@@ -1,7 +1,4 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | \
-// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" \
-// RUN: --mlir-print-debuginfo  | FileCheck --check-prefix=CODEGEN %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @test(%arg0: !fir.ref<!fir.char<1,?>> {fir.bindc_name = "str"}, %arg1: i64) {
@@ -16,14 +13,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc1 = loc("test.f90":5:1)
 #loc2 = loc("test.f90":15:1)
 
-
-// CHECK: fir.unboxchar{{.*}} loc(#[[LOC1:.*]])
-// CHECK: #[[LOC2:.*]] = loc("test.f90":5:1)
 // CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFtestEstr"{{.*}}flags = Artificial>
+// CHECK: func.func @test
+// CHECK: %[[V1:.*]]:2 = fir.unboxchar{{.*}}
+// CHECK: %[[V2:.*]] = fir.convert %[[V1]]#1 : (index) -> i64
+// CHECK: llvm.intr.dbg.value #di_local_variable = %[[V2]] : i64
 // CHECK: #[[STR_TY:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", stringLength = #[[VAR]], encoding = DW_ATE_ASCII>
-// CHECK: #[[LOC1]] = loc(fused<#di_local_variable>[#[[LOC2]]])
 // CHECK: #llvm.di_local_variable<{{.*}}name = "str"{{.*}}type = #[[STR_TY]]>
 
-// CODEGEN: #[[VAR1:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFtestEstr"{{.*}}flags = Artificial>
-// CODEGEN: llvm.func @test
-// CODEGEN: llvm.intr.dbg.value #[[VAR1]]

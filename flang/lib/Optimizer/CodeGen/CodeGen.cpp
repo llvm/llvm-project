@@ -3252,15 +3252,6 @@ struct UnboxCharOpConversion : public fir::FIROpConversion<fir::UnboxCharOp> {
     auto len = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, tuple, 1);
     mlir::Value lenAfterCast = integerCast(loc, rewriter, lenTy, len);
 
-    // If a variable is attached to fir.unboxchar then generate a DbgValueOp
-    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(unboxchar.getLoc())) {
-      if (auto varAttr =
-              mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
-                  fusedLoc.getMetadata())) {
-        rewriter.create<mlir::LLVM::DbgValueOp>(lenAfterCast.getLoc(),
-                                                lenAfterCast, varAttr, nullptr);
-      }
-    }
     rewriter.replaceOp(unboxchar,
                        llvm::ArrayRef<mlir::Value>{ptrToBuffer, lenAfterCast});
     return mlir::success();

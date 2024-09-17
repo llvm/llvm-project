@@ -299,13 +299,17 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
       if (auto unbox = mlir::dyn_cast_or_null<fir::UnboxCharOp>(op)) {
         auto name =
             mlir::StringAttr::get(context, "." + declOp.getUniqName().str());
-        mlir::LLVM::DITypeAttr Ty =
-            convertType(unbox.getResult(1).getType(), fileAttr, scope, declOp);
+        mlir::OpBuilder builder(context);
+        builder.setInsertionPoint(declOp);
+        mlir::Type i64Ty = builder.getIntegerType(64);
+        auto convOp = builder.create<fir::ConvertOp>(unbox.getLoc(), i64Ty,
+                                                     unbox.getResult(1));
+        mlir::LLVM::DITypeAttr Ty = convertType(i64Ty, fileAttr, scope, declOp);
         auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
             context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
             /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-        mlir::OpBuilder builder(context);
-        unbox->setLoc(builder.getFusedLoc({unbox->getLoc()}, lvAttr));
+        builder.create<mlir::LLVM::DbgValueOp>(convOp.getLoc(), convOp, lvAttr,
+                                               nullptr);
         varAttr = mlir::cast<mlir::LLVM::DIVariableAttr>(lvAttr);
       }
     }
