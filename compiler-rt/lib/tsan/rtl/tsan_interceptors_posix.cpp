@@ -254,9 +254,12 @@ SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionBegin() {}
 SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
 #endif
 
+// FIXME: Use for `in_symbolizer()` as well. As-is we can't use
+// `DlSymAllocator`, because it uses the primary allocator only. Symbolizer
+// requires support of the secondary allocator for larger blocks.
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() {
-    return in_symbolizer() || (ctx && !ctx->initialized);
+    return (ctx && !ctx->initialized);
   }
 };
 
@@ -667,6 +670,8 @@ TSAN_INTERCEPTOR(void, _longjmp, uptr *env, int val) {
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
+  if (in_symbolizer())
+    return InternalAlloc(size);
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
   void *p = 0;
@@ -686,7 +691,9 @@ TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
   return user_memalign(thr, pc, align, sz);
 }
 
-TSAN_INTERCEPTOR(void*, calloc, uptr n, uptr size) {
+TSAN_INTERCEPTOR(void *, calloc, uptr n, uptr size) {
+  if (in_symbolizer())
+    return InternalCalloc(n, size);
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(n, size);
   void *p = 0;
@@ -699,6 +706,8 @@ TSAN_INTERCEPTOR(void*, calloc, uptr n, uptr size) {
 }
 
 TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
+  if (in_symbolizer())
+    return InternalRealloc(p, size);
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Realloc(p, size);
   if (p)
@@ -711,9 +720,9 @@ TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
   return p;
 }
 
-TSAN_INTERCEPTOR(void*, reallocarray, void *p, uptr n, uptr size) {
-  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(p))
-    return DlsymAlloc::ReallocArray(p, n, size);
+TSAN_INTERCEPTOR(void *, reallocarray, void *p, uptr n, uptr size) {
+  if (in_symbolizer())
+    return InternalReallocArray(p, n, size);
   if (p)
     invoke_free_hook(p);
   {
@@ -727,6 +736,8 @@ TSAN_INTERCEPTOR(void*, reallocarray, void *p, uptr n, uptr size) {
 TSAN_INTERCEPTOR(void, free, void *p) {
   if (UNLIKELY(!p))
     return;
+  if (in_symbolizer())
+    return InternalFree(p);
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   invoke_free_hook(p);
@@ -737,6 +748,8 @@ TSAN_INTERCEPTOR(void, free, void *p) {
 TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (UNLIKELY(!p))
     return;
+  if (in_symbolizer())
+    return InternalFree(p);
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   invoke_free_hook(p);
@@ -826,15 +839,15 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
-  if (DlsymAlloc::Use())
-    return DlsymAlloc::Allocate(sz, align);
+  if (in_symbolizer())
+    return InternalAlloc(sz, nullptr, align);
   SCOPED_INTERCEPTOR_RAW(aligned_alloc, align, sz);
   return user_aligned_alloc(thr, pc, align, sz);
 }
 
 TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
-  if (DlsymAlloc::Use())
-    return DlsymAlloc::Allocate(sz, GetPageSizeCached());
+  if (in_symbolizer())
+    return InternalAlloc(sz, nullptr, GetPageSizeCached());
   SCOPED_INTERCEPTOR_RAW(valloc, sz);
   return user_valloc(thr, pc, sz);
 }
@@ -842,10 +855,10 @@ TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
-  if (DlsymAlloc::Use()) {
+  if (in_symbolizer()) {
     uptr PageSize = GetPageSizeCached();
     sz = sz ? RoundUpTo(sz, PageSize) : PageSize;
-    return DlsymAlloc::Allocate(sz, PageSize);
+    return InternalAlloc(sz, nullptr, PageSize);
   }
   SCOPED_INTERCEPTOR_RAW(pvalloc, sz);
   return user_pvalloc(thr, pc, sz);
@@ -857,8 +870,8 @@ TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
-  if (DlsymAlloc::Use()) {
-    void *p = DlsymAlloc::Allocate(sz, align);
+  if (in_symbolizer()) {
+    void *p = InternalAlloc(sz, nullptr, align);
     if (!p)
       return errno_ENOMEM;
     *memptr = p;
