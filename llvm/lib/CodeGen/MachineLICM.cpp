@@ -1770,9 +1770,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
   return Ratio > BlockFrequencyRatioThreshold;
 }
 
-template class llvm::MachineLICMBasePass<EarlyMachineLICMPass, true>;
-template class llvm::MachineLICMBasePass<MachineLICMPass, false>;
-
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
@@ -1786,3 +1783,6 @@ PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
   PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
+
+template class llvm::MachineLICMBasePass<EarlyMachineLICMPass, true>;
+template class llvm::MachineLICMBasePass<MachineLICMPass, false>;
