@@ -497,13 +497,10 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   B.buildExtractSubvector(SubVecTy, Vec, 0);
 
   auto CheckStr = R"(
-  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
   ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK: [[EXTRACT_SUBVECTOR:%[0-9]+]]:(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<4 x s32>), 0
+  ; CHECK: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
   ; CHECK: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-  ; CHECK: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]](<vscale x 4 x s32>), 0
+  ; CHECK: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]]:_(<vscale x 4 x s32>), 0
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
