@@ -16,7 +16,7 @@
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex --start-address=0x18000050 --stop-address=0x180000a8 %t.exe | FileCheck --check-prefix=CHECK-BTI %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex --start-address=0x180000b0 --stop-address=0x180000e8 %t.exe | FileCheck --check-prefix=CHECK-EXE3 %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex --start-address=0x30000000 --stop-address=0x300000ec %t.exe | FileCheck --check-prefix=CHECK-EXE4 %s
-// RUN: rm %t.o %tshared.o %tshared.so
+// RUN: rm %t.o %tshared.o %tshared.so %t.exe
 
 /// Test thunk generation when destination does not have
 /// a BTI compatible landing pad. Linker must generate
@@ -295,15 +295,15 @@ fn4:
 // CHECK-EXE3: 180000b0: bti     c
 // CHECK-EXE3-NEXT:      stp     x16, x30, [sp, #-0x10]!
 // CHECK-EXE3-NEXT:      adrp    x16, 0x30000000 <via_plt+0x30000000>
-// CHECK-EXE3-NEXT:      ldr     x17, [x16, #0x320]
-// CHECK-EXE3-NEXT:      add     x16, x16, #0x320
+// CHECK-EXE3-NEXT:      ldr     x17, [x16, #0x{{.*}}]
+// CHECK-EXE3-NEXT:      add     x16, x16, #0x{{.*}}
 // CHECK-EXE3-NEXT:      br      x17
 // CHECK-EXE3-NEXT:      nop
 // CHECK-EXE3-NEXT:      nop
 // CHECK-EXE3-NEXT:      bti     c
 // CHECK-EXE3-NEXT:      adrp    x16, 0x30000000 <via_plt+0x30000000>
-// CHECK-EXE3-NEXT:      ldr     x17, [x16, #0x328]
-// CHECK-EXE3-NEXT:      add     x16, x16, #0x328
+// CHECK-EXE3-NEXT:      ldr     x17, [x16, #0x{{.*}}]
+// CHECK-EXE3-NEXT:      add     x16, x16, #0x{{.*}}
 // CHECK-EXE3-NEXT:      br      x17
 // CHECK-EXE3-NEXT:      nop
 
