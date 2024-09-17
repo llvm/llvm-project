@@ -2186,6 +2186,8 @@ public:
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
+  void VisitOMPCompoundBlockDirective(const OMPCompoundBlockDirective *D);
+  void VisitOMPCompoundLoopDirective(const OMPCompoundLoopDirective *D);
   void VisitOMPParallelDirective(const OMPParallelDirective *D);
   void VisitOMPSimdDirective(const OMPSimdDirective *D);
   void
@@ -3232,6 +3234,14 @@ void EnqueueVisitor::VisitOMPLoopBasedDirective(
 
 void EnqueueVisitor::VisitOMPLoopDirective(const OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPCompoundBlockDirective(const OMPCompoundBlockDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPCompoundLoopDirective(const OMPCompoundLoopDirective *D) {
+  VisitOMPLoopDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPParallelDirective(const OMPParallelDirective *D) {
@@ -6278,6 +6288,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPParallelGenericLoopDirective");
   case CXCursor_OMPTargetParallelGenericLoopDirective:
     return cxstring::createRef("OMPTargetParallelGenericLoopDirective");
+  case CXCursor_OMPCompoundBlockDirective:
+    return cxstring::createRef("OMPCompoundBlockDirective");
+  case CXCursor_OMPCompoundLoopDirective:
+    return cxstring::createRef("OMPCompoundLoopDirective");
   case CXCursor_OverloadCandidate:
     return cxstring::createRef("OverloadCandidate");
   case CXCursor_TypeAliasTemplateDecl:

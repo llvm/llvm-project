@@ -9213,6 +9213,8 @@ TreeTransform<Derived>::TransformOMPCanonicalLoop(OMPCanonicalLoop *L) {
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     OMPExecutableDirective *D) {
+  // If D is OMPCompoundBlockDirective or OMPCompoundLoopDirective,
+  // then D->getDirectiveKind() will return the actual directive kind.
 
   // Transform the clauses
   llvm::SmallVector<OMPClause *, 16> TClauses;
@@ -9231,32 +9233,31 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     }
   }
   StmtResult AssociatedStmt;
-  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
-    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
-        D->getDirectiveKind(),
-        /*CurScope=*/nullptr);
-    StmtResult Body;
-    {
-      Sema::CompoundScopeRAII CompoundScope(getSema());
-      Stmt *CS;
-      if (D->getDirectiveKind() == OMPD_atomic ||
-          D->getDirectiveKind() == OMPD_critical ||
-          D->getDirectiveKind() == OMPD_section ||
-          D->getDirectiveKind() == OMPD_master)
-        CS = D->getAssociatedStmt();
-      else
-        CS = D->getRawStmt();
-      Body = getDerived().TransformStmt(CS);
-      if (Body.isUsable() && isOpenMPLoopDirective(D->getDirectiveKind()) &&
-          getSema().getLangOpts().OpenMPIRBuilder)
-        Body = getDerived().RebuildOMPCanonicalLoop(Body.get());
-    }
-    AssociatedStmt =
-        getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(Body, TClauses);
-    if (AssociatedStmt.isInvalid()) {
-      return StmtError();
-    }
+  bool HasAssociatedStatement =
+      D->hasAssociatedStmt() && D->getAssociatedStmt();
+  getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+      D->getDirectiveKind(), /*CurScope=*/nullptr, HasAssociatedStatement);
+  if (HasAssociatedStatement) {
+    Sema::CompoundScopeRAII CompoundScope(getSema());
+    Stmt *CS;
+    if (D->getDirectiveKind() == OMPD_atomic ||
+        D->getDirectiveKind() == OMPD_critical ||
+        D->getDirectiveKind() == OMPD_section ||
+        D->getDirectiveKind() == OMPD_master)
+      CS = D->getAssociatedStmt();
+    else
+      CS = D->getRawStmt();
+    AssociatedStmt = getDerived().TransformStmt(CS);
+    if (AssociatedStmt.isUsable() &&
+        isOpenMPLoopDirective(D->getDirectiveKind()) &&
+        getSema().getLangOpts().OpenMPIRBuilder)
+      AssociatedStmt =
+          getDerived().RebuildOMPCanonicalLoop(AssociatedStmt.get());
   }
+  AssociatedStmt = getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(
+      AssociatedStmt, TClauses);
+  if (AssociatedStmt.isInvalid())
+    return StmtError();
   if (TClauses.size() != Clauses.size()) {
     return StmtError();
   }
@@ -9264,14 +9265,29 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
   // Transform directive name for 'omp critical' directive.
   DeclarationNameInfo DirName;
   if (D->getDirectiveKind() == OMPD_critical) {
-    DirName = cast<OMPCriticalDirective>(D)->getDirectiveName();
+    if (auto *C = dyn_cast<OMPCriticalDirective>(D))
+      DirName = C->getDirectiveName();
+    else if (auto *C = dyn_cast<OMPCompoundBlockDirective>(D))
+      DirName = C->getDirectiveName();
+    else
+      llvm_unreachable("Unexpected directive class");
     DirName = getDerived().TransformDeclarationNameInfo(DirName);
   }
   OpenMPDirectiveKind CancelRegion = OMPD_unknown;
   if (D->getDirectiveKind() == OMPD_cancellation_point) {
-    CancelRegion = cast<OMPCancellationPointDirective>(D)->getCancelRegion();
+    if (auto *C = dyn_cast<OMPCancellationPointDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else if (auto *C = dyn_cast<OMPCompoundBlockDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else
+      llvm_unreachable("Unexpected directive class");
   } else if (D->getDirectiveKind() == OMPD_cancel) {
-    CancelRegion = cast<OMPCancelDirective>(D)->getCancelRegion();
+    if (auto *C = dyn_cast<OMPCancelDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else if (auto *C = dyn_cast<OMPCompoundBlockDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else
+      llvm_unreachable("Unexpected directive class");
   }
 
   return getDerived().RebuildOMPExecutableDirective(
@@ -9304,23 +9320,21 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
     }
   }
   StmtResult AssociatedStmt;
-  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
-    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
-        D->getDirectiveKind(),
-        /*CurScope=*/nullptr);
-    StmtResult Body;
-    {
-      Sema::CompoundScopeRAII CompoundScope(getSema());
-      assert(D->getDirectiveKind() == OMPD_assume &&
-             "Unexpected informational directive");
-      Stmt *CS = D->getAssociatedStmt();
-      Body = getDerived().TransformStmt(CS);
-    }
-    AssociatedStmt =
-        getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(Body, TClauses);
-    if (AssociatedStmt.isInvalid())
-      return StmtError();
+  bool HasAssociatedStatement =
+      D->hasAssociatedStmt() && D->getAssociatedStmt();
+  getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+      D->getDirectiveKind(), /*CurScope=*/nullptr, HasAssociatedStatement);
+  if (HasAssociatedStatement) {
+    Sema::CompoundScopeRAII CompoundScope(getSema());
+    assert(D->getDirectiveKind() == OMPD_assume &&
+           "Unexpected informational directive");
+    Stmt *CS = D->getAssociatedStmt();
+    AssociatedStmt = getDerived().TransformStmt(CS);
   }
+  AssociatedStmt = getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(
+      AssociatedStmt, TClauses);
+  if (AssociatedStmt.isInvalid())
+    return StmtError();
   if (TClauses.size() != Clauses.size())
     return StmtError();
 
@@ -9329,6 +9343,30 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
   return getDerived().RebuildOMPInformationalDirective(
       D->getDirectiveKind(), DirName, TClauses, AssociatedStmt.get(),
       D->getBeginLoc(), D->getEndLoc());
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPCompoundBlockDirective(
+    OMPCompoundBlockDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPCompoundLoopDirective(
+    OMPCompoundLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
 }
 
 template <typename Derived>

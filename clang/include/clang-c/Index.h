@@ -2158,6 +2158,14 @@ enum CXCursorKind {
    */
   CXCursor_OMPAssumeDirective = 309,
 
+  /** OpenMP compound block-associated directive.
+  */
+  CXCursor_OMPCompoundBlockDirective = 310,
+
+  /** OpenMP compound loop-associated directive.
+  */
+  CXCursor_OMPCompoundLoopDirective = 311,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
