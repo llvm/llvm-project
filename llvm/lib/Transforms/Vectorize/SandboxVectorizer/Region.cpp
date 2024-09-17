@@ -20,9 +20,7 @@ sandboxir::Region::~Region() {}
 
 void sandboxir::Region::add(sandboxir::Instruction *I) { Insts.insert(I); }
 
-void sandboxir::Region::remove(sandboxir::Instruction *I) {
-  Insts.remove(I);
-}
+void sandboxir::Region::remove(sandboxir::Instruction *I) { Insts.remove(I); }
 
 #ifndef NDEBUG
 bool sandboxir::Region::operator==(const sandboxir::Region &Other) const {

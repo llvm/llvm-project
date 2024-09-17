@@ -9,8 +9,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
@@ -78,9 +78,7 @@ public:
   /// Removes I from the set.
   void remove(sandboxir::Instruction *I);
   /// Returns true if I is in the Region.
-  bool contains(sandboxir::Instruction *I) const {
-    return Insts.contains(I);
-  }
+  bool contains(sandboxir::Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
 
