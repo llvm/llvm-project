@@ -79,7 +79,7 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
       }
 
       for (size_t __i = 0; __i != __unroll_count; ++__i) {
-        if (auto __cmp_res = __lhs[__i] == __rhs[__i]; !std::__all_of(__cmp_res)) {
+        if (auto __cmp_res = std::__as_mask(__lhs[__i] == __rhs[__i]); !std::__all_of(__cmp_res)) {
           auto __offset = __i * __vec_size + std::__find_first_not_set(__cmp_res);
           return {__first1 + __offset, __first2 + __offset};
         }
@@ -91,7 +91,7 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
 
     // check the remaining 0-3 vectors
     while (static_cast<size_t>(__last1 - __first1) >= __vec_size) {
-      if (auto __cmp_res = std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2);
+      if (auto __cmp_res = std::__as_mask(std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2));
           !std::__all_of(__cmp_res)) {
         auto __offset = std::__find_first_not_set(__cmp_res);
         return {__first1 + __offset, __first2 + __offset};
@@ -108,8 +108,8 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
     if (static_cast<size_t>(__first1 - __orig_first1) >= __vec_size) {
       __first1 = __last1 - __vec_size;
       __first2 = __last2 - __vec_size;
-      auto __offset =
-          std::__find_first_not_set(std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2));
+      auto __offset = std::__find_first_not_set(
+          std::__as_mask(std::__load_vector<__vec>(__first1) == std::__load_vector<__vec>(__first2)));
       return {__first1 + __offset, __first2 + __offset};
     } // else loop over the elements individually
   }
