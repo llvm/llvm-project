@@ -9,9 +9,79 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 #define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
+#include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/io.h"
+#include "src/__support/OSUtil/linux/io.h"
+#include "src/__support/integer_to_string.h"
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
-#if defined(LIBC_COPT_USE_C_ASSERT) || !defined(LIBC_FULL_BUILD)
 
+namespace LIBC_NAMESPACE_DECL {
+LIBC_INLINE void report_assertion_failure(cpp::string_view assertion,
+                                          cpp::string_view filename,
+                                          cpp::string_view line,
+                                          cpp::string_view funcname) {
+  write_all_to_stderr({filename, ":", line, ": Assertion failed: '", assertion,
+                       "' in function: '", funcname, "'\n"});
+}
+
+LIBC_INLINE void report_assertion_failure(cpp::string_view assertion,
+                                          cpp::string_view filename,
+                                          unsigned line,
+                                          cpp::string_view funcname) {
+  const IntegerToString<unsigned> line_buffer(line);
+  report_assertion_failure(assertion, filename, line_buffer.view(), funcname);
+}
+
+// Direct calls to the unsafe_unreachable are highly discouraged.
+// Use the macro versions to provide at least a check in debug builds.
+LIBC_INLINE void unsafe_unreachable() {
+#if __has_builtin(__builtin_unreachable)
+  __builtin_unreachable();
+#endif
+}
+
+// Direct calls to the unsafe_assume are highly discouraged.
+// Use the macro versions to provide at least a check in debug builds.
+LIBC_INLINE void unsafe_assume([[maybe_unused]] bool cond) {
+#if __has_builtin(__builtin_assume)
+  __builtin_assume(cond);
+#elif __has_builtin(__builtin_unreachable)
+  if (!cond)
+    __builtin_unreachable();
+#endif
+}
+
+} // namespace LIBC_NAMESPACE_DECL
+
+// Macros:
+// - LIBC_ASSERT(COND): similar to `assert(COND)` but may use libc's internal
+// implementation.
+// - LIBC_CHECK(COND): similar to LIBC_ASSERT(COND) but will not be disabled in
+// release builds.
+// - LIBC_ASSUME(COND): LIBC_ASSERT + __builtin_assume.
+// - LIBC_UNREACHABLE(): similar to `__builtin_unreachable()` but checks in
+// debug mode.
+// - LIBC_CHECK_UNREACHABLE(): checks in both debug and release builds.
+
+// Convert __LINE__ to a string using macros. The indirection is necessary
+// because otherwise it will turn "__LINE__" into a string, not its value. The
+// value is evaluated in the indirection step.
+#define __LIBC_MACRO_TO_STR(x) #x
+#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
+#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
+
+#define LIBC_CHECK(COND)                                                       \
+  do {                                                                         \
+    if (!(COND)) {                                                             \
+      LIBC_NAMESPACE::report_assertion_failure(                                \
+          #COND, __FILE__, __LIBC_LINE_STR__, __PRETTY_FUNCTION__);            \
+      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
+    }                                                                          \
+  } while (false)
+
+#if defined(LIBC_COPT_USE_C_ASSERT) || !defined(LIBC_FULL_BUILD)
 // The build is configured to just use the public <assert.h> API
 // for libc's internal assertions.
 
@@ -20,32 +90,6 @@
 #define LIBC_ASSERT(COND) assert(COND)
 
 #else // Not LIBC_COPT_USE_C_ASSERT
-
-#include "src/__support/OSUtil/exit.h"
-#include "src/__support/OSUtil/io.h"
-#include "src/__support/integer_to_string.h"
-#include "src/__support/macros/attributes.h" // For LIBC_INLINE
-
-namespace LIBC_NAMESPACE_DECL {
-
-// This is intended to be removed in a future patch to use a similar design to
-// below, but it's necessary for the external assert.
-LIBC_INLINE void report_assertion_failure(const char *assertion,
-                                          const char *filename, unsigned line,
-                                          const char *funcname) {
-  const IntegerToString<unsigned> line_buffer(line);
-  write_to_stderr(filename);
-  write_to_stderr(":");
-  write_to_stderr(line_buffer.view());
-  write_to_stderr(": Assertion failed: '");
-  write_to_stderr(assertion);
-  write_to_stderr("' in function: '");
-  write_to_stderr(funcname);
-  write_to_stderr("'\n");
-}
-
-} // namespace LIBC_NAMESPACE_DECL
-
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
 #endif
@@ -61,27 +105,28 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   do {                                                                         \
   } while (false)
 #else
-
-// Convert __LINE__ to a string using macros. The indirection is necessary
-// because otherwise it will turn "__LINE__" into a string, not its value. The
-// value is evaluated in the indirection step.
-#define __LIBC_MACRO_TO_STR(x) #x
-#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
-#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
-
-#define LIBC_ASSERT(COND)                                                      \
-  do {                                                                         \
-    if (!(COND)) {                                                             \
-      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__           \
-                                               ": Assertion failed: '" #COND   \
-                                               "' in function: '");            \
-      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
-      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
-    }                                                                          \
-  } while (false)
+#define LIBC_ASSERT(COND) LIBC_CHECK(COND)
 #endif // NDEBUG
-
 #endif // LIBC_COPT_USE_C_ASSERT
+
+#define LIBC_ASSUME(COND)                                                      \
+  do {                                                                         \
+    LIBC_ASSERT(COND);                                                         \
+    LIBC_NAMESPACE::unsafe_assume(COND);                                       \
+  } while (false)
+
+#define LIBC_CHECK_UNREACHABLE()                                               \
+  do {                                                                         \
+    LIBC_NAMESPACE::report_assertion_failure("unreachable region", __FILE__,   \
+                                             __LIBC_LINE_STR__,                \
+                                             __PRETTY_FUNCTION__);             \
+    LIBC_NAMESPACE::internal::exit(0xFF);                                      \
+  } while (false)
+
+#ifdef NDEBUG
+#define LIBC_UNREACHABLE() LIBC_NAMESPACE::unsafe_unreachable()
+#else
+#define LIBC_UNREACHABLE() LIBC_CHECK_UNREACHABLE()
+#endif // NDEBUG
 
 #endif // LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H

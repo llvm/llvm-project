@@ -22,6 +22,7 @@ add_object_library(
     libc.hdr.types.struct_flock64
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.off_t
+    libc.hdr.errno_macros
 )
 
 add_header_library(
