@@ -102,4 +102,5 @@ MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
+MACHINE_FUNCTION_PASS("si-lower-sgpr-spills", SILowerSGPRSpillsPass())
 #undef MACHINE_FUNCTION_PASS

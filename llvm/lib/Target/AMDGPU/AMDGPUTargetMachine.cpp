@@ -37,6 +37,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SILoadStoreOptimizer.h"
+#include "SILowerSGPRSpills.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "SIPeepholeSDWA.h"
@@ -412,7 +413,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
-  initializeSILowerSGPRSpillsPass(*PR);
+  initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
@@ -1440,7 +1441,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createSGPRAllocPass(false));
 
   // Equivalent of PEI for SGPRs.
-  addPass(&SILowerSGPRSpillsID);
+  addPass(&SILowerSGPRSpillsLegacyID);
   addPass(&SIPreAllocateWWMRegsID);
 
   addPass(createVGPRAllocPass(false));
@@ -1464,7 +1465,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createVirtRegRewriter(false));
 
   // Equivalent of PEI for SGPRs.
-  addPass(&SILowerSGPRSpillsID);
+  addPass(&SILowerSGPRSpillsLegacyID);
   addPass(&SIPreAllocateWWMRegsID);
 
   addPass(createVGPRAllocPass(true));
