@@ -1051,6 +1051,72 @@ define void @foo() {
   EXPECT_EQ(GV0->getCodeModel(), LLVMGV0->getCodeModel());
 }
 
+TEST_F(SandboxIRTest, GlobalAlias) {
+  parseIR(C, R"IR(
+@alias0 = dso_local alias void(), ptr @foo
+@alias1 = dso_local alias void(), ptr @foo
+declare void @bar();
+define void @foo() {
+  call void @alias0()
+  call void @alias1()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall0 = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMAlias0 = cast<llvm::GlobalAlias>(LLVMCall0->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *CalleeBar = cast<sandboxir::Constant>(CallBar->getCalledOperand());
+  // Check classof(), creation.
+  auto *Alias0 = cast<sandboxir::GlobalAlias>(Call0->getCalledOperand());
+  auto *Alias1 = cast<sandboxir::GlobalAlias>(Call1->getCalledOperand());
+  // Check getIterator().
+  {
+    auto It0 = Alias0->getIterator();
+    auto It1 = Alias1->getIterator();
+    EXPECT_EQ(&*It0, Alias0);
+    EXPECT_EQ(&*It1, Alias1);
+    EXPECT_EQ(std::next(It0), It1);
+    EXPECT_EQ(std::prev(It1), It0);
+    EXPECT_EQ(&*std::next(It0), Alias1);
+    EXPECT_EQ(&*std::prev(It1), Alias0);
+  }
+  // Check getReverseIterator().
+  {
+    auto RevIt0 = Alias0->getReverseIterator();
+    auto RevIt1 = Alias1->getReverseIterator();
+    EXPECT_EQ(&*RevIt0, Alias0);
+    EXPECT_EQ(&*RevIt1, Alias1);
+    EXPECT_EQ(std::prev(RevIt0), RevIt1);
+    EXPECT_EQ(std::next(RevIt1), RevIt0);
+    EXPECT_EQ(&*std::prev(RevIt0), Alias1);
+    EXPECT_EQ(&*std::next(RevIt1), Alias0);
+  }
+  // Check getAliasee().
+  EXPECT_EQ(Alias0->getAliasee(), Ctx.getValue(LLVMAlias0->getAliasee()));
+  // Check setAliasee().
+  auto *OrigAliasee = Alias0->getAliasee();
+  auto *NewAliasee = CalleeBar;
+  EXPECT_NE(NewAliasee, OrigAliasee);
+  Alias0->setAliasee(NewAliasee);
+  EXPECT_EQ(Alias0->getAliasee(), NewAliasee);
+  Alias0->setAliasee(OrigAliasee);
+  EXPECT_EQ(Alias0->getAliasee(), OrigAliasee);
+  // Check getAliaseeObject().
+  EXPECT_EQ(Alias0->getAliaseeObject(),
+            Ctx.getValue(LLVMAlias0->getAliaseeObject()));
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
