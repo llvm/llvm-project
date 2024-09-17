@@ -217,23 +217,22 @@ private:
                   "ArgType must be convertible to T!");
     if (!isSmall()) {
       auto [I, Inserted] = Set.insert(std::forward<ArgType>(V));
-      return std::make_pair(const_iterator(I), Inserted);
+      return {const_iterator(I), Inserted};
     }
 
     auto I = std::find(Vector.begin(), Vector.end(), V);
     if (I != Vector.end()) // Don't reinsert if it already exists.
-      return std::make_pair(const_iterator(I), false);
+      return {const_iterator(I), false};
     if (Vector.size() < N) {
       Vector.push_back(std::forward<ArgType>(V));
-      return std::make_pair(const_iterator(std::prev(Vector.end())), true);
+      return {const_iterator(std::prev(Vector.end())), true};
     }
 
     // Otherwise, grow from vector to set.
     Set.insert(std::make_move_iterator(Vector.begin()),
                std::make_move_iterator(Vector.end()));
     Vector.clear();
-    return std::make_pair(
-        const_iterator(Set.insert(std::forward<ArgType>(V)).first), true);
+    return {const_iterator(Set.insert(std::forward<ArgType>(V)).first), true};
   }
 };
 
