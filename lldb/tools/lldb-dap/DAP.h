@@ -111,12 +111,12 @@ struct Variables {
   int64_t next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
   int64_t next_permanent_var_ref{PermanentVariableStartIndex};
 
-  /// Expandable variables that are alive in this stop state.
+  /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
-  llvm::DenseMap<int64_t, lldb::SBValue> expandable_variables;
-  /// Expandable variables that persist across entire debug session.
+  llvm::DenseMap<int64_t, lldb::SBValue> referenced_variables;
+  /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
-  llvm::DenseMap<int64_t, lldb::SBValue> expandable_permanent_variables;
+  llvm::DenseMap<int64_t, lldb::SBValue> referenced_permanent_variables;
 
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
@@ -134,7 +134,7 @@ struct Variables {
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  int64_t InsertExpandableVariable(lldb::SBValue variable, bool is_permanent);
+  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
