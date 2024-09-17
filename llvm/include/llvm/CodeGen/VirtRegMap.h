@@ -32,9 +32,7 @@ class TargetInstrInfo;
 
   class VirtRegMap : public MachineFunctionPass {
   public:
-    enum {
-      NO_STACK_SLOT = (1L << 30)-1,
-    };
+    static constexpr unsigned NO_STACK_SLOT = (1u << 30) - 1;
 
   private:
     MachineRegisterInfo *MRI = nullptr;
