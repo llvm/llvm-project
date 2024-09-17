@@ -937,6 +937,120 @@ define void @foo() {
   }
 }
 
+TEST_F(SandboxIRTest, GlobalVariable) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+define void @foo() {
+  %ld0 = load i32, ptr @glob0
+  %ld1 = load i32, ptr @glob1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMLd0 = cast<llvm::LoadInst>(&*LLVMIt++);
+  auto *LLVMGV0 = cast<llvm::GlobalVariable>(LLVMLd0->getPointerOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  // Check classof(), creation.
+  auto *GV0 = cast<sandboxir::GlobalVariable>(Ld0->getPointerOperand());
+  auto *GV1 = cast<sandboxir::GlobalVariable>(Ld1->getPointerOperand());
+  // Check getIterator().
+  {
+    auto It0 = GV0->getIterator();
+    auto It1 = GV1->getIterator();
+    EXPECT_EQ(&*It0, GV0);
+    EXPECT_EQ(&*It1, GV1);
+    EXPECT_EQ(std::next(It0), It1);
+    EXPECT_EQ(std::prev(It1), It0);
+    EXPECT_EQ(&*std::next(It0), GV1);
+    EXPECT_EQ(&*std::prev(It1), GV0);
+  }
+  // Check getReverseIterator().
+  {
+    auto RevIt0 = GV0->getReverseIterator();
+    auto RevIt1 = GV1->getReverseIterator();
+    EXPECT_EQ(&*RevIt0, GV0);
+    EXPECT_EQ(&*RevIt1, GV1);
+    EXPECT_EQ(std::prev(RevIt0), RevIt1);
+    EXPECT_EQ(std::next(RevIt1), RevIt0);
+    EXPECT_EQ(&*std::prev(RevIt0), GV1);
+    EXPECT_EQ(&*std::next(RevIt1), GV0);
+  }
+  // Check hasInitializer().
+  EXPECT_EQ(GV0->hasInitializer(), LLVMGV0->hasInitializer());
+  // Check hasDefinitiveInitializer().
+  EXPECT_EQ(GV0->hasDefinitiveInitializer(),
+            LLVMGV0->hasDefinitiveInitializer());
+  // Check hasUniqueInitializer().
+  EXPECT_EQ(GV0->hasUniqueInitializer(), LLVMGV0->hasUniqueInitializer());
+  // Check getInitializer().
+  EXPECT_EQ(GV0->getInitializer(), Ctx.getValue(LLVMGV0->getInitializer()));
+  // Check setInitializer().
+  auto *OrigInitializer = GV0->getInitializer();
+  auto *NewInitializer = GV1->getInitializer();
+  EXPECT_NE(NewInitializer, OrigInitializer);
+  GV0->setInitializer(NewInitializer);
+  EXPECT_EQ(GV0->getInitializer(), NewInitializer);
+  GV0->setInitializer(OrigInitializer);
+  EXPECT_EQ(GV0->getInitializer(), OrigInitializer);
+  // Check isConstant().
+  EXPECT_EQ(GV0->isConstant(), LLVMGV0->isConstant());
+  // Check setConstant().
+  bool OrigIsConstant = GV0->isConstant();
+  bool NewIsConstant = !OrigIsConstant;
+  GV0->setConstant(NewIsConstant);
+  EXPECT_EQ(GV0->isConstant(), NewIsConstant);
+  GV0->setConstant(OrigIsConstant);
+  EXPECT_EQ(GV0->isConstant(), OrigIsConstant);
+  // Check isExternallyInitialized().
+  EXPECT_EQ(GV0->isExternallyInitialized(), LLVMGV0->isExternallyInitialized());
+  // Check setExternallyInitialized().
+  bool OrigIsExtInit = GV0->isExternallyInitialized();
+  bool NewIsExtInit = !OrigIsExtInit;
+  GV0->setExternallyInitialized(NewIsExtInit);
+  EXPECT_EQ(GV0->isExternallyInitialized(), NewIsExtInit);
+  GV0->setExternallyInitialized(OrigIsExtInit);
+  EXPECT_EQ(GV0->isExternallyInitialized(), OrigIsExtInit);
+  for (auto KindIdx : seq<int>(0, Attribute::AttrKind::EndAttrKinds)) {
+    // Check hasAttribute(AttrKind).
+    auto Kind = static_cast<Attribute::AttrKind>(KindIdx);
+    EXPECT_EQ(GV0->hasAttribute(Kind), LLVMGV0->hasAttribute(Kind));
+    // Check hasAttribute(StringRef).
+    StringRef KindStr = Attribute::getNameFromAttrKind(Kind);
+    EXPECT_EQ(GV0->hasAttribute(KindStr), LLVMGV0->hasAttribute(KindStr));
+  }
+  // Check hasAttributes().
+  EXPECT_EQ(GV0->hasAttributes(), LLVMGV0->hasAttributes());
+
+  for (auto KindIdx : seq<int>(0, Attribute::AttrKind::EndAttrKinds)) {
+    // Check getAttribute(AttrKind).
+    auto Kind = static_cast<Attribute::AttrKind>(KindIdx);
+    EXPECT_EQ(GV0->getAttribute(Kind), LLVMGV0->getAttribute(Kind));
+    // Check getAttribute(StringRef).
+    StringRef KindStr = Attribute::getNameFromAttrKind(Kind);
+    EXPECT_EQ(GV0->getAttribute(KindStr), LLVMGV0->getAttribute(KindStr));
+  }
+  // Check getAttributes().
+  EXPECT_EQ(GV0->getAttributes(), LLVMGV0->getAttributes());
+  // Check getAttributesAsList().
+  EXPECT_THAT(GV0->getAttributesAsList(0u),
+              testing::ContainerEq(LLVMGV0->getAttributesAsList(0u)));
+  // Check hasImplicitSection().
+  EXPECT_EQ(GV0->hasImplicitSection(), LLVMGV0->hasImplicitSection());
+  // Check getCodeModelRaw().
+  EXPECT_EQ(GV0->getCodeModelRaw(), LLVMGV0->getCodeModelRaw());
+  // Check getCodeModel().
+  EXPECT_EQ(GV0->getCodeModel(), LLVMGV0->getCodeModel());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {

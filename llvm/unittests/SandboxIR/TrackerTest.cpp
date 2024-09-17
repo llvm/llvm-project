@@ -1590,6 +1590,54 @@ define void @foo() {
   EXPECT_EQ(IFunc->getResolver(), OrigResolver);
 }
 
+TEST_F(TrackerTest, GlobalVariableSetters) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+define void @foo() {
+  %ld0 = load i32, ptr @glob0
+  %ld1 = load i32, ptr @glob1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  // Check classof(), creation.
+  auto *GV0 = cast<sandboxir::GlobalVariable>(Ld0->getPointerOperand());
+  auto *GV1 = cast<sandboxir::GlobalVariable>(Ld1->getPointerOperand());
+  // Check setInitializer().
+  auto *OrigInitializer = GV0->getInitializer();
+  auto *NewInitializer = GV1->getInitializer();
+  EXPECT_NE(NewInitializer, OrigInitializer);
+  Ctx.save();
+  GV0->setInitializer(NewInitializer);
+  EXPECT_EQ(GV0->getInitializer(), NewInitializer);
+  Ctx.revert();
+  EXPECT_EQ(GV0->getInitializer(), OrigInitializer);
+  // Check setConstant().
+  bool OrigIsConstant = GV0->isConstant();
+  bool NewIsConstant = !OrigIsConstant;
+  Ctx.save();
+  GV0->setConstant(NewIsConstant);
+  EXPECT_EQ(GV0->isConstant(), NewIsConstant);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isConstant(), OrigIsConstant);
+  // Check setExternallyInitialized().
+  bool OrigIsExtInit = GV0->isExternallyInitialized();
+  bool NewIsExtInit = !OrigIsExtInit;
+  Ctx.save();
+  GV0->setExternallyInitialized(NewIsExtInit);
+  EXPECT_EQ(GV0->isExternallyInitialized(), NewIsExtInit);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isExternallyInitialized(), OrigIsExtInit);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {
