@@ -225,7 +225,6 @@ public:
   llvm::StringRef getDescription() const override;
 
   void runOnOperation() override;
-  void runOnFunc(mlir::Operation *func);
 
 private:
   Statistic runCount{this, "stackArraysRunCount",
@@ -766,13 +765,7 @@ llvm::StringRef StackArraysPass::getDescription() const {
 }
 
 void StackArraysPass::runOnOperation() {
-  mlir::ModuleOp mod = getOperation();
-
-  mod.walk([this](mlir::func::FuncOp func) { runOnFunc(func); });
-}
-
-void StackArraysPass::runOnFunc(mlir::Operation *func) {
-  assert(mlir::isa<mlir::func::FuncOp>(func));
+  mlir::func::FuncOp func = getOperation();
 
   auto &analysis = getAnalysis<StackArraysAnalysisWrapper>();
   const StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
