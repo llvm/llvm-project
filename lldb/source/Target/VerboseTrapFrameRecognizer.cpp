@@ -20,8 +20,16 @@ using namespace lldb_private;
 /// the verbose_trap message. So, starting with the current parent frame,
 /// find the first frame that's not inside of the STL.
 static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
-  StackFrameSP most_relevant_frame_sp = selected_thread.GetStackFrameAtIndex(1);
-  while (most_relevant_frame_sp) {
+  // Defensive upper-bound of when we stop walking up the frames in
+  // case we somehow ended up looking at an infinite recursion.
+  const size_t max_stack_depth = 128;
+
+  // Start at parent frame.
+  size_t stack_idx = 1;
+  StackFrameSP most_relevant_frame_sp =
+      selected_thread.GetStackFrameAtIndex(stack_idx);
+
+  while (most_relevant_frame_sp && stack_idx <= max_stack_depth) {
     auto const &sc =
         most_relevant_frame_sp->GetSymbolContext(eSymbolContextEverything);
     ConstString frame_name = sc.GetFunctionName();
@@ -34,8 +42,8 @@ static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
     if (!frame_name.GetStringRef().starts_with("std::"))
       return most_relevant_frame_sp;
 
-    most_relevant_frame_sp = selected_thread.GetStackFrameAtIndex(
-        most_relevant_frame_sp->GetFrameIndex() + 1);
+    ++stack_idx;
+    most_relevant_frame_sp = selected_thread.GetStackFrameAtIndex(stack_idx);
   }
 
   return nullptr;
