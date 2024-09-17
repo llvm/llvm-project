@@ -4674,6 +4674,12 @@ def HLSLContainedType : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLRawBuffer : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL]; 
+  let Documentation = [InternalOnly];
+}
+
 def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;
