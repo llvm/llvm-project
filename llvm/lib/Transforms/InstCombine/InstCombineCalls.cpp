@@ -3100,16 +3100,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Try to fold alignment assumption into a load's !align metadata, if the
       // assumption is valid in the load's context.
       if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromBundle(
+            *cast<AssumeInst>(II), II->bundle_op_info_begin()[Idx]);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue))
+          continue;
+
         auto *LI = dyn_cast<LoadInst>(OBU.Inputs[0]);
         if (!LI ||
             !isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true))
           continue;
-        auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]);
-        if (!Align || !isPowerOf2_64(Align->getZExtValue()) || Align->getType()->getScalarSizeInBits() != 64)
-          continue;
+
         LI->setMetadata(
             LLVMContext::MD_align,
-            MDNode::get(II->getContext(), ValueAsMetadata::getConstant(Align)));
+            MDNode::get(II->getContext(), ValueAsMetadata::getConstant(
+                                              Builder.getInt64(RK.ArgValue))));
         auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
         return New;
       }
