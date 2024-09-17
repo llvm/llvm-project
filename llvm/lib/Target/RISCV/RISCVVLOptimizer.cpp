@@ -1366,29 +1366,31 @@ static bool isVectorOpUsedAsScalarOp(MachineOperand &MO) {
   }
 }
 
-static bool safeToPropgateVL(const MachineInstr &MI) {
+/// Return true if MI may read elements past VL.
+static bool mayReadPastVL(const MachineInstr &MI) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   if (!RVV)
-    return false;
+    return true;
 
   switch (RVV->BaseInstr) {
-  // vslidedown instructions may use the higher part of the input operand beyond
-  // the VL.
+  // vslidedown instructions may read elements past VL. They are handled
+  // according to current tail policy.
   case RISCV::VSLIDEDOWN_VI:
   case RISCV::VSLIDEDOWN_VX:
   case RISCV::VSLIDE1DOWN_VX:
   case RISCV::VFSLIDE1DOWN_VF:
 
-  // vrgather instructions may index beyond the VL.
+  // vrgather instructions may read the source vector at any index < VLMAX,
+  // regardless of VL.
   case RISCV::VRGATHER_VI:
   case RISCV::VRGATHER_VV:
   case RISCV::VRGATHER_VX:
   case RISCV::VRGATHEREI16_VV:
-    return false;
+    return true;
 
   default:
-    return true;
+    return false;
   }
 }
 
@@ -1443,6 +1445,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
   while (!Worklist.empty()) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Try reduce VL for " << MI << "\n");
+
     std::optional<Register> CommonVL;
     bool CanReduceVL = true;
     for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
@@ -1461,7 +1464,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
         continue;
       }
 
-      if (!safeToPropgateVL(UserMI)) {
+      if (mayReadPastVL(UserMI)) {
         LLVM_DEBUG(dbgs() << "    Abort due to used by unsafe instruction\n");
         CanReduceVL = false;
         break;
