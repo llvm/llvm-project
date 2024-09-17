@@ -306,6 +306,11 @@ BBIterator &BBIterator::operator--() {
   return *this;
 }
 
+BasicBlock *BBIterator::getNodeParent() const {
+  llvm::BasicBlock *Parent = const_cast<BBIterator *>(this)->It.getNodeParent();
+  return cast<BasicBlock>(Ctx->getValue(Parent));
+}
+
 const char *Instruction::getOpcodeName(Opcode Opc) {
   switch (Opc) {
 #define OP(OPC)                                                                \
