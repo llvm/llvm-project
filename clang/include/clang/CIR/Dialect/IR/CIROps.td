@@ -3897,6 +3897,86 @@ def FModOp : BinaryFPToFPBuiltinOp<"fmod", "FRemOp">;
 def PowOp : BinaryFPToFPBuiltinOp<"pow", "PowOp">;
 
 //===----------------------------------------------------------------------===//
+// Assume Operations
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CIR_Op<"assume"> {
+  let summary = "Tell the optimizer that a boolean value is true";
+  let description = [{
+    The `cir.assume` operation takes a single boolean prediate as its only
+    argument and does not have any results. The operation tells the optimizer
+    that the predicate's value is true.
+
+    This operation corresponds to the `__assume` and the `__builtin_assume`
+    builtin function.
+  }];
+
+  let arguments = (ins CIR_BoolType:$predicate);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+def AssumeAlignedOp
+    : CIR_Op<"assume.aligned", [Pure, AllTypesMatch<["pointer", "result"]>]> {
+  let summary = "Tell the optimizer that a pointer is aligned";
+  let description = [{
+    The `cir.assume.aligned` operation takes two or three arguments.
+
+    When the 3rd argument `offset` is absent, this operation tells the optimizer
+    that the pointer given by the `pointer` argument is aligned to the alignment
+    given by the `align` argument.
+
+    When the `offset` argument is given, it represents an offset from the
+    alignment. This operation then tells the optimizer that the pointer given by
+    the `pointer` argument is always misaligned by the alignment given by the
+    `align` argument by `offset` bytes, a.k.a. the pointer yielded by
+    `(char *)pointer - offset` is aligned to the specified alignment.
+
+    The `align` argument is a constant integer represented as an integer
+    attribute instead of an SSA value. It must be a positive integer.
+
+    The result of this operation has the same value as the `pointer` argument,
+    but the optimizer has additional knowledge about its alignment.
+
+    This operation corresponds to the `__builtin_assume_aligned` builtin
+    function.
+  }];
+
+  let arguments = (ins CIR_PointerType:$pointer,
+                       I64Attr:$alignment,
+                       Optional<CIR_IntType>:$offset);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $pointer `:` qualified(type($pointer))
+    `[` `alignment` $alignment (`,` `offset` $offset^ `:` type($offset))? `]`
+    attr-dict
+  }];
+}
+
+def AssumeSepStorageOp : CIR_Op<"assume.separate_storage", [SameTypeOperands]> {
+  let summary =
+      "Tell the optimizer that two pointers point to different allocations";
+  let description = [{
+    The `cir.assume.separate_storage` operation takes two pointers as arguments,
+    and the operation tells the optimizer that these two pointers point to
+    different allocations.
+
+    This operation corresponds to the `__builtin_assume_separate_storage`
+    builtin function.
+  }];
+
+  let arguments = (ins VoidPtr:$ptr1, VoidPtr:$ptr2);
+
+  let assemblyFormat = [{
+    $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//
 
