@@ -294,29 +294,26 @@ public:
     return mlir::ArrayAttr::get(caseAttrList.getContext(), symbolList);
   }
 
-  mlir::Block *
-  buildCatchers(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
-                mlir::Block *afterBody, mlir::Block *afterTry,
-                SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite) const {
-    auto loc = tryOp.getLoc();
-    // Replace the tryOp return with a branch that jumps out of the body.
-    rewriter.setInsertionPointToEnd(afterBody);
-    auto tryBodyYield = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+  struct LandingInfo {
+    mlir::Block *pad = nullptr;
+    mlir::Block *dispatch = nullptr;
+  };
 
-    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
-    auto *catchBegin =
+  LandingInfo
+  buildLandingPad(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                  mlir::Block *beforeCatch,
+                  SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
+                  mlir::ArrayAttr &caseAttrList) const {
+
+    auto *landingPadBlock =
         rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
-    rewriter.setInsertionPointToEnd(beforeCatch);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, afterTry);
-
-    // Start the landing pad by getting the inflight exception information.
-    rewriter.setInsertionPointToEnd(catchBegin);
+    rewriter.setInsertionPointToEnd(landingPadBlock);
     auto exceptionPtrType = mlir::cir::PointerType::get(
         mlir::cir::VoidType::get(rewriter.getContext()));
     auto typeIdType = mlir::cir::IntType::get(getContext(), 32, false);
     mlir::ArrayAttr symlist = collectTypeSymbols(tryOp);
     auto inflightEh = rewriter.create<mlir::cir::EhInflightOp>(
-        loc, exceptionPtrType, typeIdType,
+        tryOp.getLoc(), exceptionPtrType, typeIdType,
         tryOp.getCleanup() ? mlir::UnitAttr::get(tryOp.getContext()) : nullptr,
         symlist);
     auto selector = inflightEh.getTypeId();
@@ -336,85 +333,125 @@ public:
       auto cleanupYield =
           cast<mlir::cir::YieldOp>(cleanupBlock->getTerminator());
       cleanupYield->erase();
-      rewriter.mergeBlocks(cleanupBlock, catchBegin);
-      rewriter.setInsertionPointToEnd(catchBegin);
+      rewriter.mergeBlocks(cleanupBlock, landingPadBlock);
+      rewriter.setInsertionPointToEnd(landingPadBlock);
     }
 
     // Handle dispatch. In could in theory use a switch, but let's just
     // mimic LLVM more closely since we have no specific thing to achieve
     // doing that (might not play as well with existing optimizers either).
     auto *nextDispatcher =
-        rewriter.splitBlock(catchBegin, rewriter.getInsertionPoint());
-    rewriter.setInsertionPointToEnd(catchBegin);
-    mlir::ArrayAttr caseAttrList = tryOp.getCatchTypesAttr();
-    nextDispatcher->addArgument(exceptionPtr.getType(), loc);
+        rewriter.splitBlock(landingPadBlock, rewriter.getInsertionPoint());
+    rewriter.setInsertionPointToEnd(landingPadBlock);
+    caseAttrList = tryOp.getCatchTypesAttr();
+    nextDispatcher->addArgument(exceptionPtr.getType(), tryOp.getLoc());
     SmallVector<mlir::Value> dispatcherInitOps = {exceptionPtr};
     bool tryOnlyHasCatchAll = caseAttrList.size() == 1 &&
                               isa<mlir::cir::CatchAllAttr>(caseAttrList[0]);
     if (!tryOnlyHasCatchAll) {
-      nextDispatcher->addArgument(selector.getType(), loc);
+      nextDispatcher->addArgument(selector.getType(), tryOp.getLoc());
       dispatcherInitOps.push_back(selector);
     }
-    rewriter.create<mlir::cir::BrOp>(loc, nextDispatcher, dispatcherInitOps);
+    rewriter.create<mlir::cir::BrOp>(tryOp.getLoc(), nextDispatcher,
+                                     dispatcherInitOps);
+    return LandingInfo{landingPadBlock, nextDispatcher};
+  }
 
-    // Fill in dispatcher.
-    rewriter.setInsertionPointToEnd(nextDispatcher);
-    llvm::MutableArrayRef<mlir::Region> caseRegions = tryOp.getCatchRegions();
-    unsigned caseCnt = 0;
+  mlir::Block *buildCatch(mlir::cir::TryOp tryOp,
+                          mlir::PatternRewriter &rewriter,
+                          mlir::Block *afterTry, mlir::Block *dispatcher,
+                          SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
+                          mlir::Attribute catchAttr,
+                          mlir::Attribute nextCatchAttr,
+                          mlir::Region &catchRegion) const {
+    mlir::Location loc = tryOp.getLoc();
+    mlir::Block *nextDispatcher = nullptr;
+    if (auto typeIdGlobal = dyn_cast<mlir::cir::GlobalViewAttr>(catchAttr)) {
+      auto *previousDispatcher = dispatcher;
+      auto typeId =
+          rewriter.create<mlir::cir::EhTypeIdOp>(loc, typeIdGlobal.getSymbol());
+      auto ehPtr = previousDispatcher->getArgument(0);
+      auto ehSel = previousDispatcher->getArgument(1);
 
-    for (mlir::Attribute caseAttr : caseAttrList) {
-      if (auto typeIdGlobal = dyn_cast<mlir::cir::GlobalViewAttr>(caseAttr)) {
-        auto *previousDispatcher = nextDispatcher;
-        auto typeId = rewriter.create<mlir::cir::EhTypeIdOp>(
-            loc, typeIdGlobal.getSymbol());
-        auto ehPtr = previousDispatcher->getArgument(0);
-        auto ehSel = previousDispatcher->getArgument(1);
+      auto match = rewriter.create<mlir::cir::CmpOp>(
+          loc, mlir::cir::BoolType::get(rewriter.getContext()),
+          mlir::cir::CmpOpKind::eq, ehSel, typeId);
 
-        auto match = rewriter.create<mlir::cir::CmpOp>(
-            loc, mlir::cir::BoolType::get(rewriter.getContext()),
-            mlir::cir::CmpOpKind::eq, ehSel, typeId);
+      mlir::Block *typeCatchBlock =
+          buildTypeCase(rewriter, catchRegion, afterTry, ehPtr.getType());
+      nextDispatcher = rewriter.createBlock(afterTry);
+      rewriter.setInsertionPointToEnd(previousDispatcher);
 
-        mlir::Block *typeCatchBlock = buildTypeCase(
-            rewriter, caseRegions[caseCnt], afterTry, ehPtr.getType());
-        nextDispatcher = rewriter.createBlock(afterTry);
-        rewriter.setInsertionPointToEnd(previousDispatcher);
-
-        // Next dispatcher gets by default both exception ptr and selector info,
-        // but on a catch all we don't need selector info.
-        nextDispatcher->addArgument(ehPtr.getType(), loc);
-        SmallVector<mlir::Value> nextDispatchOps = {ehPtr};
-        if (!isa<mlir::cir::CatchAllAttr>(caseAttrList[caseCnt + 1])) {
-          nextDispatcher->addArgument(ehSel.getType(), loc);
-          nextDispatchOps.push_back(ehSel);
-        }
-
-        rewriter.create<mlir::cir::BrCondOp>(
-            loc, match, typeCatchBlock, nextDispatcher, mlir::ValueRange{ehPtr},
-            nextDispatchOps);
-        rewriter.setInsertionPointToEnd(nextDispatcher);
-      } else if (auto catchAll = dyn_cast<mlir::cir::CatchAllAttr>(caseAttr)) {
-        // In case the catch(...) is all we got, `nextDispatcher` shall be
-        // non-empty.
-        assert(nextDispatcher->getArguments().size() == 1 &&
-               "expected one block argument");
-        auto ehPtr = nextDispatcher->getArgument(0);
-        buildAllCase(rewriter, caseRegions[caseCnt], afterTry, nextDispatcher,
-                     ehPtr);
-        nextDispatcher = nullptr; // No more business in try/catch
-      } else if (auto catchUnwind =
-                     dyn_cast<mlir::cir::CatchUnwindAttr>(caseAttr)) {
-        // assert(nextDispatcher->empty() && "expect empty dispatcher");
-        // assert(!nextDispatcher->args_empty() && "expected block argument");
-        assert(nextDispatcher->getArguments().size() == 2 &&
-               "expected two block argument");
-        buildUnwindCase(rewriter, caseRegions[caseCnt], nextDispatcher);
-        nextDispatcher = nullptr; // No more business in try/catch
+      // Next dispatcher gets by default both exception ptr and selector info,
+      // but on a catch all we don't need selector info.
+      nextDispatcher->addArgument(ehPtr.getType(), loc);
+      SmallVector<mlir::Value> nextDispatchOps = {ehPtr};
+      if (!isa<mlir::cir::CatchAllAttr>(nextCatchAttr)) {
+        nextDispatcher->addArgument(ehSel.getType(), loc);
+        nextDispatchOps.push_back(ehSel);
       }
-      caseCnt++;
+
+      rewriter.create<mlir::cir::BrCondOp>(
+          loc, match, typeCatchBlock, nextDispatcher, mlir::ValueRange{ehPtr},
+          nextDispatchOps);
+      rewriter.setInsertionPointToEnd(nextDispatcher);
+    } else if (auto catchAll = dyn_cast<mlir::cir::CatchAllAttr>(catchAttr)) {
+      // In case the catch(...) is all we got, `dispatcher` shall be
+      // non-empty.
+      assert(dispatcher->getArguments().size() == 1 &&
+             "expected one block argument");
+      auto ehPtr = dispatcher->getArgument(0);
+      buildAllCase(rewriter, catchRegion, afterTry, dispatcher, ehPtr);
+      // Do not update `nextDispatcher`, no more business in try/catch
+    } else if (auto catchUnwind =
+                   dyn_cast<mlir::cir::CatchUnwindAttr>(catchAttr)) {
+      // assert(dispatcher->empty() && "expect empty dispatcher");
+      // assert(!dispatcher->args_empty() && "expected block argument");
+      assert(dispatcher->getArguments().size() == 2 &&
+             "expected two block argument");
+      buildUnwindCase(rewriter, catchRegion, dispatcher);
+      // Do not update `nextDispatcher`, no more business in try/catch
+    }
+    return nextDispatcher;
+  }
+
+  mlir::Block *
+  buildCatchers(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                mlir::Block *afterBody, mlir::Block *afterTry,
+                SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite) const {
+    // Replace the tryOp return with a branch that jumps out of the body.
+    rewriter.setInsertionPointToEnd(afterBody);
+    auto tryBodyYield = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+
+    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
+    rewriter.setInsertionPointToEnd(beforeCatch);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, afterTry);
+
+    // Start the landing pad by getting the inflight exception information.
+    mlir::ArrayAttr catchAttrList;
+    LandingInfo landingInfo = buildLandingPad(tryOp, rewriter, beforeCatch,
+                                              callsToRewrite, catchAttrList);
+    mlir::Block *landingPadBlock = landingInfo.pad;
+    mlir::Block *nextDispatcher = landingInfo.dispatch;
+
+    // Fill in dispatcher to all catch clauses.
+    rewriter.setInsertionPointToEnd(nextDispatcher);
+    llvm::MutableArrayRef<mlir::Region> catchRegions = tryOp.getCatchRegions();
+    unsigned catchIdx = 0;
+
+    // Build control-flow for all catch clauses.
+    for (mlir::Attribute catchAttr : catchAttrList) {
+      mlir::Attribute nextCatchAttr;
+      if (catchIdx + 1 < catchAttrList.size())
+        nextCatchAttr = catchAttrList[catchIdx + 1];
+      nextDispatcher =
+          buildCatch(tryOp, rewriter, afterTry, nextDispatcher, callsToRewrite,
+                     catchAttr, nextCatchAttr, catchRegions[catchIdx]);
+      catchIdx++;
     }
 
-    assert(!nextDispatcher && "no dispatcher available anymore");
-    return catchBegin;
+    assert(!nextDispatcher && "last dispatch expected to be nullptr");
+    return landingPadBlock;
   }
 
   mlir::Block *buildTryBody(mlir::cir::TryOp tryOp,
