@@ -1521,6 +1521,75 @@ define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
   checkCmpInst(Ctx, ICmp);
 }
 
+TEST_F(TrackerTest, GlobalValueSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto *Call = cast<sandboxir::CallInst>(&*BB->begin());
+
+  auto *GV = cast<sandboxir::GlobalValue>(Call->getCalledOperand());
+  // Check setUnnamedAddr().
+  auto OrigUnnamedAddr = GV->getUnnamedAddr();
+  auto NewUnnamedAddr = sandboxir::GlobalValue::UnnamedAddr::Global;
+  EXPECT_NE(NewUnnamedAddr, OrigUnnamedAddr);
+  Ctx.save();
+  GV->setUnnamedAddr(NewUnnamedAddr);
+  EXPECT_EQ(GV->getUnnamedAddr(), NewUnnamedAddr);
+  Ctx.revert();
+  EXPECT_EQ(GV->getUnnamedAddr(), OrigUnnamedAddr);
+
+  // Check setVisibility().
+  auto OrigVisibility = GV->getVisibility();
+  auto NewVisibility =
+      sandboxir::GlobalValue::VisibilityTypes::ProtectedVisibility;
+  EXPECT_NE(NewVisibility, OrigVisibility);
+  Ctx.save();
+  GV->setVisibility(NewVisibility);
+  EXPECT_EQ(GV->getVisibility(), NewVisibility);
+  Ctx.revert();
+  EXPECT_EQ(GV->getVisibility(), OrigVisibility);
+}
+
+TEST_F(TrackerTest, GlobalIFuncSetters) {
+  parseIR(C, R"IR(
+declare external void @bar()
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  call void @ifunc()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *IFunc = cast<sandboxir::GlobalIFunc>(Call0->getCalledOperand());
+  auto *Bar = cast<sandboxir::Function>(Call1->getCalledOperand());
+  // Check setResolver().
+  auto *OrigResolver = IFunc->getResolver();
+  auto *NewResolver = Bar;
+  EXPECT_NE(NewResolver, OrigResolver);
+  Ctx.save();
+  IFunc->setResolver(NewResolver);
+  EXPECT_EQ(IFunc->getResolver(), NewResolver);
+  Ctx.revert();
+  EXPECT_EQ(IFunc->getResolver(), OrigResolver);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {

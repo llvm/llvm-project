@@ -2451,7 +2451,7 @@ static void collectMapDataFromMapOperands(
         mapData.Names.push_back(LLVM::createMappingInformation(
             mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
         mapData.DevicePointers.push_back(devInfoTy);
-        mapData.IsAMapping.push_back(true);
+        mapData.IsAMapping.push_back(false);
         mapData.IsAMember.push_back(checkIsAMember(useDevOperands, mapOp));
       }
     }

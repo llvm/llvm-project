@@ -635,7 +635,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
 void
 InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
                                      DenseMap<SDValue, Register> &VRBaseMap) {
-  unsigned VReg = getVR(Node->getOperand(0), VRBaseMap);
+  Register VReg = getVR(Node->getOperand(0), VRBaseMap);
 
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
@@ -678,7 +678,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
       // insert copies for them in TwoAddressInstructionPass anyway.
       if (!R || !R->getReg().isPhysical()) {
         unsigned SubIdx = Op->getAsZExtVal();
-        unsigned SubReg = getVR(Node->getOperand(i-1), VRBaseMap);
+        Register SubReg = getVR(Node->getOperand(i - 1), VRBaseMap);
         const TargetRegisterClass *TRC = MRI->getRegClass(SubReg);
         const TargetRegisterClass *SRC =
         TRI->getMatchingSuperRegClass(RC, TRC, SubIdx);
@@ -1274,7 +1274,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     break;
   }
   case ISD::CopyFromReg: {
-    unsigned SrcReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+    Register SrcReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
     EmitCopyFromReg(Node, 0, IsClone, SrcReg, VRBaseMap);
     break;
   }
@@ -1343,7 +1343,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     SmallVector<unsigned, 8> GroupIdx;
 
     // Remember registers that are part of early-clobber defs.
-    SmallVector<unsigned, 8> ECRegs;
+    SmallVector<Register, 8> ECRegs;
 
     // Add all of the operand registers to the instruction.
     for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
@@ -1424,7 +1424,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // used), but this does not match the semantics of our early-clobber flag.
     // If an early-clobber operand register is also an input operand register,
     // then remove the early-clobber flag.
-    for (unsigned Reg : ECRegs) {
+    for (Register Reg : ECRegs) {
       if (MIB->readsRegister(Reg, TRI)) {
         MachineOperand *MO =
             MIB->findRegisterDefOperand(Reg, TRI, false, false);

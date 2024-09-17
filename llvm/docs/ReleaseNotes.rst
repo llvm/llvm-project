@@ -123,6 +123,7 @@ Changes to the RISC-V Backend
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 * Added ``Smctr`` and ``Ssctr`` extensions.
+* ``-mcpu=syntacore-scr7`` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

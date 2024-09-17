@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -275,7 +276,7 @@ static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
   }
   if (numDisplayedRefs < numRefs)
     os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(os.str(), ctx.config.forceUnresolved);
+  errorOrWarn(out, ctx.config.forceUnresolved);
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -562,6 +563,9 @@ void SymbolTable::addExitThunk(Symbol *from, Symbol *to) {
 }
 
 void SymbolTable::initializeECThunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
   for (auto it : entryThunks) {
     auto *to = dyn_cast<Defined>(it.second);
     if (!to)
@@ -584,9 +588,22 @@ void SymbolTable::initializeECThunks() {
 
     Symbol *sym = exitThunks.lookup(file->thunkSym);
     if (!sym)
-      sym = exitThunks.lookup(file->impSym);
+      sym = exitThunks.lookup(file->impECSym);
     file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
+
+  // On ARM64EC, the __imp_ symbol references the auxiliary IAT, while the
+  // __imp_aux_ symbol references the regular IAT. However, x86_64 code expects
+  // both to reference the regular IAT, so adjust the symbol if necessary.
+  parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+    if (file->getMachineType() != AMD64)
+      return;
+    for (auto &sym : file->getMutableSymbols()) {
+      auto impSym = dyn_cast_or_null<DefinedImportData>(sym);
+      if (impSym && impSym->file->impchkThunk && sym == impSym->file->impECSym)
+        sym = impSym->file->impSym;
+    }
+  });
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
@@ -667,7 +684,7 @@ static std::string getSourceLocationObj(ObjFile *file, SectionChunk *sc,
   if (fileLine)
     os << fileLine->first << ":" << fileLine->second << "\n>>>            ";
   os << toString(file);
-  return os.str();
+  return res;
 }
 
 static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
@@ -706,9 +723,9 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                           existing->getName());
 
   if (ctx.config.forceMultiple)
-    warn(os.str());
+    warn(msg);
   else
-    error(os.str());
+    error(msg);
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
@@ -785,11 +802,12 @@ Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
   return s;
 }
 
-DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f) {
+DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
+                                              Chunk *&location) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
-    replaceSymbol<DefinedImportData>(s, n, f);
+    replaceSymbol<DefinedImportData>(s, n, f, location);
     return cast<DefinedImportData>(s);
   }
 

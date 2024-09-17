@@ -544,12 +544,12 @@ static const uint8_t importThunkARM64[] = {
     0x00, 0x02, 0x1f, 0xd6, // br   x16
 };
 
-static const uint32_t importThunkARM64EC[] = {
-    0x9000000b, // adrp    x11, 0x0
-    0xf940016b, // ldr     x11, [x11]
-    0x9000000a, // adrp    x10, 0x0
-    0x9100014a, // add     x10, x10, #0x0
-    0x14000000  // b       0x0
+static const uint8_t importThunkARM64EC[] = {
+    0x0b, 0x00, 0x00, 0x90, // adrp x11, 0x0
+    0x6b, 0x01, 0x40, 0xf9, // ldr  x11, [x11]
+    0x0a, 0x00, 0x00, 0x90, // adrp x10, 0x0
+    0x4a, 0x01, 0x00, 0x91, // add  x10, x10, #0x0
+    0x00, 0x00, 0x00, 0x14  // b    0x0
 };
 
 // Windows-specific.
@@ -557,9 +557,12 @@ static const uint32_t importThunkARM64EC[] = {
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunk : public NonSectionCodeChunk {
 public:
-  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s);
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
+
+  // We track the usage of the thunk symbol separately from the import file
+  // to avoid generating unnecessary thunks.
+  bool live;
 
 protected:
   Defined *impSymbol;
@@ -598,13 +601,17 @@ public:
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s)
-      : ImportThunkChunk(ctx, s) {
+  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s,
+                                 MachineTypes machine)
+      : ImportThunkChunk(ctx, s), machine(machine) {
     setAlignment(4);
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
-  MachineTypes getMachine() const override { return ARM64; }
+  MachineTypes getMachine() const override { return machine; }
+
+private:
+  MachineTypes machine;
 };
 
 // ARM64EC __impchk_* thunk implementation.

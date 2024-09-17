@@ -3698,7 +3698,6 @@ GDBRemoteCommunicationClient::SendTraceStop(const TraceStopRequest &request,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(request);
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -3768,7 +3767,6 @@ GDBRemoteCommunicationClient::SendTraceGetState(llvm::StringRef type,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(TraceGetStateRequest{type.str()});
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -3802,7 +3800,6 @@ GDBRemoteCommunicationClient::SendTraceGetBinaryData(
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(request);
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -4075,7 +4072,7 @@ GDBRemoteCommunicationClient::ReadExtFeature(llvm::StringRef object,
     }
   }
 
-  return output_stream.str();
+  return output;
 }
 
 // Notify the target that gdb is prepared to serve symbol lookup requests.
