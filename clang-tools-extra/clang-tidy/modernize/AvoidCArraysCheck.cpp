@@ -93,7 +93,6 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   } else {
     RecommendTypes.push_back("std::array<>");
   }
-  llvm::errs() << llvm::join(RecommendTypes, " or ") << "\n";
   diag(ArrayType->getBeginLoc(),
        "do not declare %select{C-style|C VLA}0 arrays, use %1 instead")
       << IsVLA << llvm::join(RecommendTypes, " or ");
