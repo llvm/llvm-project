@@ -10,28 +10,28 @@ test_annotation:
   .functype   test_annotation () -> ()
   .tagtype  __cpp_exception i32
   try
-  br        0
+    br        0
   catch     __cpp_exception
-  block
-  br_if     0
-  loop
-  br_if     1
-  end_loop
-  end_block
-  try
-  rethrow   0
-  catch     __cpp_exception
-  catch_all
-  block
-  try
-  br        0
-  try
-  delegate  1
-  catch_all
-  end_try
-  end_block
-  rethrow   0
-  end_try
+    block
+      br_if     0
+      loop
+        br_if     1
+      end_loop
+    end_block
+    try
+      rethrow   0
+    catch     __cpp_exception
+    catch_all
+      block
+        try
+          br        0
+          try
+          delegate  1
+        catch_all
+        end_try
+      end_block
+      rethrow   0
+    end_try
   end_try
   end_function
 

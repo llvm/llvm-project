@@ -470,8 +470,20 @@ protected:
 private:
   using EdgeIter = typename std::vector<std::shared_ptr<ContextEdge>>::iterator;
 
-  using CallContextInfo = std::tuple<CallTy, std::vector<uint64_t>,
-                                     const FuncTy *, DenseSet<uint32_t>>;
+  // Structure to keep track of information for each call as we are matching
+  // non-allocation callsites onto context nodes created from the allocation
+  // call metadata / summary contexts.
+  struct CallContextInfo {
+    // The callsite we're trying to match.
+    CallTy Call;
+    // The callsites stack ids that have a context node in the graph.
+    std::vector<uint64_t> StackIds;
+    // The function containing this callsite.
+    const FuncTy *Func;
+    // Initially empty, if needed this will be updated to contain the context
+    // ids for use in a new context node created for this callsite.
+    DenseSet<uint32_t> ContextIds;
+  };
 
   /// Assigns the given Node to calls at or inlined into the location with
   /// the Node's stack id, after post order traversing and processing its
@@ -1458,7 +1470,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
     if (Calls.size() == 1) {
-      auto &Ids = std::get<1>(Calls[0]);
+      auto &Ids = Calls[0].StackIds;
       if (Ids.size() == 1)
         continue;
     }
@@ -1470,10 +1482,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // context pruning).
     std::stable_sort(Calls.begin(), Calls.end(),
                      [](const CallContextInfo &A, const CallContextInfo &B) {
-                       auto &IdsA = std::get<1>(A);
-                       auto &IdsB = std::get<1>(B);
-                       return IdsA.size() > IdsB.size() ||
-                              (IdsA.size() == IdsB.size() && IdsA < IdsB);
+                       return A.StackIds.size() > B.StackIds.size() ||
+                              (A.StackIds.size() == B.StackIds.size() &&
+                               A.StackIds < B.StackIds);
                      });
 
     // Find the node for the last stack id, which should be the same
@@ -1586,7 +1597,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // of tuples is sorted by the stack ids we can just look at the next one).
       bool DuplicateContextIds = false;
       if (I + 1 < Calls.size()) {
-        auto NextIds = std::get<1>(Calls[I + 1]);
+        auto &CallCtxInfo = Calls[I + 1];
+        auto &NextIds = CallCtxInfo.StackIds;
         DuplicateContextIds = Ids == NextIds;
       }
 

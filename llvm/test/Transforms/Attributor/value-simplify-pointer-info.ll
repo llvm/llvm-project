@@ -3185,10 +3185,7 @@ define i32 @may_access_after_return(i32 noundef %N, i32 noundef %M) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @write_both(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR18]]
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
-; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT-NEXT:    ret i32 8
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@may_access_after_return
@@ -3304,10 +3301,7 @@ define i32 @may_access_after_return_no_choice1(i32 noundef %N, i32 noundef %M) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @write_both(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR18]]
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
-; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT-NEXT:    ret i32 8
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@may_access_after_return_no_choice1
@@ -3342,10 +3336,7 @@ define i32 @may_access_after_return_no_choice2(i32 noundef %N, i32 noundef %M) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    call void @write_both(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR18]]
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
-; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT-NEXT:    ret i32 8
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@may_access_after_return_no_choice2

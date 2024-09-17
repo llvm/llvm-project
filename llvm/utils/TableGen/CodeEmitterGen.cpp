@@ -403,7 +403,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
       << HWM.getModeName(HwMode, /*IncludeDefault=*/true) << "[] = {\n";
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
-    Record *R = CGI->TheDef;
+    const Record *R = CGI->TheDef;
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo")) {
@@ -485,7 +485,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     std::set<unsigned> HwModes;
     BitWidth = 0;
     for (const CodeGenInstruction *CGI : NumberedInstructions) {
-      Record *R = CGI->TheDef;
+      const Record *R = CGI->TheDef;
       if (R->getValueAsString("Namespace") == "TargetOpcode" ||
           R->getValueAsBit("isPseudo"))
         continue;
