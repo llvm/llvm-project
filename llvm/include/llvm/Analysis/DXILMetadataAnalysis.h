@@ -23,7 +23,7 @@ namespace dxil {
 struct EntryProperties {
   const Function *Entry{nullptr};
   // Specific target shader stage may be specified for entry functions
-  Triple::EnvironmentType ShaderStage = Triple::UnknownEnvironment;
+  Triple::EnvironmentType ShaderStage{Triple::UnknownEnvironment};
   unsigned NumThreadsX{0}; // X component
   unsigned NumThreadsY{0}; // Y component
   unsigned NumThreadsZ{0}; // Z component
@@ -34,7 +34,7 @@ struct EntryProperties {
 struct ModuleMetadataInfo {
   VersionTuple DXILVersion{};
   VersionTuple ShaderModelVersion{};
-  Triple::EnvironmentType ShaderProfile = Triple::UnknownEnvironment;
+  Triple::EnvironmentType ShaderProfile{Triple::UnknownEnvironment};
   VersionTuple ValidatorVersion{};
   SmallVector<EntryProperties> EntryPropertyVec{};
   void print(raw_ostream &OS) const;

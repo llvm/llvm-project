@@ -24,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -34,7 +35,7 @@ using namespace llvm::dxil;
 /// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
 class DiagnosticInfoModuleFormat : public DiagnosticInfo {
 private:
-  Twine Msg;
+  const Twine Msg;
   const Module &Mod;
 
 public:
@@ -44,12 +45,6 @@ public:
   DiagnosticInfoModuleFormat(const Module &M, const Twine &Msg,
                              DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_Unsupported;
-  }
-
-  const Twine &getMessage() const { return Msg; }
 
   void print(DiagnosticPrinter &DP) const override {
     std::string Str;
@@ -166,7 +161,7 @@ getTagValueAsMetadata(EntryPropsTag Tag, uint64_t Value, LLVMContext &Ctx) {
         ConstantInt::get(Type::getInt32Ty(Ctx), Value)));
     break;
   default:
-    assert(false && "NYI: Unhandled entry property tag");
+    llvm_unreachable("NYI: Unhandled entry property tag");
   }
   return MDVals;
 }
@@ -191,13 +186,12 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
     if (EP.ShaderStage == Triple::EnvironmentType::Compute) {
       MDVals.emplace_back(ConstantAsMetadata::get(
           ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsTag)));
-      std::vector<Metadata *> NumThreadVals;
-      NumThreadVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsX)));
-      NumThreadVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsY)));
-      NumThreadVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt32Ty(Ctx), EP.NumThreadsZ)));
+      Metadata *NumThreadVals[] = {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt32Ty(Ctx), EP.NumThreadsX)),
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt32Ty(Ctx), EP.NumThreadsY)),
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt32Ty(Ctx), EP.NumThreadsZ))};
       MDVals.emplace_back(MDNode::get(Ctx, NumThreadVals));
     }
   }
@@ -333,8 +327,8 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
         M.getContext().diagnose(DiagnosticInfoModuleFormat(
-            M, "Non-library shader: Stage of Shader entry different from "
-               "target profile"));
+            M, "Non-library shader: Stage of shader entry different from "
+               "shader target profile"));
       }
     }
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
