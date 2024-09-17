@@ -322,7 +322,12 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
 template <typename SubgroupOp>
 struct GPUSubgroupOpConversion final : ConvertOpToLLVMPattern<SubgroupOp> {
-  using ConvertOpToLLVMPattern<SubgroupOp>::ConvertOpToLLVMPattern;
+  Type indexTy;
+  // using ConvertOpToLLVMPattern<SubgroupOp>::ConvertOpToLLVMPattern;
+  GPUSubgroupOpConversion(Type indexTy, const LLVMTypeConverter &typeConverter,
+                          PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<SubgroupOp>(typeConverter, benefit),
+        indexTy(indexTy) {}
 
   LogicalResult
   matchAndRewrite(SubgroupOp op, typename SubgroupOp::Adaptor adaptor,
@@ -341,13 +346,21 @@ struct GPUSubgroupOpConversion final : ConvertOpToLLVMPattern<SubgroupOp> {
 
     Operation *moduleOp =
         op->template getParentWithTrait<OpTrait::SymbolTable>();
-    Type resultType = rewriter.getI32Type();
+    Type resultTy = rewriter.getI32Type();
     LLVM::LLVMFuncOp func =
-        lookupOrCreateSPIRVFn(moduleOp, funcName, {}, resultType,
+        lookupOrCreateSPIRVFn(moduleOp, funcName, {}, resultTy,
                               /*isMemNone=*/false, /*isConvergent=*/false);
 
     Location loc = op->getLoc();
     Value result = createSPIRVBuiltinCall(loc, rewriter, func, {}).getResult();
+
+    if (resultTy != indexTy) {
+      assert(indexTy.getIntOrFloatBitWidth() >
+                 resultTy.getIntOrFloatBitWidth() &&
+             "expected that index type would be >= i32");
+      result = rewriter.create<LLVM::ZExtOp>(loc, indexTy, result);
+    }
+
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -409,11 +422,12 @@ void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                LaunchConfigOpConversion<gpu::GridDimOp>,
                LaunchConfigOpConversion<gpu::BlockDimOp>,
                LaunchConfigOpConversion<gpu::ThreadIdOp>,
-               LaunchConfigOpConversion<gpu::GlobalIdOp>,
-               GPUSubgroupOpConversion<gpu::SubgroupIdOp>,
+               LaunchConfigOpConversion<gpu::GlobalIdOp>>(typeConverter);
+  patterns.add<GPUSubgroupOpConversion<gpu::SubgroupIdOp>,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,
-               GPUSubgroupOpConversion<gpu::SubgroupSizeOp>>(typeConverter);
+               GPUSubgroupOpConversion<gpu::SubgroupSizeOp>>(
+      typeConverter.getIndexType(), typeConverter);
   MLIRContext *context = &typeConverter.getContext();
   unsigned privateAddressSpace =
       gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace::Private);
