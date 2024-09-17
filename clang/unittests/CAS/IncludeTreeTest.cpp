@@ -313,13 +313,9 @@ TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
         llvm::Succeeded());
     Files.push_back({File->getRef(), I});
   }
-  std::optional<IncludeTree::FileList> FileList;
-  ASSERT_THAT_ERROR(
-      IncludeTree::FileList::create(*DB, Files, {}).moveInto(FileList),
-      llvm::Succeeded());
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> IncludeTreeFS;
   ASSERT_THAT_ERROR(
-      createIncludeTreeFileSystem(*DB, *FileList).moveInto(IncludeTreeFS),
+      createIncludeTreeFileSystem(*DB, Files).moveInto(IncludeTreeFS),
       llvm::Succeeded());
 
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
