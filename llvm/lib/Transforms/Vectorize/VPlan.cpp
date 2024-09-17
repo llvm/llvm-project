@@ -869,14 +869,23 @@ static VPIRBasicBlock *createVPIRBasicBlockFor(BasicBlock *BB) {
   return VPIRBB;
 }
 
-VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
+VPlanPtr VPlan::createInitialVPlan(Type *IdxTy, PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
   VPIRBasicBlock *Entry = createVPIRBasicBlockFor(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
-  Plan->TripCount =
-      vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+  {
+    const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
+    assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
+           "Invalid loop count");
+
+    ScalarEvolution &SE = *PSE.getSE();
+    const SCEV *TripCount =
+        SE.getTripCountFromExitCount(BackedgeTakenCount, IdxTy, TheLoop);
+    Plan->TripCount =
+        vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+  }
   // Create VPRegionBlock, with empty header and latch blocks, to be filled
   // during processing later.
   VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
@@ -916,12 +925,11 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
   // debugging. Eg. if the compare has got a line number inside the loop.
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp =
-      TailFolded
-          ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
-                IntegerType::getInt1Ty(TripCount->getType()->getContext())))
-          : Builder.createICmp(CmpInst::ICMP_EQ, Plan->getTripCount(),
-                               &Plan->getVectorTripCount(),
-                               ScalarLatchTerm->getDebugLoc(), "cmp.n");
+      TailFolded ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
+                       IntegerType::getInt1Ty(IdxTy->getContext())))
+                 : Builder.createICmp(CmpInst::ICMP_EQ, Plan->getTripCount(),
+                                      &Plan->getVectorTripCount(),
+                                      ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
   return Plan;

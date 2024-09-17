@@ -31,6 +31,10 @@ bool onlyFirstPartUsed(const VPValue *Def);
 VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                        ScalarEvolution &SE);
 
+/// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
+/// SCEV expression could be constructed.
+const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+
 /// Returns true if \p VPV is uniform after vectorization.
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
   // A value defined outside the vector region must be uniform after
@@ -50,11 +54,6 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
-
-/// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
-/// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
-
 } // end namespace llvm::vputils
 
 #endif
