@@ -63,7 +63,7 @@ class TargetInstrInfo;
   public:
     static char ID;
 
-    static constexpr int NO_STACK_SLOT = (1u << 30) - 1;
+    static constexpr int NO_STACK_SLOT = INT_MAX;
 
     VirtRegMap() : MachineFunctionPass(ID), Virt2StackSlotMap(NO_STACK_SLOT) {}
     VirtRegMap(const VirtRegMap &) = delete;
