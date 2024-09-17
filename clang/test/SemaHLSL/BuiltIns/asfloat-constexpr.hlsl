@@ -2,7 +2,7 @@
 
 // expected-no-diagnostics
 
-// Because asuint should be constant evaluated, all the static asserts below
+// Because asfloat should be constant evaluated, all the static asserts below
 // should work!
 void ConstExprTest() {
   static_assert(asfloat(0x3f800000) == 1.0f, "One");
