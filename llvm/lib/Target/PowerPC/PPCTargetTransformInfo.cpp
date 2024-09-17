@@ -808,9 +808,8 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32))
       return 1;
     // Use lfiwax/xxspltw
-    if (Opcode == Instruction::Load && MemBytes == 32)
-      if (AlignBytes < SrcBytes || Cost > 2)
-        return 2;
+    if (Opcode == Instruction::Load && MemBytes == 32 && AlignBytes < SrcBytes)
+      return 2;
   }
 
   // Aligned loads and stores are easy.
