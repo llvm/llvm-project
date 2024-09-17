@@ -1109,6 +1109,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_locations(self, locationReference):
+        args_dict = {
+            "locationReference": locationReference,
+        }
+        command_dict = {
+            "command": "locations",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_testGetTargetBreakpoints(self):
         """A request packet used in the LLDB test suite to get all currently
         set breakpoint infos for all breakpoints currently set in the
