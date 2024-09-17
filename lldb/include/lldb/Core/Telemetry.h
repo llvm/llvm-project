@@ -17,6 +17,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
@@ -258,7 +259,8 @@ public:
   virtual std::string GetNextUUID() = 0;
 
   // For client (eg., SB API) to send telemetry entries.
-  virtual void LogClientTelemetry(const llvm::json::Object &entry) = 0;
+  virtual void
+  LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) = 0;
 };
 
 // Logger configs: LLDB users can also supply their own configs via:

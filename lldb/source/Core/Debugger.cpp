@@ -2256,6 +2256,7 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   return *g_thread_pool;
 }
 
-void Debugger::SendClientTelemetry(const llvm::json::Object &entry) {
+void Debugger::SendClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
   m_telemeter->LogClientTelemetry(entry);
 }

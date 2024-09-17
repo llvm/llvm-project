@@ -972,9 +972,9 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
-void SBDebugger::SendTelemetry(const llvm::json::Object &entry) {
+void SBDebugger::SendTelemetry(const lldb::SBStructuredData &entry) {
   if (lldb_private::Debugger *debugger = this->get()) {
-    debugger->SendClientTelemetry(entry);
+    debugger->SendClientTelemetry(*(entry.m_impl_up.get()));
   } else {
     Log *log = GetLog(LLDBLog::API);
     LLDB_LOGF(log,

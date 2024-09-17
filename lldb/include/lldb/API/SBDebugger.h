@@ -14,7 +14,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBStructuredData.h"
-#include "llvm/Support/JSON.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -247,7 +246,7 @@ public:
 
   lldb::SBTarget GetDummyTarget();
 
-  void SendTelemetry(const llvm::json::Object &entry);
+  void SendTelemetry(const lldb::SBStructuredData &entry);
 
   // Return true if target is deleted from the target list of the debugger.
   bool DeleteTarget(lldb::SBTarget &target);

@@ -332,7 +332,8 @@ public:
                      Target *target_ptr, CommandReturnObject *result) override {
   }
 
-  void LogClientTelemetry(const llvm::json::Object &entry) override {}
+  void
+  LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) override {}
 
   void addDestination(llvm::telemetry::Destination *destination) override {}
   std::string GetNextUUID() override { return ""; }
@@ -360,7 +361,8 @@ public:
                      llvm::StringRef command_args, EventStats stats,
                      Target *target_ptr, CommandReturnObject *result) override;
 
-  void LogClientTelemetry(const llvm::json::Object &entry) override;
+  void
+  LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) override;
 
   void addDestination(Destination *destination) override {
     m_destinations.push_back(destination);
@@ -563,9 +565,11 @@ void BasicTelemeter::LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
   EmitToDestinations(&misc_info);
 }
 
-void BasicTelemeter::LogClientTelemetry(const llvm::json::Object &entry) {
+void BasicTelemeter::LogClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  // TODO: pull the dictionary out of entry
   ClientTelemetryInfo client_info = MakeBaseEntry<ClientTelemetryInfo>();
-
+  /*
   std::optional<llvm::StringRef> request_name = entry.getString("request_name");
   if (!request_name.has_value()) {
     MiscTelemetryInfo misc_info = MakeBaseEntry<MiscTelemetryInfo>();
@@ -597,6 +601,7 @@ void BasicTelemeter::LogClientTelemetry(const llvm::json::Object &entry) {
   std::optional<llvm::StringRef> error_msg = entry.getString("error");
   if (error_msg.has_value())
     client_info.error_msg = error_msg->str();
+  */
 
   EmitToDestinations(&client_info);
 }

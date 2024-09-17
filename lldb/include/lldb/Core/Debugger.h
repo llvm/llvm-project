@@ -19,6 +19,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
@@ -47,7 +48,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Telemetry/Telemetry.h"
 
@@ -155,7 +155,7 @@ public:
 
   LldbTelemeter *GetTelemeter() { return m_telemeter.get(); }
 
-  void SendClientTelemetry(const llvm::json::Object &entry);
+  void SendClientTelemetry(const lldb_private::StructuredDataImpl &entry);
 
   Status SetInputString(const char *data);
 

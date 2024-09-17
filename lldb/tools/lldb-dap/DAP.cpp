@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "llvm/ADT/StringExtras.h"
@@ -687,15 +688,30 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
     auto handler_pos = request_handlers.find(std::string(command));
-    llvm::json::Object telemetry_entry;
-    telemetry_entry.insert({"request_name", std::string(command)});
-    telemetry_entry.insert(
-        {"start_time", start_time.time_since_epoch().count()});
+    lldb::SBStructuredData telemetry_entry;
+
+    // There does not seem to be a direct way to construct an SBStructuredData.
+    // So we first create a json::Array object,
+    // then we serialize it to a string,
+    // and finally call SBStructuredData::SetFromJSON(string).
+    //
+    // TODO: This seems unnecessarily complex. Ideally, we should be able to
+    // just send a json::Object directly? Does the SB API allow json?
+    //
+    llvm::json::Array telemetry_array({
+        {"request_name", std::string(command)},
+        {"start_time", start_time.time_since_epoch().count()},
+    });
 
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
       auto end_time = std::chrono::steady_clock::now();
-      telemetry_entry.insert({"end_time", end_time.time_since_epoch().count()});
+      telemetry_array.push_back(
+          llvm::json::Value{"end_time", end_time.time_since_epoch().count()});
+
+      llvm::json::Value val(std::move(telemetry_array));
+      std::string string_rep = lldb_dap::JSONToString(val);
+      telemetry_entry.SetFromJSON(string_rep.c_str());
       debugger.SendTelemetry(telemetry_entry);
       return true; // Success
     } else {
@@ -703,10 +719,14 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
         *log << "error: unhandled command \"" << command.data() << "\""
              << std::endl;
       auto end_time = std::chrono::steady_clock::now();
-      telemetry_entry.insert({"end_time", end_time.time_since_epoch().count()});
-      telemetry_entry.insert(
-          {"error", "unhandled-command:" + std::string(command)});
-      debugger.SendTelemetry(telemetry_entry);
+      telemetry_array.push_back(
+          llvm::json::Value{"end_time", end_time.time_since_epoch().count()});
+      telemetry_array.push_back(llvm::json::Value{
+          "error", llvm::Twine("unhandled-command:" + command).str()});
+
+      llvm::json::Value val(std::move(telemetry_array));
+      std::string string_rep = lldb_dap::JSONToString(val);
+      telemetry_entry.SetFromJSON(string_rep.c_str());
       debugger.SendTelemetry(telemetry_entry);
       return false; // Fail
     }
