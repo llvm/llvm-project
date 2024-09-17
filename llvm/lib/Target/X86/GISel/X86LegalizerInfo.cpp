@@ -514,8 +514,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(0, s32)(Query)) ||
                 (HasSSE2 && typeIs(0, s64)(Query))) &&
-               (scalarNarrowerThan(1, 32)(Query) ||
-                (Is64Bit && typeIs(1, s32)(Query)));
+               scalarNarrowerThan(1, Is64Bit ? 64 : 32)(Query);
       })
       .lowerIf([=](const LegalityQuery &Query) {
         // Lower conversions from s64
@@ -538,8 +537,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(1, s32)(Query)) ||
                 (HasSSE2 && typeIs(1, s64)(Query))) &&
-               (scalarNarrowerThan(0, 32)(Query) ||
-                (Is64Bit && typeIs(0, s32)(Query)));
+               scalarNarrowerThan(0, Is64Bit ? 64 : 32)(Query);
       })
       // TODO: replace with customized legalization using
       // specifics of cvttsd2si. The selection of this node requires
