@@ -391,6 +391,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. #GH63819, #GH107560
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
