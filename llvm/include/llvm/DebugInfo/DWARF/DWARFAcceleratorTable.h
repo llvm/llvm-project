@@ -447,7 +447,7 @@ public:
     std::optional<uint64_t> getForeignTUTypeSignature() const override;
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
-    // Special function that will return the related CU offset needed type 
+    // Special function that will return the related CU offset needed type
     // units. This gets used to find the .dwo file that originated the entries
     // for a given type unit.
     std::optional<uint64_t> getRelatedCUOffset() const;
@@ -803,7 +803,7 @@ public:
 
 private:
   SmallVector<NameIndex, 0> NameIndices;
-  DenseMap<uint64_t, const NameIndex *> CUToNameIndex;
+  DenseMap<uint64_t, const NameIndex *> UnitOffsetToNameIndex;
 
 public:
   DWARFDebugNames(const DWARFDataExtractor &AccelSection,
@@ -820,9 +820,9 @@ public:
   const_iterator begin() const { return NameIndices.begin(); }
   const_iterator end() const { return NameIndices.end(); }
 
-  /// Return the Name Index covering the compile unit at CUOffset, or nullptr if
-  /// there is no Name Index covering that unit.
-  const NameIndex *getCUNameIndex(uint64_t CUOffset);
+  /// Return the Name Index covering the compile unit or local type unit at
+  /// UnitOffset, or nullptr if there is no Name Index covering that unit.
+  const NameIndex *getCUOrTUNameIndex(uint64_t UnitOffset);
 };
 
 /// Calculates the starting offsets for various sections within the
