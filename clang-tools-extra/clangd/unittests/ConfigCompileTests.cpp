@@ -298,7 +298,7 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  clang::DiagnosticsEngine DiagEngine(nullptr, nullptr,
+  clang::DiagnosticsEngine DiagEngine(new DiagnosticIDs, nullptr,
                                       new clang::IgnoringDiagConsumer);
 
   using Diag = clang::Diagnostic;

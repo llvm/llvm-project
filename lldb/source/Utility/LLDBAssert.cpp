@@ -54,7 +54,7 @@ void lldb_assert(bool expression, const char *expr_text, const char *func,
       llvm::formatv("Assertion failed: ({0}), function {1}, file {2}, line {3}",
                     expr_text, func, file, line)
           .str(),
-      backtrace.str(),
+      buffer,
       "Please file a bug report against lldb reporting this failure log, and "
       "as many details as possible");
 }

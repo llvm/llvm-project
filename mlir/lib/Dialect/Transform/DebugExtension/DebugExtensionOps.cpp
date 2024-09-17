@@ -60,10 +60,10 @@ DiagnosedSilenceableFailure transform::DebugEmitParamAsRemarkOp::apply(
     os << *getMessage() << " ";
   llvm::interleaveComma(state.getParams(getParam()), os);
   if (!getAnchor()) {
-    emitRemark() << os.str();
+    emitRemark() << str;
     return DiagnosedSilenceableFailure::success();
   }
   for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
+    ::mlir::emitRemark(payload->getLoc()) << str;
   return DiagnosedSilenceableFailure::success();
 }
