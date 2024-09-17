@@ -87,9 +87,6 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-Improvements to clang-rename
-----------------------------
-
 The improvements are...
 
 Improvements to clang-tidy
