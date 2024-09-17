@@ -283,6 +283,22 @@ static uptr ThreadDescriptorSizeFallback() {
   return 0;
 #    endif
 
+#    if SANITIZER_RISCV64
+  int major;
+  int minor;
+  int patch;
+  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+    // TODO: consider adding an optional runtime check for an unknown (untested)
+    // glibc version
+    if (minor <= 28)  // WARNING: the highest tested version is 2.29
+      return 1772;    // no guarantees for this one
+    if (minor <= 31)
+      return 1772;  // tested against glibc 2.29, 2.31
+    return 1936;    // tested against glibc 2.32
+  }
+  return 0;
+#    endif
+
 #    if defined(__s390__) || defined(__sparc__)
   // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
   // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
@@ -299,22 +315,6 @@ static uptr ThreadDescriptorSizeFallback() {
 
 #    if SANITIZER_LOONGARCH64
   return 1856;  // from glibc 2.36
-#    endif
-
-#    if SANITIZER_RISCV64
-  int major;
-  int minor;
-  int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
-    // TODO: consider adding an optional runtime check for an unknown (untested)
-    // glibc version
-    if (minor <= 28)  // WARNING: the highest tested version is 2.29
-      return 1772;    // no guarantees for this one
-    if (minor <= 31)
-      return 1772;  // tested against glibc 2.29, 2.31
-    return 1936;    // tested against glibc 2.32
-  }
-  return 0;
 #    endif
 
 #    if defined(__aarch64__)
