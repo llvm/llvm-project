@@ -250,7 +250,6 @@ void InitTlsSize() {}
 static atomic_uintptr_t thread_descriptor_size;
 
 static uptr ThreadDescriptorSizeFallback() {
-  uptr val = 0;
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
   int major;
   int minor;
@@ -258,29 +257,30 @@ static uptr ThreadDescriptorSizeFallback() {
   if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
     /* sizeof(struct pthread) values from various glibc versions.  */
     if (SANITIZER_X32)
-      val = 1728;  // Assume only one particular version for x32.
+      return 1728;  // Assume only one particular version for x32.
     // For ARM sizeof(struct pthread) changed in Glibc 2.23.
     else if (SANITIZER_ARM)
-      val = minor <= 22 ? 1120 : 1216;
+      return minor <= 22 ? 1120 : 1216;
     else if (minor <= 3)
-      val = FIRST_32_SECOND_64(1104, 1696);
+      return FIRST_32_SECOND_64(1104, 1696);
     else if (minor == 4)
-      val = FIRST_32_SECOND_64(1120, 1728);
+      return FIRST_32_SECOND_64(1120, 1728);
     else if (minor == 5)
-      val = FIRST_32_SECOND_64(1136, 1728);
+      return FIRST_32_SECOND_64(1136, 1728);
     else if (minor <= 9)
-      val = FIRST_32_SECOND_64(1136, 1712);
+      return FIRST_32_SECOND_64(1136, 1712);
     else if (minor == 10)
-      val = FIRST_32_SECOND_64(1168, 1776);
+      return FIRST_32_SECOND_64(1168, 1776);
     else if (minor == 11 || (minor == 12 && patch == 1))
-      val = FIRST_32_SECOND_64(1168, 2288);
+      return FIRST_32_SECOND_64(1168, 2288);
     else if (minor <= 14)
-      val = FIRST_32_SECOND_64(1168, 2304);
+      return FIRST_32_SECOND_64(1168, 2304);
     else if (minor < 32)  // Unknown version
-      val = FIRST_32_SECOND_64(1216, 2304);
+      return FIRST_32_SECOND_64(1216, 2304);
     else  // minor == 32
-      val = FIRST_32_SECOND_64(1344, 2496);
+      return FIRST_32_SECOND_64(1344, 2496);
   }
+  return 0;
 #    elif defined(__s390__) || defined(__sparc__)
   // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
   // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
@@ -290,9 +290,9 @@ static uptr ThreadDescriptorSizeFallback() {
   return FIRST_32_SECOND_64(524, 1552);
 #    elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
-  val = FIRST_32_SECOND_64(1152, 1776);
+  return FIRST_32_SECOND_64(1152, 1776);
 #    elif SANITIZER_LOONGARCH64
-  val = 1856;  // from glibc 2.36
+  return 1856;  // from glibc 2.36
 #    elif SANITIZER_RISCV64
   int major;
   int minor;
@@ -301,20 +301,19 @@ static uptr ThreadDescriptorSizeFallback() {
     // TODO: consider adding an optional runtime check for an unknown (untested)
     // glibc version
     if (minor <= 28)  // WARNING: the highest tested version is 2.29
-      val = 1772;     // no guarantees for this one
+      return 1772;    // no guarantees for this one
     else if (minor <= 31)
-      val = 1772;  // tested against glibc 2.29, 2.31
+      return 1772;  // tested against glibc 2.29, 2.31
     else
-      val = 1936;  // tested against glibc 2.32
+      return 1936;  // tested against glibc 2.32
   }
-
+  return 0;
 #    elif defined(__aarch64__)
   // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
-  val = 1776;
+  return 1776;
 #    elif defined(__powerpc64__)
-  val = 1776;  // from glibc.ppc64le 2.20-8.fc21
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
-  return val;
 }
 
 uptr ThreadDescriptorSize() {
