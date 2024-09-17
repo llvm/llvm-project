@@ -1693,6 +1693,8 @@ public:
   /// \Returns the SBInstruction that corresponds to this iterator, or null if
   /// the instruction is not found in the IR-to-SandboxIR tables.
   pointer get() const { return getInstr(It); }
+  /// \Returns the parent BB.
+  BasicBlock *getNodeParent() const;
 };
 
 /// Contains a list of sandboxir::Instruction's.
