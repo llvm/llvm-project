@@ -2452,10 +2452,17 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       // but is not a load, then we quit. Notice that we don't handle function
       // calls that read or write.
       if (I.mayReadFromMemory()) {
-        // If the function has an explicit vectorized counterpart, we can safely
-        // assume that it can be vectorized.
+        auto hasPointerArgs = [](CallBase *CB) {
+          return llvm::any_of(CB->args(), [](Value const *Arg) {
+            return Arg->getType()->isPointerTy();
+          });
+        };
+
+        // If the function has an explicit vectorized counterpart, and does not
+        // take output/input pointers, we can safely assume that it can be
+        // vectorized.
         if (Call && !Call->isNoBuiltin() && Call->getCalledFunction() &&
-            !VFDatabase::getMappings(*Call).empty())
+            !hasPointerArgs(Call) && !VFDatabase::getMappings(*Call).empty())
           continue;
 
         auto *Ld = dyn_cast<LoadInst>(&I);

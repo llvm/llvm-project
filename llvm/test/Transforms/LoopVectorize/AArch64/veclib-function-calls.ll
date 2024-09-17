@@ -2902,35 +2902,36 @@ define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
+; FIXME: Re-enable modf[f] vectorization once aliasing issues due to output
+; pointers have been resolved.
+
 declare double @modf(double, ptr)
 declare float @modff(float, ptr)
 
 define void @modf_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @modf_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[TMP5:%.*]] = call <2 x double> @_ZGVnN2vl8_modf(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP4:%.*]])
+; SLEEF-NEON:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @modf_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
+; SLEEF-SVE:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @modf_f64
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    [[TMP17:%.*]] = call <vscale x 2 x double> @_ZGVsNxvl8_modf(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP16:%.*]])
-; SLEEF-SVE-NOPRED:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR64:[0-9]+]]
+; SLEEF-SVE-NOPRED:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @modf_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[TMP5:%.*]] = call <2 x double> @armpl_vmodfq_f64(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP4:%.*]])
+; ARMPL-NEON:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @modf_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[TMP23:%.*]] = call <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP22:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @modf_f64
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    [[TMP17:%.*]] = call <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP16:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR64:[0-9]+]]
+; ARMPL-SVE-NOPRED:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 entry:
   br label %for.body
@@ -2954,29 +2955,27 @@ for.cond.cleanup:
 define void @modf_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @modf_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[TMP5:%.*]] = call <4 x float> @_ZGVnN4vl4_modff(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP4:%.*]])
+; SLEEF-NEON:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @modf_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR5:[0-9]+]]
+; SLEEF-SVE:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @modf_f32
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    [[TMP17:%.*]] = call <vscale x 4 x float> @_ZGVsNxvl4_modff(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP16:%.*]])
-; SLEEF-SVE-NOPRED:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR65:[0-9]+]]
+; SLEEF-SVE-NOPRED:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @modf_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[TMP5:%.*]] = call <4 x float> @armpl_vmodfq_f32(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP4:%.*]])
+; ARMPL-NEON:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @modf_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[TMP23:%.*]] = call <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP22:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @modf_f32
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    [[TMP17:%.*]] = call <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP16:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]]) #[[ATTR65:[0-9]+]]
+; ARMPL-SVE-NOPRED:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
 ;
 entry:
   br label %for.body
@@ -3276,35 +3275,36 @@ define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
+; FIXME: Re-enable sincos[f] vectorization once aliasing issues with output
+; pointers have been resolved.
+
 declare void @sincos(double, ptr, ptr)
 declare void @sincosf(float, ptr, ptr)
 
 define void @sincos_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @sincos_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    call void @_ZGVnN2vl8l8_sincos(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; SLEEF-NEON:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sincos_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR6:[0-9]+]]
+; SLEEF-SVE:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @sincos_f64
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    call void @_ZGVsNxvl8l8_sincos(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]])
-; SLEEF-SVE-NOPRED:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR72:[0-9]+]]
+; SLEEF-SVE-NOPRED:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sincos_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    call void @armpl_vsincosq_f64(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; ARMPL-NEON:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sincos_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    call void @armpl_svsincos_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @sincos_f64
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    call void @armpl_svsincos_f64_x(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR72:[0-9]+]]
+; ARMPL-SVE-NOPRED:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -3327,29 +3327,27 @@ for.cond.cleanup:
 define void @sincos_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @sincos_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    call void @_ZGVnN4vl4l4_sincosf(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; SLEEF-NEON:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sincos_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR7:[0-9]+]]
+; SLEEF-SVE:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @sincos_f32
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    call void @_ZGVsNxvl4l4_sincosf(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]])
-; SLEEF-SVE-NOPRED:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR73:[0-9]+]]
+; SLEEF-SVE-NOPRED:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sincos_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    call void @armpl_vsincosq_f32(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; ARMPL-NEON:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sincos_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    call void @armpl_svsincos_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @sincos_f32
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    call void @armpl_svsincos_f32_x(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR73:[0-9]+]]
+; ARMPL-SVE-NOPRED:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -3369,35 +3367,36 @@ for.cond.cleanup:
   ret void
 }
 
+; FIXME: Re-enable sincospi[f] vectorization once aliasing issues with output
+; pointers have been resolved.
+
 declare void @sincospi(double, ptr, ptr)
 declare void @sincospif(float, ptr, ptr)
 
 define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @sincospi_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    call void @_ZGVnN2vl8l8_sincospi(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; SLEEF-NEON:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sincospi_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR8:[0-9]+]]
+; SLEEF-SVE:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @sincospi_f64
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    call void @_ZGVsNxvl8l8_sincospi(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]])
-; SLEEF-SVE-NOPRED:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR74:[0-9]+]]
+; SLEEF-SVE-NOPRED:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sincospi_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    call void @armpl_vsincospiq_f64(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; ARMPL-NEON:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sincospi_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    call void @armpl_svsincospi_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @sincospi_f64
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    call void @armpl_svsincospi_f64_x(<vscale x 2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR74:[0-9]+]]
+; ARMPL-SVE-NOPRED:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
@@ -3420,29 +3419,27 @@ for.cond.cleanup:
 define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; SLEEF-NEON-LABEL: define void @sincospi_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    call void @_ZGVnN4vl4l4_sincospif(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; SLEEF-NEON:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sincospi_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR9:[0-9]+]]
+; SLEEF-SVE:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; SLEEF-SVE-NOPRED-LABEL: define void @sincospi_f32
 ; SLEEF-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE-NOPRED:    call void @_ZGVsNxvl4l4_sincospif(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]])
-; SLEEF-SVE-NOPRED:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR75:[0-9]+]]
+; SLEEF-SVE-NOPRED:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sincospi_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    call void @armpl_vsincospiq_f32(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+; ARMPL-NEON:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sincospi_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    call void @armpl_svsincospi_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; ARMPL-SVE:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 ; ARMPL-SVE-NOPRED-LABEL: define void @sincospi_f32
 ; ARMPL-SVE-NOPRED-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE-NOPRED:    call void @armpl_svsincospi_f32_x(<vscale x 4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP17:%.*]], ptr [[TMP18:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
-; ARMPL-SVE-NOPRED:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]]) #[[ATTR75:[0-9]+]]
+; ARMPL-SVE-NOPRED:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
 ;
 entry:
   br label %for.body
