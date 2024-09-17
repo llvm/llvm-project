@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 
 int i;
 
@@ -8,7 +7,7 @@ __attribute__((constructor)) void call_me_first(void) {
 }
 
 __attribute__((constructor)) void then_call_me(void) {
-  i = 13;
+  i = 12;
 }
 
 __attribute__((destructor)) void call_me_last(void) {
@@ -22,21 +21,11 @@ void main(unsigned GI : SV_GroupIndex) {}
 // CHECK-NOT:@llvm.global_ctors
 // CHECK-NOT:@llvm.global_dtors
 
-// CHECK: define void @main()
-// CHECK-NEXT: entry:
-// Verify function constructors are emitted
-// NOINLINE-NEXT:   call void @"?call_me_first@@YAXXZ"()
-// NOINLINE-NEXT:   call void @"?then_call_me@@YAXXZ"()
-// NOINLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
-// NOINLINE-NEXT:   call void @"?call_me_last@@YAXXZ"(
-// NOINLINE-NEXT:   ret void
-
-// Verify constructor calls are inlined when AlwaysInline is run
-// INLINE-NEXT:   alloca
-// INLINE-NEXT:   store i32 12
-// INLINE-NEXT:   store i32 13
-// INLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// INLINE-NEXT:   store i32 %
-// INLINE-NEXT:   store i32 0
-// INLINE:   ret void
+//CHECK: define void @main()
+//CHECK-NEXT: entry:
+//CHECK-NEXT:   call void @"?call_me_first@@YAXXZ"()
+//CHECK-NEXT:   call void @"?then_call_me@@YAXXZ"()
+//CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
+//CHECK-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
+//CHECK-NEXT:   call void @"?call_me_last@@YAXXZ"(
+//CHECK-NEXT:   ret void
