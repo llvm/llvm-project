@@ -244,11 +244,11 @@ void InitTlsSize() {}
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
 // of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
 // to get the pointer to thread-specific data keys in the thread control block.
-#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
-      !SANITIZER_ANDROID && !SANITIZER_GO
+#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
+// FIXME: Implementation is very GLIBC specific, but it's used by FREEBSD.
 static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
   int major;
@@ -363,6 +363,10 @@ static uptr TlsPreTcbSize() {
 }
 #    endif
 
+#  endif
+
+#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
+      !SANITIZER_ANDROID && !SANITIZER_GO
 namespace {
 struct TlsBlock {
   uptr begin, end, align;
