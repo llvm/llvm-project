@@ -105,9 +105,8 @@ void MCResourceInfo::assignResourceInfoExpr(
     Seen.insert(&F);
 
     for (const Function *Callee : Callees) {
-      if (Seen.contains(Callee))
+      if (!Seen.insert(Callee).second)
         continue;
-      Seen.insert(Callee);
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
       ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }

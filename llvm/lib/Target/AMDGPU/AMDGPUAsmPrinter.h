@@ -50,11 +50,6 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
-  // validateMCResourceInfo cannot recompute parts of the occupancy as it does
-  // for other metadata to validate (e.g., NumSGPRs) so a map is necessary if we
-  // really want to track and validate the occupancy.
-  DenseMap<const Function *, const MCExpr *> OccupancyValidateMap;
-
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);

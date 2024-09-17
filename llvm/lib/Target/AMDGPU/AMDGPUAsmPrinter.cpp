@@ -437,12 +437,32 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       }
     }
 
-    auto I = OccupancyValidateMap.find(&F);
-    if (I != OccupancyValidateMap.end()) {
+    MCSymbol *NumVgprSymbol =
+        RI.getSymbol(F.getName(), RIK::RIK_NumVGPR, OutContext);
+    MCSymbol *NumAgprSymbol =
+        RI.getSymbol(F.getName(), RIK::RIK_NumAGPR, OutContext);
+    uint64_t NumVgpr, NumAgpr;
+
+    if (NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
+        TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
+        TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
+      SIMachineFunctionInfo MFI(F, &STM);
+      unsigned MaxWaves = MFI.getMaxWavesPerEU();
+      uint64_t TotalNumVgpr =
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+      uint64_t NumVGPRsForWavesPerEU = std::max(
+          {TotalNumVgpr, (uint64_t)1, (uint64_t)STM.getMinNumVGPRs(MaxWaves)});
+      uint64_t NumSGPRsForWavesPerEU = std::max(
+          {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
+      const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
+          STM.computeOccupancy(F, MFI.getLDSSize()),
+          MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
+          MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext), STM,
+          OutContext);
+      uint64_t Occupancy;
+
       const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
           F, "amdgpu-waves-per-eu", {0, 0}, true);
-      uint64_t Occupancy;
-      const MCExpr *OccupancyExpr = I->getSecond();
 
       if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
         DiagnosticInfoOptimizationFailure Diag(
@@ -473,9 +493,16 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // Assign expressions which can only be resolved when all other functions are
   // known.
   RI.finalize(OutContext);
+
+  // Switch section and emit all GPR maximums within the processed module.
+  OutStreamer->pushSection();
+  MCSectionELF *MaxGPRSection =
+      OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
+  OutStreamer->switchSection(MaxGPRSection);
   getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
                                               RI.getMaxAGPRSymbol(OutContext),
                                               RI.getMaxSGPRSymbol(OutContext));
+  OutStreamer->popSection();
 
   for (Function &F : M.functions())
     validateMCResourceInfo(F);
@@ -1225,8 +1252,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize), ProgInfo.NumSGPRsForWavesPerEU,
       ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
-
-  OccupancyValidateMap.insert({&MF.getFunction(), ProgInfo.Occupancy});
 
   const auto [MinWEU, MaxWEU] =
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
