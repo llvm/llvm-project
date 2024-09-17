@@ -43,8 +43,8 @@ static void CommonStandaloneInit() {
   SanitizerToolName = GetSanititizerToolName();
   CacheBinaryName();
   InitializeFlags();
-  __sanitizer_set_report_path(common_flags()->log_path);
   __sanitizer::InitializePlatformEarly();
+  __sanitizer_set_report_path(common_flags()->log_path);
   AndroidLogInit();
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
   CommonInit();

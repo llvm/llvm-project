@@ -129,6 +129,7 @@ class ConstantTokenNone;
 class GlobalValue;
 class GlobalObject;
 class GlobalIFunc;
+class GlobalVariable;
 class Context;
 class Function;
 class Instruction;
@@ -334,6 +335,7 @@ protected:
   friend class DSOLocalEquivalent;    // For `Val`.
   friend class GlobalObject;          // For `Val`.
   friend class GlobalIFunc;           // For `Val`.
+  friend class GlobalVariable;        // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1362,6 +1364,162 @@ public:
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::GlobalIFunc>(Val) && "Expected a GlobalIFunc!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class GlobalVariable final
+    : public GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                               GlobalObject, llvm::GlobalObject> {
+  GlobalVariable(llvm::GlobalObject *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalVariable, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  /// Helper for mapped_iterator.
+  struct LLVMGVToGV {
+    Context &Ctx;
+    LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
+    GlobalVariable &operator()(llvm::GlobalVariable &LLVMGV) const;
+  };
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalVariable;
+  }
+
+  /// Definitions have initializers, declarations don't.
+  ///
+  inline bool hasInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasInitializer();
+  }
+
+  /// hasDefinitiveInitializer - Whether the global variable has an initializer,
+  /// and any other instances of the global (this can happen due to weak
+  /// linkage) are guaranteed to have the same initializer.
+  ///
+  /// Note that if you want to transform a global, you must use
+  /// hasUniqueInitializer() instead, because of the *_odr linkage type.
+  ///
+  /// Example:
+  ///
+  /// @a = global SomeType* null - Initializer is both definitive and unique.
+  ///
+  /// @b = global weak SomeType* null - Initializer is neither definitive nor
+  /// unique.
+  ///
+  /// @c = global weak_odr SomeType* null - Initializer is definitive, but not
+  /// unique.
+  inline bool hasDefinitiveInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasDefinitiveInitializer();
+  }
+
+  /// hasUniqueInitializer - Whether the global variable has an initializer, and
+  /// any changes made to the initializer will turn up in the final executable.
+  inline bool hasUniqueInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasUniqueInitializer();
+  }
+
+  /// getInitializer - Return the initializer for this global variable.  It is
+  /// illegal to call this method if the global is external, because we cannot
+  /// tell what the value is initialized to!
+  ///
+  Constant *getInitializer() const;
+  /// setInitializer - Sets the initializer for this global variable, removing
+  /// any existing initializer if InitVal==NULL. The initializer must have the
+  /// type getValueType().
+  void setInitializer(Constant *InitVal);
+
+  // TODO: Add missing replaceInitializer(). Requires special tracker
+
+  /// If the value is a global constant, its value is immutable throughout the
+  /// runtime execution of the program.  Assigning a value into the constant
+  /// leads to undefined behavior.
+  ///
+  bool isConstant() const {
+    return cast<llvm::GlobalVariable>(Val)->isConstant();
+  }
+  void setConstant(bool V);
+
+  bool isExternallyInitialized() const {
+    return cast<llvm::GlobalVariable>(Val)->isExternallyInitialized();
+  }
+  void setExternallyInitialized(bool Val);
+
+  // TODO: Missing copyAttributesFrom()
+
+  // TODO: Missing removeFromParent(), eraseFromParent(), dropAllReferences()
+
+  // TODO: Missing addDebugInfo(), getDebugInfo()
+
+  // TODO: Missing attribute setter functions: addAttribute(), setAttributes().
+  //       There seems to be no removeAttribute() so we can't undo them.
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttribute(Kind);
+  }
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(StringRef Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttribute(Kind);
+  }
+
+  /// Return true if any attributes exist.
+  bool hasAttributes() const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttributes();
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(Attribute::AttrKind Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttribute(Kind);
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(StringRef Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttribute(Kind);
+  }
+
+  /// Return the attribute set for this global
+  AttributeSet getAttributes() const {
+    return cast<llvm::GlobalVariable>(Val)->getAttributes();
+  }
+
+  /// Return attribute set as list with index.
+  /// FIXME: This may not be required once ValueEnumerators
+  /// in bitcode-writer can enumerate attribute-set.
+  AttributeList getAttributesAsList(unsigned Index) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttributesAsList(Index);
+  }
+
+  /// Check if section name is present
+  bool hasImplicitSection() const {
+    return cast<llvm::GlobalVariable>(Val)->hasImplicitSection();
+  }
+
+  /// Get the custom code model raw value of this global.
+  ///
+  unsigned getCodeModelRaw() const {
+    return cast<llvm::GlobalVariable>(Val)->getCodeModelRaw();
+  }
+
+  /// Get the custom code model of this global if it has one.
+  ///
+  /// If this global does not have a custom code model, the empty instance
+  /// will be returned.
+  std::optional<CodeModel::Model> getCodeModel() const {
+    return cast<llvm::GlobalVariable>(Val)->getCodeModel();
+  }
+
+  // TODO: Missing setCodeModel(). Requires custom tracker.
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::GlobalVariable>(Val) && "Expected a GlobalVariable!");
   }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);

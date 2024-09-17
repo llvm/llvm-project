@@ -2672,7 +2672,9 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
-void InitializePlatformEarly() { InitTlsSize(); }
+void InitializePlatformEarly() {
+  // Do nothing.
+}
 
 void CheckASLR() {
 #  if SANITIZER_NETBSD

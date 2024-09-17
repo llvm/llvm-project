@@ -478,6 +478,9 @@ static bool AsanInitInternal() {
   if (flags()->start_deactivated)
     AsanDeactivate();
 
+  // interceptors
+  InitTlsSize();
+
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
