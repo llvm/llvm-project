@@ -492,6 +492,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -17546,8 +17548,8 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
-[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_
-and [AMD-GCN-GFX11-RDNA3]_.
+[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
 
 Operands
 ~~~~~~~~
@@ -18345,6 +18347,7 @@ Additional Documentation
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
+.. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
