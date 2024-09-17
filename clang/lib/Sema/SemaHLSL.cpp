@@ -573,7 +573,7 @@ bool clang::CreateHLSLAttributedResourceType(
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
-  TypeSourceInfo *ContainedTyInfo;
+  TypeSourceInfo *ContainedTyInfo = nullptr;
   SourceLocation LocBegin = AttrList[0]->getRange().getBegin();
   SourceLocation LocEnd = AttrList[0]->getRange().getEnd();
 
@@ -641,7 +641,7 @@ bool clang::CreateHLSLAttributedResourceType(
   ResType = S.getASTContext().getHLSLAttributedResourceType(
       Wrapped, ContainedTy, ResAttrs);
 
-  if (LocInfo) {
+  if (LocInfo && ContainedTyInfo) {
     LocInfo->Range = SourceRange(LocBegin, LocEnd);
     LocInfo->ContainedTyInfo = ContainedTyInfo;
   }
