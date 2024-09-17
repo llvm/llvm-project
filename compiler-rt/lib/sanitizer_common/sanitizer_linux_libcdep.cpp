@@ -40,6 +40,10 @@
 #  include <sys/resource.h>
 #  include <syslog.h>
 
+#  if SANITIZER_GLIBC
+#    include <gnu/libc-version.h>
+#  endif
+
 #  if !defined(ElfW)
 #    define ElfW(type) Elf_##type
 #  endif
@@ -198,17 +202,11 @@ bool SetEnv(const char *name, const char *value) {
 
 __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
                                                    int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
+#  if SANITIZER_GLIBC
+  const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   return true;
@@ -234,7 +232,7 @@ void InitTlsSize() {
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  void *get_tls_static_info = dlsym(RTLD_DEFAULT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
 #    endif
@@ -626,25 +624,32 @@ uptr GetTlsSize() {
 }
 #  endif
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
 #  if SANITIZER_GO
   // Stub implementation for Go.
-  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
 #  else
-  GetTls(tls_addr, tls_size);
+  uptr tls_addr = 0;
+  uptr tls_size = 0;
+  GetTls(&tls_addr, &tls_size);
+  *tls_begin = tls_addr;
+  *tls_end = tls_addr + tls_size;
 
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
-        *tls_size = *stk_addr + *stk_size - *tls_addr;
-      *stk_size = *tls_addr - *stk_addr;
+    if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
+      if (*stk_end < *tls_end)
+        *tls_end = *stk_end;
+      *stk_end = *tls_begin;
     }
   }
 #  endif

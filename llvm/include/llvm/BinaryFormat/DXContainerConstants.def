@@ -190,8 +190,7 @@ RESOURCE_KIND(18, FeedbackTexture2DArray)
 #endif // RESOURCE_KIND
 
 #ifdef RESOURCE_FLAG
-RESOURCE_FLAG(0, None)
-RESOURCE_FLAG(1, UsedByAtomic64)
+RESOURCE_FLAG(0, UsedByAtomic64)
 
 #undef RESOURCE_FLAG
 #endif // RESOURCE_FLAG

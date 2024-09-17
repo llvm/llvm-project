@@ -121,7 +121,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
     } else
-      error = args_or.takeError();
+      error = Status::FromError(args_or.takeError());
 
     if (error.Success()) {
       if (options->VerifyOptions(result))

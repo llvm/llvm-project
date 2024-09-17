@@ -555,7 +555,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // check.
   if (const ComplexPattern *CP =
           Pattern.getSrcPattern().getComplexPatternInfo(CGP)) {
-    const std::vector<Record *> &OpNodes = CP->getRootNodes();
+    ArrayRef<const Record *> OpNodes = CP->getRootNodes();
     assert(!OpNodes.empty() &&
            "Complex Pattern must specify what it can match");
     if (Variant >= OpNodes.size())
@@ -746,7 +746,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
 
 static bool mayInstNodeLoadOrStore(const TreePatternNode &N,
                                    const CodeGenDAGPatterns &CGP) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   return II.mayLoad || II.mayStore;
@@ -757,7 +757,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
   if (N.isLeaf())
     return 0;
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (!OpRec->isSubClassOf("Instruction"))
     return 0;
 
@@ -773,7 +773,7 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
 
 void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
-  Record *Op = N.getOperator();
+  const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
@@ -824,7 +824,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
   for (unsigned InstOpNo = NumResults, e = NumFixedOperands; InstOpNo != e;
        ++InstOpNo) {
     // Determine what to emit for this operand.
-    Record *OperandNode = II.Operands[InstOpNo].Rec;
+    const Record *OperandNode = II.Operands[InstOpNo].Rec;
     if (CGP.operandHasDefault(OperandNode) &&
         (InstOpNo < NonOverridableOperands || ChildNo >= N.getNumChildren())) {
       // This is a predicate or optional def operand which the pattern has not
@@ -1010,7 +1010,7 @@ void MatcherGen::EmitResultOperand(const TreePatternNode &N,
   if (N.isLeaf())
     return EmitResultLeafAsOperand(N, ResultOps);
 
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
   if (OpRec->isSubClassOf("Instruction"))
     return EmitResultInstructionAsOperand(N, ResultOps);
   if (OpRec->isSubClassOf("SDNodeXForm"))

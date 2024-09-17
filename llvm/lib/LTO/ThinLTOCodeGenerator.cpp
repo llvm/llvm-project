@@ -36,7 +36,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -1047,9 +1046,6 @@ void ThinLTOCodeGenerator::run() {
 
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
-
-  // Synthesize entry counts for functions in the combined index.
-  computeSyntheticCounts(*Index);
 
   // Currently there is no support for enabling whole program visibility via a
   // linker option in the old LTO API, but this call allows it to be specified

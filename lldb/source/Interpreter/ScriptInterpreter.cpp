@@ -96,7 +96,7 @@ lldb::ProcessLaunchInfoSP ScriptInterpreter::GetOpaqueTypeFromSBLaunchInfo(
 Status
 ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   if (error.m_opaque_up)
-    return *error.m_opaque_up;
+    return error.m_opaque_up->Clone();
 
   return Status();
 }
