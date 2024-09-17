@@ -51,7 +51,7 @@ namespace llvm::sandboxir {
 class Region {
   /// All the instructions in the Region. Only new instructions generated during
   /// vectorization are part of the Region.
-  SetVector<sandboxir::Instruction *> Insts;
+  SetVector<Instruction *> Insts;
 
   /// A unique ID, used for debugging.
   unsigned RegionID = 0;
@@ -65,7 +65,7 @@ class Region {
   // TODO: Add a way to encode/decode region info to/from metadata.
 
 public:
-  Region(sandboxir::Context &Ctx, sandboxir::BasicBlock &BB);
+  Region(Context &Ctx, BasicBlock &BB);
   ~Region();
 
   BasicBlock *getParent() const { return &BB; }
@@ -74,11 +74,11 @@ public:
   unsigned getID() const { return RegionID; }
 
   /// Adds I to the set.
-  void add(sandboxir::Instruction *I);
+  void add(Instruction *I);
   /// Removes I from the set.
-  void remove(sandboxir::Instruction *I);
+  void remove(Instruction *I);
   /// Returns true if I is in the Region.
-  bool contains(sandboxir::Instruction *I) const { return Insts.contains(I); }
+  bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
 
@@ -89,11 +89,12 @@ public:
 
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
-  bool operator==(const sandboxir::Region &Other) const;
+  bool operator==(const Region &Other) const;
+  bool operator!=(const Region &other) const { return !(*this == other); }
+
   void dump(raw_ostream &OS) const;
   void dump() const;
-  friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const sandboxir::Region &Rgn) {
+  friend raw_ostream &operator<<(raw_ostream &OS, const Region &Rgn) {
     Rgn.dump(OS);
     return OS;
   }
