@@ -49,9 +49,28 @@ define i64 @dont_make_div_variable(i64 noundef %x, i64 noundef %i) {
 ; CHECK-LABEL: define i64 @dont_make_div_variable(
 ; CHECK-SAME: i64 noundef [[X:%.*]], i64 noundef [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i64 [[I]], 9
-; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i64 [[SWITCH_TABLEIDX]], 9
-; CHECK-NEXT:    [[DIV6:%.*]] = udiv i64 [[X]], [[SWITCH_OFFSET]]
+; CHECK-NEXT:    switch i64 [[I]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i64 9, label %[[SW_BB:.*]]
+; CHECK-NEXT:      i64 10, label %[[SW_BB1:.*]]
+; CHECK-NEXT:      i64 11, label %[[SW_BB3:.*]]
+; CHECK-NEXT:      i64 12, label %[[SW_BB5:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW_BB]]:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[X]], 9
+; CHECK-NEXT:    br label %[[RETURN:.*]]
+; CHECK:       [[SW_BB1]]:
+; CHECK-NEXT:    [[DIV2:%.*]] = udiv i64 [[X]], 10
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_BB3]]:
+; CHECK-NEXT:    [[DIV4:%.*]] = udiv i64 [[X]], 11
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_BB5]]:
+; CHECK-NEXT:    [[DIV7:%.*]] = udiv i64 [[X]], 12
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[SW_DEFAULT]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[DIV6:%.*]] = phi i64 [ [[DIV7]], %[[SW_BB5]] ], [ [[DIV4]], %[[SW_BB3]] ], [ [[DIV2]], %[[SW_BB1]] ], [ [[DIV]], %[[SW_BB]] ]
 ; CHECK-NEXT:    ret i64 [[DIV6]]
 ;
 entry:
