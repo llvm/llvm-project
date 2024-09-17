@@ -284,9 +284,8 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
       continue;
     if (next == to)
       return true;
-    if (visited.contains(next))
+    if (!visited.insert(next).second)
       continue;
-    visited.insert(next);
     for (Block *succ : next->getSuccessors())
       worklist.push_back(succ);
   }

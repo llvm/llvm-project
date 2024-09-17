@@ -1084,25 +1084,26 @@ libc_support_library(
     name = "__support_osutil_vdso",
     hdrs = [
         "src/__support/OSUtil/linux/vdso.h",
-        "src/__support/OSUtil/linux/vdso_sym.h"
+        "src/__support/OSUtil/linux/vdso_sym.h",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     textual_hdrs = [
         "src/__support/OSUtil/linux/riscv/vdso.h",
         "src/__support/OSUtil/linux/arm/vdso.h",
         "src/__support/OSUtil/linux/x86_64/vdso.h",
         "src/__support/OSUtil/linux/aarch64/vdso.h",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_optional",
         ":__support_cpp_string_view",
         ":__support_threads_callonce",
         ":types_clock_t",
-        ":types_struct_timeval"
+        ":types_clockid_t",
+        ":types_struct_timeval",
     ],
 )
 
@@ -1190,7 +1191,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_osutil_syscall",
         ":__support_threads_linux_futex_word_type",
-        ":__support_time_linux",
+        ":__support_time_linux_abs_timeout",
         ":types_struct_timespec",
     ],
 )
@@ -1218,10 +1219,12 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":__support_cpp_expected",
         ":__support_cpp_optional",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
-        ":__support_time_linux",
+        ":__support_time_linux_abs_timeout",
+        ":__support_time_linux_monotonicity",
         ":types_pid_t",
     ],
 )
@@ -1248,7 +1251,6 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "__support_threads_callonce",
     hdrs = [
@@ -1263,7 +1265,8 @@ libc_support_library(
     ],
     deps = [
         ":__support_macros_config",
-        ":__support_macros_optimization"
+        ":__support_macros_optimization",
+        ":__support_threads_linux_futex_utils",
     ],
 )
 
@@ -1278,22 +1281,59 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_time_linux",
-    hdrs = glob(["src/__support/time/linux/**/*.h"]),
+    name = "__support_time_linux_abs_timeout",
+    hdrs = ["src/__support/time/linux/abs_timeout.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_expected",
+        ":__support_time",
+        ":hdr_time_macros",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
+    name = "__support_time_linux_clock_conversion",
+    hdrs = ["src/__support/time/linux/clock_conversion.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_time",
+        ":__support_time_linux_clock_gettime",
+    ],
+)
+
+libc_support_library(
+    name = "__support_time_linux_clock_gettime",
+    hdrs = ["src/__support/time/linux/clock_gettime.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
         ":__support_common",
-        ":__support_cpp_expected",
         ":__support_error_or",
-        ":__support_libc_assert",
         ":__support_osutil_vdso",
-        ":__support_time",
+    ],
+)
+
+libc_support_library(
+    name = "__support_time_linux_monotonicity",
+    hdrs = ["src/__support/time/linux/monotonicity.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_libc_assert",
+        ":__support_time_linux_abs_timeout",
+        ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
-        ":types_clockid_t",
-        ":types_struct_timespec",
     ],
 )
 

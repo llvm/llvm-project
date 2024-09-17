@@ -170,6 +170,9 @@ Resolutions to C++ Defect Reports
   in constant expressions. These comparisons always worked in non-constant expressions.
   (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
 
+- Reject explicit object parameters with type ``void`` (``this void``).
+  (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
+
 C Language Changes
 ------------------
 
@@ -505,6 +508,8 @@ AST Matchers
 
 - Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
+
+- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
 
 clang-format
 ------------
