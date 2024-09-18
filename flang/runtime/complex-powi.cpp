@@ -65,23 +65,21 @@ template <typename C, typename I> C tgpowi(C base, I exp) {
 #ifndef _MSC_VER
 // With most compilers, C complex is implemented as a builtin type that may have
 // specific ABI requirements
-extern "C" CppTypeFor<TypeCategory::Real, 4> _Complex RTNAME(cpowi)(
-    CppTypeFor<TypeCategory::Real, 4> _Complex base, std::int32_t exp) {
+extern "C" float _Complex RTNAME(cpowi)(float _Complex base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" CppTypeFor<TypeCategory::Real, 8> _Complex RTNAME(zpowi)(
-    CppTypeFor<TypeCategory::Real, 8> _Complex base, std::int32_t exp) {
+extern "C" double _Complex RTNAME(zpowi)(
+    double _Complex base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" CppTypeFor<TypeCategory::Real, 4> _Complex RTNAME(cpowk)(
-    CppTypeFor<TypeCategory::Real, 4> _Complex base, std::int64_t exp) {
+extern "C" float _Complex RTNAME(cpowk)(float _Complex base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" CppTypeFor<TypeCategory::Real, 8> _Complex RTNAME(zpowk)(
-    CppTypeFor<TypeCategory::Real, 8> _Complex base, std::int64_t exp) {
+extern "C" double _Complex RTNAME(zpowk)(
+    double _Complex base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
@@ -91,7 +89,7 @@ extern "C" CppTypeFor<TypeCategory::Real, 8> _Complex RTNAME(zpowk)(
 // c99-extension warnings. We decided to disable warnings for this
 // particular file, so we can use _Complex here.
 #if LDBL_MANT_DIG == 113
-typedef CppTypeFor<TypeCategory::Real, 16> _Complex Qcomplex;
+typedef long double _Complex Qcomplex;
 #elif HAS_FLOAT128
 #if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
 typedef _Complex float __attribute__((mode(TC))) Qcomplex;
