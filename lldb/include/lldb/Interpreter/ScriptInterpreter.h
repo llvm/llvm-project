@@ -436,19 +436,18 @@ public:
                                      Args &args) {
     return std::nullopt;
   }
-  
-  virtual StructuredData::DictionarySP HandleArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args, 
-      size_t args_pos, size_t char_in_arg)
-  {
+
+  virtual StructuredData::DictionarySP
+  HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) {
     return {};
   }
 
-  virtual StructuredData::DictionarySP 
+  virtual StructuredData::DictionarySP
   HandleOptionArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name, 
-      size_t char_in_arg)
-  {
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
+      size_t char_in_arg) {
     return {};
   }
 

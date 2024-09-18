@@ -206,18 +206,18 @@ LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
   return std::nullopt;
 }
 
-StructuredData::DictionarySP 
-LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(PyObject *implementor,
-    std::vector<llvm::StringRef> &args, size_t args_pos, size_t pos_in_arg) {
+StructuredData::DictionarySP
+LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+    PyObject *implementor, std::vector<llvm::StringRef> &args, size_t args_pos,
+    size_t pos_in_arg) {
   return {};
 }
 
-StructuredData::DictionarySP 
+StructuredData::DictionarySP
 LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
-      PyObject *implementor, llvm::StringRef &long_options, size_t char_in_arg) {
+    PyObject *implementor, llvm::StringRef &long_options, size_t char_in_arg) {
   return {};
 }
-
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,

@@ -68,7 +68,14 @@ class ParsedCommandTestCase(TestBase):
 
         return results
 
-    def handle_completion(self, cmd_str, exp_num_completions, exp_matches, exp_descriptions, match_description):
+    def handle_completion(
+        self,
+        cmd_str,
+        exp_num_completions,
+        exp_matches,
+        exp_descriptions,
+        match_description,
+    ):
         matches = lldb.SBStringList()
         descriptions = lldb.SBStringList()
 
@@ -76,23 +83,34 @@ class ParsedCommandTestCase(TestBase):
         num_completions = interp.HandleCompletionWithDescriptions(
             cmd_str, len(cmd_str), 0, 1000, matches, descriptions
         )
-        self.assertEqual(num_completions, exp_num_completions, "Number of completions is right.")
+        self.assertEqual(
+            num_completions, exp_num_completions, "Number of completions is right."
+        )
         num_matches = matches.GetSize()
-        self.assertEqual(num_matches, exp_matches.GetSize(), "matches and expected matches of different lengths")
+        self.assertEqual(
+            num_matches,
+            exp_matches.GetSize(),
+            "matches and expected matches of different lengths",
+        )
         num_descriptions = descriptions.GetSize()
         if match_description:
-            self.assertEqual(num_descriptions, exp_descriptions.GetSize(), "descriptions and expected of different lengths")
-            
+            self.assertEqual(
+                num_descriptions,
+                exp_descriptions.GetSize(),
+                "descriptions and expected of different lengths",
+            )
+
         self.assertEqual(
-            matches.GetSize(), num_completions + 1, "The first element is the complete additional text"
+            matches.GetSize(),
+            num_completions + 1,
+            "The first element is the complete additional text",
         )
-        
 
         for idx in range(0, num_matches):
             match = matches.GetStringAtIndex(idx)
             exp_match = exp_matches.GetStringAtIndex(idx)
             self.assertEqual(
-                match, exp_match , f"{match} did not match expectation: {exp_match}"
+                match, exp_match, f"{match} did not match expectation: {exp_match}"
             )
         if match_description:
             desc = descriptions.GetStringAtIndex(idx)
@@ -100,7 +118,7 @@ class ParsedCommandTestCase(TestBase):
             self.assertEqual(
                 desc, exp_desc, f"{desc} didn't match expectation: {exp_desc}"
             )
-        
+
     def pycmd_tests(self):
         source_dir = self.getSourceDir()
         test_file_path = os.path.join(source_dir, "test_commands.py")
@@ -208,14 +226,11 @@ class ParsedCommandTestCase(TestBase):
         matches = lldb.SBStringList()
         descriptions = lldb.SBStringList()
 
-
         # First try an enum completion:
         # Note - this is an enum so all the values are returned:
         matches.AppendList(["oo ", "foo"], 2)
-         
-        self.handle_completion(
-            "no-args -e f", 1, matches, descriptions, False
-        )
+
+        self.handle_completion("no-args -e f", 1, matches, descriptions, False)
 
         # Now try an internal completer, the on disk file one is handy:
         partial_name = os.path.join(source_dir, "test_")
@@ -225,9 +240,7 @@ class ParsedCommandTestCase(TestBase):
         descriptions.Clear()
         matches.AppendList(["commands.py' ", test_file_path], 2)
         # We don't have descriptions for the file path completer:
-        self.handle_completion(
-            cmd_str, 1, matches, descriptions, False
-        )
+        self.handle_completion(cmd_str, 1, matches, descriptions, False)
 
         # Try a command with arguments.
         # FIXME: It should be enough to define an argument and it's type to get the completer
@@ -247,7 +260,7 @@ class ParsedCommandTestCase(TestBase):
         cmd_str = "two-args -p something -c other_"
         matches.AppendString("something ")
         matches.AppendString("other_something")
-        # This is a full match so no descriptions: 
+        # This is a full match so no descriptions:
         self.handle_completion(cmd_str, 1, matches, descriptions, False)
 
         matches.Clear()
@@ -277,7 +290,7 @@ class ParsedCommandTestCase(TestBase):
         descriptions.Clear()
         matches.AppendList(["answer ", "correct_answer"], 2)
         self.handle_completion(cmd_str, 1, matches, descriptions, False)
-        
+
         # Now make sure get_repeat_command works properly:
 
         # no-args turns off auto-repeat

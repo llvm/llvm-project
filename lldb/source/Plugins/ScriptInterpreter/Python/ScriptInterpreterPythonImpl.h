@@ -174,11 +174,11 @@ public:
                                      Args &args) override;
 
   StructuredData::DictionarySP HandleArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args, 
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
       size_t args_pos, size_t char_in_arg) override;
 
   StructuredData::DictionarySP HandleOptionArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_options, 
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_options,
       size_t char_in_arg) override;
 
   Status GenerateFunction(const char *signature, const StringList &input,

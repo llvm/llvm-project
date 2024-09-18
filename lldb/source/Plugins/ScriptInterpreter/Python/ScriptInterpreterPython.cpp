@@ -2766,10 +2766,10 @@ ScriptInterpreterPythonImpl::GetRepeatCommandForScriptedCommand(
   return ret_val;
 }
 
-StructuredData::DictionarySP 
+StructuredData::DictionarySP
 ScriptInterpreterPythonImpl::HandleArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args, 
-      size_t args_pos, size_t char_in_arg) {
+    StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+    size_t args_pos, size_t char_in_arg) {
   StructuredData::DictionarySP completion_dict_sp;
   if (!impl_obj_sp || !impl_obj_sp->IsValid())
     return completion_dict_sp;
@@ -2778,18 +2778,18 @@ ScriptInterpreterPythonImpl::HandleArgumentCompletionForScriptedCommand(
     Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
 
-    completion_dict_sp = 
-      SWIGBridge::LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
-      static_cast<PyObject *>(impl_obj_sp->GetValue()), args, args_pos, 
-                              char_in_arg);
+    completion_dict_sp =
+        SWIGBridge::LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+            static_cast<PyObject *>(impl_obj_sp->GetValue()), args, args_pos,
+            char_in_arg);
   }
   return completion_dict_sp;
 }
 
-StructuredData::DictionarySP 
+StructuredData::DictionarySP
 ScriptInterpreterPythonImpl::HandleOptionArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_option, 
-      size_t char_in_arg) {
+    StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_option,
+    size_t char_in_arg) {
   StructuredData::DictionarySP completion_dict_sp;
   if (!impl_obj_sp || !impl_obj_sp->IsValid())
     return completion_dict_sp;
@@ -2798,10 +2798,10 @@ ScriptInterpreterPythonImpl::HandleOptionArgumentCompletionForScriptedCommand(
     Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
 
-    completion_dict_sp = 
-      SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
-      static_cast<PyObject *>(impl_obj_sp->GetValue()), long_option, 
-                              char_in_arg);
+    completion_dict_sp = SWIGBridge::
+        LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+            static_cast<PyObject *>(impl_obj_sp->GetValue()), long_option,
+            char_in_arg);
   }
   return completion_dict_sp;
 }

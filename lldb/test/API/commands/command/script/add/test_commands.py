@@ -201,9 +201,7 @@ class TwoArgGroupsCommand(ReportingCmd):
                 ov_parser.make_argument_element(
                     lldb.eArgTypePythonClass, "plain", [3, 4]
                 ),
-                ov_parser.make_argument_element(
-                    lldb.eArgTypePid, "optional", [3, 4]
-                ),
+                ov_parser.make_argument_element(lldb.eArgTypePid, "optional", [3, 4]),
             ]
         )
 
@@ -214,16 +212,16 @@ class TwoArgGroupsCommand(ReportingCmd):
 
     def handle_option_argument_completion(self, long_option, cursor_pos):
         ov_parser = self.get_parser()
-        value = ov_parser.dest_for_option(long_option)[0:cursor_pos+1]
+        value = ov_parser.dest_for_option(long_option)[0 : cursor_pos + 1]
         proc_value = ov_parser.proc_name
         if proc_value != None:
-            new_str = value+proc_value
-            ret_arr = {"completion" : new_str, "mode" : "partial"}
+            new_str = value + proc_value
+            ret_arr = {"completion": new_str, "mode": "partial"}
             return ret_arr
 
-        ret_arr = {"values" : [value+"nice", value+"not_nice", value+"mediocre"]}
+        ret_arr = {"values": [value + "nice", value + "not_nice", value + "mediocre"]}
         return ret_arr
-        
+
     def handle_argument_completion(self, args, arg_pos, cursor_pos):
         ov_parser = self.get_parser()
         orig_arg = args[arg_pos][0:cursor_pos]
@@ -235,7 +233,10 @@ class TwoArgGroupsCommand(ReportingCmd):
             # No completions if proc_name was set.
             return True
 
-        ret_arr = {"values" : [orig_arg + "cool", orig_arg+"yuck"], "descriptions" : ["good idea", "bad idea"]}
+        ret_arr = {
+            "values": [orig_arg + "cool", orig_arg + "yuck"],
+            "descriptions": ["good idea", "bad idea"],
+        }
         return ret_arr
 
     def get_short_help(self):

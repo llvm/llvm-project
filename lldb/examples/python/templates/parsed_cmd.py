@@ -284,13 +284,13 @@ class LLDBOptionValueParser:
         return True
 
     def was_set(self, opt_name):
-        """ Call this in the __call__ method of your command to determine
-            whether this option was set on the command line.  It is sometimes
-            useful to know whether an option has the default value because the
-            user set it explicitly (was_set -> True) or not.
-            You can also call this in a handle_completion method, but it will
-            currently only report true values for the options mentioned 
-            BEFORE the cursor point in the command line.
+        """Call this in the __call__ method of your command to determine
+        whether this option was set on the command line.  It is sometimes
+        useful to know whether an option has the default value because the
+        user set it explicitly (was_set -> True) or not.
+        You can also call this in a handle_completion method, but it will
+        currently only report true values for the options mentioned
+        BEFORE the cursor point in the command line.
         """
 
         elem = self.get_option_element(opt_name)
@@ -302,8 +302,8 @@ class LLDBOptionValueParser:
             return False
 
     def dest_for_option(self, opt_name):
-        """ This will return the value of the dest variable you defined for opt_name.
-            Mostly useful for handle_completion where you get passed the long option.
+        """This will return the value of the dest variable you defined for opt_name.
+        Mostly useful for handle_completion where you get passed the long option.
         """
         elem = self.get_option_element(opt_name)
         if not elem:
@@ -331,8 +331,8 @@ class LLDBOptionValueParser:
         completion_type: currently these are values form the lldb.CompletionType enum.  If
                          you need custom completions, implement handle_option_argument_completion.
         enum_values: An array of duples: ["element_name", "element_help"].  If provided,
-                     only one of the enum elements is allowed.  The value will be the 
-                     element_name for the chosen enum element as a string. 
+                     only one of the enum elements is allowed.  The value will be the
+                     element_name for the chosen enum element as a string.
         """
         if not dest:
             dest = long_option
