@@ -836,8 +836,10 @@ def : InstRW<[N2Write_3c_1V], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
 def : SchedAlias<WriteFCvt, N2Write_3c_1V0>;
 
 // FP move, immed
-// FP move, register
 def : SchedAlias<WriteFImm, N2Write_2c_1V>;
+
+// FP move, register
+def : InstRW<[N2Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
 def : InstRW<[N2Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr,
@@ -858,9 +860,8 @@ def : InstRW<[N2Write_6c_1L], (instregex "^LDR[SDQ]l$",
                                          "^LDUR[BHSDQ]i$")>;
 
 // Load vector reg, immed post-index
-def : InstRW<[N2Write_6c_1I_1L, WriteI], (instregex "^LDR[BHSDQ]post$")>;
 // Load vector reg, immed pre-index
-def : InstRW<[WriteAdr, N2Write_6c_1I_1L], (instregex "^LDR[BHSDQ]pre$")>;
+def : InstRW<[WriteAdr, N2Write_6c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, unsigned immed
 def : InstRW<[N2Write_6c_1L], (instregex "^LDR[BHSDQ]ui$")>;
@@ -1119,7 +1120,7 @@ def : InstRW<[N2Write_5c_1V], (instregex "^FMLALv", "^FMLSLv")>;
 // ASIMD FP round, D-form F32 and Q-form F64
 def : InstRW<[N2Write_3c_1V0],
              (instregex "^FRINT[AIMNPXZ]v2f(32|64)$",
-                        "^FRINT[32|64)[XZ]v2f(32|64)$")>;
+                        "^FRINT(32|64)[XZ]v2f(32|64)$")>;
 
 // ASIMD FP round, D-form F16 and Q-form F32
 def : InstRW<[N2Write_4c_2V0],

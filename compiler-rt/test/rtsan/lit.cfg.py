@@ -3,6 +3,22 @@ import os
 # Setup config name.
 config.name = "RTSAN" + config.name_suffix
 
+
+default_rtsan_opts = "atexit_sleep_ms=0"
+
+if config.host_os == "Darwin":
+    # On Darwin, we default to `abort_on_error=1`, which would make tests run
+    # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
+    default_rtsan_opts += ":abort_on_error=0"
+
+if default_rtsan_opts:
+    config.environment["RTSAN_OPTIONS"] = default_rtsan_opts
+    default_rtsan_opts += ":"
+
+config.substitutions.append(
+    ("%env_rtsan_opts=", "env RTSAN_OPTIONS=" + default_rtsan_opts)
+)
+
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 

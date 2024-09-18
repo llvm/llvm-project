@@ -24,7 +24,6 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:  LBB0_1: @ %bb3
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 @ :0:0
 ; CHECK-NEXT:    adds r5, r3, #1
 ; CHECK-NEXT:    str.w lr, [r2]
 ; CHECK-NEXT:    cmp.w lr, #0
@@ -37,7 +36,7 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:    movne r6, #0
 ; CHECK-NEXT:  Ltmp0:
 ; CHECK-NEXT:    @DEBUG_VALUE: test:this <- [DW_OP_LLVM_arg 0, DW_OP_plus_uconst 135168, DW_OP_LLVM_arg 1, DW_OP_constu 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst 4, DW_OP_stack_value] $r0, $r5
-; CHECK-NEXT:    .loc 1 28 24 prologue_end is_stmt 1 @ test.cpp:28:24
+; CHECK-NEXT:    .loc 1 28 24 prologue_end @ test.cpp:28:24
 ; CHECK-NEXT:    strne.w r6, [r8]
 ; CHECK-NEXT:    moveq r6, #1
 ; CHECK-NEXT:    ldr r4, [r4, #4]

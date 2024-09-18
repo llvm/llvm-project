@@ -275,8 +275,8 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "cpu_model/x86.c",
-      "i386/fp_mode.c",
       "extendbfsf2.c",
+      "i386/fp_mode.c",
       "truncdfbf2.c",
       "truncsfbf2.c",
     ]

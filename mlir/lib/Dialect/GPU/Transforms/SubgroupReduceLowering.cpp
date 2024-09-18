@@ -346,7 +346,7 @@ private:
 };
 } // namespace
 
-void mlir::populateGpuBreakDownSubgrupReducePatterns(
+void mlir::populateGpuBreakDownSubgroupReducePatterns(
     RewritePatternSet &patterns, unsigned maxShuffleBitwidth,
     PatternBenefit benefit) {
   patterns.add<BreakDownSubgroupReduce>(patterns.getContext(),
@@ -354,7 +354,7 @@ void mlir::populateGpuBreakDownSubgrupReducePatterns(
   patterns.add<ScalarizeSingleElementReduce>(patterns.getContext(), benefit);
 }
 
-void mlir::populateGpuLowerSubgroupReduceToShufflePattenrs(
+void mlir::populateGpuLowerSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth, PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToShuffles, VectorSubgroupReduceToShuffles>(

@@ -28,3 +28,12 @@
 
 // RUN: %clang --target=x86_64-scei-ps4 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-LTO %s
 // CHECK-NO-LTO-NOT: -lto-debug-options
+
+// Test the driver passes a sysroot to the linker. Without --sysroot, its value
+// is sourced from the SDK environment variable.
+
+// RUN: env SCE_ORBIS_SDK_DIR=mysdk %clang --target=x64_64-scei-ps4 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SYSROOT %s
+// RUN: env SCE_ORBIS_SDK_DIR=other %clang --target=x64_64-scei-ps4 %s -### --sysroot=mysdk 2>&1 | FileCheck --check-prefixes=CHECK-SYSROOT %s
+
+// CHECK-SYSROOT: {{ld(\.exe)?}}"
+// CHECK-SYSROOT-SAME: "--sysroot=mysdk"

@@ -45,10 +45,12 @@ void RTDECL(BesselJn_4)(Descriptor &result, int32_t n1, int32_t n2, float x,
 void RTDECL(BesselJn_8)(Descriptor &result, int32_t n1, int32_t n2, double x,
     double bn2, double bn2_1, const char *sourceFile = nullptr, int line = 0);
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDECL(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
-    long double x, long double bn2, long double bn2_1,
-    const char *sourceFile = nullptr, int line = 0);
+    CppTypeFor<TypeCategory::Real, 10> x,
+    CppTypeFor<TypeCategory::Real, 10> bn2,
+    CppTypeFor<TypeCategory::Real, 10> bn2_1, const char *sourceFile = nullptr,
+    int line = 0);
 #endif
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -69,7 +71,7 @@ void RTDECL(BesselJnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
 void RTDECL(BesselJnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDECL(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif
@@ -91,10 +93,12 @@ void RTDECL(BesselYn_4)(Descriptor &result, int32_t n1, int32_t n2, float x,
 void RTDECL(BesselYn_8)(Descriptor &result, int32_t n1, int32_t n2, double x,
     double bn1, double bn1_1, const char *sourceFile = nullptr, int line = 0);
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDECL(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
-    long double x, long double bn1, long double bn1_1,
-    const char *sourceFile = nullptr, int line = 0);
+    CppTypeFor<TypeCategory::Real, 10> x,
+    CppTypeFor<TypeCategory::Real, 10> bn1,
+    CppTypeFor<TypeCategory::Real, 10> bn1_1, const char *sourceFile = nullptr,
+    int line = 0);
 #endif
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -115,7 +119,7 @@ void RTDECL(BesselYnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
 void RTDECL(BesselYnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDECL(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif

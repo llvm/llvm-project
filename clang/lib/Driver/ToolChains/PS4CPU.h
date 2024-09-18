@@ -128,9 +128,12 @@ public:
                                 const char *Suffix) const = 0;
   virtual const char *getProfileRTLibName() const = 0;
 
+  StringRef getSDKLibraryRootDir() const { return SDKLibraryRootDir; }
+
 private:
-  // We compute the SDK root dir in the ctor, and use it later.
-  std::string SDKRootDir;
+  // We compute the SDK locations in the ctor, and use them later.
+  std::string SDKHeaderRootDir;
+  std::string SDKLibraryRootDir;
 };
 
 // PS4-specific Toolchain class.

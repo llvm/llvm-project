@@ -603,6 +603,7 @@ public:
 
   Init *convertInitializerTo(RecTy *Ty) const override;
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
+  std::optional<int64_t> convertInitializerToInt() const;
 
   bool isComplete() const override {
     for (unsigned i = 0; i != getNumBits(); ++i)
@@ -2035,7 +2036,7 @@ public:
   }
 
   /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name);
+  void startTimer(StringRef Name) const;
 
   /// Stop timing a phase.
   void stopTimer();
@@ -2109,12 +2110,13 @@ private:
   mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
   GlobalMap ExtraGlobals;
 
+  // TODO: Move timing related code out of RecordKeeper.
   // These members are for the phase timing feature. We need a timer group,
   // the last timer started, and a flag to say whether the last timer
   // is the special "backend overall timer."
-  TimerGroup *TimingGroup = nullptr;
-  Timer *LastTimer = nullptr;
-  bool BackendTimer = false;
+  mutable TimerGroup *TimingGroup = nullptr;
+  mutable Timer *LastTimer = nullptr;
+  mutable bool BackendTimer = false;
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;

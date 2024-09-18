@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 class CallingConvEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   unsigned Counter = 0u;
   std::string CurrentAction;
   bool SwiftAction = false;
@@ -32,13 +32,13 @@ class CallingConvEmitter {
   std::map<std::string, std::set<std::string>> DelegateToMap;
 
 public:
-  explicit CallingConvEmitter(RecordKeeper &R) : Records(R) {}
+  explicit CallingConvEmitter(const RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &o);
 
 private:
-  void EmitCallingConv(Record *CC, raw_ostream &O);
-  void EmitAction(Record *Action, unsigned Indent, raw_ostream &O);
+  void EmitCallingConv(const Record *CC, raw_ostream &O);
+  void EmitAction(const Record *Action, unsigned Indent, raw_ostream &O);
   void EmitArgRegisterLists(raw_ostream &O);
 };
 } // End anonymous namespace
@@ -46,13 +46,14 @@ private:
 void CallingConvEmitter::run(raw_ostream &O) {
   emitSourceFileHeader("Calling Convention Implementation Fragment", O);
 
-  std::vector<Record *> CCs = Records.getAllDerivedDefinitions("CallingConv");
+  ArrayRef<const Record *> CCs =
+      Records.getAllDerivedDefinitions("CallingConv");
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
   Records.startTimer("Emit prototypes");
   O << "#ifndef GET_CC_REGISTER_LISTS\n\n";
-  for (Record *CC : CCs) {
+  for (const Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
       unsigned Pad = CC->getName().size();
       if (CC->getValueAsBit("Entry")) {
@@ -71,7 +72,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
 
   // Emit each non-custom calling convention description in full.
   Records.startTimer("Emit full descriptions");
-  for (Record *CC : CCs) {
+  for (const Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
       EmitCallingConv(CC, O);
     }
@@ -82,8 +83,8 @@ void CallingConvEmitter::run(raw_ostream &O) {
   O << "\n#endif // CC_REGISTER_LIST\n";
 }
 
-void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
-  ListInit *CCActions = CC->getValueAsListInit("Actions");
+void CallingConvEmitter::EmitCallingConv(const Record *CC, raw_ostream &O) {
+  const ListInit *CCActions = CC->getValueAsListInit("Actions");
   Counter = 0;
 
   CurrentAction = CC->getName().str();
@@ -106,7 +107,7 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
     << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
   // Emit all of the actions, in order.
   for (unsigned i = 0, e = CCActions->size(); i != e; ++i) {
-    Record *Action = CCActions->getElementAsRecord(i);
+    const Record *Action = CCActions->getElementAsRecord(i);
     SwiftAction =
         llvm::any_of(Action->getSuperClasses(),
                      [](const std::pair<Record *, SMRange> &Class) {
@@ -122,7 +123,7 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
   O << "}\n";
 }
 
-void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
+void CallingConvEmitter::EmitAction(const Record *Action, unsigned Indent,
                                     raw_ostream &O) {
   std::string IndentStr = std::string(Indent, ' ');
 
@@ -150,14 +151,14 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
     O << IndentStr << "}\n";
   } else {
     if (Action->isSubClassOf("CCDelegateTo")) {
-      Record *CC = Action->getValueAsDef("CC");
+      const Record *CC = Action->getValueAsDef("CC");
       O << IndentStr << "if (!" << CC->getName()
         << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State))\n"
         << IndentStr << "  return false;\n";
       DelegateToMap[CurrentAction].insert(CC->getName().str());
     } else if (Action->isSubClassOf("CCAssignToReg") ||
                Action->isSubClassOf("CCAssignToRegAndStack")) {
-      ListInit *RegList = Action->getValueAsListInit("RegList");
+      const ListInit *RegList = Action->getValueAsListInit("RegList");
       if (RegList->size() == 1) {
         std::string Name = getQualifiedName(RegList->getElementAsRecord(0));
         O << IndentStr << "if (MCRegister Reg = State.AllocateReg(" << Name
@@ -210,8 +211,9 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
       O << IndentStr << "  return false;\n";
       O << IndentStr << "}\n";
     } else if (Action->isSubClassOf("CCAssignToRegWithShadow")) {
-      ListInit *RegList = Action->getValueAsListInit("RegList");
-      ListInit *ShadowRegList = Action->getValueAsListInit("ShadowRegList");
+      const ListInit *RegList = Action->getValueAsListInit("RegList");
+      const ListInit *ShadowRegList =
+          Action->getValueAsListInit("ShadowRegList");
       if (!ShadowRegList->empty() && ShadowRegList->size() != RegList->size())
         PrintFatalError(Action->getLoc(),
                         "Invalid length of list of shadowed registers");
@@ -278,7 +280,8 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
     } else if (Action->isSubClassOf("CCAssignToStackWithShadow")) {
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
-      ListInit *ShadowRegList = Action->getValueAsListInit("ShadowRegList");
+      const ListInit *ShadowRegList =
+          Action->getValueAsListInit("ShadowRegList");
 
       unsigned ShadowRegListNumber = ++Counter;
 
@@ -297,7 +300,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
         << Counter << ", LocVT, LocInfo));\n";
       O << IndentStr << "return false;\n";
     } else if (Action->isSubClassOf("CCPromoteToType")) {
-      Record *DestTy = Action->getValueAsDef("DestTy");
+      const Record *DestTy = Action->getValueAsDef("DestTy");
       MVT::SimpleValueType DestVT = getValueType(DestTy);
       O << IndentStr << "LocVT = " << getEnumName(DestVT) << ";\n";
       if (MVT(DestVT).isFloatingPoint()) {
@@ -311,7 +314,7 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
           << IndentStr << "  LocInfo = CCValAssign::AExt;\n";
       }
     } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
-      Record *DestTy = Action->getValueAsDef("DestTy");
+      const Record *DestTy = Action->getValueAsDef("DestTy");
       MVT::SimpleValueType DestVT = getValueType(DestTy);
       O << IndentStr << "LocVT = " << getEnumName(DestVT) << ";\n";
       if (MVT(DestVT).isFloatingPoint()) {
@@ -327,17 +330,17 @@ void CallingConvEmitter::EmitAction(Record *Action, unsigned Indent,
           << IndentStr << "  LocInfo = CCValAssign::AExtUpper;\n";
       }
     } else if (Action->isSubClassOf("CCBitConvertToType")) {
-      Record *DestTy = Action->getValueAsDef("DestTy");
+      const Record *DestTy = Action->getValueAsDef("DestTy");
       O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
         << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::BCvt;\n";
     } else if (Action->isSubClassOf("CCTruncToType")) {
-      Record *DestTy = Action->getValueAsDef("DestTy");
+      const Record *DestTy = Action->getValueAsDef("DestTy");
       O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
         << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::Trunc;\n";
     } else if (Action->isSubClassOf("CCPassIndirect")) {
-      Record *DestTy = Action->getValueAsDef("DestTy");
+      const Record *DestTy = Action->getValueAsDef("DestTy");
       O << IndentStr << "LocVT = " << getEnumName(getValueType(DestTy))
         << ";\n";
       O << IndentStr << "LocInfo = CCValAssign::Indirect;\n";

@@ -1589,7 +1589,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTMSDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (int Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (unsigned Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
       VPUSH.addReg(Reg);
 
     // Clear FP registers with a VSCCLRM.
@@ -1794,7 +1794,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLDMSIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (int Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (unsigned Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
       VPOP.addReg(Reg, RegState::Define);
   }
 }
@@ -2044,13 +2044,14 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
 
 static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
                                 MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI, int JumpReg,
-                                const LivePhysRegs &LiveRegs, bool Thumb1Only) {
+                                MachineBasicBlock::iterator MBBI,
+                                Register JumpReg, const LivePhysRegs &LiveRegs,
+                                bool Thumb1Only) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   if (Thumb1Only) { // push Lo and Hi regs separately
     MachineInstrBuilder PushMIB =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (int Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (unsigned Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
       PushMIB.addReg(
           Reg, Reg == JumpReg || LiveRegs.contains(Reg) ? 0 : RegState::Undef);
     }
@@ -2062,7 +2063,8 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
     // memory, and allow us to later pop them with a single instructions.
     // FIXME: Could also use any of r0-r3 that are free (including in the
     // first PUSH above).
-    for (int LoReg = ARM::R7, HiReg = ARM::R11; LoReg >= ARM::R4; --LoReg) {
+    for (unsigned LoReg = ARM::R7, HiReg = ARM::R11; LoReg >= ARM::R4;
+         --LoReg) {
       if (JumpReg == LoReg)
         continue;
       BuildMI(MBB, MBBI, DL, TII.get(ARM::tMOVr), LoReg)
@@ -2072,7 +2074,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
     }
     MachineInstrBuilder PushMIB2 =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (int Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (unsigned Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
       if (Reg == JumpReg)
         continue;
       PushMIB2.addReg(Reg, RegState::Kill);
@@ -2082,7 +2084,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
     // the JumpReg), use r4 or r5, whichever is not JumpReg. It has already been
     // saved.
     if (JumpReg >= ARM::R4 && JumpReg <= ARM::R7) {
-      int LoReg = JumpReg == ARM::R4 ? ARM::R5 : ARM::R4;
+      Register LoReg = JumpReg == ARM::R4 ? ARM::R5 : ARM::R4;
       BuildMI(MBB, MBBI, DL, TII.get(ARM::tMOVr), LoReg)
           .addReg(ARM::R8, LiveRegs.contains(ARM::R8) ? 0 : RegState::Undef)
           .add(predOps(ARMCC::AL));
@@ -2095,7 +2097,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2STMDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (int Reg = ARM::R4; Reg < ARM::R12; ++Reg) {
+    for (unsigned Reg = ARM::R4; Reg < ARM::R12; ++Reg) {
       PushMIB.addReg(
           Reg, Reg == JumpReg || LiveRegs.contains(Reg) ? 0 : RegState::Undef);
     }
@@ -2125,7 +2127,7 @@ static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2LDMIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (int Reg = ARM::R4; Reg < ARM::R12; ++Reg)
+    for (unsigned Reg = ARM::R4; Reg < ARM::R12; ++Reg)
       PopMIB.addReg(Reg, RegState::Define);
   }
 }

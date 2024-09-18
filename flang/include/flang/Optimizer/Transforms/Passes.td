@@ -278,7 +278,7 @@ def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
+def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
   let summary = "Move local array allocations from heap memory into stack memory";
   let description = [{
     Convert heap allocations for arrays, even those of unknown size, into stack

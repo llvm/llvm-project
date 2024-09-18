@@ -33,4 +33,4 @@ set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;-Xclang;-mcode-object-version=none" CACHE STRING "")
-set(CMAKE_REQUIRED_FLAGS "-nogpulib -nodefaultlibs" CACHE STRING "")
+set(CMAKE_REQUIRED_FLAGS "-nogpulib" CACHE STRING "")

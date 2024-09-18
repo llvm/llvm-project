@@ -61,9 +61,9 @@ static std::string escapeForRST(StringRef Str) {
   return Result;
 }
 
-static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenDAGPatterns CDP(RK);
-  CodeGenTarget &Target = CDP.getTargetInfo();
+static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
+  const CodeGenDAGPatterns CDP(RK);
+  const CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned VariantCount = Target.getAsmParserVariantCount();
 
   // Page title.
@@ -86,7 +86,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     // Assembly string(s).
     if (!II->AsmString.empty()) {
       for (unsigned VarNum = 0; VarNum < VariantCount; ++VarNum) {
-        Record *AsmVariant = Target.getAsmParserVariant(VarNum);
+        const Record *AsmVariant = Target.getAsmParserVariant(VarNum);
         OS << "Assembly string";
         if (VariantCount != 1)
           OS << " (" << AsmVariant->getValueAsString("Name") << ")";
@@ -167,7 +167,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
         // names of both the compound operand and the basic operands it
         // contains.
         for (unsigned SubOpIdx = 0; SubOpIdx < Op.MINumOperands; ++SubOpIdx) {
-          Record *SubRec =
+          const Record *SubRec =
               cast<DefInit>(Op.MIOperandInfo->getArg(SubOpIdx))->getDef();
           StringRef SubOpName = Op.MIOperandInfo->getArgNameStr(SubOpIdx);
           StringRef SubOpTypeName = SubRec->getName();
@@ -198,7 +198,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     if (!II->ImplicitDefs.empty()) {
       OS << "Implicit defs: ";
       ListSeparator LS;
-      for (Record *Def : II->ImplicitDefs)
+      for (const Record *Def : II->ImplicitDefs)
         OS << LS << "``" << Def->getName() << "``";
       OS << "\n\n";
     }
@@ -207,18 +207,18 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     if (!II->ImplicitUses.empty()) {
       OS << "Implicit uses: ";
       ListSeparator LS;
-      for (Record *Use : II->ImplicitUses)
+      for (const Record *Use : II->ImplicitUses)
         OS << LS << "``" << Use->getName() << "``";
       OS << "\n\n";
     }
 
     // Predicates.
-    std::vector<Record *> Predicates =
-        II->TheDef->getValueAsListOfDefs("Predicates");
+    std::vector<const Record *> Predicates =
+        II->TheDef->getValueAsListOfConstDefs("Predicates");
     if (!Predicates.empty()) {
       OS << "Predicates: ";
       ListSeparator LS;
-      for (Record *P : Predicates)
+      for (const Record *P : Predicates)
         OS << LS << "``" << P->getName() << "``";
       OS << "\n\n";
     }

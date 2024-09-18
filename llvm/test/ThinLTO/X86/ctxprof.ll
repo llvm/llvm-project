@@ -47,18 +47,21 @@
 ; NOPROF-1-NOT: m2_f1()
 ; NOPROF-2-NOT: m1_f1()
 ;
-; The run with workload definitions - same other options.
+; The run with workload definitions - same other options. We do need to re-generate the .bc
+; files, to include instrumentation.
+; RUN: opt -module-summary -passes=assign-guid,ctx-instr-gen %t/m1.ll -o %t/m1-instr.bc
+; RUN: opt -module-summary -passes=assign-guid,ctx-instr-gen %t/m2.ll -o %t/m2-instr.bc
 ;
 ; RUN: echo '[ \
 ; RUN:        {"Guid": 6019442868614718803, "Counters": [1], "Callsites": [[{"Guid": 15593096274670919754, "Counters": [1]}]]}, \
 ; RUN:        {"Guid": 15593096274670919754, "Counters": [1], "Callsites": [[{"Guid": 6019442868614718803, "Counters": [1]}]]} \
 ; RUN:  ]' > %t_exp/ctxprof.json
 ; RUN: llvm-ctxprof-util fromJSON --input %t_exp/ctxprof.json --output %t_exp/ctxprof.bitstream
-; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc \
+; RUN: llvm-lto2 run %t/m1-instr.bc %t/m2-instr.bc \
 ; RUN:  -o %t_exp/result.o -save-temps \
 ; RUN:  -use-ctx-profile=%t_exp/ctxprof.bitstream \
-; RUN:  -r %t/m1.bc,m1_f1,plx \
-; RUN:  -r %t/m2.bc,m2_f1,plx
+; RUN:  -r %t/m1-instr.bc,m1_f1,plx \
+; RUN:  -r %t/m2-instr.bc,m2_f1,plx
 ; RUN: llvm-dis %t_exp/result.o.1.3.import.bc -o - | FileCheck %s --check-prefix=FIRST
 ; RUN: llvm-dis %t_exp/result.o.2.3.import.bc -o - | FileCheck %s --check-prefix=SECOND
 ;

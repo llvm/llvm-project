@@ -1249,18 +1249,18 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z256, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z, rm)
     DecodeSubVectorBroadcast(8, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X4, Z, rm)
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1269,13 +1269,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, Z, rm)
     DecodeSubVectorBroadcast(16, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X8, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X8, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X8, Z, rm)
     DecodeSubVectorBroadcast(16, 8, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

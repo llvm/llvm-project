@@ -179,7 +179,7 @@ TEST_F(PassTest, ParsePassPipeline) {
   Registry.registerPass(std::make_unique<TestPass1>());
   Registry.registerPass(std::make_unique<TestPass2>());
 
-  auto &FPM =
+  [[maybe_unused]] auto &FPM =
       Registry.parseAndCreatePassPipeline("test-pass1,test-pass2,test-pass1");
 #ifndef NDEBUG
   std::string Buff;

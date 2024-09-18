@@ -64,6 +64,9 @@
 // 8. Remove redundant CSELs that select between identical registers, by
 //    replacing them with unconditional moves.
 //
+// 9. Replace UBFMXri with UBFMWri if the instruction is equivalent to a 32 bit
+//    LSR or LSL alias of UBFM.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -132,6 +135,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
   bool visitFMOVDr(MachineInstr &MI);
+  bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -715,6 +719,57 @@ bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
+  // Check if the instruction is equivalent to a 32 bit LSR or LSL alias of
+  // UBFM, and replace the UBFMXri instruction with its 32 bit variant, UBFMWri.
+  int64_t Immr = MI.getOperand(2).getImm();
+  int64_t Imms = MI.getOperand(3).getImm();
+
+  bool IsLSR = Imms == 31 && Immr <= Imms;
+  bool IsLSL = Immr == Imms + 33;
+  if (!IsLSR && !IsLSL)
+    return false;
+
+  if (IsLSL) {
+    Immr -= 32;
+  }
+
+  const TargetRegisterClass *DstRC64 =
+      TII->getRegClass(TII->get(MI.getOpcode()), 0, TRI, *MI.getMF());
+  const TargetRegisterClass *DstRC32 =
+      TRI->getSubRegisterClass(DstRC64, AArch64::sub_32);
+  assert(DstRC32 && "Destination register class of UBFMXri doesn't have a "
+                    "sub_32 subregister class");
+
+  const TargetRegisterClass *SrcRC64 =
+      TII->getRegClass(TII->get(MI.getOpcode()), 1, TRI, *MI.getMF());
+  const TargetRegisterClass *SrcRC32 =
+      TRI->getSubRegisterClass(SrcRC64, AArch64::sub_32);
+  assert(SrcRC32 && "Source register class of UBFMXri doesn't have a sub_32 "
+                    "subregister class");
+
+  Register DstReg64 = MI.getOperand(0).getReg();
+  Register DstReg32 = MRI->createVirtualRegister(DstRC32);
+  Register SrcReg64 = MI.getOperand(1).getReg();
+  Register SrcReg32 = MRI->createVirtualRegister(SrcRC32);
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::COPY),
+          SrcReg32)
+      .addReg(SrcReg64, 0, AArch64::sub_32);
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::UBFMWri),
+          DstReg32)
+      .addReg(SrcReg32)
+      .addImm(Immr)
+      .addImm(Imms);
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+          TII->get(AArch64::SUBREG_TO_REG), DstReg64)
+      .addImm(0)
+      .addReg(DstReg32)
+      .addImm(AArch64::sub_32);
+  MI.eraseFromParent();
+  return true;
+}
+
 // Across a basic-block we might have in i32 extract from a value that only
 // operates on upper bits (for example a sxtw). We can replace the COPY with a
 // new version skipping the sxtw.
@@ -864,6 +919,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::FMOVDr:
         Changed |= visitFMOVDr(MI);
+        break;
+      case AArch64::UBFMXri:
+        Changed |= visitUBFMXri(MI);
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);

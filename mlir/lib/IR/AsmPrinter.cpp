@@ -584,9 +584,8 @@ private:
   struct InProgressAliasInfo {
     InProgressAliasInfo()
         : aliasDepth(0), isType(false), canBeDeferred(false) {}
-    InProgressAliasInfo(StringRef alias, bool isType, bool canBeDeferred)
-        : alias(alias), aliasDepth(1), isType(isType),
-          canBeDeferred(canBeDeferred) {}
+    InProgressAliasInfo(StringRef alias)
+        : alias(alias), aliasDepth(1), isType(false), canBeDeferred(false) {}
 
     bool operator<(const InProgressAliasInfo &rhs) const {
       // Order first by depth, then by attr/type kind, and then by name.
@@ -1096,6 +1095,8 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 
   // Try to generate an alias for this value.
   generateAlias(value, it->second, canBeDeferred);
+  it->second.isType = std::is_base_of_v<Type, T>;
+  it->second.canBeDeferred = canBeDeferred;
 
   // Print the value, capturing any nested elements that require aliases.
   SmallVector<size_t> childAliases;
@@ -1153,8 +1154,7 @@ void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
       sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-",
                          /*allowTrailingDigit=*/false);
   name = name.copy(aliasAllocator);
-  alias = InProgressAliasInfo(name, /*isType=*/std::is_base_of_v<Type, T>,
-                              canBeDeferred);
+  alias = InProgressAliasInfo(name);
 }
 
 //===----------------------------------------------------------------------===//

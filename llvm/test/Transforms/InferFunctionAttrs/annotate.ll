@@ -1106,6 +1106,15 @@ declare void @__cxa_throw(ptr, ptr, ptr)
 ; CHECK: declare void @_ZSt9terminatev() [[NOFREE_COLD_NORETURN:#[0-9]+]]
 declare void @_ZSt9terminatev()
 
+; CHECK: declare void @sincos(double, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincos(double, ptr, ptr)
+
+; CHECK: declare void @sincosf(float, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincosf(float, ptr, ptr)
+
+; CHECK: declare void @sincosl(x86_fp80, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincosl(x86_fp80, ptr, ptr)
+
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern4(ptr, ptr, i64)

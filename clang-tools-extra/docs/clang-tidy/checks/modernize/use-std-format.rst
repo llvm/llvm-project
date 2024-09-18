@@ -43,7 +43,7 @@ Options
     extern std::string strprintf(const char *format, ...);
     int i = -42;
     unsigned int u = 0xffffffff;
-    return strprintf("%d %u\n", i, u);
+    return strprintf("%u %d\n", i, u);
 
   would be converted to
 

@@ -155,12 +155,12 @@ raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
 }
 
 class DecoderEmitter {
-  RecordKeeper &RK;
+  const RecordKeeper &RK;
   std::vector<EncodingAndInst> NumberedEncodings;
 
 public:
-  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace)
-      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)) {}
+  DecoderEmitter(const RecordKeeper &R, const std::string &PredicateNamespace)
+      : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
 
   // Emit the decoder state machine table.
   void emitTable(formatted_raw_ostream &o, DecoderTable &Table,
@@ -181,7 +181,7 @@ private:
   CodeGenTarget Target;
 
 public:
-  std::string PredicateNamespace;
+  const std::string &PredicateNamespace;
 };
 
 } // end anonymous namespace
@@ -1302,7 +1302,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
       AllInstructions[Opc].EncodingDef->getValueAsListInit("Predicates");
   bool IsFirstEmission = true;
   for (unsigned i = 0; i < Predicates->size(); ++i) {
-    Record *Pred = Predicates->getElementAsRecord(i);
+    const Record *Pred = Predicates->getElementAsRecord(i);
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
@@ -1320,10 +1320,10 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
 }
 
 bool FilterChooser::doesOpcodeNeedPredicate(unsigned Opc) const {
-  ListInit *Predicates =
+  const ListInit *Predicates =
       AllInstructions[Opc].EncodingDef->getValueAsListInit("Predicates");
   for (unsigned i = 0; i < Predicates->size(); ++i) {
-    Record *Pred = Predicates->getElementAsRecord(i);
+    const Record *Pred = Predicates->getElementAsRecord(i);
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
@@ -1868,7 +1868,7 @@ static std::string findOperandDecoderMethod(const Record *Record) {
   std::string Decoder;
 
   const RecordVal *DecoderString = Record->getValue("DecoderMethod");
-  StringInit *String =
+  const StringInit *String =
       DecoderString ? dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
     Decoder = std::string(String->getValue());
@@ -2010,7 +2010,7 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
 }
 
 static unsigned
-populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
+populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
                     const CodeGenInstruction &CGI, unsigned Opc,
                     std::map<unsigned, std::vector<OperandInfo>> &Operands,
                     bool IsVarLenInst) {
@@ -2089,12 +2089,12 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
       if (SubArgDag)
         OpInit = SubArgDag->getOperator();
-      Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
+      const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
       // Lookup the sub-operands from the operand type record (note that only
       // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
-      DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
-                            ? OpTypeRec->getValueAsDag("MIOperandInfo")
-                            : nullptr;
+      const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
+                                  ? OpTypeRec->getValueAsDag("MIOperandInfo")
+                                  : nullptr;
 
       // Lookup the decoder method and construct a new OperandInfo to hold our
       // result.
@@ -2549,7 +2549,7 @@ namespace llvm {
     handleHwModesUnrelatedEncodings(NumberedInstruction, HwModeNames,
                                     NamespacesWithHwModes, NumberedEncodings);
   }
-  for (const auto &NumberedAlias :
+  for (const Record *NumberedAlias :
        RK.getAllDerivedDefinitions("AdditionalEncoding"))
     NumberedEncodings.emplace_back(
         NumberedAlias,

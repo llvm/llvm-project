@@ -8258,15 +8258,23 @@ but do not pass them to the underlying coroutine or pass them by value.
 def CoroAwaitElidableDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-The ``[[clang::coro_await_elidable]]`` is a class attribute which can be applied
-to a coroutine return type.
+The ``[[clang::coro_await_elidable]]`` is a class attribute which can be
+applied to a coroutine return type. It provides a hint to the compiler to apply
+Heap Allocation Elision more aggressively.
 
-When a coroutine function that returns such a type calls another coroutine function,
-the compiler performs heap allocation elision when the call to the coroutine function
-is immediately co_awaited as a prvalue. In this case, the coroutine frame for the
-callee will be a local variable within the enclosing braces in the caller's stack
-frame. And the local variable, like other variables in coroutines, may be collected
-into the coroutine frame, which may be allocated on the heap.
+When a coroutine function returns such a type, a direct call expression therein
+that returns a prvalue of a type attributed ``[[clang::coro_await_elidable]]``
+is said to be under a safe elide context if one of the following is true:
+- it is the immediate right-hand side operand to a co_await expression.
+- it is an argument to a ``[[clang::coro_await_elidable_argument]]`` parameter
+or parameter pack of another direct call expression under a safe elide context.
+
+Do note that the safe elide context applies only to the call expression itself,
+and the context does not transitively include any of its subexpressions unless
+exceptional rules of ``[[clang::coro_await_elidable_argument]]`` apply.
+
+The compiler performs heap allocation elision on call expressions under a safe
+elide context, if the callee is a coroutine.
 
 Example:
 
@@ -8281,8 +8289,63 @@ Example:
     co_await t;
   }
 
-The behavior is undefined if the caller coroutine is destroyed earlier than the
-callee coroutine.
+Such elision replaces the heap allocated activation frame of the callee coroutine
+with a local variable within the enclosing braces in the caller's stack frame.
+The local variable, like other variables in coroutines, may be collected into the
+coroutine frame, which may be allocated on the heap. The behavior is undefined
+if the caller coroutine is destroyed earlier than the callee coroutine.
+
+}];
+}
+
+def CoroAwaitElidableArgumentDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+
+The ``[[clang::coro_await_elidable_argument]]`` is a function parameter attribute.
+It works in conjunction with ``[[clang::coro_await_elidable]]`` to propagate a
+safe elide context to a parameter or parameter pack if the function is called
+under a safe elide context.
+
+This is sometimes necessary on utility functions used to compose or modify the
+behavior of a callee coroutine.
+
+Example:
+
+.. code-block:: c++
+
+  template <typename T>
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  template <typename... T>
+  class [[clang::coro_await_elidable]] WhenAll { ... };
+
+  // `when_all` is a utility function that composes coroutines. It does not
+  // need to be a coroutine to propagate.
+  template <typename... T>
+  WhenAll<T...> when_all([[clang::coro_await_elidable_argument]] Task<T> tasks...);
+
+  Task<int> foo();
+  Task<int> bar();
+  Task<void> example1() {
+    // `when_all``, `foo``, and `bar` are all elide safe because `when_all` is
+    // under a safe elide context and, thanks to the [[clang::coro_await_elidable_argument]]
+    // attribute, such context is propagated to foo and bar.
+    co_await when_all(foo(), bar());
+  }
+
+  Task<void> example2() {
+    // `when_all` and `bar` are elide safe. `foo` is not elide safe.
+    auto f = foo();
+    co_await when_all(f, bar());
+  }
+
+
+  Task<void> example3() {
+    // None of the calls are elide safe.
+    auto t = when_all(foo(), bar());
+    co_await t;
+  }
 
 }];
 }

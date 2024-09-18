@@ -342,7 +342,7 @@ void RTDEF(BesselJn_8)(Descriptor &result, int32_t n1, int32_t n2,
       result, n1, n2, x, bn2, bn2_1, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 10> x,
     CppTypeFor<TypeCategory::Real, 10> bn2,
@@ -375,7 +375,7 @@ void RTDEF(BesselJnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
   DoBesselJnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselJnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);
@@ -405,7 +405,7 @@ void RTDEF(BesselYn_8)(Descriptor &result, int32_t n1, int32_t n2,
       result, n1, n2, x, bn1, bn1_1, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, 10> x,
     CppTypeFor<TypeCategory::Real, 10> bn1,
@@ -438,7 +438,7 @@ void RTDEF(BesselYnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
   DoBesselYnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
 }
 
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile, int line) {
   DoBesselYnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);

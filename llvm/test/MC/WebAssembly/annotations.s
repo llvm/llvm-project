@@ -33,6 +33,22 @@ test_annotation:
       rethrow   0
     end_try
   end_try
+
+  block exnref
+    block
+      block () -> (i32, exnref)
+        block i32
+          try_table (catch __cpp_exception 0) (catch_ref __c_longjmp 1) (catch_all 2) (catch_all_ref 3)
+          end_try_table
+          return
+        end_block
+        return
+      end_block
+      return
+    end_block
+    return
+  end_block
+  drop
   end_function
 
 
@@ -61,5 +77,24 @@ test_annotation:
 # CHECK-NEXT:   rethrow   0               # to caller
 # CHECK-NEXT:   end_try                   # label3:
 # CHECK-NEXT:   end_try                   # label0:
+
+# CHECK:        block           exnref
+# CHECK-NEXT:   block
+# CHECK-NEXT:   block           () -> (i32, exnref)
+# CHECK-NEXT:   block           i32
+# CHECK-NEXT:   try_table        (catch __cpp_exception 0) (catch_ref __c_longjmp 1) (catch_all 2) (catch_all_ref 3) # 0: down to label10
+# CHECK-NEXT:                             # 1: down to label9
+# CHECK-NEXT:                             # 2: down to label8
+# CHECK-NEXT:                             # 3: down to label7
+# CHECK-NEXT:   end_try_table                           # label11:
+# CHECK-NEXT:   return
+# CHECK-NEXT:   end_block                               # label10:
+# CHECK-NEXT:   return
+# CHECK-NEXT:   end_block                               # label9:
+# CHECK-NEXT:   return
+# CHECK-NEXT:   end_block                               # label8:
+# CHECK-NEXT:   return
+# CHECK-NEXT:   end_block                               # label7:
+# CHECK-NEXT:   drop
 # CHECK-NEXT:   end_function
 

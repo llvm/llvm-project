@@ -96,7 +96,7 @@ void error_fread(void) {
     }
   }
   fclose(F);
-  Ret = fread(Buf, 1, 10, F); // expected-warning {{Stream might be already closed}}
+  Ret = fread(Buf, 1, 10, F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fwrite(void) {
@@ -113,7 +113,7 @@ void error_fwrite(void) {
     fwrite(0, 1, 10, F);            // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  Ret = fwrite(0, 1, 10, F); // expected-warning {{Stream might be already closed}}
+  Ret = fwrite(0, 1, 10, F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fgetc(void) {
@@ -135,7 +135,7 @@ void error_fgetc(void) {
     }
   }
   fclose(F);
-  fgetc(F); // expected-warning {{Stream might be already closed}}
+  fgetc(F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fgets(void) {
@@ -158,7 +158,7 @@ void error_fgets(void) {
     }
   }
   fclose(F);
-  fgets(Buf, sizeof(Buf), F);         // expected-warning {{Stream might be already closed}}
+  fgets(Buf, sizeof(Buf), F);         // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fputc(int fd) {
@@ -176,7 +176,7 @@ void error_fputc(int fd) {
     fputc('Y', F);                               // no-warning
   }
   fclose(F);
-  fputc('A', F); // expected-warning {{Stream might be already closed}}
+  fputc('A', F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fputs(void) {
@@ -194,7 +194,7 @@ void error_fputs(void) {
     fputs("QWD", F);                 // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  fputs("ABC", F); // expected-warning {{Stream might be already closed}}
+  fputs("ABC", F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fprintf(void) {
@@ -211,7 +211,7 @@ void error_fprintf(void) {
     fprintf(F, "bbb");              // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  fprintf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+  fprintf(F, "ccc"); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fscanf(int *A) {
@@ -236,7 +236,7 @@ void error_fscanf(int *A) {
     }
   }
   fclose(F);
-  fscanf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+  fscanf(F, "ccc"); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_ungetc(int TestIndeterminate) {
@@ -256,7 +256,7 @@ void error_ungetc(int TestIndeterminate) {
     ungetc('X', F);                          // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  ungetc('A', F);                            // expected-warning {{Stream might be already closed}}
+  ungetc('A', F);                            // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_getdelim(char *P, size_t Sz) {
@@ -278,7 +278,7 @@ void error_getdelim(char *P, size_t Sz) {
     }
   }
   fclose(F);
-  getdelim(&P, &Sz, '\n', F);         // expected-warning {{Stream might be already closed}}
+  getdelim(&P, &Sz, '\n', F);         // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_getline(char *P, size_t Sz) {
@@ -300,7 +300,7 @@ void error_getline(char *P, size_t Sz) {
     }
   }
   fclose(F);
-  getline(&P, &Sz, F);                // expected-warning {{Stream might be already closed}}
+  getline(&P, &Sz, F);                // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void write_after_eof_is_allowed(void) {

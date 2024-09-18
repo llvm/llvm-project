@@ -608,7 +608,6 @@ clang/tools/clang-refactor/ClangRefactor.cpp
 clang/tools/clang-refactor/TestSupport.cpp
 clang/tools/clang-refactor/TestSupport.h
 clang/tools/clang-refactor/ToolRefactoringResultConsumer.h
-clang/tools/clang-rename/ClangRename.cpp
 clang/tools/clang-repl/ClangRepl.cpp
 clang/tools/clang-scan-deps/ClangScanDeps.cpp
 clang/tools/clang-shlib/clang-shlib.cpp

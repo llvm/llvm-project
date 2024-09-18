@@ -5,8 +5,22 @@
 define arm_aapcs_vfpcc <8 x half> @fneg_float16_t(<8 x half> %src) {
 ; CHECK-MVE-LABEL: fneg_float16_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmov.i16 q1, #0x8000
-; CHECK-MVE-NEXT:    veor q0, q0, q1
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
+; CHECK-MVE-NEXT:    vneg.f16 s0, s0
+; CHECK-MVE-NEXT:    vneg.f16 s4, s4
+; CHECK-MVE-NEXT:    vins.f16 s0, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
+; CHECK-MVE-NEXT:    vneg.f16 s4, s4
+; CHECK-MVE-NEXT:    vneg.f16 s1, s1
+; CHECK-MVE-NEXT:    vins.f16 s1, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s2
+; CHECK-MVE-NEXT:    vneg.f16 s4, s4
+; CHECK-MVE-NEXT:    vneg.f16 s2, s2
+; CHECK-MVE-NEXT:    vins.f16 s2, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s3
+; CHECK-MVE-NEXT:    vneg.f16 s4, s4
+; CHECK-MVE-NEXT:    vneg.f16 s3, s3
+; CHECK-MVE-NEXT:    vins.f16 s3, s4
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: fneg_float16_t:
@@ -21,8 +35,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fneg_float32_t(<4 x float> %src) {
 ; CHECK-MVE-LABEL: fneg_float32_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmov.i32 q1, #0x80000000
-; CHECK-MVE-NEXT:    veor q0, q0, q1
+; CHECK-MVE-NEXT:    vneg.f32 s3, s3
+; CHECK-MVE-NEXT:    vneg.f32 s2, s2
+; CHECK-MVE-NEXT:    vneg.f32 s1, s1
+; CHECK-MVE-NEXT:    vneg.f32 s0, s0
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: fneg_float32_t:
@@ -37,17 +53,20 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @fneg_float64_t(<2 x double> %src) {
 ; CHECK-LABEL: fneg_float64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI2_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    veor q0, q0, q1
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    vstr d1, [sp]
+; CHECK-NEXT:    ldrb.w r0, [sp, #7]
+; CHECK-NEXT:    vstr d0, [sp, #8]
+; CHECK-NEXT:    ldrb.w r1, [sp, #15]
+; CHECK-NEXT:    eor r0, r0, #128
+; CHECK-NEXT:    strb.w r0, [sp, #7]
+; CHECK-NEXT:    vldr d1, [sp]
+; CHECK-NEXT:    eor r0, r1, #128
+; CHECK-NEXT:    strb.w r0, [sp, #15]
+; CHECK-NEXT:    vldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 2147483648 @ 0x80000000
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 2147483648 @ 0x80000000
 entry:
   %0 = fsub nnan ninf nsz <2 x double> <double 0.0e0, double 0.0e0>, %src
   ret <2 x double> %0

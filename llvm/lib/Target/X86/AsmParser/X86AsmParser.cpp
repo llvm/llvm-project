@@ -1195,7 +1195,7 @@ private:
   /// instrumentation around Inst.
   void emitInstruction(MCInst &Inst, OperandVector &Operands, MCStreamer &Out);
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -1215,7 +1215,7 @@ private:
                                     uint64_t &ErrorInfo,
                                     bool MatchingInlineAsm);
 
-  bool OmitRegisterFromClobberLists(unsigned RegNo) override;
+  bool omitRegisterFromClobberLists(unsigned RegNo) override;
 
   /// Parses AVX512 specific operand primitives: masked registers ({%k<NUM>}, {z})
   /// and memory broadcasting ({1to<NUM>}) primitives, updating Operands vector if required.
@@ -1290,7 +1290,7 @@ public:
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -3186,7 +3186,7 @@ bool X86AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   return Parser.parsePrimaryExpr(Res, EndLoc, nullptr);
 }
 
-bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   InstInfo = &Info;
@@ -4121,7 +4121,7 @@ static unsigned getPrefixes(OperandVector &Operands) {
   return Result;
 }
 
-bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool X86AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -4659,7 +4659,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
                MatchingInlineAsm);
 }
 
-bool X86AsmParser::OmitRegisterFromClobberLists(unsigned RegNo) {
+bool X86AsmParser::omitRegisterFromClobberLists(unsigned RegNo) {
   return X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(RegNo);
 }
 

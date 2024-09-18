@@ -104,6 +104,8 @@ enum class PrimitiveKind {
   Double,
   Ldouble,
   Nullptr,
+  Auto,
+  DecltypeAuto,
 };
 
 enum class CharKind {

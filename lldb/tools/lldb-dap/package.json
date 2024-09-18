@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
@@ -78,6 +78,15 @@
           "scope": "resource",
           "type": "string",
           "description": "The log path for lldb-dap (if any)"
+        },
+        "lldb-dap.environment": {
+          "scope": "resource",
+          "type": "object",
+          "default": {},
+          "description": "The environment of the lldb-dap process.",
+          "additionalProperties": {
+             "type": "string"
+          }
         }
       }
     },

@@ -1259,7 +1259,7 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov.b v1[5], w10
 ; CHECK-NEXT:    ubfx w10, w9, #24, #4
 ; CHECK-NEXT:    mov.b v1[6], w10
-; CHECK-NEXT:    ubfx x10, x9, #28, #4
+; CHECK-NEXT:    lsr w10, w9, #28
 ; CHECK-NEXT:    mov.b v1[7], w10
 ; CHECK-NEXT:    ubfx x10, x9, #32, #4
 ; CHECK-NEXT:    mov.b v1[8], w10
@@ -1322,7 +1322,7 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    mov v1.b[6], w10
 ; CHECK-BE-NEXT:    ubfx x10, x9, #32, #4
 ; CHECK-BE-NEXT:    mov v1.b[7], w10
-; CHECK-BE-NEXT:    ubfx x10, x9, #28, #4
+; CHECK-BE-NEXT:    lsr w10, w9, #28
 ; CHECK-BE-NEXT:    mov v1.b[8], w10
 ; CHECK-BE-NEXT:    ubfx w10, w9, #24, #4
 ; CHECK-BE-NEXT:    mov v1.b[9], w10

@@ -13,8 +13,9 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include "flang/Common/uint128.h"
-#include <complex>
+#include "flang/Runtime/complex.h"
 #include <cstdint>
 #if __cplusplus >= 202302
 #include <stdfloat>
@@ -70,9 +71,9 @@ template <> struct CppTypeForHelper<TypeCategory::Real, 8> {
   using type = double;
 #endif
 };
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 template <> struct CppTypeForHelper<TypeCategory::Real, 10> {
-  using type = long double;
+  using type = CppFloat80Type;
 };
 #endif
 #if __STDCPP_FLOAT128_T__
@@ -89,7 +90,7 @@ template <> struct CppTypeForHelper<TypeCategory::Real, 16> {
 #endif
 
 template <int KIND> struct CppTypeForHelper<TypeCategory::Complex, KIND> {
-  using type = std::complex<CppTypeFor<TypeCategory::Real, KIND>>;
+  using type = rtcmplx::complex<CppTypeFor<TypeCategory::Real, KIND>>;
 };
 
 template <> struct CppTypeForHelper<TypeCategory::Character, 1> {

@@ -672,7 +672,8 @@ void InstrInfoEmitter::emitLogicalOperandTypeMappings(
 
 void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
                                              StringRef TargetName) {
-  RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  ArrayRef<const Record *> TIIPredicates =
+      Records.getAllDerivedDefinitions("TIIPredicate");
 
   OS << "#ifdef GET_INSTRINFO_MC_HELPER_DECLS\n";
   OS << "#undef GET_INSTRINFO_MC_HELPER_DECLS\n\n";

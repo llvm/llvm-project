@@ -1954,6 +1954,9 @@ static bool isLifeTimeMarker(const Instruction *I) {
 // into variables.
 static bool replacingOperandWithVariableIsCheap(const Instruction *I,
                                                 int OpIdx) {
+  // Divide/Remainder by constant is typically much cheaper than by variable.
+  if (I->isIntDivRem())
+    return OpIdx != 1;
   return !isa<IntrinsicInst>(I);
 }
 
@@ -3334,7 +3337,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // extended for vector types in the future.
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
-    Instruction *MaskedLoadStore = nullptr;
+    CallInst *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
@@ -3367,8 +3370,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //         vector specifies a per-element range, so the semantics stay the
     //         same. Keep it.
     // !annotation: Not impact semantics. Keep it.
-    I->dropUBImplyingAttrsAndUnknownMetadata(
-        {LLVMContext::MD_range, LLVMContext::MD_annotation});
+    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
+      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
     at::deleteAssignmentMarkers(I);
@@ -7881,6 +7885,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       case Instruction::Call:
       case Instruction::CallBr:
       case Instruction::Invoke:
+      case Instruction::UDiv:
+      case Instruction::URem:
+        // Note: signed div/rem of INT_MIN / -1 is also immediate UB, not
+        // implemented to avoid code complexity as it is unclear how useful such
+        // logic is.
+      case Instruction::SDiv:
+      case Instruction::SRem:
         return true;
       }
     });
@@ -7982,6 +7993,9 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
           }
       }
     }
+    // Div/Rem by zero is immediate UB
+    if (match(Use, m_BinOp(m_Value(), m_Specific(I))) && Use->isIntDivRem())
+      return true;
   }
   return false;
 }

@@ -238,6 +238,37 @@ define void @calls_statepoint(ptr addrspace(1) %arg0, i64 %arg1, i32 %arg2, i32 
   ret void
 }
 
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+
+define void @test_patchpoint(i64 %arg0, i32 %arg1, i32 %arg2) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i64 %arg0
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 %arg0, i32 4, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg1
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 %arg1, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg2
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 4, ptr null, i32 %arg2)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i64 %arg0
+  ; CHECK-NEXT: %patchpoint0 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 %arg0, i32 4, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg1
+  ; CHECK-NEXT: %patchpoint1 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 %arg1, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg2
+  ; CHECK-NEXT: %patchpoint2 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 4, ptr null, i32 %arg2)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 %arg0, i32 4, ptr null, i32 0)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 %arg1, ptr null, i32 0)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 4, ptr null, i32 %arg2)
+  %patchpoint0 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 %arg0, i32 4, ptr null, i32 0)
+  %patchpoint1 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 %arg1, ptr null, i32 0)
+  %patchpoint2 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 4, ptr null, i32 %arg2)
+  ret void
+}
+
 declare void @llvm.hwasan.check.memaccess(ptr, ptr, i32)
 
 define void @hwasan_check_memaccess(ptr %arg0,ptr %arg1, i32 %arg2) {

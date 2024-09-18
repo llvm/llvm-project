@@ -2840,11 +2840,14 @@ private:
     if (AfterRParen->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
-    // Look for a cast `( x ) (`.
-    if (AfterRParen->is(tok::l_paren) && BeforeRParen->Previous) {
-      if (BeforeRParen->is(tok::identifier) &&
-          BeforeRParen->Previous->is(tok::l_paren)) {
-        return true;
+    // Look for a cast `( x ) (`, where x may be a qualified identifier.
+    if (AfterRParen->is(tok::l_paren)) {
+      for (const auto *Prev = BeforeRParen; Prev->is(tok::identifier);) {
+        Prev = Prev->Previous;
+        if (Prev->is(tok::coloncolon))
+          Prev = Prev->Previous;
+        if (Prev == LParen)
+          return true;
       }
     }
 
@@ -3704,11 +3707,6 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   auto *First = Line.First;
   First->SpacesRequiredBefore = 1;
   First->CanBreakBefore = First->MustBreakBefore;
-
-  if (First->is(tok::eof) && First->NewlinesBefore == 0 &&
-      Style.InsertNewlineAtEOF) {
-    First->NewlinesBefore = 1;
-  }
 }
 
 // This function heuristically determines whether 'Current' starts the name of a
@@ -4418,31 +4416,29 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen == &Left && Line.Children.empty()) {
     return Style.SpaceInEmptyBlock;
   }
-  if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
-      (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
-       Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
-    return Style.SpacesInParensOptions.InEmptyParentheses;
-  }
-  if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
-      Style.SpacesInParensOptions.ExceptDoubleParentheses &&
-      Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
-    auto *InnerLParen = Left.MatchingParen;
-    if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
-      InnerLParen->SpacesRequiredBefore = 0;
-      return false;
+  if (Style.SpacesInParens == FormatStyle::SIPO_Custom) {
+    if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
+        (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
+         Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
+      return Style.SpacesInParensOptions.InEmptyParentheses;
     }
-  }
-  if (Style.SpacesInParensOptions.InConditionalStatements) {
+    if (Style.SpacesInParensOptions.ExceptDoubleParentheses &&
+        Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
+      auto *InnerLParen = Left.MatchingParen;
+      if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
+        InnerLParen->SpacesRequiredBefore = 0;
+        return false;
+      }
+    }
     const FormatToken *LeftParen = nullptr;
     if (Left.is(tok::l_paren))
       LeftParen = &Left;
     else if (Right.is(tok::r_paren) && Right.MatchingParen)
       LeftParen = Right.MatchingParen;
-    if (LeftParen) {
-      if (LeftParen->is(TT_ConditionLParen))
-        return true;
-      if (LeftParen->Previous && isKeywordWithCondition(*LeftParen->Previous))
-        return true;
+    if (LeftParen && (LeftParen->is(TT_ConditionLParen) ||
+                      (LeftParen->Previous &&
+                       isKeywordWithCondition(*LeftParen->Previous)))) {
+      return Style.SpacesInParensOptions.InConditionalStatements;
     }
   }
 

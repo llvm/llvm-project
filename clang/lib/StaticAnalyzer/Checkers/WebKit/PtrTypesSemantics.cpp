@@ -123,9 +123,8 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
-bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
-  assert(F);
-  QualType type = F->getReturnType();
+bool isRefType(const clang::QualType T) {
+  QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
       type = elaboratedT->desugar();
