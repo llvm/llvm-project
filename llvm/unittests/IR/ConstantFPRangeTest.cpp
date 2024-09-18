@@ -367,4 +367,23 @@ TEST_F(ConstantFPRangeTest, Print) {
   EXPECT_EQ(ToString(Some.unionWith(SNaN)), "[-3, 3] with SNaN");
 }
 
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+TEST_F(ConstantFPRangeTest, NonCanonicalEmptySet) {
+  EXPECT_DEATH(ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(0.0)),
+               "Non-canonical form");
+}
+TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
+  EXPECT_DEATH(ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(1.0f)),
+               "Should only use the same semantics");
+  EXPECT_DEATH(One.contains(APFloat(1.0f)),
+               "Should only use the same semantics");
+  ConstantFPRange OneF32 = ConstantFPRange(APFloat(1.0f));
+  EXPECT_DEATH(One.contains(OneF32), "Should only use the same semantics");
+  EXPECT_DEATH(One.intersectWith(OneF32), "Should only use the same semantics");
+  EXPECT_DEATH(One.unionWith(OneF32), "Should only use the same semantics");
+}
+#endif
+#endif
+
 } // anonymous namespace
