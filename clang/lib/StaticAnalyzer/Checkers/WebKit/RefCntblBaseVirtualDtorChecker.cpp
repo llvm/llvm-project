@@ -72,7 +72,7 @@ public:
       if (name == "ensureOnMainThread" || name == "ensureOnMainRunLoop") {
         for (unsigned i = 0; i < CE->getNumArgs(); ++i) {
           auto *Arg = CE->getArg(i);
-          if (VisitLabmdaArgument(Arg))
+          if (VisitLambdaArgument(Arg))
             return true;
         }
       }
@@ -80,16 +80,14 @@ public:
     return false;
   }
 
-  bool VisitLabmdaArgument(const Expr *E) {
+  bool VisitLambdaArgument(const Expr *E) {
     E = E->IgnoreParenCasts();
     if (auto *TempE = dyn_cast<CXXBindTemporaryExpr>(E))
       E = TempE->getSubExpr();
     E = E->IgnoreParenCasts();
     if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
-      if (auto *Decl = Ref->getDecl()) {
-        if (auto *VD = dyn_cast<VarDecl>(Decl))
-          return VisitLabmdaArgument(VD->getInit());
-      }
+      if (auto *VD = dyn_cast_or_null<VarDecl>(Ref->getDecl()))
+        return VisitLambdaArgument(VD->getInit());
       return false;
     }
     if (auto *Lambda = dyn_cast<LambdaExpr>(E)) {
@@ -98,7 +96,7 @@ public:
     }
     if (auto *ConstructE = dyn_cast<CXXConstructExpr>(E)) {
       for (unsigned i = 0; i < ConstructE->getNumArgs(); ++i) {
-        if (VisitLabmdaArgument(ConstructE->getArg(i)))
+        if (VisitLambdaArgument(ConstructE->getArg(i)))
           return true;
       }
     }
