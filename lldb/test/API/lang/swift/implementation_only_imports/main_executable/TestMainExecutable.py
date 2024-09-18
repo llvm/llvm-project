@@ -55,9 +55,9 @@ class TestMainExecutable(TestBase):
             "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
             "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
             "(Int) simple = 1"])
-        self.expect("e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
-        self.expect("e container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
-        self.expect("e TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
+        self.expect("expr value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
+        self.expect("expr container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
+        self.expect("expr TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
 
     @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
             setting=('symbols.use-swift-clangimporter', 'false'))
@@ -86,9 +86,9 @@ class TestMainExecutable(TestBase):
 #            "container = {}",
             "simple = 1"])
 
-        self.expect("e value", error=True)
-        self.expect("e container", error=True)
-        self.expect("e TwoInts(4, 5)", error=True)
+        self.expect("expr value", error=True)
+        self.expect("expr container", error=True)
+        self.expect("expr TwoInts(4, 5)", error=True)
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
 
@@ -109,9 +109,9 @@ class TestMainExecutable(TestBase):
             "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
             "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
             "(Int) simple = 1"])
-        self.expect("e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
-        self.expect("e container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
-        self.expect("e TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
+        self.expect("expr value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
+        self.expect("expr container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
+        self.expect("expr TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
 
     @swiftTest
     @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
@@ -134,6 +134,6 @@ class TestMainExecutable(TestBase):
             "(Int) simple = 1"])
         # FIXME: If we could figure out how to ignore this failure but still not
         # crash if we touch something that can't be loaded, that would be nice.
-        self.expect("e value", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
-        self.expect("e container", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
-        self.expect("e TwoInts(4, 5)", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
+        self.expect("expr value", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
+        self.expect("expr container", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
+        self.expect("expr TwoInts(4, 5)", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
