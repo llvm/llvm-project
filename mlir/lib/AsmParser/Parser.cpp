@@ -1918,9 +1918,10 @@ public:
 
     Token tok = parser.getToken();
 
-    // Check to see if we are parsing a location alias. We are parsing a location
-    // alias if the token is a hash identifier *without* a dot in it - the dot
-    // signifies a dialect attribute. Otherwise, we parse the location directly.
+    // Check to see if we are parsing a location alias. We are parsing a
+    // location alias if the token is a hash identifier *without* a dot in it -
+    // the dot signifies a dialect attribute. Otherwise, we parse the location
+    // directly.
     if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
       if (parser.parseLocationAlias(directLoc))
         return failure();
