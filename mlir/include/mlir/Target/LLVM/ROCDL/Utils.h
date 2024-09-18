@@ -73,7 +73,7 @@ public:
 
   /// Determines required Device Libraries and adds `oclc` control variables to
   /// the LLVM Module if needed. Also sets
-  /// `amdhsa_code_object_version` module flag
+  /// `amdhsa_code_object_version` module flag.
   void handleModulePreLink(llvm::Module &module) override;
 
   /// Removes unnecessary metadata from the loaded bitcode files.
