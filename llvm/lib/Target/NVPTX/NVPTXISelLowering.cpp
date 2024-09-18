@@ -6179,6 +6179,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   case MVT::v4i16:
   case MVT::v4i32:
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::v4f32:
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>
