@@ -254,9 +254,11 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
       if (m_opt_regsets.AllSet(eRegsetMaskMTE))
         AddRegSetMTE();
 
-      // The TLS set always contains tpidr but only has tpidr2 when SME is
-      // present.
-      AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
+      if (m_opt_regsets.AllSet(eRegsetMaskTLS)) {
+        // The TLS set always contains tpidr but only has tpidr2 when SME is
+        // present.
+        AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
+      }
 
       if (m_opt_regsets.AnySet(eRegsetMaskSSVE))
         AddRegSetSME(m_opt_regsets.AnySet(eRegsetMaskZT));

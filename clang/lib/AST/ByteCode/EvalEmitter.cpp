@@ -38,13 +38,14 @@ EvalEmitter::~EvalEmitter() {
 void EvalEmitter::cleanup() { S.cleanup(); }
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
-                                            bool ConvertResultToRValue) {
+                                            bool ConvertResultToRValue,
+                                            bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E)) {
+  if (!this->visitExpr(E, DestroyToplevelScope)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
@@ -219,7 +220,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
+          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }

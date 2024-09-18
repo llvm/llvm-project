@@ -171,18 +171,18 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
 }
 
 // static
-std::string Driver::GetResourcesPath(StringRef BinaryPath,
-                                     StringRef CustomResourceDir) {
+std::string Driver::GetResourcesPath(StringRef BinaryPath) {
   // Since the resource directory is embedded in the module hash, it's important
   // that all places that need it call this function, so that they get the
   // exact same string ("a/../b/" and "b/" get different hashes, for example).
 
   // Dir is bin/ or lib/, depending on where BinaryPath is.
-  std::string Dir = std::string(llvm::sys::path::parent_path(BinaryPath));
-
+  StringRef Dir = llvm::sys::path::parent_path(BinaryPath);
   SmallString<128> P(Dir);
-  if (CustomResourceDir != "") {
-    llvm::sys::path::append(P, CustomResourceDir);
+
+  StringRef ConfiguredResourceDir(CLANG_RESOURCE_DIR);
+  if (!ConfiguredResourceDir.empty()) {
+    llvm::sys::path::append(P, ConfiguredResourceDir);
   } else {
     // On Windows, libclang.dll is in bin/.
     // On non-Windows, libclang.so/.dylib is in lib/.
@@ -239,7 +239,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 #endif
 
   // Compute the path to the resource directory.
-  ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
+  ResourceDir = GetResourcesPath(ClangExecutable);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -2296,7 +2296,8 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
 
   if (C.getArgs().hasArg(options::OPT_print_multi_lib)) {
     for (const Multilib &Multilib : TC.getMultilibs())
-      llvm::outs() << Multilib << "\n";
+      if (!Multilib.isFatalError())
+        llvm::outs() << Multilib << "\n";
     return false;
   }
 
@@ -3025,12 +3026,6 @@ class OffloadingActionBuilder final {
         // Set the flag to true, so that the builder acts on the current input.
         IsActive = true;
 
-        if (CompileHostOnly)
-          return ABRT_Success;
-
-        // Replicate inputs for each GPU architecture.
-        auto Ty = IA->getType() == types::TY_HIP ? types::TY_HIP_DEVICE
-                                                 : types::TY_CUDA_DEVICE;
         std::string CUID = FixedCUID.str();
         if (CUID.empty()) {
           if (UseCUID == CUID_Random)
@@ -3054,6 +3049,12 @@ class OffloadingActionBuilder final {
         }
         IA->setId(CUID);
 
+        if (CompileHostOnly)
+          return ABRT_Success;
+
+        // Replicate inputs for each GPU architecture.
+        auto Ty = IA->getType() == types::TY_HIP ? types::TY_HIP_DEVICE
+                                                 : types::TY_CUDA_DEVICE;
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
           CudaDeviceActions.push_back(
               C.MakeAction<InputAction>(IA->getInputArg(), Ty, IA->getId()));

@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
 #include <optional>
 
 namespace llvm {
@@ -32,16 +31,15 @@ public:
   size_t size() const { return AggregateString.size(); }
 
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
-    auto IterBool =
-        StringOffset.insert(std::make_pair(Str, AggregateString.size()));
-    if (IterBool.second) {
+    auto [II, Inserted] = StringOffset.insert({Str, size()});
+    if (Inserted) {
       // Add the string to the aggregate if this is the first time found.
       AggregateString.append(Str.begin(), Str.end());
       if (appendZero)
         AggregateString += '\0';
     }
 
-    return IterBool.first->second;
+    return II->second;
   }
 
   // Returns the offset of `Str` in the table if its preset, else return
@@ -78,37 +76,35 @@ public:
   }
 
   // Emit the string as one single string.
-  void EmitString(raw_ostream &O) {
+  void EmitString(raw_ostream &O) const {
     // Escape the string.
-    SmallString<256> Str;
-    raw_svector_ostream(Str).write_escaped(AggregateString);
-    AggregateString = std::string(Str);
+    SmallString<256> EscapedStr;
+    raw_svector_ostream(EscapedStr).write_escaped(AggregateString);
 
     O << "    \"";
     unsigned CharsPrinted = 0;
-    for (unsigned i = 0, e = AggregateString.size(); i != e; ++i) {
+    for (unsigned i = 0, e = EscapedStr.size(); i != e; ++i) {
       if (CharsPrinted > 70) {
         O << "\"\n    \"";
         CharsPrinted = 0;
       }
-      O << AggregateString[i];
+      O << EscapedStr[i];
       ++CharsPrinted;
 
       // Print escape sequences all together.
-      if (AggregateString[i] != '\\')
+      if (EscapedStr[i] != '\\')
         continue;
 
-      assert(i + 1 < AggregateString.size() && "Incomplete escape sequence!");
-      if (isdigit(AggregateString[i + 1])) {
-        assert(isdigit(AggregateString[i + 2]) &&
-               isdigit(AggregateString[i + 3]) &&
+      assert(i + 1 < EscapedStr.size() && "Incomplete escape sequence!");
+      if (isDigit(EscapedStr[i + 1])) {
+        assert(isDigit(EscapedStr[i + 2]) && isDigit(EscapedStr[i + 3]) &&
                "Expected 3 digit octal escape!");
-        O << AggregateString[++i];
-        O << AggregateString[++i];
-        O << AggregateString[++i];
+        O << EscapedStr[++i];
+        O << EscapedStr[++i];
+        O << EscapedStr[++i];
         CharsPrinted += 3;
       } else {
-        O << AggregateString[++i];
+        O << EscapedStr[++i];
         ++CharsPrinted;
       }
     }

@@ -50,8 +50,6 @@ Getting Started with libc++
    Status/Format
    Status/Parallelism
    Status/PSTL
-   Status/SpecialMath
-   Status/Zip
 
 
 .. toctree::

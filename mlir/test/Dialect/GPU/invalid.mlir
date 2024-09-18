@@ -335,7 +335,7 @@ func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
 
 func.func @subgroup_reduce_zero_cluster_size(%arg0 : vector<4xf32>) {
   // expected-error@+1 {{cluster size 0 is not a power of two}}
-  %res = gpu.subgroup_reduce add %arg0 cluster_size(0) : (vector<4xf32>) -> vector<4xf32>
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 0) : (vector<4xf32>) -> vector<4xf32>
   return
 }
 
@@ -343,9 +343,26 @@ func.func @subgroup_reduce_zero_cluster_size(%arg0 : vector<4xf32>) {
 
 func.func @subgroup_reduce_npot_cluster_size(%arg0 : vector<4xf32>) {
   // expected-error@+1 {{cluster size 3 is not a power of two}}
-  %res = gpu.subgroup_reduce add %arg0 cluster_size(3) : (vector<4xf32>) -> vector<4xf32>
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 3) : (vector<4xf32>) -> vector<4xf32>
   return
 }
+
+// -----
+
+func.func @subgroup_reduce_zero_cluster_stride(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride 0 is not a power of two}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(size = 4, stride = 0) : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{cluster stride can only be specified if cluster size is specified}}
+  %res = gpu.subgroup_reduce add %arg0 { cluster_stride = 2 : i32 } : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
 
 // -----
 
@@ -848,3 +865,15 @@ module attributes {gpu.container_module} {
   gpu.module @kernel <> {
   }
 }
+
+// -----
+
+gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
+  // expected-error@+1{{expected all kernels to be uniquely named}}
+    kernels = #gpu.kernel_table<[
+      #gpu.kernel_metadata<"kernel", (i32) -> ()>,
+      #gpu.kernel_metadata<"kernel", (i32, f32) -> (), metadata = {sgpr_count = 255}>
+  // expected-error@below{{failed to parse GPU_ObjectAttr parameter 'kernels' which is to be a `KernelTableAttr`}}
+    ]>,
+    bin = "BLOB">
+  ]

@@ -121,9 +121,7 @@ FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
 
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
                                        CodeGenOptLevel OptLevel)
-    : SelectionDAGISel(TM, OptLevel) {
-  EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
-}
+    : SelectionDAGISel(TM, OptLevel) {}
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
@@ -2740,6 +2738,11 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     SelectDSBvhStackIntrinsic(N);
     return;
+  case Intrinsic::amdgcn_init_whole_wave:
+    CurDAG->getMachineFunction()
+        .getInfo<SIMachineFunctionInfo>()
+        ->setInitWholeWave();
+    break;
   }
 
   SelectCode(N);

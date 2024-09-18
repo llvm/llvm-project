@@ -1,0 +1,4 @@
+void foo() {
+    // expected-error@+1{{use of undeclared identifier 'a'}}
+    a = 2;
+}

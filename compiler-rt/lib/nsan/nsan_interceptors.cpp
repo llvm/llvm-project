@@ -94,7 +94,7 @@ INTERCEPTOR(char *, strfry, char *s) {
 
 INTERCEPTOR(char *, strsep, char **Stringp, const char *delim) {
   char *OrigStringp = REAL(strsep)(Stringp, delim);
-  if (Stringp != nullptr) {
+  if (*Stringp != nullptr) {
     // The previous character has been overwritten with a '\0' char.
     __nsan_set_value_unknown(reinterpret_cast<u8 *>(*Stringp) - 1, 1);
   }

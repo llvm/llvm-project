@@ -2253,9 +2253,6 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
-def EnableLateCFGStructurize : Predicate<
-  "EnableLateStructurizeCFG">;
-
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;

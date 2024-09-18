@@ -355,6 +355,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "strcoll_l",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
               "strncmp",
               RetValSpec<IntType>,
               [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
@@ -365,6 +370,14 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<CharRestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
+              "strxfrm_l",
+              RetValSpec<SizeTType>,
+              [ArgSpec<CharRestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<SizeTType>,
+               ArgSpec<LocaleT>]
           >,
           FunctionSpec<
               "strchr",
@@ -1043,11 +1056,24 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<VarArgType>]
           >,
           FunctionSpec<
+              "vscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VaListType>]
+          >,
+          FunctionSpec<
               "fscanf",
               RetValSpec<IntType>,
               [ArgSpec<FILERestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
+              "vfscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<FILERestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VaListType>]
           >,
           FunctionSpec<
               "sprintf",
@@ -1294,6 +1320,14 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"strtoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoul", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"strtoull", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+
+          FunctionSpec<"strtof_l", RetValSpec<FloatType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtod_l", RetValSpec<DoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtold_l", RetValSpec<LongDoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtol_l", RetValSpec<LongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtoll_l", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtoul_l", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleT>]>,
+          FunctionSpec<"strtoull_l", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>, ArgSpec<LocaleT>]>,
 
           FunctionSpec<"malloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>]>,
           FunctionSpec<"calloc", RetValSpec<VoidPtr>, [ArgSpec<SizeTType>, ArgSpec<SizeTType>]>,
@@ -1563,6 +1597,19 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<CharPtr>,
               [
                   ArgSpec<StructTmPtr>,
+                  ArgSpec<CharPtr>,
+              ]
+          >,
+          FunctionSpec<
+              "ctime",
+              RetValSpec<CharPtr>,
+              [ArgSpec<TimeTTypePtr>]
+          >,
+          FunctionSpec<
+              "ctime_r",
+              RetValSpec<CharPtr>,
+              [
+                  ArgSpec<TimeTTypePtr>,
                   ArgSpec<CharPtr>,
               ]
           >,

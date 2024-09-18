@@ -801,14 +801,8 @@ define i32 @test_pr30188(i1 zeroext %flag, i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[Y]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    store i32 [[X]], ptr [[Z]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[Y_Z:%.*]] = select i1 [[FLAG:%.*]], ptr [[Y]], ptr [[Z]]
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[Y_Z]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -834,17 +828,14 @@ define i32 @test_pr30188a(i1 zeroext %flag, i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @g()
-; CHECK-NEXT:    [[ONE:%.*]] = load i32, ptr [[Y]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    [[THREE:%.*]] = load i32, ptr [[Z]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[THREE_SINK:%.*]] = phi i32 [ [[THREE]], [[IF_ELSE]] ], [ [[ONE]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[FOUR:%.*]] = add i32 [[THREE_SINK]], 2
+; CHECK-NEXT:    [[Z_SINK:%.*]] = phi ptr [ [[Y]], [[IF_THEN]] ], [ [[Z]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[THREE:%.*]] = load i32, ptr [[Z_SINK]], align 4
+; CHECK-NEXT:    [[FOUR:%.*]] = add i32 [[THREE]], 2
 ; CHECK-NEXT:    store i32 [[FOUR]], ptr [[Y]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;

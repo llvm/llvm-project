@@ -1030,7 +1030,7 @@ namespace {
       discardCleanups();
     }
 
-    ASTContext &getCtx() const override { return Ctx; }
+    ASTContext &getASTContext() const override { return Ctx; }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -1222,7 +1222,7 @@ namespace {
   public:
     /// Should we continue evaluation after encountering a side-effect that we
     /// couldn't model?
-    bool keepEvaluatingAfterSideEffect() {
+    bool keepEvaluatingAfterSideEffect() const override {
       switch (EvalMode) {
       case EM_IgnoreSideEffects:
         return true;
@@ -1240,7 +1240,7 @@ namespace {
 
     /// Note that we have had a side-effect, and determine whether we should
     /// keep evaluating.
-    bool noteSideEffect() {
+    bool noteSideEffect() override {
       EvalStatus.HasSideEffects = true;
       return keepEvaluatingAfterSideEffect();
     }
@@ -1522,7 +1522,8 @@ CallStackFrame::~CallStackFrame() {
 }
 
 static bool isRead(AccessKinds AK) {
-  return AK == AK_Read || AK == AK_ReadObjectRepresentation;
+  return AK == AK_Read || AK == AK_ReadObjectRepresentation ||
+         AK == AK_IsWithinLifetime;
 }
 
 static bool isModification(AccessKinds AK) {
@@ -1532,6 +1533,7 @@ static bool isModification(AccessKinds AK) {
   case AK_MemberCall:
   case AK_DynamicCast:
   case AK_TypeId:
+  case AK_IsWithinLifetime:
     return false;
   case AK_Assign:
   case AK_Increment:
@@ -1549,7 +1551,8 @@ static bool isAnyAccess(AccessKinds AK) {
 
 /// Is this an access per the C++ definition?
 static bool isFormalAccess(AccessKinds AK) {
-  return isAnyAccess(AK) && AK != AK_Construct && AK != AK_Destroy;
+  return isAnyAccess(AK) && AK != AK_Construct && AK != AK_Destroy &&
+         AK != AK_IsWithinLifetime;
 }
 
 /// Is this kind of axcess valid on an indeterminate object value?
@@ -1561,6 +1564,7 @@ static bool isValidIndeterminateAccess(AccessKinds AK) {
     // These need the object's value.
     return false;
 
+  case AK_IsWithinLifetime:
   case AK_ReadObjectRepresentation:
   case AK_Assign:
   case AK_Construct:
@@ -2327,9 +2331,9 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
 
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
-      if (Info.getCtx().getLangOpts().CUDA &&
-          Info.getCtx().getLangOpts().CUDAIsDevice &&
-          Info.getCtx().CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if (Info.getASTContext().getLangOpts().CUDA &&
+          Info.getASTContext().getLangOpts().CUDAIsDevice &&
+          Info.getASTContext().CUDAConstantEvalCtx.NoWrongSidedVars) {
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
@@ -3707,7 +3711,8 @@ struct CompleteObject {
     // In C++14 onwards, it is permitted to read a mutable member whose
     // lifetime began within the evaluation.
     // FIXME: Should we also allow this in C++11?
-    if (!Info.getLangOpts().CPlusPlus14)
+    if (!Info.getLangOpts().CPlusPlus14 &&
+        AK != AccessKinds::AK_IsWithinLifetime)
       return false;
     return lifetimeStartedInEvaluation(Info, Base, /*MutableSubobject*/true);
   }
@@ -3760,6 +3765,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     if ((O->isAbsent() && !(handler.AccessKind == AK_Construct && I == N)) ||
         (O->isIndeterminate() &&
          !isValidIndeterminateAccess(handler.AccessKind))) {
+      // Object has ended lifetime.
+      // If I is non-zero, some subobject (member or array element) of a
+      // complete object has ended its lifetime, so this is valid for
+      // IsWithinLifetime, resulting in false.
+      if (I != 0 && handler.AccessKind == AK_IsWithinLifetime)
+        return false;
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate()
@@ -3927,6 +3938,9 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
             // Placement new onto an inactive union member makes it active.
             O->setUnion(Field, APValue());
           } else {
+            // Pointer to/into inactive union member: Not within lifetime
+            if (handler.AccessKind == AK_IsWithinLifetime)
+              return false;
             // FIXME: If O->getUnionValue() is absent, report that there's no
             // active union member rather than reporting the prior active union
             // member. We'll need to fix nullptr_t to not use APValue() as its
@@ -5662,7 +5676,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    auto LO = Info.getCtx().getLangOpts();
+    auto LO = Info.getASTContext().getLangOpts();
     if (LO.CXXAssumptions && !LO.MSVCCompat) {
       for (auto *Attr : AS->getAttrs()) {
         auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
@@ -5673,7 +5687,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
-        if (Assumption->HasSideEffects(Info.getCtx()))
+        if (Assumption->HasSideEffects(Info.getASTContext()))
           continue;
 
         bool Value;
@@ -6691,7 +6705,9 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
     if (Size && Size > Value.getArrayInitializedElts())
       expandArray(Value, Value.getArraySize() - 1);
 
-    for (; Size != 0; --Size) {
+    // The size of the array might have been reduced by
+    // a placement new.
+    for (Size = Value.getArraySize(); Size != 0; --Size) {
       APValue &Elem = Value.getArrayInitializedElt(Size - 1);
       if (!HandleLValueArrayAdjustment(Info, &LocE, ElemLV, ElemT, -1) ||
           !HandleDestructionImpl(Info, CallRange, ElemLV, Elem, ElemT))
@@ -10003,23 +10019,14 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     return false;
 
   FunctionDecl *OperatorNew = E->getOperatorNew();
+  QualType AllocType = E->getAllocatedType();
+  QualType TargetType = AllocType;
 
   bool IsNothrow = false;
   bool IsPlacement = false;
-  if (OperatorNew->isReservedGlobalPlacementOperator() &&
-      Info.CurrentCall->isStdFunction() && !E->isArray()) {
-    // FIXME Support array placement new.
-    assert(E->getNumPlacementArgs() == 1);
-    if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
-      return false;
-    if (Result.Designator.Invalid)
-      return false;
-    IsPlacement = true;
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
-    Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
-        << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
-    return false;
-  } else if (E->getNumPlacementArgs()) {
+
+  if (E->getNumPlacementArgs() == 1 &&
+      E->getPlacementArg(0)->getType()->isNothrowT()) {
     // The only new-placement list we support is of the form (std::nothrow).
     //
     // FIXME: There is no restriction on this, but it's not clear that any
@@ -10030,14 +10037,31 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     // (which should presumably be valid only if N is a multiple of
     // alignof(int), and in any case can't be deallocated unless N is
     // alignof(X) and X has new-extended alignment).
-    if (E->getNumPlacementArgs() != 1 ||
-        !E->getPlacementArg(0)->getType()->isNothrowT())
-      return Error(E, diag::note_constexpr_new_placement);
-
     LValue Nothrow;
     if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
       return false;
     IsNothrow = true;
+  } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
+    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26) {
+      if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
+        return false;
+      if (Result.Designator.Invalid)
+        return false;
+      TargetType = E->getPlacementArg(0)->getType();
+      IsPlacement = true;
+    } else {
+      Info.FFDiag(E, diag::note_constexpr_new_placement)
+          << /*C++26 feature*/ 1 << E->getSourceRange();
+      return false;
+    }
+  } else if (E->getNumPlacementArgs()) {
+    Info.FFDiag(E, diag::note_constexpr_new_placement)
+        << /*Unsupported*/ 0 << E->getSourceRange();
+    return false;
+  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+    Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
+        << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+    return false;
   }
 
   const Expr *Init = E->getInitializer();
@@ -10045,7 +10069,6 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   const CXXConstructExpr *ResizedArrayCCE = nullptr;
   bool ValueInit = false;
 
-  QualType AllocType = E->getAllocatedType();
   if (std::optional<const Expr *> ArraySize = E->getArraySize()) {
     const Expr *Stripped = *ArraySize;
     for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
@@ -10139,9 +10162,17 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       bool found(APValue &Subobj, QualType SubobjType) {
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
-        if (!Info.Ctx.hasSameUnqualifiedType(SubobjType, AllocType)) {
-          Info.FFDiag(E, diag::note_constexpr_placement_new_wrong_type) <<
-            SubobjType << AllocType;
+        unsigned SubobjectSize = 1;
+        unsigned AllocSize = 1;
+        if (auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
+          AllocSize = CAT->getZExtSize();
+        if (auto *CAT = dyn_cast<ConstantArrayType>(SubobjType))
+          SubobjectSize = CAT->getZExtSize();
+        if (SubobjectSize < AllocSize ||
+            !Info.Ctx.hasSimilarType(Info.Ctx.getBaseElementType(SubobjType),
+                                     Info.Ctx.getBaseElementType(AllocType))) {
+          Info.FFDiag(E, diag::note_constexpr_placement_new_wrong_type)
+              << SubobjType << AllocType;
           return false;
         }
         Value = &Subobj;
@@ -10903,6 +10934,15 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     return true;
+  }
+  case CK_HLSLVectorTruncation: {
+    APValue Val;
+    SmallVector<APValue, 4> Elements;
+    if (!EvaluateVector(SE, Val, Info))
+      return Error(E);
+    for (unsigned I = 0; I < NElts; I++)
+      Elements.push_back(Val.getVectorElt(I));
+    return Success(Elements, E);
   }
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
@@ -11666,6 +11706,9 @@ public:
   }
 
   bool ZeroInitialization(const Expr *E) { return Success(0, E); }
+
+  friend std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &,
+                                                             const CallExpr *);
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -12702,6 +12745,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return false;
   }
 
+  case Builtin::BI__noop:
+    // __noop always evaluates successfully and returns 0.
+    return Success(0, E);
+
   case Builtin::BI__builtin_is_constant_evaluated: {
     const auto *Callee = Info.CurrentCall->getCallee();
     if (Info.InConstantContext && !Info.CheckingPotentialConstantExpression &&
@@ -12721,6 +12768,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(Info.InConstantContext, E);
   }
+
+  case Builtin::BI__builtin_is_within_lifetime:
+    if (auto result = EvaluateBuiltinIsWithinLifetime(*this, E))
+      return Success(*result, E);
+    return false;
 
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
@@ -13874,16 +13926,6 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
     SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
 
-    // C++11 [expr.rel]p3:
-    //   Pointers to void (after pointer conversions) can be compared, with a
-    //   result defined as follows: If both pointers represent the same
-    //   address or are both the null pointer value, the result is true if the
-    //   operator is <= or >= and false otherwise; otherwise the result is
-    //   unspecified.
-    // We interpret this as applying to pointers to *cv* void.
-    if (LHSTy->isVoidPointerType() && LHSOffset != RHSOffset && IsRelational)
-      Info.CCEDiag(E, diag::note_constexpr_void_comparison);
-
     // C++11 [expr.rel]p2:
     // - If two pointers point to non-static data members of the same object,
     //   or to subobjects or array elements fo such members, recursively, the
@@ -14445,7 +14487,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
-  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -14617,6 +14658,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!HandleFloatToIntCast(Info, E, SrcType, F, DestType, Value))
       return false;
     return Success(Value, E);
+  }
+  case CK_HLSLVectorTruncation: {
+    APValue Val;
+    if (!EvaluateVector(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getVectorElt(0), E);
   }
   }
 
@@ -15143,6 +15190,12 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
     Result = V.getComplexFloatReal();
     return true;
+  }
+  case CK_HLSLVectorTruncation: {
+    APValue Val;
+    if (!EvaluateVector(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getVectorElt(0), E);
   }
   }
 }
@@ -16248,7 +16301,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind))
       return false;
     return CheckConstantExpression(Info, getExprLoc(),
                                    getStorageType(Ctx, this), Result.Val, Kind);
@@ -16619,6 +16672,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CoyieldExprClass:
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::HLSLOutArgExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {
@@ -17310,3 +17364,84 @@ bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   return EvaluateBuiltinStrLen(this, Result, Info);
 }
+
+namespace {
+struct IsWithinLifetimeHandler {
+  EvalInfo &Info;
+  static constexpr AccessKinds AccessKind = AccessKinds::AK_IsWithinLifetime;
+  using result_type = std::optional<bool>;
+  std::optional<bool> failed() { return std::nullopt; }
+  template <typename T>
+  std::optional<bool> found(T &Subobj, QualType SubobjType) {
+    return true;
+  }
+};
+
+std::optional<bool> EvaluateBuiltinIsWithinLifetime(IntExprEvaluator &IEE,
+                                                    const CallExpr *E) {
+  EvalInfo &Info = IEE.Info;
+  // Sometimes this is called during some sorts of constant folding / early
+  // evaluation. These are meant for non-constant expressions and are not
+  // necessary since this consteval builtin will never be evaluated at runtime.
+  // Just fail to evaluate when not in a constant context.
+  if (!Info.InConstantContext)
+    return std::nullopt;
+  assert(E->getBuiltinCallee() == Builtin::BI__builtin_is_within_lifetime);
+  const Expr *Arg = E->getArg(0);
+  if (Arg->isValueDependent())
+    return std::nullopt;
+  LValue Val;
+  if (!EvaluatePointer(Arg, Val, Info))
+    return std::nullopt;
+
+  auto Error = [&](int Diag) {
+    bool CalledFromStd = false;
+    const auto *Callee = Info.CurrentCall->getCallee();
+    if (Callee && Callee->isInStdNamespace()) {
+      const IdentifierInfo *Identifier = Callee->getIdentifier();
+      CalledFromStd = Identifier && Identifier->isStr("is_within_lifetime");
+    }
+    Info.CCEDiag(CalledFromStd ? Info.CurrentCall->getCallRange().getBegin()
+                               : E->getExprLoc(),
+                 diag::err_invalid_is_within_lifetime)
+        << (CalledFromStd ? "std::is_within_lifetime"
+                          : "__builtin_is_within_lifetime")
+        << Diag;
+    return std::nullopt;
+  };
+  // C++2c [meta.const.eval]p4:
+  //   During the evaluation of an expression E as a core constant expression, a
+  //   call to this function is ill-formed unless p points to an object that is
+  //   usable in constant expressions or whose complete object's lifetime began
+  //   within E.
+
+  // Make sure it points to an object
+  // nullptr does not point to an object
+  if (Val.isNullPointer() || Val.getLValueBase().isNull())
+    return Error(0);
+  QualType T = Val.getLValueBase().getType();
+  assert(!T->isFunctionType() &&
+         "Pointers to functions should have been typed as function pointers "
+         "which would have been rejected earlier");
+  assert(T->isObjectType());
+  // Hypothetical array element is not an object
+  if (Val.getLValueDesignator().isOnePastTheEnd())
+    return Error(1);
+  assert(Val.getLValueDesignator().isValidSubobject() &&
+         "Unchecked case for valid subobject");
+  // All other ill-formed values should have failed EvaluatePointer, so the
+  // object should be a pointer to an object that is usable in a constant
+  // expression or whose complete lifetime began within the expression
+  CompleteObject CO =
+      findCompleteObject(Info, E, AccessKinds::AK_IsWithinLifetime, Val, T);
+  // The lifetime hasn't begun yet if we are still evaluating the
+  // initializer ([basic.life]p(1.2))
+  if (Info.EvaluatingDeclValue && CO.Value == Info.EvaluatingDeclValue)
+    return Error(2);
+
+  if (!CO)
+    return false;
+  IsWithinLifetimeHandler handler{Info};
+  return findSubobject(Info, E, CO, Val.getLValueDesignator(), handler);
+}
+} // namespace

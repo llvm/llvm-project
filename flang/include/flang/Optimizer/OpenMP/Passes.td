@@ -12,7 +12,7 @@
 include "mlir/Pass/PassBase.td"
 
 def MapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization"> {
+    : Pass<"omp-map-info-finalization", "mlir::ModuleOp"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple
@@ -28,7 +28,7 @@ def MarkDeclareTargetPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def FunctionFiltering : Pass<"omp-function-filtering"> {
+def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
   let dependentDialects = [

@@ -658,7 +658,7 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
   case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
     Fortran::common::die("Vector element type not implemented");
   }
-  return ss.str();
+  return buf;
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
@@ -694,7 +694,7 @@ std::string DerivedTypeSpec::AsFortran() const {
     }
     ss << ')';
   }
-  return ss.str();
+  return buf;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
@@ -771,7 +771,7 @@ std::string ParamValue::AsFortran() const {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       expr_->AsFortran(ss);
-      return ss.str();
+      return buf;
     } else {
       return "";
     }
@@ -795,7 +795,7 @@ static std::string KindAsFortran(const KindExpr &kind) {
   } else {
     kind.AsFortran(ss);
   }
-  return ss.str();
+  return buf;
 }
 
 std::string IntrinsicTypeSpec::AsFortran() const {
@@ -891,15 +891,6 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
-}
-
-std::optional<bool> IsInteroperableIntrinsicType(
-    const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
-  if (auto dyType{evaluate::DynamicType::From(type)}) {
-    return IsInteroperableIntrinsicType(*dyType, &features);
-  } else {
-    return std::nullopt;
-  }
 }
 
 } // namespace Fortran::semantics

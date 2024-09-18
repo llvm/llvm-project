@@ -57,9 +57,9 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -597,6 +597,41 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
+
+  for (auto &F : M.functions()) {
+    // Remove memory attributes that are invalid with HWASan.
+    // HWASan checks read from shadow, which invalidates memory(argmem: *)
+    // Short granule checks on function arguments read from the argument memory
+    // (last byte of the granule), which invalidates writeonly.
+    //
+    // This is not only true for sanitized functions, because AttrInfer can
+    // infer those attributes on libc functions, which is not true if those
+    // are instrumented (Android) or intercepted.
+
+    // The API is weird. `onlyReadsMemory` actually means "does not write", and
+    // `onlyWritesMemory` actually means "does not read". So we reconstruct
+    // "accesses memory" && "does not read" <=> "writes".
+    bool Changed = false;
+    if (!F.doesNotAccessMemory()) {
+      bool WritesMemory = !F.onlyReadsMemory();
+      bool ReadsMemory = !F.onlyWritesMemory();
+      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
+        F.removeFnAttr(Attribute::Memory);
+        Changed = true;
+      }
+    }
+    for (Argument &A : F.args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        Changed = true;
+        A.removeAttr(Attribute::WriteOnly);
+      }
+    }
+    if (Changed) {
+      // nobuiltin makes sure later passes don't restore assumptions about
+      // the function.
+      F.addFnAttr(Attribute::NoBuiltin);
+    }
+  }
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -1563,6 +1598,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (&F == HwasanCtorFunction)
     return;
 
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
+
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
 
@@ -1586,10 +1625,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction *, 8> LandingPadVec;
   const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (auto &Inst : instructions(F)) {
     if (InstrumentStack) {
-      SIB.visit(Inst);
+      SIB.visit(ORE, Inst);
     }
 
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
@@ -1621,14 +1660,6 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
-
-  // Remove memory attributes that are about to become invalid.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  F.removeFnAttr(llvm::Attribute::Memory);
-  for (auto &A : F.args())
-    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

@@ -26,25 +26,13 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
-static llvm::Value *createIntrinsicCallWithRange(llvm::IRBuilderBase &builder,
-                                                 llvm::Intrinsic::ID intrinsic,
-                                                 DenseI32ArrayAttr maybeRange) {
-  auto *inst = llvm::cast<llvm::CallInst>(
-      createIntrinsicCall(builder, intrinsic, {}, {}));
-  if (maybeRange) {
-    llvm::ConstantRange Range(APInt(32, maybeRange[0]),
-                              APInt(32, maybeRange[1]));
-    inst->addRangeRetAttr(Range);
-  }
-  return inst;
-}
-
-// Create a call to ROCm-Device-Library function
-// Currently this routine will work only for calling ROCDL functions that
-// take a single int32 argument. It is likely that the interface of this
-// function will change to make it more generic.
-static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
-                                             StringRef fnName, int parameter) {
+// Create a call to ROCm-Device-Library function that returns an ID.
+// This is intended to specifically call device functions that fetch things like
+// block or grid dimensions, and so is limited to functions that take one
+// integer parameter.
+static llvm::Value *createDimGetterFunctionCall(llvm::IRBuilderBase &builder,
+                                                Operation *op, StringRef fnName,
+                                                int parameter) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::FunctionType *functionType = llvm::FunctionType::get(
       llvm::Type::getInt64Ty(module->getContext()), // return type.
@@ -54,7 +42,14 @@ static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
       module->getOrInsertFunction(fnName, functionType).getCallee());
   llvm::Value *fnOp0 = llvm::ConstantInt::get(
       llvm::Type::getInt32Ty(module->getContext()), parameter);
-  return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
+  auto *call = builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
+  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
+    // Zero-extend to 64 bits because the GPU dialect uses 32-bit bounds but
+    // these ockl functions are defined to be 64-bits
+    call->addRangeRetAttr(llvm::ConstantRange(rangeAttr.getLower().zext(64),
+                                              rangeAttr.getUpper().zext(64)));
+  }
+  return call;
 }
 
 namespace {

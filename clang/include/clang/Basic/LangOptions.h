@@ -160,7 +160,8 @@ public:
     HLSL_2017 = 2017,
     HLSL_2018 = 2018,
     HLSL_2021 = 2021,
-    HLSL_202x = 2029,
+    HLSL_202x = 2028,
+    HLSL_202y = 2029,
   };
 
   /// Clang versions with different platform ABI conformance.
@@ -375,11 +376,13 @@ public:
     /// Exclude all overflow patterns (below)
     All = 1 << 1,
     /// if (a + b < a)
-    AddOverflowTest = 1 << 2,
+    AddSignedOverflowTest = 1 << 2,
+    /// if (a + b < a)
+    AddUnsignedOverflowTest = 1 << 3,
     /// -1UL
-    NegUnsignedConst = 1 << 3,
+    NegUnsignedConst = 1 << 4,
     /// while (count--)
-    PostDecrInWhile = 1 << 4,
+    PostDecrInWhile = 1 << 5,
   };
 
   enum class DefaultVisiblityExportMapping {
@@ -454,6 +457,16 @@ public:
 
     /// No range rule is enabled.
     CX_None
+  };
+
+  /// Controls which variables have static destructors registered.
+  enum class RegisterStaticDestructorsKind {
+    /// Register static destructors for all variables.
+    All,
+    /// Register static destructors only for thread-local variables.
+    ThreadLocal,
+    /// Don't register static destructors for any variables.
+    None,
   };
 
   // Define simple language options (with no accessors).

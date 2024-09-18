@@ -478,11 +478,11 @@ public:
   Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCPhysReg Reg,
+  void removeLiveIn(MCRegister Reg,
                     LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCPhysReg Reg,
+  bool isLiveIn(MCRegister Reg,
                 LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted

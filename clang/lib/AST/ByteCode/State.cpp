@@ -74,12 +74,12 @@ void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
 }
 
 DiagnosticBuilder State::report(SourceLocation Loc, diag::kind DiagId) {
-  return getCtx().getDiagnostics().Report(Loc, DiagId);
+  return getASTContext().getDiagnostics().Report(Loc, DiagId);
 }
 
 /// Add a diagnostic to the diagnostics list.
 PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
-  PartialDiagnostic PD(DiagId, getCtx().getDiagAllocator());
+  PartialDiagnostic PD(DiagId, getASTContext().getDiagAllocator());
   getEvalStatus().Diag->push_back(std::make_pair(Loc, PD));
   return getEvalStatus().Diag->back().second;
 }
@@ -93,7 +93,8 @@ OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
     }
 
     unsigned CallStackNotes = getCallStackDepth() - 1;
-    unsigned Limit = getCtx().getDiagnostics().getConstexprBacktraceLimit();
+    unsigned Limit =
+        getASTContext().getDiagnostics().getConstexprBacktraceLimit();
     if (Limit)
       CallStackNotes = std::min(CallStackNotes, Limit + 1);
     if (checkingPotentialConstantExpression())
@@ -113,7 +114,9 @@ OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
   return OptionalDiagnostic();
 }
 
-const LangOptions &State::getLangOpts() const { return getCtx().getLangOpts(); }
+const LangOptions &State::getLangOpts() const {
+  return getASTContext().getLangOpts();
+}
 
 void State::addCallStack(unsigned Limit) {
   // Determine which calls to skip, if any.

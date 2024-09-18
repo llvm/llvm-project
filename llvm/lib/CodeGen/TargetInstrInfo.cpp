@@ -823,7 +823,9 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   }
 
   copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill());
+              SrcMO.getReg(), SrcMO.isKill(),
+              DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
+              SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);

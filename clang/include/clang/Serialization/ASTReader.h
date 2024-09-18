@@ -2149,7 +2149,7 @@ public:
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
 
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

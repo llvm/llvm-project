@@ -331,12 +331,9 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
         // and b) edges to distinct loop headers.  We need to insert pools on
         // each.
         SetVector<BasicBlock *> Headers;
-        for (unsigned i = 0; i < Term->getNumSuccessors(); i++) {
-          BasicBlock *Succ = Term->getSuccessor(i);
-          if (DT.dominates(Succ, Term->getParent())) {
+        for (BasicBlock *Succ : successors(Term->getParent()))
+          if (DT.dominates(Succ, Term->getParent()))
             Headers.insert(Succ);
-          }
-        }
         assert(!Headers.empty() && "poll location is not a loop latch?");
 
         // The split loop structure here is so that we only need to recalculate

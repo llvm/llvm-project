@@ -54,6 +54,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
+#include "InstructionBreakpoint.h"
 #include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
@@ -68,6 +69,8 @@ namespace lldb_dap {
 
 typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
+    InstructionBreakpointMap;
 
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
@@ -108,12 +111,12 @@ struct Variables {
   int64_t next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
   int64_t next_permanent_var_ref{PermanentVariableStartIndex};
 
-  /// Expandable variables that are alive in this stop state.
+  /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
-  llvm::DenseMap<int64_t, lldb::SBValue> expandable_variables;
-  /// Expandable variables that persist across entire debug session.
+  llvm::DenseMap<int64_t, lldb::SBValue> referenced_variables;
+  /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
-  llvm::DenseMap<int64_t, lldb::SBValue> expandable_permanent_variables;
+  llvm::DenseMap<int64_t, lldb::SBValue> referenced_permanent_variables;
 
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
@@ -131,7 +134,7 @@ struct Variables {
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  int64_t InsertExpandableVariable(lldb::SBValue variable, bool is_permanent);
+  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
@@ -160,6 +163,7 @@ struct DAP {
   std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
+  InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
   std::vector<std::string> pre_init_commands;
@@ -333,6 +337,10 @@ struct DAP {
   void SetFrameFormat(llvm::StringRef format);
 
   void SetThreadFormat(llvm::StringRef format);
+
+  InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
+
+  InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
