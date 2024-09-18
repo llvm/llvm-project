@@ -202,6 +202,8 @@ TEST(SanitizerLinux, ThreadDescriptorSize) {
   void *result;
   ASSERT_EQ(0, pthread_create(&tid, 0, thread_descriptor_size_test_func, 0));
   ASSERT_EQ(0, pthread_join(tid, &result));
+  EXPECT_EQ(0u, ThreadDescriptorSize());
+  InitTlsSize();
   EXPECT_EQ((uptr)result, ThreadDescriptorSize());
 }
 #  endif

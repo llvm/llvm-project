@@ -224,7 +224,7 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
 // to get the pointer to thread-specific data keys in the thread control block.
 #  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 // sizeof(struct pthread) from glibc.
-static atomic_uintptr_t thread_descriptor_size;
+static uptr thread_descriptor_size;
 
 // FIXME: Implementation is very GLIBC specific, but it's used by FREEBSD.
 static uptr ThreadDescriptorSizeFallback() {
@@ -305,20 +305,7 @@ static uptr ThreadDescriptorSizeFallback() {
 #    endif
 }
 
-uptr ThreadDescriptorSize() {
-  uptr val = atomic_load_relaxed(&thread_descriptor_size);
-  if (val)
-    return val;
-  // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
-  // glibc 2.34 and later.
-  if (unsigned *psizeof = static_cast<unsigned *>(
-          dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread")))
-    val = *psizeof;
-  if (!val)
-    val = ThreadDescriptorSizeFallback();
-  atomic_store_relaxed(&thread_descriptor_size, val);
-  return val;
-}
+uptr ThreadDescriptorSize() { return thread_descriptor_size; }
 
 #    if SANITIZER_GLIBC
 __attribute__((unused)) static size_t g_tls_size;
@@ -330,6 +317,15 @@ void InitTlsSize() {
   GetGLibcVersion(&major, &minor, &patch);
   g_use_dlpi_tls_data = major == 2 && minor >= 25;
 
+  if (major == 2 && minor >= 34) {
+    // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
+    // glibc 2.34 and later.
+    if (unsigned *psizeof = static_cast<unsigned *>(
+            dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread"))) {
+      thread_descriptor_size = *psizeof;
+    }
+  }
+
 #      if defined(__aarch64__) || defined(__x86_64__) || \
           defined(__powerpc64__) || defined(__loongarch__)
   auto *get_tls_static_info = (void (*)(size_t *, size_t *))dlsym(
@@ -339,7 +335,11 @@ void InitTlsSize() {
   if (get_tls_static_info)
     get_tls_static_info(&g_tls_size, &tls_align);
 #      endif
+
 #    endif  // SANITIZER_GLIBC
+
+  if (!thread_descriptor_size)
+    thread_descriptor_size = ThreadDescriptorSizeFallback();
 }
 
 #    if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64 || \
