@@ -167,6 +167,28 @@ define i32 @test_tailcall_ib_var(ptr %arg0, ptr %arg1) #0 {
   ret i32 %tmp1
 }
 
+define void @test_tailcall_omit_mov_x16_x16(ptr %t) {
+; CHECK-LABEL: test_tailcall_omit_mov_x16_x16:
+; CHECK:         ldr     x16, [x0]
+; CHECK:         mov     x17, x0
+; CHECK:         movk    x17, #6503, lsl #48
+; CHECK:         autda   x16, x17
+; CHECK:         ldr     x1, [x16]
+; CHECK:         movk    x16, #54167, lsl #48
+; CHECK:         braa    x1, x16
+entry:
+  %vtable = load ptr, ptr %t, align 8
+  %0 = ptrtoint ptr %t to i64
+  %1 = tail call i64 @llvm.ptrauth.blend(i64 %0, i64 6503)
+  %2 = ptrtoint ptr %vtable to i64
+  %3 = tail call i64 @llvm.ptrauth.auth(i64 %2, i32 2, i64 %1)
+  %4 = inttoptr i64 %3 to ptr
+  %5 = load ptr, ptr %4, align 8
+  %6 = tail call i64 @llvm.ptrauth.blend(i64 %3, i64 54167)
+  tail call void %5(ptr %t) [ "ptrauth"(i32 0, i64 %6) ]
+  ret void
+}
+
 define i32 @test_call_ia_arg(ptr %arg0, i64 %arg1) #0 {
 ; DARWIN-LABEL: test_call_ia_arg:
 ; DARWIN-NEXT:    stp x29, x30, [sp, #-16]!
