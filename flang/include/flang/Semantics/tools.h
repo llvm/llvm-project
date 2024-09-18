@@ -758,9 +758,11 @@ inline bool checkForSymbolMatch(
   auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
   const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
   for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*e))
-    if (varSymbol == symbol)
+      Fortran::evaluate::GetSymbolVector(*e)) {
+    if (varSymbol == symbol) {
       return true;
+    }
+  }
   return false;
 }
 } // namespace Fortran::semantics

@@ -2009,12 +2009,13 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
     if (e && v) {
       const Symbol &stmt2VarSymbol = evaluate::GetSymbolVector(*v).front();
       const Symbol &stmt1ExprSymbol = evaluate::GetSymbolVector(*e).front();
-      if (stmt2VarSymbol != stmt1ExprSymbol)
+      if (stmt2VarSymbol != stmt1ExprSymbol) {
         context_.Say(stmt1Expr.source,
             "Captured variable %s "
             "expected to be assigned in the second statement of "
             "atomic capture construct"_err_en_US,
             stmt1ExprSymbol.name().ToString());
+      }
     }
   } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
       Fortran::semantics::checkForSingleVariableOnRHS(stmt2)) {
