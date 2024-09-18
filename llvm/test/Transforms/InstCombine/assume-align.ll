@@ -134,7 +134,7 @@ define ptr @fold_assume_align_pow2_of_loaded_pointer_into_align_metadata(ptr %p)
 }
 
 define ptr @fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(ptr %p) {
-; CHECK-LABEL: @dont_fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(
+; CHECK-LABEL: @fold_assume_align_i32_pow2_of_loaded_pointer_into_align_metadata(
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
