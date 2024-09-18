@@ -1057,11 +1057,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // No operations on x86mmx supported, everything uses intrinsics.
   }
 
-  /*
-      MVT::v4f32, MVT::v8f32,  MVT::v16f32,
-      MVT::v2f64, MVT::v4f64,  MVT::v8f64
-  */
-
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE1()) {
     addRegisterClass(MVT::v4f32, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
