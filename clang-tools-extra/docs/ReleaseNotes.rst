@@ -87,9 +87,6 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-Improvements to clang-rename
-----------------------------
-
 The improvements are...
 
 Improvements to clang-tidy
@@ -136,6 +133,11 @@ Changes in existing checks
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
+
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using ``std::span``
+  as a replacement for parameters of incomplete C array type in C++20 and 
+  ``std::array`` or ``std::vector`` before C++20.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
