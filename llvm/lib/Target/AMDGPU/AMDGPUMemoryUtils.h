@@ -70,6 +70,10 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA);
 
+/// Check if the passed global variable or private alloca can be allocated
+/// in VGPRs.
+bool IsPromotableToVGPR(const Value &V, const DataLayout &DL);
+
 } // end namespace AMDGPU
 
 } // end namespace llvm

@@ -677,7 +677,7 @@ declare i64 @get_int()
 
 define i1 @test_icmp_ptr(ptr %in) {
 ; CHECK-LABEL: test_icmp_ptr
-; CHECK: ubfx x0, x0, #31, #1
+; CHECK: lsr w0, w0, #31
   %res = icmp slt ptr %in, null
   ret i1 %res
 }

@@ -236,7 +236,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
-def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+def SelectScalarFPAsInt : ComplexPattern<fAny, 1, "selectScalarFPAsInt", [], [],
+                                         1>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
@@ -2475,6 +2476,7 @@ multiclass VPseudoUnaryVMV_V_X_I {
         def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          SchedUnary<"WriteVIMovV", "ReadVIMovV", mx,
                                     forcePassthruRead=true>;
+        let isReMaterializable = 1 in
         def "_X_" # mx : VPseudoUnaryNoMask<m.vrclass, GPR>,
                          SchedUnary<"WriteVIMovX", "ReadVIMovX", mx,
                                     forcePassthruRead=true>;
@@ -6557,6 +6559,7 @@ defm PseudoVFMERGE : VPseudoVMRG_FM;
 //===----------------------------------------------------------------------===//
 // 13.16. Vector Floating-Point Move Instruction
 //===----------------------------------------------------------------------===//
+let isReMaterializable = 1 in
 defm PseudoVFMV_V : VPseudoVMV_F;
 
 //===----------------------------------------------------------------------===//
@@ -6762,7 +6765,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
     Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
-  let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
+  let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
                             (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
@@ -6785,7 +6788,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
              (ins VR:$rs2, ixlenimm:$sew), []>,
       Sched<[WriteVMovFS, ReadVMovFS]>,
       RISCVVPseudo;
-    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
         Constraints = "$rd = $rs1" in
     def "PseudoVFMV_S_" # f.FX :
       Pseudo<(outs VR:$rd),

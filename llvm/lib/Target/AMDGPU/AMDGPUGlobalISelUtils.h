@@ -29,6 +29,9 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           bool CheckNUW = false);
 
 bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);
+
+bool IsPrivateInVGPR(const MachineMemOperand *MemOpnd);
+
 } // namespace AMDGPU
 } // namespace llvm
 

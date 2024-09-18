@@ -3156,8 +3156,14 @@ unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-static const TargetRegisterClass *
-getAnyVGPRClassForBitWidth(unsigned BitWidth) {
+const TargetRegisterClass *
+SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth == 1)
+    return &AMDGPU::VReg_1RegClass;
+  if (BitWidth == 16)
+    return &AMDGPU::VGPR_16RegClass;
+  if (BitWidth == 32)
+    return &AMDGPU::VGPR_32RegClass;
   if (BitWidth == 64)
     return &AMDGPU::VReg_64RegClass;
   if (BitWidth == 96)
@@ -3725,8 +3731,7 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
         std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
-    return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
-                    : &AMDGPU::SReg_64_XEXECRegClass;
+    return getWaveMaskRegClass();
   case AMDGPU::SGPRRegBankID:
     return getSGPRClassForBitWidth(std::max(32u, Size));
   case AMDGPU::AGPRRegBankID:
@@ -3769,8 +3774,7 @@ SIRegisterInfo::getRegClass(unsigned RCID) const {
   case AMDGPU::SReg_1RegClassID:
     return getBoolRC();
   case AMDGPU::SReg_1_XEXECRegClassID:
-    return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
-      : &AMDGPU::SReg_64_XEXECRegClass;
+    return getWaveMaskRegClass();
   case -1:
     return nullptr;
   default:

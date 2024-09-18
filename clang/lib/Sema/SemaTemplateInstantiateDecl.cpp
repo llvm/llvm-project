@@ -284,7 +284,8 @@ static void instantiateDependentDiagnoseIfAttr(
   if (Cond)
     New->addAttr(new (S.getASTContext()) DiagnoseIfAttr(
         S.getASTContext(), *DIA, Cond, DIA->getMessage(),
-        DIA->getDiagnosticType(), DIA->getArgDependent(), New));
+        DIA->getDefaultSeverity(), DIA->getWarningGroup(),
+        DIA->getArgDependent(), New));
 }
 
 // Constructs and adds to New a new instance of CUDALaunchBoundsAttr using
@@ -5481,7 +5482,10 @@ void Sema::InstantiateVariableInitializer(
     EnterExpressionEvaluationContext Evaluated(
         *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
-    keepInLifetimeExtendingContext();
+    currentEvaluationContext().InLifetimeExtendingContext =
+        parentEvaluationContext().InLifetimeExtendingContext;
+    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
     // Instantiate the initializer.
     ExprResult Init;
 

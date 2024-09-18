@@ -10,6 +10,7 @@ def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot],
 def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
 def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
 
+def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoIOffset", [], [SDNPWantRoot], -3>;
 def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
@@ -1336,32 +1337,32 @@ class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType 
 >;
 
 class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol), M0),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
   (inst $dsaddr, $vaddr, $offset, $cpol)
 >;
 
 class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol), M0),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatLoadLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $dsaddr, $vaddr, $offset, $cpol)
 >;
 
 class GlobalLoadLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatStoreLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $vaddr, $dsaddr, $offset, $cpol)
 >;
 
 class GlobalStoreLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), (i32 VGPR_32:$dsaddr), (i32 timm:$cpol)),
+  (node (GlobalSAddrNoIOffset (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset)), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol)),
   (inst $saddr, $voffset, $dsaddr, $offset, $cpol)
 >;
 
@@ -3623,6 +3624,8 @@ defm GLOBAL_LOAD_DWORD                : VGLOBAL_Real_AllAddr_gfx13<0x0c, "global
 defm GLOBAL_LOAD_DWORDX2              : VGLOBAL_Real_AllAddr_gfx13<0x0d, "global_load_b64">;
 defm GLOBAL_LOAD_DWORDX4              : VGLOBAL_Real_AllAddr_gfx13<0x0e, "global_load_b128">;
 defm GLOBAL_LOAD_DWORDX3              : VGLOBAL_Real_AllAddr_gfx13<0x0f, "global_load_b96">;
+defm GLOBAL_LOAD_DWORD_ADDTID         : VGLOBAL_Real_AllAddr_gfx13<0x16, "global_load_addtid_b32">;
+defm GLOBAL_STORE_DWORD_ADDTID        : VGLOBAL_Real_AllAddr_gfx13<0x17, "global_store_addtid_b32">;
 defm GLOBAL_STORE_BYTE                : VGLOBAL_Real_AllAddr_gfx13<0x18, "global_store_b8">;
 defm GLOBAL_STORE_BYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x19, "global_store_d16_hi_b8">;
 defm GLOBAL_STORE_SHORT               : VGLOBAL_Real_AllAddr_gfx13<0x1a, "global_store_b16">;
@@ -3637,8 +3640,6 @@ defm GLOBAL_LOAD_SBYTE_D16            : VGLOBAL_Real_AllAddr_gfx13<0x22, "global
 defm GLOBAL_LOAD_SBYTE_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x23, "global_load_d16_hi_i8">;
 defm GLOBAL_LOAD_SHORT_D16            : VGLOBAL_Real_AllAddr_gfx13<0x24, "global_load_d16_b16">;
 defm GLOBAL_LOAD_SHORT_D16_HI         : VGLOBAL_Real_AllAddr_gfx13<0x25, "global_load_d16_hi_b16">;
-defm GLOBAL_LOAD_DWORD_ADDTID         : VGLOBAL_Real_AllAddr_gfx13<0x28, "global_load_addtid_b32">;
-defm GLOBAL_STORE_DWORD_ADDTID        : VGLOBAL_Real_AllAddr_gfx13<0x29, "global_store_addtid_b32">;
 defm GLOBAL_INV                       : VFLAT_Real_Base_gfx13<0x2b>;
 defm GLOBAL_WB                        : VFLAT_Real_Base_gfx13<0x2c>;
 defm GLOBAL_WBINV                     : VFLAT_Real_Base_gfx13<0x2e>;

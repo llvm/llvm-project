@@ -1192,7 +1192,6 @@ def OMP_DistributeParallelDo : Directive<"distribute parallel do"> {
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
   ];
@@ -1293,7 +1292,6 @@ def OMP_DistributeSimd : Directive<"distribute simd"> {
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -1840,7 +1838,6 @@ def OMP_TargetParallel : Directive<"target parallel"> {
 def OMP_TargetParallelDo : Directive<"target parallel do"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocator>,
-    VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_FirstPrivate>,
@@ -1977,7 +1974,6 @@ def OMP_TargetParallelForSimd : Directive<"target parallel for simd"> {
 def OMP_target_parallel_loop : Directive<"target parallel loop"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_FirstPrivate>,
@@ -2106,7 +2102,6 @@ def OMP_TargetTeamsDistributeParallelDo :
     Directive<"target teams distribute parallel do"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
@@ -2115,7 +2110,6 @@ def OMP_TargetTeamsDistributeParallelDo :
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
     VersionedClause<OMPC_Map>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
@@ -2143,7 +2137,6 @@ def OMP_TargetTeamsDistributeParallelDoSimd :
   let allowedClauses = [
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
@@ -2153,7 +2146,6 @@ def OMP_TargetTeamsDistributeParallelDoSimd :
     VersionedClause<OMPC_Linear>,
     VersionedClause<OMPC_Map>,
     VersionedClause<OMPC_NonTemporal>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
@@ -2395,7 +2387,6 @@ def OMP_TeamsDistributeParallelDo :
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
-    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_ThreadLimit>,

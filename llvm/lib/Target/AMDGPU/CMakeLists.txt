@@ -177,6 +177,7 @@ add_llvm_target(AMDGPUCodeGen
   SIShrinkInstructions.cpp
   AMDGPUFixWaveGroupEntry.cpp
   AMDGPUMarkPromotableLaneShared.cpp
+  AMDGPUMarkPromotablePrivate.cpp
   AMDGPUIdxRegAlloc.cpp
   AMDGPUBundleIdxLdSt.cpp
   SIWholeQuadMode.cpp

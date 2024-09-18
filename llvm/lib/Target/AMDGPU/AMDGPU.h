@@ -36,7 +36,7 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
-FunctionPass *createSIPeepholeSDWAPass();
+FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
@@ -64,6 +64,7 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 FunctionPass *createAMDGPUMarkPromotableLaneSharedLegacyPass();
+FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
@@ -161,6 +162,16 @@ struct AMDGPUMarkPromotableLaneSharedPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+void initializeAMDGPUMarkPromotablePrivateLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkPromotablePrivateLegacyPassID;
+
+struct AMDGPUMarkPromotablePrivatePass
+    : PassInfoMixin<AMDGPUMarkPromotablePrivatePass> {
+  AMDGPUMarkPromotablePrivatePass() {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 void initializeAMDGPULowerBufferFatPointersPass(PassRegistry &);
 extern char &AMDGPULowerBufferFatPointersID;
 
@@ -182,8 +193,8 @@ extern char &GCNDPPCombineLegacyID;
 void initializeSIFoldOperandsLegacyPass(PassRegistry &);
 extern char &SIFoldOperandsLegacyID;
 
-void initializeSIPeepholeSDWAPass(PassRegistry &);
-extern char &SIPeepholeSDWAID;
+void initializeSIPeepholeSDWALegacyPass(PassRegistry &);
+extern char &SIPeepholeSDWALegacyID;
 
 void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
 extern char &SIShrinkInstructionsLegacyID;
@@ -498,20 +509,6 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD3,
   TI_NUM_VGPRS,
 };
-
-// FIXME: Missing constant_32bit
-inline bool isFlatGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
-
-inline bool isExtendedGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= AMDGPUAS::MAX_AMDGPU_ADDRESS,

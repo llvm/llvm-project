@@ -2055,7 +2055,6 @@ def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1210Insts,
    FeatureLocalMemorySize327680,
-   FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,

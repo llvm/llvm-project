@@ -30,9 +30,12 @@
 /// asm text is not deterministic.
 ///
 /// Another part of the pass is lowering of dynamic VGPR indexing pseudo
-/// instructions. V_LOAD/STORE_IDX are be lowered to V_MOV_B32, and the index
-/// registers they use are encoded in a preceding update the index select bits
-/// in MODE using S_SET_VGPR_FRAMES.
+/// instructions. V_LOAD/STORE_IDX are lowered to one or several V_MOV_B32,
+/// and the index registers they use are encoded in a preceding update to the
+/// index select bits in MODE using S_SET_VGPR_FRAMES. Dynamic indexing bundles
+/// containing V_LOAD/STORE_IDXs and a CoreMI are lowered by folding
+/// V_LOAD/STORE_IDX of CoreMI's operands into CoreMI, and inserting
+/// S_SET_VGPR_FRAMES.
 ///
 /// This pass creates a convention where non-fall through basic blocks shall
 /// start with all MODE register bits 0. Otherwise a disassembly would not be
@@ -139,16 +142,22 @@ private:
   std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
 
   /// Handle single \p MI. \return true if changed.
-  bool runOnMachineInstr(MachineInstr &MI);
+  /// Updates MII to point to the last instruction processed (existing or newly
+  /// inserted) for mode update, so that upon increment in runOnMachineFunction
+  /// MII is the correct value to process next.
+  bool runOnMachineInstr(MachineBasicBlock::instr_iterator &MII);
 
   /// Compute the mode and mode mask for a single \p MI given \p Ops operands
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  void computeMode(ModeTy &NewMode, ModeTy &Mask, MachineInstr &MI,
-                   const unsigned Ops[OpNum], const unsigned *Ops2 = nullptr);
+  bool lowerInstrOrBundle(ModeTy &NewMode, ModeTy &Mask, MachineInstr &MI,
+                          MachineInstr *CoreMI, const unsigned Ops[OpNum],
+                          const unsigned *Ops2 = nullptr);
 
-  void lowerIDX(MachineInstr &MI);
+  /// MII is updated to point to the last V_MOV inserted in place of the
+  /// V_LOAD/STORE_IDX that was lowered
+  void lowerIDX(MachineBasicBlock::instr_iterator &MII);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
@@ -203,7 +212,8 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   return Idx >> 8;
 }
 
-void AMDGPULowerVGPREncoding::lowerIDX(MachineInstr &MI) {
+void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
+  MachineInstr &MI = *MII;
   unsigned Opc = MI.getOpcode();
   bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
 
@@ -260,28 +270,72 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineInstr &MI) {
     }
 
     setMode(NewMode, Mask, &*MIB);
+    MII = MachineBasicBlock::instr_iterator(MIB);
   }
 
   MI.eraseFromParent();
 }
 
-void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
-                                            MachineInstr &MI,
-                                            const unsigned Ops[OpNum],
-                                            const unsigned *Ops2) {
+bool AMDGPULowerVGPREncoding::lowerInstrOrBundle(ModeTy &NewMode, ModeTy &Mask,
+                                                 MachineInstr &MI,
+                                                 MachineInstr *CoreMI,
+                                                 const unsigned Ops[OpNum],
+                                                 const unsigned *Ops2) {
   NewMode = {};
   Mask = {};
+  bool IsBundleWithGPRIndexing = CoreMI != nullptr;
+  if (!CoreMI)
+    CoreMI = &MI;
 
   for (unsigned I = 0; I < OpNum; ++I) {
-    MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
+    MachineOperand *CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
+
+    if (CoreOp && IsBundleWithGPRIndexing && CoreOp->isReg()) {
+      MachineBasicBlock::instr_iterator II = MI.getIterator();
+      MachineBasicBlock::instr_iterator E = MI.getParent()->instr_end();
+      while (++II != E && II->isInsideBundle()) {
+        if (&*II == CoreMI)
+          continue;
+        unsigned Opc = II->getOpcode();
+        if (CoreOp->isDef() && Opc != AMDGPU::V_STORE_IDX)
+          continue;
+        if (CoreOp->isUse() && Opc != AMDGPU::V_LOAD_IDX)
+          continue;
+        MachineOperand &DataOp = II->getOperand(
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));
+        if (DataOp.getReg() != CoreOp->getReg())
+          continue;
+
+        // Replace CoreOp with a new register of the correct width and offset
+        size_t ByteSize = AMDGPU::getRegOperandSize(TRI, CoreMI->getDesc(),
+                                                    CoreOp->getOperandNo());
+        int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
+        assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
+        unsigned Offset = II->getOperand(OffsetIdx).getImm();
+        assert(Offset < ST->getAddressableNumVGPRs() - ByteSize / 4);
+        CoreOp->setReg(
+            TRI->getAnyVGPRClassForBitWidth(ByteSize * 8)->getRegister(Offset));
+        CoreOp->setIsUndef();
+        CoreOp->setIsInternalRead(false);
+
+        Register IdxReg =
+            II->getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
+                .getReg();
+        unsigned IdxRegVal = IdxReg - AMDGPU::IDX0;
+        NewMode[I] = IdxRegVal;
+
+        --II;
+        II->getNextNode()->removeFromBundle();
+      }
+    }
 
     std::optional<unsigned> MSBits;
-    if (Op)
-      MSBits = getMSBs(*Op);
+    if (CoreOp)
+      MSBits = getMSBs(*CoreOp);
 
 #if !defined(NDEBUG)
     if (MSBits.has_value() && Ops2) {
-      auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
+      auto Op2 = TII->getNamedOperand(*CoreMI, Ops2[I]);
       if (Op2) {
         std::optional<unsigned> MSBits2;
         MSBits2 = getMSBs(*Op2);
@@ -292,9 +346,9 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
 #endif
 
     if (!MSBits.has_value() && Ops2) {
-      Op = TII->getNamedOperand(MI, Ops2[I]);
-      if (Op)
-        MSBits = getMSBs(*Op);
+      CoreOp = TII->getNamedOperand(*CoreMI, Ops2[I]);
+      if (CoreOp)
+        MSBits = getMSBs(*CoreOp);
     }
 
     if (!MSBits.has_value())
@@ -303,10 +357,11 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
     // Skip tied uses of src2 of VOP2, these will be handled along with defs and
     // only vdst bit affects these operands. We cannot skip tied uses of VOP3,
     // these uses are real even if must match the vdst.
-    if (Ops[I] == AMDGPU::OpName::src2 && !Op->isDef() && Op->isTied() &&
-        (SIInstrInfo::isVOP2(MI) ||
-         (SIInstrInfo::isVOP3(MI) &&
-          TII->hasVALU32BitEncoding(MI.getOpcode()))))
+    if (Ops[I] == AMDGPU::OpName::src2 && !CoreOp->isDef() &&
+        CoreOp->isTied() &&
+        (SIInstrInfo::isVOP2(*CoreMI) ||
+         (SIInstrInfo::isVOP3(*CoreMI) &&
+          TII->hasVALU32BitEncoding(CoreMI->getOpcode()))))
       continue;
 
     unsigned IdxOffset = ST->hasVGPRIndexingRegisters() ? 4 : 0;
@@ -316,21 +371,41 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
     if (ST->hasVGPRIndexingRegisters())
       Mask[I] = FieldMask;
   }
+
+  if (IsBundleWithGPRIndexing) {
+    MachineBasicBlock::instr_iterator Start(MI.getIterator());
+    for (MachineBasicBlock::instr_iterator I = ++Start,
+                                           E = MI.getParent()->instr_end();
+         I != E && I->isBundledWithPred(); ++I) {
+      assert(I->getOpcode() != AMDGPU::V_LOAD_IDX &&
+             I->getOpcode() != AMDGPU::V_STORE_IDX &&
+             "Failed to lower bundled index instruction");
+      I->unbundleFromPred();
+    }
+    MI.eraseFromParent();
+  }
+  return setMode(NewMode, Mask, CoreMI);
 }
 
-bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
+bool AMDGPULowerVGPREncoding::runOnMachineInstr(
+    MachineBasicBlock::instr_iterator &MII) {
+  MachineInstr &MI = *MII;
   unsigned Opc = MI.getOpcode();
-  // TODO-GFX13 Support BUNDLEs with multiple V_LOAD/STORE_IDX instructions
   if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX) {
-    lowerIDX(MI);
+    lowerIDX(MII);
     return true;
   }
 
-  auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
+  MachineInstr *CoreMI = SIInstrInfo::bundleWithGPRIndexing(MI);
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(CoreMI ? CoreMI->getDesc()
+                                                         : MI.getDesc());
+  assert((!CoreMI || Ops.first) &&
+         "Unexpected BUNDLE with a non-VGPR using core instruction");
   if (Ops.first) {
+    if (CoreMI)
+      MII = MachineBasicBlock::instr_iterator(CoreMI);
     ModeTy NewMode, Mask;
-    computeMode(NewMode, Mask, MI, Ops.first, Ops.second);
-    return setMode(NewMode, Mask, &MI);
+    return lowerInstrOrBundle(NewMode, Mask, MI, CoreMI, Ops.first, Ops.second);
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
@@ -386,36 +461,38 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
 
-    for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
-      if (MI.isMetaInstruction())
+    MachineBasicBlock::instr_iterator I = MBB.instr_begin();
+    MachineBasicBlock::instr_iterator E = MBB.instr_end();
+    for (; I != E; ++I) {
+      if (I->isMetaInstruction())
         continue;
 
-      if (MI.isTerminator() || MI.isCall()) {
-        if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
-            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+      if (I->isTerminator() || I->isCall()) {
+        if (I->getOpcode() == AMDGPU::S_ENDPGM ||
+            I->getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
           CurrentMode.reset();
           CurrentModeKnown = true;
         } else
-          resetMode(&MI);
+          resetMode(&*I);
         continue;
       }
 
-      if (MI.isInlineAsm()) {
-        if (TII->hasVGPRUses(MI))
-          resetMode(&MI);
+      if (I->isInlineAsm()) {
+        if (TII->hasVGPRUses(*I))
+          resetMode(&*I);
         continue;
       }
 
-      if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
+      if (I->getOpcode() == AMDGPU::S_CLAUSE) {
         assert(!ClauseRemaining && "Nested clauses are not supported");
-        ClauseLen = MI.getOperand(0).getImm();
+        ClauseLen = I->getOperand(0).getImm();
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
-        Clause = &MI;
+        Clause = &*I;
         continue;
       }
 
-      Changed |= runOnMachineInstr(MI);
+      Changed |= runOnMachineInstr(I);
 
       if (ClauseRemaining)
         --ClauseRemaining;

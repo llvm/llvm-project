@@ -104,11 +104,7 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     if (TargetExtType *TTy = AMDGPU::isLDSSemaphore(GV)) {
-      // TODO-GFX13: Check parameters of target("amdgcn.semaphore") in the IR
-      // Verifier.
-      assert(TTy->getNumIntParameters() == 1 &&
-             TTy->getIntParameter(0) < WAVEGROUPS_PER_WORKGROUP);
-      unsigned OwningRank = TTy->getIntParameter(0);
+      unsigned OwningRank = TTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
       unsigned Num = ++NumSemaphores[OwningRank];
       Offset = 0x801000u | OwningRank << 8 | Num << 4;
       // TODO-GFX13: Diagnose trying to allocate more than the 5 semaphores

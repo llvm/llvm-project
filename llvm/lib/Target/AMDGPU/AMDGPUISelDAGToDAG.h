@@ -162,13 +162,16 @@ private:
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
-                         bool &ScaleOffset) const;
+                         bool &ScaleOffset, bool NeedIOffset = true) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                  SDValue &VOffset, SDValue &Offset,
+                                  SDValue &CPol) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,

@@ -838,6 +838,14 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
         "target extension type riscv.vector.tuple should have one "
         "type parameter and one integer parameter");
 
+  // Opaque types in the AMDGPU name space.
+  if (TTy->Name == "amdgcn.semaphore" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
+    return createStringError(
+        "target extension type amdgcn.semaphore should have no type parameters "
+        "and one integer parameter");
+  }
+
   return TTy;
 }
 
@@ -878,6 +886,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
   }
+
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0));
 
   // Opaque types in the AMDGPU name space.
   if (Name == "amdgcn.semaphore") {

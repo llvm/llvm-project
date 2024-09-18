@@ -762,8 +762,11 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   // TODO-GFX13: Can we make this conditional on whether private is actually
   //             used?
-  if (IsKernel && AMDGPU::getWavegroupEnable(F))
+  if (IsKernel && AMDGPU::getWavegroupEnable(F)) {
     PrivateSegmentSize = true;
+    if (ST.isCuModeEnabled())
+      report_fatal_error("cannot enable cumode when wavegroup is enabled");
+  }
 
   if (hasImplicitBufferPtr())
     NumUsedUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);

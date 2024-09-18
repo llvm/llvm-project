@@ -1071,21 +1071,23 @@ class VIMAGE_Atomic_gfx13<mimgopc op, string opcode,
   : VIMAGE_Atomic<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm>;
 
 
-class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string renamed,
-                                  RegisterClass DataRC, int num_addrs,
-                                  bit enableDisasm=0>
-  : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>;
-
-class VIMAGE_Atomic_gfx13_Renamed<mimgopc op, string renamed,
-                                  RegisterClass DataRC, int num_addrs,
-                                  bit enableDisasm=0>
-  : VIMAGE_Atomic_gfx13<op, renamed, DataRC, num_addrs, enableDisasm>;
+class AMDGPUMnemonicAliasMIMG<string asm, string alias, Predicate Pred>
+  : AMDGPUMnemonicAlias<asm, alias> {
+  let AssemblerPredicate = Pred;
+  bit IsAtomicRet; // Unused
+  MIMGBaseOpcode BaseOpcode; // Unused
+  int VDataDwords; // Unused
+}
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
                                       bit enableDasm = 0,
                                       bit isFP = 0,
                                       string renamed = ""> {
+  // Some opcodes were renamed in gfx12+ and use 'renamed' as default opcode
+  // name in assembler and disassembler, 'asm' is accepted as assembler alias.
+  defvar asmDefault = !if(!empty(renamed), asm, renamed);
+  defvar asmAlias = !if(!empty(renamed), "", asm);
   let hasSideEffects = 1, // FIXME: remove this
       mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
       FPAtomic = isFP in {
@@ -1107,16 +1109,10 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
-        else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1, enableDasm>;
+        def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 1, enableDasm>;
       }
       if op.HAS_GFX13 then {
-        if !empty(renamed) then
-          def _V1_gfx13 : VIMAGE_Atomic_gfx13 <op, asm, data_rc, 1, enableDasm>;
-        else
-          def _V1_gfx13 : VIMAGE_Atomic_gfx13_Renamed <op, renamed, data_rc, 1, enableDasm>;
+        def _V1_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 1, enableDasm>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1138,16 +1134,10 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2>;
-        else
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 2>;
+        def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 2>;
       }
       if op.HAS_GFX13 then {
-        if !empty(renamed) then
-          def _V2_gfx13 : VIMAGE_Atomic_gfx13 <op, asm, data_rc, 2>;
-        else
-          def _V2_gfx13 : VIMAGE_Atomic_gfx13_Renamed <op, renamed, data_rc, 2>;
+        def _V2_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 2>;
       }
     }
     let VAddrDwords = 3 in {
@@ -1169,16 +1159,10 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3>;
-        else
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 3>;
+        def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 3>;
       }
       if op.HAS_GFX13 then {
-        if !empty(renamed) then
-          def _V3_gfx13 : VIMAGE_Atomic_gfx13 <op, asm, data_rc, 3>;
-        else
-          def _V3_gfx13 : VIMAGE_Atomic_gfx13_Renamed <op, renamed, data_rc, 3>;
+        def _V3_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 3>;
       }
     }
     let VAddrDwords = 4 in {
@@ -1200,55 +1184,64 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         }
       }
       if op.HAS_GFX12 then {
-        if !empty(renamed) then
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
-        else
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 4, enableDasm>;
+        def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asmDefault, data_rc, 4, enableDasm>;
       }
       if op.HAS_GFX13 then {
-        if !empty(renamed) then
-          def _V4_gfx13 : VIMAGE_Atomic_gfx13 <op, asm, data_rc, 4, enableDasm>;
-        else
-          def _V4_gfx13 : VIMAGE_Atomic_gfx13_Renamed <op, renamed, data_rc, 4, enableDasm>;
+        def _V4_gfx13 : VIMAGE_Atomic_gfx13 <op, asmDefault, data_rc, 4, enableDasm>;
       }
     }
   }
-  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
-    def : AMDGPUMnemonicAlias<asm, renamed> {
-      let AssemblerPredicate = isGFX12Plus;
-      bit IsAtomicRet; // Unused
-      MIMGBaseOpcode BaseOpcode; // Unused
-      int VDataDwords; // Unused
-    }
+
+  if !and(op.HAS_GFX12, !not(!empty(asmAlias))) then
+    def : AMDGPUMnemonicAliasMIMG<asmAlias, asmDefault, isGFX12Only>;
+
+  if !and(op.HAS_GFX13, !not(!empty(asmAlias))) then
+    def : AMDGPUMnemonicAliasMIMG<asmAlias, asmDefault, isGFX13Only>;
+}
+
+// This defines all Reals, but does not define MIMGBaseOpcode.
+multiclass MIMG_Atomic_Base <MIMGBaseOpcode BaseOpc, mimgopc op, string asm,
+                             bit isCmpSwap = 0, bit isFP = 0,
+                             string renamed = ""> { // 64-bit atomics
+  let IsAtomicRet = 1 , BaseOpcode = BaseOpc in {
+    // _V* variants have different dst size, but the size is encoded implicitly,
+    // using dmask and tfe. Only 32-bit variant is registered with disassembler.
+    // Other variants are reconstructed by disassembler using dmask and tfe.
+    let VDataDwords = !if(isCmpSwap, 2, 1) in
+    defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
+    let VDataDwords = !if(isCmpSwap, 4, 2) in
+    defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
+    let VDataDwords = !if(isCmpSwap, 2, 2) in
+    defm _V3 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_96, 0, isFP, renamed>;
+    let VDataDwords = !if(isCmpSwap, 4, 4) in
+    defm _V4 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_160, 0, isFP, renamed>;
+  }
+}
+
+class MIMGBaseOpcodeAtomic : MIMGBaseOpcode {
+  let IsAtomicRet = 1;
+  let Atomic = 1;
+  let AtomicX2 = 0;
 }
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         string renamed = ""> { // 64-bit atomics
-  let IsAtomicRet = 1 in {
-    def "" : MIMGBaseOpcode {
-      let Atomic = 1;
-      let AtomicX2 = isCmpSwap;
-    }
+  let AtomicX2 = isCmpSwap in
+  def "" : MIMGBaseOpcodeAtomic;
 
-    let BaseOpcode = !cast<MIMGBaseOpcode>(NAME) in {
-      // _V* variants have different dst size, but the size is encoded implicitly,
-      // using dmask and tfe. Only 32-bit variant is registered with disassembler.
-      // Other variants are reconstructed by disassembler using dmask and tfe.
-      let VDataDwords = !if(isCmpSwap, 2, 1) in
-      defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
-      let VDataDwords = !if(isCmpSwap, 4, 2) in
-      defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
-      let VDataDwords = !if(isCmpSwap, 2, 2) in
-      defm _V3 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_96, 0, isFP, renamed>;
-      let VDataDwords = !if(isCmpSwap, 4, 4) in
-      defm _V4 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_160, 0, isFP, renamed>;
-    }
-  } // End IsAtomicRet = 1
+  defm "": MIMG_Atomic_Base <!cast<MIMGBaseOpcode>(NAME), op, asm, isCmpSwap,
+                             isFP, renamed>;
 }
 
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
                                 bit isCmpSwap = 0, bit isFP = 0>
   : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
+
+multiclass MIMG_Atomic_With_Alias <mimgopc op, string asm, string alias,
+                                   bit isCmpSwap = 0, bit isFP = 0> {
+  defm "": MIMG_Atomic_Base <!cast<MIMGBaseOpcode>(NAME), op, alias, isCmpSwap,
+                             isFP, asm>;
+}
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
@@ -1824,12 +1817,18 @@ defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.
 defm IMAGE_ATOMIC_PK_ADD_F16    : MIMG_Atomic <mimgopc<0x86, 0x86, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_pk_add_f16", 0, 1>;
 defm IMAGE_ATOMIC_PK_ADD_BF16   : MIMG_Atomic <mimgopc<0x87, 0x87, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_pk_add_bf16", 0, 1>;
 defm IMAGE_ATOMIC_ADD_FLT       : MIMG_Atomic <mimgopc<0x83, 0x83, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_add_flt", 0, 1>;
-defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic <mimgopc<0x84, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", 0, 1, "image_atomic_min_flt">;
-defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic <mimgopc<0x85, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", 0, 1, "image_atomic_max_flt">;
 let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"image_atomic_fmin", "image_atomic_min_flt">;
   def : AMDGPUMnemonicAlias<"image_atomic_fmax", "image_atomic_max_flt">;
 }
+
+def IMAGE_ATOMIC_MIN_FLT : MIMGBaseOpcodeAtomic;
+defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_flt", "image_atomic_min_num_flt", 0, 1>;
+defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", "image_atomic_min_flt", 0, 1>;
+
+def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
+defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
+defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {

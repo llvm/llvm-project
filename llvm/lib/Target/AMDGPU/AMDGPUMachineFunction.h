@@ -59,7 +59,7 @@ protected:
   uint32_t LaneSharedVGPRSize = 0;
 
   // Number of statically allocated semaphores for each owning rank.
-  unsigned NumSemaphores[WAVEGROUPS_PER_WORKGROUP] = {};
+  unsigned NumSemaphores[MAX_WAVES_PER_WAVEGROUP] = {};
 
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
@@ -81,6 +81,8 @@ protected:
 
   // Kernel may need limited waves per EU for better performance.
   bool WaveLimiter = false;
+
+  bool HasInitWholeWave = false;
 
 public:
   AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
@@ -126,6 +128,9 @@ public:
   bool needsWaveLimiter() const {
     return WaveLimiter;
   }
+
+  bool hasInitWholeWave() const { return HasInitWholeWave; }
+  void setInitWholeWave() { HasInitWholeWave = true; }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV) {
     return allocateLDSGlobal(DL, GV, DynLDSAlign);

@@ -39,6 +39,7 @@
 #include "SILoadStoreOptimizer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIPeepholeSDWA.h"
 #include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -398,6 +399,12 @@ static cl::opt<bool>
                             cl::desc("Enable promoting lane-shared into VGPR"),
                             cl::init(true), cl::Hidden);
 
+// TODO: Enable by default once all codegen phases are implemented.
+static cl::opt<bool> EnablePromotePrivate(
+    "amdgpu-promote-private",
+    cl::desc("Enable promoting private objects into VGPRs"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -422,7 +429,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeAMDGPUBundleIdxLdStPass(*PR);
   initializeSIInsertWaterfallPass(*PR);
-  initializeSIPeepholeSDWAPass(*PR);
+  initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
@@ -451,6 +458,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
+  initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
@@ -1276,6 +1284,8 @@ bool GCNPassConfig::addPreISel() {
 
   if (isPassEnabled(EnablePromoteLaneShared))
     addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
+  if (isPassEnabled(EnablePromotePrivate))
+    addPass(createAMDGPUMarkPromotablePrivateLegacyPass());
 
   return false;
 }
@@ -1296,7 +1306,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&GCNDPPCombineLegacyID);
   addPass(&SILoadStoreOptimizerLegacyID);
   if (isPassEnabled(EnableSDWAPeephole)) {
-    addPass(&SIPeepholeSDWAID);
+    addPass(&SIPeepholeSDWALegacyID);
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSELegacyID);
     addPass(&SIFoldOperandsLegacyID);
@@ -1773,6 +1783,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   MFI->Mode.FP64FP16Denormals.Output = YamlMFI.Mode.FP64FP16OutputDenormals
                                            ? DenormalMode::IEEE
                                            : DenormalMode::PreserveSign;
+
+  if (YamlMFI.HasInitWholeWave)
+    MFI->setInitWholeWave();
 
   return false;
 }

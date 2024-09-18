@@ -1798,6 +1798,14 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
+  MachineFunction *MF = MI.getParent()->getParent();
+  SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
+
+  MFInfo->setInitWholeWave();
+  return selectImpl(MI, *CoverageInfo);
+}
+
 bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
@@ -2143,6 +2151,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
     return selectDSAppendConsume(I, false);
+  case Intrinsic::amdgcn_init_whole_wave:
+    return selectInitWholeWave(I);
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
@@ -4833,7 +4843,8 @@ AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
-                                             unsigned CPolBits) const {
+                                             unsigned CPolBits,
+                                             bool NeedIOffset) const {
   Register Addr = Root.getReg();
   Register PtrBase;
   int64_t ConstOffset;
@@ -4844,8 +4855,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0) {
-    if (TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
-                              SIInstrFlags::FlatGlobal)) {
+    if (NeedIOffset && TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
+                                             SIInstrFlags::FlatGlobal)) {
       Addr = PtrBase;
       ImmOffset = ConstOffset;
     } else {
@@ -4857,9 +4868,12 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
           // saddr + large_offset -> saddr +
           //                         (voffset = large_offset & ~MaxOffset) +
           //                         (large_offset & MaxOffset);
-          int64_t SplitImmOffset, RemainderOffset;
-          std::tie(SplitImmOffset, RemainderOffset) = TII.splitFlatOffset(
-              ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+          int64_t SplitImmOffset = 0, RemainderOffset = ConstOffset;
+          if (NeedIOffset) {
+            std::tie(SplitImmOffset, RemainderOffset) =
+                TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
+                                    SIInstrFlags::FlatGlobal);
+          }
 
           if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
                                               : isUInt<32>(RemainderOffset)) {
@@ -4962,6 +4976,12 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
+    MachineOperand &Root) const {
+  return selectGlobalSAddr(Root, 0, 0);
 }
 
 InstructionSelector::ComplexRendererFns

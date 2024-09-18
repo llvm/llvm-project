@@ -191,6 +191,10 @@ public:
   unsigned getHWRegIndex(MCRegister Reg) const;
 
   LLVM_READONLY
+  const TargetRegisterClass *
+  getAnyVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY const TargetRegisterClass *

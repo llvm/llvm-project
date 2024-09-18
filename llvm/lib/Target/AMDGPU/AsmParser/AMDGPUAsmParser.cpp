@@ -306,8 +306,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
 
-  bool isRegOrImmWithIntT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  template <bool IsFake16> bool isRegOrImmWithIntT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrImmWithInt32InputMods() const {
@@ -316,6 +317,11 @@ public:
 
   bool isRegOrInlineImmWithInt16InputMods() const {
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::i16);
+  }
+
+  template <bool IsFake16> bool isRegOrInlineImmWithIntT16InputMods() const {
+    return isRegOrInline(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrInlineImmWithInt32InputMods() const {
@@ -330,8 +336,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
   }
 
-  bool isRegOrImmWithFPT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  template <bool IsFake16> bool isRegOrImmWithFPT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrImmWithFP32InputMods() const {
@@ -400,6 +407,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
+  template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
@@ -579,7 +587,7 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
-  bool isVCSrcTB16() const {
+  bool isVCSrcT_b16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
@@ -609,7 +617,11 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::bf16);
   }
 
-  bool isVCSrcTF16() const {
+  bool isVCSrcT_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcT_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
@@ -649,7 +661,7 @@ public:
 
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
-  bool isVSrcT_b16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
+  bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcT_b16_Lo128() const {
     return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
@@ -683,7 +695,7 @@ public:
 
   bool isVSrcT_bf16() const { return isVCSrcTBF16() || isLiteralImm(MVT::bf16); }
 
-  bool isVSrcT_f16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
+  bool isVSrcT_f16() const { return isVCSrcT_f16() || isLiteralImm(MVT::f16); }
 
   bool isVSrcT_bf16_Lo128() const {
     return isVCSrcTBF16_Lo128() || isLiteralImm(MVT::bf16);
@@ -2309,9 +2321,15 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
-template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+template <bool IsFake16>
+bool AMDGPUOperand::isT16_Lo128VRegWithInputMods() const {
   return isRegClass(IsFake16 ? AMDGPU::VGPR_32_Lo128RegClassID
                              : AMDGPU::VGPR_16_Lo128RegClassID);
+}
+
+template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(IsFake16 ? AMDGPU::VGPR_32RegClassID
+                             : AMDGPU::VGPR_16RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {

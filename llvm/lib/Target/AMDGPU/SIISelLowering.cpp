@@ -2266,12 +2266,6 @@ bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
 }
 
-bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
-  const MemSDNode *MemNode = cast<MemSDNode>(N);
-
-  return AMDGPUInstrInfo::isUniformMMO(MemNode->getMemOperand());
-}
-
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
@@ -5044,7 +5038,7 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
 
-  const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
   Register DstReg = MI.getOperand(0).getReg();
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   Register TmpExec = MRI.createVirtualRegister(BoolXExecRC);
@@ -5494,19 +5488,30 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
 
   // common code to generate IDX for SADDR mode
   auto EmitIdxSAddr = [&](MachineInstr &MI) {
-    Register SAddrReg =
-        TII->getNamedOperand(MI, AMDGPU::OpName::saddr)->getReg();
+    MachineOperand &SAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::saddr);
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-    Register IdxReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+
+    const TargetRegisterClass *IdxRC;
+    if (SAddrOp.isReg()) {
+      IdxRC = MRI.getRegClass(SAddrOp.getReg());
+    } else {
+      assert(SAddrOp.isFI());
+      IdxRC = &AMDGPU::SReg_32_XEXEC_HIRegClass;
+    }
+
+    Register IdxReg = MRI.createVirtualRegister(IdxRC);
     // index should be in the unit of dword
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
-        .addReg(SAddrReg)
-        .addImm(2u)
-        .setOperandDead(3); // Dead scc
+    auto Shift = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg);
+    if (SAddrOp.isReg())
+      Shift.addReg(SAddrOp.getReg());
+    else
+      Shift.addFrameIndex(SAddrOp.getIndex());
+    Shift.addImm(2u);
+    Shift.setOperandDead(3); // Dead scc
     if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
       Offset = Offset >> 2;
     } else {
-      Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+      Register AddReg = MRI.createVirtualRegister(IdxRC);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
           .addReg(IdxReg)
           .addImm(Offset >> 2)
@@ -5830,7 +5835,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       return BB;
     }
 
-    const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+    const auto *CarryRC = TRI->getWaveMaskRegClass();
 
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -6064,7 +6069,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     Register DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register DstHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+    const auto *CondRC = TRI->getWaveMaskRegClass();
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
     const TargetRegisterClass *Src0RC = Src0.isReg()
@@ -6303,15 +6308,19 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   default:
     if (TII->isFLATScratch(MI)) {
-      bool LaneSharedInVGPR = false;
-      for (const auto *MemOp : MI.memoperands()) {
-        if (AMDGPU::IsLaneSharedInVGPR(MemOp)) {
-          LaneSharedInVGPR = true;
-          break;
+      const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+      if (ST.hasVGPRIndexingRegisters()) {
+        bool Promotable = false;
+        for (const auto *MemOp : MI.memoperands()) {
+          if (AMDGPU::IsLaneSharedInVGPR(MemOp) ||
+              AMDGPU::IsPrivateInVGPR(MemOp)) {
+            Promotable = true;
+            break;
+          }
         }
-      }
-      if (LaneSharedInVGPR) {
-        return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
+        if (Promotable) {
+          return emitVLoadStoreIdx(MI, *BB, *getSubtarget());
+        }
       }
       return BB;
     }
@@ -6887,6 +6896,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   unsigned IID = N->getConstantOperandVal(0);
   bool IsPermLane16 = IID == Intrinsic::amdgcn_permlane16 ||
                       IID == Intrinsic::amdgcn_permlanex16;
+  bool IsSetInactive = IID == Intrinsic::amdgcn_set_inactive ||
+                       IID == Intrinsic::amdgcn_set_inactive_chain_arg;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
@@ -6904,6 +6915,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
       Operands.push_back(Src2);
       [[fallthrough]];
     case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_set_inactive_chain_arg:
       Operands.push_back(Src1);
       [[fallthrough]];
     case Intrinsic::amdgcn_readfirstlane:
@@ -6930,7 +6943,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
-      IsPermLane16) {
+      IsSetInactive || IsPermLane16) {
     Src1 = N->getOperand(2);
     if (IID == Intrinsic::amdgcn_writelane || IsPermLane16)
       Src2 = N->getOperand(3);
@@ -6946,7 +6959,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     Src0 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src0) : Src0,
                                 SL, MVT::i32);
 
-    if (IsPermLane16) {
+    if (IsSetInactive || IsPermLane16) {
       Src1 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src1) : Src1,
                                   SL, MVT::i32);
     }
@@ -7022,7 +7035,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
         Src0SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
                                  DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        if (IsPermLane16)
+        if (IsSetInactive || IsPermLane16)
           Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
@@ -7031,7 +7044,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
         Pieces.push_back(
-            IsPermLane16
+            IsSetInactive || IsPermLane16
                 ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
                 : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
         EltIdx += 2;
@@ -7047,7 +7060,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
   Src0 = DAG.getBitcast(VecVT, Src0);
 
-  if (IsPermLane16)
+  if (IsSetInactive || IsPermLane16)
     Src1 = DAG.getBitcast(VecVT, Src1);
 
   if (IID == Intrinsic::amdgcn_writelane)
@@ -9828,6 +9841,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16:
   case Intrinsic::amdgcn_permlane64:
+  case Intrinsic::amdgcn_set_inactive:
+  case Intrinsic::amdgcn_set_inactive_chain_arg:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -11554,6 +11569,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
+  MachineMemOperand *MMO = Load->getMemOperand();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
@@ -11564,7 +11580,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     SDValue Chain = Load->getChain();
     SDValue BasePtr = Load->getBasePtr();
-    MachineMemOperand *MMO = Load->getMemOperand();
 
     EVT RealMemVT = (MemVT == MVT::i1) ? MVT::i8 : MVT::i16;
 
@@ -11621,24 +11636,11 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumElements = MemVT.getVectorNumElements();
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
-      AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-    if (!Op->isDivergent() && Alignment >= Align(4) && NumElements < 32) {
-      if (MemVT.isPow2VectorType() ||
-          (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
-        return SDValue();
-      return WidenOrSplitVectorLoad(Op, DAG);
-    }
-    // Non-uniform loads will be selected to MUBUF instructions, so they
-    // have the same legalization requirements as global and private
-    // loads.
-    //
-  }
-
-  if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::GLOBAL_ADDRESS) {
-    if (Subtarget->getScalarizeGlobalBehavior() && !Op->isDivergent() &&
-        Load->isSimple() && isMemOpHasNoClobberedMemOperand(Load) &&
+      (AS == AMDGPUAS::GLOBAL_ADDRESS &&
+       Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
+       isMemOpHasNoClobberedMemOperand(Load))) {
+    if ((!Op->isDivergent() || AMDGPUInstrInfo::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||
           (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
@@ -17584,9 +17586,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return isAtomicRMWLegalXChgTy(RMW)
                ? TargetLowering::AtomicExpansionKind::None
                : TargetLowering::AtomicExpansionKind::CmpXChg;
-
-    // PCIe supports add and xchg for system atomics.
-    return atomicSupportedIfLegalIntType(RMW);
   }
   case AtomicRMWInst::Add:
   case AtomicRMWInst::And:

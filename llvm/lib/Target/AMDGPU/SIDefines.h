@@ -1283,6 +1283,7 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 // Wavegroup defines.
 
 enum {
+  MAX_WAVES_PER_WAVEGROUP = 8,
   WAVEGROUPS_PER_WORKGROUP = 4,
 };
 

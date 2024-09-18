@@ -120,6 +120,7 @@ private:
   bool selectDSOrderedIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
+  bool selectInitWholeWave(MachineInstr &MI) const;
   bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 
@@ -247,11 +248,14 @@ private:
   selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
-  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits) const;
+  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
+                    bool NeedIOffset = true) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrGLC(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;

@@ -113,3 +113,15 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
   Vals = std::move(EnabledExtensions);
   return false;
 }
+
+llvm::StringRef SPIRVExtensionsParser::checkExtensions(
+    const std::vector<std::string> &ExtNames,
+    std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
+  for (const auto &Ext : ExtNames) {
+    auto It = SPIRVExtensionMap.find(Ext);
+    if (It == SPIRVExtensionMap.end())
+      return Ext;
+    AllowedExtensions.insert(It->second);
+  }
+  return StringRef();
+}
