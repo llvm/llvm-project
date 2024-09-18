@@ -587,7 +587,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
       repl_module = swift_ast->CreateModule(completion_module_info, error,
                                             importInfo);
-      std::optional<unsigned> bufferID;
+      auto bufferID = (*ast)->SourceMgr.addMemBufferCopy("// swift repl\n");
       swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
           *repl_module, swift::SourceFileKind::Main, bufferID);
       repl_module->addFile(*repl_source_file);
