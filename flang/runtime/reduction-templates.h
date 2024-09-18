@@ -321,8 +321,8 @@ RT_VAR_GROUP_BEGIN
 static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
   16
-#elif HAS_FLOAT80
-    10
+#elif LDBL_MANT_DIG == 64
+  10
 #else
   8
 #endif
