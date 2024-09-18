@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_CIR_CIRGENACTION_H
 #define LLVM_CLANG_CIR_CIRGENACTION_H
 
+#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Frontend/FrontendAction.h"
 #include <memory>
 
@@ -128,6 +129,60 @@ public:
   EmitObjAction(mlir::MLIRContext *mlirCtx = nullptr);
 };
 
+// Used for -fclangir-analysis-only: use CIR analysis but still use original LLVM codegen path
+class AnalysisOnlyActionBase : public clang::CodeGenAction {
+  virtual void anchor();
+
+protected:
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &CI,
+                    llvm::StringRef InFile) override;
+
+  AnalysisOnlyActionBase(unsigned _Act,
+                         llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitAssemblyAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitAssemblyAction(llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitBCAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitBCAction(llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitLLVMAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitLLVMAction(llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitLLVMOnlyAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitLLVMOnlyAction(llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitCodeGenOnlyAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitCodeGenOnlyAction(llvm::LLVMContext *_VMContext = nullptr);
+};
+
+class AnalysisOnlyAndEmitObjAction : public AnalysisOnlyActionBase {
+  virtual void anchor() override;
+
+public:
+  AnalysisOnlyAndEmitObjAction(llvm::LLVMContext *_VMContext = nullptr);
+};
 } // namespace cir
 
 #endif

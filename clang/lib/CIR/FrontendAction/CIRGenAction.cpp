@@ -32,6 +32,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/DebugInfo.h"
@@ -439,6 +440,7 @@ void CIRGenAction::ExecuteAction() {
     llvmModule->print(*outstream, nullptr);
 }
 
+namespace cir {
 void EmitAssemblyAction::anchor() {}
 EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitAssembly, _MLIRContext) {}
@@ -470,3 +472,52 @@ EmitBCAction::EmitBCAction(mlir::MLIRContext *_MLIRContext)
 void EmitObjAction::anchor() {}
 EmitObjAction::EmitObjAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitObj, _MLIRContext) {}
+} // namespace cir
+
+// Used for -fclangir-analysis-only: use CIR analysis but still use original LLVM codegen path
+void AnalysisOnlyActionBase::anchor() {}
+AnalysisOnlyActionBase::AnalysisOnlyActionBase(unsigned _Act,
+                                               llvm::LLVMContext *_VMContext)
+    : clang::CodeGenAction(_Act, _VMContext) {}
+
+std::unique_ptr<ASTConsumer>
+AnalysisOnlyActionBase::CreateASTConsumer(clang::CompilerInstance &ci,
+                                          llvm::StringRef inFile) {
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  Consumers.push_back(clang::CodeGenAction::CreateASTConsumer(ci, inFile));
+  Consumers.push_back(std::make_unique<cir::CIRGenConsumer>(
+      CIRGenAction::OutputType::None, ci.getDiagnostics(),
+      &ci.getVirtualFileSystem(), ci.getHeaderSearchOpts(), ci.getCodeGenOpts(),
+      ci.getTargetOpts(), ci.getLangOpts(), ci.getFrontendOpts(), nullptr));
+  return std::make_unique<MultiplexConsumer>(std::move(Consumers));
+}
+
+void AnalysisOnlyAndEmitAssemblyAction::anchor() {}
+AnalysisOnlyAndEmitAssemblyAction::AnalysisOnlyAndEmitAssemblyAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitAssembly, _VMContext) {}
+
+void AnalysisOnlyAndEmitBCAction::anchor() {}
+AnalysisOnlyAndEmitBCAction::AnalysisOnlyAndEmitBCAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitBC, _VMContext) {}
+
+void AnalysisOnlyAndEmitLLVMAction::anchor() {}
+AnalysisOnlyAndEmitLLVMAction::AnalysisOnlyAndEmitLLVMAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitLL, _VMContext) {}
+
+void AnalysisOnlyAndEmitLLVMOnlyAction::anchor() {}
+AnalysisOnlyAndEmitLLVMOnlyAction::AnalysisOnlyAndEmitLLVMOnlyAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitNothing, _VMContext) {}
+
+void AnalysisOnlyAndEmitCodeGenOnlyAction::anchor() {}
+AnalysisOnlyAndEmitCodeGenOnlyAction::AnalysisOnlyAndEmitCodeGenOnlyAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitMCNull, _VMContext) {}
+
+void AnalysisOnlyAndEmitObjAction::anchor() {}
+AnalysisOnlyAndEmitObjAction::AnalysisOnlyAndEmitObjAction(
+    llvm::LLVMContext *_VMContext)
+    : AnalysisOnlyActionBase(Backend_EmitObj, _VMContext) {}
