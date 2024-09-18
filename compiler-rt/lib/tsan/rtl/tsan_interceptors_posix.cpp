@@ -21,7 +21,6 @@
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
-#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
@@ -258,9 +257,7 @@ SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
 // `DlSymAllocator`, because it uses the primary allocator only. Symbolizer
 // requires support of the secondary allocator for larger blocks.
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
-  static bool UseImpl() {
-    return (ctx && !ctx->initialized);
-  }
+  static bool UseImpl() { return (ctx && !ctx->initialized); }
 };
 
 }  // namespace __tsan
