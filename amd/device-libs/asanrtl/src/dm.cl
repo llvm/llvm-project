@@ -46,11 +46,9 @@ typedef struct alloc_struct {
 #define SLAB_THRESHOLD (SLAB_BYTES / 64)
 #define SLAB_HEADER_BYTES 32
 
-// Use 24 bit counter to avoid ABA
 // Assume SLAB_ALIGN so low 12 bits are already clear
-// XXX Reduce if virtual address > 52 bits
-#define SLAB_SHIFT 12
-#define SLAB_CTR_MASK (ulong)0xffffff
+#define SLAB_SHIFT 6
+#define SLAB_CTR_MASK ((1UL << (SLAB_SHIFT+12)) - 1UL)
 
 #define LINE 128
 #define PAD(N,M) ulong pad##N[LINE/8 - M];
