@@ -206,6 +206,7 @@ private:
   Value *optimizeFMinFMax(CallInst *CI, IRBuilderBase &B);
   Value *optimizeLog(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSqrt(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFMod(CallInst *CI, IRBuilderBase &B);
   Value *mergeSqrtToExp(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
