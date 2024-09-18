@@ -129,6 +129,10 @@ def main():
         prop = st.LevelProperty
         levels = [
             [builder(fmt.compressed, [prop.non_unique]), builder(fmt.singleton)],
+            [
+                builder(fmt.compressed, [prop.non_unique]),
+                builder(fmt.singleton, [prop.soa]),
+            ],
             [builder(fmt.dense), builder(fmt.compressed)],
             [builder(fmt.dense), builder(fmt.loose_compressed)],
             [builder(fmt.compressed), builder(fmt.compressed)],
