@@ -225,7 +225,9 @@ void warn(Error E, StringRef Whence) {
 }
 
 static std::string getPath(StringRef Dir, unsigned Task) {
-  return (Dir + "/" + llvm::Twine(Task) + ".saved_copy.bc").str();
+  llvm::SmallString<128> Path(Dir);
+  llvm::sys::path::append(Path, llvm::Twine(Task) + ".saved_copy.bc");
+  return std::string(Path);
 }
 
 void initializeTwoCodegenRounds() {
