@@ -4687,6 +4687,8 @@ def err_void_only_param : Error<
   "'void' must be the first and only parameter if specified">;
 def err_void_param_qualified : Error<
   "'void' as parameter must not have type qualifiers">;
+def err_void_explicit_object_param : Error<
+  "explicit object parameter cannot have 'void' type">;
 def err_ident_list_in_fn_declaration : Error<
   "a parameter list without types is only allowed in a function definition">;
 def ext_param_not_declared : ExtWarn<
@@ -12379,6 +12381,7 @@ def warn_hlsl_deprecated_register_type_b: Warning<"binding type 'b' only applies
 def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The 'integer constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
+def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
