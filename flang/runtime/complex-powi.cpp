@@ -7,11 +7,13 @@
  * ===-----------------------------------------------------------------------===
  */
 #include "flang/Common/float128.h"
+#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 #include <cstdio>
 #include <limits>
 
+namespace Fortran::runtime {
 #ifdef __clang_major__
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
@@ -63,21 +65,23 @@ template <typename C, typename I> C tgpowi(C base, I exp) {
 #ifndef _MSC_VER
 // With most compilers, C complex is implemented as a builtin type that may have
 // specific ABI requirements
-extern "C" float _Complex RTNAME(cpowi)(float _Complex base, std::int32_t exp) {
+extern "C" CppTypeFor<TypeCategory::Real, 4> _Complex RTNAME(cpowi)(
+    CppTypeFor<TypeCategory::Real, 4> _Complex base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" double _Complex RTNAME(zpowi)(
-    double _Complex base, std::int32_t exp) {
+extern "C" CppTypeFor<TypeCategory::Real, 8> _Complex RTNAME(zpowi)(
+    CppTypeFor<TypeCategory::Real, 8> _Complex base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" float _Complex RTNAME(cpowk)(float _Complex base, std::int64_t exp) {
+extern "C" CppTypeFor<TypeCategory::Real, 4> _Complex RTNAME(cpowk)(
+    CppTypeFor<TypeCategory::Real, 4> _Complex base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" double _Complex RTNAME(zpowk)(
-    double _Complex base, std::int64_t exp) {
+extern "C" CppTypeFor<TypeCategory::Real, 8> _Complex RTNAME(zpowk)(
+    CppTypeFor<TypeCategory::Real, 8> _Complex base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
@@ -87,7 +91,7 @@ extern "C" double _Complex RTNAME(zpowk)(
 // c99-extension warnings. We decided to disable warnings for this
 // particular file, so we can use _Complex here.
 #if LDBL_MANT_DIG == 113
-typedef long double _Complex Qcomplex;
+typedef CppTypeFor<TypeCategory::Real, 16> _Complex Qcomplex;
 #elif HAS_FLOAT128
 #if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
 typedef _Complex float __attribute__((mode(TC))) Qcomplex;
@@ -114,35 +118,35 @@ extern "C" Qcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
 // MSVC doesn't allow including <ccomplex> or <complex.h> in C++17 mode to get
 // the Windows definitions of these structs so just redefine here.
 struct Fcomplex {
-  float re;
-  float im;
+  CppTypeFor<TypeCategory::Real, 4> re;
+  CppTypeFor<TypeCategory::Real, 4> im;
 };
 
 struct Dcomplex {
-  double re;
-  double im;
+  CppTypeFor<TypeCategory::Real, 8> re;
+  CppTypeFor<TypeCategory::Real, 8> im;
 };
 
 extern "C" Fcomplex RTNAME(cpowi)(Fcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<float> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(zpowi)(Dcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<double> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 8> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Dcomplex *)(&cppres);
 }
 
 extern "C" Fcomplex RTNAME(cpowk)(Fcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<float> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(zpowk)(Dcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<double> *)(&base);
+  auto cppbase = *(CppTypeFor<TypeCategory::Complex, 8> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Dcomplex *)(&cppres);
 }
@@ -154,15 +158,16 @@ struct Qcomplex {
 };
 
 extern "C" Dcomplex RTNAME(cqpowi)(Qcomplex base, std::int32_t exp) {
-  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppbase = *(rtcmplx::complex<CFloat128Type> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Qcomplex *)(&cppres);
 }
 
 extern "C" Dcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
-  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppbase = *(rtcmplx::complex<CFloat128Type> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Qcomplex *)(&cppres);
 }
 #endif
 #endif
+} // namespace Fortran::runtime
