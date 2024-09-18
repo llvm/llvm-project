@@ -86,16 +86,22 @@ struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
   // EMUL can take on values that don't map to RISCVII::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
-  std::pair<unsigned, bool> EMUL;
+  std::optional<std::pair<unsigned, bool>> EMUL;
 
   unsigned Log2EEW;
 
+  // true if this is a vector register that only uses element 0 of the register.
+  bool IsScalar;
+
   OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {
-  }
+      : S(State::Known), EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW),
+        IsScalar(false) {}
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW) {}
+      : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW), IsScalar(false) {}
+
+  OperandInfo(unsigned Log2EEW)
+      : S(State::Known), EMUL(std::nullopt), Log2EEW(Log2EEW), IsScalar(true) {}
 
   OperandInfo(State S) : S(S) {
     assert(S != State::Known &&
@@ -108,8 +114,14 @@ struct OperandInfo {
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
     assert(A.isKnown() && B.isKnown() && "Both operands must be known");
-    return A.Log2EEW == B.Log2EEW && A.EMUL.first == B.EMUL.first &&
-           A.EMUL.second == B.EMUL.second;
+
+    if (A.IsScalar != B.IsScalar)
+      return false;
+    if (A.IsScalar && B.IsScalar)
+      return A.Log2EEW == B.Log2EEW;
+
+    return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
+           A.EMUL->second == B.EMUL->second;
   }
 
   void print(raw_ostream &OS) const {
@@ -117,10 +129,15 @@ struct OperandInfo {
       OS << "Unknown";
       return;
     }
+    if (IsScalar) {
+      OS << "EEW:" << (1 << Log2EEW);
+      return;
+    }
+    assert(EMUL && "Expected EMUL to have value");
     OS << "EMUL: ";
-    if (EMUL.second)
+    if (EMUL->second)
       OS << "m";
-    OS << "f" << EMUL.first;
+    OS << "f" << EMUL->first;
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -1162,9 +1179,9 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   // The destination and first source operand are vector registers, but only
   // element 0 has any meaning. The vector registers are being used as a scalar
   // register. They have a width (SEW), but the concept of LMUL or EMUL does not
-  // apply here. We return Unknown since OperandInfo does not model this yet.
-  // The next vector operand is used for tail value, which does not obey VL. The
-  // last vector operand is the the elements to reduce over, which does obey VL.
+  // apply here. The next vector operand is used for tail value, which does not
+  // obey VL, we must return Unknown. The last vector operand is the the
+  // elements to reduce over, which does obey VL and has EEW=SEW and EMUL=LMUL.
   case RISCV::VREDAND_VS:
   case RISCV::VREDMAX_VS:
   case RISCV::VREDMAXU_VS:
@@ -1172,27 +1189,47 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VREDMINU_VS:
   case RISCV::VREDOR_VS:
   case RISCV::VREDSUM_VS:
-  case RISCV::VREDXOR_VS:
+  case RISCV::VREDXOR_VS: {
+    if (IsMODef || IsOp1)
+      return OperandInfo(MILog2SEW);
+    if (IsOp2)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(OperandInfo::State::Unknown);
+  }
   // 14.2. Vector Widening Integer Reduction Instructions
   // Again, the destination and first source operand are vector registers, but
   // only element 0 has any meaning. The vector registers are being used as a
   // scalar register. They have a width (2 * SEW), but the concept of LMUL or
-  // EMUL does not apply here. We return Unknown since OperandInfo does not
-  // model this yet. The next vector operand is used for tail value, which does
-  // not obey VL. The last vector operand is the the elements to reduce over,
-  // which does obey VL.
+  // EMUL does not apply here. The next vector operand is used for tail value,
+  // which does not obey VL, we must return Unknown. The last vector operand is
+  // the the elements to reduce over, which does obey VL and has EEW=SEW and
+  // EMUL=LMUL.
   case RISCV::VWREDSUM_VS:
-  case RISCV::VWREDSUMU_VS:
+  case RISCV::VWREDSUMU_VS: {
+    if (IsMODef || IsOp1)
+      return OperandInfo(MILog2SEW + 1);
+    if (IsOp2)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(OperandInfo::State::Unknown);
+  }
   // 14.3. Vector Single-Width Floating-Point Reduction Instructions
   // Behaves similar to 14.1
   case RISCV::VFREDMAX_VS:
   case RISCV::VFREDMIN_VS:
   case RISCV::VFREDOSUM_VS:
-  case RISCV::VFREDUSUM_VS:
+  case RISCV::VFREDUSUM_VS: {
+    if (IsMODef || IsOp1)
+      return OperandInfo(MILog2SEW);
+    if (IsOp2)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(OperandInfo::State::Unknown);
+  }
   // 14.4. Vector Widening Floating-Point Reduction Instructions
   // Behaves similar to 14.2
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
+    if (IsMODef || IsOp1)
+      return OperandInfo(MILog2SEW + 1);
     if (IsOp2)
       return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(OperandInfo::State::Unknown);
