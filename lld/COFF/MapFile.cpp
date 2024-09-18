@@ -128,8 +128,7 @@ static void getSymbols(const COFFLinkerContext &ctx,
     if (!file->thunkSym->isLive())
       continue;
 
-    if (auto *thunkSym = dyn_cast<Defined>(file->thunkSym))
-      syms.push_back(thunkSym);
+    syms.push_back(file->thunkSym);
 
     if (auto *impSym = dyn_cast_or_null<Defined>(file->impSym))
       syms.push_back(impSym);

@@ -781,6 +781,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[10], tok::minus, TT_BinaryOperator);
 
+  Tokens = annotate("return (::Type)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("return (Namespace::Class)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
