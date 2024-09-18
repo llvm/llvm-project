@@ -386,14 +386,11 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
       // the argument is used only to be stored in a alloca.
       Value arg = SrcFn.getArgument(ArgNo);
       assert(arg.hasOneUse());
-      for (auto *firstStore : arg.getUsers()) {
-        assert(isa<StoreOp>(firstStore));
-        auto argAlloca = cast<StoreOp>(firstStore).getAddr();
-        rewriter.replaceAllUsesWith(argAlloca, Alloca);
-        rewriter.eraseOp(firstStore);
-        rewriter.eraseOp(argAlloca.getDefiningOp());
-      }
-
+      auto *firstStore = *arg.user_begin();
+      auto argAlloca = cast<StoreOp>(firstStore).getAddr();
+      rewriter.replaceAllUsesWith(argAlloca, Alloca);
+      rewriter.eraseOp(firstStore);
+      rewriter.eraseOp(argAlloca.getDefiningOp());
       break;
     }
     default:
