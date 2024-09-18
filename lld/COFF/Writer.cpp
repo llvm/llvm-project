@@ -914,6 +914,10 @@ void Writer::addSyntheticIdata() {
   if (!idata.hints.empty())
     add(".idata$6", idata.hints);
   add(".idata$7", idata.dllNames);
+  if (!idata.auxIat.empty())
+    add(".idata$9", idata.auxIat);
+  if (!idata.auxIatCopy.empty())
+    add(".idata$a", idata.auxIatCopy);
 }
 
 void Writer::appendECImportTables() {
@@ -935,6 +939,15 @@ void Writer::appendECImportTables() {
                             importAddresses->chunks.end());
     rdataSec->contribSections.insert(rdataSec->contribSections.begin(),
                                      importAddresses);
+  }
+
+  // The auxiliary IAT is always placed at the end of the .rdata section
+  // and is aligned to 4KB.
+  if (PartialSection *auxIat = findPartialSection(".idata$9", rdata)) {
+    auxIat->chunks.front()->setAlignment(0x1000);
+    rdataSec->chunks.insert(rdataSec->chunks.end(), auxIat->chunks.begin(),
+                            auxIat->chunks.end());
+    rdataSec->addContributingPartialSection(auxIat);
   }
 }
 
@@ -1095,7 +1108,8 @@ void Writer::createSections() {
 
     // ARM64EC has specific placement and alignment requirements for the IAT.
     // Delay adding its chunks until appendECImportTables.
-    if (isArm64EC(ctx.config.machine) && pSec->name == ".idata$5")
+    if (isArm64EC(ctx.config.machine) &&
+        (pSec->name == ".idata$5" || pSec->name == ".idata$9"))
       continue;
 
     OutputSection *sec = createSection(name, outChars);
@@ -1240,14 +1254,24 @@ void Writer::appendImportThunks() {
     if (!file->live)
       continue;
 
-    if (!file->thunkSym)
-      continue;
+    if (file->thunkSym) {
+      if (!isa<DefinedImportThunk>(file->thunkSym))
+        fatal(toString(ctx, *file->thunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
 
-    if (!isa<DefinedImportThunk>(file->thunkSym))
-      fatal(toString(ctx, *file->thunkSym) + " was replaced");
-    DefinedImportThunk *thunk = cast<DefinedImportThunk>(file->thunkSym);
-    if (file->thunkLive)
-      textSec->addChunk(thunk->getChunk());
+    if (file->auxThunkSym) {
+      if (!isa<DefinedImportThunk>(file->auxThunkSym))
+        fatal(toString(ctx, *file->auxThunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
+
+    if (file->impchkThunk)
+      textSec->addChunk(file->impchkThunk);
   }
 
   if (!delayIdata.empty()) {
@@ -2252,6 +2276,16 @@ void Writer::setECSymbols() {
   Symbol *entryPointCountSym =
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
   cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
+
+  Symbol *iatSym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat");
+  replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
+                                  idata.auxIat.empty() ? nullptr
+                                                       : idata.auxIat.front());
+
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
+  replaceSymbol<DefinedSynthetic>(
+      iatCopySym, "__hybrid_auxiliary_iat_copy",
+      idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 }
 
 // Write section contents to a mmap'ed file.

@@ -943,10 +943,8 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   // they are recorded in the summary index being built.
   // We save a GUID which refers to the same global as the ValueInfo, but
   // ignoring the linkage, i.e. for values other than local linkage they are
-  // identical (this is the second tuple member).
-  // The third tuple member is the real GUID of the ValueInfo.
-  DenseMap<unsigned,
-           std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>>
+  // identical (this is the second member). ValueInfo has the real GUID.
+  DenseMap<unsigned, std::pair<ValueInfo, GlobalValue::GUID>>
       ValueIdToValueInfoMap;
 
   /// Map populated during module path string table parsing, from the
@@ -998,7 +996,7 @@ private:
   parseParamAccesses(ArrayRef<uint64_t> Record);
 
   template <bool AllowNullValueInfo = false>
-  std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+  std::pair<ValueInfo, GlobalValue::GUID>
   getValueInfoFromValueId(unsigned ValueId);
 
   void addThisModule();
@@ -7102,7 +7100,7 @@ ModuleSummaryIndexBitcodeReader::getThisModule() {
 }
 
 template <bool AllowNullValueInfo>
-std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+std::pair<ValueInfo, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToValueInfoMap[ValueId];
   // We can have a null value info for memprof callsite info records in
@@ -7129,10 +7127,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_tuple(
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(
       TheIndex.getOrInsertValueInfo(
           ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID, ValueGUID);
+      OriginalNameID);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7220,8 +7218,8 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       GlobalValue::GUID RefGUID = Record[1];
       // The "original name", which is the second value of the pair will be
       // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     }
@@ -7621,8 +7619,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       } else {
         RefGUID = Record[1];
       }
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     // FS_PERMODULE is legacy and does not have support for the tail call flag.
@@ -7680,9 +7678,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // the prevailing copy of a symbol. The linker doesn't resolve local
       // linkage values so don't check whether those are prevailing.
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
-      if (IsPrevailing &&
-          !GlobalValue::isLocalLinkage(LT) &&
-          !IsPrevailing(std::get<2>(VIAndOriginalGUID))) {
+      if (IsPrevailing && !GlobalValue::isLocalLinkage(LT) &&
+          !IsPrevailing(VIAndOriginalGUID.first.getGUID())) {
         PendingCallsites.clear();
         PendingAllocs.clear();
       }

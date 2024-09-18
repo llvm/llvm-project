@@ -17,7 +17,7 @@ import sys
 import textwrap
 
 # FIXME Python 3.9: Replace typing.Tuple with builtins.tuple.
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Match
 
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
@@ -511,7 +511,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         return ""
 
-    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[re.Match[str]]]:
+    def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[Match[str]]]:
         check_name = doc_file[0] + "-" + doc_file[1].replace(".rst", "")
 
         with io.open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:

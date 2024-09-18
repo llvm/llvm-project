@@ -114,9 +114,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP54:%.*]] = add <vscale x 8 x i64> [[TMP53]], zeroinitializer
 ; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP54]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 3, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP55]]
-; CHECK-NEXT:    [[TMP56:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP57:%.*]] = mul i64 [[TMP56]], 8
-; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP57]]
+; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP52]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT24:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP58]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT25:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT24]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

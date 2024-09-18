@@ -1669,7 +1669,7 @@ private:
   RecordKeeper &TrackedRecords;
 
   // The DefInit corresponding to this record.
-  DefInit *CorrespondingDefInit = nullptr;
+  mutable DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1736,7 +1736,7 @@ public:
   RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit();
+  DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 
@@ -1912,6 +1912,9 @@ public:
   /// vector of records, throwing an exception if the field does not exist or
   /// if the value is not the right type.
   std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
+  // Temporary function to help staged migration to const Record pointers.
+  std::vector<const Record *>
+  getValueAsListOfConstDefs(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of integers, throwing an exception if the field does not exist or
