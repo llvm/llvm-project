@@ -510,7 +510,7 @@ private:
 
   /// Helper to remove edge from graph, updating edge iterator if it is provided
   /// (in which case CalleeIter indicates which edge list is being iterated).
-  /// This will also perform the necessary clearning of the ContextEdge members
+  /// This will also perform the necessary clearing of the ContextEdge members
   /// to enable later checking if the edge has been removed (since we may have
   /// other copies of the shared_ptr in existence, and in fact rely on this to
   /// enable removal while iterating over a copy of a node's edge list).
