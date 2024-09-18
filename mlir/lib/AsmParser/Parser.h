@@ -303,9 +303,6 @@ public:
   /// Parse a name or FileLineCol location instance.
   ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
 
-  /// Parse a dialect-specific location.
-  ParseResult parseDialectLocation(LocationAttr &loc);
-
   //===--------------------------------------------------------------------===//
   // Affine Parsing
   //===--------------------------------------------------------------------===//
