@@ -560,13 +560,22 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    StringRef FmtStr = SL->getString();
+    StringRef FmtStr;
+
+    if (SL->getCharByteWidth() == 1)
+      FmtStr = SL->getString();
+    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
+      FmtStr = *EvaledFmtStr;
+    else
+      goto CHECK_UNSAFE_PTR;
+
     StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
 
     return analyze_format_string::ParsePrintfString(
         Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
         Ctx.getTargetInfo(), isKprintf);
   }
+CHECK_UNSAFE_PTR:
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
@@ -833,9 +842,16 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
 //
 // For the first two arguments: `ptr` and `size`, they are safe if in the
 // following patterns:
+//
+// Pattern 1:
 //    ptr := DRE.data();
 //    size:= DRE.size()/DRE.size_bytes()
 // And DRE is a hardened container or view.
+//
+// Pattern 2:
+//    ptr := Constant-Array-DRE;
+//    size:= any expression that has compile-time constant value equivalent to
+//           sizeof (Constant-Array-DRE)
 AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -856,6 +872,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
       !Size->getType()->isIntegerType())
     return false; // not an snprintf call
 
+  // Pattern 1:
   static StringRef SizedObjs[] = {"span", "array", "vector",
                                   "basic_string_view", "basic_string"};
   Buf = Buf->IgnoreParenImpCasts();
@@ -886,6 +903,23 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
                   SizedObj)
             return false; // It is in fact safe
     }
+
+  // Pattern 2:
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
+    ASTContext &Ctx = Finder->getASTContext();
+
+    if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+      Expr::EvalResult ER;
+      // The array element type must be compatible with `char` otherwise an
+      // explicit cast will be needed, which will make this check unreachable.
+      // Therefore, the array extent is same as its' bytewise size.
+      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+
+        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+      }
+    }
+  }
   return true; // ptr and size are not in safe pattern
 }
 } // namespace libc_func_matchers

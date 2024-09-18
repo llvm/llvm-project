@@ -7,7 +7,7 @@ module m
    contains
     final :: final
   end type
-!CHECK: .dt.finalizable, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.finalizable,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.finalizable,specialbitset=512_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
+!CHECK: .dt.finalizable, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.finalizable,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.finalizable,specialbitset=128_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
   type, abstract :: t1
   end type
 !CHECK: .dt.t1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(name=.n.t1,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),specialbitset=0_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)

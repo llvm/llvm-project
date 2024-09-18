@@ -114,9 +114,9 @@ public:
 
     if (upperBound && intrType != IntrType::None) {
       int32_t min = (intrType == IntrType::Dim ? 1 : 0);
-      int32_t max = *upperBound - (intrType == IntrType::Id ? 0 : 1);
-      newOp->setAttr(
-          "range", DenseI32ArrayAttr::get(op.getContext(), ArrayRef{min, max}));
+      int32_t max = *upperBound + (intrType == IntrType::Id ? 0 : 1);
+      newOp->setAttr("range", LLVM::ConstantRangeAttr::get(
+                                  rewriter.getContext(), 32, min, max));
     }
     if (indexBitwidth > 32) {
       newOp = rewriter.create<LLVM::SExtOp>(
