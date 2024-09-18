@@ -319,6 +319,10 @@ void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
   if (NeedsCtor) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     auto block = builder.createBlock(&Addr.getCtorRegion());
+    CIRGenFunction::LexicalScope lexScope{*CurCGF, Addr.getLoc(),
+                                          builder.getInsertionBlock()};
+    lexScope.setAsGlobalInit();
+
     builder.setInsertionPointToStart(block);
     Address DeclAddr(getAddrOfGlobalVar(D), getASTContext().getDeclAlign(D));
     buildDeclInit(CGF, D, DeclAddr);
@@ -327,17 +331,25 @@ void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
   }
 
   if (isCstStorage) {
+    // TODO: this leads to a missing feature in the moment, probably also need a
+    // LexicalScope to be inserted here.
     buildDeclInvariant(CGF, D);
   } else {
     // If not constant storage we'll emit this regardless of NeedsDtor value.
     mlir::OpBuilder::InsertionGuard guard(builder);
     auto block = builder.createBlock(&Addr.getDtorRegion());
+    CIRGenFunction::LexicalScope lexScope{*CurCGF, Addr.getLoc(),
+                                          builder.getInsertionBlock()};
+    lexScope.setAsGlobalInit();
+
     builder.setInsertionPointToStart(block);
     buildDeclDestroy(CGF, D);
     builder.setInsertionPointToEnd(block);
-    if (block->empty())
+    if (block->empty()) {
       block->erase();
-    else
+      // Don't confuse lexical cleanup.
+      builder.clearInsertionPoint();
+    } else
       builder.create<mlir::cir::YieldOp>(Addr->getLoc());
   }
 

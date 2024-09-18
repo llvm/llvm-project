@@ -2014,10 +2014,11 @@ public:
 
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
-      Regular, // cir.if, cir.scope, if_regions
-      Ternary, // cir.ternary
-      Switch,  // cir.switch
-      Try,     // cir.try
+      Regular,   // cir.if, cir.scope, if_regions
+      Ternary,   // cir.ternary
+      Switch,    // cir.switch
+      Try,       // cir.try
+      GlobalInit // cir.global initalization code
     } ScopeKind = Regular;
 
     // Track scope return value.
@@ -2075,6 +2076,7 @@ public:
     // ---
     // Kind
     // ---
+    bool isGlobalInit() { return ScopeKind == Kind::GlobalInit; }
     bool isRegular() { return ScopeKind == Kind::Regular; }
     bool isSwitch() { return ScopeKind == Kind::Switch; }
     bool isTernary() { return ScopeKind == Kind::Ternary; }
@@ -2085,6 +2087,7 @@ public:
     }
     mlir::cir::TryOp getClosestTryParent();
 
+    void setAsGlobalInit() { ScopeKind = Kind::GlobalInit; }
     void setAsSwitch() { ScopeKind = Kind::Switch; }
     void setAsTernary() { ScopeKind = Kind::Ternary; }
     void setAsTry(mlir::cir::TryOp op) {

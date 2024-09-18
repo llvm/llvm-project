@@ -456,7 +456,8 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
     // In OG, we build the landing pad for this scope. In CIR, we emit a
     // synthetic cir.try because this didn't come from codegenerating from a
     // try/catch in C++.
-    auto op = CGF.currLexScope->getClosestTryParent();
+    assert(CGF.currLexScope && "expected scope");
+    mlir::cir::TryOp op = CGF.currLexScope->getClosestTryParent();
     if (op)
       return op;
 
