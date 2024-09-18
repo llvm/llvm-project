@@ -1104,7 +1104,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
           m_sc.function->GetFrameBaseExpression().Evaluate(
               &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
       if (!expr_value)
-        m_frame_base_error = expr_value.takeError();
+        m_frame_base_error = Status::FromError(expr_value.takeError());
       else
         m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
@@ -1117,7 +1117,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
     frame_base = m_frame_base;
 
   if (error_ptr)
-    *error_ptr = m_frame_base_error;
+    *error_ptr = m_frame_base_error.Clone();
   return m_frame_base_error.Success();
 }
 

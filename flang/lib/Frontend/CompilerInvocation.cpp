@@ -438,8 +438,19 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
-}
 
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10))
+    opts.disabledRealKinds.push_back(10);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3))
+    opts.disabledRealKinds.push_back(3);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_2))
+    opts.disabledIntegerKinds.push_back(2);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
+    opts.disabledIntegerKinds.push_back(16);
+}
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
   if (opts.programAction == DebugDumpParsingLog)
@@ -968,7 +979,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// generated.
 static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  if (!args.hasArg(clang::driver::options::OPT_fopenmp))
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
+                                        clang::driver::options::OPT_fno_openmp);
+  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
     return true;
 
   unsigned numErrorsBefore = diags.getNumErrors();
@@ -1529,8 +1542,8 @@ CompilerInvocation::getSemanticsCtx(
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
-      allCompilerInvocOpts);
+      semanticsContext->targetCharacteristics(), targetMachine, getTargetOpts(),
+      compilerVersion, allCompilerInvocOpts);
   return semanticsContext;
 }
 

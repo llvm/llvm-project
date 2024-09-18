@@ -2658,6 +2658,7 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
+  bool isHLSLIntangibleType() const; // Any HLSL intangible type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -6167,10 +6168,18 @@ public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
-        : ResourceClass(ResourceClass), IsROV(IsROV) {}
-    Attributes() : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0) {}
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t RawBuffer : 1;
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
+               bool RawBuffer)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+
+    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
   };
 
 private:
@@ -6203,6 +6212,7 @@ public:
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
+    ID.AddBoolean(Attrs.RawBuffer);
   }
 
   static bool classof(const Type *T) {
@@ -8339,6 +8349,12 @@ inline bool Type::isHLSLSpecificType() const {
   return
 #include "clang/Basic/HLSLIntangibleTypes.def"
       false; // end boolean or operation
+}
+
+inline bool Type::isHLSLIntangibleType() const {
+  // All HLSL specific types are currently intangible type as well, but that
+  // might change in the future.
+  return isHLSLSpecificType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

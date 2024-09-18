@@ -78,18 +78,18 @@ extern "C" void workshareloop_iterator(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP8]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM2:%.*]] = zext i32 [[TMP11]] to i64
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[IDXPROM2]]
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP10]], i64 [[IDXPROM2]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP9]], [[TMP12]]
 // CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP14]] to i64
-// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[IDXPROM4]]
+// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[IDXPROM4]]
 // CHECK-NEXT:    store float [[MUL]], ptr [[ARRAYIDX5]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC]]
 // CHECK:       omp_loop.inc:

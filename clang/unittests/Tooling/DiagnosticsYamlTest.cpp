@@ -151,7 +151,7 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
   yaml::Output YAML(YamlContentStream);
   YAML << TUD;
 
-  EXPECT_EQ(YAMLContent, YamlContentStream.str());
+  EXPECT_EQ(YAMLContent, YamlContent);
 }
 
 TEST(DiagnosticsYamlTest, deserializesDiagnostics) {

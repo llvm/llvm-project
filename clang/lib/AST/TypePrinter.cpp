@@ -1635,7 +1635,8 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
                                   raw_ostream &OS, bool FullyQualify) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
+  TemplateDecl *TD =
+      T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
@@ -1942,6 +1943,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::HLSLResourceClass:
+  case attr::HLSLROV:
+  case attr::HLSLRawBuffer:
+  case attr::HLSLContainedType:
+    llvm_unreachable("HLSL resource type attributes handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -2062,18 +2069,27 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 void TypePrinter::printHLSLAttributedResourceBefore(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-
-  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
-  OS << " [[hlsl::resource_class("
-     << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
-     << ")]]";
-  if (Attrs.IsROV)
-    OS << " [[hlsl::is_rov()]]";
 }
 
 void TypePrinter::printHLSLAttributedResourceAfter(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  OS << " [[hlsl::resource_class("
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
+     << ")]]";
+  if (Attrs.IsROV)
+    OS << " [[hlsl::is_rov]]";
+  if (Attrs.RawBuffer)
+    OS << " [[hlsl::raw_buffer]]";
+
+  QualType ContainedTy = T->getContainedType();
+  if (!ContainedTy.isNull()) {
+    OS << " [[hlsl::contained_type(";
+    printBefore(ContainedTy, OS);
+    printAfter(ContainedTy, OS);
+    OS << ")]]";
+  }
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

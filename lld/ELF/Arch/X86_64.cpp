@@ -432,8 +432,8 @@ void X86_64::writePltHeader(uint8_t *buf) const {
       0x0f, 0x1f, 0x40, 0x00, // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t plt = in.ibtPlt ? in.ibtPlt->getVA() : in.plt->getVA();
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.ibtPlt ? ctx.in.ibtPlt->getVA() : ctx.in.plt->getVA();
   write32le(buf + 2, gotPlt - plt + 2); // GOTPLT+8
   write32le(buf + 8, gotPlt - plt + 4); // GOTPLT+16
 }
@@ -449,7 +449,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 
   write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
   write32le(buf + 7, sym.getPltIdx());
-  write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
+  write32le(buf + 12, ctx.in.plt->getVA() - pltEntryAddr - 16);
 }
 
 RelType X86_64::getDynRel(RelType type) const {
@@ -1073,7 +1073,7 @@ IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
-      in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
+      ctx.in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1162,8 +1162,8 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
   };
   memcpy(buf, insn, sizeof(insn));
 
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
   write32le(buf + 2, gotPlt - plt - 6 + 8);
   write32le(buf + 9, gotPlt - plt - 13 + 16);
 }
@@ -1180,7 +1180,7 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  uint64_t off = pltEntryAddr - in.plt->getVA();
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
 
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
@@ -1221,7 +1221,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   memcpy(buf, insn, sizeof(insn));
 
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
-  write32le(buf + 8, in.plt->getVA() - pltEntryAddr - 12);
+  write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 
 static TargetInfo *getTargetInfo() {

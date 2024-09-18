@@ -3522,6 +3522,15 @@ let TargetPrefix = "aarch64" in {
   }
 
   //
+  // Multi-vector floating point absolute min/max number
+  //
+
+  foreach instr = ["famax", "famin"] in {
+    def int_aarch64_sme_ # instr # _x2 : SME2_VG2_Multi_Multi_Intrinsic;
+    def int_aarch64_sme_ # instr # _x4 : SME2_VG4_Multi_Multi_Intrinsic;
+  }
+
+  //
   // Multi-vector vertical dot-products
   //
 
@@ -3785,3 +3794,13 @@ def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic
 def int_aarch64_sme_mopa_nonwide : SME_OuterProduct_Intrinsic;
 def int_aarch64_sme_mops_nonwide : SME_OuterProduct_Intrinsic;
 
+// SVE2/SME2 - Floating point absolute maximum and minimum
+
+def int_aarch64_sve_famax   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_famax_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_famin   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_famin_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+// Neon absolute maximum and minimum
+def int_aarch64_neon_famax :  AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;
