@@ -957,11 +957,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
   } else if (T == X_CNT) {
-    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-      auto &Op = Inst.getOperand(I);
-      if (!Op.isReg() || Op.isDef())
-        continue;
-
+    for (const MachineOperand &Op : Inst.all_uses()) {
       RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
       for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
         setRegScore(RegNo, T, CurrScore);
