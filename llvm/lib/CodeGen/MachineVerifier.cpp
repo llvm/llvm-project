@@ -1750,7 +1750,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
     if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
       report("Subvector type and index must not cause insert to overrun the "
-             "vector being inserted into", MI);
+             "vector being inserted into",
+             MI);
       break;
     }
 
