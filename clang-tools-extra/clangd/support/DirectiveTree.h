@@ -25,17 +25,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_DIRECTIVETREE_H
-#define CLANG_PSEUDO_DIRECTIVETREE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIRECTIVETREE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIRECTIVETREE_H
 
-#include "clang-pseudo/Token.h"
+#include "Token.h"
 #include "clang/Basic/TokenKinds.h"
 #include <optional>
 #include <variant>
 #include <vector>
 
 namespace clang {
-namespace pseudo {
+namespace clangd {
 
 /// Describes the structure of a source file, as seen by the preprocessor.
 ///
@@ -124,7 +124,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 /// The choices are stored in Conditional::Taken nodes.
 void chooseConditionalBranches(DirectiveTree &, const TokenStream &Code);
 
-} // namespace pseudo
+} // namespace clangd
 } // namespace clang
 
-#endif // CLANG_PSEUDO_DIRECTIVETREE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIRECTIVETREE_H
