@@ -1131,8 +1131,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     } else {
       // If UseBB is the single successor of Pred, we can add InsertValue to
       // Pred.
-      if (succ_size(Pred) != 1)
-        return nullptr; // Give up.
+      auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
+      if (!(BI && BI->isUnconditional()))
+        return nullptr;
     }
   }
 
@@ -1154,14 +1155,21 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // must be conservative here.
     // If OrigIVI is in UseBB and it's the only successor of PredBB, PredBB
     // can't be in inner loop.
-    if (UseBB == OrigBB)
-      continue;
+    if (UseBB != OrigBB)
+      return nullptr;
 
-    // It is always safe to move InsertValue to colder places.
-    if (BFI && BFI->getBlockFreq(OrigBB) > BFI->getBlockFreq(It.first))
-      continue;
-
-    return nullptr;
+    // Avoid constructing constant aggregate because constant value may expose
+    // more optimizations.
+    bool ConstAgg = true;
+    for (auto I : enumerate(AggElts)) {
+      Value *Elt = (*I.value())->DoPHITranslation(UseBB, It.first);
+      if (!isa<Constant>(Elt)) {
+        ConstAgg = false;
+        break;
+      }
+    }
+    if (ConstAgg)
+      return nullptr;
   }
 
   // For predecessors without appropriate source aggregate, create one in the
