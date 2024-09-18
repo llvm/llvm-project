@@ -77,6 +77,9 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
+- The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
+  ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.)
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
