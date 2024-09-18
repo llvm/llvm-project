@@ -346,7 +346,7 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {},
                       MallocF, Name);
 }
 

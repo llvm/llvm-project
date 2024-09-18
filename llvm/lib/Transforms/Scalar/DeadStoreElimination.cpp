@@ -505,7 +505,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     // Failed to create a fragment expression for this so discard the value,
     // making this a kill location.
     auto *Expr = *DIExpression::createFragmentExpression(
-        DIExpression::get(Assign->getContext(), std::nullopt),
+        DIExpression::get(Assign->getContext(), {}),
         DeadFragment.OffsetInBits, DeadFragment.SizeInBits);
     Assign->setExpression(Expr);
     Assign->setKillLocation();

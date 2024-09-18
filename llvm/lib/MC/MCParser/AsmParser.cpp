@@ -5714,7 +5714,7 @@ bool AsmParser::parseDirectiveRept(SMLoc DirectiveLoc, StringRef Dir) {
   raw_svector_ostream OS(Buf);
   while (Count--) {
     // Note that the AtPseudoVariable is disabled for instantiations of .rep(t).
-    if (expandMacro(OS, *M, std::nullopt, std::nullopt, false))
+    if (expandMacro(OS, *M, {}, {}, false))
       return true;
   }
   instantiateMacroLikeBody(M, DirectiveLoc, OS);

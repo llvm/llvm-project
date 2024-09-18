@@ -1554,7 +1554,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolved=*/false,
                 OldSP->getUnit());
   auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+      DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                     DISubprogram::SPFlagOptimized |
                                     DISubprogram::SPFlagLocalToUnit;

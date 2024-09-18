@@ -3180,7 +3180,7 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   CallOptions.setDiscardResult(true);
   SDValue Chain =
       TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
-                      std::nullopt, CallOptions, getCurSDLoc())
+                      {}, CallOptions, getCurSDLoc())
           .second;
   // On PS4/PS5, the "return address" must still be within the calling
   // function, even if it's at the very end, so emit an explicit TRAP here.

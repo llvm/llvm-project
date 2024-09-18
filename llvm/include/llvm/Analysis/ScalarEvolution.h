@@ -1134,7 +1134,7 @@ public:
         const SCEV *E, const SCEV *ConstantMaxNotTaken,
         const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
         ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList =
-            std::nullopt);
+        {});
 
     ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
               const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,

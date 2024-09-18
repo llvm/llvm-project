@@ -1944,7 +1944,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
       Cost += getArithmeticInstrCost(Instruction::Add, GEP->getType(), CostKind,
                                      {TTI::OK_AnyValue, TTI::OP_None},
                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                     std::nullopt);
+                                     {});
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),

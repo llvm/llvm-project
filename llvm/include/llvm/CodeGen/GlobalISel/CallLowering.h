@@ -413,7 +413,7 @@ protected:
       ValueHandler &Handler, ValueAssigner &Assigner,
       SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
       CallingConv::ID CallConv, bool IsVarArg,
-      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+      ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
@@ -422,7 +422,7 @@ protected:
   handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
                     CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
                     MachineIRBuilder &MIRBuilder,
-                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+                    ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

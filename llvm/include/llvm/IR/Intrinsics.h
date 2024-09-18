@@ -74,7 +74,7 @@ namespace Intrinsic {
 
   /// Return the function type for an intrinsic.
   FunctionType *getType(LLVMContext &Context, ID id,
-                        ArrayRef<Type *> Tys = std::nullopt);
+                        ArrayRef<Type *> Tys = {});
 
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
@@ -90,7 +90,7 @@ namespace Intrinsic {
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
   Function *getDeclaration(Module *M, ID id,
-                           ArrayRef<Type *> Tys = std::nullopt);
+                           ArrayRef<Type *> Tys = {});
 
   /// Looks up Name in NameTable via binary search. NameTable must be sorted
   /// and all entries must start with "llvm.".  If NameTable contains an exact

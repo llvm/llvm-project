@@ -897,7 +897,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
+      ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
@@ -1023,7 +1023,7 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) {
     switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
     case TTI::SK_Broadcast:
@@ -1659,7 +1659,7 @@ public:
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_ExtractSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(RetTy));
+          {}, CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -1669,17 +1669,17 @@ public:
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(Args[1]->getType()));
+          {}, CostKind, Index, cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_reverse: {
       return thisT()->getShuffleCost(
-          TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), std::nullopt,
+          TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), {},
           CostKind, 0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
-          TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), std::nullopt,
+          TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), {},
           CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
@@ -2601,7 +2601,7 @@ public:
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
+          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
                                   CostKind, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
@@ -2618,7 +2618,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -2692,7 +2692,7 @@ public:
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
       ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
+          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
                                   CostKind, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
@@ -2709,7 +2709,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

@@ -682,7 +682,7 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
-            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
+            DB.getOrCreateTypeArray({})), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */

@@ -393,7 +393,7 @@ Value *Mapper::mapValue(const Value *V) {
                  ? nullptr
                  : MetadataAsValue::get(
                        V->getContext(),
-                       MDTuple::get(V->getContext(), std::nullopt));
+                       MDTuple::get(V->getContext(), {}));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;

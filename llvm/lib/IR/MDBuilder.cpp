@@ -67,7 +67,7 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
 }
 
 MDNode *MDBuilder::createUnpredictable() {
-  return MDNode::get(Context, std::nullopt);
+  return MDNode::get(Context, {});
 }
 
 MDNode *MDBuilder::createFunctionEntryCount(

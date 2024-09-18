@@ -476,7 +476,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, std::nullopt, "",
+      objcarc::createCallInstWithColors(IA, {}, "",
                                         Inst->getIterator(), BlockColors);
     }
   decline_rv_optimization:

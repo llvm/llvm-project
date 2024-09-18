@@ -290,7 +290,7 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
     return;
   std::optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
-  MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
+  MCOS.emitLabel(Header.Emit(&MCOS, Params, {}, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
