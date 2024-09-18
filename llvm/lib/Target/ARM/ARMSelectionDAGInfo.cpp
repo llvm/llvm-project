@@ -12,6 +12,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARMTargetTransformInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
@@ -148,11 +149,11 @@ SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
   unsigned EmittedNumMemOps = 0;
   EVT VT = MVT::i32;
   unsigned VTSize = 4;
-  unsigned i = 0;
+  unsigned I = 0;
   // Emit a maximum of 4 loads in Thumb1 since we have fewer registers
   const unsigned MaxLoads = Subtarget.isThumb1Only() ? 4 : 6;
-  SDValue TFOps[6];
-  SDValue Loads[6];
+  SmallVector<SDValue> TFOps(6);
+  SmallVector<SDValue> Loads(6);
   uint64_t SrcOff = 0, DstOff = 0;
 
   MachineMemOperand::Flags MOFlags = MachineMemOperand::Flags::MONone;
@@ -174,28 +175,30 @@ SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
   // same number of stores.  The loads and stores may get combined into
   // ldm/stm later on.
   while (EmittedNumMemOps < NumMemOps) {
-    for (i = 0; i < MaxLoads && EmittedNumMemOps + i < NumMemOps; ++i) {
-      Loads[i] = DAG.getLoad(VT, dl, Chain,
+    for (I = 0; I < MaxLoads && EmittedNumMemOps + I < NumMemOps; ++I) {
+      Loads[I] = DAG.getLoad(VT, dl, Chain,
                              DAG.getNode(ISD::ADD, dl, MVT::i32, Src,
                                          DAG.getConstant(SrcOff, dl, MVT::i32)),
                              SrcPtrInfo.getWithOffset(SrcOff), MaybeAlign(0),
                              LoadMOFlags);
-      TFOps[i] = Loads[i].getValue(1);
+      TFOps[I] = Loads[I].getValue(1);
       SrcOff += VTSize;
     }
-    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                        ArrayRef(TFOps.data(), I));
 
-    for (i = 0; i < MaxLoads && EmittedNumMemOps + i < NumMemOps; ++i) {
-      TFOps[i] = DAG.getStore(
-          Chain, dl, Loads[i],
+    for (I = 0; I < MaxLoads && EmittedNumMemOps + I < NumMemOps; ++I) {
+      TFOps[I] = DAG.getStore(
+          Chain, dl, Loads[I],
           DAG.getNode(ISD::ADD, dl, MVT::i32, Dst,
                       DAG.getConstant(DstOff, dl, MVT::i32)),
           DstPtrInfo.getWithOffset(DstOff), MaybeAlign(0), StoreMOFlags);
       DstOff += VTSize;
     }
-    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                        ArrayRef(TFOps.data(), I));
 
-    EmittedNumMemOps += i;
+    EmittedNumMemOps += I;
   }
 
   if (BytesLeft == 0)
@@ -203,7 +206,7 @@ SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
 
   // Issue loads / stores for the trailing (1 - 3) bytes.
   unsigned BytesLeftSave = BytesLeft;
-  i = 0;
+  I = 0;
   while (BytesLeft) {
     if (BytesLeft >= 2) {
       VT = MVT::i16;
@@ -213,19 +216,21 @@ SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
       VTSize = 1;
     }
 
-    Loads[i] = DAG.getLoad(VT, dl, Chain,
+    Loads[I] = DAG.getLoad(VT, dl, Chain,
                            DAG.getNode(ISD::ADD, dl, MVT::i32, Src,
                                        DAG.getConstant(SrcOff, dl, MVT::i32)),
                            SrcPtrInfo.getWithOffset(SrcOff), MaybeAlign(0),
                            LoadMOFlags);
-    TFOps[i] = Loads[i].getValue(1);
-    ++i;
+
+    TFOps[I] = Loads[I].getValue(1);
+    ++I;
     SrcOff += VTSize;
     BytesLeft -= VTSize;
   }
-  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
+  Chain =
+      DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps.data(), I));
 
-  i = 0;
+  I = 0;
   BytesLeft = BytesLeftSave;
   while (BytesLeft) {
     if (BytesLeft >= 2) {
@@ -236,16 +241,18 @@ SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
       VTSize = 1;
     }
 
-    TFOps[i] = DAG.getStore(Chain, dl, Loads[i],
+    TFOps[I] = DAG.getStore(Chain, dl, Loads[I],
                             DAG.getNode(ISD::ADD, dl, MVT::i32, Dst,
                                         DAG.getConstant(DstOff, dl, MVT::i32)),
                             DstPtrInfo.getWithOffset(DstOff), MaybeAlign(0),
                             StoreMOFlags);
-    ++i;
+    ++I;
     DstOff += VTSize;
     BytesLeft -= VTSize;
   }
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, i));
+
+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                     ArrayRef(TFOps.data(), I));
 }
 
 static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
@@ -302,9 +309,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                   Alignment.value(), RTLIB::MEMCPY);
 
-  if (Subtarget.isCortexM7() &&
-      (Subtarget.wantsMEMCPYAsLdSt() ||
-       (isVolatile && Subtarget.wantsVolatileMEMCPYAsLdSt())))
+  if (Subtarget.allowInlineMemcpyAsLdSt())
     return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
                             isVolatile, DstPtrInfo, SrcPtrInfo);
 
