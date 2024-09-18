@@ -411,6 +411,11 @@ public:
 
   Type *getType() const;
 
+  /// \Returns the expected type of \p V. For most Values this is equivalent
+  /// to getType, but for stores returns the stored type, rather than void,
+  /// and for ReturnInsts returns the returned type.
+  Type *getExpectedType() const;
+
   Context &getContext() const { return Ctx; }
 
   void replaceUsesWithIf(Value *OtherV,
@@ -1421,6 +1426,11 @@ public:
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
   void copyFastMathFlags(FastMathFlags FMF);
+
+  /// \Returns the expected Value for this instruction. For most instructions,
+  /// this is the instruction it self, but for stores returns the stored
+  /// operand, and for ReturnInstructions returns the returned value.
+  Value *getExpectedValue() const;
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;

@@ -875,6 +875,8 @@ OperandNo: 0
   EXPECT_TRUE(I0->hasNUses(1u));
   EXPECT_FALSE(I0->hasNUses(2u));
 
+  // Check Value.getExpectedType
+
   // Check User.setOperand().
   Ret->setOperand(0, Arg0);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
@@ -945,6 +947,38 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   auto *Glob0Op = Glob0->getOperand(0);
   Glob0->replaceUsesOfWith(Glob0Op, Glob1);
   EXPECT_EQ(Glob0->getOperand(0), Glob1);
+}
+
+TEST_F(SandboxIRTest, GetExpected) {
+  parseIR(C, R"IR(
+define float @foo(float %v, ptr %ptr) {
+  %add = fadd float %v, %v
+  store float %v, ptr %ptr
+  ret float %v
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+
+  Ctx.createFunction(&LLVMF);
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  auto Add = cast<sandboxir::Instruction>(&*It++);
+  auto *S0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+  // Instruction.getExpectedValue
+  EXPECT_EQ(Add->getExpectedValue(), Add);
+  EXPECT_EQ(S0->getExpectedValue(),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand());
+  EXPECT_EQ(Ret->getExpectedValue(),
+            cast<sandboxir::ReturnInst>(Ret)->getReturnValue());
+  // Value.getExpectedType
+  EXPECT_EQ(Add->getExpectedType(), Add->getType());
+  EXPECT_EQ(S0->getExpectedType(),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand()->getType());
+  EXPECT_EQ(Ret->getExpectedType(),
+            cast<sandboxir::ReturnInst>(Ret)->getReturnValue()->getType());
 }
 
 TEST_F(SandboxIRTest, RAUW_RUWIf) {
