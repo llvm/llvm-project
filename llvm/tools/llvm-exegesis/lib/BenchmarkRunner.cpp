@@ -116,8 +116,7 @@ private:
                                 ExecutableFunction Function,
                                 BenchmarkRunner::ScratchSpace *Scratch,
                                 std::optional<int> BenchmarkCPU)
-      : State(State), Function(std::move(Function)), Scratch(Scratch),
-        BenchmarkProcessCPU(BenchmarkCPU) {}
+      : State(State), Function(std::move(Function)), Scratch(Scratch) {}
 
   static void accumulateCounterValues(const SmallVector<int64_t, 4> &NewValues,
                                       SmallVector<int64_t, 4> *Result) {
@@ -180,7 +179,6 @@ private:
   const LLVMState &State;
   const ExecutableFunction Function;
   BenchmarkRunner::ScratchSpace *const Scratch;
-  const std::optional<int> BenchmarkProcessCPU;
 };
 
 #ifdef __linux__
@@ -395,6 +393,31 @@ private:
     return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
 
+  void setCPUAffinityIfRequested() const {
+    if (BenchmarkProcessCPU.has_value()) {
+      // Set the CPU affinity for the child process, so that we ensure that if
+      // the user specified a CPU the process should run on, the benchmarking
+      // process is running on that CPU.
+      cpu_set_t CPUMask;
+      CPU_ZERO(&CPUMask);
+      CPU_SET(*BenchmarkProcessCPU, &CPUMask);
+      // TODO(boomanaiden154): Rewrite this to use LLVM primitives once they
+      // are available.
+      int SetAffinityReturn = sched_setaffinity(0, sizeof(CPUMask), &CPUMask);
+      if (SetAffinityReturn == -1) {
+        exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
+      }
+
+      // Check (if assertions are enabled) that we are actually running on the
+      // CPU that was specified by the user.
+      unsigned int CurrentCPU;
+      assert(getcpu(&CurrentCPU, nullptr) == 0 &&
+             "Expected getcpu call to succeed.");
+      assert(static_cast<int>(CurrentCPU) == *BenchmarkProcessCPU &&
+             "Expected current CPU to equal the CPU requested by the user");
+    }
+  }
+
   Error createSubProcessAndRunBenchmark(
       StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
       ArrayRef<const char *> ValidationCounters,
@@ -427,28 +450,7 @@ private:
     }
 
     if (ParentOrChildPID == 0) {
-      if (BenchmarkProcessCPU) {
-        // Set the CPU affinity for the child process, so that we ensure that if
-        // the user specified a CPU the process should run on, the benchmarking
-        // process is running on that CPU.
-        cpu_set_t CPUMask;
-        CPU_ZERO(&CPUMask);
-        CPU_SET(*BenchmarkProcessCPU, &CPUMask);
-        // TODO(boomanaiden154): Rewrite this to use LLVM primitives once they
-        // are available.
-        int SetAffinityReturn = sched_setaffinity(0, sizeof(CPUMask), &CPUMask);
-        if (SetAffinityReturn == -1) {
-          exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
-        }
-
-        // Check (if assertions are enabled) that we are actually running on the
-        // CPU that was specified by the user.
-        unsigned int CurrentCPU;
-        assert(getcpu(&CurrentCPU, nullptr) == 0 &&
-               "Expected getcpu call to succeed.");
-        assert(static_cast<int>(CurrentCPU) == *BenchmarkProcessCPU &&
-               "Expected current CPU to equal the CPU requested by the user");
-      }
+      setCPUAffinityIfRequested();
 
       // We are in the child process, close the write end of the pipe.
       close(PipeFiles[1]);
@@ -653,6 +655,10 @@ BenchmarkRunner::createFunctionExecutor(
     const BenchmarkKey &Key, std::optional<int> BenchmarkProcessCPU) const {
   switch (ExecutionMode) {
   case ExecutionModeE::InProcess: {
+    if (BenchmarkProcessCPU.has_value())
+      return make_error<Failure>("The inprocess execution mode does not "
+                                 "support benchmark core pinning.");
+
     auto InProcessExecutorOrErr = InProcessFunctionExecutorImpl::create(
         State, std::move(ObjectFile), Scratch.get(), BenchmarkProcessCPU);
     if (!InProcessExecutorOrErr)

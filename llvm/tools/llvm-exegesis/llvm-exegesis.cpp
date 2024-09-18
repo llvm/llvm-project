@@ -423,13 +423,10 @@ static void runBenchmarkConfigurations(
         std::optional<StringRef> DumpFile;
         if (DumpObjectToDisk.getNumOccurrences())
           DumpFile = DumpObjectToDisk;
-        std::optional<int> BenchmarkCPU = std::nullopt;
-        if (BenchmarkProcessCPU != -1) {
-          if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess)
-            ExitWithError("--benchmark-process-cpu is only supported in the "
-                          "subprocess execution mode");
-          BenchmarkCPU = BenchmarkProcessCPU;
-        }
+        const std::optional<int> BenchmarkCPU =
+            BenchmarkProcessCPU == -1
+                ? std::nullopt
+                : std::optional(BenchmarkProcessCPU.getValue());
         auto [Err, BenchmarkResult] =
             Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
         if (Err) {
