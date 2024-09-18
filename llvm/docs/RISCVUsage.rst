@@ -421,22 +421,7 @@ extension are still experimental.  To use C intrinsics for such an extension
 from `clang`, you must add `-menable-experimental-extensions` to the command
 line.  This currently applies to the following extensions:
 
-* ``Zvbb``
-* ``Zvbc``
-* ``Zvkb``
-* ``Zvkg``
-* ``Zvkn``
-* ``Zvknc``
-* ``Zvkned``
-* ``Zvkng``
-* ``Zvknha``
-* ``Zvknhb``
-* ``Zvks``
-* ``Zvksc``
-* ``Zvksed``
-* ``Zvksg``
-* ``Zvksh``
-* ``Zvkt``
+No extensions have experimental intrinsics.
 
 Global Pointer (GP) Relaxation and the Small Data Limit
 =======================================================
@@ -444,9 +429,10 @@ Global Pointer (GP) Relaxation and the Small Data Limit
 Some of the RISC-V psABI variants reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
 
 To use this functionality, you need to be doing all of the following:
+
 * Use the ``medlow`` (aka ``small``) code model;
 * Not use the ``gp`` register for any other uses (some platforms use it for the shadow stack and others as a temporary -- as denoted by the ``Tag_RISCV_x3_reg_usage`` build attribute);
-* Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects;
+* Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects (this is the default, but ``-mno-relax`` disables these relaxation annotations);
 * Compile for a position-dependent static executable (not a shared library, and ``-fno-PIC`` / ``-fno-pic`` / ``-fno-pie``); and
 * Use LLD's ``--relax-gp`` option.
 
