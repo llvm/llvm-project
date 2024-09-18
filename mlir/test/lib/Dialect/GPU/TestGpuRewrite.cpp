@@ -78,9 +78,12 @@ struct TestGpuSubgroupReduceLoweringPass
     populateGpuBreakDownSubgroupReducePatterns(patterns,
                                                /*maxShuffleBitwidth=*/32,
                                                PatternBenefit(2));
-    if (expandToShuffles)
+    if (expandToShuffles) {
       populateGpuLowerSubgroupReduceToShufflePatterns(
           patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);
+      populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+          patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);
+    }
 
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
