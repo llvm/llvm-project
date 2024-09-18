@@ -3704,11 +3704,6 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   auto *First = Line.First;
   First->SpacesRequiredBefore = 1;
   First->CanBreakBefore = First->MustBreakBefore;
-
-  if (First->is(tok::eof) && First->NewlinesBefore == 0 &&
-      Style.InsertNewlineAtEOF) {
-    First->NewlinesBefore = 1;
-  }
 }
 
 // This function heuristically determines whether 'Current' starts the name of a
