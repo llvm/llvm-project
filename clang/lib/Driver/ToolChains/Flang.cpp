@@ -732,6 +732,12 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // to avoid warn_drv_unused_argument.
   Args.getLastArg(options::OPT_fcolor_diagnostics,
                   options::OPT_fno_color_diagnostics);
+  if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_color_EQ)) {
+    StringRef Value(A->getValue());
+    if (Value != "always" && Value != "never" && Value != "auto")
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+  }
   if (Diags.getDiagnosticOptions().ShowColors)
     CmdArgs.push_back("-fcolor-diagnostics");
 
