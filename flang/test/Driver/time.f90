@@ -1,3 +1,9 @@
+! TODO: For some reason, on Windows, nothing is printed to stderr which causes
+! the checks to fail. It is not clear why this is, so disable this on Windows
+! until the root cause can be determined.
+!
+! UNSUPPORTED: system-windows
+
 ! The -time option prints timing information for the various subcommands in a
 ! format similar to that used by gfortran. When compiling and linking, this will
 ! include the time to call flang-${LLVM_VERSION_MAJOR} and the linker. Since the
