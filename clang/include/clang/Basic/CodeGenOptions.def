@@ -375,8 +375,18 @@ ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 /// The maximum stack size a function can have to be considered for inlining.
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
 
-// Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary)
+// Define the number of bits required for the VecLib enum
+#define VECLIB_BIT_COUNT (llvm::countPopulation(llvm::driver::VectorLibrary::MaxLibrary))
+
+// Ensure the VecLib bitfield has enough space for future vector libraries.
+// The number of bits is determined automatically based on the number of enum values.
+static_assert(static_cast<size_t>(llvm::driver::VectorLibrary::MaxLibrary) <= (1 << VECLIB_BIT_COUNT),
+              "VecLib bitfield size is too small to accommodate all vector libraries.");
+              
+// VecLib definition in CodeGenOptions.def
+ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, VECLIB_BIT_COUNT, llvm::driver::VectorLibrary::NoLibrary)
+
+#undef VECLIB_BIT_COUNT
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
