@@ -459,7 +459,7 @@ struct VariableDescription {
 };
 
 /// Does the given variable have an associated value location?
-bool HasValueLocation(lldb::SBValue v);
+bool ValuePointsToCode(lldb::SBValue v);
 
 /// Pack a location into a single integer which we can send via
 /// the debug adapter protocol.

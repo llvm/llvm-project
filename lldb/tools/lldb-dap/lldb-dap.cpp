@@ -1642,7 +1642,7 @@ void request_evaluate(const llvm::json::Object &request) {
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       int64_t var_ref = 0;
-      if (value.MightHaveChildren() || HasValueLocation(value))
+      if (value.MightHaveChildren() || ValuePointsToCode(value))
          var_ref = g_dap.variables.InsertVariable(
           value, /*is_permanent=*/context == "repl");
       if (value.MightHaveChildren())
@@ -1652,7 +1652,7 @@ void request_evaluate(const llvm::json::Object &request) {
       if (lldb::addr_t addr = value.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
-      if (HasValueLocation(value))
+      if (ValuePointsToCode(value))
         body.try_emplace("valueLocationReference", var_ref);
     }
   }
@@ -3841,7 +3841,7 @@ void request_setVariable(const llvm::json::Object &request) {
       if (lldb::addr_t addr = variable.GetLoadAddress();
           addr != LLDB_INVALID_ADDRESS)
         body.try_emplace("memoryReference", EncodeMemoryReference(addr));
-      if (HasValueLocation(variable))
+      if (ValuePointsToCode(variable))
         body.try_emplace("valueLocationReference", new_var_ref);
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));

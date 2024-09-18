@@ -1198,10 +1198,9 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
   return description.trim().str();
 }
 
-bool HasValueLocation(lldb::SBValue v) {
-  if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType()) {
+bool ValuePointsToCode(lldb::SBValue v) {
+  if (!v.GetType().GetPointeeType().IsFunctionType())
     return false;
-  }
 
   lldb::addr_t addr = v.GetValueAsAddress();
   lldb::SBLineEntry line_entry =
@@ -1424,7 +1423,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
   if (v.GetDeclaration().IsValid())
     object.try_emplace("declarationLocationReference", PackLocation(var_ref, false));
 
-  if (HasValueLocation(v))
+  if (ValuePointsToCode(v))
     object.try_emplace("valueLocationReference", PackLocation(var_ref, true));
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
