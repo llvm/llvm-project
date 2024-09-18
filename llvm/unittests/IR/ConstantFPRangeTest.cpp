@@ -125,6 +125,19 @@ static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn) {
   });
 }
 
+template <typename Fn>
+static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
+                                             Fn TestFn) {
+  const fltSemantics &Sem = CR.getSemantics();
+  unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+  assert(Bits < 32 && "Too many bits");
+  for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
+    APFloat V(Sem, APInt(Bits, I));
+    if (CR.contains(V))
+      TestFn(V);
+  }
+}
+
 TEST_F(ConstantFPRangeTest, Basics) {
   EXPECT_TRUE(Full.isFullSet());
   EXPECT_FALSE(Full.isEmptySet());
@@ -323,23 +336,14 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
 
   EnumerateConstantFPRanges([](const ConstantFPRange &CR) {
     unsigned Mask = fcNone;
-    if (CR.containsSNaN())
-      Mask |= fcSNan;
-    if (CR.containsQNaN())
-      Mask |= fcQNan;
-    bool HasPos = CR.containsNaN(), HasNeg = CR.containsNaN();
-    APFloat Lower = CR.getLower();
-    const APFloat &Upper = CR.getUpper();
-    if (!(Lower.isPosInfinity() && Upper.isNegInfinity())) {
-      while (true) {
-        Mask |= Lower.classify();
-        HasPos |= !Lower.isNegative();
-        HasNeg |= Lower.isNegative();
-        if (Lower.bitwiseIsEqual(Upper))
-          break;
-        strictNext(Lower);
-      }
-    }
+    bool HasPos = false, HasNeg = false;
+    EnumerateValuesInConstantFPRange(CR, [&](const APFloat &V) {
+      Mask |= V.classify();
+      if (V.isNegative())
+        HasNeg = true;
+      else
+        HasPos = true;
+    });
 
     std::optional<bool> SignBit = std::nullopt;
     if (HasPos != HasNeg)
