@@ -53,6 +53,8 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
+  void checkUsers(std::optional<Register> &CommonVL, bool &CanReduceVL,
+                  MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -1428,27 +1430,16 @@ static bool mayReadPastVL(const MachineInstr &MI) {
 }
 
 bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
-
-  LLVM_DEBUG(
-      dbgs() << "Check whether the instruction is a candidate for reducing VL:"
-             << MI << "\n");
-
   const MCInstrDesc &Desc = MI.getDesc();
-  if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate due to lack of vl op or sew op\n");
+  if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
-  }
+  if (MI.getNumDefs() != 1)
+    return false;
 
-  if (MI.getNumDefs() != 1) {
-    LLVM_DEBUG(dbgs() << " Not a candidate due to it def more than one\n");
-    return false;
-  }
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
   const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-  if (!VLOp.isImm() || VLOp.getImm() != RISCV::VLMaxSentinel) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate due to VL is not VLMAX\n");
+  if (!VLOp.isImm() || VLOp.getImm() != RISCV::VLMaxSentinel)
     return false;
-  }
 
   // Some instructions that produce vectors have semantics that make it more
   // difficult to determine whether the VL can be reduced. For example, some
@@ -1467,7 +1458,89 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  LLVM_DEBUG(dbgs() << "  Found a candidate for VL reduction: " << MI << "\n");
   return true;
+}
+
+void RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
+                                  bool &CanReduceVL, MachineInstr &MI) {
+  // FIXME: Avoid visiting each user for each time we visit something on the
+  // worklist, combined with an extra visit from the outer loop. Restructure
+  // along lines of an instcombine style worklist which integrates the outer
+  // pass.
+  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
+    const MachineInstr &UserMI = *UserOp.getParent();
+    LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
+
+    // Instructions like reductions may use a vector register as a scalar
+    // register. In this case, we should treat it like a scalar register which
+    // does not impact the decision on whether to optimize VL.
+    if (isVectorOpUsedAsScalarOp(UserOp)) {
+      [[maybe_unused]] Register R = UserOp.getReg();
+      [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
+      assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
+             "Expect LMUL 1 register class for vector as scalar operands!");
+      LLVM_DEBUG(dbgs() << "    Use this operand as a scalar operand\n");
+      continue;
+    }
+
+    if (mayReadPastVL(UserMI)) {
+      LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    // Tied operands might pass through.
+    if (UserOp.isTied()) {
+      LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    const MCInstrDesc &Desc = UserMI.getDesc();
+    if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
+      LLVM_DEBUG(dbgs() << "    Abort due to lack of VL or SEW, assume that"
+                           " use VLMAX\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+    const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+    // Looking for a register VL that isn't X0.
+    if (!VLOp.isReg() || VLOp.getReg() == RISCV::X0) {
+      LLVM_DEBUG(dbgs() << "    Abort due to user uses X0 as VL.\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    if (!CommonVL) {
+      CommonVL = VLOp.getReg();
+    } else if (*CommonVL != VLOp.getReg()) {
+      LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
+      CanReduceVL = false;
+      break;
+    }
+
+    // The SEW and LMUL of destination and source registers need to match.
+
+    // We know that MI DEF is a vector register, because that was the guard
+    // to call this function.
+    assert(isVectorRegClass(UserMI.getOperand(0).getReg(), MRI) &&
+           "Expected DEF and USE to be vector registers");
+
+    OperandInfo ConsumerInfo = getOperandInfo(UserMI, UserOp, MRI);
+    OperandInfo ProducerInfo = getOperandInfo(MI, MI.getOperand(0), MRI);
+    if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||
+        !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo)) {
+      LLVM_DEBUG(dbgs() << "    Abort due to incompatible or unknown "
+                           "information for EMUL or EEW.\n");
+      LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
+      LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
+      CanReduceVL = false;
+      break;
+    }
+  }
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
@@ -1477,87 +1550,24 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
   bool MadeChange = false;
   while (!Worklist.empty()) {
     MachineInstr &MI = *Worklist.pop_back_val();
-    LLVM_DEBUG(dbgs() << "Try reduce VL for " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
+    // A MI may not produce a vector register when it is at the root of the
+    // traversal. For example:
+    // vec_reg_a = ..., vl_op, sew_op
+    // vec_reg_a = ..., vl_op, sew_op
+    // scalar_reg = vector_instr vec_reg_a, vec_reg_b, vl_op, sew_op
+    // We'd like to reduce the vl_op on vector_instr, despite it producing
+    // a scalar register. If the produced Dest is not a vector register (such as
+    // vcpop or vfirst), then it has no EEW or EMUL, so there is no need to
+    // check that producer and consumer LMUL and SEW of usres match.
     std::optional<Register> CommonVL;
     bool CanReduceVL = true;
-    for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
-      const MachineInstr &UserMI = *UserOp.getParent();
-      LLVM_DEBUG(dbgs() << "  Check user: " << UserMI << "\n");
-
-      // Instructions like reductions may use a vector register as a scalar
-      // register. In this case, we should treat it like a scalar register which
-      // does not impact the decision on whether to optimize VL.
-      if (isVectorOpUsedAsScalarOp(UserOp)) {
-        [[maybe_unused]] Register R = UserOp.getReg();
-        [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-        assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-               "Expect LMUL 1 register class for vector as scalar operands!");
-        LLVM_DEBUG(dbgs() << "    Use this operand as a scalar operand\n");
-        continue;
-      }
-
-      if (mayReadPastVL(UserMI)) {
-        LLVM_DEBUG(dbgs() << "    Abort due to used by unsafe instruction\n");
-        CanReduceVL = false;
-        break;
-      }
-
-      // Tied operands might pass through.
-      if (UserOp.isTied()) {
-        LLVM_DEBUG(dbgs() << "    Abort due to user use it as tied operand\n");
-        CanReduceVL = false;
-        break;
-      }
-
-      const MCInstrDesc &Desc = UserMI.getDesc();
-      if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-        LLVM_DEBUG(dbgs() << "    Abort due to lack of VL or SEW, assume that"
-                             " use VLMAX.\n");
-        CanReduceVL = false;
-        break;
-      }
-
-      unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-      const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-      // Looking for a register VL that isn't X0.
-      if (!VLOp.isReg() || VLOp.getReg() == RISCV::X0) {
-        LLVM_DEBUG(dbgs() << "    Abort due to user use X0 as VL.\n");
-        CanReduceVL = false;
-        break;
-      }
-
-      if (!CommonVL) {
-        CommonVL = VLOp.getReg();
-      } else if (*CommonVL != VLOp.getReg()) {
-        LLVM_DEBUG(dbgs() << "    Abort due to users have different VL!\n");
-        CanReduceVL = false;
-        break;
-      }
-
-      // The SEW and LMUL of destination and source registers need to match.
-
-      // If the produced Dest is not a vector register, then it has no EEW or
-      // EMUL, so there is no need to check that producer and consumer LMUL and
-      // SEW match. We've already checked above that UserOp is a vector
-      // register.
-      if (!isVectorRegClass(MI.getOperand(0).getReg(), MRI)) {
-        LLVM_DEBUG(dbgs() << "    Abort due to register class mismatch between "
-                             "USE and DEF\n");
-        continue;
-      }
-
-      OperandInfo ConsumerInfo = getOperandInfo(UserMI, UserOp, MRI);
-      OperandInfo ProducerInfo = getOperandInfo(MI, MI.getOperand(0), MRI);
-      if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown() ||
-          !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo)) {
-        LLVM_DEBUG(dbgs() << "    Abort due to incompatible or unknown "
-                             "information for EMUL or EEW.\n");
-        LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
-        LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
-        CanReduceVL = false;
-        break;
-      }
+    if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
+      checkUsers(CommonVL, CanReduceVL, MI);
+    else {
+      CommonVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc())).getReg();
+      CanReduceVL = true;
     }
 
     if (!CanReduceVL || !CommonVL)
