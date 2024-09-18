@@ -18,7 +18,7 @@ together with its specifications:
 ```
 - Add function specs to the file:
 ```
-  libc/spec/stdc.td
+  libc/newhdrgen/yaml/math.yaml
 ```
 
 ## Implementation
@@ -177,7 +177,7 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test
+  $ ninja libc.test.src.math.<func>_test.__unit__
   $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
@@ -196,7 +196,8 @@ implementation (which is very often glibc).
 
 ## Code reviews
 
-We follow the code review process of LLVM with Phabricator:
+We use GitHub's inbuilt pull request system for code review:
 ```
-  https://llvm.org/docs/Phabricator.html
+  https://docs.github.com/articles/about-collaborative-development-models
+  https://docs.github.com/articles/about-pull-requests
 ```

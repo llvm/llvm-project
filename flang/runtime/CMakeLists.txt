@@ -103,11 +103,11 @@ append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
-add_subdirectory(FortranMain)
 add_subdirectory(Float128Math)
 
 set(sources
   ISO_Fortran_binding.cpp
+  allocator-registry.cpp
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
@@ -129,6 +129,7 @@ set(sources
   exceptions.cpp
   execute.cpp
   extensions.cpp
+  external-unit.cpp
   extrema.cpp
   file.cpp
   findloc.cpp
@@ -136,6 +137,7 @@ set(sources
   inquiry.cpp
   internal-unit.cpp
   io-api.cpp
+  io-api-minimal.cpp
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
@@ -149,8 +151,10 @@ set(sources
   numeric.cpp
   pointer.cpp
   product.cpp
+  pseudo-unit.cpp
   ragged.cpp
   random.cpp
+  reduce.cpp
   reduction.cpp
   stat.cpp
   stop.cpp
@@ -166,34 +170,52 @@ set(sources
   unit-map.cpp
   unit.cpp
   utf.cpp
+  ${FORTRAN_MODULE_OBJECTS}
 )
 
-option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
-  "Compile Fortran runtime as CUDA sources (experimental)" OFF
-  )
+include(AddFlangOffloadRuntime)
 
 # List of files that are buildable for all devices.
 set(supported_files
   ISO_Fortran_binding.cpp
   allocatable.cpp
+  allocator-registry.cpp
   array-constructor.cpp
   assign.cpp
+  buffer.cpp
   character.cpp
+  connection.cpp
   copy.cpp
   derived-api.cpp
   derived.cpp
   descriptor.cpp
+  descriptor-io.cpp
   dot-product.cpp
+  edit-input.cpp
+  edit-output.cpp
+  environment.cpp
   extrema.cpp
+  external-unit.cpp
+  file.cpp
   findloc.cpp
+  format.cpp
   inquiry.cpp
+  internal-unit.cpp
+  io-api.cpp
+  io-api-minimal.cpp
+  io-error.cpp
+  io-stmt.cpp
+  iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
   memory.cpp
   misc-intrinsic.cpp
+  namelist.cpp
+  non-tbp-dio.cpp
   numeric.cpp
   pointer.cpp
   product.cpp
+  pseudo-unit.cpp
   ragged.cpp
   stat.cpp
   sum.cpp
@@ -203,123 +225,12 @@ set(supported_files
   transformational.cpp
   type-code.cpp
   type-info.cpp
+  unit.cpp
+  utf.cpp
   )
 
-if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
-  if (BUILD_SHARED_LIBS)
-    message(FATAL_ERROR
-      "BUILD_SHARED_LIBS is not supported for CUDA build of Fortran runtime"
-      )
-  endif()
-
-  enable_language(CUDA)
-
-  # TODO: figure out how to make target property CUDA_SEPARABLE_COMPILATION
-  # work, and avoid setting CMAKE_CUDA_SEPARABLE_COMPILATION.
-  set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
-
-  # Treat all supported sources as CUDA files.
-  set_source_files_properties(${supported_files} PROPERTIES LANGUAGE CUDA)
-  set(CUDA_COMPILE_OPTIONS)
-  if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "Clang")
-    # Allow varargs.
-    set(CUDA_COMPILE_OPTIONS
-      -Xclang -fcuda-allow-variadic-functions
-      )
-  endif()
-  if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
-    set(CUDA_COMPILE_OPTIONS
-      --expt-relaxed-constexpr
-      # Disable these warnings:
-      #   'long double' is treated as 'double' in device code
-      -Xcudafe --diag_suppress=20208
-      -Xcudafe --display_error_number
-      )
-  endif()
-  set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
-    "${CUDA_COMPILE_OPTIONS}"
-    )
-endif()
-
-set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
-  "Compile Fortran runtime as OpenMP target offload sources (experimental). Valid options are 'off', 'host_device', 'nohost'")
-
-set(FLANG_OMP_DEVICE_ARCHITECTURES "all" CACHE STRING
-  "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
-
-if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
-  # 'host_device' build only works with Clang compiler currently.
-  # The build is done with the CMAKE_C/CXX_COMPILER, i.e. it does not use
-  # the in-tree built Clang. We may have a mode that would use the in-tree
-  # built Clang.
-  #
-  # 'nohost' is supposed to produce an LLVM Bitcode library,
-  # and it has to be done with a C/C++ compiler producing LLVM Bitcode
-  # compatible with the LLVM toolchain version distributed with the Flang
-  # compiler.
-  # In general, the in-tree built Clang should be used for 'nohost' build.
-  # Note that 'nohost' build does not produce the host version of Flang
-  # runtime library, so there will be two separate distributable objects.
-  # 'nohost' build is a TODO.
-
-  if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "host_device")
-    message(FATAL_ERROR "Unsupported OpenMP offload build of Flang runtime")
-  endif()
-  if (BUILD_SHARED_LIBS)
-    message(FATAL_ERROR
-      "BUILD_SHARED_LIBS is not supported for OpenMP offload build of Fortran runtime"
-      )
-  endif()
-
-  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
-      "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-
-    set(all_amdgpu_architectures
-      "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-      "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
-      "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-      "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
-      )
-    set(all_nvptx_architectures
-      "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-      "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90"
-      )
-    set(all_gpu_architectures
-      "${all_amdgpu_architectures};${all_nvptx_architectures}"
-      )
-    # TODO: support auto detection on the build system.
-    if (FLANG_OMP_DEVICE_ARCHITECTURES STREQUAL "all")
-      set(FLANG_OMP_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-    endif()
-    list(REMOVE_DUPLICATES FLANG_OMP_DEVICE_ARCHITECTURES)
-
-    string(REPLACE ";" "," compile_for_architectures
-      "${FLANG_OMP_DEVICE_ARCHITECTURES}"
-      )
-
-    set(OMP_COMPILE_OPTIONS
-      -fopenmp
-      -fvisibility=hidden
-      -fopenmp-cuda-mode
-      --offload-arch=${compile_for_architectures}
-      # Force LTO for the device part.
-      -foffload-lto
-      )
-    set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
-      "${OMP_COMPILE_OPTIONS}"
-      )
-
-    # Enable "declare target" in the source code.
-    set_source_files_properties(${supported_files}
-      PROPERTIES COMPILE_DEFINITIONS OMP_OFFLOAD_BUILD
-      )
-  else()
-    message(FATAL_ERROR
-      "Flang runtime build is not supported for these compilers:\n"
-      "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}\n"
-      "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
-  endif()
-endif()
+enable_cuda_compilation(FortranRuntime "${supported_files}")
+enable_omp_offload_compilation("${supported_files}")
 
 if (NOT TARGET FortranFloat128Math)
   # If FortranFloat128Math is not defined, then we are not building
@@ -339,6 +250,13 @@ if (NOT TARGET FortranFloat128Math)
     set_property(SOURCE ${f128_sources}
       APPEND PROPERTY COMPILE_DEFINITIONS
       ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
       )
     list(APPEND sources ${f128_sources})
   endif()
@@ -363,21 +281,41 @@ else()
     LINK_LIBS
     FortranDecimal.static
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   add_flang_library(FortranRuntime.dynamic ${sources}
     LINK_LIBS
     FortranDecimal.dynamic
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
   add_flang_library(FortranRuntime.static_dbg ${sources}
     LINK_LIBS
     FortranDecimal.static_dbg
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
   add_flang_library(FortranRuntime.dynamic_dbg ${sources}
     LINK_LIBS
     FortranDecimal.dynamic_dbg
     INSTALL_WITH_TOOLCHAIN)
+  set_target_properties(FortranRuntime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
     FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
+endif()
+set_target_properties(FortranRuntime PROPERTIES FOLDER "Flang/Runtime Libraries")
+
+# If FortranRuntime is part of a Flang build (and not a separate build) then
+# add dependency to make sure that Fortran runtime library is being built after
+# we have the Flang compiler available.  This also includes the MODULE files
+# that compile when the 'flang-new' target is built.
+#
+# TODO: This is a workaround and should be updated when runtime build procedure
+# is changed to a regular runtime build.  See discussion in PR #95388.
+if (TARGET flang-new AND TARGET module_files)
+  add_dependencies(FortranRuntime flang-new module_files)
+endif()
+
+if (FLANG_CUF_RUNTIME)
+  add_subdirectory(CUDA)
 endif()

@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
@@ -26,6 +27,8 @@ class AArch64ABIInfo : public ABIInfo {
 public:
   AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
       : ABIInfo(CGT), Kind(Kind) {}
+
+  bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
 
 private:
   AArch64ABIKind getABIKind() const { return Kind; }
@@ -52,26 +55,27 @@ private:
                                      FI.getCallingConvention());
   }
 
-  Address EmitDarwinVAArg(Address VAListAddr, QualType Ty,
-                          CodeGenFunction &CGF) const;
+  RValue EmitDarwinVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
+                         AggValueSlot Slot) const;
 
-  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                         CodeGenFunction &CGF) const;
+  RValue EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
+                        AArch64ABIKind Kind, AggValueSlot Slot) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override {
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override {
     llvm::Type *BaseTy = CGF.ConvertType(Ty);
     if (isa<llvm::ScalableVectorType>(BaseTy))
       llvm::report_fatal_error("Passing SVE types to variadic functions is "
                                "currently not supported");
 
-    return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
-           : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
+    return Kind == AArch64ABIKind::Win64
+               ? EmitMSVAArg(CGF, VAListAddr, Ty, Slot)
+           : isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF, Slot)
+                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind, Slot);
   }
 
-  Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                      QualType Ty) const override;
+  RValue EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                     AggValueSlot Slot) const override;
 
   bool allowBFloatArgsAndRet() const override {
     return getTarget().hasBFloat16Type();
@@ -116,37 +120,20 @@ public:
     if (!FD)
       return;
 
-    const auto *TA = FD->getAttr<TargetAttr>();
-    if (TA == nullptr)
-      return;
+    TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    ParsedTargetAttr Attr =
-        CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
-    if (Attr.BranchProtection.empty())
-      return;
-
-    TargetInfo::BranchProtectionInfo BPI;
-    StringRef Error;
-    (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                   Attr.CPU, BPI, Error);
-    assert(Error.empty());
-
-    auto *Fn = cast<llvm::Function>(GV);
-    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
-
-    if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
-      Fn->addFnAttr("sign-return-address-key",
-                    BPI.SignKey == LangOptions::SignReturnAddressKeyKind::AKey
-                        ? "a_key"
-                        : "b_key");
+    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+      ParsedTargetAttr Attr =
+          CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
+      if (!Attr.BranchProtection.empty()) {
+        StringRef Error;
+        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                       Attr.CPU, BPI, Error);
+        assert(Error.empty());
+      }
     }
-
-    Fn->addFnAttr("branch-target-enforcement",
-                  BPI.BranchTargetEnforcement ? "true" : "false");
-    Fn->addFnAttr("branch-protection-pauth-lr",
-                  BPI.BranchProtectionPAuthLR ? "true" : "false");
-    Fn->addFnAttr("guarded-control-stack",
-                  BPI.GuardedControlStack ? "true" : "false");
+    auto *Fn = cast<llvm::Function>(GV);
+    setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -163,10 +150,27 @@ public:
     return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
 
+  void checkFunctionABI(CodeGenModule &CGM,
+                        const FunctionDecl *Decl) const override;
+
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
-                            const FunctionDecl *Callee,
-                            const CallArgList &Args) const override;
+                            const FunctionDecl *Callee, const CallArgList &Args,
+                            QualType ReturnType) const override;
+
+private:
+  // Diagnose calls between functions with incompatible Streaming SVE
+  // attributes.
+  void checkFunctionCallABIStreaming(CodeGenModule &CGM, SourceLocation CallLoc,
+                                     const FunctionDecl *Caller,
+                                     const FunctionDecl *Callee) const;
+  // Diagnose calls which must pass arguments in floating-point registers when
+  // the selected target does not have floating-point registers.
+  void checkFunctionCallABISoftFloat(CodeGenModule &CGM, SourceLocation CallLoc,
+                                     const FunctionDecl *Caller,
+                                     const FunctionDecl *Callee,
+                                     const CallArgList &Args,
+                                     QualType ReturnType) const;
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
@@ -297,10 +301,10 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty);
+        return getNaturalAlignIndirect(Ty, false);
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
-                ? ABIArgInfo::getExtend(Ty)
+                ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
                 : ABIArgInfo::getDirect());
   }
 
@@ -494,6 +498,11 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 }
 
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
+  // For the soft-float ABI variant, no types are considered to be homogeneous
+  // aggregates.
+  if (isSoftFloat())
+    return false;
+
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
   // point type or a short-vector type. This is the same as the 32-bit ABI,
   // but with the difference that any floating-point type is allowed,
@@ -524,18 +533,14 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
-Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                                       CodeGenFunction &CGF) const {
+RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
+                                      CodeGenFunction &CGF, AArch64ABIKind Kind,
+                                      AggValueSlot Slot) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
-  if (AI.isIgnore()) {
-    uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
-    CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  if (AI.isIgnore())
+    return Slot.asRValue();
 
   bool IsIndirect = AI.isIndirect();
 
@@ -550,7 +555,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = BaseTy->isFloatingPointTy() || BaseTy->isVectorTy();
+  bool IsFPR =
+      !isSoftFloat() && (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
@@ -723,18 +729,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   // Again, stack arguments may need realignment. In this case both integer and
   // floating-point ones might be affected.
   if (!IsIndirect && TyAlign.getQuantity() > 8) {
-    int Align = TyAlign.getQuantity();
-
-    OnStackPtr = CGF.Builder.CreatePtrToInt(OnStackPtr, CGF.Int64Ty);
-
-    OnStackPtr = CGF.Builder.CreateAdd(
-        OnStackPtr, llvm::ConstantInt::get(CGF.Int64Ty, Align - 1),
-        "align_stack");
-    OnStackPtr = CGF.Builder.CreateAnd(
-        OnStackPtr, llvm::ConstantInt::get(CGF.Int64Ty, -Align),
-        "align_stack");
-
-    OnStackPtr = CGF.Builder.CreateIntToPtr(OnStackPtr, CGF.Int8PtrTy);
+    OnStackPtr = emitRoundPointerUpToAlignment(CGF, OnStackPtr, TyAlign);
   }
   Address OnStackAddr = Address(OnStackPtr, CGF.Int8Ty,
                                 std::max(CharUnits::fromQuantity(8), TyAlign));
@@ -773,27 +768,34 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
                                  OnStackBlock, "vaargs.addr");
 
   if (IsIndirect)
-    return Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"), ElementTy,
-                   TyAlign);
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(
+            Address(CGF.Builder.CreateLoad(ResAddr, "vaarg.addr"), ElementTy,
+                    TyAlign),
+            Ty),
+        Slot);
 
-  return ResAddr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
 }
 
-Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
-                                        CodeGenFunction &CGF) const {
+RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
+                                       CodeGenFunction &CGF,
+                                       AggValueSlot Slot) const {
   // The backend's lowering doesn't support va_arg for aggregates or
   // illegal vector types.  Lower VAArg here for these cases and use
   // the LLVM va_arg instruction for everything else.
   if (!isAggregateTypeForABI(Ty) && !isIllegalVectorType(Ty))
-    return EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect());
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(
+            EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect()), Ty),
+        Slot);
 
   uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true))
-    return Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
+    return Slot.asRValue();
 
   // The size of the actual thing passed, which might end up just
   // being a pointer for indirect types.
@@ -808,12 +810,12 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
     IsIndirect = !isHomogeneousAggregate(Ty, Base, Members);
   }
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
-                          TyInfo, SlotSize, /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo, SlotSize,
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
-Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
   // Composites larger than 16 bytes are passed by reference.
@@ -823,15 +825,7 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false);
-}
-
-static bool isStreaming(const FunctionDecl *F) {
-  if (F->hasAttr<ArmLocallyStreamingAttr>())
-    return true;
-  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
-    return T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask;
-  return false;
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 static bool isStreamingCompatible(const FunctionDecl *F) {
@@ -841,26 +835,96 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
   return false;
 }
 
-void AArch64TargetCodeGenInfo::checkFunctionCallABI(
+// Report an error if an argument or return value of type Ty would need to be
+// passed in a floating-point register.
+static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
+                                 const StringRef ABIName,
+                                 const AArch64ABIInfo &ABIInfo,
+                                 const QualType &Ty, const NamedDecl *D,
+                                 SourceLocation loc) {
+  const Type *HABase = nullptr;
+  uint64_t HAMembers = 0;
+  if (Ty->isFloatingType() || Ty->isVectorType() ||
+      ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
+    Diags.Report(loc, diag::err_target_unsupported_type_for_abi)
+        << D->getDeclName() << Ty << ABIName;
+  }
+}
+
+// If we are using a hard-float ABI, but do not have floating point registers,
+// then report an error for any function arguments or returns which would be
+// passed in floating-pint registers.
+void AArch64TargetCodeGenInfo::checkFunctionABI(
+    CodeGenModule &CGM, const FunctionDecl *FuncDecl) const {
+  const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
+  const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
+
+  if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
+    diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
+                         FuncDecl->getReturnType(), FuncDecl,
+                         FuncDecl->getLocation());
+    for (ParmVarDecl *PVD : FuncDecl->parameters()) {
+      diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
+                           PVD, FuncDecl->getLocation());
+    }
+  }
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
-    const FunctionDecl *Callee, const CallArgList &Args) const {
+    const FunctionDecl *Callee) const {
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  bool CallerIsStreaming = isStreaming(Caller);
-  bool CalleeIsStreaming = isStreaming(Callee);
+  bool CallerIsStreaming =
+      IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
+  bool CalleeIsStreaming =
+      IsArmStreamingFunction(Callee, /*IncludeLocallyStreaming=*/true);
   bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
   bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
-    CGM.getDiags().Report(CallLoc,
-                          diag::err_function_always_inline_attribute_mismatch)
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())
       CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
           << Callee->getDeclName();
+}
+
+// If the target does not have floating-point registers, but we are using a
+// hard-float ABI, there is no way to pass floating-point, vector or HFA values
+// to functions, so we report an error.
+void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args,
+    QualType ReturnType) const {
+  const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
+  const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
+
+  if (!Caller || TI.hasFeature("fp") || ABIInfo.isSoftFloat())
+    return;
+
+  diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, ReturnType,
+                       Callee ? Callee : Caller, CallLoc);
+
+  for (const CallArg &Arg : Args)
+    diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, Arg.getType(),
+                         Callee ? Callee : Caller, CallLoc);
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
+                                                    SourceLocation CallLoc,
+                                                    const FunctionDecl *Caller,
+                                                    const FunctionDecl *Callee,
+                                                    const CallArgList &Args,
+                                                    QualType ReturnType) const {
+  checkFunctionCallABIStreaming(CGM, CallLoc, Caller, Callee);
+  checkFunctionCallABISoftFloat(CGM, CallLoc, Caller, Callee, Args, ReturnType);
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
@@ -888,7 +952,7 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
+    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
       if (UniqueFeats.insert(Ext->Name).second)
         Out << 'M' << Ext->Name;
 }

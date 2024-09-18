@@ -228,6 +228,22 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
     RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB, RTC});
 }
 
+/// ScopExpander generates IR the the value of a SCEV that represents a value
+/// from a SCoP.
+///
+/// IMPORTANT: There are two ScalarEvolutions at play here. First, the SE that
+/// was used to analyze the original SCoP (not actually referenced anywhere
+/// here, but passed as argument to make the distinction clear). Second, GenSE
+/// which is the SE for the function that the code is emitted into. SE and GenSE
+/// may be different when the generated code is to be emitted into an outlined
+/// function, e.g. for a parallel loop. That is, each SCEV is to be used only by
+/// the SE that "owns" it and ScopExpander handles the translation between them.
+/// The SCEVVisitor methods are only to be called on SCEVs of the original SE.
+/// Their job is to create a new SCEV for GenSE. The nested SCEVExpander is to
+/// be used only with SCEVs belonging to GenSE. Currently SCEVs do not store a
+/// reference to the ScalarEvolution they belong to, so a mixup does not
+/// immediately cause a crash but certainly is a violation of its interface.
+///
 /// The SCEVExpander will __not__ generate any code for an existing SDiv/SRem
 /// instruction but just use it, if it is referenced as a SCEVUnknown. We want
 /// however to generate new code if the instruction is in the analyzed region
@@ -237,19 +253,19 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
 struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
-  explicit ScopExpander(const Region &R, ScalarEvolution &SE,
-                        const DataLayout &DL, const char *Name, ValueMapT *VMap,
-                        BasicBlock *RTCBB)
-      : Expander(SE, DL, Name, /*PreserveLCSSA=*/false), SE(SE), Name(Name),
-        R(R), VMap(VMap), RTCBB(RTCBB) {}
+  explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
+                        ScalarEvolution &GenSE, const DataLayout &DL,
+                        const char *Name, ValueMapT *VMap,
+                        LoopToScevMapT *LoopMap, BasicBlock *RTCBB)
+      : Expander(GenSE, DL, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
+        VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
+  }
 
-  Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *I) {
-    // If we generate code in the region we will immediately fall back to the
-    // SCEVExpander, otherwise we will stop at all unknowns in the SCEV and if
-    // needed replace them by copies computed in the entering block.
-    if (!R.contains(I))
-      E = visit(E);
-    return Expander.expandCodeFor(E, Ty, I);
+  Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *IP) {
+    assert(isInGenRegion(IP) &&
+           "ScopExpander assumes to be applied to generated code region");
+    const SCEV *GenE = visit(E);
+    return Expander.expandCodeFor(GenE, Ty, IP);
   }
 
   const SCEV *visit(const SCEV *E) {
@@ -265,16 +281,32 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
 
 private:
   SCEVExpander Expander;
-  ScalarEvolution &SE;
   const char *Name;
   const Region &R;
   ValueMapT *VMap;
+  LoopToScevMapT *LoopMap;
   BasicBlock *RTCBB;
   DenseMap<const SCEV *, const SCEV *> SCEVCache;
 
+  ScalarEvolution &GenSE;
+  Function *GenFn;
+
+  /// Is the instruction part of the original SCoP (in contrast to be located in
+  /// the code-generated region)?
+  bool isInOrigRegion(Instruction *Inst) {
+    Function *Fn = R.getEntry()->getParent();
+    bool isInOrigRegion = Inst->getFunction() == Fn && R.contains(Inst);
+    assert((isInOrigRegion || GenFn == Inst->getFunction()) &&
+           "Instruction expected to be either in the SCoP or the translated "
+           "region");
+    return isInOrigRegion;
+  }
+
+  bool isInGenRegion(Instruction *Inst) { return !isInOrigRegion(Inst); }
+
   const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
                                Instruction *IP) {
-    if (!Inst || !R.contains(Inst))
+    if (!Inst || isInGenRegion(Inst))
       return E;
 
     assert(!Inst->mayThrow() && !Inst->mayReadOrWriteMemory() &&
@@ -282,15 +314,15 @@ private:
 
     auto *InstClone = Inst->clone();
     for (auto &Op : Inst->operands()) {
-      assert(SE.isSCEVable(Op->getType()));
-      auto *OpSCEV = SE.getSCEV(Op);
+      assert(GenSE.isSCEVable(Op->getType()));
+      auto *OpSCEV = GenSE.getSCEV(Op);
       auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
       InstClone->replaceUsesOfWith(Op, OpClone);
     }
 
     InstClone->setName(Name + Inst->getName());
     InstClone->insertBefore(IP);
-    return SE.getSCEV(InstClone);
+    return GenSE.getSCEV(InstClone);
   }
 
   const SCEV *visitUnknown(const SCEVUnknown *E) {
@@ -298,19 +330,27 @@ private:
     // If a value mapping was given try if the underlying value is remapped.
     Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
     if (NewVal) {
-      auto *NewE = SE.getSCEV(NewVal);
+      auto *NewE = GenSE.getSCEV(NewVal);
 
       // While the mapped value might be different the SCEV representation might
       // not be. To this end we will check before we go into recursion here.
+      // FIXME: SCEVVisitor must only visit SCEVs that belong to the original
+      // SE. This calls it on SCEVs that belong GenSE.
       if (E != NewE)
         return visit(NewE);
     }
 
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
     Instruction *IP;
-    if (Inst && !R.contains(Inst))
+    if (Inst && isInGenRegion(Inst))
       IP = Inst;
-    else if (Inst && RTCBB->getParent() == Inst->getFunction())
+    else if (R.getEntry()->getParent() != GenFn) {
+      // RTCBB is in the original function, but we are generating for a
+      // subfunction so we cannot emit to RTCBB. Usually, we land here only
+      // because E->getValue() is not an instruction but a global or constant
+      // which do not need to emit anything.
+      IP = GenFn->getEntryBlock().getTerminator();
+    } else if (Inst && RTCBB->getParent() == Inst->getFunction())
       IP = RTCBB->getTerminator();
     else
       IP = RTCBB->getParent()->getEntryBlock().getTerminator();
@@ -319,100 +359,117 @@ private:
                   Inst->getOpcode() != Instruction::SDiv))
       return visitGenericInst(E, Inst, IP);
 
-    const SCEV *LHSScev = SE.getSCEV(Inst->getOperand(0));
-    const SCEV *RHSScev = SE.getSCEV(Inst->getOperand(1));
+    const SCEV *LHSScev = GenSE.getSCEV(Inst->getOperand(0));
+    const SCEV *RHSScev = GenSE.getSCEV(Inst->getOperand(1));
 
-    if (!SE.isKnownNonZero(RHSScev))
-      RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
+    if (!GenSE.isKnownNonZero(RHSScev))
+      RHSScev = GenSE.getUMaxExpr(RHSScev, GenSE.getConstant(E->getType(), 1));
 
     Value *LHS = expandCodeFor(LHSScev, E->getType(), IP);
     Value *RHS = expandCodeFor(RHSScev, E->getType(), IP);
 
-    Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
-                                  LHS, RHS, Inst->getName() + Name, IP);
-    return SE.getSCEV(Inst);
+    Inst =
+        BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(), LHS,
+                               RHS, Inst->getName() + Name, IP->getIterator());
+    return GenSE.getSCEV(Inst);
   }
 
-  /// The following functions will just traverse the SCEV and rebuild it with
-  /// the new operands returned by the traversal.
+  /// The following functions will just traverse the SCEV and rebuild it using
+  /// GenSE and the new operands returned by the traversal.
   ///
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
   const SCEV *visitVScale(const SCEVVScale *E) { return E; }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    return SE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
+    return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
-    return SE.getTruncateExpr(visit(E->getOperand()), E->getType());
+    return GenSE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *E) {
-    return SE.getZeroExtendExpr(visit(E->getOperand()), E->getType());
+    return GenSE.getZeroExtendExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *E) {
-    return SE.getSignExtendExpr(visit(E->getOperand()), E->getType());
+    return GenSE.getSignExtendExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
     auto *RHSScev = visit(E->getRHS());
-    if (!SE.isKnownNonZero(RHSScev))
-      RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
-    return SE.getUDivExpr(visit(E->getLHS()), RHSScev);
+    if (!GenSE.isKnownNonZero(RHSScev))
+      RHSScev = GenSE.getUMaxExpr(RHSScev, GenSE.getConstant(E->getType(), 1));
+    return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getAddExpr(NewOps);
+    return GenSE.getAddExpr(NewOps);
   }
   const SCEV *visitMulExpr(const SCEVMulExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getMulExpr(NewOps);
+    return GenSE.getMulExpr(NewOps);
   }
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getUMaxExpr(NewOps);
+    return GenSE.getUMaxExpr(NewOps);
   }
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getSMaxExpr(NewOps);
+    return GenSE.getSMaxExpr(NewOps);
   }
   const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getUMinExpr(NewOps);
+    return GenSE.getUMinExpr(NewOps);
   }
   const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getSMinExpr(NewOps);
+    return GenSE.getSMinExpr(NewOps);
   }
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getUMinExpr(NewOps, /*Sequential=*/true);
+    return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
-    return SE.getAddRecExpr(NewOps, E->getLoop(), E->getNoWrapFlags());
+
+    const Loop *L = E->getLoop();
+    const SCEV *GenLRepl = LoopMap ? LoopMap->lookup(L) : nullptr;
+    if (!GenLRepl)
+      return GenSE.getAddRecExpr(NewOps, L, E->getNoWrapFlags());
+
+    // evaluateAtIteration replaces the SCEVAddrExpr with a direct calculation.
+    const SCEV *Evaluated =
+        SCEVAddRecExpr::evaluateAtIteration(NewOps, GenLRepl, GenSE);
+
+    // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
+    // induction variable of a generated loop), so we should not use SCEVVisitor
+    // with it. Howver, it still contains references to the SCoP region.
+    return visit(Evaluated);
   }
   ///}
 };
 
-Value *polly::expandCodeFor(Scop &S, ScalarEvolution &SE, const DataLayout &DL,
-                            const char *Name, const SCEV *E, Type *Ty,
-                            Instruction *IP, ValueMapT *VMap,
+Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
+                            llvm::Function *GenFn, ScalarEvolution &GenSE,
+                            const DataLayout &DL, const char *Name,
+                            const SCEV *E, Type *Ty, Instruction *IP,
+                            ValueMapT *VMap, LoopToScevMapT *LoopMap,
                             BasicBlock *RTCBB) {
-  ScopExpander Expander(S.getRegion(), SE, DL, Name, VMap, RTCBB);
+  ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, DL, Name, VMap,
+                        LoopMap, RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
 }
 

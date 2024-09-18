@@ -40,19 +40,7 @@ struct MipsRelocationEntry {
   bool Matched = false;       ///< Is this relocation part of a match.
 
   MipsRelocationEntry(const ELFRelocationEntry &R) : R(R) {}
-
-  void print(raw_ostream &Out) const {
-    R.print(Out);
-    Out << ", Matched=" << Matched;
-  }
 };
-
-#ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
-  RHS.print(OS);
-  return OS;
-}
-#endif
 
 class MipsELFObjectWriter : public MCELFObjectTargetWriter {
 public:
@@ -115,17 +103,11 @@ static InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
   for (InputIt I = First; I != Last; ++I) {
     unsigned Matched = Predicate(*I);
     if (Matched != FindBest_NoMatch) {
-      LLVM_DEBUG(dbgs() << std::distance(First, I) << " is a match (";
-                 I->print(dbgs()); dbgs() << ")\n");
-      if (Best == Last || BetterThan(*I, *Best)) {
-        LLVM_DEBUG(dbgs() << ".. and it beats the last one\n");
+      if (Best == Last || BetterThan(*I, *Best))
         Best = I;
-      }
     }
-    if (Matched == FindBest_PerfectMatch) {
-      LLVM_DEBUG(dbgs() << ".. and it is unbeatable\n");
+    if (Matched == FindBest_PerfectMatch)
       break;
-    }
   }
 
   return Best;
@@ -147,8 +129,7 @@ static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
   if (Type == ELF::R_MIPS16_HI16)
     return ELF::R_MIPS16_LO16;
 
-  if (Reloc.OriginalSymbol &&
-      Reloc.OriginalSymbol->getBinding() != ELF::STB_LOCAL)
+  if (Reloc.Symbol && Reloc.Symbol->getBinding() != ELF::STB_LOCAL)
     return ELF::R_MIPS_NONE;
 
   if (Type == ELF::R_MIPS_GOT16)
@@ -161,54 +142,12 @@ static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
   return ELF::R_MIPS_NONE;
 }
 
-/// Determine whether a relocation (X) matches the one given in R.
-///
-/// A relocation matches if:
-/// - It's type matches that of a corresponding low part. This is provided in
-///   MatchingType for efficiency.
-/// - It's based on the same symbol.
-/// - It's offset of greater or equal to that of the one given in R.
-///   It should be noted that this rule assumes the programmer does not use
-///   offsets that exceed the alignment of the symbol. The carry-bit will be
-///   incorrect if this is not true.
-///
-/// A matching relocation is unbeatable if:
-/// - It is not already involved in a match.
-/// - It's offset is exactly that of the one given in R.
-static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
-                                               const ELFRelocationEntry &R,
-                                               unsigned MatchingType) {
-  if (X.R.Type == MatchingType && X.R.OriginalSymbol == R.OriginalSymbol) {
-    if (!X.Matched &&
-        X.R.OriginalAddend == R.OriginalAddend)
-      return FindBest_PerfectMatch;
-    else if (X.R.OriginalAddend >= R.OriginalAddend)
-      return FindBest_Match;
-  }
-  return FindBest_NoMatch;
+// Determine whether a relocation X is a low-part and matches the high-part R
+// perfectly by symbol and addend.
+static bool isMatchingReloc(unsigned MatchingType, const ELFRelocationEntry &R,
+                            const ELFRelocationEntry &X) {
+  return X.Type == MatchingType && X.Symbol == R.Symbol && X.Addend == R.Addend;
 }
-
-/// Determine whether Candidate or PreviousBest is the better match.
-/// The return value is true if Candidate is the better match.
-///
-/// A matching relocation is a better match if:
-/// - It has a smaller addend.
-/// - It is not already involved in a match.
-static bool compareMatchingRelocs(const MipsRelocationEntry &Candidate,
-                                  const MipsRelocationEntry &PreviousBest) {
-  if (Candidate.R.OriginalAddend != PreviousBest.R.OriginalAddend)
-    return Candidate.R.OriginalAddend < PreviousBest.R.OriginalAddend;
-  return PreviousBest.Matched && !Candidate.Matched;
-}
-
-#ifndef NDEBUG
-/// Print all the relocations.
-template <class Container>
-static void dumpRelocs(const char *Prefix, const Container &Relocs) {
-  for (const auto &R : Relocs)
-    dbgs() << Prefix << R << "\n";
-}
-#endif
 
 MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
                                          bool HasRelocationAddend, bool Is64)
@@ -436,72 +375,58 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
   if (hasRelocationAddend())
     return;
 
-  if (Relocs.size() < 2)
-    return;
-
   // Sort relocations by the address they are applied to.
   llvm::sort(Relocs,
              [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
                return A.Offset < B.Offset;
              });
 
+  // Place relocations in a list for reorder convenience. Hi16 contains the
+  // iterators of high-part relocations.
   std::list<MipsRelocationEntry> Sorted;
-  std::list<ELFRelocationEntry> Remainder;
-
-  LLVM_DEBUG(dumpRelocs("R: ", Relocs));
-
-  // Separate the movable relocations (AHL relocations using the high bits) from
-  // the immobile relocations (everything else). This does not preserve high/low
-  // matches that already existed in the input.
-  copy_if_else(Relocs.begin(), Relocs.end(), std::back_inserter(Remainder),
-               std::back_inserter(Sorted), [](const ELFRelocationEntry &Reloc) {
-                 return getMatchingLoType(Reloc) != ELF::R_MIPS_NONE;
-               });
-
-  for (auto &R : Remainder) {
-    LLVM_DEBUG(dbgs() << "Matching: " << R << "\n");
-
-    unsigned MatchingType = getMatchingLoType(R);
-    assert(MatchingType != ELF::R_MIPS_NONE &&
-           "Wrong list for reloc that doesn't need a match");
-
-    // Find the best matching relocation for the current high part.
-    // See isMatchingReloc for a description of a matching relocation and
-    // compareMatchingRelocs for a description of what 'best' means.
-    auto InsertionPoint =
-        find_best(Sorted.begin(), Sorted.end(),
-                  [&R, &MatchingType](const MipsRelocationEntry &X) {
-                    return isMatchingReloc(X, R, MatchingType);
-                  },
-                  compareMatchingRelocs);
-
-    // If we matched then insert the high part in front of the match and mark
-    // both relocations as being involved in a match. We only mark the high
-    // part for cosmetic reasons in the debug output.
-    //
-    // If we failed to find a match then the high part is orphaned. This is not
-    // permitted since the relocation cannot be evaluated without knowing the
-    // carry-in. We can sometimes handle this using a matching low part that is
-    // already used in a match but we already cover that case in
-    // isMatchingReloc and compareMatchingRelocs. For the remaining cases we
-    // should insert the high part at the end of the list. This will cause the
-    // linker to fail but the alternative is to cause the linker to bind the
-    // high part to a semi-matching low part and silently calculate the wrong
-    // value. Unfortunately we have no means to warn the user that we did this
-    // so leave it up to the linker to complain about it.
-    if (InsertionPoint != Sorted.end())
-      InsertionPoint->Matched = true;
-    Sorted.insert(InsertionPoint, R)->Matched = true;
+  SmallVector<std::list<MipsRelocationEntry>::iterator, 0> Hi16;
+  for (auto &R : Relocs) {
+    Sorted.push_back(R);
+    if (getMatchingLoType(R) != ELF::R_MIPS_NONE)
+      Hi16.push_back(std::prev(Sorted.end()));
   }
 
-  LLVM_DEBUG(dumpRelocs("S: ", Sorted));
+  for (auto I : Hi16) {
+    auto &R = I->R;
+    unsigned MatchingType = getMatchingLoType(R);
+    // If the next relocation is a perfect match, continue;
+    if (std::next(I) != Sorted.end() &&
+        isMatchingReloc(MatchingType, R, std::next(I)->R))
+      continue;
+    // Otherwise, find the best matching low-part relocation with the following
+    // criteria. It must have the same symbol and its addend is no lower than
+    // that of the current high-part.
+    //
+    // (1) %lo with a smaller offset is preferred.
+    // (2) %lo with the same offset that is unmatched is preferred.
+    // (3) later %lo is preferred.
+    auto Best = Sorted.end();
+    for (auto J = Sorted.begin(); J != Sorted.end(); ++J) {
+      auto &R1 = J->R;
+      if (R1.Type == MatchingType && R.Symbol == R1.Symbol &&
+          R.Addend <= R1.Addend &&
+          (Best == Sorted.end() || R1.Addend < Best->R.Addend ||
+           (!Best->Matched && R1.Addend == Best->R.Addend)))
+        Best = J;
+    }
+    if (Best != Sorted.end() && R.Addend == Best->R.Addend)
+      Best->Matched = true;
+
+    // Move the high-part before the low-part, or if not found, the end of the
+    // list. The unmatched high-part will lead to a linker warning/error.
+    Sorted.splice(Best, Sorted, I);
+  }
 
   assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
 
-  // Overwrite the original vector with the sorted elements. The caller expects
-  // them in reverse order.
+  // Overwrite the original vector with the sorted elements.
   unsigned CopyTo = 0;
-  for (const auto &R : reverse(Sorted))
+  for (const auto &R : Sorted)
     Relocs[CopyTo++] = R.R;
 }
 

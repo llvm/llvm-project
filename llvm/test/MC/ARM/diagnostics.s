@@ -288,7 +288,7 @@
 @ CHECK-ERRORS: error: 'asr' shift amount must be in range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #1, r10, asr #33
 @ CHECK-ERRORS: 	    	                  ^
-@ CHECK-ERRORS: error: shift operator 'asr' or 'lsl' expected
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS:         ssat    r8, #1, r10, lsr #5
 @ CHECK-ERRORS:                              ^
 @ CHECK-ERRORS: error: '#' expected

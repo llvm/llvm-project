@@ -76,6 +76,11 @@ using ConstMemFnType = int (Dummy::*)() const;
 
 void foo() {}
 
+void test_builtin_empty_parentheses_diags() {
+  __is_trivially_copyable(); // expected-error {{expected a type}}
+  __is_trivially_copyable(1); // expected-error {{expected a type}}
+}
+
 void test_builtin_launder_diags(void *vp, const void *cvp, FnType *fnp,
                                 MemFnType mfp, ConstMemFnType cmfp, int (&Arr)[5]) {
   __builtin_launder(vp);   // expected-error {{void pointer argument to '__builtin_launder' is not allowed}}
@@ -169,4 +174,24 @@ template void test_builtin_complex(int, double); // expected-note {{instantiatio
 // This previously would cause an assertion when emitting the note diagnostic.
 static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
                                      expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
+#endif
+
+#ifdef _MSC_VER
+constexpr int x = [] {
+  __noop;
+  return 0;
+}(); // expected-no-diagnostics
+static_assert([] { return __noop; }() == 0);
+static_assert([] { return __noop(4); }() == 0);
+extern int not_accessed;
+void not_called();
+static_assert([] { return __noop(not_accessed *= 6); }() == 0);
+static_assert([] { return __noop(not_called()); }() == 0);
+static_assert([] { return __noop(throw ""); }() == 0);
+static_assert([] { return __noop(throw "", throw ""); }() == 0);
+static_assert([] {
+  int a = 5;
+  __noop(++a);
+  return a;
+}() == 5);
 #endif

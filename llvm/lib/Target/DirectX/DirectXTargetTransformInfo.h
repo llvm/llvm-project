@@ -31,9 +31,10 @@ class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
 
 public:
   explicit DirectXTTIImpl(const DirectXTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 };
 } // namespace llvm
 

@@ -63,7 +63,7 @@ private:
 
 INITIALIZE_PASS_BEGIN(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies", false,
                     false)
@@ -90,9 +90,8 @@ void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
   if (Reg.isPhysical())
     return;
 
-  Register PhysReg = VRM->getPhys(Reg);
-  assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
-         "should have allocated a physical register");
+  MCRegister PhysReg = VRM->getPhys(Reg);
+  assert(PhysReg && "should have allocated a physical register");
 
   MFI->allocateWWMSpill(MF, PhysReg);
 }
@@ -102,8 +101,10 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   MFI = MF.getInfo<SIMachineFunctionInfo>();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
-  Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   VRM = getAnalysisIfAvailable<VirtRegMap>();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();

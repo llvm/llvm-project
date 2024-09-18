@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_HLFIR_OPS
 
 include "flang/Optimizer/HLFIR/HLFIROpBase.td"
+include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
@@ -87,23 +88,26 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
   );
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-     attr-dict `:` functional-type(operands, results)
+    (`dummy_scope` $dummy_scope^)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$memref, "llvm::StringRef":$uniq_name,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::Value", "{}">:$dummy_scope,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"fir::CUDADataAttributeAttr", "{}">:$cuda_attr)>];
+      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks
@@ -729,7 +733,7 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
     OpBuilder<(ins "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams, 
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
@@ -1087,9 +1091,12 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     potentially absent variable storage. The second result indicates if a copy
     was made.
 
+    A descriptor address must be provided for the temporary. This descriptor will
+    be set if a temporary copy was made.
+
     This operation is meant to be used in combination with the hlfir.copy_out
-    operation that deletes the temporary if it was created and copies the data
-    back if needed.
+    operation that takes the address of the descriptor for the temporary, deletes
+    the temporary if it was created, and copies the data back if needed.
     This operation allows passing non contiguous arrays to contiguous dummy
     arguments, which is possible in Fortran procedure references.
 
@@ -1099,17 +1106,19 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
   }];
 
   let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$var,
-                   Optional<I1>:$var_is_present);
+                    Arg<AnyReferenceLike, "", [MemWrite]>:$tempBox,
+                    Optional<I1>:$var_is_present);
 
   let results = (outs fir_BaseBoxType, I1);
 
   let assemblyFormat = [{
-    $var (`handle_optional` $var_is_present^)?
+    $var `to` $tempBox (`handle_optional` $var_is_present^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$var_is_present)>
+    OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$temp_box,
+          "mlir::Value":$var_is_present)>
   ];
 
   let extraClassDeclaration = [{
@@ -1134,9 +1143,10 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", [MemoryEffects<[MemFree]>]> {
     the temporary.
     The copy back is done if $var is provided and $was_copied is true.
     The deallocation of $temp is done if $was_copied is true.
+    $temp must be the descriptor address that was provided to hlfir.copy_in.
   }];
 
-  let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$temp,
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$temp,
                        I1:$was_copied,
                        Arg<Optional<fir_BaseBoxType>, "", [MemWrite]>:$var);
 
@@ -1248,7 +1258,7 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
 
   let extraClassDeclaration = [{
     /// Interface verifier imlementation.
-    mlir::LogicalResult verifyImpl();
+    llvm::LogicalResult verifyImpl();
 
     mlir::Block* getSubTreeBlock() {
       mlir::Region* region = getSubTreeRegion();
@@ -1327,7 +1337,8 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
 }
 
 def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp",
-    "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp"]>,
+    "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp",
+    "ExactlyOnceOp"]>,
     SingleBlockImplicitTerminator<"fir::FirEndOp">, RecursivelySpeculatable,
         RecursiveMemoryEffects]> {
 
@@ -1592,6 +1603,27 @@ def hlfir_ForallMaskOp : hlfir_AssignmentMaskOp<"forall_mask"> {
   let hasVerifier = 1;
 }
 
+def hlfir_ExactlyOnceOp : hlfir_Op<"exactly_once", [RecursiveMemoryEffects]> {
+  let summary = "Execute exactly once its region in a WhereOp";
+  let description = [{
+    Inside a Where assignment, Fortran requires a non elemental call and its
+    arguments to be executed exactly once, regardless of the mask values.
+    This operation allows holding these evaluations that cannot be hoisted
+    until potential parent Forall loops have been created.
+    It also allows inlining the calls without losing the information that
+    these calls must be hoisted.
+  }];
+
+  let regions = (region SizedRegion<1>:$body);
+
+  let results = (outs AnyFortranEntity:$result);
+
+  let assemblyFormat = [{
+    attr-dict `:` type($result)
+    $body
+  }];
+}
+
 def hlfir_WhereOp : hlfir_AssignmentMaskOp<"where"> {
   let summary = "Represent a Fortran where construct or statement";
   let description = [{
@@ -1701,8 +1733,8 @@ def hlfir_CharExtremumOp : hlfir_Op<"char_extremum",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Find max/min from given character strings";
   let description = [{
-    Find the lexicographical minimum or maximum of two or more character 
-    strings of the same character kind and return the string with the lexicographical 
+    Find the lexicographical minimum or maximum of two or more character
+    strings of the same character kind and return the string with the lexicographical
     minimum or maximum number of characters. Example:
 
     %0 = hlfir.char_extremum min, %arg0, %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,20>>) -> !hlfir.expr<!fir.char<1,10>>

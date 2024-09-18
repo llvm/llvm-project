@@ -1,4 +1,6 @@
-; RUN: opt -S -passes=place-safepoints < %s | FileCheck %s
+; RUN: opt -S -passes=place-safepoints < %s | FileCheck -check-prefixes=CHECK,WITHLDEXPF %s
+; RUN: opt -S -passes=place-safepoints -disable-builtin=ldexp < %s | FileCheck %s
+
 
 ; Libcalls will not contain a safepoint poll, so check that we insert
 ; a safepoint in a loop containing a libcall.
@@ -17,7 +19,8 @@ loop:
 ; CHECK-NEXT: %x_loop = phi double [ %x, %entry ], [ %x_exp, %loop ]
 ; CHECK-NEXT: %x_exp = call double @ldexp(double %x_loop, i32 5)
 ; CHECK-NEXT: %done = fcmp ogt double %x_exp, 1.5
-; CHECK-NEXT: call void @do_safepoint
+; WITHLDEXPF-NEXT: call void @do_safepoint
+; CHECK-NEXT: br
   %x_loop = phi double [ %x, %entry ], [ %x_exp, %loop ]
   %x_exp = call double @ldexp(double %x_loop, i32 5) nounwind readnone
   %done = fcmp ogt double %x_exp, 1.5

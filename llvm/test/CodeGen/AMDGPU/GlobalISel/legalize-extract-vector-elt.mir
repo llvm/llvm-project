@@ -294,7 +294,8 @@ body: |
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
     %1:_(s1) = G_CONSTANT i1 false
-    %2:_(s1) = G_EXTRACT_VECTOR_ELT %0, %1
+    %4:_(s32) = G_ZEXT %1
+    %2:_(s1) = G_EXTRACT_VECTOR_ELT %0, %4
     %3:_(s32) = G_ANYEXT %2
     $vgpr0 = COPY %3
 ...
@@ -948,7 +949,8 @@ body: |
     ; CHECK-NEXT: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %1
+    %3:_(s32) = G_TRUNC %1
+    %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %3
     $vgpr0 = COPY %2
 ...
 ---

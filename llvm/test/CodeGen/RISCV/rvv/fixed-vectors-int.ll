@@ -40,9 +40,7 @@ define void @add_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -122,9 +120,7 @@ define void @sub_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -204,9 +200,7 @@ define void @mul_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -286,9 +280,7 @@ define void @and_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vand.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -368,9 +360,7 @@ define void @or_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -450,9 +440,7 @@ define void @xor_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -532,9 +520,7 @@ define void @lshr_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -614,9 +600,7 @@ define void @ashr_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsra.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -696,9 +680,7 @@ define void @shl_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsll.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -776,18 +758,9 @@ define void @sdiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: sdiv_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdiv.vv v10, v11, v10
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vdiv.vv v8, v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -865,18 +838,9 @@ define void @srem_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: srem_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vrem.vv v10, v11, v10
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vrem.vv v8, v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vrem.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -954,18 +918,9 @@ define void @udiv_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: udiv_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdivu.vv v10, v11, v10
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vdivu.vv v8, v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1043,18 +998,9 @@ define void @urem_v6i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: urem_v6i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vslidedown.vi v11, v9, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vremu.vv v10, v11, v10
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vremu.vv v8, v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vremu.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1100,46 +1046,46 @@ define void @mulhu_v16i8(ptr %x) {
 ; CHECK-LABEL: mulhu_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    lui a1, 3
 ; CHECK-NEXT:    addi a1, a1, -2044
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    li a1, -128
-; CHECK-NEXT:    vmerge.vxm v10, v9, a1, v0
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    lui a1, 1
 ; CHECK-NEXT:    addi a2, a1, 32
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    lui a2, %hi(.LCPI65_0)
 ; CHECK-NEXT:    addi a2, a2, %lo(.LCPI65_0)
 ; CHECK-NEXT:    vle8.v v11, (a2)
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vsrl.vv v9, v8, v9
-; CHECK-NEXT:    vmulhu.vv v9, v9, v11
-; CHECK-NEXT:    vsub.vv v8, v8, v9
-; CHECK-NEXT:    vmulhu.vv v8, v8, v10
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    li a2, -128
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmerge.vxm v12, v10, a2, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vsrl.vv v8, v9, v8
+; CHECK-NEXT:    vmulhu.vv v8, v8, v11
+; CHECK-NEXT:    vsub.vv v9, v9, v8
+; CHECK-NEXT:    vmulhu.vv v9, v9, v12
+; CHECK-NEXT:    vadd.vv v9, v9, v8
 ; CHECK-NEXT:    li a2, 513
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 4
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 4
+; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
 ; CHECK-NEXT:    addi a1, a1, 78
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vim v9, v9, 3, v0
 ; CHECK-NEXT:    lui a1, 8
 ; CHECK-NEXT:    addi a1, a1, 304
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
-; CHECK-NEXT:    vsrl.vv v8, v8, v9
+; CHECK-NEXT:    vmerge.vim v10, v10, 3, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v9, v8
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
@@ -1155,19 +1101,19 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, 1048568
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v11, 1
-; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v11, 6
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    lui a1, %hi(.LCPI66_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI66_0)
-; CHECK-NEXT:    vle16.v v12, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v11, (a1)
+; CHECK-NEXT:    vmv.v.i v12, 1
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v9, v12, 6
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v9, v8, v9
-; CHECK-NEXT:    vmulhu.vv v9, v9, v12
+; CHECK-NEXT:    vmulhu.vv v9, v9, v11
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
@@ -1176,7 +1122,7 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v11, 6
+; CHECK-NEXT:    vslideup.vi v9, v12, 6
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
@@ -1192,23 +1138,12 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vi v9, v9, 12
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdivu.vv v9, v10, v9
-; CHECK-NEXT:    lui a1, 45217
-; CHECK-NEXT:    addi a1, a1, -1785
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v11, v10
-; CHECK-NEXT:    vdivu.vv v8, v8, v11
+; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1222,18 +1157,18 @@ define void @mulhu_v4i32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    vmv.s.x v9, a1
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v10, v9, 2
 ; CHECK-NEXT:    lui a1, %hi(.LCPI68_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI68_0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vmv.v.i v11, 0
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v11, v10, 2
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v9, v8, v9
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
-; CHECK-NEXT:    vmulhu.vv v8, v8, v10
+; CHECK-NEXT:    vmulhu.vv v8, v8, v11
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    lui a1, 4128
 ; CHECK-NEXT:    addi a1, a1, 514
@@ -1353,25 +1288,13 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 7
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    li a1, -14
-; CHECK-NEXT:    vmadd.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vdiv.vv v9, v9, v10
-; CHECK-NEXT:    lui a1, 1020016
-; CHECK-NEXT:    addi a1, a1, 2041
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v11, v10
-; CHECK-NEXT:    vdiv.vv v8, v8, v11
+; CHECK-NEXT:    li a1, 22
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    vmv.v.i v9, -7
+; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1401,12 +1324,12 @@ define void @mulhs_v4i32(ptr %x) {
 ;
 ; RV64-LABEL: mulhs_v4i32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI73_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI73_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI73_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI73_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v9, (a1), zero
+; RV64-NEXT:    vmv.v.x v9, a1
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmulh.vv v8, v8, v9
 ; RV64-NEXT:    vsra.vi v8, v8, 1
@@ -1455,13 +1378,13 @@ define void @mulhs_v2i64(ptr %x) {
 ; RV64-LABEL: mulhs_v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    slli a2, a1, 32
-; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    lui a2, %hi(.LCPI74_0)
 ; RV64-NEXT:    ld a2, %lo(.LCPI74_0)(a2)
-; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    slli a3, a1, 32
+; RV64-NEXT:    add a1, a1, a3
 ; RV64-NEXT:    vmv.v.x v9, a1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; RV64-NEXT:    vmv.s.x v9, a2
@@ -1522,9 +1445,7 @@ define void @smin_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmin.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1608,9 +1529,7 @@ define void @smin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1676,9 +1595,7 @@ define void @smin_xv_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmin.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1745,9 +1662,7 @@ define void @smax_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1831,9 +1746,7 @@ define void @smax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1899,9 +1812,7 @@ define void @smax_xv_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1968,9 +1879,7 @@ define void @umin_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vminu.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2054,9 +1963,7 @@ define void @umin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2122,9 +2029,7 @@ define void @umin_xv_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2191,9 +2096,7 @@ define void @umax_v6i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2277,9 +2180,7 @@ define void @umax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2345,9 +2246,7 @@ define void @umax_xv_v6i16(ptr %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a1
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -2429,9 +2328,7 @@ define void @add_v6i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i32>, ptr %x
@@ -3260,49 +3157,47 @@ define void @mulhu_v32i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    lui a1, 163907
 ; CHECK-NEXT:    addi a1, a1, -2044
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    li a1, -128
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vxm v12, v10, a1, v0
 ; CHECK-NEXT:    lui a1, 66049
 ; CHECK-NEXT:    addi a1, a1, 32
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    lui a1, %hi(.LCPI181_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI181_0)
 ; CHECK-NEXT:    vle8.v v14, (a1)
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vsrl.vv v10, v8, v10
-; CHECK-NEXT:    vmulhu.vv v10, v10, v14
-; CHECK-NEXT:    vsub.vv v8, v8, v10
-; CHECK-NEXT:    vmulhu.vv v8, v8, v12
-; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    vmv.v.i v10, 4
+; CHECK-NEXT:    li a1, -128
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vxm v16, v12, a1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    vsrl.vv v8, v10, v8
+; CHECK-NEXT:    vmulhu.vv v8, v8, v14
+; CHECK-NEXT:    vsub.vv v10, v10, v8
+; CHECK-NEXT:    vmulhu.vv v10, v10, v16
+; CHECK-NEXT:    vadd.vv v10, v10, v8
 ; CHECK-NEXT:    lui a1, 8208
 ; CHECK-NEXT:    addi a1, a1, 513
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 4
+; CHECK-NEXT:    vmerge.vim v12, v8, 1, v0
 ; CHECK-NEXT:    lui a1, 66785
 ; CHECK-NEXT:    addi a1, a1, 78
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v10, 3, v0
 ; CHECK-NEXT:    lui a1, 529160
 ; CHECK-NEXT:    addi a1, a1, 304
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
-; CHECK-NEXT:    vsrl.vv v8, v8, v10
+; CHECK-NEXT:    vmerge.vim v12, v12, 3, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v12, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v10, v8
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
@@ -3326,12 +3221,12 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV32-NEXT:    vmv.s.x v8, a1
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
-; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    lui a1, %hi(.LCPI182_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; RV32-NEXT:    vle16.v v14, (a1)
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v16, v9
 ; RV32-NEXT:    vsrl.vv v16, v10, v16
 ; RV32-NEXT:    vmulhu.vv v14, v16, v14
@@ -3361,24 +3256,24 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV64-NEXT:    vmv.v.i v10, 0
 ; RV64-NEXT:    lui a1, 1048568
 ; RV64-NEXT:    vmerge.vxm v10, v10, a1, v0
+; RV64-NEXT:    lui a1, %hi(.LCPI182_0)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI182_0)
+; RV64-NEXT:    vle16.v v12, (a1)
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a1
+; RV64-NEXT:    vmv.v.x v14, a1
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI182_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI182_0)
-; RV64-NEXT:    vle16.v v14, (a1)
-; RV64-NEXT:    vsext.vf2 v16, v12
-; RV64-NEXT:    vsrl.vv v12, v8, v16
-; RV64-NEXT:    vmulhu.vv v12, v12, v14
+; RV64-NEXT:    vsext.vf2 v16, v14
+; RV64-NEXT:    vsrl.vv v14, v8, v16
+; RV64-NEXT:    vmulhu.vv v12, v14, v12
+; RV64-NEXT:    lui a1, %hi(.LCPI182_1)
+; RV64-NEXT:    ld a1, %lo(.LCPI182_1)(a1)
 ; RV64-NEXT:    vsub.vv v8, v8, v12
 ; RV64-NEXT:    vmulhu.vv v8, v8, v10
 ; RV64-NEXT:    vadd.vv v8, v8, v12
-; RV64-NEXT:    lui a1, %hi(.LCPI182_1)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI182_1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v10, (a1), zero
+; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vsext.vf2 v12, v10
 ; RV64-NEXT:    vsrl.vv v8, v8, v12
@@ -3433,23 +3328,24 @@ define void @mulhu_v4i64(ptr %x) {
 ; RV32-NEXT:    vle32.v v10, (a1)
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vmulhu.vv v10, v8, v10
-; RV32-NEXT:    vsub.vv v8, v8, v10
 ; RV32-NEXT:    lui a1, 524288
 ; RV32-NEXT:    vmv.s.x v12, a1
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v14, 0
 ; RV32-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
 ; RV32-NEXT:    vslideup.vi v14, v12, 5
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vmulhu.vv v8, v8, v14
-; RV32-NEXT:    vadd.vv v8, v8, v10
 ; RV32-NEXT:    lui a1, %hi(.LCPI184_1)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI184_1)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle8.v v10, (a1)
-; RV32-NEXT:    vsext.vf4 v12, v10
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vle8.v v12, (a1)
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vsrl.vv v8, v8, v12
+; RV32-NEXT:    vsub.vv v8, v8, v10
+; RV32-NEXT:    vmulhu.vv v8, v8, v14
+; RV32-NEXT:    vadd.vv v8, v8, v10
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsext.vf4 v10, v12
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vsrl.vv v8, v8, v10
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
@@ -3457,19 +3353,19 @@ define void @mulhu_v4i64(ptr %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a1, a1, 63
-; RV64-NEXT:    vmv.s.x v10, a1
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
-; RV64-NEXT:    vslideup.vi v12, v10, 2
 ; RV64-NEXT:    lui a1, %hi(.LCPI184_0)
 ; RV64-NEXT:    addi a1, a1, %lo(.LCPI184_0)
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v10, (a1)
 ; RV64-NEXT:    vmulhu.vv v10, v8, v10
 ; RV64-NEXT:    vsub.vv v8, v8, v10
-; RV64-NEXT:    vmulhu.vv v8, v8, v12
+; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    slli a1, a1, 63
+; RV64-NEXT:    vmv.s.x v12, a1
+; RV64-NEXT:    vmv.v.i v14, 0
+; RV64-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
+; RV64-NEXT:    vslideup.vi v14, v12, 2
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vmulhu.vv v8, v8, v14
 ; RV64-NEXT:    vadd.vv v8, v8, v10
 ; RV64-NEXT:    lui a1, 12320
 ; RV64-NEXT:    addi a1, a1, 513
@@ -3488,14 +3384,13 @@ define void @mulhs_v32i8(ptr %x) {
 ; CHECK-LABEL: mulhs_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v10, 7
 ; CHECK-NEXT:    lui a1, 304453
 ; CHECK-NEXT:    addi a1, a1, -1452
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 7
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    li a1, -123
 ; CHECK-NEXT:    vmv.v.x v12, a1
@@ -3559,12 +3454,12 @@ define void @mulhs_v8i32(ptr %x) {
 ;
 ; RV64-LABEL: mulhs_v8i32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI187_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI187_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI187_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI187_0)
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vlse64.v v10, (a1), zero
+; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vmulh.vv v8, v8, v10
 ; RV64-NEXT:    vsra.vi v8, v8, 1
@@ -3615,19 +3510,19 @@ define void @mulhs_v4i64(ptr %x) {
 ;
 ; RV64-LABEL: mulhs_v4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    addiw a1, a1, 1365
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    lui a1, %hi(.LCPI188_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI188_0)(a1)
+; RV64-NEXT:    lui a2, %hi(.LCPI188_0)
+; RV64-NEXT:    ld a2, %lo(.LCPI188_0)(a2)
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.v.i v0, 5
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmerge.vxm v10, v10, a1, v0
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vmerge.vxm v10, v10, a2, v0
 ; RV64-NEXT:    vmulh.vv v10, v8, v10
 ; RV64-NEXT:    lui a1, 1044496
 ; RV64-NEXT:    addi a1, a1, -256
@@ -3935,9 +3830,7 @@ define void @add_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 -1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = add <16 x i8> %a, %c
+  %d = add <16 x i8> %a, splat (i8 -1)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -3951,9 +3844,7 @@ define void @add_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 -1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = add <8 x i16> %a, %c
+  %d = add <8 x i16> %a, splat (i16 -1)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -3967,9 +3858,7 @@ define void @add_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 -1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = add <4 x i32> %a, %c
+  %d = add <4 x i32> %a, splat (i32 -1)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -3983,9 +3872,7 @@ define void @add_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 -1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = add <2 x i64> %a, %c
+  %d = add <2 x i64> %a, splat (i64 -1)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -3999,9 +3886,7 @@ define void @add_iv_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = add <16 x i8> %c, %a
+  %d = add <16 x i8> splat (i8 1), %a
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4015,9 +3900,7 @@ define void @add_iv_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = add <8 x i16> %c, %a
+  %d = add <8 x i16> splat (i16 1), %a
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4031,9 +3914,7 @@ define void @add_iv_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = add <4 x i32> %c, %a
+  %d = add <4 x i32> splat (i32 1), %a
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4047,9 +3928,7 @@ define void @add_iv_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = add <2 x i64> %c, %a
+  %d = add <2 x i64> splat (i64 1), %a
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4160,9 +4039,7 @@ define void @sub_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 -1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = sub <16 x i8> %a, %c
+  %d = sub <16 x i8> %a, splat (i8 -1)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4177,9 +4054,7 @@ define void @sub_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 -1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = sub <8 x i16> %a, %c
+  %d = sub <8 x i16> %a, splat (i16 -1)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4194,9 +4069,7 @@ define void @sub_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 -1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = sub <4 x i32> %a, %c
+  %d = sub <4 x i32> %a, splat (i32 -1)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4211,9 +4084,7 @@ define void @sub_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 -1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = sub <2 x i64> %a, %c
+  %d = sub <2 x i64> %a, splat (i64 -1)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4227,9 +4098,7 @@ define void @sub_iv_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = sub <16 x i8> %c, %a
+  %d = sub <16 x i8> splat (i8 1), %a
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4243,9 +4112,7 @@ define void @sub_iv_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = sub <8 x i16> %c, %a
+  %d = sub <8 x i16> splat (i16 1), %a
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4259,9 +4126,7 @@ define void @sub_iv_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = sub <4 x i32> %c, %a
+  %d = sub <4 x i32> splat (i32 1), %a
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4275,9 +4140,7 @@ define void @sub_iv_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = sub <2 x i64> %c, %a
+  %d = sub <2 x i64> splat (i64 1), %a
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4483,9 +4346,7 @@ define void @and_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 -2, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = and <16 x i8> %a, %c
+  %d = and <16 x i8> %a, splat (i8 -2)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4499,9 +4360,7 @@ define void @and_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 -2, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = and <8 x i16> %a, %c
+  %d = and <8 x i16> %a, splat (i16 -2)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4515,9 +4374,7 @@ define void @and_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 -2, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = and <4 x i32> %a, %c
+  %d = and <4 x i32> %a, splat (i32 -2)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4531,9 +4388,7 @@ define void @and_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 -2, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = and <2 x i64> %a, %c
+  %d = and <2 x i64> %a, splat (i64 -2)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4547,9 +4402,7 @@ define void @and_iv_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = and <16 x i8> %c, %a
+  %d = and <16 x i8> splat (i8 1), %a
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4563,9 +4416,7 @@ define void @and_iv_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = and <8 x i16> %c, %a
+  %d = and <8 x i16> splat (i16 1), %a
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4579,9 +4430,7 @@ define void @and_iv_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = and <4 x i32> %c, %a
+  %d = and <4 x i32> splat (i32 1), %a
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4595,9 +4444,7 @@ define void @and_iv_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = and <2 x i64> %c, %a
+  %d = and <2 x i64> splat (i64 1), %a
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4707,9 +4554,7 @@ define void @or_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 -2, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = or <16 x i8> %a, %c
+  %d = or <16 x i8> %a, splat (i8 -2)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4723,9 +4568,7 @@ define void @or_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 -2, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = or <8 x i16> %a, %c
+  %d = or <8 x i16> %a, splat (i16 -2)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4739,9 +4582,7 @@ define void @or_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 -2, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = or <4 x i32> %a, %c
+  %d = or <4 x i32> %a, splat (i32 -2)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4755,9 +4596,7 @@ define void @or_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 -2, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = or <2 x i64> %a, %c
+  %d = or <2 x i64> %a, splat (i64 -2)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4771,9 +4610,7 @@ define void @or_iv_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = or <16 x i8> %c, %a
+  %d = or <16 x i8> splat (i8 1), %a
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4787,9 +4624,7 @@ define void @or_iv_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = or <8 x i16> %c, %a
+  %d = or <8 x i16> splat (i16 1), %a
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4803,9 +4638,7 @@ define void @or_iv_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = or <4 x i32> %c, %a
+  %d = or <4 x i32> splat (i32 1), %a
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4819,9 +4652,7 @@ define void @or_iv_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = or <2 x i64> %c, %a
+  %d = or <2 x i64> splat (i64 1), %a
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4931,9 +4762,7 @@ define void @xor_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 -1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = xor <16 x i8> %a, %c
+  %d = xor <16 x i8> %a, splat (i8 -1)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -4947,9 +4776,7 @@ define void @xor_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 -1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = xor <8 x i16> %a, %c
+  %d = xor <8 x i16> %a, splat (i16 -1)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -4963,9 +4790,7 @@ define void @xor_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 -1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = xor <4 x i32> %a, %c
+  %d = xor <4 x i32> %a, splat (i32 -1)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -4979,9 +4804,7 @@ define void @xor_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 -1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = xor <2 x i64> %a, %c
+  %d = xor <2 x i64> %a, splat (i64 -1)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -4995,9 +4818,7 @@ define void @xor_iv_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 1, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = xor <16 x i8> %c, %a
+  %d = xor <16 x i8> splat (i8 1), %a
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -5011,9 +4832,7 @@ define void @xor_iv_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 1, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = xor <8 x i16> %c, %a
+  %d = xor <8 x i16> splat (i16 1), %a
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -5027,9 +4846,7 @@ define void @xor_iv_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 1, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = xor <4 x i32> %c, %a
+  %d = xor <4 x i32> splat (i32 1), %a
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -5043,9 +4860,7 @@ define void @xor_iv_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 1, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = xor <2 x i64> %c, %a
+  %d = xor <2 x i64> splat (i64 1), %a
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -5155,9 +4970,7 @@ define void @lshr_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 7, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = lshr <16 x i8> %a, %c
+  %d = lshr <16 x i8> %a, splat (i8 7)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -5171,9 +4984,7 @@ define void @lshr_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 15, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = lshr <8 x i16> %a, %c
+  %d = lshr <8 x i16> %a, splat (i16 15)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -5187,9 +4998,7 @@ define void @lshr_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 31, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = lshr <4 x i32> %a, %c
+  %d = lshr <4 x i32> %a, splat (i32 31)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -5203,9 +5012,7 @@ define void @lshr_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 31, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = lshr <2 x i64> %a, %c
+  %d = lshr <2 x i64> %a, splat (i64 31)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -5267,9 +5074,7 @@ define void @ashr_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 7, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = ashr <16 x i8> %a, %c
+  %d = ashr <16 x i8> %a, splat (i8 7)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -5283,9 +5088,7 @@ define void @ashr_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 15, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = ashr <8 x i16> %a, %c
+  %d = ashr <8 x i16> %a, splat (i16 15)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -5299,9 +5102,7 @@ define void @ashr_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 31, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = ashr <4 x i32> %a, %c
+  %d = ashr <4 x i32> %a, splat (i32 31)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -5315,9 +5116,7 @@ define void @ashr_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 31, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = ashr <2 x i64> %a, %c
+  %d = ashr <2 x i64> %a, splat (i64 31)
   store <2 x i64> %d, ptr %x
   ret void
 }
@@ -5379,9 +5178,7 @@ define void @shl_vi_v16i8(ptr %x) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
-  %b = insertelement <16 x i8> poison, i8 7, i32 0
-  %c = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
-  %d = shl <16 x i8> %a, %c
+  %d = shl <16 x i8> %a, splat (i8 7)
   store <16 x i8> %d, ptr %x
   ret void
 }
@@ -5395,9 +5192,7 @@ define void @shl_vi_v8i16(ptr %x) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
-  %b = insertelement <8 x i16> poison, i16 15, i32 0
-  %c = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
-  %d = shl <8 x i16> %a, %c
+  %d = shl <8 x i16> %a, splat (i16 15)
   store <8 x i16> %d, ptr %x
   ret void
 }
@@ -5411,9 +5206,7 @@ define void @shl_vi_v4i32(ptr %x) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
-  %b = insertelement <4 x i32> poison, i32 31, i32 0
-  %c = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
-  %d = shl <4 x i32> %a, %c
+  %d = shl <4 x i32> %a, splat (i32 31)
   store <4 x i32> %d, ptr %x
   ret void
 }
@@ -5427,9 +5220,7 @@ define void @shl_vi_v2i64(ptr %x) {
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x
-  %b = insertelement <2 x i64> poison, i64 31, i32 0
-  %c = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
-  %d = shl <2 x i64> %a, %c
+  %d = shl <2 x i64> %a, splat (i64 31)
   store <2 x i64> %d, ptr %x
   ret void
 }

@@ -201,6 +201,9 @@ namespace llvm {
     bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
                               const SlotMapping *Slots);
 
+    bool parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                          const SlotMapping *Slots);
+
     LLVMContext &getContext() { return Context; }
 
   private:
@@ -301,6 +304,8 @@ namespace llvm {
                               bool &DSOLocal);
     void parseOptionalDSOLocal(bool &DSOLocal);
     void parseOptionalVisibility(unsigned &Res);
+    bool parseOptionalImportType(lltok::Kind Kind,
+                                 GlobalValueSummary::ImportKind &Res);
     void parseOptionalDLLStorageClass(unsigned &Res);
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
@@ -370,6 +375,7 @@ namespace llvm {
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
+    bool parseInitializesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -388,7 +394,7 @@ namespace llvm {
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);
-    bool parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls);
+    bool parseOptionalCalls(SmallVectorImpl<FunctionSummary::EdgeTy> &Calls);
     bool parseHotness(CalleeInfo::HotnessType &Hotness);
     bool parseOptionalTypeIdInfo(FunctionSummary::TypeIdInfo &TypeIdInfo);
     bool parseTypeTests(std::vector<GlobalValue::GUID> &TypeTests);
@@ -413,7 +419,7 @@ namespace llvm {
     bool parseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
                               IdLocListType &IdLocList);
     bool parseParamAccessOffset(ConstantRange &Range);
-    bool parseOptionalRefs(std::vector<ValueInfo> &Refs);
+    bool parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs);
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
@@ -554,8 +560,7 @@ namespace llvm {
     bool parseExceptionArgs(SmallVectorImpl<Value *> &Args,
                             PerFunctionState &PFS);
 
-    bool resolveFunctionType(Type *RetType,
-                             const SmallVector<ParamInfo, 16> &ArgList,
+    bool resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                              FunctionType *&FuncTy);
 
     // Constant Parsing.
@@ -563,8 +568,7 @@ namespace llvm {
                     Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
-    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                std::optional<unsigned> *InRangeOp = nullptr);
+    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
@@ -589,6 +593,7 @@ namespace llvm {
     template <class ParserTy>
     bool parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc);
     bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false);
+    bool parseDIExpressionBody(MDNode *&Result, bool IsDistinct);
 
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);

@@ -82,7 +82,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       HasDSPR2(false), HasDSPR3(false), AllowMixed16_32(Mixed16_32 || Mips_Os16),
       Os16(Mips_Os16), HasMSA(false), UseTCCInDIV(false), HasSym32(false),
       HasEVA(false), DisableMadd4(false), HasMT(false), HasCRC(false),
-      HasVirt(false), HasGINV(false), UseIndirectJumpsHazard(false),
+      HasVirt(false), HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
       TSInfo(), InstrInfo(MipsInstrInfo::create(
                     initializeSubtargetDependencies(CPU, FS, TM))),
@@ -217,8 +217,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   auto *RBI = new MipsRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
-  InstSelector.reset(createMipsInstructionSelector(
-      *static_cast<const MipsTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createMipsInstructionSelector(TM, *this, *RBI));
 }
 
 bool MipsSubtarget::isPositionIndependent() const {

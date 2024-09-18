@@ -4,6 +4,7 @@
 # based on the ability of the host toolchain to target various platforms.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -36,6 +37,7 @@ include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
+include(GetDarwinLinkerVersion)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -49,6 +51,8 @@ option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
 mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 option(COMPILER_RT_BUILD_PROFILE "Build profile runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
+option(COMPILER_RT_BUILD_CTX_PROFILE "Build ctx profile runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_CTX_PROFILE)
 option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
@@ -87,7 +91,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
     # under the appropriate folder in an IDE.
-    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "LLVM/Tablegenning")
   endif()
 
   find_package(Python3 COMPONENTS Interpreter)
@@ -280,6 +284,8 @@ endif()
 option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
+option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
 include(config-ix)
 
 #================================
@@ -375,7 +381,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
@@ -442,6 +448,15 @@ if(FUCHSIA OR UNIX)
   set(SANITIZER_USE_SYMBOLS TRUE)
 else()
   set(SANITIZER_USE_SYMBOLS FALSE)
+endif()
+
+# Get the linker version while configuring compiler-rt and explicitly pass it
+# in cflags during testing. This fixes the compiler/linker version mismatch
+# issue when running a clang built with a newer Xcode in an older Xcode
+set(COMPILER_RT_DARWIN_LINKER_VERSION)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+  get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
+  message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
 endif()
 
 # Build sanitizer runtimes with debug info.
@@ -573,6 +588,25 @@ string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
 # and linking of unittests.
 string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+
+option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
+  "When set to ON and testing in a standalone build, test the runtime \
+  libraries built by this standalone build rather than the runtime libraries \
+  shipped with the compiler (used for testing). When set to OFF and testing \
+  in a standalone build, test the runtime libraries shipped with the compiler \
+  (used for testing). This option has no effect if the compiler and this \
+  build are configured to use the same runtime library path."
+  ON)
+if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
+  # Ensure that the unit tests can find the sanitizer headers prior to installation.
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS "-I${CMAKE_CURRENT_LIST_DIR}/include")
+  # Ensure that unit tests link against the just-built runtime libraries instead
+  # of the ones bundled with the compiler by overriding the resource directory.
+  #
+  if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
+    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
+  endif()
+endif()
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)
   # We're linking directly against the libunwind that we're building so don't
@@ -764,6 +798,10 @@ if(ANDROID)
   set(COMPILER_RT_TEST_USE_LLD TRUE)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
+endif()
+if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES sparc)
+  # lld has several bugs/limitations on SPARC, so disable (Issue #100320).
+  set(COMPILER_RT_HAS_LLD FALSE)
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)

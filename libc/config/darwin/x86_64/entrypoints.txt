@@ -101,10 +101,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     # libc.src.fenv.fegetround
     # libc.src.fenv.feholdexcept
     # libc.src.fenv.fesetenv
+    # libc.src.fenv.fesetexcept
     # libc.src.fenv.fesetexceptflag
     # libc.src.fenv.fesetround
     # libc.src.fenv.feraiseexcept
     # libc.src.fenv.fetestexcept
+    # libc.src.fenv.fetestexceptflag
     # libc.src.fenv.feupdateenv
 
     ## Currently disabled for failing tests.
@@ -117,6 +119,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.ceill
     #libc.src.math.coshf
     #libc.src.math.cosf
+    #libc.src.math.daddl
+    #libc.src.math.ddivl
+    #libc.src.math.dfmal
+    #libc.src.math.dsqrtl
+    #libc.src.math.dsubl
     #libc.src.math.expf
     #libc.src.math.exp2f
     #libc.src.math.expm1f
@@ -126,6 +133,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.fdim
     #libc.src.math.fdimf
     #libc.src.math.fdiml
+    #libc.src.math.fdiv
+    #libc.src.math.fdivl
+    #libc.src.math.ffma
+    #libc.src.math.ffmal
     #libc.src.math.floor
     #libc.src.math.floorf
     #libc.src.math.floorl
@@ -142,6 +153,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.frexp
     #libc.src.math.frexpf
     #libc.src.math.frexpl
+    #libc.src.math.fsub
+    #libc.src.math.fsubl
     #libc.src.math.hypot
     #libc.src.math.hypotf
     #libc.src.math.ilogb
@@ -204,6 +217,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf
+    #libc.src.math.totalordermag
+    #libc.src.math.totalordermagf
+    #libc.src.math.totalordermagl
     #libc.src.math.trunc
     #libc.src.math.truncf
     #libc.src.math.truncl

@@ -64,11 +64,10 @@ __attribute__((swiftcall)) int add_swiftcall(int a, int b) {
   return a+b;
 }
 
-// [FIXME: swiftasynccc] Update debuginfo tag to SwiftAsync once LLVM support lands.
 // LINUX: !DISubprogram({{.*}}"add_swiftasynccall", {{.*}}type: ![[FTY:[0-9]+]]
-// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_Swift,
-__attribute__((swiftasynccall)) int add_swiftasynccall(int a, int b, int c) {
-  return a+b+c;
+// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_SwiftTail,
+__attribute__((swiftasynccall)) int add_swiftasynccall(int a, int b) {
+  return a+b;
 }
 
 // LINUX: !DISubprogram({{.*}}"add_inteloclbicc", {{.*}}type: ![[FTY:[0-9]+]]

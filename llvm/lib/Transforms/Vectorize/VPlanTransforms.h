@@ -25,6 +25,7 @@ class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
+class VPRecipeBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -57,7 +58,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan, ScalarEvolution &SE);
+  static void optimize(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -81,8 +82,7 @@ struct VPlanTransforms {
   /// will be folded later.
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
-                             const MapVector<Instruction *, uint64_t> &MinBWs,
-                             LLVMContext &Ctx);
+                             const MapVector<Instruction *, uint64_t> &MinBWs);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -98,6 +98,21 @@ struct VPlanTransforms {
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
       VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+
+  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+  /// replaces all uses except the canonical IV increment of
+  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+  /// VPCanonicalIVPHIRecipe is only used to control the loop after
+  /// this transformation.
+  /// \returns true if the transformation succeeds, or false if it doesn't.
+  static bool tryAddExplicitVectorLength(VPlan &Plan);
+
+  // For each Interleave Group in \p InterleaveGroups replace the Recipes
+  // widening its memory instructions with a single VPInterleaveRecipe at its
+  // insertion point.
+  static void createInterleaveGroups(
+      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+      VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
 };
 
 } // namespace llvm

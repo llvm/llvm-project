@@ -16,10 +16,10 @@
 namespace clang {
 namespace format {
 
-class FormatTestProto : public ::testing::Test {
+class FormatTestProto : public testing::Test {
 protected:
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
@@ -30,13 +30,13 @@ protected:
     return *Result;
   }
 
-  static std::string format(llvm::StringRef Code) {
+  static std::string format(StringRef Code) {
     FormatStyle Style = getGoogleStyle(FormatStyle::LK_Proto);
     Style.ColumnLimit = 60; // To make writing tests easier.
     return format(Code, 0, Code.size(), Style);
   }
 
-  static void verifyFormat(llvm::StringRef Code) {
+  static void verifyFormat(StringRef Code) {
     EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code)));
   }
@@ -516,8 +516,6 @@ TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
 }
 
 TEST_F(FormatTestProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
-  Style.ColumnLimit = 60;
   // The column limit allows for the keys submessage to be put on 1 line, but we
   // break it since it contains a submessage an another entry.
   verifyFormat("option (MyProto.options) = {\n"

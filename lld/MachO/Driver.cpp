@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
@@ -270,6 +272,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -301,6 +317,9 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
@@ -330,9 +349,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
               reason = "-all_load";
               break;
           }
-          if (Error e = file->fetch(c, reason))
-            error(toString(file) + ": " + reason +
-                  " failed to load archive member: " + toString(std::move(e)));
+          if (Error e = file->fetch(c, reason)) {
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": " + reason +
+                   " failed to load archive member: " + toString(std::move(e)));
+            else
+              llvm::consumeError(std::move(e));
+          }
         }
         if (e)
           error(toString(file) +
@@ -349,7 +372,18 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-          if (!mb || !hasObjCSection(*mb))
+          if (!mb) {
+            // We used to create broken repro tarballs that only included those
+            // object files from thin archives that ended up being used.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
+            continue;
+          }
+
+          if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
             error(toString(file) + ": -ObjC failed to load archive member: " +
@@ -612,7 +646,7 @@ static void replaceCommonSymbols() {
     if (!osec)
       osec = ConcatOutputSection::getOrCreateForInput(isec);
     isec->parent = osec;
-    inputSections.push_back(isec);
+    addInputSection(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
@@ -814,8 +848,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -910,7 +950,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {"lld", opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
@@ -1009,20 +1048,36 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
          platform == PLATFORM_XROS_SIMULATOR;
 }
 
-static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(10, 15)},
-        {PLATFORM_IOS, VersionTuple(13, 0)},
-        {PLATFORM_TVOS, VersionTuple(13, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(6, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)},
-        {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
+template <std::size_t N>
+using MinVersions = std::array<std::pair<PlatformType, VersionTuple>, N>;
+
+/// Returns true if the platform is greater than the min version.
+/// Returns false if the platform does not exist.
+template <std::size_t N>
+static bool greaterEqMinVersion(const MinVersions<N> &minVersions,
+                                bool ignoreSimulator) {
+  PlatformType platform = config->platformInfo.target.Platform;
+  if (ignoreSimulator)
+    platform = removeSimulator(platform);
+  auto it = llvm::find_if(minVersions,
                           [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end())
-    if (config->platformInfo.target.MinDeployment < it->second)
-      return false;
+  if (it != minVersions.end())
+    if (config->platformInfo.target.MinDeployment >= it->second)
+      return true;
+  return false;
+}
+
+static bool dataConstDefault(const InputArgList &args) {
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 15)},
+      {PLATFORM_IOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)},
+  }};
+  if (!greaterEqMinVersion(minVersion, true))
+    return false;
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -1048,42 +1103,67 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (arg && arg->getOption().matches(OPT_no_fixup_chains))
     return false;
 
-  bool isRequested = arg != nullptr;
+  bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (!config->isPic) {
+    if (requested)
+      error("-fixup_chains is incompatible with -no_pie");
 
-  // Version numbers taken from the Xcode 13.3 release notes.
-  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
-        {PLATFORM_IOS, VersionTuple(13, 4)},
-        {PLATFORM_TVOS, VersionTuple(14, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end() &&
-      it->second > config->platformInfo.target.MinDeployment) {
-    if (!isRequested)
-      return false;
-
-    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
-         it->second.getAsString() + ", which is newer than target minimum of " +
-         config->platformInfo.target.MinDeployment.getAsString());
+    return false;
   }
 
   if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
-    if (isRequested)
+    if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
+
     return false;
   }
 
-  if (!config->isPic) {
-    if (isRequested)
-      error("-fixup_chains is incompatible with -no_pie");
+  if (args.hasArg(OPT_preload)) {
+    if (requested)
+      error("-fixup_chains is incompatible with -preload");
+
     return false;
   }
 
-  // TODO: Enable by default once stable.
-  return isRequested;
+  if (requested)
+    return true;
+
+  static const MinVersions<9> minVersion = {{
+      {PLATFORM_IOS, VersionTuple(13, 4)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+      {PLATFORM_MACOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, false);
+}
+
+static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                   OPT_no_objc_relative_method_lists);
+  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
+    return true;
+  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
+    return false;
+
+  // If no flag is specified, enable this on newer versions by default.
+  // The min versions is taken from
+  // ld64(https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/ld.hpp#L310)
+  // to mimic to operation of ld64
+  // [here](https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/Options.cpp#L6085-L6101)
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 16)},
+      {PLATFORM_IOS, VersionTuple(14, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(5, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true);
 }
 
 void SymbolPatterns::clear() {
@@ -1146,6 +1226,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  // If we've processed an opening --start-lib, without a matching --end-lib
+  bool inLib = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1203,13 +1285,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
@@ -1220,53 +1305,52 @@ static void createFiles(const InputArgList &args) {
 
 static void gatherInputSections() {
   TimeTraceScope timeScope("Gathering input sections");
-  int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const Section *section : file->sections) {
       // Compact unwind entries require special handling elsewhere. (In
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
-      ConcatOutputSection *osec = nullptr;
-      for (const Subsection &subsection : section->subsections) {
-        if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
-          if (isec->isCoalescedWeak())
-            continue;
-          if (config->emitInitOffsets &&
-              sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
-            in.initOffsets->addInput(isec);
-            continue;
-          }
-          isec->outSecOff = inputOrder++;
-          if (!osec)
-            osec = ConcatOutputSection::getOrCreateForInput(isec);
-          isec->parent = osec;
-          inputSections.push_back(isec);
-        } else if (auto *isec =
-                       dyn_cast<CStringInputSection>(subsection.isec)) {
-          if (isec->getName() == section_names::objcMethname) {
-            if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
-              in.objcMethnameSection->inputOrder = inputOrder++;
-            in.objcMethnameSection->addInput(isec);
-          } else {
-            if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-              in.cStringSection->inputOrder = inputOrder++;
-            in.cStringSection->addInput(isec);
-          }
-        } else if (auto *isec =
-                       dyn_cast<WordLiteralInputSection>(subsection.isec)) {
-          if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
-            in.wordLiteralSection->inputOrder = inputOrder++;
-          in.wordLiteralSection->addInput(isec);
-        } else {
-          llvm_unreachable("unexpected input section kind");
-        }
-      }
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
+      for (const Subsection &subsection : section->subsections)
+        addInputSection(subsection.isec);
     }
     if (!file->objCImageInfo.empty())
       in.objCImageInfo->addFile(file);
   }
-  assert(inputOrder <= UnspecifiedInputOrder);
+}
+
+static void codegenDataGenerate() {
+  TimeTraceScope timeScope("Generating codegen data");
+
+  OutlinedHashTreeRecord globalOutlineRecord;
+  for (ConcatInputSection *isec : inputSections)
+    if (isec->getSegName() == segment_names::data &&
+        isec->getName() == section_names::outlinedHashTree) {
+      // Read outlined hash tree from each section.
+      OutlinedHashTreeRecord localOutlineRecord;
+      auto *data = isec->data.data();
+      localOutlineRecord.deserialize(data);
+
+      // Merge it to the global hash tree.
+      globalOutlineRecord.merge(localOutlineRecord);
+    }
+
+  CodeGenDataWriter Writer;
+  if (!globalOutlineRecord.empty())
+    Writer.addRecord(globalOutlineRecord);
+
+  std::error_code EC;
+  auto fileName = config->codegenDataGeneratePath;
+  assert(!fileName.empty());
+  raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
+  if (EC)
+    error("fail to create " + fileName + ": " + EC.message());
+
+  if (auto E = Writer.write(Output))
+    error("fail to write CGData: " + toString(std::move(E)));
 }
 
 static void foldIdenticalLiterals() {
@@ -1407,6 +1491,25 @@ static void handleExplicitExports() {
   }
 }
 
+static void eraseInitializerSymbols() {
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    for (Defined *sym : isec->symbols)
+      sym->used = false;
+}
+
+static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_rpath)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+    else if (config->warnDuplicateRpath)
+      warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1422,12 +1525,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     concatOutputSections.clear();
     inputFiles.clear();
     inputSections.clear();
+    inputSectionsOrder = 0;
     loadedArchives.clear();
     loadedObjectFrameworks.clear();
     missingAutolinkWarnings.clear();
     syntheticSections.clear();
     thunkMap.clear();
     unprocessedLCLinkerOptions.clear();
+    ObjCSelRefsHelper::cleanup();
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
@@ -1437,6 +1542,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     resetOutputSegments();
     resetWriter();
     InputFile::resetIdCount();
+
+    objc::doCleanup();
   };
 
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
@@ -1522,7 +1629,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sep = sys::path::get_separator();
       // real_path removes trailing slashes as part of the normalization, but
       // these are meaningful for our text based stripping
-      if (config->osoPrefix.equals(".") || config->osoPrefix.ends_with(sep))
+      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
         expanded += sep;
       config->osoPrefix = saver().save(expanded.str());
     }
@@ -1643,7 +1750,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->warnDuplicateRpath =
+      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
+  config->runtimePaths = getRuntimePaths(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1661,7 +1770,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitChainedFixups = shouldEmitChainedFixups(args);
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+  config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
+  config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
@@ -1679,11 +1790,51 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->codegenDataGeneratePath =
+      args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+
+  auto IncompatWithCGSort = [&](StringRef firstArgStr) {
+    // Throw an error only if --call-graph-profile-sort is explicitly specified
+    if (config->callGraphProfileSort)
+      if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
+        error(firstArgStr + " is incompatible with " + arg->getSpelling());
+  };
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
+    config->irpgoProfileSortProfilePath = arg->getValue();
+    IncompatWithCGSort(arg->getSpelling());
+  }
+  config->compressionSortStartupFunctions =
+      args.hasFlag(OPT_compression_sort_startup_functions,
+                   OPT_no_compression_sort_startup_functions, false);
+  if (config->irpgoProfileSortProfilePath.empty() &&
+      config->compressionSortStartupFunctions)
+    error("--compression-sort-startup-functions must be used with "
+          "--irpgo-profile-sort");
+  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      config->functionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      config->functionOrderForCompression = true;
+      config->dataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      error("unknown value `" + compressionSortStr + "` for " +
+            arg->getSpelling());
+    }
+    if (compressionSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1777,9 +1928,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
@@ -1973,20 +2136,38 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     gatherInputSections();
+
+    if (!config->codegenDataGeneratePath.empty())
+      codegenDataGenerate();
+
     if (config->callGraphProfileSort)
       priorityBuilder.extractCallGraphProfile();
 
     if (config->deadStrip)
       markLive();
 
+    // Ensure that no symbols point inside __mod_init_func sections if they are
+    // removed due to -init_offsets. This must run after dead stripping.
+    if (config->emitInitOffsets)
+      eraseInitializerSymbols();
+
+    // Categories are not subject to dead-strip. The __objc_catlist section is
+    // marked as NO_DEAD_STRIP and that propagates into all category data.
     if (args.hasArg(OPT_check_category_conflicts))
       objc::checkCategories();
+
+    // Category merging uses "->live = false" to erase old category data, so
+    // it has to run after dead-stripping (markLive).
+    if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
+                     false))
+      objc::mergeCategories();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {

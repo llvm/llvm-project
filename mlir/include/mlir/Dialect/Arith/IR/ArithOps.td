@@ -12,6 +12,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -49,7 +50,7 @@ class Arith_BinaryOp<string mnemonic, list<Trait> traits = []> :
 // Base class for integer binary operations.
 class Arith_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
-      [DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>,
     Results<(outs SignlessIntegerLike:$result)>;
 
@@ -83,12 +84,25 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
                           attr-dict `:` type($result) }];
 }
 
+// Checks that tensor input and outputs have identical shapes. This is stricker
+// than the verification done in `SameOperandsAndResultShape` that allows for
+// tensor dimensions to be 'compatible' (e.g., dynamic dimensions being
+// compatible with static ones).
+def SameInputOutputTensorDims : PredOpTrait<
+    "input and output have the same tensor dimensions",
+    AllMatchSameOperatorPred<["in", "out"],
+      "(::llvm::isa<::mlir::TensorType>($_self.getType()) ?"
+      " ::llvm::cast<::mlir::TensorType>($_self.getType()).getShape() :"
+      " ::llvm::ArrayRef<int64_t>{})">>;
+
 // Base class for arithmetic cast operations. Requires a single operand and
-// result. If either is a shaped type, then the other must be of the same shape.
+// result. If either is a shaped type, then the other must be of the same
+// shape.  In the case of tensor types, this also includes the corresponding
+// operand/result dimensions being equal.
 class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
                    list<Trait> traits = []> :
     Arith_Op<mnemonic, traits # [Pure, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>]>,
+      SameInputOutputTensorDims, DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins From:$in)>,
     Results<(outs To:$out)> {
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
@@ -107,7 +121,7 @@ class Arith_IToICastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike,
                            SignlessFixedWidthIntegerLike,
                            traits #
-                           [DeclareOpInterfaceMethods<InferIntRangeInterface>]>;
+                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>;
 // Cast from an integer type to a floating point type.
 class Arith_IToFCastOp<string mnemonic, list<Trait> traits = []> :
     Arith_CastOp<mnemonic, SignlessFixedWidthIntegerLike, FloatLike, traits>;
@@ -139,7 +153,7 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
 
 class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
-      [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>,
+      [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
        DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs,
       DefaultValuedAttr<
@@ -159,7 +173,7 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
     [ConstantLike, Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>,
-     DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "integer or floating point constant";
   let description = [{
     The `constant` operation produces an SSA value equal to some integer or
@@ -343,7 +357,9 @@ def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli", [Commutative]> {
+def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli",
+  [Commutative, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = [{
     Integer multiplication operation.
   }];
@@ -1118,6 +1134,10 @@ def Arith_DivFOp : Arith_FloatBinaryOp<"divf"> {
 
 def Arith_RemFOp : Arith_FloatBinaryOp<"remf"> {
   let summary = "floating point division remainder operation";
+  let description = [{
+    Returns the floating point division remainder.
+    The remainder has the same sign as the dividend (lhs operand).
+  }];
   let hasFolder = 1;
 }
 
@@ -1184,7 +1204,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
 // ExtFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
+def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "cast from floating-point to wider floating-point";
   let description = [{
     Cast a floating-point value to a larger floating-point-typed value.
@@ -1193,6 +1213,13 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let arguments = (ins FloatLike:$in,
+                       OptionalAttr<Arith_FastMathAttr>:$fastmath);
+  let results = (outs FloatLike:$out);
+
+  let assemblyFormat = [{ $in (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($in) `to` type($out) }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,17 +1254,36 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
 // TruncFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_TruncFOp : Arith_FToFCastOp<"truncf"> {
+def Arith_TruncFOp :
+    Arith_Op<"truncf",
+      [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
+       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+       DeclareOpInterfaceMethods<ArithFastMathInterface>,
+       DeclareOpInterfaceMethods<CastOpInterface>]>,
+    Arguments<(ins FloatLike:$in,
+                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+    Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
     The destination type must be strictly narrower than the source type.
-    If the value cannot be exactly represented, it is rounded using the default
-    rounding mode. When operating on vectors, casts elementwise.
+    If the value cannot be exactly represented, it is rounded using the
+    provided rounding mode or the default one if no rounding mode is provided.
+    When operating on vectors, casts elementwise.
   }];
+  let builders = [
+    OpBuilder<(ins "Type":$out, "Value":$in), [{
+      $_state.addOperands(in);
+      $_state.addTypes(out);
+    }]>
+  ];
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let assemblyFormat = [{ $in ($roundingmode^)?
+                          (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($in) `to` type($out) }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1310,7 +1356,7 @@ def IndexCastTypeConstraint : TypeConstraint<Or<[
 
 def Arith_IndexCastOp
   : Arith_CastOp<"index_cast", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
@@ -1329,7 +1375,7 @@ def Arith_IndexCastOp
 
 def Arith_IndexCastUIOp
   : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "unsigned cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
@@ -1383,7 +1429,7 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 
 def Arith_CmpIOp
   : Arith_CompareOpOfAnyRank<"cmpi",
-                             [DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+                             [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1523,24 +1569,31 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+class BooleanConditionOrMatchingShape<string condition, string result> :
+    PredOpTrait<
+      condition # " is signless i1 or has matching shape",
+      Or<[TypeIsPred<condition, I1>,
+          AllShapesMatch<[condition, result]>.predicate]>>;
+
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
-    ScalarConditionOrMatchingShape<["condition", "result"]>,
-    DeclareOpInterfaceMethods<InferIntRangeInterface>,
+    BooleanConditionOrMatchingShape<"condition", "result">,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+    DeclareOpInterfaceMethods<SelectLikeOpInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";
   let description = [{
     The `arith.select` operation chooses one value based on a binary condition
-    supplied as its first operand. 
-    
-    If the value of the first operand (the condition) is `1`, then the second 
-    operand is returned, and the third operand is ignored, even if it was poison. 
-    
-    If the value of the first operand (the condition) is `0`, then the third 
-    operand is returned, and the second operand is ignored, even if it was poison. 
-    
-    If the value of the first operand (the condition) is poison, then the 
-    operation returns poison. 
+    supplied as its first operand.
+
+    If the value of the first operand (the condition) is `1`, then the second
+    operand is returned, and the third operand is ignored, even if it was poison.
+
+    If the value of the first operand (the condition) is `0`, then the third
+    operand is returned, and the second operand is ignored, even if it was poison.
+
+    If the value of the first operand (the condition) is poison, then the
+    operation returns poison.
 
     The operation applies to vectors and tensors elementwise given the _shape_
     of all operands is identical. The choice is made for each element

@@ -12,7 +12,6 @@
 
 #include <__algorithm/replace.h>
 #include <__algorithm/replace_copy.h>
-#include <__availability>
 #include <__config>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
@@ -22,6 +21,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
+#include <__utility/move.h>
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -812,7 +812,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI path extension() const { return string_type(__extension()); }
 
   // query
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __pn_.empty(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __pn_.empty(); }
 
   _LIBCPP_HIDE_FROM_ABI bool has_root_name() const { return !__root_name().empty(); }
   _LIBCPP_HIDE_FROM_ABI bool has_root_directory() const { return !__root_directory().empty(); }

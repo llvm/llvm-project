@@ -1578,7 +1578,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
                         // the encoding.
     // Mark non-live registers as undef
     for (MachineOperand &MO : VLSTM->implicit_operands()) {
-      if (MO.isReg() && MO.isImplicit() && !MO.isDef()) {
+      if (MO.isReg() && !MO.isDef()) {
         Register Reg = MO.getReg();
         MO.setIsUndef(!LiveRegs.contains(Reg));
       }
@@ -1942,11 +1942,14 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineOperand &Dest = MI.getOperand(0);
-  Register TempReg = MI.getOperand(1).getReg();
   // Duplicating undef operands into 2 instructions does not guarantee the same
   // value on both; However undef should be replaced by xzr anyway.
-  assert(!MI.getOperand(2).isUndef() && "cannot handle undef");
-  Register AddrReg = MI.getOperand(2).getReg();
+  assert(!MI.getOperand(1).isUndef() && "cannot handle undef");
+  Register AddrAndTempReg = MI.getOperand(1).getReg();
+  Register AddrReg = TRI->getSubReg(AddrAndTempReg, ARM::gsub_0);
+  Register TempReg = TRI->getSubReg(AddrAndTempReg, ARM::gsub_1);
+  assert(MI.getOperand(1).getReg() == MI.getOperand(2).getReg() &&
+         "tied operands have different registers");
   Register DesiredReg = MI.getOperand(3).getReg();
   MachineOperand New = MI.getOperand(4);
   New.setIsKill(false);
@@ -2197,7 +2200,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
 
     case ARM::TCRETURNdi:
-    case ARM::TCRETURNri: {
+    case ARM::TCRETURNri:
+    case ARM::TCRETURNrinotr12: {
       MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
       if (MBBI->getOpcode() == ARM::SEH_EpilogEnd)
         MBBI--;
@@ -2241,7 +2245,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         // Add the default predicate in Thumb mode.
         if (STI->isThumb())
           MIB.add(predOps(ARMCC::AL));
-      } else if (RetOpcode == ARM::TCRETURNri) {
+      } else if (RetOpcode == ARM::TCRETURNri ||
+                 RetOpcode == ARM::TCRETURNrinotr12) {
         unsigned Opcode =
           STI->isThumb() ? ARM::tTAILJMPr
                          : (STI->hasV4TOps() ? ARM::TAILJMPr : ARM::TAILJMPr4);

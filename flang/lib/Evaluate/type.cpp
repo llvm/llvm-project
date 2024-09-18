@@ -505,7 +505,13 @@ bool AreSameDerivedType(
   return AreSameDerivedType(x, y, false, false, inProgress);
 }
 
-bool AreSameDerivedType(
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, true, true, inProgress);
+}
+
+static bool AreSameDerivedType(
     const semantics::DerivedTypeSpec *x, const semantics::DerivedTypeSpec *y) {
   return x == y || (x && y && AreSameDerivedType(*x, *y));
 }
@@ -731,7 +737,7 @@ bool SomeKind<TypeCategory::Derived>::operator==(
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
 }
 
-int SelectedCharKind(const std::string &s, int defaultKind) { // 16.9.168
+int SelectedCharKind(const std::string &s, int defaultKind) { // F'2023 16.9.180
   auto lower{parser::ToLowerCaseLetters(s)};
   auto n{lower.size()};
   while (n > 0 && lower[0] == ' ') {
@@ -807,22 +813,29 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
-bool IsInteroperableIntrinsicType(const DynamicType &type,
+std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     const common::LanguageFeatureControl *features, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return (features && features->IsEnabled(common::LanguageFeature::CUDA)) ||
-        type.kind() >= 4; // no short or half floats
+    return type.kind() >= 4 /* not a short or half float */ || !features ||
+        features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:
-    if (checkCharLength && type.knownLength().value_or(0) != 1) {
+    if (type.kind() != 1) { // C_CHAR
       return false;
+    } else if (checkCharLength) {
+      if (type.knownLength()) {
+        return *type.knownLength() == 1;
+      } else {
+        return std::nullopt;
+      }
+    } else {
+      return true;
     }
-    return type.kind() == 1 /* C_CHAR */;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

@@ -60,9 +60,9 @@ public:
 
     struct BuildVersionOpts {
 
-      // Derive platform from triple.
-      static BuildVersionOpts fromTriple(const Triple &TT, uint32_t MinOS,
-                                         uint32_t SDK);
+      // Derive platform from triple if possible.
+      static std::optional<BuildVersionOpts>
+      fromTriple(const Triple &TT, uint32_t MinOS, uint32_t SDK);
 
       uint32_t Platform; // Platform.
       uint32_t MinOS;    // X.Y.Z is encoded in nibbles xxxx.yy.zz
@@ -73,13 +73,12 @@ public:
     /// will be used.
     std::optional<Dylib> IDDylib;
 
-    /// Override for LC_BUILD_VERSION. If this is nullopt then
-    std::optional<BuildVersionOpts> BuildVersion;
-
     /// List of LC_LOAD_DYLIBs.
     std::vector<Dylib> LoadDylibs;
     /// List of LC_RPATHs.
     std::vector<std::string> RPaths;
+    /// List of LC_BUILD_VERSIONs.
+    std::vector<BuildVersionOpts> BuildVersions;
 
     HeaderOptions() = default;
     HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}

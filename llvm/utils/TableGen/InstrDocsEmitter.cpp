@@ -18,9 +18,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <string>
@@ -73,7 +73,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n";
 
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-    Record *Inst = II->TheDef;
+    const Record *Inst = II->TheDef;
 
     // Don't print the target-independent instructions.
     if (II->Namespace == "TargetOpcode")

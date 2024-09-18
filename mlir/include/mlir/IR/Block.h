@@ -18,6 +18,7 @@
 
 namespace llvm {
 class BitVector;
+class raw_ostream;
 } // namespace llvm
 
 namespace mlir {
@@ -26,8 +27,8 @@ template <typename ValueRangeT>
 class ValueTypeRange;
 
 /// `Block` represents an ordered list of `Operation`s.
-class Block : public IRObjectWithUseList<BlockOperand>,
-              public llvm::ilist_node_with_parent<Block, Region> {
+class alignas(8) Block : public IRObjectWithUseList<BlockOperand>,
+                         public llvm::ilist_node_with_parent<Block, Region> {
 public:
   explicit Block() = default;
   ~Block();
@@ -401,6 +402,8 @@ private:
 
   friend struct llvm::ilist_traits<Block>;
 };
+
+raw_ostream &operator<<(raw_ostream &, Block &);
 } // namespace mlir
 
 #endif // MLIR_IR_BLOCK_H

@@ -147,7 +147,7 @@ Sections:
 
     Obj = yaml::yaml2ObjectFile(Storage, Buffer,
                                 [](const Twine &Err) { errs() << Err; });
-    return *Obj.get();
+    return *Obj;
   }
 };
 
@@ -521,7 +521,7 @@ Sections:
 
     Obj = yaml::yaml2ObjectFile(ObjStorage, YamlBuffer,
                                 [](const Twine &Err) { errs() << Err; });
-    return *Obj.get();
+    return *Obj;
   }
 };
 

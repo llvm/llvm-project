@@ -20,6 +20,22 @@ class SparseTensor_Attr<string name,
     : AttrDef<SparseTensor_Dialect, name, traits>;
 
 //===----------------------------------------------------------------------===//
+// A simple bitset attribute wrapped around a single int64_t to encode a set of
+// sparse tensor levels.
+//===----------------------------------------------------------------------===//
+
+def I64BitSetAttr : TypedAttrBase<I64, "IntegerAttr",
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getType().isInteger(64)">]>,
+      "LevelSet attribute"> {
+  let returnType = [{::mlir::sparse_tensor::I64BitSet}];
+  let convertFromStorage = [{::mlir::sparse_tensor::I64BitSet($_self.getValue().getZExtValue())}];
+}
+
+def I64BitSetArrayAttr :
+    TypedArrayAttrBase<I64BitSetAttr, "I64BitSet array attribute">;
+
+//===----------------------------------------------------------------------===//
 // These attributes are just like `IndexAttr` except that they clarify whether
 // the index refers to a dimension (an axis of the semantic tensor) or a level
 // (an axis of the actual storage format).
@@ -167,7 +183,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     - **soa** : only applicable to singleton levels, fuses the singleton
       level in SoA (structure of arrays) scheme.
 
-    In addition to the map, the following two fields are optional:
+    In addition to the map, the following fields are optional:
 
     - The required bitwidth for position storage (integral offsets
       into the sparse storage scheme).  A narrow width reduces the memory
@@ -182,6 +198,23 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       the total required range (viz. the maximum value of each tensor
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
+
+    - The explicit value for the sparse tensor. If explicitVal is set,
+      then all the non-zero values in the tensor have the same explicit value.
+      The default value Attribute() indicates that it is not set. This
+      is useful for binary-valued sparse tensors whose values can either
+      be an implicit value (0 by default) or an explicit value (such as 1).
+      In this approach, we don't store explicit/implicit values, and metadata
+      (such as position and coordinate arrays) alone fully defines the original tensor.
+      This yields additional savings for the storage requirements,
+      as well as for the computational time, since we skip operating on
+      implicit values and can constant fold the explicit values where they are used.
+
+    - The implicit value for the sparse tensor. If implicitVal is set,
+      then the "zero" value in the tensor is equal to the implicit value.
+      For now, we only support `0` as the implicit value but it could be
+      extended in the future. The default value Attribute() indicates that
+      the implicit value is `0` (same type as the tensor element type).
 
     Examples:
 
@@ -225,6 +258,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       crdWidth = 8
     }>
     ... tensor<8x8xf64, #DCSC> ...
+
+    // Doubly compressed sparse column storage with specific
+    // explicit and implicit values.
+    #DCSC = #sparse_tensor.encoding<{
+      map = (i, j) -> (j : compressed, i : compressed),
+      explicitVal = 1 : i64,
+      implicitVal = 0 : i64
+    }>
+    ... tensor<8x8xi64, #DCSC> ...
 
     // Block sparse row storage (2x3 blocks).
     #BSR = #sparse_tensor.encoding<{
@@ -307,6 +349,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // The required bitwidth for coordinate storage.
     "unsigned":$crdWidth,
 
+    // The required explicit value.
+    "::mlir::Attribute":$explicitVal,
+
+    // The required implicit value.
+    "::mlir::Attribute":$implicitVal,
+
     // A slice attribute for each dimension of the tensor type.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
@@ -319,7 +367,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
                      CArg<"AffineMap", "{}">:$dimToLvl,
                      CArg<"AffineMap", "{}">:$lvlToDim,
                      CArg<"unsigned", "0">:$posWidth,
-                     CArg<"unsigned", "0">:$crdWidth), [{
+                     CArg<"unsigned", "0">:$crdWidth,
+                     CArg<"::mlir::Attribute", "{}">:$explicitVal,
+                     CArg<"::mlir::Attribute", "{}">:$implicitVal), [{
       if (!dimToLvl) {
         dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
       }
@@ -327,6 +377,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
         lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
       }
       return $_get($_ctxt, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+        explicitVal, implicitVal,
         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
   ];
@@ -352,6 +403,22 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// Constructs a new encoding with the pointer and index bitwidths
     /// reset to the default, and all other fields inherited from `this`.
     SparseTensorEncodingAttr withoutBitWidths() const;
+
+    /// Constructs a new encoding with the given explicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withExplicitVal(Attribute explicitVal) const;
+
+    /// Constructs a new encoding with the explicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutExplicitVal() const;
+
+    /// Constructs a new encoding with the given implicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withImplicitVal(Attribute implicitVal) const;
+
+    /// Constructs a new encoding with the implicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutImplicitVal() const;
 
     /// Constructs a new encoding with the given dimSlices, and all
     /// other fields inherited from `this`.
@@ -402,6 +469,26 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isAllOrdered() const;
 
     //
+    // Storage type methods.
+    //
+
+    /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+    Type getCrdElemType() const;
+
+    /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+    Type getPosElemType() const;
+
+    /// Returns the coordinate-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getCrdMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
+
+    /// Returns the position-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getPosMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
+
+    //
     // dimToLvl methods.
     //
 
@@ -431,8 +518,23 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     //
     // Helper function to translate between level/dimension space.
     //
+
     SmallVector<int64_t> translateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
     ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
+
+    //
+    // COO methods.
+    //
+
+    /// Returns the starting level of this sparse tensor type for a
+    /// trailing COO region that spans **at least** two levels. If
+    /// no such COO region is found, then returns the level-rank.
+    ///
+    /// DEPRECATED: use getCOOSegment instead;
+    Level getAoSCOOStart() const;
+
+    /// Returns a list of COO segments in the sparse tensor types.
+    SmallVector<COOSegment> getCOOSegments() const;
 
     //
     // Printing methods.

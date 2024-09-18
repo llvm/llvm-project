@@ -52,6 +52,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -699,7 +700,7 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
         Worklist.push_back(U.get());
   }
   for (Instruction *I : DropPoisonFlags)
-    I->dropPoisonGeneratingFlagsAndMetadata();
+    I->dropPoisonGeneratingAnnotations();
 
   Value *Result = Orig;
   for (Value *V : NeedFreeze) {
@@ -816,7 +817,7 @@ bool GuardWideningImpl::parseRangeChecks(
   if (IC->getPredicate() == ICmpInst::ICMP_UGT)
     std::swap(CmpLHS, CmpRHS);
 
-  auto &DL = IC->getModule()->getDataLayout();
+  auto &DL = IC->getDataLayout();
 
   GuardWideningImpl::RangeCheck Check(
       CmpLHS, cast<ConstantInt>(ConstantInt::getNullValue(CmpRHS->getType())),

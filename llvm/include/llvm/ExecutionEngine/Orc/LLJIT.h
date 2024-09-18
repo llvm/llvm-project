@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -254,7 +255,6 @@ protected:
 
   DataLayout DL;
   Triple TT;
-  std::unique_ptr<DefaultThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
   std::unique_ptr<ObjectTransformLayer> ObjTransformLayer;
@@ -325,6 +325,7 @@ public:
   PlatformSetupFunction SetUpPlatform;
   NotifyCreatedFunction NotifyCreated;
   unsigned NumCompileThreads = 0;
+  std::optional<bool> SupportConcurrentCompilation;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -333,7 +334,7 @@ public:
 template <typename JITType, typename SetterImpl, typename State>
 class LLJITBuilderSetters {
 public:
-  /// Set a ExecutorProcessControl for this instance.
+  /// Set an ExecutorProcessControl for this instance.
   /// This should not be called if ExecutionSession has already been set.
   SetterImpl &
   setExecutorProcessControl(std::unique_ptr<ExecutorProcessControl> EPC) {
@@ -462,19 +463,26 @@ public:
   ///
   /// If this method is not called, behavior will be as if it were called with
   /// a zero argument.
+  ///
+  /// This setting should not be used if a custom ExecutionSession or
+  /// ExecutorProcessControl object is set: in those cases a custom
+  /// TaskDispatcher should be used instead.
   SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
     impl().NumCompileThreads = NumCompileThreads;
     return impl();
   }
 
-  /// Set an ExecutorProcessControl object.
+  /// If set, this forces LLJIT concurrent compilation support to be either on
+  /// or off. This controls the selection of compile function (concurrent vs
+  /// single threaded) and whether or not sub-modules are cloned to new
+  /// contexts for lazy emission.
   ///
-  /// If the platform uses ObjectLinkingLayer by default and no
-  /// ObjectLinkingLayerCreator has been set then the ExecutorProcessControl
-  /// object will be used to supply the memory manager for the
-  /// ObjectLinkingLayer.
-  SetterImpl &setExecutorProcessControl(ExecutorProcessControl &EPC) {
-    impl().EPC = &EPC;
+  /// If not explicitly set then concurrency support will be turned on if
+  /// NumCompileThreads is set to a non-zero value, or if a custom
+  /// ExecutionSession or ExecutorProcessControl instance is provided.
+  SetterImpl &setSupportConcurrentCompilation(
+      std::optional<bool> SupportConcurrentCompilation) {
+    impl().SupportConcurrentCompilation = SupportConcurrentCompilation;
     return impl();
   }
 
@@ -613,6 +621,7 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+  SmallPtrSet<JITDylib const *, 8> InitializedDylib;
 };
 
 } // End namespace orc

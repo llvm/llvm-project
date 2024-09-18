@@ -60,6 +60,8 @@ def ADLPPort01_05_10       : ProcResGroup<[ADLPPort01, ADLPPort05, ADLPPort10]>;
 def ADLPPort02_03          : ProcResGroup<[ADLPPort02, ADLPPort03]>;
 def ADLPPort02_03_07       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort07]>;
 def ADLPPort02_03_11       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort11]>;
+def ADLPPort02_03_10       : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort10]>;
+def ADLPPort05_11          : ProcResGroup<[ADLPPort05, ADLPPort11]>;
 def ADLPPort07_08          : ProcResGroup<[ADLPPort07, ADLPPort08]>;
 
 // EU has 112 reservation stations.
@@ -78,6 +80,10 @@ def ADLPPort02_03_07_08_11 : ProcResGroup<[ADLPPort02, ADLPPort03, ADLPPort07,
                                            ADLPPort08, ADLPPort11]> {
   let BufferSize = 72;
 }
+
+def ADLPPortAny : ProcResGroup<[ADLPPort00, ADLPPort01, ADLPPort02, ADLPPort03,
+                                ADLPPort04, ADLPPort05, ADLPPort06, ADLPPort07,
+                                ADLPPort08, ADLPPort09, ADLPPort10, ADLPPort11]>;
 
 // Integer loads are 5 cycles, so ReadAfterLd registers needn't be available
 // until 5 cycles after the memory operand.
@@ -880,15 +886,15 @@ def ADLPWriteResGroup50 : SchedWriteRes<[ADLPPort04_09, ADLPPort05, ADLPPort07_0
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup50], (instregex "^(V?)EXTRACTPSmr$")>;
+def : InstRW<[ADLPWriteResGroup50], (instregex "^(V?)EXTRACTPSmri$")>;
 def : InstRW<[ADLPWriteResGroup50], (instrs SMSW16m)>;
 
 def ADLPWriteResGroup51 : SchedWriteRes<[ADLPPort00, ADLPPort05]> {
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup51], (instregex "^(V?)EXTRACTPSrr$")>;
-def : InstRW<[ADLPWriteResGroup51], (instrs MMX_PEXTRWrr)>;
+def : InstRW<[ADLPWriteResGroup51], (instregex "^(V?)EXTRACTPSrri$")>;
+def : InstRW<[ADLPWriteResGroup51], (instrs MMX_PEXTRWrri)>;
 
 def ADLPWriteResGroup52 : SchedWriteRes<[ADLPPort00_01_05_06, ADLPPort02_03, ADLPPort02_03_07, ADLPPort04, ADLPPort06]> {
   let Latency = 7;
@@ -1361,7 +1367,7 @@ def ADLPWriteResGroup121 : SchedWriteRes<[ADLPPort05]> {
 }
 def : InstRW<[ADLPWriteResGroup121], (instregex "^MMX_PACKSS(DW|WB)rr$")>;
 def : InstRW<[ADLPWriteResGroup121], (instrs MMX_PACKUSWBrr)>;
-def : InstRW<[ADLPWriteResGroup121, ReadDefault, ReadInt2Fpu], (instrs MMX_PINSRWrr)>;
+def : InstRW<[ADLPWriteResGroup121, ReadDefault, ReadInt2Fpu], (instrs MMX_PINSRWrri)>;
 
 def ADLPWriteResGroup122 : SchedWriteRes<[ADLPPort00_05, ADLPPort02_03_11]> {
   let Latency = 9;
@@ -1388,7 +1394,7 @@ def ADLPWriteResGroup125 : SchedWriteRes<[ADLPPort02_03_11, ADLPPort05]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ADLPWriteResGroup125], (instregex "^VPBROADCAST(B|W)Yrm$")>;
-def : InstRW<[ADLPWriteResGroup125, ReadAfterLd], (instrs MMX_PINSRWrm)>;
+def : InstRW<[ADLPWriteResGroup125, ReadAfterLd], (instrs MMX_PINSRWrmi)>;
 def : InstRW<[ADLPWriteResGroup125, ReadAfterVecYLd], (instrs VPALIGNRYrmi)>;
 
 def ADLPWriteResGroup126 : SchedWriteRes<[ADLPPort00_01_05_06_10, ADLPPort02_03_11]> {
@@ -1715,7 +1721,7 @@ def ADLPWriteResGroup176 : SchedWriteRes<[ADLPPort01_05, ADLPPort04_09, ADLPPort
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[ADLPWriteResGroup176], (instregex "^(V?)PEXTR(D|Q)mr$")>;
+def : InstRW<[ADLPWriteResGroup176], (instregex "^(V?)PEXTR(D|Q)mri$")>;
 
 def ADLPWriteResGroup177 : SchedWriteRes<[ADLPPort00_01, ADLPPort01_05, ADLPPort02_03_11]> {
   let ReleaseAtCycles = [1, 2, 1];
@@ -2244,7 +2250,7 @@ def ADLPWriteResGroup255 : SchedWriteRes<[ADLPPort00_01_05, ADLPPort02_03_11]> {
   let Latency = 9;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup255, ReadAfterVecYLd], (instregex "^VINSERT(F|I)128rm$",
+def : InstRW<[ADLPWriteResGroup255, ReadAfterVecYLd], (instregex "^VINSERT(F|I)128rmi$",
                                                                  "^VP(ADD|SUB)(B|D|Q|W)Yrm$")>;
 
 def ADLPWriteResGroup256 : SchedWriteRes<[ADLPPort00, ADLPPort00_06, ADLPPort02_03_11]> {

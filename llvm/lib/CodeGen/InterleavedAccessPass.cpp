@@ -101,21 +101,21 @@ private:
 
   /// Transform an interleaved load into target specific intrinsics.
   bool lowerInterleavedLoad(LoadInst *LI,
-                            SmallVector<Instruction *, 32> &DeadInsts);
+                            SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform an interleaved store into target specific intrinsics.
   bool lowerInterleavedStore(StoreInst *SI,
-                             SmallVector<Instruction *, 32> &DeadInsts);
+                             SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform a load and a deinterleave intrinsic into target specific
   /// instructions.
   bool lowerDeinterleaveIntrinsic(IntrinsicInst *II,
-                                  SmallVector<Instruction *, 32> &DeadInsts);
+                                  SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform an interleave intrinsic and a store into target specific
   /// instructions.
   bool lowerInterleaveIntrinsic(IntrinsicInst *II,
-                                SmallVector<Instruction *, 32> &DeadInsts);
+                                SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Returns true if the uses of an interleaved load by the
   /// extractelement instructions in \p Extracts can be replaced by uses of the
@@ -200,28 +200,6 @@ FunctionPass *llvm::createInterleavedAccessPass() {
   return new InterleavedAccess();
 }
 
-/// Check if the mask is a DE-interleave mask of the given factor
-/// \p Factor like:
-///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
-static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
-                                       unsigned &Index) {
-  // Check all potential start indices from 0 to (Factor - 1).
-  for (Index = 0; Index < Factor; Index++) {
-    unsigned i = 0;
-
-    // Check that elements are in ascending order by Factor. Ignore undef
-    // elements.
-    for (; i < Mask.size(); i++)
-      if (Mask[i] >= 0 && static_cast<unsigned>(Mask[i]) != Index + i * Factor)
-        break;
-
-    if (i == Mask.size())
-      return true;
-  }
-
-  return false;
-}
-
 /// Check if the mask is a DE-interleave mask for an interleaved load.
 ///
 /// E.g. DE-interleave masks (Factor = 2) could be:
@@ -238,7 +216,7 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
     // Make sure we don't produce a load wider than the input load.
     if (Mask.size() * Factor > NumLoadElements)
       return false;
-    if (isDeInterleaveMaskOfFactor(Mask, Factor, Index))
+    if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
   }
 
@@ -272,7 +250,7 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
 }
 
 bool InterleavedAccessImpl::lowerInterleavedLoad(
-    LoadInst *LI, SmallVector<Instruction *, 32> &DeadInsts) {
+    LoadInst *LI, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!LI->isSimple() || isa<ScalableVectorType>(LI->getType()))
     return false;
 
@@ -333,8 +311,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   for (auto *Shuffle : Shuffles) {
     if (Shuffle->getType() != VecTy)
       return false;
-    if (!isDeInterleaveMaskOfFactor(Shuffle->getShuffleMask(), Factor,
-                                    Index))
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
     assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
@@ -343,8 +321,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   for (auto *Shuffle : BinOpShuffles) {
     if (Shuffle->getType() != VecTy)
       return false;
-    if (!isDeInterleaveMaskOfFactor(Shuffle->getShuffleMask(), Factor,
-                                    Index))
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
     assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
@@ -388,14 +366,15 @@ bool InterleavedAccessImpl::replaceBinOpShuffles(
       return Idx < (int)cast<FixedVectorType>(BIOp0Ty)->getNumElements();
     }));
 
+    BasicBlock::iterator insertPos = SVI->getIterator();
     auto *NewSVI1 =
         new ShuffleVectorInst(BI->getOperand(0), PoisonValue::get(BIOp0Ty),
-                              Mask, SVI->getName(), SVI);
+                              Mask, SVI->getName(), insertPos);
     auto *NewSVI2 = new ShuffleVectorInst(
         BI->getOperand(1), PoisonValue::get(BI->getOperand(1)->getType()), Mask,
-        SVI->getName(), SVI);
+        SVI->getName(), insertPos);
     BinaryOperator *NewBI = BinaryOperator::CreateWithCopiedFlags(
-        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), SVI);
+        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), insertPos);
     SVI->replaceAllUsesWith(NewBI);
     LLVM_DEBUG(dbgs() << "  Replaced: " << *BI << "\n    And   : " << *SVI
                       << "\n  With    : " << *NewSVI1 << "\n    And   : "
@@ -475,7 +454,7 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
 }
 
 bool InterleavedAccessImpl::lowerInterleavedStore(
-    StoreInst *SI, SmallVector<Instruction *, 32> &DeadInsts) {
+    StoreInst *SI, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!SI->isSimple())
     return false;
 
@@ -501,7 +480,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
-    IntrinsicInst *DI, SmallVector<Instruction *, 32> &DeadInsts) {
+    IntrinsicInst *DI, SmallVectorImpl<Instruction *> &DeadInsts) {
   LoadInst *LI = dyn_cast<LoadInst>(DI->getOperand(0));
 
   if (!LI || !LI->hasOneUse() || !LI->isSimple())
@@ -510,7 +489,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   LLVM_DEBUG(dbgs() << "IA: Found a deinterleave intrinsic: " << *DI << "\n");
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI, DeadInsts))
     return false;
 
   // We now have a target-specific load, so delete the old one.
@@ -520,7 +499,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 }
 
 bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
-    IntrinsicInst *II, SmallVector<Instruction *, 32> &DeadInsts) {
+    IntrinsicInst *II, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!II->hasOneUse())
     return false;
 
@@ -531,13 +510,16 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
   LLVM_DEBUG(dbgs() << "IA: Found an interleave intrinsic: " << *II << "\n");
 
+  SmallVector<Instruction *, 4> InterleaveDeadInsts;
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerInterleaveIntrinsicToStore(II, SI))
+  if (!TLI->lowerInterleaveIntrinsicToStore(II, SI, InterleaveDeadInsts))
     return false;
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.push_back(SI);
   DeadInsts.push_back(II);
+  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(),
+                   InterleaveDeadInsts.end());
   return true;
 }
 
@@ -556,9 +538,9 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       // At present, we only have intrinsics to represent (de)interleaving
       // with a factor of 2.
-      if (II->getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2)
+      if (II->getIntrinsicID() == Intrinsic::vector_deinterleave2)
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-      if (II->getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+      else if (II->getIntrinsicID() == Intrinsic::vector_interleave2)
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
     }
   }

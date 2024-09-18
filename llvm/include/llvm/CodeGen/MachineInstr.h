@@ -115,6 +115,10 @@ public:
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
+    NonNeg = 1 << 18,        // The operand is non-negative.
+    Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
+    NoUSWrap = 1 << 20,      // Instruction supports geps
+                             // no unsigned signed wrap.
   };
 
 private:
@@ -158,24 +162,27 @@ private:
                              MCSymbol *PreInstrSymbol = nullptr,
                              MCSymbol *PostInstrSymbol = nullptr,
                              MDNode *HeapAllocMarker = nullptr,
-                             MDNode *PCSections = nullptr,
-                             uint32_t CFIType = 0) {
+                             MDNode *PCSections = nullptr, uint32_t CFIType = 0,
+                             MDNode *MMRAs = nullptr) {
       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
       bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
+      bool HasMMRAs = MMRAs != nullptr;
       bool HasCFIType = CFIType != 0;
       bool HasPCSections = PCSections != nullptr;
       auto *Result = new (Allocator.Allocate(
           totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t>(
               MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
-              HasHeapAllocMarker + HasPCSections, HasCFIType),
+              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType),
           alignof(ExtraInfo)))
           ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
-                    HasHeapAllocMarker, HasPCSections, HasCFIType);
+                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs);
 
       // Copy the actual data into the trailing objects.
       std::copy(MMOs.begin(), MMOs.end(),
                 Result->getTrailingObjects<MachineMemOperand *>());
+
+      unsigned MDNodeIdx = 0;
 
       if (HasPreInstrSymbol)
         Result->getTrailingObjects<MCSymbol *>()[0] = PreInstrSymbol;
@@ -183,12 +190,13 @@ private:
         Result->getTrailingObjects<MCSymbol *>()[HasPreInstrSymbol] =
             PostInstrSymbol;
       if (HasHeapAllocMarker)
-        Result->getTrailingObjects<MDNode *>()[0] = HeapAllocMarker;
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = HeapAllocMarker;
       if (HasPCSections)
-        Result->getTrailingObjects<MDNode *>()[HasHeapAllocMarker] =
-            PCSections;
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = PCSections;
       if (HasCFIType)
         Result->getTrailingObjects<uint32_t>()[0] = CFIType;
+      if (HasMMRAs)
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = MMRAs;
 
       return Result;
     }
@@ -221,6 +229,12 @@ private:
       return HasCFIType ? getTrailingObjects<uint32_t>()[0] : 0;
     }
 
+    MDNode *getMMRAMetadata() const {
+      return HasMMRAs ? getTrailingObjects<MDNode *>()[HasHeapAllocMarker +
+                                                       HasPCSections]
+                      : nullptr;
+    }
+
   private:
     friend TrailingObjects;
 
@@ -235,6 +249,7 @@ private:
     const bool HasHeapAllocMarker;
     const bool HasPCSections;
     const bool HasCFIType;
+    const bool HasMMRAs;
 
     // Implement the `TrailingObjects` internal API.
     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
@@ -253,11 +268,12 @@ private:
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.
     ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
-              bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType)
+              bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType,
+              bool HasMMRAs)
         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
           HasPostInstrSymbol(HasPostInstrSymbol),
           HasHeapAllocMarker(HasHeapAllocMarker), HasPCSections(HasPCSections),
-          HasCFIType(HasCFIType) {}
+          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs) {}
   };
 
   /// Enumeration of the kinds of inline extra info available. It is important
@@ -287,6 +303,9 @@ private:
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.
   unsigned DebugInstrNum;
+
+  /// Cached opcode from MCID.
+  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -400,6 +419,12 @@ public:
     assert(isUInt<LLVM_MI_FLAGS_BITS>(unsigned(Flag)) &&
            "Flag to clear is out of range for the Flags field");
     Flags &= ~((uint32_t)Flag);
+  }
+
+  void clearFlags(unsigned flags) {
+    assert(isUInt<LLVM_MI_FLAGS_BITS>(flags) &&
+           "flags to be cleared are out of range for the Flags field");
+    Flags &= ~flags;
   }
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
@@ -541,7 +566,7 @@ public:
   const MCInstrDesc &getDesc() const { return *MCID; }
 
   /// Returns the opcode of this MachineInstr.
-  unsigned getOpcode() const { return MCID->Opcode; }
+  unsigned getOpcode() const { return Opcode; }
 
   /// Retuns the total number of operands.
   unsigned getNumOperands() const { return NumOperands; }
@@ -617,7 +642,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef() && MO.isImplicit())
+      if (MO.isDef())
         return true;
     return false;
   }
@@ -703,7 +728,7 @@ public:
     return make_range(operands_begin(),
                       operands_begin() + getNumExplicitDefs());
   }
-  /// Returns a range that includes all operands that are register uses.
+  /// Returns a range that includes all operands which may be register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
     return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
@@ -833,6 +858,15 @@ public:
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getPCSections();
 
+    return nullptr;
+  }
+
+  /// Helper to extract mmra.op metadata.
+  MDNode *getMMRAMetadata() const {
+    if (!Info)
+      return nullptr;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getMMRAMetadata();
     return nullptr;
   }
 
@@ -1289,6 +1323,11 @@ public:
     return getOpcode() == TargetOpcode::ANNOTATION_LABEL;
   }
 
+  bool isLifetimeMarker() const {
+    return getOpcode() == TargetOpcode::LIFETIME_START ||
+           getOpcode() == TargetOpcode::LIFETIME_END;
+  }
+
   /// Returns true if the MachineInstr represents a label.
   bool isLabel() const {
     return isEHLabel() || isGCLabel() || isAnnotationLabel();
@@ -1401,6 +1440,8 @@ public:
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
 
+  bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
+
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
   bool isCopyLike() const {
@@ -1443,9 +1484,8 @@ public:
   /// is a read of a super-register.
   /// This does not count partial redefines of virtual registers as reads:
   ///   %reg1024:6 = OP.
-  bool readsRegister(Register Reg,
-                     const TargetRegisterInfo *TRI = nullptr) const {
-    return findRegisterUseOperandIdx(Reg, false, TRI) != -1;
+  bool readsRegister(Register Reg, const TargetRegisterInfo *TRI) const {
+    return findRegisterUseOperandIdx(Reg, TRI, false) != -1;
   }
 
   /// Return true if the MachineInstr reads the specified virtual register.
@@ -1464,34 +1504,30 @@ public:
   /// Return true if the MachineInstr kills the specified register.
   /// If TargetRegisterInfo is non-null, then it also checks if there is
   /// a kill of a super-register.
-  bool killsRegister(Register Reg,
-                     const TargetRegisterInfo *TRI = nullptr) const {
-    return findRegisterUseOperandIdx(Reg, true, TRI) != -1;
+  bool killsRegister(Register Reg, const TargetRegisterInfo *TRI) const {
+    return findRegisterUseOperandIdx(Reg, TRI, true) != -1;
   }
 
   /// Return true if the MachineInstr fully defines the specified register.
   /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a def of a super-register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
-  bool definesRegister(Register Reg,
-                       const TargetRegisterInfo *TRI = nullptr) const {
-    return findRegisterDefOperandIdx(Reg, false, false, TRI) != -1;
+  bool definesRegister(Register Reg, const TargetRegisterInfo *TRI) const {
+    return findRegisterDefOperandIdx(Reg, TRI, false, false) != -1;
   }
 
   /// Return true if the MachineInstr modifies (fully define or partially
   /// define) the specified register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
-  bool modifiesRegister(Register Reg,
-                        const TargetRegisterInfo *TRI = nullptr) const {
-    return findRegisterDefOperandIdx(Reg, false, true, TRI) != -1;
+  bool modifiesRegister(Register Reg, const TargetRegisterInfo *TRI) const {
+    return findRegisterDefOperandIdx(Reg, TRI, false, true) != -1;
   }
 
   /// Returns true if the register is dead in this machine instruction.
   /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a dead def of a super-register.
-  bool registerDefIsDead(Register Reg,
-                         const TargetRegisterInfo *TRI = nullptr) const {
-    return findRegisterDefOperandIdx(Reg, true, false, TRI) != -1;
+  bool registerDefIsDead(Register Reg, const TargetRegisterInfo *TRI) const {
+    return findRegisterDefOperandIdx(Reg, TRI, true, false) != -1;
   }
 
   /// Returns true if the MachineInstr has an implicit-use operand of exactly
@@ -1501,22 +1537,23 @@ public:
   /// Returns the operand index that is a use of the specific register or -1
   /// if it is not found. It further tightens the search criteria to a use
   /// that kills the register if isKill is true.
-  int findRegisterUseOperandIdx(Register Reg, bool isKill = false,
-                                const TargetRegisterInfo *TRI = nullptr) const;
+  int findRegisterUseOperandIdx(Register Reg, const TargetRegisterInfo *TRI,
+                                bool isKill = false) const;
 
   /// Wrapper for findRegisterUseOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
-  MachineOperand *findRegisterUseOperand(Register Reg, bool isKill = false,
-                                      const TargetRegisterInfo *TRI = nullptr) {
-    int Idx = findRegisterUseOperandIdx(Reg, isKill, TRI);
+  MachineOperand *findRegisterUseOperand(Register Reg,
+                                         const TargetRegisterInfo *TRI,
+                                         bool isKill = false) {
+    int Idx = findRegisterUseOperandIdx(Reg, TRI, isKill);
     return (Idx == -1) ? nullptr : &getOperand(Idx);
   }
 
-  const MachineOperand *findRegisterUseOperand(
-    Register Reg, bool isKill = false,
-    const TargetRegisterInfo *TRI = nullptr) const {
-    return const_cast<MachineInstr *>(this)->
-      findRegisterUseOperand(Reg, isKill, TRI);
+  const MachineOperand *findRegisterUseOperand(Register Reg,
+                                               const TargetRegisterInfo *TRI,
+                                               bool isKill = false) const {
+    return const_cast<MachineInstr *>(this)->findRegisterUseOperand(Reg, TRI,
+                                                                    isKill);
   }
 
   /// Returns the operand index that is a def of the specified register or
@@ -1525,26 +1562,26 @@ public:
   /// overlap the specified register. If TargetRegisterInfo is non-null,
   /// then it also checks if there is a def of a super-register.
   /// This may also return a register mask operand when Overlap is true.
-  int findRegisterDefOperandIdx(Register Reg,
-                                bool isDead = false, bool Overlap = false,
-                                const TargetRegisterInfo *TRI = nullptr) const;
+  int findRegisterDefOperandIdx(Register Reg, const TargetRegisterInfo *TRI,
+                                bool isDead = false,
+                                bool Overlap = false) const;
 
   /// Wrapper for findRegisterDefOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
-  MachineOperand *
-  findRegisterDefOperand(Register Reg, bool isDead = false,
-                         bool Overlap = false,
-                         const TargetRegisterInfo *TRI = nullptr) {
-    int Idx = findRegisterDefOperandIdx(Reg, isDead, Overlap, TRI);
+  MachineOperand *findRegisterDefOperand(Register Reg,
+                                         const TargetRegisterInfo *TRI,
+                                         bool isDead = false,
+                                         bool Overlap = false) {
+    int Idx = findRegisterDefOperandIdx(Reg, TRI, isDead, Overlap);
     return (Idx == -1) ? nullptr : &getOperand(Idx);
   }
 
-  const MachineOperand *
-  findRegisterDefOperand(Register Reg, bool isDead = false,
-                         bool Overlap = false,
-                         const TargetRegisterInfo *TRI = nullptr) const {
+  const MachineOperand *findRegisterDefOperand(Register Reg,
+                                               const TargetRegisterInfo *TRI,
+                                               bool isDead = false,
+                                               bool Overlap = false) const {
     return const_cast<MachineInstr *>(this)->findRegisterDefOperand(
-        Reg, isDead, Overlap, TRI);
+        Reg, TRI, isDead, Overlap);
   }
 
   /// Find the index of the first operand in the
@@ -1693,7 +1730,11 @@ public:
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.
-  bool isSafeToMove(AAResults *AA, bool &SawStore) const;
+  bool isSafeToMove(bool &SawStore) const;
+
+  /// Return true if this instruction would be trivially dead if all of its
+  /// defined registers were dead.
+  bool wouldBeTriviallyDead() const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
@@ -1900,6 +1941,8 @@ public:
   // addresses into.
   void setPCSections(MachineFunction &MF, MDNode *MD);
 
+  void setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs);
+
   /// Set the CFI type for the instruction.
   void setCFIType(MachineFunction &MF, uint32_t Type);
 
@@ -2012,7 +2055,7 @@ private:
   void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
-                    uint32_t CFIType);
+                    uint32_t CFIType, MDNode *MMRAs);
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

@@ -1,0 +1,32 @@
+@AUTO_GEN_COMMENT@
+
+config.bin_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
+config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
+config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
+config.test_fortran_compiler="@OPENMP_TEST_Fortran_COMPILER@"
+config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
+config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
+config.test_extra_flags = "@OPENMP_TEST_FLAGS@"
+config.cuda_path = "@CUDA_ROOT@"
+config.cuda_libdir = "@CUDA_LIBDIR@"
+config.cuda_test_arch = "@LIBOMPTARGET_DEP_CUDA_ARCH@"
+config.amdgpu_test_arch = "@LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST@"
+config.libomptarget_obj_root = "@CMAKE_CURRENT_BINARY_DIR@/@CURRENT_TARGET@"
+config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
+config.llvm_library_dir = "@LIBOMPTARGET_LLVM_LIBRARY_DIR@"
+config.llvm_library_intdir = "@LIBOMPTARGET_LLVM_LIBRARY_INTDIR@"
+config.omp_header_directory = "@LIBOMPTARGET_OPENMP_HEADER_FOLDER@"
+config.omp_host_rtl_directory = "@LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER@"
+config.llvm_lib_directory = "@LIBOMPTARGET_LLVM_LIBRARY_DIR@"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.libomptarget_all_targets = "@LIBOMPTARGET_ALL_TARGETS@".split()
+config.libomptarget_current_target = "@CURRENT_TARGET@"
+config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
+config.libomptarget_not = "@OPENMP_NOT_EXECUTABLE@"
+config.offload_device_info = "@OFFLOAD_DEVICE_INFO_EXECUTABLE@"
+config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
+config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
+config.libomptarget_has_libc = @LIBOMPTARGET_GPU_LIBC_SUPPORT@
+config.libomptarget_test_pgo = @LIBOMPTARGET_TEST_GPU_PGO@
+# Let the main config do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

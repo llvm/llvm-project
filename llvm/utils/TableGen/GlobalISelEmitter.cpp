@@ -30,27 +30,25 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenIntrinsics.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "GlobalISelMatchTable.h"
-#include "GlobalISelMatchTableExecutorEmitter.h"
-#include "InfoByHwMode.h"
-#include "SubtargetFeatureInfo.h"
+#include "Basic/CodeGenIntrinsics.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/GlobalISel/GlobalISelMatchTable.h"
+#include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <numeric>
 #include <string>
 
 using namespace llvm;
@@ -122,7 +120,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
     if (P.isTruncStore())
       Explanation += " truncstore";
 
-    if (Record *VT = P.getMemoryVT())
+    if (const Record *VT = P.getMemoryVT())
       Explanation += (" MemVT=" + VT->getName()).str();
     if (Record *VT = P.getScalarMemoryVT())
       Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
@@ -170,7 +168,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
   return Explanation;
 }
 
-std::string explainOperator(Record *Operator) {
+std::string explainOperator(const Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
     return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
@@ -209,7 +207,7 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
     if (Predicate.isImmediatePattern())
       continue;
 
-    if (Predicate.hasNoUse())
+    if (Predicate.hasNoUse() || Predicate.hasOneUse())
       continue;
 
     if (Predicate.isNonExtLoad() || Predicate.isAnyExtLoad() ||
@@ -337,7 +335,7 @@ public:
 private:
   std::string ClassName;
 
-  const RecordKeeper &RK;
+  RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
   CodeGenRegBank &CGRegs;
@@ -348,7 +346,7 @@ private:
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
   /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
-  DenseMap<Record *, Record *> NodeEquivs;
+  DenseMap<const Record *, Record *> NodeEquivs;
 
   /// Keep track of the equivalence between ComplexPattern's and
   /// GIComplexOperandMatcher. Map entries are specified by subclassing
@@ -381,7 +379,7 @@ private:
   void gatherTypeIDValues();
   void gatherNodeEquivs();
 
-  Record *findNodeEquiv(Record *N) const;
+  Record *findNodeEquiv(const Record *N) const;
   const CodeGenInstruction *getEquivNode(Record &Equiv,
                                          const TreePatternNode &N) const;
 
@@ -390,7 +388,7 @@ private:
   createAndImportSelDAGMatcher(RuleMatcher &Rule,
                                InstructionMatcher &InsnMatcher,
                                const TreePatternNode &Src, unsigned &TempOpIdx);
-  Error importComplexPatternOperandMatcher(OperandMatcher &OM, Record *R,
+  Error importComplexPatternOperandMatcher(OperandMatcher &OM, const Record *R,
                                            unsigned &TempOpIdx) const;
   Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode &SrcChild,
@@ -506,7 +504,7 @@ void GlobalISelEmitter::gatherNodeEquivs() {
   }
 }
 
-Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
+Record *GlobalISelEmitter::findNodeEquiv(const Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
@@ -784,6 +782,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       InsnMatcher.addPredicate<NoUsePredicateMatcher>();
       HasAddedBuiltinMatcher = true;
     }
+    if (Predicate.hasOneUse()) {
+      InsnMatcher.addPredicate<OneUsePredicateMatcher>();
+      HasAddedBuiltinMatcher = true;
+    }
 
     if (Predicate.hasGISelPredicateCode()) {
       if (Predicate.usesOperands()) {
@@ -792,8 +794,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
                "nested predicate that uses operands");
         TreePattern *TP = Predicate.getOrigPatFragRecord();
         WaitingForNamedOperands = TP->getNumArgs();
-        for (unsigned i = 0; i < WaitingForNamedOperands; ++i)
-          StoreIdxForName[getScopedName(Call.Scope, TP->getArgName(i))] = i;
+        for (unsigned I = 0; I < WaitingForNamedOperands; ++I)
+          StoreIdxForName[getScopedName(Call.Scope, TP->getArgName(I))] = I;
       }
       InsnMatcher.addPredicate<GenericInstructionPredicateMatcher>(Predicate);
       continue;
@@ -831,6 +833,11 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
       InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
+      return InsnMatcher;
+    }
+
+    if (SrcGIOrNull->TheDef->getName() == "G_FRAME_INDEX") {
+      InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
       return InsnMatcher;
     }
 
@@ -873,8 +880,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (IsIntrinsic && !II)
       return failedImport("Expected IntInit containing intrinsic ID)");
 
-    for (unsigned i = 0; i != NumChildren; ++i) {
-      const TreePatternNode &SrcChild = Src.getChild(i);
+    for (unsigned I = 0; I != NumChildren; ++I) {
+      const TreePatternNode &SrcChild = Src.getChild(I);
 
       // We need to determine the meaning of a literal integer based on the
       // context. If this is a field required to be an immediate (such as an
@@ -883,19 +890,19 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // argument that is required to be an immediate, we should not emit an LLT
       // type check, and should not be looking for a G_CONSTANT defined
       // register.
-      bool OperandIsImmArg = SrcGIOrNull->isInOperandImmArg(i);
+      bool OperandIsImmArg = SrcGIOrNull->isInOperandImmArg(I);
 
       // SelectionDAG allows pointers to be represented with iN since it doesn't
       // distinguish between pointers and integers but they are different types
       // in GlobalISel. Coerce integers to pointers to address space 0 if the
       // context indicates a pointer.
       //
-      bool OperandIsAPointer = SrcGIOrNull->isInOperandAPointer(i);
+      bool OperandIsAPointer = SrcGIOrNull->isInOperandAPointer(I);
 
       if (IsIntrinsic) {
         // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
         // following the defs is an intrinsic ID.
-        if (i == 0) {
+        if (I == 0) {
           OperandMatcher &OM =
               InsnMatcher.addOperand(OpIdx++, SrcChild.getName(), TempOpIdx);
           OM.addPredicate<IntrinsicIDOperandMatcher>(II);
@@ -906,8 +913,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         //
         // Note that we have to look at the i-1th parameter, because we don't
         // have the intrinsic ID in the intrinsic's parameter list.
-        OperandIsAPointer |= II->isParamAPointer(i - 1);
-        OperandIsImmArg |= II->isParamImmArg(i - 1);
+        OperandIsAPointer |= II->isParamAPointer(I - 1);
+        OperandIsImmArg |= II->isParamImmArg(I - 1);
       }
 
       if (auto Error =
@@ -921,7 +928,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 }
 
 Error GlobalISelEmitter::importComplexPatternOperandMatcher(
-    OperandMatcher &OM, Record *R, unsigned &TempOpIdx) const {
+    OperandMatcher &OM, const Record *R, unsigned &TempOpIdx) const {
   const auto &ComplexPattern = ComplexPatternEquivs.find(R);
   if (ComplexPattern == ComplexPatternEquivs.end())
     return failedImport("SelectionDAG ComplexPattern (" + R->getName() +
@@ -962,9 +969,9 @@ Error GlobalISelEmitter::importChildMatcher(
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
     std::string PatternName = std::string(SrcChild.getOperator()->getName());
-    for (unsigned i = 0; i < SrcChild.getNumChildren(); ++i) {
+    for (unsigned I = 0; I < SrcChild.getNumChildren(); ++I) {
       PatternName += ":";
-      PatternName += SrcChild.getChild(i).getName();
+      PatternName += SrcChild.getChild(I).getName();
     }
     SrcChildName = PatternName;
   }
@@ -1037,11 +1044,11 @@ Error GlobalISelEmitter::importChildMatcher(
               OM, SrcChild.getOperator(), TempOpIdx))
         return Error;
 
-      for (unsigned i = 0, e = SrcChild.getNumChildren(); i != e; ++i) {
-        auto &SubOperand = SrcChild.getChild(i);
+      for (unsigned I = 0, E = SrcChild.getNumChildren(); I != E; ++I) {
+        auto &SubOperand = SrcChild.getChild(I);
         if (!SubOperand.getName().empty()) {
           if (auto Error = Rule.defineComplexSubOperand(
-                  SubOperand.getName(), SrcChild.getOperator(), RendererID, i,
+                  SubOperand.getName(), SrcChild.getOperator(), RendererID, I,
                   SrcChildName))
             return Error;
         }
@@ -1155,7 +1162,7 @@ Error GlobalISelEmitter::importChildMatcher(
       OperandMatcher &OM =
           InsnOperand.getInsnMatcher().addOperand(0, "", TempOpIdx);
       if (auto Error =
-              OM.addTypeCheckPredicate(VTy, false /* OperandIsAPointer */))
+              OM.addTypeCheckPredicate(TypeSetByHwMode(VTy), false /* OperandIsAPointer */))
         return failedImport(toString(std::move(Error)) +
                             " for result of Src pattern operator");
 
@@ -1223,10 +1230,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild.getOperator()->getName() == "timm") {
       DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
       return InsertPt;
-    } else if (DstChild.getOperator()->getName() == "imm") {
+    }
+    if (DstChild.getOperator()->getName() == "tframeindex") {
+      DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+      return InsertPt;
+    }
+    if (DstChild.getOperator()->getName() == "imm") {
       DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(DstChild.getName());
       return InsertPt;
-    } else if (DstChild.getOperator()->getName() == "fpimm") {
+    }
+    if (DstChild.getOperator()->getName() == "fpimm") {
       DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
           DstChild.getName());
       return InsertPt;
@@ -1495,7 +1508,7 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst) {
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
       return failedImport(
@@ -1691,7 +1704,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     unsigned InstOpNo = DstI->Operands.NumDefs + I;
 
     // Determine what to emit for this operand.
-    Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+    const Record *OperandNode = DstI->Operands[InstOpNo].Rec;
 
     // If the operand has default values, introduce them now.
     if (CGP.operandHasDefault(OperandNode) &&
@@ -1700,7 +1713,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
 
-      Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+      const Record *OperandNode = DstI->Operands[InstOpNo].Rec;
       if (auto Error = importDefaultOperandRenderers(
               InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
         return std::move(Error);
@@ -1739,7 +1752,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
       std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
-      auto Def = DefaultDefOp->getDef();
+      auto *Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
         M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
@@ -1800,7 +1813,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // just take the first one).
   if (N.getNumTypes() < 1)
     return std::nullopt;
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
 
   // We only want instructions.
   if (!OpRec->isSubClassOf("Instruction"))
@@ -1837,7 +1850,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // Handle destination record types that we can safely infer a register class
   // from.
   const auto &DstIOperand = Inst.Operands[0];
-  Record *DstIOpRec = DstIOperand.Rec;
+  const Record *DstIOpRec = DstIOperand.Rec;
   if (DstIOpRec->isSubClassOf("RegisterOperand")) {
     DstIOpRec = DstIOpRec->getValueAsDef("RegClass");
     const CodeGenRegisterClass &RC = Target.getRegisterClass(DstIOpRec);
@@ -1998,7 +2011,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   }
 
   // Start with the defined operands (i.e., the results of the root operator).
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction"))
     return failedImport("Pattern operator isn't an instruction");
 
@@ -2032,7 +2045,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     const TypeSetByHwMode &VTy = Src.getExtType(I);
 
     const auto &DstIOperand = DstI.Operands[OpIdx];
-    PointerUnion<Record *, const CodeGenRegisterClass *> MatchedRC =
+    PointerUnion<const Record *, const CodeGenRegisterClass *> MatchedRC =
         DstIOperand.Rec;
     if (DstIName == "COPY_TO_REGCLASS") {
       MatchedRC = getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
@@ -2069,9 +2082,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
       MatchedRC = *MaybeRegClass;
-    } else if (MatchedRC.get<Record *>()->isSubClassOf("RegisterOperand"))
-      MatchedRC = MatchedRC.get<Record *>()->getValueAsDef("RegClass");
-    else if (!MatchedRC.get<Record *>()->isSubClassOf("RegisterClass"))
+    } else if (MatchedRC.get<const Record *>()->isSubClassOf("RegisterOperand"))
+      MatchedRC = MatchedRC.get<const Record *>()->getValueAsDef("RegClass");
+    else if (!MatchedRC.get<const Record *>()->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" + to_string(Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
@@ -2081,8 +2094,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // GIM_CheckIsSameOperand predicates by the defineOperand method.
     OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
-    if (MatchedRC.is<Record *>())
-      MatchedRC = &Target.getRegisterClass(MatchedRC.get<Record *>());
+    if (MatchedRC.is<const Record *>())
+      MatchedRC = &Target.getRegisterClass(MatchedRC.get<const Record *>());
     OM.addPredicate<RegisterBankOperandMatcher>(
         *MatchedRC.get<const CodeGenRegisterClass *>());
     ++OpIdx;
@@ -2235,8 +2248,10 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
-           std::tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)
@@ -2344,7 +2359,7 @@ void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
-  OS << "void " << getClassName()
+  OS << "bool " << getClassName()
      << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
         "{\n"
      << "    llvm_unreachable(\"" + getClassName() +
@@ -2411,6 +2426,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
 
+    if (Pat.getGISelShouldIgnore())
+      continue; // skip without warning
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.
@@ -2438,13 +2455,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   }
 
   // Comparison function to order records by name.
-  auto orderByName = [](const Record *A, const Record *B) {
+  auto OrderByName = [](const Record *A, const Record *B) {
     return A->getName() < B->getName();
   };
 
   std::vector<Record *> ComplexPredicates =
       RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
-  llvm::sort(ComplexPredicates, orderByName);
+  llvm::sort(ComplexPredicates, OrderByName);
 
   std::vector<StringRef> CustomRendererFns;
   transform(RK.getAllDerivedDefinitions("GICustomOperandRenderer"),
@@ -2454,9 +2471,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Sort and remove duplicates to get a list of unique renderer functions, in
   // case some were mentioned more than once.
   llvm::sort(CustomRendererFns);
-  CustomRendererFns.erase(
-      std::unique(CustomRendererFns.begin(), CustomRendererFns.end()),
-      CustomRendererFns.end());
+  CustomRendererFns.erase(llvm::unique(CustomRendererFns),
+                          CustomRendererFns.end());
 
   // Create a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.

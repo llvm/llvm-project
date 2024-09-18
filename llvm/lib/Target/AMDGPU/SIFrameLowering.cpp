@@ -579,6 +579,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
         (!GITPtrLoReg || !TRI->isSubRegisterEq(Reg, GITPtrLoReg))) {
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
+      MRI.reserveReg(Reg, TRI);
       return Reg;
     }
   }
@@ -678,22 +679,28 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         break;
       }
     }
+
+    // FIXME: We can spill incoming arguments and restore at the end of the
+    // prolog.
+    if (!ScratchWaveOffsetReg)
+      report_fatal_error(
+          "could not find temporary scratch offset register in prolog");
   } else {
     ScratchWaveOffsetReg = PreloadedScratchWaveOffsetReg;
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
+
+  if (hasFP(MF)) {
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+  }
 
   if (requiresStackPointerReference(MF)) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
         .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
-  }
-
-  if (hasFP(MF)) {
-    Register FPReg = MFI->getFrameOffsetReg();
-    assert(FPReg != AMDGPU::FP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
   }
 
   bool NeedsFlatScratchInit =
@@ -1336,10 +1343,14 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Allocate spill slots for WWM reserved VGPRs.
   // For chain functions, we only need to do this if we have calls to
-  // llvm.amdgcn.cs.chain.
-  bool IsChainWithoutCalls =
-      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
-  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
+  // llvm.amdgcn.cs.chain (otherwise there's no one to save them for, since
+  // chain functions do not return) and the function did not contain a call to
+  // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
+  // when entering the function).
+  bool IsChainWithoutRestores =
+      FuncInfo->isChainFunction() &&
+      (!MF.getFrameInfo().hasTailCall() || FuncInfo->hasInitWholeWave());
+  if (!FuncInfo->isEntryFunction() && !IsChainWithoutRestores) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
       const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),

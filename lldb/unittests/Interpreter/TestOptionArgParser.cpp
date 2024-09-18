@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "llvm/Support/Error.h"
 
 using namespace lldb_private;
 
@@ -63,6 +64,45 @@ TEST(OptionArgParserTest, toBoolean) {
   EXPECT_FALSE(success);
   EXPECT_TRUE(OptionArgParser::ToBoolean(llvm::StringRef(""), true, &success));
   EXPECT_FALSE(success);
+}
+
+void TestToBooleanWithExpectedBool(llvm::StringRef option_arg,
+                                   bool expected_parse_success,
+                                   bool expected_result) {
+  llvm::Expected<bool> bool_or_error =
+      OptionArgParser::ToBoolean(llvm::StringRef("test_option"), option_arg);
+  EXPECT_EQ(expected_parse_success, (bool)bool_or_error);
+  if (expected_parse_success)
+    EXPECT_EQ(expected_result, *bool_or_error);
+  else {
+    std::string error = llvm::toString(bool_or_error.takeError());
+    EXPECT_NE(std::string::npos, error.find("test_option"));
+  }
+}
+
+TEST(OptionArgParserTest, toBooleanWithExpectedBool) {
+  TestToBooleanWithExpectedBool(llvm::StringRef("true"), true, true);
+  TestToBooleanWithExpectedBool(llvm::StringRef("on"), true, true);
+  TestToBooleanWithExpectedBool(llvm::StringRef("yes"), true, true);
+  TestToBooleanWithExpectedBool(llvm::StringRef("1"), true, true);
+
+  TestToBooleanWithExpectedBool(llvm::StringRef("True"), true, true);
+  TestToBooleanWithExpectedBool(llvm::StringRef("On"), true, true);
+  TestToBooleanWithExpectedBool(llvm::StringRef("Yes"), true, true);
+
+  TestToBooleanWithExpectedBool(llvm::StringRef("false"), true, false);
+  TestToBooleanWithExpectedBool(llvm::StringRef("off"), true, false);
+  TestToBooleanWithExpectedBool(llvm::StringRef("no"), true, false);
+  TestToBooleanWithExpectedBool(llvm::StringRef("0"), true, false);
+
+  TestToBooleanWithExpectedBool(llvm::StringRef("False"), true, false);
+  TestToBooleanWithExpectedBool(llvm::StringRef("Off"), true, false);
+  TestToBooleanWithExpectedBool(llvm::StringRef("No"), true, false);
+
+  TestToBooleanWithExpectedBool(llvm::StringRef("10"), false,
+                                false /* doesn't matter */);
+  TestToBooleanWithExpectedBool(llvm::StringRef(""), false,
+                                false /* doesn't matter */);
 }
 
 TEST(OptionArgParserTest, toChar) {

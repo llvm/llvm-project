@@ -15,9 +15,8 @@ define i8 @abs_i8(i8 %a){
 ; CHECK-GI-LABEL: abs_i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxtb w8, w0
-; CHECK-GI-NEXT:    asr w8, w8, #7
-; CHECK-GI-NEXT:    add w9, w0, w8
-; CHECK-GI-NEXT:    eor w0, w9, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cneg w0, w0, le
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call i8 @llvm.abs.i8(i8 %a, i1 0)
@@ -36,9 +35,8 @@ define i16 @abs_i16(i16 %a){
 ; CHECK-GI-LABEL: abs_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxth w8, w0
-; CHECK-GI-NEXT:    asr w8, w8, #15
-; CHECK-GI-NEXT:    add w9, w0, w8
-; CHECK-GI-NEXT:    eor w0, w9, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cneg w0, w0, le
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call i16 @llvm.abs.i16(i16 %a, i1 0)
@@ -55,9 +53,8 @@ define i32 @abs_i32(i32 %a){
 ;
 ; CHECK-GI-LABEL: abs_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    asr w8, w0, #31
-; CHECK-GI-NEXT:    add w9, w0, w8
-; CHECK-GI-NEXT:    eor w0, w9, w8
+; CHECK-GI-NEXT:    cmp w0, #0
+; CHECK-GI-NEXT:    cneg w0, w0, le
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call i32 @llvm.abs.i32(i32 %a, i1 0)
@@ -74,9 +71,8 @@ define i64 @abs_i64(i64 %a){
 ;
 ; CHECK-GI-LABEL: abs_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    asr x8, x0, #63
-; CHECK-GI-NEXT:    add x9, x0, x8
-; CHECK-GI-NEXT:    eor x0, x9, x8
+; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cneg x0, x0, le
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call i64 @llvm.abs.i64(i64 %a, i1 0)
@@ -248,10 +244,10 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ; CHECK-GI-LABEL: abs_v1i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    asr w9, w8, #31
-; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    eor w8, w8, w9
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cneg w8, w9, le
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -284,6 +280,40 @@ entry:
 }
 declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
 
+define <2 x i128> @abs_v4i128(<2 x i128> %a){
+; CHECK-SD-LABEL: abs_v4i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    asr x8, x1, #63
+; CHECK-SD-NEXT:    asr x9, x3, #63
+; CHECK-SD-NEXT:    eor x10, x0, x8
+; CHECK-SD-NEXT:    eor x11, x1, x8
+; CHECK-SD-NEXT:    subs x0, x10, x8
+; CHECK-SD-NEXT:    eor x10, x2, x9
+; CHECK-SD-NEXT:    sbc x1, x11, x8
+; CHECK-SD-NEXT:    eor x8, x3, x9
+; CHECK-SD-NEXT:    subs x2, x10, x9
+; CHECK-SD-NEXT:    sbc x3, x8, x9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_v4i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    asr x9, x3, #63
+; CHECK-GI-NEXT:    adds x10, x0, x8
+; CHECK-GI-NEXT:    adc x11, x1, x8
+; CHECK-GI-NEXT:    adds x12, x2, x9
+; CHECK-GI-NEXT:    eor x0, x10, x8
+; CHECK-GI-NEXT:    adc x13, x3, x9
+; CHECK-GI-NEXT:    eor x1, x11, x8
+; CHECK-GI-NEXT:    eor x2, x12, x9
+; CHECK-GI-NEXT:    eor x3, x13, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  %res = call <2 x i128> @llvm.abs.v2i128(<2 x i128> %a, i1 0)
+  ret <2 x i128> %res
+}
+declare <2 x i128> @llvm.abs.v2i128(<2 x i128>, i1)
+
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @abs_v3i8(<3 x i8> %a){
@@ -303,10 +333,8 @@ define <3 x i8> @abs_v3i8(<3 x i8> %a){
 ; CHECK-GI-LABEL: abs_v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    mov v0.b[1], w1
+; CHECK-GI-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-NEXT:    abs v0.8b, v0.8b
 ; CHECK-GI-NEXT:    umov w0, v0.b[0]
 ; CHECK-GI-NEXT:    umov w1, v0.b[1]

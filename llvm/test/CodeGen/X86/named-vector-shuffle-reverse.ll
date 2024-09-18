@@ -23,7 +23,7 @@ define <16 x i8> @reverse_v16i8(<16 x i8> %a) #0 {
 ; CHECK-NEXT:    packuswb %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 
-  %res = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> %a)
+  %res = call <16 x i8> @llvm.vector.reverse.v16i8(<16 x i8> %a)
   ret <16 x i8> %res
 }
 
@@ -34,7 +34,7 @@ define <8 x i16> @reverse_v8i16(<8 x i16> %a) #0 {
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; CHECK-NEXT:    retq
-  %res = call <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16> %a)
+  %res = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %res
 }
 
@@ -43,7 +43,7 @@ define <4 x i32> @reverse_v4i32(<4 x i32> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
-  %res = call <4 x i32> @llvm.experimental.vector.reverse.v4i32(<4 x i32> %a)
+  %res = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %res
 }
 
@@ -52,7 +52,7 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
-  %res = call <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64> %a)
+  %res = call <2 x i64> @llvm.vector.reverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %res
 }
 
@@ -61,7 +61,7 @@ define <4 x float> @reverse_v4f32(<4 x float> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
-  %res = call <4 x float> @llvm.experimental.vector.reverse.v4f32(<4 x float> %a)
+  %res = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %a)
   ret <4 x float> %res
 }
 
@@ -70,7 +70,7 @@ define <2 x double> @reverse_v2f64(<2 x double> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
-  %res = call <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double> %a)
+  %res = call <2 x double> @llvm.vector.reverse.v2f64(<2 x double> %a)
   ret <2 x double> %res
 }
 
@@ -83,7 +83,7 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) #0 {
 ; CHECK-NEXT:    psllw $8, %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
+  %res = call <2 x i8> @llvm.vector.reverse.v2i8(<2 x i8> %a)
   ret <2 x i8> %res
 }
 
@@ -95,7 +95,7 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) #0 {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32> %a)
+  %res = call <8 x i32> @llvm.vector.reverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %res
 }
 
@@ -115,20 +115,20 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) #0 {
 ; CHECK-NEXT:    movaps %xmm5, %xmm3
 ; CHECK-NEXT:    retq
 
-  %res = call <16 x float> @llvm.experimental.vector.reverse.v16f32(<16 x float> %a)
+  %res = call <16 x float> @llvm.vector.reverse.v16f32(<16 x float> %a)
   ret <16 x float> %res
 }
 
 
-declare <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8>)
-declare <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8>)
-declare <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16>)
-declare <4 x i32> @llvm.experimental.vector.reverse.v4i32(<4 x i32>)
-declare <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32>)
-declare <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64>)
-declare <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half>)
-declare <4 x float> @llvm.experimental.vector.reverse.v4f32(<4 x float>)
-declare <16 x float> @llvm.experimental.vector.reverse.v16f32(<16 x float>)
-declare <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double>)
+declare <2 x i8> @llvm.vector.reverse.v2i8(<2 x i8>)
+declare <16 x i8> @llvm.vector.reverse.v16i8(<16 x i8>)
+declare <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16>)
+declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
+declare <8 x i32> @llvm.vector.reverse.v8i32(<8 x i32>)
+declare <2 x i64> @llvm.vector.reverse.v2i64(<2 x i64>)
+declare <8 x half> @llvm.vector.reverse.v8f16(<8 x half>)
+declare <4 x float> @llvm.vector.reverse.v4f32(<4 x float>)
+declare <16 x float> @llvm.vector.reverse.v16f32(<16 x float>)
+declare <2 x double> @llvm.vector.reverse.v2f64(<2 x double>)
 
 attributes #0 = { nounwind }

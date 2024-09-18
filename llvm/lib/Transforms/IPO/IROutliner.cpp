@@ -678,7 +678,7 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), MangledNameStream.str(),
+        Unit /* Context */, F->getName(), Dummy,
         Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
@@ -723,8 +723,8 @@ static void moveFunctionData(Function &Old, Function &New,
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
-      // the same debug instructions. Drop non-intrinsic DPValues here,
-      // collect intrinsics for removal later.
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
       Val.dropDbgRecords();
 
       // We must handle the scoping of called functions differently than
@@ -1333,11 +1333,10 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
       if (!isa<PointerType>(Group.ArgumentTypes[Jdx]))
         continue;
 
-      if (AggArgsUsed.contains(Jdx))
+      if (!AggArgsUsed.insert(Jdx).second)
         continue;
 
       TypeFound = true;
-      AggArgsUsed.insert(Jdx);
       Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
       Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
       AggArgIdx = Jdx;

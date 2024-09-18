@@ -24,7 +24,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   CheckObjCInstMethSignature.cpp
   CheckPlacementNew.cpp
   CheckSecuritySyntaxOnly.cpp
-  CheckSizeofPointer.cpp
   CheckerDocumentation.cpp
   ChrootChecker.cpp
   CloneChecker.cpp
@@ -64,7 +63,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   MacOSKeychainAPIChecker.cpp
   MacOSXAPIChecker.cpp
   MallocChecker.cpp
-  MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
   MismatchedIteratorChecker.cpp
   MmapWriteExecChecker.cpp
@@ -78,6 +76,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   NoReturnFunctionChecker.cpp
   NonNullParamChecker.cpp
   NonnullGlobalConstantsChecker.cpp
+  NoOwnershipChangeVisitor.cpp
   NullabilityChecker.cpp
   NumberObjectConversionChecker.cpp
   ObjCAtSyncChecker.cpp
@@ -96,13 +95,14 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerSortingChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
-  cert/PutenvWithAutoChecker.cpp
+  PutenvStackArrayChecker.cpp
   RetainCountChecker/RetainCountChecker.cpp
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
   ReturnValueChecker.cpp
   RunLoopAutoreleaseLeakChecker.cpp
+  SetgidSetuidOrderChecker.cpp
   SimpleStreamChecker.cpp
   SmartPtrChecker.cpp
   SmartPtrModeling.cpp

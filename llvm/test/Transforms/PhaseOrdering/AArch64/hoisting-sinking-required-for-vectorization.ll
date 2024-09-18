@@ -134,11 +134,11 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 40000
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 40000
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 40000
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP2]], [[B]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[C]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ugt ptr [[SCEVGEP3]], [[B]]
-; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ugt ptr [[SCEVGEP]], [[A]]
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[B]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[LOOP_BODY:%.*]], label [[VECTOR_PH:%.*]]
@@ -158,16 +158,16 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[WIDE_LOAD8]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[WIDE_LOAD9]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP2]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP3]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD11]]
-; CHECK-NEXT:    [[PREDPHI12:%.*]] = fadd <4 x float> [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP6]], [[WIDE_LOAD10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[WIDE_LOAD11]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP6]], <4 x float> [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI12:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP12]], align 4, !alias.scope [[META9]], !noalias [[META11]]
@@ -181,7 +181,7 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C_LV]], 20
 ; CHECK-NEXT:    [[A_GEP_0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV1]]
 ; CHECK-NEXT:    [[A_LV_0:%.*]] = load float, ptr [[A_GEP_0]], align 4
-; CHECK-NEXT:    [[MUL2_I81_I:%.*]] = fmul float [[A_LV_0]], [[X]]
+; CHECK-NEXT:    [[MUL2_I81_I:%.*]] = fmul float [[X]], [[A_LV_0]]
 ; CHECK-NEXT:    [[B_GEP_0:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[ELSE:%.*]]
 ; CHECK:       else:

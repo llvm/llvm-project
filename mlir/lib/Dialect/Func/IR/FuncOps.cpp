@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
@@ -18,7 +19,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
@@ -41,8 +41,10 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
-  declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
-  declarePromisedInterface<FuncDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
+                            FuncOp, ReturnOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -121,12 +123,13 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConstantOp::verify() {
+LogicalResult ConstantOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef fnName = getValue();
   Type type = getType();
 
   // Try to find the referenced function.
-  auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnName);
+  auto fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(
+      this->getOperation(), StringAttr::get(getContext(), fnName));
   if (!fn)
     return emitOpError() << "reference to undefined function '" << fnName
                          << "'";

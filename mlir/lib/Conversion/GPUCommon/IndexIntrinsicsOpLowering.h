@@ -14,6 +14,14 @@
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {
+namespace gpu {
+namespace index_lowering {
+enum class IndexKind : uint32_t { Other = 0, Block = 1, Grid = 2 };
+enum class IntrType : uint32_t {
+  None = 0,
+  Id = 1,
+  Dim = 2,
+};
 
 // Rewriting that replaces Op with XOp, YOp, or ZOp depending on the dimension
 // that Op operates on.  Op is assumed to return an `index` value and
@@ -21,22 +29,23 @@ namespace mlir {
 // `indexBitwidth`, sign-extend or truncate the resulting value to match the
 // bitwidth expected by the consumers of the value.
 template <typename Op, typename XOp, typename YOp, typename ZOp>
-struct GPUIndexIntrinsicOpLowering : public ConvertOpToLLVMPattern<Op> {
+struct OpLowering : public ConvertOpToLLVMPattern<Op> {
 private:
   unsigned indexBitwidth;
-  StringRef boundsAttrName;
+  IndexKind indexKind;
+  IntrType intrType;
 
 public:
-  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter)
+  explicit OpLowering(LLVMTypeConverter &typeConverter)
       : ConvertOpToLLVMPattern<Op>(typeConverter),
         indexBitwidth(typeConverter.getIndexTypeBitwidth()),
-        boundsAttrName("") {}
+        indexKind(IndexKind::Other), intrType(IntrType::None) {}
 
-  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter,
-                                       StringRef boundsAttrName)
+  explicit OpLowering(LLVMTypeConverter &typeConverter, IndexKind indexKind,
+                      IntrType intrType)
       : ConvertOpToLLVMPattern<Op>(typeConverter),
         indexBitwidth(typeConverter.getIndexTypeBitwidth()),
-        boundsAttrName(boundsAttrName) {}
+        indexKind(indexKind), intrType(intrType) {}
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
   LogicalResult
@@ -57,19 +66,58 @@ public:
       break;
     }
 
-    Operation *function;
-    if (auto gpuFunc = op->template getParentOfType<gpu::GPUFuncOp>())
-      function = gpuFunc;
-    if (auto llvmFunc = op->template getParentOfType<LLVM::LLVMFuncOp>())
-      function = llvmFunc;
-    if (!boundsAttrName.empty() && function) {
-      if (auto attr = function->template getAttrOfType<DenseI32ArrayAttr>(
-              boundsAttrName)) {
-        int32_t maximum = attr[static_cast<uint32_t>(op.getDimension())];
-        newOp->setAttr("range", rewriter.getDenseI32ArrayAttr({0, maximum}));
+    // Order of priority for bounds:
+    // 1. The upper_bound attribute
+    // 2. Inherent attributes on a surrounding gpu.func
+    // 3. Discardable attributes on a surrounding function of any kind
+    // The below code handles these in reverse order so that more important
+    // sources overwrite less important ones.
+    DenseI32ArrayAttr funcBounds = nullptr;
+    if (auto funcOp = op->template getParentOfType<FunctionOpInterface>()) {
+      switch (indexKind) {
+      case IndexKind::Block: {
+        auto blockHelper =
+            gpu::GPUDialect::KnownBlockSizeAttrHelper(op.getContext());
+        if (blockHelper.isAttrPresent(funcOp))
+          funcBounds = blockHelper.getAttr(funcOp);
+        break;
+      }
+      case IndexKind::Grid: {
+        auto gridHelper =
+            gpu::GPUDialect::KnownGridSizeAttrHelper(op.getContext());
+        if (gridHelper.isAttrPresent(funcOp))
+          funcBounds = gridHelper.getAttr(funcOp);
+        break;
+      }
+      case IndexKind::Other:
+        break;
       }
     }
+    if (auto gpuFunc = op->template getParentOfType<gpu::GPUFuncOp>()) {
+      switch (indexKind) {
+      case IndexKind::Block:
+        funcBounds = gpuFunc.getKnownBlockSizeAttr();
+        break;
+      case IndexKind::Grid:
+        funcBounds = gpuFunc.getKnownGridSizeAttr();
+        break;
+      case IndexKind::Other:
+        break;
+      }
+    }
+    std::optional<int32_t> upperBound;
+    if (funcBounds)
+      upperBound =
+          funcBounds.asArrayRef()[static_cast<uint32_t>(op.getDimension())];
+    if (auto opBound = op.getUpperBound())
+      upperBound = opBound->getZExtValue();
 
+    if (upperBound && intrType != IntrType::None) {
+      int32_t min = (intrType == IntrType::Dim ? 1 : 0);
+      int32_t max = *upperBound + (intrType == IntrType::Id ? 0 : 1);
+      newOp->setAttr("range", LLVM::ConstantRangeAttr::get(
+                                  rewriter.getContext(), 32, min, max));
+    }
     if (indexBitwidth > 32) {
       newOp = rewriter.create<LLVM::SExtOp>(
           loc, IntegerType::get(context, indexBitwidth), newOp->getResult(0));
@@ -82,7 +130,8 @@ public:
     return success();
   }
 };
-
+} // namespace index_lowering
+} // namespace gpu
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_INDEXINTRINSICSOPLOWERING_H_

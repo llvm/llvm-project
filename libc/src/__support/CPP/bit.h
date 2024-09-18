@@ -14,14 +14,15 @@
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
@@ -36,20 +37,20 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     To>
 bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
-#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#if __has_builtin(__builtin_bit_cast)
   return __builtin_bit_cast(To, from);
 #else
   To to;
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
   __builtin_memcpy_inline(dst, src, sizeof(To));
 #else
   for (unsigned i = 0; i < sizeof(To); ++i)
     dst[i] = src[i];
-#endif // LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#endif // __has_builtin(__builtin_memcpy_inline)
   return to;
-#endif // LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#endif // __has_builtin(__builtin_bit_cast)
 }
 
 template <typename T>
@@ -73,6 +74,14 @@ has_single_bit(T value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_ctzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_zero(T value) {
+  return __builtin_ctzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countr_zero(T value) {
@@ -94,12 +103,13 @@ countr_zero(T value) {
   }
   return zero_bits;
 }
-#if LIBC_HAS_BUILTIN(__builtin_ctzs)
+#if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
 #endif
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -107,6 +117,14 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_clzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_zero(T value) {
+  return __builtin_clzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_zero(T value) {
@@ -124,12 +142,13 @@ countl_zero(T value) {
   }
   return zero_bits;
 }
-#if LIBC_HAS_BUILTIN(__builtin_clzs)
+#if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
 #endif
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
 
@@ -242,13 +261,22 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
 /// Count number of 1's aka population count or Hamming weight.
 ///
 /// Only unsigned integral types are allowed.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_popcountg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+popcount(T value) {
+  return __builtin_popcountg(value);
+}
+#else // !__has_builtin(__builtin_popcountg)
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 popcount(T value) {
   int count = 0;
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    if ((value >> i) & 0x1)
-      ++count;
+  while (value) {
+    value &= value - 1;
+    ++count;
+  }
   return count;
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
@@ -261,9 +289,10 @@ ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
 ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
-// TODO: 128b specializations?
+#endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

@@ -17,9 +17,11 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,10 +56,12 @@ namespace {
 /// Shared state per-module
 class PassState {
 public:
+  PassState(mlir::DominanceInfo &domInfo) : domInfo(domInfo) {}
   /// memoised call to fir::AliasAnalysis::getSource
   inline const fir::AliasAnalysis::Source &getSource(mlir::Value value) {
     if (!analysisCache.contains(value))
-      analysisCache.insert({value, analysis.getSource(value)});
+      analysisCache.insert(
+          {value, analysis.getSource(value, /*getInstantiationPoint=*/true)});
     return analysisCache[value];
   }
 
@@ -65,12 +69,71 @@ public:
   inline const fir::TBAATree &getFuncTree(mlir::func::FuncOp func) {
     return forrest[func];
   }
+  inline const fir::TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+                                                   fir::DummyScopeOp scope) {
+    auto &scopeMap = scopeNames.at(func);
+    return forrest.getFuncTreeWithScope(func, scopeMap.lookup(scope));
+  }
+
+  void processFunctionScopes(mlir::func::FuncOp func);
+  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
 
 private:
+  mlir::DominanceInfo &domInfo;
   fir::AliasAnalysis analysis;
   llvm::DenseMap<mlir::Value, fir::AliasAnalysis::Source> analysisCache;
   fir::TBAAForrest forrest;
+  // Unique names for fir.dummy_scope operations within
+  // the given function.
+  llvm::DenseMap<mlir::func::FuncOp,
+                 llvm::DenseMap<fir::DummyScopeOp, std::string>>
+      scopeNames;
+  // A map providing a vector of fir.dummy_scope operations
+  // for the given function. The vectors are sorted according
+  // to the dominance information.
+  llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
+      sortedScopeOperations;
 };
+
+// Process fir.dummy_scope operations in the given func:
+// sort them according to the dominance information, and
+// associate a unique (within the current function) scope name
+// with each of them.
+void PassState::processFunctionScopes(mlir::func::FuncOp func) {
+  if (scopeNames.contains(func))
+    return;
+
+  auto &scopeMap = scopeNames[func];
+  auto &scopeOps = sortedScopeOperations[func];
+  func.walk([&](fir::DummyScopeOp op) { scopeOps.push_back(op); });
+  llvm::stable_sort(scopeOps, [&](const fir::DummyScopeOp &op1,
+                                  const fir::DummyScopeOp &op2) {
+    return domInfo.properlyDominates(&*op1, &*op2);
+  });
+  unsigned scopeId = 0;
+  for (auto scope : scopeOps) {
+    if (scopeId != 0) {
+      std::string name = (llvm::Twine("Scope ") + llvm::Twine(scopeId)).str();
+      LLVM_DEBUG(llvm::dbgs() << "Creating scope '" << name << "':\n"
+                              << scope << "\n");
+      scopeMap.insert({scope, std::move(name)});
+    }
+    ++scopeId;
+  }
+}
+
+// For the given fir.declare returns the dominating fir.dummy_scope
+// operation.
+fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
+  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
+  assert(func && "fir.declare does not have parent func.func");
+  auto &scopeOps = sortedScopeOperations.at(func);
+  for (auto II = scopeOps.rbegin(), IE = scopeOps.rend(); II != IE; ++II) {
+    if (domInfo.dominates(&**II, &*declareOp))
+      return *II;
+  }
+  return nullptr;
+}
 
 class AddAliasTagsPass : public fir::impl::AddAliasTagsBase<AddAliasTagsPass> {
 public:
@@ -85,6 +148,9 @@ private:
 } // namespace
 
 static fir::DeclareOp getDeclareOp(mlir::Value arg) {
+  if (auto declare =
+          mlir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp()))
+    return declare;
   for (mlir::Operation *use : arg.getUsers())
     if (fir::DeclareOp declare = mlir::dyn_cast<fir::DeclareOp>(use))
       return declare;
@@ -94,7 +160,7 @@ static fir::DeclareOp getDeclareOp(mlir::Value arg) {
 /// Get the name of a function argument using the "fir.bindc_name" attribute,
 /// or ""
 static std::string getFuncArgName(mlir::Value arg) {
-  // first try getting the name from the hlfir.declare
+  // first try getting the name from the fir.declare
   if (fir::DeclareOp declare = getDeclareOp(arg))
     return declare.getUniqName().str();
 
@@ -105,6 +171,7 @@ static std::string getFuncArgName(mlir::Value arg) {
          "arg is a function argument");
   mlir::FunctionOpInterface func = mlir::dyn_cast<mlir::FunctionOpInterface>(
       blockArg.getOwner()->getParentOp());
+  assert(func && "This is not a function argument");
   mlir::StringAttr attr = func.getArgAttrOfType<mlir::StringAttr>(
       blockArg.getArgNumber(), "fir.bindc_name");
   if (!attr)
@@ -138,15 +205,33 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     return;
   }
 
+  // Process the scopes, if not processed yet.
+  state.processFunctionScopes(func);
+
+  fir::DummyScopeOp scopeOp;
+  if (auto declVal = source.origin.instantiationPoint) {
+    // If the source is a dummy argument within some fir.dummy_scope,
+    // then find the corresponding innermost scope to be used for finding
+    // the right TBAA tree.
+    auto declareOp =
+        mlir::dyn_cast_or_null<fir::DeclareOp>(declVal.getDefiningOp());
+    assert(declareOp && "Instantiation point must be fir.declare");
+    if (auto dummyScope = declareOp.getDummyScope())
+      scopeOp = mlir::cast<fir::DummyScopeOp>(dummyScope.getDefiningOp());
+    if (!scopeOp)
+      scopeOp = state.getDeclarationScope(declareOp);
+  }
+
   mlir::LLVM::TBAATagAttr tag;
   // TBAA for dummy arguments
   if (enableDummyArgs &&
       source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
-    std::string name = getFuncArgName(source.u.get<mlir::Value>());
+    std::string name = getFuncArgName(source.origin.u.get<mlir::Value>());
     if (!name.empty())
-      tag = state.getFuncTree(func).dummyArgDataTree.getTag(name);
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .dummyArgDataTree.getTag(name);
     else
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for dummy argument " << *op
@@ -154,22 +239,25 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
     // TBAA for global variables
   } else if (enableGlobals &&
-             source.kind == fir::AliasAnalysis::SourceKind::Global) {
-    mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
+             source.kind == fir::AliasAnalysis::SourceKind::Global &&
+             !source.isBoxData()) {
+    mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
-    tag = state.getFuncTree(func).globalDataTree.getTag(name);
+    tag = state.getFuncTreeWithScope(func, scopeOp).globalDataTree.getTag(name);
 
     // TBAA for SourceKind::Direct
   } else if (enableDirect &&
-             source.kind == fir::AliasAnalysis::SourceKind::Direct) {
-    if (source.u.is<mlir::SymbolRefAttr>()) {
-      mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
+             source.kind == fir::AliasAnalysis::SourceKind::Global &&
+             source.isBoxData()) {
+    if (source.origin.u.is<mlir::SymbolRefAttr>()) {
+      mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
-      tag = state.getFuncTree(func).directDataTree.getTag(name);
+      tag =
+          state.getFuncTreeWithScope(func, scopeOp).directDataTree.getTag(name);
     } else {
       // SourceKind::Direct is likely to be extended to cases which are not a
       // SymbolRefAttr in the future
@@ -181,7 +269,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp = source.u.get<mlir::Value>().getDefiningOp();
+    mlir::Operation *sourceOp =
+        source.origin.u.get<mlir::Value>().getDefiningOp();
     if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
     else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
@@ -189,7 +278,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     if (name) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
-      tag = state.getFuncTree(func).allocatedDataTree.getTag(*name);
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .allocatedDataTree.getTag(*name);
     } else {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
@@ -215,15 +305,12 @@ void AddAliasTagsPass::runOnOperation() {
   // Instead this pass stores state per mlir::ModuleOp (which is what MLIR
   // thinks the pass operates on), then the real work of the pass is done in
   // runOnAliasInterface
-  PassState state;
+  auto &domInfo = getAnalysis<mlir::DominanceInfo>();
+  PassState state(domInfo);
 
   mlir::ModuleOp mod = getOperation();
   mod.walk(
       [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createAliasTagsPass() {
-  return std::make_unique<AddAliasTagsPass>();
 }

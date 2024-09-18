@@ -612,7 +612,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, Out, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);

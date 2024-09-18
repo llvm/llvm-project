@@ -44,6 +44,7 @@ extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
 extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
 extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
 extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
+extern cl::opt<bool> WasmEnableExnref; // EH using new Wasm EH (exnref)
 
 enum OperandType {
   /// Basic block label in a branch construct.
@@ -86,6 +87,8 @@ enum OperandType {
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.
   OPERAND_TABLE,
+  /// A list of catch clauses for try_table.
+  OPERAND_CATCH_LIST,
 };
 } // end namespace WebAssembly
 
@@ -118,6 +121,10 @@ enum TOF {
   // address relative the __table_base wasm global.
   // Only applicable to function symbols.
   MO_TABLE_BASE_REL,
+
+  // On a block signature operand this indicates that this is a destination
+  // block of a (catch_ref) clause in try_table.
+  MO_CATCH_BLOCK_SIG,
 };
 
 } // end namespace WebAssemblyII
@@ -176,7 +183,7 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW8_U_CMPXCHG_I32)
   WASM_LOAD_STORE(ATOMIC_RMW8_U_CMPXCHG_I64)
   WASM_LOAD_STORE(LOAD8_SPLAT)
-  WASM_LOAD_STORE(LOAD_LANE_I8x16)
+  WASM_LOAD_STORE(LOAD_LANE_8)
   WASM_LOAD_STORE(STORE_LANE_I8x16)
   return 0;
   WASM_LOAD_STORE(LOAD16_S_I32)
@@ -204,8 +211,10 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(ATOMIC_RMW16_U_CMPXCHG_I32)
   WASM_LOAD_STORE(ATOMIC_RMW16_U_CMPXCHG_I64)
   WASM_LOAD_STORE(LOAD16_SPLAT)
-  WASM_LOAD_STORE(LOAD_LANE_I16x8)
+  WASM_LOAD_STORE(LOAD_LANE_16)
   WASM_LOAD_STORE(STORE_LANE_I16x8)
+  WASM_LOAD_STORE(LOAD_F16_F32)
+  WASM_LOAD_STORE(STORE_F16_F32)
   return 1;
   WASM_LOAD_STORE(LOAD_I32)
   WASM_LOAD_STORE(LOAD_F32)
@@ -235,8 +244,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(MEMORY_ATOMIC_NOTIFY)
   WASM_LOAD_STORE(MEMORY_ATOMIC_WAIT32)
   WASM_LOAD_STORE(LOAD32_SPLAT)
-  WASM_LOAD_STORE(LOAD_ZERO_I32x4)
-  WASM_LOAD_STORE(LOAD_LANE_I32x4)
+  WASM_LOAD_STORE(LOAD_ZERO_32)
+  WASM_LOAD_STORE(LOAD_LANE_32)
   WASM_LOAD_STORE(STORE_LANE_I32x4)
   return 2;
   WASM_LOAD_STORE(LOAD_I64)
@@ -260,8 +269,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(LOAD_EXTEND_U_I32x4)
   WASM_LOAD_STORE(LOAD_EXTEND_S_I64x2)
   WASM_LOAD_STORE(LOAD_EXTEND_U_I64x2)
-  WASM_LOAD_STORE(LOAD_ZERO_I64x2)
-  WASM_LOAD_STORE(LOAD_LANE_I64x2)
+  WASM_LOAD_STORE(LOAD_ZERO_64)
+  WASM_LOAD_STORE(LOAD_LANE_64)
   WASM_LOAD_STORE(STORE_LANE_I64x2)
   return 3;
   WASM_LOAD_STORE(LOAD_V128)
@@ -343,6 +352,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_v4i32_S:
   case WebAssembly::ARGUMENT_v2i64:
   case WebAssembly::ARGUMENT_v2i64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
   case WebAssembly::ARGUMENT_v4f32:
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:
@@ -351,6 +362,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_funcref_S:
   case WebAssembly::ARGUMENT_externref:
   case WebAssembly::ARGUMENT_externref_S:
+  case WebAssembly::ARGUMENT_exnref:
+  case WebAssembly::ARGUMENT_exnref_S:
     return true;
   default:
     return false;
@@ -373,6 +386,8 @@ inline bool isCopy(unsigned Opc) {
   case WebAssembly::COPY_FUNCREF_S:
   case WebAssembly::COPY_EXTERNREF:
   case WebAssembly::COPY_EXTERNREF_S:
+  case WebAssembly::COPY_EXNREF:
+  case WebAssembly::COPY_EXNREF_S:
     return true;
   default:
     return false;
@@ -395,6 +410,8 @@ inline bool isTee(unsigned Opc) {
   case WebAssembly::TEE_FUNCREF_S:
   case WebAssembly::TEE_EXTERNREF:
   case WebAssembly::TEE_EXTERNREF_S:
+  case WebAssembly::TEE_EXNREF:
+  case WebAssembly::TEE_EXNREF_S:
     return true;
   default:
     return false;
@@ -451,6 +468,22 @@ inline bool isMarker(unsigned Opc) {
   case WebAssembly::TRY_S:
   case WebAssembly::END_TRY:
   case WebAssembly::END_TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
+  case WebAssembly::END_TRY_TABLE:
+  case WebAssembly::END_TRY_TABLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isTry(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::TRY:
+  case WebAssembly::TRY_S:
+  case WebAssembly::TRY_TABLE:
+  case WebAssembly::TRY_TABLE_S:
     return true;
   default:
     return false;
@@ -459,10 +492,18 @@ inline bool isMarker(unsigned Opc) {
 
 inline bool isCatch(unsigned Opc) {
   switch (Opc) {
+  case WebAssembly::CATCH_LEGACY:
+  case WebAssembly::CATCH_LEGACY_S:
+  case WebAssembly::CATCH_ALL_LEGACY:
+  case WebAssembly::CATCH_ALL_LEGACY_S:
   case WebAssembly::CATCH:
   case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
   case WebAssembly::CATCH_ALL:
   case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
     return true;
   default:
     return false;
@@ -485,6 +526,8 @@ inline bool isLocalGet(unsigned Opc) {
   case WebAssembly::LOCAL_GET_FUNCREF_S:
   case WebAssembly::LOCAL_GET_EXTERNREF:
   case WebAssembly::LOCAL_GET_EXTERNREF_S:
+  case WebAssembly::LOCAL_GET_EXNREF:
+  case WebAssembly::LOCAL_GET_EXNREF_S:
     return true;
   default:
     return false;
@@ -507,6 +550,8 @@ inline bool isLocalSet(unsigned Opc) {
   case WebAssembly::LOCAL_SET_FUNCREF_S:
   case WebAssembly::LOCAL_SET_EXTERNREF:
   case WebAssembly::LOCAL_SET_EXTERNREF_S:
+  case WebAssembly::LOCAL_SET_EXNREF:
+  case WebAssembly::LOCAL_SET_EXNREF_S:
     return true;
   default:
     return false;
@@ -529,6 +574,8 @@ inline bool isLocalTee(unsigned Opc) {
   case WebAssembly::LOCAL_TEE_FUNCREF_S:
   case WebAssembly::LOCAL_TEE_EXTERNREF:
   case WebAssembly::LOCAL_TEE_EXTERNREF_S:
+  case WebAssembly::LOCAL_TEE_EXNREF:
+  case WebAssembly::LOCAL_TEE_EXNREF_S:
     return true;
   default:
     return false;

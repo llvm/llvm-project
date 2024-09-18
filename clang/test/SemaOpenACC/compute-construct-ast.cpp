@@ -12,14 +12,16 @@ void NormalFunc() {
   // CHECK-LABEL: NormalFunc
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel
+#pragma acc parallel default(none)
   {
 #pragma acc parallel
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: default(present)
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel
+#pragma acc parallel default(present)
     {}
   }
   // FIXME: Add a test once we have clauses for this.
@@ -50,12 +52,12 @@ void NormalFunc() {
 
 template<typename T>
 void TemplFunc() {
-#pragma acc parallel
+#pragma acc parallel default(none)
   {
     typename T::type I;
   }
 
-#pragma acc serial
+#pragma acc serial default(present)
   {
     typename T::type I;
   }
@@ -72,10 +74,12 @@ void TemplFunc() {
   // CHECK-NEXT: FunctionDecl
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename T::type'
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
+  // CHECK-NEXT: default(present)
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename T::type'
@@ -91,10 +95,12 @@ void TemplFunc() {
   // CHECK-NEXT: CXXRecord
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename S::type':'int'
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
+  // CHECK-NEXT: default(present)
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} I 'typename S::type':'int'
@@ -111,5 +117,26 @@ struct S {
 void use() {
   TemplFunc<S>();
 }
-#endif
 
+struct HasCtor { HasCtor(); operator int(); ~HasCtor();};
+
+void useCtorType() {
+  // CHECK-LABEL: useCtorType
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels num_workers(HasCtor{})
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} kernels
+  // CHECK-NEXT: num_workers clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'int'
+  // CHECK-NEXT: MemberExpr{{.*}}.operator int
+  // CHECK-NEXT: MaterializeTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXBindTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'HasCtor'
+
+  while(true);
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+}
+#endif

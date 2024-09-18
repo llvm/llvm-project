@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
@@ -117,9 +118,20 @@ private:
 // sure that they can be replaced.
 static bool hasReplaceableUsers(GlobalVariable &GV) {
   for (User *CurrentUser : GV.users()) {
-    // Instruction users are always valid.
-    if (isa<Instruction>(CurrentUser))
+    if (auto *I = dyn_cast<Instruction>(CurrentUser)) {
+      // Do not merge globals in exception pads.
+      if (I->isEHPad())
+        return false;
+
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        // Some intrinsics require a plain global.
+        if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
+          return false;
+      }
+
+      // Other instruction users are always valid.
       continue;
+    }
 
     // We cannot replace GlobalValue users because they are not just nodes
     // in IR. To replace a user like this we would need to create a new
@@ -158,8 +170,9 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
     LLVM_DEBUG(dbgs() << "hasInitializer() " << Global.hasInitializer()
                       << "\n");
 
-    // We can only pool constants.
-    if (!Global.isConstant() || !Global.hasInitializer())
+    // We can only pool non-thread-local constants.
+    if (!Global.isConstant() || !Global.hasInitializer() ||
+        Global.isThreadLocal())
       continue;
 
     // If a global constant has a section we do not try to pool it because
@@ -290,13 +303,6 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
   return true;
 }
 
-static bool userHasOperand(User *TheUser, GlobalVariable *GVOperand) {
-  for (Value *Op : TheUser->operands())
-    if (Op == GVOperand)
-      return true;
-  return false;
-}
-
 // For pooled strings we need to add the offset into the pool for each string.
 // This is done by adding a Get Element Pointer (GEP) before each user. This
 // function adds the GEP.
@@ -307,62 +313,13 @@ void PPCMergeStringPool::replaceUsesWithGEP(GlobalVariable *GlobalToReplace,
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), 0));
   Indices.push_back(ConstantInt::get(Type::getInt32Ty(*Context), ElementIndex));
 
-  // Need to save a temporary copy of each user list because we remove uses
-  // as we replace them.
-  SmallVector<User *> Users;
-  for (User *CurrentUser : GlobalToReplace->users())
-    Users.push_back(CurrentUser);
-
-  for (User *CurrentUser : Users) {
-    Instruction *UserInstruction = dyn_cast<Instruction>(CurrentUser);
-    Constant *UserConstant = dyn_cast<Constant>(CurrentUser);
-
-    // At this point we expect that the user is either an instruction or a
-    // constant.
-    assert((UserConstant || UserInstruction) &&
-           "Expected the user to be an instruction or a constant.");
-
-    // The user was not found so it must have been replaced earlier.
-    if (!userHasOperand(CurrentUser, GlobalToReplace))
-      continue;
-
-    // We cannot replace operands in globals so we ignore those.
-    if (isa<GlobalValue>(CurrentUser))
-      continue;
-
-    if (!UserInstruction) {
-      // User is a constant type.
-      Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
-          PooledStructType, GPool, Indices);
-      UserConstant->handleOperandChange(GlobalToReplace, ConstGEP);
-      continue;
-    }
-
-    if (PHINode *UserPHI = dyn_cast<PHINode>(UserInstruction)) {
-      // GEP instructions cannot be added before PHI nodes.
-      // With getInBoundsGetElementPtr we create the GEP and then replace it
-      // inline into the PHI.
-      Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
-          PooledStructType, GPool, Indices);
-      UserPHI->replaceUsesOfWith(GlobalToReplace, ConstGEP);
-      continue;
-    }
-    // The user is a valid instruction that is not a PHINode.
-    GetElementPtrInst *GEPInst =
-        GetElementPtrInst::Create(PooledStructType, GPool, Indices);
-    GEPInst->insertBefore(UserInstruction);
-
-    LLVM_DEBUG(dbgs() << "Inserting GEP before:\n");
-    LLVM_DEBUG(UserInstruction->dump());
-
-    LLVM_DEBUG(dbgs() << "Replacing this global:\n");
-    LLVM_DEBUG(GlobalToReplace->dump());
-    LLVM_DEBUG(dbgs() << "with this:\n");
-    LLVM_DEBUG(GEPInst->dump());
-
-    // After the GEP is inserted the GV can be replaced.
-    CurrentUser->replaceUsesOfWith(GlobalToReplace, GEPInst);
-  }
+  Constant *ConstGEP =
+      ConstantExpr::getInBoundsGetElementPtr(PooledStructType, GPool, Indices);
+  LLVM_DEBUG(dbgs() << "Replacing this global:\n");
+  LLVM_DEBUG(GlobalToReplace->dump());
+  LLVM_DEBUG(dbgs() << "with this:\n");
+  LLVM_DEBUG(ConstGEP->dump());
+  GlobalToReplace->replaceAllUsesWith(ConstGEP);
 }
 
 } // namespace

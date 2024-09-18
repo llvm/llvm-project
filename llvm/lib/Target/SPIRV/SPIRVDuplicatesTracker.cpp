@@ -13,6 +13,8 @@
 
 #include "SPIRVDuplicatesTracker.h"
 
+#define DEBUG_TYPE "build-dep-graph"
+
 using namespace llvm;
 
 template <typename T>
@@ -39,6 +41,7 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
   prebuildReg2Entry(GT, Reg2Entry);
   prebuildReg2Entry(FT, Reg2Entry);
   prebuildReg2Entry(AT, Reg2Entry);
+  prebuildReg2Entry(MT, Reg2Entry);
   prebuildReg2Entry(ST, Reg2Entry);
 
   for (auto &Op2E : Reg2Entry) {
@@ -62,6 +65,18 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
         if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL && i == 2)
           continue;
         MachineOperand *RegOp = &VRegDef->getOperand(0);
+        LLVM_DEBUG({
+          if (Reg2Entry.count(RegOp) == 0 &&
+              (MI->getOpcode() != SPIRV::OpVariable || i != 3)) {
+            dbgs() << "Unexpected pattern while building a dependency "
+                      "graph.\nInstruction: ";
+            MI->print(dbgs());
+            dbgs() << "Operand: ";
+            Op.print(dbgs());
+            dbgs() << "\nOperand definition: ";
+            VRegDef->print(dbgs());
+          }
+        });
         assert((MI->getOpcode() == SPIRV::OpVariable && i == 3) ||
                Reg2Entry.count(RegOp));
         if (Reg2Entry.count(RegOp))

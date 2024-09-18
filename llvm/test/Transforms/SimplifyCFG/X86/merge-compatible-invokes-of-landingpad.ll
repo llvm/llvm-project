@@ -13,12 +13,12 @@ define void @t0_noop() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.end:
@@ -53,7 +53,7 @@ define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -61,7 +61,7 @@ define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -106,7 +106,7 @@ define void @t2_shared_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -114,7 +114,7 @@ define void @t2_shared_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -159,7 +159,7 @@ define void @t3_shared_identical_normal_dest() personality ptr @__gxx_personalit
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -167,7 +167,7 @@ define void @t3_shared_identical_normal_dest() personality ptr @__gxx_personalit
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -208,13 +208,13 @@ define void @t4_normal_dests() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -222,7 +222,7 @@ define void @t4_normal_dests() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    call void @another_sideeffect()
 ; CHECK-NEXT:    unreachable
@@ -270,7 +270,7 @@ define void @t5_different_landingpads() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD0:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD0:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       common.resume:
@@ -278,7 +278,7 @@ define void @t5_different_landingpads() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    resume { ptr, i32 } [[COMMON_RESUME_OP]]
 ; CHECK:       lpad0:
 ; CHECK-NEXT:    [[EH0]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    br label [[COMMON_RESUME:%.*]]
 ; CHECK:       if.else:
@@ -286,12 +286,12 @@ define void @t5_different_landingpads() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD1]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD1]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad1:
 ; CHECK-NEXT:    [[EH1]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @another_destructor()
 ; CHECK-NEXT:    br label [[COMMON_RESUME]]
 ; CHECK:       if.end:
@@ -341,12 +341,12 @@ define void @t6_different_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -354,7 +354,7 @@ define void @t6_different_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @another_simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -399,12 +399,12 @@ define void @t7_nomerge0() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -412,7 +412,7 @@ define void @t7_nomerge0() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -455,12 +455,12 @@ define void @t8_nomerge1() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -468,7 +468,7 @@ define void @t8_nomerge1() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -511,12 +511,12 @@ define void @t9_nomerge2() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -524,7 +524,7 @@ define void @t9_nomerge2() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -569,12 +569,12 @@ define void @t10_inlineasm() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void asm sideeffect "something bad", ""()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -582,7 +582,7 @@ define void @t10_inlineasm() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void asm sideeffect "something bad", ""()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -627,13 +627,13 @@ define void @t11_phi_in_landingpad_incompatible_incoming_values() personality pt
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 1, [[IF_THEN1:%.*]] ]
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
@@ -642,7 +642,7 @@ define void @t11_phi_in_landingpad_incompatible_incoming_values() personality pt
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -689,7 +689,7 @@ define void @t12_arguments_are_fine() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -697,7 +697,7 @@ define void @t12_arguments_are_fine() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw_taking_argument(i32 42)
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -742,7 +742,7 @@ define void @t13_different_arguments_are_fine() personality ptr @__gxx_personali
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -751,7 +751,7 @@ define void @t13_different_arguments_are_fine() personality ptr @__gxx_personali
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    invoke void @simple_throw_taking_argument(i32 [[TMP0]])
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -796,7 +796,7 @@ define void @t14_three_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN2_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -807,7 +807,7 @@ define void @t14_three_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then2.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN2_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN2_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then2.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -862,7 +862,7 @@ define void @t15_three_invokes_only_two_compatible() personality ptr @__gxx_pers
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -870,7 +870,7 @@ define void @t15_three_invokes_only_two_compatible() personality ptr @__gxx_pers
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
@@ -878,7 +878,7 @@ define void @t15_three_invokes_only_two_compatible() personality ptr @__gxx_pers
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @another_simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -933,7 +933,7 @@ define void @t16_four_invokes_forming_two_sets() personality ptr @__gxx_personal
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -941,7 +941,7 @@ define void @t16_four_invokes_forming_two_sets() personality ptr @__gxx_personal
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
@@ -952,7 +952,7 @@ define void @t16_four_invokes_forming_two_sets() personality ptr @__gxx_personal
 ; CHECK-NEXT:    br i1 [[C3]], label [[IF_THEN3_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then3.invoke:
 ; CHECK-NEXT:    invoke void @another_simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN3_CONT:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[IF_THEN3_CONT:%.*]] unwind label [[LPAD]]
 ; CHECK:       if.then3.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1017,12 +1017,12 @@ define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_persona
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1030,7 +1030,7 @@ define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_persona
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1075,7 +1075,7 @@ define void @t18_attributes_are_preserved() personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1083,7 +1083,7 @@ define void @t18_attributes_are_preserved() personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1128,7 +1128,7 @@ define void @t19_compatible_operand_bundle() personality ptr @__gxx_personality_
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1136,7 +1136,7 @@ define void @t19_compatible_operand_bundle() personality ptr @__gxx_personality_
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 42) ]
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1181,12 +1181,12 @@ define void @t20_incompatible_operand_bundle() personality ptr @__gxx_personalit
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 42) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1194,7 +1194,7 @@ define void @t20_incompatible_operand_bundle() personality ptr @__gxx_personalit
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw() [ "def"(i32 0) ]
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1239,7 +1239,7 @@ define void @t21_semicompatible_operand_bundle(i32 %a, i32 %b) personality ptr @
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1248,7 +1248,7 @@ define void @t21_semicompatible_operand_bundle(i32 %a, i32 %b) personality ptr @
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 [[TMP0]]) ]
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1294,7 +1294,7 @@ define void @t22_dead_phi_in_normal_dest() personality ptr @__gxx_personality_v0
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1302,7 +1302,7 @@ define void @t22_dead_phi_in_normal_dest() personality ptr @__gxx_personality_v0
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1350,7 +1350,7 @@ define void @t23_phi_in_landingpad_compatible_incoming_values() personality ptr 
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[IF_THEN2:%.*]] ], [ 0, [[IF_THEN1_INVOKE]] ]
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
@@ -1359,7 +1359,7 @@ define void @t23_phi_in_landingpad_compatible_incoming_values() personality ptr 
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
@@ -1367,7 +1367,7 @@ define void @t23_phi_in_landingpad_compatible_incoming_values() personality ptr 
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1425,14 +1425,14 @@ define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 1, [[IF_THEN1]] ], [ 1, [[IF_THEN2]] ]
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI0]])
 ; CHECK-NEXT:    call void @consume(i32 [[PHI1]])
 ; CHECK-NEXT:    call void @destructor()
@@ -1442,7 +1442,7 @@ define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
@@ -1450,7 +1450,7 @@ define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1509,7 +1509,7 @@ define void @t25_incompatible_phis_in_normal_destination() personality ptr @__gx
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ -1, [[IF_THEN1:%.*]] ]
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
@@ -1517,7 +1517,7 @@ define void @t25_incompatible_phis_in_normal_destination() personality ptr @__gx
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1525,7 +1525,7 @@ define void @t25_incompatible_phis_in_normal_destination() personality ptr @__gx
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1573,7 +1573,7 @@ define void @t26_phi_in_normal_dest_compatible_incoming_values() personality ptr
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -1581,13 +1581,13 @@ define void @t26_phi_in_normal_dest_compatible_incoming_values() personality ptr
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.else1:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1640,7 +1640,7 @@ define void @t27_invoke_ret_value_is_used() personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1648,7 +1648,7 @@ define void @t27_invoke_ret_value_is_used() personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1693,7 +1693,7 @@ define void @t28_invoke_ret_value_is_used_in_phi_node() personality ptr @__gxx_p
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1701,7 +1701,7 @@ define void @t28_invoke_ret_value_is_used_in_phi_node() personality ptr @__gxx_p
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1747,7 +1747,7 @@ define void @t29_common_normal_destination_and_unreachable_normal_destination() 
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -1755,13 +1755,13 @@ define void @t29_common_normal_destination_and_unreachable_normal_destination() 
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.else1:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1814,13 +1814,13 @@ define void @t30_completely_different_normal_dests() personality ptr @__gxx_pers
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT0:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1828,7 +1828,7 @@ define void @t30_completely_different_normal_dests() personality ptr @__gxx_pers
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
@@ -1878,7 +1878,7 @@ define void @t31_incompatible_dead_phi_in_normal_dest() personality ptr @__gxx_p
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1886,7 +1886,7 @@ define void @t31_incompatible_dead_phi_in_normal_dest() personality ptr @__gxx_p
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @maybe_throw()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -1935,7 +1935,7 @@ define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() person
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -1943,7 +1943,7 @@ define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() person
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -1989,7 +1989,7 @@ define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() persona
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ [[V0]], [[IF_THEN0]] ], [ [[V1:%.*]], [[IF_THEN1:%.*]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ -1, [[IF_THEN1]] ]
@@ -1999,7 +1999,7 @@ define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() persona
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2007,7 +2007,7 @@ define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() persona
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    [[V1]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -2053,7 +2053,7 @@ define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personal
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN0:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then0:
 ; CHECK-NEXT:    [[V0:%.*]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ [[V0]], [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ [[V1:%.*]], [[IF_THEN1]] ]
@@ -2063,7 +2063,7 @@ define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personal
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2071,7 +2071,7 @@ define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personal
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    [[V1]] = invoke i32 @returning_maybe_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -2116,7 +2116,7 @@ define void @t35_identical_indirect_callees(ptr %callee) personality ptr @__gxx_
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2124,7 +2124,7 @@ define void @t35_identical_indirect_callees(ptr %callee) personality ptr @__gxx_
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void [[CALLEE:%.*]]()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2169,7 +2169,7 @@ define void @t36_different_indirect_callees(ptr %callee0, ptr %callee1) personal
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2178,7 +2178,7 @@ define void @t36_different_indirect_callees(ptr %callee0, ptr %callee1) personal
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    invoke void [[TMP0]]()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2223,7 +2223,7 @@ define void @t37_three_invokes_two_indirect_one_direct(ptr %callee) personality 
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
@@ -2231,7 +2231,7 @@ define void @t37_three_invokes_two_indirect_one_direct(ptr %callee) personality 
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void [[CALLEE:%.*]]()
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1:
@@ -2239,7 +2239,7 @@ define void @t37_three_invokes_two_indirect_one_direct(ptr %callee) personality 
 ; CHECK-NEXT:    br i1 [[C2]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:    to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 ; CHECK:       invoke.cont3:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2294,7 +2294,7 @@ define void @t38_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2304,7 +2304,7 @@ define void @t38_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP1]](i32 [[TMP0]])
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2349,7 +2349,7 @@ define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2359,7 +2359,7 @@ define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP1]]() [ "abc"(i32 [[TMP0]]) ]
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2404,7 +2404,7 @@ define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
@@ -2415,7 +2415,7 @@ define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP2]](i32 [[TMP0]]) [ "abc"(i32 [[TMP1]]) ]
-; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -2457,15 +2457,15 @@ define void @dont_merge_different_immargs(i1 %c1) gc "statepoint-example" person
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[T1:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
-; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[T2:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
-; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[UNREACHABLE]] unwind label [[LPAD]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[T3:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c1, label %if, label %else

@@ -1,0 +1,448 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+
+#--- matching.s
+.section .rodata.a,"a",@progbits
+.byte 1
+
+.section .rodata.b,"a",@progbits
+.byte 2
+
+.section .rodata.c,"ax",@progbits
+.byte 3
+
+.section .rodata.d,"a",@progbits
+.byte 4
+
+.section .rodata.e,"a",@progbits
+.byte 5
+
+.section .rodata.f,"a",@progbits
+.balign 2
+.byte 6
+
+.section .rodata.g,"a",@progbits
+.byte 7
+
+.section .rodata.h,"a",@progbits
+.byte 8
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 matching.s -o matching.o
+
+#--- matching.lds
+## CLASS definitions match sections in linker script order. The sections may be
+## placed in a different order. Classes may derive from one another. Class
+## references can be restricted by INPUT_SECTION_FLAGS. Classes can be referenced
+## in /DISCARD/ and INSERT.
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(cd) { *(.rodata.c) *(.rodata.d) }
+  CLASS(ef) { *(SORT_BY_ALIGNMENT(.rodata.e .rodata.f)) }
+  CLASS(g) { *(.rodata.g) }
+  CLASS("h)") { *(.rodata.h) }
+  .rodata : {
+    *(.rodata.*)
+    INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS( cd)
+    CLASS(a)CLASS(ef )
+  }
+  OVERLAY : { .rodata.d { INPUT_SECTION_FLAGS(!SHF_EXECINSTR) CLASS(cd) } }
+  /DISCARD/ : { CLASS(g) }
+}
+
+SECTIONS {
+  .rodata.h : { CLASS("h)") }
+} INSERT AFTER .rodata;
+
+# RUN: ld.lld -T matching.lds matching.o -o matching
+# RUN: llvm-objdump -s matching |\
+# RUN:   FileCheck %s --check-prefix=MATCHING
+# MATCHING:      .rodata
+# MATCHING-NEXT: 020301cc 0605 ......{{$}}
+# MATCHING:      .rodata.h
+# MATCHING-NEXT: 08 .{{$}}
+# MATCHING:      .rodata.d
+# MATCHING-NEXT: 04 .{{$}}
+
+#--- already-defined.lds
+## A section class has more than one description.
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(a) { *(.rodata.b) }
+  CLASS(b) { *(.rodata.c) }
+  CLASS(b) { *(.rodata.d) }
+}
+
+# RUN: not ld.lld -T already-defined.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ALREADY-DEFINED --implicit-check-not=error:
+
+# ALREADY-DEFINED: error: already-defined.lds:4: section class 'a' already defined
+
+#--- missing-filename-pattern-1.lds
+## A filename pattern is missing in a section class description.
+SECTIONS {
+  CLASS(a) { (.rodata.a) }
+}
+#--- missing-filename-pattern-2.lds
+## A filename pattern is missing in a section class description.
+SECTIONS {
+  CLASS(a) { .rodata.a) }
+}
+
+# RUN: not ld.lld -T missing-filename-pattern-1.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
+# RUN: not ld.lld -T missing-filename-pattern-2.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
+
+# MISSING-FILENAME-PATTERN: error: missing-filename-pattern-{{[1-2]}}.lds:3: expected filename pattern
+
+#--- multiple-class-names.lds
+## More than one class is mentioned in a reference.
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(b) { *(.rodata.b) }
+  .rodata : { CLASS(a b) }
+}
+
+# RUN: not ld.lld -T multiple-class-names.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MULTIPLE-CLASS-NAMES --implicit-check-not=error:
+
+# MULTIPLE-CLASS-NAMES: error: multiple-class-names.lds:5: ) expected, but got b
+
+#--- undefined.lds
+## A section class is referenced but never defined
+SECTIONS {
+  .rodata : { CLASS(a) }
+}
+
+# RUN: not ld.lld -T undefined.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNDEFINED --implicit-check-not=error:
+
+# UNDEFINED: error: undefined section class 'a'
+
+#--- referenced-before-defined.lds
+## The content of section classes is demanded before its definition is processed.
+SECTIONS {
+  .rodata : { CLASS(a) }
+  CLASS(a) { *(.rodata.a) }
+}
+
+# RUN: not ld.lld -T referenced-before-defined.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=REFERENCED-BEFORE-DEFINED
+# RUN: ld.lld -T referenced-before-defined.lds matching.o -o out --noinhibit-exec 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=REFERENCED-BEFORE-DEFINED-WARN
+
+# REFERENCED-BEFORE-DEFINED: error: section class 'a' referenced by '.rodata' before class definition
+# REFERENCED-BEFORE-DEFINED-WARN: warning: section class 'a' referenced by '.rodata' before class definition
+
+#--- unreferenced.lds
+## An input section is bound to a section class but is not referenced.
+SECTIONS {
+  CLASS(a) { *(.rodata.*) }
+}
+
+# RUN: not ld.lld -T unreferenced.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNREFERENCED -implicit-check-not=error:
+# RUN: ld.lld -T unreferenced.lds matching.o -o out --noinhibit-exec 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNREFERENCED-WARN -implicit-check-not=error:
+
+# UNREFERENCED: error: section class 'a' is unreferenced
+# UNREFERENCED-WARN: warning: section class 'a' is unreferenced
+
+#--- class-references-class.lds
+## One section class references another.
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(b) { CLASS(a) }
+}
+
+# RUN: not ld.lld -T class-references-class.lds matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CLASS-REFERENCES-CLASS --implicit-check-not=error:
+
+# CLASS-REFERENCES-CLASS: error: class-references-class.lds:4: section class 'b' references class 'a'
+
+#--- spill.s
+.section .one_byte_section,"a",@progbits
+.fill 1
+
+.section .two_byte_section,"a",@progbits
+.fill 2
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 spill.s -o spill.o
+
+#--- spill.lds
+## An input section in a class spills to a later class ref when the region of
+## its first ref would overflow. The spill uses the alignment of the later ref.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 16
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : SUBALIGN(1) { *(.one_byte_section) CLASS(c) } >a
+  .last_chance : SUBALIGN(8) { CLASS (c) } >b
+}
+
+# RUN: ld.lld -T spill.lds spill.o -o spill
+# RUN: llvm-readelf -S spill | FileCheck %s --check-prefix=SPILL
+
+# SPILL:      Name          Type     Address          Off    Size
+# SPILL:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-NEXT: .last_chance  PROGBITS 0000000000000008 001008 000002
+
+#--- spill-fail.lds
+## A spill off the end still fails the link.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 2, LENGTH = 0
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >a
+  .last_chance : { CLASS(c) } >b
+}
+
+# RUN: not ld.lld -T spill-fail.lds spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=SPILL-FAIL --implicit-check-not=error:
+
+# SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
+
+#--- spill-lma.lds
+## The above spill still occurs when the LMA would overflow, even though the
+## VMA would fit.
+MEMORY {
+  vma_a : ORIGIN = 0, LENGTH = 3
+  vma_b : ORIGIN = 3, LENGTH = 3
+  lma_a : ORIGIN = 6, LENGTH = 2
+  lma_b : ORIGIN = 8, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >vma_a AT>lma_a
+  .last_chance : { CLASS(c) } >vma_b AT>lma_b
+}
+
+# RUN: ld.lld -T spill-lma.lds spill.o -o spill-lma
+# RUN: llvm-readelf -S spill-lma | FileCheck %s --check-prefix=SPILL-LMA
+
+# SPILL-LMA:      Name          Type     Address          Off    Size
+# SPILL-LMA:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-LMA-NEXT: .last_chance  PROGBITS 0000000000000003 001003 000002
+
+#--- spill-later.lds
+## A spill occurs to an additional class ref after the first.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >a
+  .second_chance : { CLASS(c) } >b
+  .last_chance : { CLASS(c) } >c
+}
+
+# RUN: ld.lld -T spill-later.lds spill.o -o spill-later
+# RUN: llvm-readelf -S spill-later | FileCheck %s --check-prefix=SPILL-LATER
+
+# SPILL-LATER:      Name            Type     Address          Off    Size
+# SPILL-LATER:      .first_chance   PROGBITS 0000000000000000 001000 000001
+# SPILL-LATER-NEXT: .second_chance  PROGBITS 0000000000000002 001001 000000
+# SPILL-LATER-NEXT: .last_chance    PROGBITS 0000000000000003 001003 000002
+
+#--- spill-earlier.lds
+## A later overflow causes an earlier section to spill.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+}
+
+SECTIONS {
+  CLASS(c) { *(.one_byte_section) }
+  .first_chance : { CLASS(c) *(.two_byte_section) } >a
+  .last_chance : { CLASS(c) } >b
+}
+
+# RUN: ld.lld -T spill-earlier.lds spill.o -o spill-earlier
+# RUN: llvm-readelf -S spill-earlier | FileCheck %s --check-prefix=SPILL-EARLIER
+
+# SPILL-EARLIER:      Name          Type     Address          Off    Size
+# SPILL-EARLIER:      .first_chance PROGBITS 0000000000000000 001000 000002
+# SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
+
+#--- enable-non-contiguous-regions.lds
+## Class definitions do not preclude additional matches when used with
+## --enable-non-contiguous-regions, and additional matches in class
+## definitions become spills at class references.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 1, LENGTH = 2
+  c : ORIGIN = 3, LENGTH = 1
+}
+
+SECTIONS {
+  .first_chance : { *(.two_byte_section) } >a
+  /* An additional match in a class defers a spill. */
+  CLASS(two) { *(.two_byte_section) }
+  /* A class references actualizes deferred spills. */
+  .last_chance : { CLASS(two) } >b
+
+  /* Section classes do not preclude other matches. */
+  CLASS(one) { *(.one_byte_section) }
+  .one_byte_section : { *(.one_byte_section) } >c
+}
+
+# RUN: ld.lld -T enable-non-contiguous-regions.lds spill.o -o enable-non-contiguous-regions --enable-non-contiguous-regions
+# RUN: llvm-readelf -S enable-non-contiguous-regions | FileCheck %s --check-prefix=ENABLE-NON-CONTIGUOUS-REGIONS
+
+# ENABLE-NON-CONTIGUOUS-REGIONS:      Name          Type     Address          Off    Size
+# ENABLE-NON-CONTIGUOUS-REGIONS:      .first_chance     PROGBITS 0000000000000000 000190 000000
+# ENABLE-NON-CONTIGUOUS-REGIONS-NEXT: .last_chance      PROGBITS 0000000000000001 001001 000002
+# ENABLE-NON-CONTIGUOUS-REGIONS-NEXT: .one_byte_section PROGBITS 0000000000000003 001003 000001
+
+#--- merge.s
+.section .a,"aM",@progbits,1
+.byte 0x12, 0x34
+
+.section .b,"aM",@progbits,1
+.byte 0x12
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 merge.s -o merge.o
+
+#--- spill-merge.lds
+## SHF_MERGE sections are spilled according to the class refs of the first
+## merged input section (the one giving the resulting section its name).
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 1, LENGTH = 2
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(a) { *(.a) }
+  CLASS(b) { *(.b) }
+  .first : { CLASS(a) CLASS(b) } >a
+  .second : { CLASS(a) } >b
+  .third : { CLASS(b) } >c
+}
+
+# RUN: ld.lld -T spill-merge.lds merge.o -o spill-merge
+# RUN: llvm-readelf -S spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
+
+# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+
+#--- link-order.s
+.section .a,"a",@progbits
+.fill 1
+
+.section .b,"a",@progbits
+.fill 1
+
+.section .c,"a",@progbits
+.fill 1
+
+.section .link_order.a,"ao",@progbits,.a
+.byte 1
+
+.section .link_order.b,"ao",@progbits,.b
+.byte 2
+
+.section .link_order.c,"ao",@progbits,.c
+.byte 3
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 link-order.s -o link-order.o
+
+#--- link-order.lds
+## SHF_LINK_ORDER is reordered when spilling changes relative section order.
+MEMORY {
+  order : ORIGIN = 0, LENGTH = 3
+  potential_a : ORIGIN = 3, LENGTH = 0
+  bc : ORIGIN = 3, LENGTH = 2
+  actual_a : ORIGIN = 5, LENGTH = 1
+}
+
+SECTIONS {
+  CLASS(a) { *(.a) }
+  .order :  { *(.link_order.*) } > order
+  .potential_a : { CLASS(a) } >potential_a
+  .bc : { *(.b) *(.c) } >bc
+  .actual_a : { CLASS(a) } >actual_a
+}
+
+# RUN: ld.lld -T link-order.lds link-order.o -o link-order
+# RUN: llvm-objdump -s link-order | FileCheck %s --check-prefix=LINK-ORDER
+
+# LINK-ORDER: 020301 ...{{$}}
+
+#--- from-insert.lds
+## A section might spill from INSERT.
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { *(.one_byte_section) }
+}
+SECTIONS { .b : { CLASS(class) } } INSERT AFTER .a;
+SECTIONS { .c : { CLASS(class) } }
+
+# RUN: not ld.lld -T from-insert.lds spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-INSERT
+# RUN: ld.lld -T from-insert.lds spill.o -o out --noinhibit-exec 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-INSERT-WARN
+
+# FROM-INSERT: error: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+# FROM-INSERT-WARN: warning: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+
+#--- to-insert.lds
+## A section might spill to INSERT.
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { CLASS(class) *(.one_byte_section) }
+}
+SECTIONS { .b : { CLASS(class) } } INSERT AFTER .a;
+
+# RUN: not ld.lld -T to-insert.lds spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-INSERT
+# RUN:  ld.lld -T to-insert.lds spill.o -o out --noinhibit-exec 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-INSERT-WARN
+
+# TO-INSERT: error: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+# TO-INSERT-WARN: warning: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+
+#--- from-discard.lds
+## A section might spill from /DISCARD/.
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  /DISCARD/ : { CLASS(class) }
+  .c : { CLASS(class) }
+}
+
+# RUN: not ld.lld -T from-discard.lds spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-DISCARD
+# RUN: ld.lld -T from-discard.lds spill.o -o out --noinhibit-exec 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-DISCARD-WARN
+
+# FROM-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
+# FROM-DISCARD-WARN: warning: section '.two_byte_section' cannot spill from/to /DISCARD/
+
+#--- to-discard.lds
+## A section might spill to /DISCARD/.
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { CLASS(class) }
+  /DISCARD/ : { CLASS(class) }
+}
+
+# RUN: not ld.lld -T to-discard.lds spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-DISCARD
+# RUN: ld.lld -T to-discard.lds spill.o -o out --noinhibit-exec 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-DISCARD-WARN
+
+# TO-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
+# TO-DISCARD-WARN: warning: section '.two_byte_section' cannot spill from/to /DISCARD/

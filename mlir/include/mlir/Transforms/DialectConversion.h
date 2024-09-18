@@ -168,37 +168,41 @@ public:
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
-  /// Register a materialization function, which must be convertible to the
-  /// following form:
+  /// All of the following materializations require function objects that are
+  /// convertible to the following form:
   ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the converted type on success, an `std::nullopt` if
+  /// must return a Value of the type `T` on success, an `std::nullopt` if
   /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion may
-  /// persist after the conversion has finished.
-  ///
+  /// unrecoverable failure. Materialization functions must be provided when a
+  /// type conversion may persist after the conversion has finished.
+
   /// This method registers a materialization that will be called when
-  /// converting an illegal block argument type, to a legal type.
+  /// converting (potentially multiple) block arguments that were the result of
+  /// a signature conversion of a single block argument, to a single SSA value
+  /// with the old block argument type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
-  /// converting a legal type to an illegal source type. This is used when
-  /// conversions to an illegal type must persist beyond the main conversion.
+  /// converting a legal replacement value back to an illegal source type.
+  /// This is used when some uses of the original, illegal value must persist
+  /// beyond the main conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
-  /// converting type from an illegal, or source, type to a legal type.
+  /// converting an illegal (source) value to a legal (target) type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
@@ -247,7 +251,8 @@ public:
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
   /// and a null type on conversion or cast failure.
-  template <typename TargetType> TargetType convertType(Type t) const {
+  template <typename TargetType>
+  TargetType convertType(Type t) const {
     return dyn_cast_or_null<TargetType>(convertType(t));
   }
 
@@ -661,41 +666,41 @@ class ConversionPatternRewriter final : public PatternRewriter {
 public:
   ~ConversionPatternRewriter() override;
 
-  /// Apply a signature conversion to the entry block of the given region. This
-  /// replaces the entry block with a new block containing the updated
-  /// signature. The new entry block to the region is returned for convenience.
-  /// If no block argument types are changing, the entry original block will be
+  /// Apply a signature conversion to given block. This replaces the block with
+  /// a new block containing the updated signature. The operations of the given
+  /// block are inlined into the newly-created block, which is returned.
+  ///
+  /// If no block argument types are changing, the original block will be
   /// left in place and returned.
   ///
-  /// If provided, `converter` will be used for any materializations.
+  /// A signature converison must be provided. (Type converters can construct
+  /// a signature conversion with `convertBlockSignature`.)
+  ///
+  /// Optionally, a type converter can be provided to build materializations.
+  /// Note: If no type converter was provided or the type converter does not
+  /// specify any suitable argument/target materialization rules, the dialect
+  /// conversion may fail to legalize unresolved materializations.
   Block *
-  applySignatureConversion(Region *region,
+  applySignatureConversion(Block *block,
                            TypeConverter::SignatureConversion &conversion,
                            const TypeConverter *converter = nullptr);
 
-  /// Convert the types of block arguments within the given region. This
+  /// Apply a signature conversion to each block in the given region. This
   /// replaces each block with a new block containing the updated signature. If
   /// an updated signature would match the current signature, the respective
-  /// block is left in place as is.
+  /// block is left in place as is. (See `applySignatureConversion` for
+  /// details.) The new entry block of the region is returned.
   ///
-  /// The entry block may have a special conversion if `entryConversion` is
-  /// provided. On success, the new entry block to the region is returned for
-  /// convenience. Otherwise, failure is returned.
+  /// SignatureConversions are computed with the specified type converter.
+  /// This function returns "failure" if the type converter failed to compute
+  /// a SignatureConversion for at least one block.
+  ///
+  /// Optionally, a special SignatureConversion can be specified for the entry
+  /// block. This is because the types of the entry block arguments are often
+  /// tied semantically to the operation.
   FailureOr<Block *> convertRegionTypes(
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
-
-  /// Convert the types of block arguments within the given region except for
-  /// the entry region. This replaces each non-entry block with a new block
-  /// containing the updated signature. If an updated signature would match the
-  /// current signature, the respective block is left in place as is.
-  ///
-  /// If special conversion behavior is needed for the non-entry blocks (for
-  /// example, we need to convert only a subset of a BB arguments), such
-  /// behavior can be specified in blockConversions.
-  LogicalResult convertNonEntryRegionTypes(
-      Region *region, const TypeConverter &converter,
-      ArrayRef<TypeConverter::SignatureConversion> blockConversions);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
@@ -1088,8 +1093,9 @@ struct ConversionConfig {
 
   /// An optional listener that is notified about all IR modifications in case
   /// dialect conversion succeeds. If the dialect conversion fails and no IR
-  /// modifications are visible (i.e., they were all rolled back), no
-  /// notifications are sent.
+  /// modifications are visible (i.e., they were all rolled back), or if the
+  /// dialect conversion is an "analysis conversion", no notifications are
+  /// sent (apart from `notifyPatternBegin`/notifyPatternEnd`).
   ///
   /// Note: Notifications are sent in a delayed fashion, when the dialect
   /// conversion is guaranteed to succeed. At that point, some IR modifications
@@ -1118,7 +1124,40 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion attempts to build source/target/
+  /// argument materializations through the type converter API in lieu of
+  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
+  /// at least one materialization could not be built.
+  ///
+  /// If set to "false", the dialect conversion does not build any custom
+  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
+  /// ops to ensure that the resulting IR is valid.
+  bool buildMaterializations = true;
 };
+
+//===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided).
+///
+/// This function processes cast ops in a worklist-driven fashion. For each
+/// cast op, if the chain of input casts eventually reaches a cast op where the
+/// input types match the output types of the matched op, replace the matched
+/// op with the inputs.
+///
+/// Example:
+/// %1 = unrealized_conversion_cast %0 : !A to !B
+/// %2 = unrealized_conversion_cast %1 : !B to !C
+/// %3 = unrealized_conversion_cast %2 : !C to !A
+///
+/// In the above example, %0 can be used instead of %3 and all cast ops are
+/// folded away.
+void reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

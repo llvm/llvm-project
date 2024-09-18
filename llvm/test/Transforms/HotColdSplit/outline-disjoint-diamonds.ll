@@ -2,9 +2,9 @@
 
 ; CHECK-LABEL: define {{.*}}@fun
 ; CHECK: call {{.*}}@fun.cold.1(
-; CHECK-NEXT: ret void
+; CHECK-NEXT: unreachable
 ; CHECK: call {{.*}}@fun.cold.2(
-; CHECK-NEXT: ret void
+; CHECK-NEXT: unreachable
 define void @fun() {
 entry:
   br i1 undef, label %A.then, label %A.else

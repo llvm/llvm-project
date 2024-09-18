@@ -26,8 +26,8 @@
 #include "variant_test_helpers.h"
 
 template <class Var, std::size_t I, class... Args>
-constexpr auto test_emplace_exists_imp(int) -> decltype(
-    std::declval<Var>().template emplace<I>(std::declval<Args>()...), true) {
+constexpr auto test_emplace_exists_imp(int)
+    -> decltype(std::declval<Var>().template emplace<I>(std::declval<Args>()...), true) {
   return true;
 }
 
@@ -36,51 +36,32 @@ constexpr auto test_emplace_exists_imp(long) -> bool {
   return false;
 }
 
-template <class Var, std::size_t I, class... Args> constexpr bool emplace_exists() {
+template <class Var, std::size_t I, class... Args>
+constexpr bool emplace_exists() {
   return test_emplace_exists_imp<Var, I, Args...>(0);
 }
 
-void test_emplace_sfinae() {
+constexpr void test_emplace_sfinae() {
   {
-    using V = std::variant<int, void *, const void *, TestTypes::NoCtors>;
+    using V = std::variant<int, void*, const void*, TestTypes::NoCtors>;
     static_assert(emplace_exists<V, 0>(), "");
     static_assert(emplace_exists<V, 0, int>(), "");
-    static_assert(!emplace_exists<V, 0, decltype(nullptr)>(),
-                  "cannot construct");
+    static_assert(!emplace_exists<V, 0, decltype(nullptr)>(), "cannot construct");
     static_assert(emplace_exists<V, 1, decltype(nullptr)>(), "");
-    static_assert(emplace_exists<V, 1, int *>(), "");
-    static_assert(!emplace_exists<V, 1, const int *>(), "");
+    static_assert(emplace_exists<V, 1, int*>(), "");
+    static_assert(!emplace_exists<V, 1, const int*>(), "");
     static_assert(!emplace_exists<V, 1, int>(), "cannot construct");
-    static_assert(emplace_exists<V, 2, const int *>(), "");
-    static_assert(emplace_exists<V, 2, int *>(), "");
+    static_assert(emplace_exists<V, 2, const int*>(), "");
+    static_assert(emplace_exists<V, 2, int*>(), "");
     static_assert(!emplace_exists<V, 3>(), "cannot construct");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, int &, const int &, int &&, TestTypes::NoCtors>;
-    static_assert(emplace_exists<V, 0>(), "");
-    static_assert(emplace_exists<V, 0, int>(), "");
-    static_assert(emplace_exists<V, 0, long long>(), "");
-    static_assert(!emplace_exists<V, 0, int, int>(), "too many args");
-    static_assert(emplace_exists<V, 1, int &>(), "");
-    static_assert(!emplace_exists<V, 1>(), "cannot default construct ref");
-    static_assert(!emplace_exists<V, 1, const int &>(), "cannot bind ref");
-    static_assert(!emplace_exists<V, 1, int &&>(), "cannot bind ref");
-    static_assert(emplace_exists<V, 2, int &>(), "");
-    static_assert(emplace_exists<V, 2, const int &>(), "");
-    static_assert(emplace_exists<V, 2, int &&>(), "");
-    static_assert(!emplace_exists<V, 2, void *>(),
-                  "not constructible from void*");
-    static_assert(emplace_exists<V, 3, int>(), "");
-    static_assert(!emplace_exists<V, 3, int &>(), "cannot bind ref");
-    static_assert(!emplace_exists<V, 3, const int &>(), "cannot bind ref");
-    static_assert(!emplace_exists<V, 3, const int &&>(), "cannot bind ref");
-    static_assert(!emplace_exists<V, 4>(), "no ctors");
-  }
-#endif
 }
 
-void test_basic() {
+struct NoCtor {
+  NoCtor() = delete;
+};
+
+TEST_CONSTEXPR_CXX20 void test_basic() {
   {
     using V = std::variant<int>;
     V v(42);
@@ -93,9 +74,9 @@ void test_basic() {
     assert(std::get<0>(v) == 42);
     assert(&ref2 == &std::get<0>(v));
   }
+
   {
-    using V =
-        std::variant<int, long, const void *, TestTypes::NoCtors, std::string>;
+    using V     = std::variant<int, long, const void*, NoCtor, std::string>;
     const int x = 100;
     V v(std::in_place_index<0>, -1);
     // default emplace a value
@@ -113,46 +94,21 @@ void test_basic() {
     assert(std::get<4>(v) == "aaa");
     assert(&ref3 == &std::get<4>(v));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, long, const int &, int &&, TestTypes::NoCtors,
-                           std::string>;
-    const int x = 100;
-    int y = 42;
-    int z = 43;
-    V v(std::in_place_index<0>, -1);
-    // default emplace a value
-    auto& ref1 = v.emplace<1>();
-    static_assert(std::is_same_v<long&, decltype(ref1)>, "");
-    assert(std::get<1>(v) == 0);
-    assert(&ref1 == &std::get<1>(v));
-    // emplace a reference
-    auto& ref2 = v.emplace<2>(x);
-    static_assert(std::is_same_v<&, decltype(ref)>, "");
-    assert(&std::get<2>(v) == &x);
-    assert(&ref2 == &std::get<2>(v));
-    // emplace an rvalue reference
-    auto& ref3 = v.emplace<3>(std::move(y));
-    static_assert(std::is_same_v<&, decltype(ref)>, "");
-    assert(&std::get<3>(v) == &y);
-    assert(&ref3 == &std::get<3>(v));
-    // re-emplace a new reference over the active member
-    auto& ref4 = v.emplace<3>(std::move(z));
-    static_assert(std::is_same_v<&, decltype(ref)>, "");
-    assert(&std::get<3>(v) == &z);
-    assert(&ref4 == &std::get<3>(v));
-    // emplace with multiple args
-    auto& ref5 = v.emplace<5>(3u, 'a');
-    static_assert(std::is_same_v<std::string&, decltype(ref5)>, "");
-    assert(std::get<5>(v) == "aaa");
-    assert(&ref5 == &std::get<5>(v));
-  }
-#endif
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_basic();
+  test_emplace_sfinae();
+
+  return true;
 }
 
 int main(int, char**) {
-  test_basic();
-  test_emplace_sfinae();
+  test();
+
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }

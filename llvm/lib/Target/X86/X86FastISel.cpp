@@ -835,7 +835,7 @@ redo_gep:
     // visited them yet, so the instructions may not yet be assigned
     // virtual registers.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(V)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -1634,8 +1634,8 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // Unconditional branches are selected by tablegen-generated code.
   // Handle a conditional branch.
   const BranchInst *BI = cast<BranchInst>(I);
-  MachineBasicBlock *TrueMBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FalseMBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TrueMBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FalseMBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Fold the common case of a conditional branch with a comparison
   // in the same block (values defined on other blocks may not have
@@ -2133,7 +2133,8 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     return false;
 
   const TargetRegisterInfo &TRI = *Subtarget->getRegisterInfo();
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC)/8);
+  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(*RC) / 8, false,
+                                    Subtarget->hasNDD());
   Register ResultReg = fastEmitInst_rri(Opc, RC, RHSReg, LHSReg, CC);
   updateValueMap(I, ResultReg);
   return true;

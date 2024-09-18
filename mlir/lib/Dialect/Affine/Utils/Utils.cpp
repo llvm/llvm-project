@@ -678,12 +678,9 @@ static bool mayHaveEffect(Operation *srcMemOp, Operation *destMemOp,
 }
 
 template <typename EffectType, typename T>
-bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
-  auto isLocallyAllocated = [](Value memref) {
-    auto *defOp = memref.getDefiningOp();
-    return defOp && hasSingleEffect<MemoryEffects::Allocate>(defOp, memref);
-  };
-
+bool mlir::affine::hasNoInterveningEffect(
+    Operation *start, T memOp,
+    llvm::function_ref<bool(Value, Value)> mayAlias) {
   // A boolean representing whether an intervening operation could have impacted
   // memOp.
   bool hasSideEffect = false;
@@ -704,11 +701,8 @@ bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
         // If op causes EffectType on a potentially aliasing location for
         // memOp, mark as having the effect.
         if (isa<EffectType>(effect.getEffect())) {
-          // TODO: This should be replaced with a check for no aliasing.
-          // Aliasing information should be passed to this method.
           if (effect.getValue() && effect.getValue() != memref &&
-              isLocallyAllocated(memref) &&
-              isLocallyAllocated(effect.getValue()))
+              !mayAlias(effect.getValue(), memref))
             continue;
           opMayHaveEffect = true;
           break;
@@ -832,10 +826,10 @@ bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
 /// other operations will overwrite the memory loaded between the given load
 /// and store.  If such a value exists, the replaced `loadOp` will be added to
 /// `loadOpsToErase` and its memref will be added to `memrefsToErase`.
-static void forwardStoreToLoad(AffineReadOpInterface loadOp,
-                               SmallVectorImpl<Operation *> &loadOpsToErase,
-                               SmallPtrSetImpl<Value> &memrefsToErase,
-                               DominanceInfo &domInfo) {
+static void forwardStoreToLoad(
+    AffineReadOpInterface loadOp, SmallVectorImpl<Operation *> &loadOpsToErase,
+    SmallPtrSetImpl<Value> &memrefsToErase, DominanceInfo &domInfo,
+    llvm::function_ref<bool(Value, Value)> mayAlias) {
 
   // The store op candidate for forwarding that satisfies all conditions
   // to replace the load, if any.
@@ -866,13 +860,13 @@ static void forwardStoreToLoad(AffineReadOpInterface loadOp,
     // 3. The store must reach the load. Access function equivalence only
     // guarantees this for accesses in the same block. The load could be in a
     // nested block that is unreachable.
-    if (storeOp->getBlock() != loadOp->getBlock() &&
-        !mustReachAtInnermost(srcAccess, destAccess))
+    if (!mustReachAtInnermost(srcAccess, destAccess))
       continue;
 
     // 4. Ensure there is no intermediate operation which could replace the
     // value in memory.
-    if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
+    if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp,
+                                                              mayAlias))
       continue;
 
     // We now have a candidate for forwarding.
@@ -901,7 +895,8 @@ static void forwardStoreToLoad(AffineReadOpInterface loadOp,
 template bool
 mlir::affine::hasNoInterveningEffect<mlir::MemoryEffects::Read,
                                      affine::AffineReadOpInterface>(
-    mlir::Operation *, affine::AffineReadOpInterface);
+    mlir::Operation *, affine::AffineReadOpInterface,
+    llvm::function_ref<bool(Value, Value)>);
 
 // This attempts to find stores which have no impact on the final result.
 // A writing op writeA will be eliminated if there exists an op writeB if
@@ -910,7 +905,8 @@ mlir::affine::hasNoInterveningEffect<mlir::MemoryEffects::Read,
 // 3) There is no potential read between writeA and writeB.
 static void findUnusedStore(AffineWriteOpInterface writeA,
                             SmallVectorImpl<Operation *> &opsToErase,
-                            PostDominanceInfo &postDominanceInfo) {
+                            PostDominanceInfo &postDominanceInfo,
+                            llvm::function_ref<bool(Value, Value)> mayAlias) {
 
   for (Operation *user : writeA.getMemRef().getUsers()) {
     // Only consider writing operations.
@@ -939,7 +935,8 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
 
     // There cannot be an operation which reads from memory between
     // the two writes.
-    if (!affine::hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
+    if (!affine::hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB,
+                                                             mayAlias))
       continue;
 
     opsToErase.push_back(writeA);
@@ -955,7 +952,8 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
 // 3) There is no write between loadA and loadB.
 static void loadCSE(AffineReadOpInterface loadA,
                     SmallVectorImpl<Operation *> &loadOpsToErase,
-                    DominanceInfo &domInfo) {
+                    DominanceInfo &domInfo,
+                    llvm::function_ref<bool(Value, Value)> mayAlias) {
   SmallVector<AffineReadOpInterface, 4> loadCandidates;
   for (auto *user : loadA.getMemRef().getUsers()) {
     auto loadB = dyn_cast<AffineReadOpInterface>(user);
@@ -976,7 +974,7 @@ static void loadCSE(AffineReadOpInterface loadA,
 
     // 3. There should not be a write between loadA and loadB.
     if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(
-            loadB.getOperation(), loadA))
+            loadB.getOperation(), loadA, mayAlias))
       continue;
 
     // Check if two values have the same shape. This is needed for affine vector
@@ -1034,16 +1032,21 @@ static void loadCSE(AffineReadOpInterface loadA,
 // than dealloc) remain.
 //
 void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
-                                       PostDominanceInfo &postDomInfo) {
+                                       PostDominanceInfo &postDomInfo,
+                                       AliasAnalysis &aliasAnalysis) {
   // Load op's whose results were replaced by those forwarded from stores.
   SmallVector<Operation *, 8> opsToErase;
 
   // A list of memref's that are potentially dead / could be eliminated.
   SmallPtrSet<Value, 4> memrefsToErase;
 
+  auto mayAlias = [&](Value val1, Value val2) -> bool {
+    return !aliasAnalysis.alias(val1, val2).isNo();
+  };
+
   // Walk all load's and perform store to load forwarding.
   f.walk([&](AffineReadOpInterface loadOp) {
-    forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo);
+    forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo, mayAlias);
   });
   for (auto *op : opsToErase)
     op->erase();
@@ -1051,7 +1054,7 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
 
   // Walk all store's and perform unused store elimination
   f.walk([&](AffineWriteOpInterface storeOp) {
-    findUnusedStore(storeOp, opsToErase, postDomInfo);
+    findUnusedStore(storeOp, opsToErase, postDomInfo, mayAlias);
   });
   for (auto *op : opsToErase)
     op->erase();
@@ -1084,7 +1087,7 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   // stores. Otherwise, some stores are wrongly seen as having an intervening
   // effect.
   f.walk([&](AffineReadOpInterface loadOp) {
-    loadCSE(loadOp, opsToErase, domInfo);
+    loadCSE(loadOp, opsToErase, domInfo, mayAlias);
   });
   for (auto *op : opsToErase)
     op->erase();
@@ -1792,8 +1795,7 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   MLIRContext *context = memrefType.getContext();
   for (unsigned d = 0; d < newRank; ++d) {
     // Check if this dimension is dynamic.
-    if (bool isDynDim =
-            isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims)) {
+    if (isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims)) {
       newShape[d] = ShapedType::kDynamic;
       continue;
     }

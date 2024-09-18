@@ -50,12 +50,21 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
                  __min_vector_width__(128)))
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
+                 __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
+                 __min_vector_width__(128)))
+#endif
 
 /* Arithmetic */
 /// Adds two 256-bit vectors of [4 x double].
@@ -207,6 +216,8 @@ _mm256_div_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the greater
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMAXPD </c> instruction.
@@ -225,6 +236,8 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the greater
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -245,6 +258,8 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the lesser
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMINPD </c> instruction.
@@ -263,6 +278,8 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the lesser
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -832,6 +849,7 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 
 /// Copies the values stored in a 128-bit vector of [4 x float] as
 ///    specified by the 128-bit integer vector operand.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPERMILPS </c> instruction.
@@ -1604,9 +1622,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [2 x double] vector consisting of two doubles corresponding to
-///    the two comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1663,9 +1681,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [4 x float] vector consisting of four floats corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1721,9 +1739,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    256-bit vectors of [4 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [4 x double] vector consisting of four doubles corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1781,9 +1799,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [8 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [8 x float] vector consisting of eight floats corresponding to
-///    the eight comparison results: zero if the comparison is false, and all
-///    1's if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1842,8 +1860,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    If the result is true, all 64 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1900,8 +1919,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
 ///
-///    If the result is true, all 32 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2201,6 +2221,10 @@ _mm256_cvtpd_ps(__m256d __a)
 
 /// Converts a vector of [8 x float] into a vector of [8 x i32].
 ///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCVTPS2DQ </c> instruction.
@@ -2230,9 +2254,13 @@ _mm256_cvtps_pd(__m128 __a)
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32], truncating the result by rounding towards zero when it is
-///    inexact.
+/// Converts a 256-bit vector of [4 x double] into four signed truncated
+///    (rounded toward zero) 32-bit integers returned in a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2247,9 +2275,12 @@ _mm256_cvttpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32]. When a conversion is inexact, the value returned is rounded
-///    according to the rounding control bits in the MXCSR register.
+/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2264,8 +2295,12 @@ _mm256_cvtpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32],
-///    truncating the result by rounding towards zero when it is inexact.
+/// Converts a vector of [8 x float] into eight signed truncated (rounded
+///    toward zero) 32-bit integers returned in a vector of [8 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///

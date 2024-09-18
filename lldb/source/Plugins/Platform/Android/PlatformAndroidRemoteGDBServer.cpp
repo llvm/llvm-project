@@ -50,7 +50,7 @@ static Status ForwardPortWithAdb(
             remote_socket_name.str().c_str(), local_port);
 
   if (!socket_namespace)
-    return Status("Invalid socket namespace");
+    return Status::FromErrorString("Invalid socket namespace");
 
   return adb.SetPortForwarding(local_port, remote_socket_name,
                                *socket_namespace);
@@ -114,15 +114,15 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   m_device_id.clear();
 
   if (args.GetArgumentCount() != 1)
-    return Status(
+    return Status::FromErrorString(
         "\"platform connect\" takes a single argument: <connect-url>");
 
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
-    return Status("URL is null.");
+    return Status::FromErrorString("URL is null.");
   std::optional<URI> parsed_url = URI::Parse(url);
   if (!parsed_url)
-    return Status("Invalid URL: %s", url);
+    return Status::FromErrorStringWithFormat("Invalid URL: %s", url);
   if (parsed_url->hostname != "localhost")
     m_device_id = parsed_url->hostname.str();
 
@@ -189,8 +189,8 @@ Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
   Status error;
 
   auto forward = [&](const uint16_t local, const uint16_t remote) {
-    error = ForwardPortWithAdb(local, remote, remote_socket_name,
-                               m_socket_namespace, m_device_id);
+    Status error = ForwardPortWithAdb(local, remote, remote_socket_name,
+                                      m_socket_namespace, m_device_id);
     if (error.Success()) {
       m_port_forwards[pid] = local;
       std::ostringstream url_str;
@@ -231,8 +231,7 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
 
   std::optional<URI> parsed_url = URI::Parse(connect_url);
   if (!parsed_url) {
-    error.SetErrorStringWithFormat("Invalid URL: %s",
-                                   connect_url.str().c_str());
+    error = Status::FromErrorStringWithFormatv("Invalid URL: {0}", connect_url);
     return nullptr;
   }
 

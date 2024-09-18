@@ -14,12 +14,16 @@
 #ifndef LLVM_TABLEGEN_ERROR_H
 #define LLVM_TABLEGEN_ERROR_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/TableGen/Record.h"
 
 namespace llvm {
+class Record;
+class RecordVal;
+class Init;
 
 void PrintNote(const Twine &Msg);
+void PrintNote(function_ref<void(raw_ostream &OS)> PrintMsg);
 void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
 
 [[noreturn]] void PrintFatalNote(const Twine &Msg);
@@ -32,6 +36,7 @@ void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg);
 void PrintWarning(const char *Loc, const Twine &Msg);
 
 void PrintError(const Twine &Msg);
+void PrintError(function_ref<void(raw_ostream &OS)> PrintMsg);
 void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
 void PrintError(const char *Loc, const Twine &Msg);
 void PrintError(const Record *Rec, const Twine &Msg);
@@ -41,6 +46,7 @@ void PrintError(const RecordVal *RecVal, const Twine &Msg);
 [[noreturn]] void PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg);
 [[noreturn]] void PrintFatalError(const Record *Rec, const Twine &Msg);
 [[noreturn]] void PrintFatalError(const RecordVal *RecVal, const Twine &Msg);
+[[noreturn]] void PrintFatalError(function_ref<void(raw_ostream &OS)> PrintMsg);
 
 void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
 void dumpMessage(SMLoc Loc, Init *Message);

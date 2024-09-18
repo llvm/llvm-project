@@ -292,7 +292,7 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx4.a;
-// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @bfx4_packed, i64 2) monotonic, align 1
+// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @bfx4_packed, i32 0, i32 1) monotonic, align 1
 // CHECK: store i8 [[LD]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
 // CHECK: [[SHL:%.+]] = shl i8 [[LD]], 7
@@ -309,7 +309,7 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read relaxed
   ldv = bfx4.b;
-// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @bfx4_packed, i64 2) acquire, align 1
+// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @bfx4_packed, i32 0, i32 1) acquire, align 1
 // CHECK: store i8 [[LD]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
 // CHECK: [[ASHR:%.+]] = ashr i8 [[LD]], 1

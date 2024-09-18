@@ -10,13 +10,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
-#include "src/__support/CPP/bit.h"           // countl_one, countr_zero
-#include "src/__support/CPP/limits.h"        // CHAR_BIT, numeric_limits
-#include "src/__support/CPP/type_traits.h"   // is_unsigned_v
+#include "src/__support/CPP/bit.h"         // countl_one, countr_zero
+#include "src/__support/CPP/limits.h"      // CHAR_BIT, numeric_limits
+#include "src/__support/CPP/type_traits.h" // is_unsigned_v, is_constant_evaluated
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Create a bitmask with the count right-most bits set to 1, and all other bits
 // set to 0.  Only unsigned types are allowed.
@@ -33,199 +33,94 @@ mask_trailing_ones() {
 template <typename T, size_t count>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 mask_leading_ones() {
-  constexpr T MASK(mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>());
-  return T(~MASK); // bitwise NOT performs integer promotion.
+  return T(~mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>());
 }
 
-// Add with carry
-template <typename T> struct SumCarry {
-  T sum;
-  T carry;
-};
+// Create a bitmask with the count right-most bits set to 0, and all other bits
+// set to 1.  Only unsigned types are allowed.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+mask_trailing_zeros() {
+  return mask_leading_ones<T, CHAR_BIT * sizeof(T) - count>();
+}
 
-// This version is always valid for constexpr.
+// Create a bitmask with the count left-most bits set to 0, and all other bits
+// set to 1.  Only unsigned types are allowed.
+template <typename T, size_t count>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+mask_leading_zeros() {
+  return mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>();
+}
+
+// Returns whether 'a + b' overflows, the result is stored in 'res'.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, SumCarry<T>>
-add_with_carry_const(T a, T b, T carry_in) {
-  T tmp = a + carry_in;
-  T sum = b + tmp;
-  T carry_out = (sum < b) + (tmp < a);
-  return {sum, carry_out};
+[[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T &res) {
+  return __builtin_add_overflow(a, b, &res);
 }
 
+// Returns whether 'a - b' overflows, the result is stored in 'res'.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, SumCarry<T>>
-add_with_carry(T a, T b, T carry_in) {
-  return add_with_carry_const<T>(a, b, carry_in);
+[[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T &res) {
+  return __builtin_sub_overflow(a, b, &res);
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_addc)
-// https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
+#define RETURN_IF(TYPE, BUILTIN)                                               \
+  if constexpr (cpp::is_same_v<T, TYPE>)                                       \
+    return BUILTIN(a, b, carry_in, carry_out);
 
-template <>
-LIBC_INLINE constexpr SumCarry<unsigned char>
-add_with_carry<unsigned char>(unsigned char a, unsigned char b,
-                              unsigned char carry_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return add_with_carry_const<unsigned char>(a, b, carry_in);
-  } else {
-    SumCarry<unsigned char> result{0, 0};
-    result.sum = __builtin_addcb(a, b, carry_in, &result.carry);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr SumCarry<unsigned short>
-add_with_carry<unsigned short>(unsigned short a, unsigned short b,
-                               unsigned short carry_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return add_with_carry_const<unsigned short>(a, b, carry_in);
-  } else {
-    SumCarry<unsigned short> result{0, 0};
-    result.sum = __builtin_addcs(a, b, carry_in, &result.carry);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr SumCarry<unsigned int>
-add_with_carry<unsigned int>(unsigned int a, unsigned int b,
-                             unsigned int carry_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return add_with_carry_const<unsigned int>(a, b, carry_in);
-  } else {
-    SumCarry<unsigned int> result{0, 0};
-    result.sum = __builtin_addc(a, b, carry_in, &result.carry);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr SumCarry<unsigned long>
-add_with_carry<unsigned long>(unsigned long a, unsigned long b,
-                              unsigned long carry_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return add_with_carry_const<unsigned long>(a, b, carry_in);
-  } else {
-    SumCarry<unsigned long> result{0, 0};
-    result.sum = __builtin_addcl(a, b, carry_in, &result.carry);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr SumCarry<unsigned long long>
-add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
-                                   unsigned long long carry_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return add_with_carry_const<unsigned long long>(a, b, carry_in);
-  } else {
-    SumCarry<unsigned long long> result{0, 0};
-    result.sum = __builtin_addcll(a, b, carry_in, &result.carry);
-    return result;
-  }
-}
-
-#endif // LIBC_HAS_BUILTIN(__builtin_addc)
-
-// Subtract with borrow
-template <typename T> struct DiffBorrow {
-  T diff;
-  T borrow;
-};
-
-// This version is always valid for constexpr.
+// Returns the result of 'a + b' taking into account 'carry_in'.
+// The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, DiffBorrow<T>>
-sub_with_borrow_const(T a, T b, T borrow_in) {
-  T tmp = a - b;
-  T diff = tmp - borrow_in;
-  T borrow_out = (diff > tmp) + (tmp > a);
-  return {diff, borrow_out};
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+add_with_carry(T a, T b, T carry_in, T &carry_out) {
+  if constexpr (!cpp::is_constant_evaluated()) {
+#if __has_builtin(__builtin_addcb)
+    RETURN_IF(unsigned char, __builtin_addcb)
+#elif __has_builtin(__builtin_addcs)
+    RETURN_IF(unsigned short, __builtin_addcs)
+#elif __has_builtin(__builtin_addc)
+    RETURN_IF(unsigned int, __builtin_addc)
+#elif __has_builtin(__builtin_addcl)
+    RETURN_IF(unsigned long, __builtin_addcl)
+#elif __has_builtin(__builtin_addcll)
+    RETURN_IF(unsigned long long, __builtin_addcll)
+#endif
+  }
+  T sum = {};
+  T carry1 = add_overflow(a, b, sum);
+  T carry2 = add_overflow(sum, carry_in, sum);
+  carry_out = carry1 | carry2;
+  return sum;
 }
 
-// This version is not always valid for constepxr because it's overriden below
-// if builtins are available.
+// Returns the result of 'a - b' taking into account 'carry_in'.
+// The carry out is stored in 'carry_out' it not 'nullptr', dropped otherwise.
+// We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<
-    cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, DiffBorrow<T>>
-sub_with_borrow(T a, T b, T borrow_in) {
-  return sub_with_borrow_const<T>(a, b, borrow_in);
-}
-
-#if LIBC_HAS_BUILTIN(__builtin_subc)
-// https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
-
-template <>
-LIBC_INLINE constexpr DiffBorrow<unsigned char>
-sub_with_borrow<unsigned char>(unsigned char a, unsigned char b,
-                               unsigned char borrow_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return sub_with_borrow_const<unsigned char>(a, b, borrow_in);
-  } else {
-    DiffBorrow<unsigned char> result{0, 0};
-    result.diff = __builtin_subcb(a, b, borrow_in, &result.borrow);
-    return result;
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+sub_with_borrow(T a, T b, T carry_in, T &carry_out) {
+  if constexpr (!cpp::is_constant_evaluated()) {
+#if __has_builtin(__builtin_subcb)
+    RETURN_IF(unsigned char, __builtin_subcb)
+#elif __has_builtin(__builtin_subcs)
+    RETURN_IF(unsigned short, __builtin_subcs)
+#elif __has_builtin(__builtin_subc)
+    RETURN_IF(unsigned int, __builtin_subc)
+#elif __has_builtin(__builtin_subcl)
+    RETURN_IF(unsigned long, __builtin_subcl)
+#elif __has_builtin(__builtin_subcll)
+    RETURN_IF(unsigned long long, __builtin_subcll)
+#endif
   }
+  T sub = {};
+  T carry1 = sub_overflow(a, b, sub);
+  T carry2 = sub_overflow(sub, carry_in, sub);
+  carry_out = carry1 | carry2;
+  return sub;
 }
 
-template <>
-LIBC_INLINE constexpr DiffBorrow<unsigned short>
-sub_with_borrow<unsigned short>(unsigned short a, unsigned short b,
-                                unsigned short borrow_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return sub_with_borrow_const<unsigned short>(a, b, borrow_in);
-  } else {
-    DiffBorrow<unsigned short> result{0, 0};
-    result.diff = __builtin_subcs(a, b, borrow_in, &result.borrow);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr DiffBorrow<unsigned int>
-sub_with_borrow<unsigned int>(unsigned int a, unsigned int b,
-                              unsigned int borrow_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return sub_with_borrow_const<unsigned int>(a, b, borrow_in);
-  } else {
-    DiffBorrow<unsigned int> result{0, 0};
-    result.diff = __builtin_subc(a, b, borrow_in, &result.borrow);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr DiffBorrow<unsigned long>
-sub_with_borrow<unsigned long>(unsigned long a, unsigned long b,
-                               unsigned long borrow_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return sub_with_borrow_const<unsigned long>(a, b, borrow_in);
-  } else {
-    DiffBorrow<unsigned long> result{0, 0};
-    result.diff = __builtin_subcl(a, b, borrow_in, &result.borrow);
-    return result;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr DiffBorrow<unsigned long long>
-sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
-                                    unsigned long long borrow_in) {
-  if (__builtin_is_constant_evaluated()) {
-    return sub_with_borrow_const<unsigned long long>(a, b, borrow_in);
-  } else {
-    DiffBorrow<unsigned long long> result{0, 0};
-    result.diff = __builtin_subcll(a, b, borrow_in, &result.borrow);
-    return result;
-  }
-}
-
-#endif // LIBC_HAS_BUILTIN(__builtin_subc)
+#undef RETURN_IF
 
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
@@ -261,6 +156,6 @@ count_zeros(T value) {
   return cpp::popcount<T>(static_cast<T>(~value));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H

@@ -26,15 +26,16 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributes.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -157,7 +158,7 @@ StringRef Hexagon_MC::selectHexagonCPU(StringRef CPU) {
     // non-tiny subtarget.  See: addArchSubtarget
     std::pair<StringRef, StringRef> ArchP = ArchV.split('t');
     std::pair<StringRef, StringRef> CPUP = CPU.split('t');
-    if (!ArchP.first.equals(CPUP.first))
+    if (ArchP.first != CPUP.first)
       report_fatal_error("conflicting architectures specified.");
     return CPU;
   }
@@ -224,12 +225,12 @@ bool isSlot0Only(unsigned units) {
 namespace {
 
 class HexagonTargetAsmStreamer : public HexagonTargetStreamer {
+  formatted_raw_ostream &OS;
+
 public:
-  HexagonTargetAsmStreamer(MCStreamer &S,
-                           formatted_raw_ostream &OS,
-                           bool isVerboseAsm,
+  HexagonTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                            MCInstPrinter &IP)
-      : HexagonTargetStreamer(S) {}
+      : HexagonTargetStreamer(S), OS(OS) {}
 
   void prettyPrintAsm(MCInstPrinter &InstPrinter, uint64_t Address,
                       const MCInst &Inst, const MCSubtargetInfo &STI,
@@ -266,6 +267,21 @@ public:
     else
       OS << "\t}" << PacketBundle.second;
   }
+
+  void finish() override { finishAttributeSection(); }
+
+  void finishAttributeSection() override {}
+
+  void emitAttribute(unsigned Attribute, unsigned Value) override {
+    OS << "\t.attribute\t" << Attribute << ", " << Twine(Value);
+    if (getStreamer().isVerboseAsm()) {
+      StringRef Name = ELFAttrs::attrTypeAsString(
+          Attribute, HexagonAttrs::getHexagonAttributeTags());
+      if (!Name.empty())
+        OS << "\t// " << Name;
+    }
+    OS << "\n";
+  }
 };
 
 class HexagonTargetELFStreamer : public HexagonTargetStreamer {
@@ -275,10 +291,8 @@ public:
   }
   HexagonTargetELFStreamer(MCStreamer &S, MCSubtargetInfo const &STI)
       : HexagonTargetStreamer(S) {
-    MCAssembler &MCA = getStreamer().getAssembler();
-    MCA.setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
+    getStreamer().getWriter().setELFHeaderEFlags(Hexagon_MC::GetELFFlags(STI));
   }
-
 
   void emitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                               unsigned ByteAlignment,
@@ -296,6 +310,27 @@ public:
         static_cast<HexagonMCELFStreamer &>(getStreamer());
     HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(
         Symbol, Size, Align(ByteAlignment), AccessSize);
+  }
+
+  void finish() override { finishAttributeSection(); }
+
+  void reset() override { AttributeSection = nullptr; }
+
+private:
+  MCSection *AttributeSection = nullptr;
+
+  void finishAttributeSection() override {
+    MCELFStreamer &S = getStreamer();
+    if (S.Contents.empty())
+      return;
+
+    S.emitAttributesSection("hexagon", ".hexagon.attributes",
+                            ELF::SHT_HEXAGON_ATTRIBUTES, AttributeSection);
+  }
+
+  void emitAttribute(uint32_t Attribute, uint32_t Value) override {
+    getStreamer().setAttributeItem(Attribute, Value,
+                                   /*OverwriteExisting=*/true);
   }
 };
 
@@ -339,17 +374,16 @@ static MCInstPrinter *createHexagonMCInstPrinter(const Triple &T,
     return nullptr;
 }
 
-static MCTargetStreamer *
-createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
-                          MCInstPrinter *IP, bool IsVerboseAsm) {
-  return new HexagonTargetAsmStreamer(S, OS, IsVerboseAsm, *IP);
+static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
+                                                   formatted_raw_ostream &OS,
+                                                   MCInstPrinter *IP) {
+  return new HexagonTargetAsmStreamer(S, OS, *IP);
 }
 
 static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createHexagonELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                   std::move(Emitter));
 }
@@ -542,7 +576,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   if (X != nullptr && (CPUName == "hexagonv67t" || CPUName == "hexagon71t"))
     addArchSubtarget(X, ArchFS);
 
-  if (CPU.equals("help"))
+  if (CPU == "help")
     exit(0);
 
   if (!isCPUValid(CPUName.str())) {
@@ -589,6 +623,29 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
     ArchSubtarget[std::string(STI->getCPU())] =
         std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
   }
+}
+
+std::optional<unsigned>
+Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
+  for (auto Arch : {Hexagon::ExtensionHVXV73, Hexagon::ExtensionHVXV71,
+                    Hexagon::ExtensionHVXV69, Hexagon::ExtensionHVXV68,
+                    Hexagon::ExtensionHVXV67, Hexagon::ExtensionHVXV66,
+                    Hexagon::ExtensionHVXV65, Hexagon::ExtensionHVXV62,
+                    Hexagon::ExtensionHVXV60})
+    if (Features.test(Arch))
+      return Arch;
+  return {};
+}
+
+unsigned Hexagon_MC::getArchVersion(const FeatureBitset &Features) {
+  for (auto Arch :
+       {Hexagon::ArchV73, Hexagon::ArchV71, Hexagon::ArchV69, Hexagon::ArchV68,
+        Hexagon::ArchV67, Hexagon::ArchV66, Hexagon::ArchV65, Hexagon::ArchV62,
+        Hexagon::ArchV60, Hexagon::ArchV55, Hexagon::ArchV5})
+    if (Features.test(Arch))
+      return Arch;
+  llvm_unreachable("Expected arch v5-v73");
+  return 0;
 }
 
 unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {

@@ -39,16 +39,13 @@ namespace elf {
 class InputSection;
 class Symbol;
 
-// If --reproduce is specified, all input files are written to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
-
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
-
-void parseArmCMSEImportLib(InputFile *file);
+void parseFiles(const std::vector<InputFile *> &files,
+                InputFile *armCmseImpLib);
 
 // The root class of input files.
 class InputFile {
@@ -84,6 +81,7 @@ public:
     assert(fileKind == ObjKind || fileKind == BinaryKind);
     return sections;
   }
+  void cacheDecodedCrel(size_t i, InputSectionBase *s) { sections[i] = s; }
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
@@ -230,6 +228,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
@@ -298,8 +297,7 @@ private:
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
-                                   uint32_t info);
+  InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef name);
 

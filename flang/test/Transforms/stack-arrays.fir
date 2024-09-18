@@ -127,9 +127,7 @@ func.func @placement1() {
   return
 }
 // CHECK:      func.func @placement1() {
-// CHECK-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   %[[TWO:.*]] = arith.constant 2 : index
-// CHECK-NEXT:   %[[ARG:.*]] = arith.addi %[[ONE]], %[[TWO]] : index
+// CHECK-NEXT:   %[[ARG:.*]] = arith.constant 3 : index
 // CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[ARG]]
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
@@ -176,9 +174,9 @@ func.func @placement3() {
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
 // CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:     %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:     fir.call @llvm.stackrestore.p0(%[[SP]])
+// CHECK-NEXT:     llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:     fir.result
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
@@ -204,14 +202,13 @@ func.func @placement4(%arg0 : i1) {
 // CHECK:      func.func @placement4(%arg0: i1) {
 // CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
-// CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:   %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
-// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:   fir.call @llvm.stackrestore.p0(%[[SP]]) : (!fir.ref<i8>) -> ()
+// CHECK-NEXT:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK-NEXT:   %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[C3]]
+// CHECK-NEXT:   llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:   cf.cond_br %arg0, ^bb1, ^bb2
 // CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   return
@@ -342,13 +339,10 @@ func.func @omp_placement1() {
   return
 }
 // CHECK:      func.func @omp_placement1() {
+// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
+// CHECK-NEXT:   %[[MEM_CONV:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
 // CHECK-NEXT:   omp.sections {
 // CHECK-NEXT:     omp.section {
-// CHECK-NEXT:       %[[MEM:.*]] = fir.allocmem !fir.array<42xi32>
-// TODO: this allocation should be moved to the stack. Unfortunately, the data
-// flow analysis fails to propogate the lattice out of the omp region to the
-// return satement.
-// CHECK-NEXT:       fir.freemem %[[MEM]] : !fir.heap<!fir.array<42xi32>>
 // CHECK-NEXT:       omp.terminator
 // CHECK-NEXT:     }
 // CHECK-NEXT:     omp.terminator
@@ -371,4 +365,38 @@ func.func @stop_terminator() {
 // CHECK-NEXT:  %[[FALSE:.*]] = arith.constant false
 // CHECK-NEXT:  %[[NONE:.*]] = fir.call @_FortranAStopStatement(%[[ZERO]], %[[FALSE]], %[[FALSE]]) : (i32, i1, i1) -> none
 // CHECK-NEXT:  fir.unreachable
+// CHECK-NEXT: }
+
+
+// check that stack allocations that use fir.declare which must be placed in loops
+// use stacksave
+func.func @placement_loop_declare() {
+  %c1 = arith.constant 1 : index
+  %c1_i32 = fir.convert %c1 : (index) -> i32
+  %c2 = arith.constant 2 : index
+  %c10 = arith.constant 10 : index
+  %0:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) {
+    %3 = arith.addi %c1, %c2 : index
+    // operand is now available
+    %4 = fir.allocmem !fir.array<?xi32>, %3
+    %5 = fir.declare %4 {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+    // ...
+    fir.freemem %5 : !fir.heap<!fir.array<?xi32>>
+    fir.result %3, %c1_i32 : index, i32
+  }
+  return
+}
+// CHECK:      func.func @placement_loop_declare() {
+// CHECK-NEXT:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:   %[[C1_I32:.*]] = fir.convert %[[C1]] : (index) -> i32
+// CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
+// CHECK-NEXT:   fir.do_loop
+// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
+// CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
+// CHECK:          llvm.intr.stackrestore %[[SP]] : !llvm.ptr
+// CHECK-NEXT:     fir.result
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return
 // CHECK-NEXT: }

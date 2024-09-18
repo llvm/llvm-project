@@ -109,6 +109,7 @@ enum Kind {
   kw_fast,
   kw_nuw,
   kw_nsw,
+  kw_nusw,
   kw_exact,
   kw_disjoint,
   kw_inbounds,
@@ -146,6 +147,7 @@ enum Kind {
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
   kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
@@ -181,6 +183,7 @@ enum Kind {
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
+  kw_riscv_vector_cc,
 
   // Attributes:
   kw_attributes,
@@ -265,6 +268,8 @@ enum Kind {
   kw_fmin,
   kw_uinc_wrap,
   kw_udec_wrap,
+  kw_usub_cond,
+  kw_usub_sat,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -344,6 +349,7 @@ enum Kind {
   kw_blockaddress,
   kw_dso_local_equivalent,
   kw_no_cfi,
+  kw_ptrauth,
 
   kw_freeze,
 
@@ -369,6 +375,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,

@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 //
 // Generate all the types of files we can bundle.
@@ -504,6 +504,17 @@
 // RUN: not clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle 2>&1 | FileCheck %s -check-prefix=NOGFX906
 // NOGFX906: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906
+
+//
+// Check hip and hipv4 are compatible as offload kind.
+//
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
+
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
 
 //
 // Check archive unbundling

@@ -127,7 +127,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return matchStridedConstant(StartC);
 
   // Base case, start is a stepvector
-  if (match(Start, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (match(Start, m_Intrinsic<Intrinsic::stepvector>())) {
     auto *Ty = Start->getType()->getScalarType();
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }
@@ -231,7 +231,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     BasePtr =
         PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi->getIterator());
     Inc = BinaryOperator::CreateAdd(BasePtr, Step, Inc->getName() + ".scalar",
-                                    Inc);
+                                    Inc->getIterator());
     BasePtr->addIncoming(Start, Phi->getIncomingBlock(1 - IncrementingBlock));
     BasePtr->addIncoming(Inc, Phi->getIncomingBlock(IncrementingBlock));
 
@@ -349,8 +349,27 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
   SmallVector<Value *, 2> Ops(GEP->operands());
 
+  // If the base pointer is a vector, check if it's strided.
+  Value *Base = GEP->getPointerOperand();
+  if (auto *BaseInst = dyn_cast<Instruction>(Base);
+      BaseInst && BaseInst->getType()->isVectorTy()) {
+    // If GEP's offset is scalar then we can add it to the base pointer's base.
+    auto IsScalar = [](Value *Idx) { return !Idx->getType()->isVectorTy(); };
+    if (all_of(GEP->indices(), IsScalar)) {
+      auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
+      if (BaseBase) {
+        Builder.SetInsertPoint(GEP);
+        SmallVector<Value *> Indices(GEP->indices());
+        Value *OffsetBase =
+            Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices,
+                              GEP->getName() + "offset", GEP->isInBounds());
+        return {OffsetBase, Stride};
+      }
+    }
+  }
+
   // Base pointer needs to be a scalar.
-  Value *ScalarBase = Ops[0];
+  Value *ScalarBase = Base;
   if (ScalarBase->getType()->isVectorTy()) {
     ScalarBase = getSplatValue(ScalarBase);
     if (!ScalarBase)
@@ -485,7 +504,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
     return false;
 
   LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
+  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
   Builder.SetInsertPoint(PtrI);
 
   Value *BasePtr, *Stride;
@@ -496,17 +515,23 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
 
   Builder.SetInsertPoint(II);
 
+  Value *EVL = Builder.CreateElementCount(
+      IntegerType::get(Ctx, 32), cast<VectorType>(DataType)->getElementCount());
+
   CallInst *Call;
-  if (II->getIntrinsicID() == Intrinsic::masked_gather)
+  if (II->getIntrinsicID() == Intrinsic::masked_gather) {
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_load,
+        Intrinsic::experimental_vp_strided_load,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(3), BasePtr, Stride, II->getArgOperand(2)});
-  else
+        {BasePtr, Stride, II->getArgOperand(2), EVL});
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_store,
+        Intrinsic::vp_select, {DataType},
+        {II->getOperand(2), Call, II->getArgOperand(3), EVL});
+  } else
+    Call = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_store,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3)});
+        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3), EVL});
 
   Call->takeName(II);
   II->replaceAllUsesWith(Call);
@@ -529,7 +554,7 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
     return false;
 
   TLI = ST->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   StridedAddrs.clear();

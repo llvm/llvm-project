@@ -57,8 +57,8 @@ BlockGenerator::BlockGenerator(
     PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
     AllocaMapTy &ScalarMap, EscapeUsersAllocaMapTy &EscapeMap,
     ValueMapT &GlobalMap, IslExprBuilder *ExprBuilder, BasicBlock *StartBlock)
-    : Builder(B), LI(LI), SE(SE), ExprBuilder(ExprBuilder), DT(DT),
-      EntryBB(nullptr), ScalarMap(ScalarMap), EscapeMap(EscapeMap),
+    : Builder(B), LI(LI), SE(SE), ExprBuilder(ExprBuilder), DT(DT), GenDT(&DT),
+      GenLI(&LI), GenSE(&SE), ScalarMap(ScalarMap), EscapeMap(EscapeMap),
       GlobalMap(GlobalMap), StartBlock(StartBlock) {}
 
 Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
@@ -75,20 +75,19 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
   if (isa<SCEVCouldNotCompute>(Scev))
     return nullptr;
 
-  const SCEV *NewScev = SCEVLoopAddRecRewriter::rewrite(Scev, LTS, SE);
   ValueMapT VTV;
   VTV.insert(BBMap.begin(), BBMap.end());
   VTV.insert(GlobalMap.begin(), GlobalMap.end());
 
   Scop &S = *Stmt.getParent();
-  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
+  const DataLayout &DL = S.getFunction().getDataLayout();
   auto IP = Builder.GetInsertPoint();
 
   assert(IP != Builder.GetInsertBlock()->end() &&
          "Only instructions can be insert points for SCEVExpander");
-  Value *Expanded =
-      expandCodeFor(S, SE, DL, "polly", NewScev, Old->getType(), &*IP, &VTV,
-                    StartBlock->getSinglePredecessor());
+  Value *Expanded = expandCodeFor(
+      S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL, "polly", Scev,
+      Old->getType(), &*IP, &VTV, &LTS, StartBlock->getSinglePredecessor());
 
   BBMap[Old] = Expanded;
   return Expanded;
@@ -233,6 +232,8 @@ void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,
       return;
     }
 
+    // FIXME: We will encounter "NewOperand" again if used twice. getNewValue()
+    // is meant to be called on old values only.
     NewInst->replaceUsesOfWith(OldOperand, NewOperand);
   }
 
@@ -410,7 +411,7 @@ void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
 BasicBlock *BlockGenerator::splitBB(BasicBlock *BB) {
   BasicBlock *CopyBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), &DT, &LI);
+                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
   CopyBB->setName("polly.stmt." + BB->getName());
   return CopyBB;
 }
@@ -431,11 +432,20 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
   return CopyBB;
 }
 
+void BlockGenerator::switchGeneratedFunc(Function *GenFn, DominatorTree *GenDT,
+                                         LoopInfo *GenLI,
+                                         ScalarEvolution *GenSE) {
+  assert(GenFn == GenDT->getRoot()->getParent());
+  assert(GenLI->getTopLevelLoops().empty() ||
+         GenFn == GenLI->getTopLevelLoops().front()->getHeader()->getParent());
+  this->GenDT = GenDT;
+  this->GenLI = GenLI;
+  this->GenSE = GenSE;
+}
+
 void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
                             ValueMapT &BBMap, LoopToScevMapT &LTS,
                             isl_id_to_ast_expr *NewAccesses) {
-  EntryBB = &CopyBB->getParent()->getEntryBlock();
-
   // Block statements and the entry blocks of region statement are code
   // generated from instruction lists. This allow us to optimize the
   // instructions that belong to a certain scop statement. As the code
@@ -492,12 +502,12 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
   else
     NameExt = ".s2a";
 
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
 
   Addr =
       new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
                      DL.getPrefTypeAlign(Ty), ScalarBase->getName() + NameExt);
-  EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
+  BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   Addr->insertBefore(&*EntryBB->getFirstInsertionPt());
 
   return Addr;
@@ -554,10 +564,6 @@ void BlockGenerator::generateScalarLoads(
 
     auto *Address =
         getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap, NewAccesses);
-    assert((!isa<Instruction>(Address) ||
-            DT.dominates(cast<Instruction>(Address)->getParent(),
-                         Builder.GetInsertBlock())) &&
-           "Domination violation");
     BBMap[MA->getAccessValue()] = Builder.CreateLoad(
         MA->getElementType(), Address, Address->getName() + ".reload");
   }
@@ -615,9 +621,9 @@ void BlockGenerator::generateConditionalExecution(
   StringRef BlockName = HeadBlock->getName();
 
   // Generate the conditional block.
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(Cond, &*Builder.GetInsertPoint(), false, nullptr,
-                            &DTU, &LI);
+                            &DTU, GenLI);
   BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);
@@ -639,7 +645,7 @@ static std::string getInstName(Value *Val) {
   std::string Result;
   raw_string_ostream OS(Result);
   Val->printAsOperand(OS, false);
-  return OS.str();
+  return Result;
 }
 
 void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,

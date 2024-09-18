@@ -103,7 +103,7 @@ static void createCoroData(CodeGenFunction &CGF,
     return;
   }
 
-  CurCoro.Data = std::unique_ptr<CGCoroData>(new CGCoroData);
+  CurCoro.Data = std::make_unique<CGCoroData>();
   CurCoro.Data->CoroId = CoroId;
   CurCoro.Data->CoroIdExpr = CoroIdExpr;
 }
@@ -278,7 +278,11 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
 
-  const auto AwaitSuspendCanThrow = StmtCanThrow(S.getSuspendExpr());
+  // SuspendHandle might throw since it also resumes the returned handle.
+  const bool AwaitSuspendCanThrow =
+      SuspendReturnType ==
+          CoroutineSuspendExpr::SuspendReturnType::SuspendHandle ||
+      StmtCanThrow(S.getSuspendExpr());
 
   llvm::CallBase *SuspendRet = nullptr;
   // FIXME: add call attributes?
@@ -307,10 +311,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     break;
   }
   case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle: {
-    assert(SuspendRet->getType()->isPointerTy());
-
-    auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
-    Builder.CreateCall(ResumeIntrinsic, SuspendRet);
+    assert(SuspendRet->getType()->isVoidTy());
     break;
   }
   }
@@ -413,10 +414,8 @@ llvm::Function *
 CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
                                              Twine const &SuspendPointName,
                                              CoroutineSuspendExpr const &S) {
-  std::string FuncName = "__await_suspend_wrapper_";
-  FuncName += CoroName.str();
-  FuncName += '_';
-  FuncName += SuspendPointName.str();
+  std::string FuncName =
+      (CoroName + ".__await_suspend_wrapper__" + SuspendPointName).str();
 
   ASTContext &C = getContext();
 
@@ -868,7 +867,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
     auto *PromiseAddrVoidPtr =
-        new llvm::BitCastInst(PromiseAddr.getPointer(), VoidPtrTy, "", CoroId);
+        new llvm::BitCastInst(PromiseAddr.emitRawPointer(*this), VoidPtrTy, "",
+                              CoroId->getIterator());
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
     CoroId->setArgOperand(1, PromiseAddrVoidPtr);

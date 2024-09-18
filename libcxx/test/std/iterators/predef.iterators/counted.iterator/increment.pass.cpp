@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr counted_iterator& operator++();
-// decltype(auto) operator++(int);
+// constexpr decltype(auto) operator++(int);
 // constexpr counted_iterator operator++(int)
 //   requires forward_iterator<I>;
 
@@ -63,6 +63,26 @@ constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
+    using Counted = std::counted_iterator<InputOrOutputArchetype>;
+    std::counted_iterator iter(InputOrOutputArchetype{buffer}, 8);
+
+    iter++;
+    assert((++iter).base().ptr == buffer + 2);
+
+    ASSERT_SAME_TYPE(decltype(iter++), void);
+    ASSERT_SAME_TYPE(decltype(++iter), Counted&);
+  }
+  {
+    using Counted = std::counted_iterator<cpp20_input_iterator<int*>>;
+    std::counted_iterator iter(cpp20_input_iterator<int*>{buffer}, 8);
+
+    iter++;
+    assert(++iter == Counted(cpp20_input_iterator<int*>{buffer + 2}, 6));
+
+    ASSERT_SAME_TYPE(decltype(iter++), void);
+    ASSERT_SAME_TYPE(decltype(++iter), Counted&);
+  }
+  {
     using Counted = std::counted_iterator<forward_iterator<int*>>;
     std::counted_iterator iter(forward_iterator<int*>{buffer}, 8);
 
@@ -95,29 +115,8 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-
-  {
-    using Counted = std::counted_iterator<InputOrOutputArchetype>;
-    std::counted_iterator iter(InputOrOutputArchetype{buffer}, 8);
-
-    iter++;
-    assert((++iter).base().ptr == buffer + 2);
-
-    ASSERT_SAME_TYPE(decltype(iter++), void);
-    ASSERT_SAME_TYPE(decltype(++iter), Counted&);
-  }
-  {
-    using Counted = std::counted_iterator<cpp20_input_iterator<int*>>;
-    std::counted_iterator iter(cpp20_input_iterator<int*>{buffer}, 8);
-
-    iter++;
-    assert(++iter == Counted(cpp20_input_iterator<int*>{buffer + 2}, 6));
-
-    ASSERT_SAME_TYPE(decltype(iter++), void);
-    ASSERT_SAME_TYPE(decltype(++iter), Counted&);
-  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
+  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
   {
     using Counted = std::counted_iterator<ThrowsOnInc<int*>>;
     std::counted_iterator iter(ThrowsOnInc<int*>{buffer}, 8);

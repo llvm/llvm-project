@@ -2,14 +2,16 @@
 The LLVM C Library
 ==================
 
-.. warning::
-  The libc is not complete.  If you need a fully functioning C library right
-  now, you should continue to use your standard system libraries.
+.. note::
+  LLVM-libc is not fully complete right now. Some programs may fail to build due
+  to missing functions (especially C++ ones). If you would like to help us
+  finish LLVM-libc, check out "Contributing to the libc project" in the sidebar
+  or ask on discord.
 
 Introduction
 ============
 
-The libc aspires to a unique place in the software ecosystem.  The goals are:
+LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
 
 - Fully compliant with current C standards (C17 and upcoming C2x) and POSIX.
 - Easily decomposed and embedded: Supplement or replace system C library
@@ -32,8 +34,9 @@ The libc aspires to a unique place in the software ecosystem.  The goals are:
 Platform Support
 ================
 
-Most development is currently targeting x86_64 and aarch64 on Linux.  Several
-functions in the libc have been tested on Windows.  The Fuchsia platform is
+Most development is currently targeting Linux on x86_64, aarch64, arm, and
+RISC-V. Embedded/baremetal targets are supported on arm and RISC-V, and Windows
+and MacOS have limited support (may be broken).  The Fuchsia platform is
 slowly replacing functions from its bundled libc with functions from this
 project.
 
@@ -41,7 +44,7 @@ ABI Compatibility
 =================
 
 The libc is written to be ABI independent.  Interfaces are generated using
-LLVM's tablegen, so supporting arbitrary ABIs is possible.  In it's initial
+headergen, so supporting arbitrary ABIs is possible.  In it's initial
 stages there is no ABI stability in any form.
 
 .. toctree::
@@ -66,8 +69,13 @@ stages there is no ABI stability in any form.
    strings
    stdio
    stdbit
+   fenv
    libc_search
    c23
+   ctype
+   signal
+   threads
+   setjmp
 
 .. toctree::
    :hidden:

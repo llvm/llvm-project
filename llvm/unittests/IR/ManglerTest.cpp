@@ -20,7 +20,6 @@ static std::string mangleStr(StringRef IRName, Mangler &Mang,
   std::string Mangled;
   raw_string_ostream SS(Mangled);
   Mang.getNameWithPrefix(SS, IRName, DL);
-  SS.flush();
   return Mangled;
 }
 
@@ -37,7 +36,6 @@ static std::string mangleFunc(StringRef IRName,
   std::string Mangled;
   raw_string_ostream SS(Mangled);
   Mang.getNameWithPrefix(SS, F, false);
-  SS.flush();
   F->eraseFromParent();
   return Mangled;
 }
@@ -171,7 +169,7 @@ TEST(ManglerTest, GOFF) {
             "foo");
   EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::PrivateLinkage,
                        llvm::CallingConv::C, Mod, Mang),
-            "@foo");
+            "L#foo");
 }
 
 } // end anonymous namespace

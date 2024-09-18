@@ -62,7 +62,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    store i64 1102416563, ptr [[TMP23]], align 8
 ; CHECK-INLINE-NEXT:    [[TMP24:%.*]] = add i64 [[TMP12]], 8
 ; CHECK-INLINE-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to ptr
-; CHECK-INLINE-NEXT:    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr [[TMP25]], align 8
+; CHECK-INLINE-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP25]], align 8
 ; CHECK-INLINE-NEXT:    [[TMP26:%.*]] = add i64 [[TMP12]], 16
 ; CHECK-INLINE-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to ptr
 ; CHECK-INLINE-NEXT:    store i64 ptrtoint (ptr @FuncletPersonality to i64), ptr [[TMP27]], align 8
@@ -95,7 +95,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP42:%.*]] = inttoptr i64 [[TMP41]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP43:%.*]] = load i8, ptr [[TMP42]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP44:%.*]] = icmp ne i8 [[TMP43]], 0
-; CHECK-INLINE-NEXT:    br i1 [[TMP44]], label [[TMP45:%.*]], label [[TMP50:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-INLINE-NEXT:    br i1 [[TMP44]], label [[TMP45:%.*]], label [[TMP50:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK-INLINE:       45:
 ; CHECK-INLINE-NEXT:    [[TMP46:%.*]] = and i64 [[TMP21]], 7
 ; CHECK-INLINE-NEXT:    [[TMP47:%.*]] = trunc i64 [[TMP46]] to i8
@@ -153,7 +153,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP82:%.*]] = inttoptr i64 [[TMP81]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP83:%.*]] = load i8, ptr [[TMP82]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP84:%.*]] = icmp ne i8 [[TMP83]], 0
-; CHECK-INLINE-NEXT:    br i1 [[TMP84]], label [[TMP85:%.*]], label [[TMP90:%.*]], !prof [[PROF0]]
+; CHECK-INLINE-NEXT:    br i1 [[TMP84]], label [[TMP85:%.*]], label [[TMP90:%.*]], !prof [[PROF1]]
 ; CHECK-INLINE:       85:
 ; CHECK-INLINE-NEXT:    [[TMP86:%.*]] = and i64 [[TMP77]], 7
 ; CHECK-INLINE-NEXT:    [[TMP87:%.*]] = trunc i64 [[TMP86]] to i8
@@ -193,7 +193,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP101:%.*]] = inttoptr i64 [[TMP100]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP102:%.*]] = load i8, ptr [[TMP101]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP103:%.*]] = icmp ne i8 [[TMP102]], 0
-; CHECK-INLINE-NEXT:    br i1 [[TMP103]], label [[TMP104:%.*]], label [[TMP109:%.*]], !prof [[PROF0]]
+; CHECK-INLINE-NEXT:    br i1 [[TMP103]], label [[TMP104:%.*]], label [[TMP109:%.*]], !prof [[PROF1]]
 ; CHECK-INLINE:       104:
 ; CHECK-INLINE-NEXT:    [[TMP105:%.*]] = and i64 [[TMP54]], 7
 ; CHECK-INLINE-NEXT:    [[TMP106:%.*]] = trunc i64 [[TMP105]] to i8
@@ -221,7 +221,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP119:%.*]] = inttoptr i64 [[TMP118]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP120:%.*]] = load i8, ptr [[TMP119]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP121:%.*]] = icmp ne i8 [[TMP120]], 0
-; CHECK-INLINE-NEXT:    br i1 [[TMP121]], label [[TMP122:%.*]], label [[TMP127:%.*]], !prof [[PROF0]]
+; CHECK-INLINE-NEXT:    br i1 [[TMP121]], label [[TMP122:%.*]], label [[TMP127:%.*]], !prof [[PROF1]]
 ; CHECK-INLINE:       122:
 ; CHECK-INLINE-NEXT:    [[TMP123:%.*]] = and i64 [[TMP116]], 7
 ; CHECK-INLINE-NEXT:    [[TMP124:%.*]] = trunc i64 [[TMP123]] to i8
@@ -236,7 +236,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-INLINE-NEXT:    [[TMP130:%.*]] = inttoptr i64 [[TMP129]] to ptr
 ; CHECK-INLINE-NEXT:    [[TMP131:%.*]] = load i8, ptr [[TMP130]], align 1
 ; CHECK-INLINE-NEXT:    [[TMP132:%.*]] = icmp ne i8 [[TMP131]], 0
-; CHECK-INLINE-NEXT:    br i1 [[TMP132]], label [[TMP133:%.*]], label [[EHEXIT:%.*]], !prof [[PROF0]]
+; CHECK-INLINE-NEXT:    br i1 [[TMP132]], label [[TMP133:%.*]], label [[EHEXIT:%.*]], !prof [[PROF1]]
 ; CHECK-INLINE:       133:
 ; CHECK-INLINE-NEXT:    [[TMP134:%.*]] = and i64 [[TMP114]], 7
 ; CHECK-INLINE-NEXT:    [[TMP135:%.*]] = trunc i64 [[TMP134]] to i8
@@ -308,7 +308,7 @@ define void @FuncletPersonality(ptr %ptrParam) sanitize_address personality ptr 
 ; CHECK-OUTLINE-NEXT:    store i64 1102416563, ptr [[TMP27]], align 8
 ; CHECK-OUTLINE-NEXT:    [[TMP28:%.*]] = add i64 [[TMP12]], 8
 ; CHECK-OUTLINE-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
-; CHECK-OUTLINE-NEXT:    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr [[TMP29]], align 8
+; CHECK-OUTLINE-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP29]], align 8
 ; CHECK-OUTLINE-NEXT:    [[TMP30:%.*]] = add i64 [[TMP12]], 16
 ; CHECK-OUTLINE-NEXT:    [[TMP31:%.*]] = inttoptr i64 [[TMP30]] to ptr
 ; CHECK-OUTLINE-NEXT:    store i64 ptrtoint (ptr @FuncletPersonality to i64), ptr [[TMP31]], align 8
@@ -524,7 +524,7 @@ define void @OtherPersonality(ptr %ptrParam) sanitize_address personality ptr @d
 ; CHECK-NEXT:    store i64 1102416563, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_.1 to i64), ptr [[TMP16]], align 8
+; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.1 to i64), ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP11]], 16
 ; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
 ; CHECK-NEXT:    store i64 ptrtoint (ptr @OtherPersonality to i64), ptr [[TMP18]], align 8
@@ -580,5 +580,5 @@ ehcleanup:                                        ; preds = %entry
   cleanupret from %0 unwind to caller
 }
 ;.
-; CHECK-INLINE: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK-INLINE: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

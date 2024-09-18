@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
-#include "SequenceToOffsetTable.h"
-#include "SubtargetFeatureInfo.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
+#include "Common/SubtargetFeatureInfo.h"
+#include "Common/Types.h"
 #include "TableGenBackends.h"
-#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -151,7 +151,7 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
     }
 
     for (unsigned j = 0, e = OperandList.size(); j != e; ++j) {
-      Record *OpR = OperandList[j].Rec;
+      const Record *OpR = OperandList[j].Rec;
       std::string Res;
 
       if (OpR->isSubClassOf("RegisterOperand"))
@@ -398,7 +398,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   // TODO: Factor out duplicate operand lists to compress the tables.
   if (!NumberedInstructions.empty()) {
     std::vector<int> OperandOffsets;
-    std::vector<Record *> OperandRecords;
+    std::vector<const Record *> OperandRecords;
     int CurrentOffset = 0;
     for (const CodeGenInstruction *Inst : NumberedInstructions) {
       OperandOffsets.push_back(CurrentOffset);
@@ -447,7 +447,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
         while (OperandOffsets[++CurOffset] == I)
           OS << "/* " << getInstrName(CurOffset) << " */\n    ";
       }
-      Record *OpR = OperandRecords[I];
+      const Record *OpR = OperandRecords[I];
       if ((OpR->isSubClassOf("Operand") ||
            OpR->isSubClassOf("RegisterOperand") ||
            OpR->isSubClassOf("RegisterClass")) &&
@@ -672,7 +672,8 @@ void InstrInfoEmitter::emitLogicalOperandTypeMappings(
 
 void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
                                              StringRef TargetName) {
-  RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  ArrayRef<const Record *> TIIPredicates =
+      Records.getAllDerivedDefinitions("TIIPredicate");
 
   OS << "#ifdef GET_INSTRINFO_MC_HELPER_DECLS\n";
   OS << "#undef GET_INSTRINFO_MC_HELPER_DECLS\n\n";
@@ -721,9 +722,9 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
 }
 
 static std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   std::string Name = "CEFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   return Name;
 }
@@ -731,7 +732,7 @@ getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
 void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
                                            const CodeGenTarget &Target) {
   const auto &All = SubtargetFeatureInfo::getAll(Records);
-  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
+  SubtargetFeatureInfoMap SubtargetFeatures;
   SubtargetFeatures.insert(All.begin(), All.end());
 
   OS << "#if (defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)) "
@@ -752,18 +753,19 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Target.getName(), "", "computeAvailableFeatures", SubtargetFeatures, OS);
 
-  std::vector<std::vector<Record *>> FeatureBitsets;
+  std::vector<std::vector<const Record *>> FeatureBitsets;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     FeatureBitsets.emplace_back();
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
+    for (const Record *Predicate :
+         Inst->TheDef->getValueAsListOfDefs("Predicates")) {
       const auto &I = SubtargetFeatures.find(Predicate);
       if (I != SubtargetFeatures.end())
         FeatureBitsets.back().push_back(I->second.TheDef);
     }
   }
 
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
+  llvm::sort(FeatureBitsets, [&](const std::vector<const Record *> &A,
+                                 const std::vector<const Record *> &B) {
     if (A.size() < B.size())
       return true;
     if (A.size() > B.size())
@@ -776,9 +778,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     return false;
   });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "inline FeatureBitset computeRequiredFeatures(unsigned Opcode) {\n"
      << "  enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
      << "    CEFBS_None,\n";
@@ -808,7 +808,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     OS << "    CEFBS";
     unsigned NumPredicates = 0;
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
+    for (const Record *Predicate :
+         Inst->TheDef->getValueAsListOfDefs("Predicates")) {
       const auto &I = SubtargetFeatures.find(Predicate);
       if (I != SubtargetFeatures.end()) {
         OS << '_' << I->second.TheDef->getName();
@@ -892,7 +893,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
 void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
                                             StringRef TargetName,
                                             bool ExpandDefinition) {
-  RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  ArrayRef<const Record *> TIIPredicates =
+      Records.getAllDerivedDefinitions("TIIPredicate");
   if (TIIPredicates.empty())
     return;
 
@@ -1181,9 +1183,15 @@ void InstrInfoEmitter::emitRecord(
     // Each logical operand can be multiple MI operands.
     MinOperands =
         Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
+  // Even the logical output operand may be multiple MI operands.
+  int DefOperands = 0;
+  if (Inst.Operands.NumDefs) {
+    auto &Opnd = Inst.Operands[Inst.Operands.NumDefs - 1];
+    DefOperands = Opnd.MIOperandNo + Opnd.MINumOperands;
+  }
 
   OS << "    { ";
-  OS << Num << ",\t" << MinOperands << ",\t" << Inst.Operands.NumDefs << ",\t"
+  OS << Num << ",\t" << MinOperands << ",\t" << DefOperands << ",\t"
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t";
 

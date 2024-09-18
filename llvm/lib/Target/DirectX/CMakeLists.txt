@@ -18,7 +18,10 @@ add_llvm_target(DirectXCodeGen
   DirectXRegisterInfo.cpp
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
+  DirectXTargetTransformInfo.cpp
   DXContainerGlobals.cpp
+  DXILFinalizeLinkage.cpp
+  DXILIntrinsicExpansion.cpp
   DXILMetadata.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp

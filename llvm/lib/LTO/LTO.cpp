@@ -30,15 +30,14 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
@@ -65,6 +64,8 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
@@ -74,6 +75,10 @@ namespace llvm {
 cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
+
+static cl::opt<bool>
+    LTOKeepSymbolCopies("lto-keep-symbol-copies", cl::init(false), cl::Hidden,
+                        cl::desc("Keep copies of symbols in LTO indexing"));
 
 /// Indicate we are linking with an allocator that supports hot/cold operator
 /// new interfaces.
@@ -85,15 +90,15 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
-// The hash is produced in \p Key.
-void llvm::computeLTOCacheKey(
-    SmallString<40> &Key, const Config &Conf, const ModuleSummaryIndex &Index,
-    StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
+// Returns the hash in its hexadecimal representation.
+std::string llvm::computeLTOCacheKey(
+    const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
+    const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const std::set<GlobalValue::GUID> &CfiFunctionDefs,
-    const std::set<GlobalValue::GUID> &CfiFunctionDecls) {
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -114,12 +119,15 @@ void llvm::computeLTOCacheKey(
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
     support::endian::write32le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 4});
+    Hasher.update(Data);
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
     support::endian::write64le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 8});
+    Hasher.update(Data);
+  };
+  auto AddUint8 = [&](const uint8_t I) {
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
@@ -156,56 +164,45 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
+  // TODO: `ExportList` is determined by `ImportList`. Since `ImportList` is
+  // used to compute cache key, we could omit hashing `ExportList` here.
   std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
-    ExportsGUID.push_back(GUID);
-  }
+  for (const auto &VI : ExportList)
+    ExportsGUID.push_back(VI.getGUID());
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (uint64_t GUID : ExportsGUID) {
-    // The export list can impact the internalization, be conservative here
+  for (auto GUID : ExportsGUID)
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
-  }
 
-  // Include the hash for every module we import functions from. The set of
-  // imported symbols for each module may affect code generation and is
-  // sensitive to link order, so include that as well.
-  using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
-  struct ImportModule {
-    ImportMapIteratorTy ModIt;
-    const ModuleSummaryIndex::ModuleInfo *ModInfo;
-
-    StringRef getIdentifier() const { return ModIt->getFirst(); }
-    const FunctionImporter::FunctionsToImportTy &getFunctions() const {
-      return ModIt->second;
-    }
-
-    const ModuleHash &getHash() const { return ModInfo->second; }
-  };
-
-  std::vector<ImportModule> ImportModulesVector;
-  ImportModulesVector.reserve(ImportList.size());
-
-  for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
-       ++It) {
-    ImportModulesVector.push_back({It, Index.getModule(It->getFirst())});
-  }
   // Order using module hash, to be both independent of module name and
   // module order.
-  llvm::sort(ImportModulesVector,
-             [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
-               return Lhs.getHash() < Rhs.getHash();
-             });
-  for (const ImportModule &Entry : ImportModulesVector) {
-    auto ModHash = Entry.getHash();
-    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+  auto Comp = [&](const std::pair<StringRef, GlobalValue::GUID> &L,
+                  const std::pair<StringRef, GlobalValue::GUID> &R) {
+    return std::make_pair(Index.getModule(L.first)->second, L.second) <
+           std::make_pair(Index.getModule(R.first)->second, R.second);
+  };
+  FunctionImporter::SortedImportList SortedImportList(ImportList, Comp);
 
-    AddUint64(Entry.getFunctions().size());
-    for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn);
+  // Count the number of imports for each source module.
+  DenseMap<StringRef, unsigned> ModuleToNumImports;
+  for (const auto &[FromModule, GUID, Type] : SortedImportList)
+    ++ModuleToNumImports[FromModule];
+
+  std::optional<StringRef> LastModule;
+  for (const auto &[FromModule, GUID, Type] : SortedImportList) {
+    if (LastModule != FromModule) {
+      // Include the hash for every module we import functions from. The set of
+      // imported symbols for each module may affect code generation and is
+      // sensitive to link order, so include that as well.
+      LastModule = FromModule;
+      auto ModHash = Index.getModule(FromModule)->second;
+      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+      AddUint64(ModuleToNumImports[FromModule]);
+    }
+    AddUint64(GUID);
+    AddUint8(Type);
   }
 
   // Include the hash for the resolved ODR.
@@ -225,9 +222,9 @@ void llvm::computeLTOCacheKey(
   std::set<GlobalValue::GUID> UsedTypeIds;
 
   auto AddUsedCfiGlobal = [&](GlobalValue::GUID ValueGUID) {
-    if (CfiFunctionDefs.count(ValueGUID))
+    if (CfiFunctionDefs.contains(ValueGUID))
       UsedCfiDefs.insert(ValueGUID);
-    if (CfiFunctionDecls.count(ValueGUID))
+    if (CfiFunctionDecls.contains(ValueGUID))
       UsedCfiDecls.insert(ValueGUID);
   };
 
@@ -274,16 +271,14 @@ void llvm::computeLTOCacheKey(
 
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
-  for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &ImpF : ImpM.getFunctions()) {
-      GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
-      AddUsedThings(S);
-      // If this is an alias, we also care about any types/etc. that the aliasee
-      // may reference.
-      if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
-        AddUsedThings(AS->getBaseObject());
-    }
+  for (const auto &[FromModule, GUID, Type] : SortedImportList) {
+    GlobalValueSummary *S = Index.findSummaryInModule(GUID, FromModule);
+    AddUsedThings(S);
+    // If this is an alias, we also care about any types/etc. that the aliasee
+    // may reference.
+    if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
+      AddUsedThings(AS->getBaseObject());
+  }
 
   auto AddTypeIdSummary = [&](StringRef TId, const TypeIdSummary &S) {
     AddString(TId);
@@ -318,8 +313,8 @@ void llvm::computeLTOCacheKey(
   // Include the hash for all type identifiers used by this module.
   for (GlobalValue::GUID TId : UsedTypeIds) {
     auto TidIter = Index.typeIds().equal_range(TId);
-    for (auto It = TidIter.first; It != TidIter.second; ++It)
-      AddTypeIdSummary(It->second.first, It->second.second);
+    for (const auto &I : make_range(TidIter))
+      AddTypeIdSummary(I.second.first, I.second.second);
   }
 
   AddUnsigned(UsedCfiDefs.size());
@@ -343,7 +338,7 @@ void llvm::computeLTOCacheKey(
     }
   }
 
-  Key = toHex(Hasher.result());
+  return toHex(Hasher.result());
 }
 
 static void thinLTOResolvePrevailingGUID(
@@ -579,7 +574,9 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(std::make_unique<IRMover>(*CombinedModule)) {}
+      Mover(std::make_unique<IRMover>(*CombinedModule)) {
+  CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
+}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
     : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
@@ -593,8 +590,14 @@ LTO::LTO(Config Conf, ThinBackend Backend,
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
       ThinLTO(std::move(Backend)),
-      GlobalResolutions(std::make_optional<StringMap<GlobalResolution>>()),
-      LTOMode(LTOMode) {}
+      GlobalResolutions(
+          std::make_unique<DenseMap<StringRef, GlobalResolution>>()),
+      LTOMode(LTOMode) {
+  if (Conf.KeepSymbolNameCopies || LTOKeepSymbolCopies) {
+    Alloc = std::make_unique<BumpPtrAllocator>();
+    GlobalResolutionSymbolSaver = std::make_unique<llvm::StringSaver>(*Alloc);
+  }
+}
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
@@ -612,7 +615,12 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    auto &GlobalRes = (*GlobalResolutions)[Sym.getName()];
+    StringRef SymbolName = Sym.getName();
+    // Keep copies of symbols if the client of LTO says so.
+    if (GlobalResolutionSymbolSaver && !GlobalResolutions->contains(SymbolName))
+      SymbolName = GlobalResolutionSymbolSaver->save(SymbolName);
+
+    auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -664,6 +672,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
+}
+
+void LTO::releaseGlobalResolutionsMemory() {
+  // Release GlobalResolutions dense-map itself.
+  GlobalResolutions.reset();
+  // Release the string saver memory.
+  GlobalResolutionSymbolSaver.reset();
+  Alloc.reset();
 }
 
 static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
@@ -1063,8 +1079,8 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
       if (BM.getModuleIdentifier().contains(Name)) {
         ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
-        llvm::errs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
-                     << " to compile\n";
+        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
+                          << " to compile\n");
       }
     }
   }
@@ -1344,14 +1360,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
-ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
-  return ArrayRef(libcallRoutineNames);
+SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  SmallVector<const char *> LibcallSymbols;
+  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
+          [](const char *Name) { return Name; });
+  return LibcallSymbols;
 }
 
 /// This class defines the interface to the ThinLTO backend.
@@ -1386,16 +1400,21 @@ public:
   Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
-    std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+    GVSummaryPtrSet DeclarationSummaries;
+
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex,
+                                     DeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
@@ -1412,8 +1431,8 @@ class InProcessThinBackend : public ThinBackendProc {
   DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
-  std::set<GlobalValue::GUID> CfiFunctionDefs;
-  std::set<GlobalValue::GUID> CfiFunctionDecls;
+  DenseSet<GlobalValue::GUID> CfiFunctionDefs;
+  DenseSet<GlobalValue::GUID> CfiFunctionDecls;
 
   std::optional<Error> Err;
   std::mutex ErrMu;
@@ -1471,11 +1490,10 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
-    SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
-                       ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
-                       CfiFunctionDecls);
+    std::string Key = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
@@ -1696,11 +1714,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
 
-  // Synthesize entry counts for functions in the CombinedIndex.
-  computeSyntheticCounts(ThinLTO.CombinedIndex);
-
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(
-      ThinLTO.ModuleMap.size());
+  FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
@@ -1779,7 +1793,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // are no further accesses. We specifically want to do this before computing
   // cross module importing, which adds to peak memory via the computed import
   // and export lists.
-  GlobalResolutions.reset();
+  releaseGlobalResolutionsMemory();
 
   if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,

@@ -267,21 +267,21 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    fcvt s1, h9
 ; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    fcvt s1, h10
 ; GISEL-NEXT:    fcvt h0, s0
-; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s1
 ; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; GISEL-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
 ; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
-; GISEL-NEXT:    mov v1.h[1], v2.h[0]
-; GISEL-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    mov v1.h[1], v3.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[3], v0.h[0]
 ; GISEL-NEXT:    mov v0.16b, v1.16b
@@ -532,11 +532,18 @@ define double @exp10_f64(double %x) {
   ret double %r
 }
 
-; FIXME: Broken
-; define <1 x double> @exp10_v1f64(<1 x double> %x) {
-;   %r = call <1 x double> @llvm.exp10.v1f64(<1 x double> %x)
-;   ret <1 x double> %r
-; }
+define <1 x double> @exp10_v1f64(<1 x double> %x) {
+; CHECK-LABEL: exp10_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl exp10
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %r = call <1 x double> @llvm.exp10.v1f64(<1 x double> %x)
+  ret <1 x double> %r
+}
 
 define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; SDAG-LABEL: exp10_v2f64:

@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -76,11 +77,7 @@ struct FixupTy {
 /// idioms that are used for distinct target processor and ABI combinations.
 class TargetRewrite : public fir::impl::TargetRewritePassBase<TargetRewrite> {
 public:
-  TargetRewrite(const fir::TargetRewriteOptions &options) {
-    noCharacterConversion = options.noCharacterConversion;
-    noComplexConversion = options.noComplexConversion;
-    noStructConversion = options.noStructConversion;
-  }
+  using TargetRewritePassBase<TargetRewrite>::TargetRewritePassBase;
 
   void runOnOperation() override final {
     auto &context = getContext();
@@ -92,6 +89,9 @@ public:
 
     if (!forcedTargetCPU.empty())
       fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTuneCPU.empty())
+      fir::setTuneCPU(mod, forcedTuneCPU);
 
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
@@ -110,16 +110,10 @@ public:
 
     auto specifics = fir::CodeGenSpecifics::get(
         mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
-        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl);
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl,
+        fir::getTuneCPU(mod));
 
     setMembers(specifics.get(), &rewriter, &*dl);
-
-    // We may need to call stacksave/stackrestore later, so
-    // create the FuncOps beforehand.
-    fir::FirOpBuilder builder(rewriter, mod);
-    builder.setInsertionPointToStart(mod.getBody());
-    stackSaveFn = fir::factory::getLlvmStackSave(builder);
-    stackRestoreFn = fir::factory::getLlvmStackRestore(builder);
 
     // Perform type conversion on signatures and call sites.
     if (mlir::failed(convertTypes(mod))) {
@@ -137,7 +131,7 @@ public:
         if (!hasPortableSignature(dispatch.getFunctionType(), op))
           convertCallOp(dispatch);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
-        if (addr.getType().isa<mlir::FunctionType>() &&
+        if (mlir::isa<mlir::FunctionType>(addr.getType()) &&
             !hasPortableSignature(addr.getType(), op))
           convertAddrOp(addr);
       }
@@ -601,7 +595,7 @@ public:
   /// Taking the address of a function. Modify the signature as needed.
   void convertAddrOp(fir::AddrOfOp addrOp) {
     rewriter->setInsertionPoint(addrOp);
-    auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
+    auto addrTy = mlir::cast<mlir::FunctionType>(addrOp.getType());
     fir::CodeGenSpecifics::Marshalling newInTyAndAttrs;
     llvm::SmallVector<mlir::Type> newResTys;
     auto loc = addrOp.getLoc();
@@ -671,16 +665,22 @@ public:
   /// Convert the type signatures on all the functions present in the module.
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
-  mlir::LogicalResult convertTypes(mlir::ModuleOp mod) {
+  llvm::LogicalResult convertTypes(mlir::ModuleOp mod) {
     mlir::MLIRContext *ctx = mod->getContext();
     auto targetCPU = specifics->getTargetCPU();
     mlir::StringAttr targetCPUAttr =
         targetCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, targetCPU);
+    auto tuneCPU = specifics->getTuneCPU();
+    mlir::StringAttr tuneCPUAttr =
+        tuneCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, tuneCPU);
     auto targetFeaturesAttr = specifics->getTargetFeatures();
 
     for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
       if (targetCPUAttr)
         fn->setAttr("target_cpu", targetCPUAttr);
+
+      if (tuneCPUAttr)
+        fn->setAttr("tune_cpu", tuneCPUAttr);
 
       if (targetFeaturesAttr)
         fn->setAttr("target_features", targetFeaturesAttr);
@@ -705,22 +705,23 @@ public:
   /// return `true`. Otherwise, the signature is not portable and `false` is
   /// returned.
   bool hasPortableSignature(mlir::Type signature, mlir::Operation *op) {
-    assert(signature.isa<mlir::FunctionType>());
-    auto func = signature.dyn_cast<mlir::FunctionType>();
+    assert(mlir::isa<mlir::FunctionType>(signature));
+    auto func = mlir::dyn_cast<mlir::FunctionType>(signature);
     bool hasCCallingConv = isFuncWithCCallingConvention(op);
     for (auto ty : func.getResults())
-      if ((ty.isa<fir::BoxCharType>() && !noCharacterConversion) ||
+      if ((mlir::isa<fir::BoxCharType>(ty) && !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (ty.isa<mlir::IntegerType>() && hasCCallingConv)) {
+          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     for (auto ty : func.getInputs())
-      if (((ty.isa<fir::BoxCharType>() || fir::isCharacterProcedureTuple(ty)) &&
+      if (((mlir::isa<fir::BoxCharType>(ty) ||
+            fir::isCharacterProcedureTuple(ty)) &&
            !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (ty.isa<mlir::IntegerType>() && hasCCallingConv) ||
-          (ty.isa<fir::RecordType>() && !noStructConversion)) {
+          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv) ||
+          (mlir::isa<fir::RecordType>(ty) && !noStructConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -740,7 +741,7 @@ public:
   /// Rewrite the signatures and body of the `FuncOp`s in the module for
   /// the immediately subsequent target code gen.
   void convertSignature(mlir::func::FuncOp func) {
-    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
+    auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
     if (hasPortableSignature(funcTy, func) && !hasHostAssociations(func))
       return;
     llvm::SmallVector<mlir::Type> newResTys;
@@ -1238,24 +1239,19 @@ private:
   // Inserts a call to llvm.stacksave at the current insertion
   // point and the given location. Returns the call's result Value.
   inline mlir::Value genStackSave(mlir::Location loc) {
-    return rewriter->create<fir::CallOp>(loc, stackSaveFn).getResult(0);
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackSave(loc);
   }
 
   // Inserts a call to llvm.stackrestore at the current insertion
   // point and the given location and argument.
   inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
-    rewriter->create<fir::CallOp>(loc, stackRestoreFn, mlir::ValueRange{sp});
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackRestore(loc, sp);
   }
 
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;
   mlir::DataLayout *dataLayout = nullptr;
-  mlir::func::FuncOp stackSaveFn = nullptr;
-  mlir::func::FuncOp stackRestoreFn = nullptr;
 };
 } // namespace
-
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-fir::createFirTargetRewritePass(const fir::TargetRewriteOptions &options) {
-  return std::make_unique<TargetRewrite>(options);
-}

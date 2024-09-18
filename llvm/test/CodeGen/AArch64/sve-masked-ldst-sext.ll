@@ -235,9 +235,9 @@ define <vscale x 8 x i64> @masked_sload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1sb { z3.d }, p2/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ld1sb { z5.d }, p2/z, [x1, #3, mul vl]
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1sb { z2.d }, p1/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z6.d }, p1/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z1.d }, p3/z, [x0, #1, mul vl]

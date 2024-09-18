@@ -200,11 +200,25 @@ result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
 
+# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+if config.have_openmp_rtl:
+    config.available_features.add("openmp_runtime")
+    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+    # project or runtime.
+    if config.openmp_module_dir:
+        config.substitutions.append(
+            ("%openmp_flags", f"-fopenmp -J {config.openmp_module_dir}")
+        )
+    else:
+        config.substitutions.append(("%openmp_flags", "-fopenmp"))
+
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
 # for LIT tests checking for F128 library support.
-if config.flang_runtime_f128_math_lib:
+if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
     config.available_features.add("flang-supports-f128-math")
+if config.flang_runtime_f128_math_lib:
     config.available_features.add(
         "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
     )

@@ -21,8 +21,6 @@ static_library("Basic") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
-    "//clang/include/clang/Basic:AttrLeftSideCanPrintList",
-    "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:Builtins",
@@ -31,6 +29,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",
+    "//clang/include/clang/Basic:arm_immcheck_types",
     "//clang/include/clang/Basic:arm_mve_builtins",
     "//clang/include/clang/Basic:arm_sme_builtins",
     "//clang/include/clang/Basic:arm_sve_builtins",
@@ -63,6 +62,7 @@ static_library("Basic") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "ASTSourceDescriptor.cpp",
     "Attributes.cpp",
     "Builtins.cpp",
     "CLWarnings.cpp",
@@ -109,7 +109,6 @@ static_library("Basic") {
     "Targets/DirectX.cpp",
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
-    "Targets/Le64.cpp",
     "Targets/LoongArch.cpp",
     "Targets/M68k.cpp",
     "Targets/MSP430.cpp",

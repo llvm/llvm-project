@@ -77,12 +77,12 @@ public:
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
-    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
       if (seqTy.hasUnknownShape())
         return -1;
       return seqTy.getDimension();
     }
-    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+    if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
       return exprType.getRank();
     return 0;
   }
@@ -99,38 +99,24 @@ public:
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
-    return eleTy.isa<fir::CharacterType>() ||
+    return mlir::isa<fir::CharacterType>(eleTy) ||
            fir::isRecordWithTypeParameters(eleTy);
   }
 
   bool isCharacter() const {
-    return getFortranElementType().isa<fir::CharacterType>();
+    return mlir::isa<fir::CharacterType>(getFortranElementType());
   }
 
   bool hasIntrinsicType() const {
     mlir::Type eleTy = getFortranElementType();
-    return fir::isa_trivial(eleTy) || eleTy.isa<fir::CharacterType>();
+    return fir::isa_trivial(eleTy) || mlir::isa<fir::CharacterType>(eleTy);
   }
 
   bool isDerivedWithLengthParameters() const {
     return fir::isRecordWithTypeParameters(getFortranElementType());
   }
 
-  bool hasNonDefaultLowerBounds() const {
-    if (!isBoxAddressOrValue() || isScalar())
-      return false;
-    if (isMutableBox())
-      return true;
-    if (auto varIface = getIfVariableInterface()) {
-      if (auto shape = varIface.getShape()) {
-        auto shapeTy = shape.getType();
-        return shapeTy.isa<fir::ShiftType>() ||
-               shapeTy.isa<fir::ShapeShiftType>();
-      }
-      return false;
-    }
-    return true;
-  }
+  bool mayHaveNonDefaultLowerBounds() const;
 
   // Is this entity known to be contiguous at compile time?
   // Note that when this returns false, the entity may still
@@ -223,7 +209,7 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity);
+                         Entity entity, bool contiguousHint = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
@@ -238,7 +224,8 @@ fir::FortranVariableOpInterface
 genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           fir::CUDADataAttributeAttr cudaAttr = {});
+           mlir::Value dummyScope = nullptr,
+           cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -332,6 +319,9 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 /// a character entity.
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
+
+mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity entity, mlir::Type resultType);
 
 /// Return the fir base, shape, and type parameters for a variable. Note that
 /// type parameters are only added if the entity is not a box and the type
@@ -433,6 +423,11 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
+
+// TODO: this does not support polymorphic molds
+hlfir::Entity createStackTempFromMold(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity mold);
 
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,

@@ -26,6 +26,15 @@
 
 namespace lldb_private {
 
+class LanguageProperties : public Properties {
+public:
+  LanguageProperties();
+
+  static llvm::StringRef GetSettingName();
+
+  bool GetEnableFilterForLineBreakpoints() const;
+};
+
 class Language : public PluginInterface {
 public:
   class TypeScavenger {
@@ -272,6 +281,10 @@ public:
     return mangled.GetMangledName();
   }
 
+  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
+    return mangled.GetDemangledName();
+  }
+
   virtual void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                                Stream &s);
 
@@ -324,6 +337,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
 
+  static LanguageProperties &GetGlobalLanguageProperties();
+
   // Given a mangled function name, calculates some alternative manglings since
   // the compiler mangling may not line up with the symbol we are expecting.
   virtual std::vector<ConstString>
@@ -338,6 +353,31 @@ public:
   }
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+
+  /// Returns true if this SymbolContext should be ignored when setting
+  /// breakpoints by line (number or regex). Helpful for languages that create
+  /// artificial functions without meaningful user code associated with them
+  /// (e.g. code that gets expanded in late compilation stages, like by
+  /// CoroSplitter).
+  virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
+    return false;
+  }
+
+  /// Returns true if this Language supports exception breakpoints on throw via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
+
+  /// Returns true if this Language supports exception breakpoints on catch via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
+
+  /// Returns the keyword used for throw statements in this language, e.g.
+  /// Python uses \b raise. Defaults to \b throw.
+  virtual llvm::StringRef GetThrowKeyword() const { return "throw"; }
+
+  /// Returns the keyword used for catch statements in this language, e.g.
+  /// Python uses \b except. Defaults to \b catch.
+  virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
 
 protected:
   // Classes that inherit from Language can see and modify these

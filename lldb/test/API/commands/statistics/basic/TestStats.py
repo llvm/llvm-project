@@ -1,6 +1,7 @@
 import lldb
 import json
 import os
+import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -80,7 +81,7 @@ class TestCase(TestBase):
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
         self.expect("expr patatino", substrs=["27"])
@@ -223,7 +224,7 @@ class TestCase(TestBase):
         self.build()
         target = self.createTestTarget()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
         debug_stats = self.get_stats()
         debug_stat_keys = [
@@ -249,6 +250,7 @@ class TestCase(TestBase):
             "launchOrAttachTime",
             "moduleIdentifiers",
             "targetCreateTime",
+            "summaryProviderStatistics",
         ]
         self.verify_keys(stats, '"stats"', keys_exist, None)
         self.assertGreater(stats["firstStopTime"], 0.0)
@@ -446,6 +448,7 @@ class TestCase(TestBase):
             "targetCreateTime",
             "moduleIdentifiers",
             "totalBreakpointResolveTime",
+            "summaryProviderStatistics",
         ]
         self.verify_keys(target_stats, '"stats"', keys_exist, None)
         self.assertGreater(target_stats["totalBreakpointResolveTime"], 0.0)
@@ -623,3 +626,363 @@ class TestCase(TestBase):
         # Verify that the top level statistic that aggregates the number of
         # modules with debugInfoHadVariableErrors is greater than zero
         self.assertGreater(stats["totalModuleCountWithVariableErrors"], 0)
+
+    def test_transcript_happy_path(self):
+        """
+        Test "statistics dump" and the transcript information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+
+        # Verify the output of a first "statistics dump"
+        debug_stats = self.get_stats("--transcript true")
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        self.assertEqual(len(transcript), 2)
+        self.assertEqual(transcript[0]["commandName"], "version")
+        self.assertEqual(transcript[1]["commandName"], "statistics dump")
+        # The first "statistics dump" in the transcript should have no output
+        self.assertNotIn("output", transcript[1])
+
+        # Verify the output of a second "statistics dump"
+        debug_stats = self.get_stats("--transcript true")
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        self.assertEqual(len(transcript), 3)
+        self.assertEqual(transcript[0]["commandName"], "version")
+        self.assertEqual(transcript[1]["commandName"], "statistics dump")
+        # The first "statistics dump" in the transcript should have output now
+        self.assertIn("output", transcript[1])
+        self.assertEqual(transcript[2]["commandName"], "statistics dump")
+        # The second "statistics dump" in the transcript should have no output
+        self.assertNotIn("output", transcript[2])
+
+    def verify_stats(self, stats, expectation, options):
+        for field_name in expectation:
+            idx = field_name.find(".")
+            if idx == -1:
+                # `field_name` is a top-level field
+                exists = field_name in stats
+                should_exist = expectation[field_name]
+                should_exist_string = "" if should_exist else "not "
+                self.assertEqual(
+                    exists,
+                    should_exist,
+                    f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                )
+            else:
+                # `field_name` is a string of "<top-level field>.<second-level field>"
+                top_level_field_name = field_name[0:idx]
+                second_level_field_name = field_name[idx + 1 :]
+                for top_level_field in (
+                    stats[top_level_field_name] if top_level_field_name in stats else {}
+                ):
+                    exists = second_level_field_name in top_level_field
+                    should_exist = expectation[field_name]
+                    should_exist_string = "" if should_exist else "not "
+                    self.assertEqual(
+                        exists,
+                        should_exist,
+                        f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                    )
+
+    def get_test_cases_for_sections_existence(self):
+        should_always_exist_or_not = {
+            "totalDebugInfoEnabled": True,
+            "memory": True,
+        }
+        test_cases = [
+            {  # Everything mode
+                "command_options": "",
+                "api_options": {},
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": True,
+                    "transcript": True,
+                },
+            },
+            {  # Summary mode
+                "command_options": " --summary",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode with targets
+                "command_options": " --summary --targets=true",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeTargets": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode without targets
+                "command_options": " --summary --targets=false",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeTargets": False,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": False,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode with modules
+                "command_options": " --summary --modules=true",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeModules": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": True,
+                    "transcript": False,
+                },
+            },
+            {  # Default mode without modules and transcript
+                "command_options": " --modules=false --transcript=false",
+                "api_options": {
+                    "SetIncludeModules": False,
+                    "SetIncludeTranscript": False,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Default mode without modules
+                "command_options": " --modules=false",
+                "api_options": {
+                    "SetIncludeModules": False,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": True,
+                },
+            },
+        ]
+        return (should_always_exist_or_not, test_cases)
+
+    def test_sections_existence_through_command(self):
+        """
+        Test "statistics dump" and the existence of sections when different
+        options are given through the command line (CLI or HandleCommand).
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # Then disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # Expectation
+        (
+            should_always_exist_or_not,
+            test_cases,
+        ) = self.get_test_cases_for_sections_existence()
+
+        # Verification
+        for test_case in test_cases:
+            options = test_case["command_options"]
+            # Get statistics dump result
+            stats = self.get_stats(options)
+            # Verify that each field should exist (or not)
+            expectation = {**should_always_exist_or_not, **test_case["expect"]}
+            self.verify_stats(stats, expectation, options)
+
+    def test_sections_existence_through_api(self):
+        """
+        Test "statistics dump" and the existence of sections when different
+        options are given through the public API.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # But disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # Expectation
+        (
+            should_always_exist_or_not,
+            test_cases,
+        ) = self.get_test_cases_for_sections_existence()
+
+        # Verification
+        for test_case in test_cases:
+            # Create options
+            options = test_case["api_options"]
+            sb_options = lldb.SBStatisticsOptions()
+            for method_name, param_value in options.items():
+                getattr(sb_options, method_name)(param_value)
+            # Get statistics dump result
+            stream = lldb.SBStream()
+            target.GetStatistics(sb_options).GetAsJSON(stream)
+            stats = json.loads(stream.GetData())
+            # Verify that each field should exist (or not)
+            expectation = {**should_always_exist_or_not, **test_case["expect"]}
+            self.verify_stats(stats, expectation, options)
+
+    def test_order_of_options_do_not_matter(self):
+        """
+        Test "statistics dump" and the order of options.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # Then disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # The order of the following options shouldn't matter
+        test_cases = [
+            (" --summary", " --targets=true"),
+            (" --summary", " --targets=false"),
+            (" --summary", " --modules=true"),
+            (" --summary", " --modules=false"),
+            (" --summary", " --transcript=true"),
+            (" --summary", " --transcript=false"),
+        ]
+
+        # Verification
+        for options in test_cases:
+            debug_stats_0 = self.get_stats(options[0] + options[1])
+            debug_stats_1 = self.get_stats(options[1] + options[0])
+            # Redact all numbers
+            debug_stats_0 = re.sub(r"\d+", "0", json.dumps(debug_stats_0))
+            debug_stats_1 = re.sub(r"\d+", "0", json.dumps(debug_stats_1))
+            # Verify that the two output are the same
+            self.assertEqual(
+                debug_stats_0,
+                debug_stats_1,
+                f"The order of options '{options[0]}' and '{options[1]}' should not matter",
+            )
+
+    @skipIfWindows
+    def test_summary_statistics_providers(self):
+        """
+        Test summary timing statistics is included in statistics dump when
+        a type with a summary provider exists, and is evaluated.
+        """
+
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop here", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect("frame var", substrs=["hello world"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        # We don't want to take a dependency on the type name, so we just look
+        # for string and that it was called once.
+        summary_provider_str = str(summary_providers)
+        self.assertIn("string", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        # We may hit the std::string C++ provider, or a summary provider string
+        self.assertIn("'type':", summary_provider_str)
+        self.assertTrue(
+            "c++" in summary_provider_str or "string" in summary_provider_str
+        )
+
+        self.runCmd("continue")
+        self.runCmd("command script import BoxFormatter.py")
+        self.expect("frame var", substrs=["box = [27]"])
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertIn("BoxFormatter.summary", summary_provider_str)
+        self.assertIn("'count': 1", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type': 'python'", summary_provider_str)
+
+    @skipIfWindows
+    def test_summary_statistics_providers_vec(self):
+        """
+        Test summary timing statistics is included in statistics dump when
+        a type with a summary provider exists, and is evaluated. This variation
+        tests that vector recurses into it's child type.
+        """
+        self.build()
+        target = self.createTestTarget()
+        lldbutil.run_to_source_breakpoint(
+            self, "// stop vector", lldb.SBFileSpec("main.cpp")
+        )
+        self.expect(
+            "frame var", substrs=["int_vec", "double_vec", "[0] = 1", "[7] = 8"]
+        )
+        stats = self.get_target_stats(self.get_stats())
+        self.assertIn("summaryProviderStatistics", stats)
+        summary_providers = stats["summaryProviderStatistics"]
+        summary_provider_str = str(summary_providers)
+        self.assertIn("'count': 2", summary_provider_str)
+        self.assertIn("'totalTime':", summary_provider_str)
+        self.assertIn("'type':", summary_provider_str)
+        # We may hit the std::vector C++ provider, or a summary provider string
+        if "c++" in summary_provider_str:
+            self.assertIn("std::vector", summary_provider_str)

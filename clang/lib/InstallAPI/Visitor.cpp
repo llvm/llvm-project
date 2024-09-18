@@ -11,6 +11,7 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/FrontendRecords.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -156,7 +157,9 @@ void InstallAPIVisitor::recordObjCInstanceVariables(
     StringRef Name = IV->getName();
     const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(IV);
     auto AC = IV->getCanonicalAccessControl();
-    Ctx.Slice->addObjCIVar(Record, Name, Linkage, Avail, IV, *Access, AC);
+    auto [ObjCIVR, FA] =
+        Ctx.Slice->addObjCIVar(Record, Name, Linkage, Avail, IV, *Access, AC);
+    Ctx.Verifier->verify(ObjCIVR, FA, SuperClass);
   }
 }
 
@@ -178,15 +181,16 @@ bool InstallAPIVisitor::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
       (!D->getASTContext().getLangOpts().ObjCRuntime.isFragile() &&
        hasObjCExceptionAttribute(D));
 
-  ObjCInterfaceRecord *Class =
+  auto [Class, FA] =
       Ctx.Slice->addObjCInterface(Name, Linkage, Avail, D, *Access, IsEHType);
+  Ctx.Verifier->verify(Class, FA);
 
   // Get base class.
   StringRef SuperClassName;
   if (const auto *SuperClass = D->getSuperClass())
     SuperClassName = SuperClass->getObjCRuntimeNameAsString();
 
-  recordObjCInstanceVariables(D->getASTContext(), Class, SuperClassName,
+  recordObjCInstanceVariables(D->getASTContext(), Class, Class->getName(),
                               D->ivars());
   return true;
 }
@@ -201,9 +205,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  ObjCCategoryRecord *Category = Ctx.Slice->addObjCCategory(
-      InterfaceName, CategoryName, Avail, D, *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
@@ -213,7 +218,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  // Skip variables in records. They are handled seperately for C++.
+  // Skip variables in records. They are handled separately for C++.
   if (D->getDeclContext()->isRecord())
     return true;
 
@@ -236,8 +241,10 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   const bool WeakDef = D->hasAttr<WeakAttr>();
   const bool ThreadLocal = D->getTLSKind() != VarDecl::TLS_None;
   const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(D);
-  Ctx.Slice->addGlobal(getMangledName(D), Linkage, GlobalRecord::Kind::Variable,
-                       Avail, D, *Access, getFlags(WeakDef, ThreadLocal));
+  auto [GR, FA] = Ctx.Slice->addGlobal(getMangledName(D), Linkage,
+                                       GlobalRecord::Kind::Variable, Avail, D,
+                                       *Access, getFlags(WeakDef, ThreadLocal));
+  Ctx.Verifier->verify(GR, FA);
   return true;
 }
 
@@ -248,7 +255,7 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
       return true;
 
     // Skip methods in CXX RecordDecls.
-    for (auto P : D->getASTContext().getParents(*M)) {
+    for (const DynTypedNode &P : D->getASTContext().getParents(*M)) {
       if (P.get<CXXRecordDecl>())
         return true;
     }
@@ -287,8 +294,10 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   const RecordLinkage Linkage = (Inlined || !isExported(D))
                                     ? RecordLinkage::Internal
                                     : RecordLinkage::Exported;
-  Ctx.Slice->addGlobal(Name, Linkage, GlobalRecord::Kind::Function, Avail, D,
-                       *Access, getFlags(WeakDef), Inlined);
+  auto [GR, FA] =
+      Ctx.Slice->addGlobal(Name, Linkage, GlobalRecord::Kind::Function, Avail,
+                           D, *Access, getFlags(WeakDef), Inlined);
+  Ctx.Verifier->verify(GR, FA);
   return true;
 }
 
@@ -438,16 +447,16 @@ InstallAPIVisitor::getMangledCXXVTableName(const CXXRecordDecl *D) const {
   return getBackendMangledName(Name);
 }
 
-std::string
-InstallAPIVisitor::getMangledCXXThunk(const GlobalDecl &D,
-                                      const ThunkInfo &Thunk) const {
+std::string InstallAPIVisitor::getMangledCXXThunk(
+    const GlobalDecl &D, const ThunkInfo &Thunk, bool ElideOverrideInfo) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
   const auto *Method = cast<CXXMethodDecl>(D.getDecl());
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(Method))
-    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk.This, NameStream);
+    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk, ElideOverrideInfo,
+                           NameStream);
   else
-    MC->mangleThunk(Method, Thunk, NameStream);
+    MC->mangleThunk(Method, Thunk, ElideOverrideInfo, NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -478,9 +487,10 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
         VTableLinkage == CXXLinkage::WeakODRLinkage) {
       const std::string Name = getMangledCXXVTableName(D);
       const bool WeakDef = VTableLinkage == CXXLinkage::WeakODRLinkage;
-      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                           GlobalRecord::Kind::Variable, Avail, D, Access,
-                           getFlags(WeakDef));
+      auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                           GlobalRecord::Kind::Variable, Avail,
+                                           D, Access, getFlags(WeakDef));
+      Ctx.Verifier->verify(GR, FA);
       if (!D->getDescribedClassTemplate() && !D->isInvalidDecl()) {
         VTableContextBase *VTable = D->getASTContext().getVTableContext();
         auto AddThunk = [&](GlobalDecl GD) {
@@ -490,10 +500,12 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
             return;
 
           for (const auto &Thunk : *Thunks) {
-            const std::string Name = getMangledCXXThunk(GD, Thunk);
-            Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                                 GlobalRecord::Kind::Function, Avail,
-                                 GD.getDecl(), Access);
+            const std::string Name =
+                getMangledCXXThunk(GD, Thunk, /*ElideOverrideInfo=*/true);
+            auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                                 GlobalRecord::Kind::Function,
+                                                 Avail, GD.getDecl(), Access);
+            Ctx.Verifier->verify(GR, FA);
           }
         };
 
@@ -519,12 +531,16 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
 
   if (hasRTTI(D)) {
     std::string Name = getMangledCXXRTTI(D);
-    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                         GlobalRecord::Kind::Variable, Avail, D, Access);
+    auto [GR, FA] =
+        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                             GlobalRecord::Kind::Variable, Avail, D, Access);
+    Ctx.Verifier->verify(GR, FA);
 
     Name = getMangledCXXRTTIName(D);
-    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                         GlobalRecord::Kind::Variable, Avail, D, Access);
+    auto [NamedGR, NamedFA] =
+        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                             GlobalRecord::Kind::Variable, Avail, D, Access);
+    Ctx.Verifier->verify(NamedGR, NamedFA);
   }
 
   for (const auto &It : D->bases()) {
@@ -615,15 +631,17 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
         continue;
 
       std::string Name = getMangledCtorDtor(M, Ctor_Base);
-      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                           GlobalRecord::Kind::Function, Avail, D, *Access,
-                           getFlags(WeakDef));
+      auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                           GlobalRecord::Kind::Function, Avail,
+                                           D, *Access, getFlags(WeakDef));
+      Ctx.Verifier->verify(GR, FA);
 
       if (!D->isAbstract()) {
         std::string Name = getMangledCtorDtor(M, Ctor_Complete);
-        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                             GlobalRecord::Kind::Function, Avail, D, *Access,
-                             getFlags(WeakDef));
+        auto [GR, FA] = Ctx.Slice->addGlobal(
+            Name, RecordLinkage::Exported, GlobalRecord::Kind::Function, Avail,
+            D, *Access, getFlags(WeakDef));
+        Ctx.Verifier->verify(GR, FA);
       }
 
       continue;
@@ -635,20 +653,23 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
         continue;
 
       std::string Name = getMangledCtorDtor(M, Dtor_Base);
-      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                           GlobalRecord::Kind::Function, Avail, D, *Access,
-                           getFlags(WeakDef));
+      auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                           GlobalRecord::Kind::Function, Avail,
+                                           D, *Access, getFlags(WeakDef));
+      Ctx.Verifier->verify(GR, FA);
 
       Name = getMangledCtorDtor(M, Dtor_Complete);
-      Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                           GlobalRecord::Kind::Function, Avail, D, *Access,
-                           getFlags(WeakDef));
+      auto [CompleteGR, CompleteFA] = Ctx.Slice->addGlobal(
+          Name, RecordLinkage::Exported, GlobalRecord::Kind::Function, Avail, D,
+          *Access, getFlags(WeakDef));
+      Ctx.Verifier->verify(CompleteGR, CompleteFA);
 
       if (Dtor->isVirtual()) {
         Name = getMangledCtorDtor(M, Dtor_Deleting);
-        Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                             GlobalRecord::Kind::Function, Avail, D, *Access,
-                             getFlags(WeakDef));
+        auto [VirtualGR, VirtualFA] = Ctx.Slice->addGlobal(
+            Name, RecordLinkage::Exported, GlobalRecord::Kind::Function, Avail,
+            D, *Access, getFlags(WeakDef));
+        Ctx.Verifier->verify(VirtualGR, VirtualFA);
       }
 
       continue;
@@ -661,9 +682,10 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
       continue;
 
     std::string Name = getMangledName(M);
-    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                         GlobalRecord::Kind::Function, Avail, D, *Access,
-                         getFlags(WeakDef));
+    auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                         GlobalRecord::Kind::Function, Avail, M,
+                                         *Access, getFlags(WeakDef));
+    Ctx.Verifier->verify(GR, FA);
   }
 
   if (auto *Templ = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -694,9 +716,10 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     const AvailabilityInfo Avail = AvailabilityInfo::createFromDecl(Var);
     const bool WeakDef = Var->hasAttr<WeakAttr>() || KeepInlineAsWeak;
 
-    Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                         GlobalRecord::Kind::Variable, Avail, D, *Access,
-                         getFlags(WeakDef));
+    auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
+                                         GlobalRecord::Kind::Variable, Avail, D,
+                                         *Access, getFlags(WeakDef));
+    Ctx.Verifier->verify(GR, FA);
   }
 
   return true;

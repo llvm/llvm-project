@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// The AMDGPU-R600 target machine contains all of the hardware specific
-/// information  needed to emit code for R600 GPUs.
+/// This file contains both AMDGPU-R600 target machine and the CodeGen pass
+/// builder. The target machine contains all of the hardware specific
+/// information needed to emit code for R600 GPUs and the CodeGen pass builder
+/// handles the pass pipeline for new pass manager.
 //
 //===----------------------------------------------------------------------===//
 
 #include "R600TargetMachine.h"
-#include "AMDGPUTargetMachine.h"
 #include "R600.h"
+#include "R600MachineFunctionInfo.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
 #include "llvm/Transforms/Scalar.h"
@@ -143,4 +145,44 @@ void R600PassConfig::addPreEmitPass() {
 
 TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new R600PassConfig(*this, PM);
+}
+
+Error R600TargetMachine::buildCodeGenPipeline(
+    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC) {
+  R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+}
+
+MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
+      Allocator, F, static_cast<const R600Subtarget *>(STI));
+}
+
+//===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+R600CodeGenPassBuilder::R600CodeGenPassBuilder(
+    R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+    PassInstrumentationCallbacks *PIC)
+    : CodeGenPassBuilder(TM, Opts, PIC) {
+  Opt.RequiresCodeGenSCCOrder = true;
+}
+
+void R600CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+  // TODO: Add passes pre instruction selection.
+}
+
+void R600CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+                                           CreateMCStreamer) const {
+  // TODO: Add AsmPrinter.
+}
+
+Error R600CodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
+  // TODO: Add instruction selector.
+  return Error::success();
 }

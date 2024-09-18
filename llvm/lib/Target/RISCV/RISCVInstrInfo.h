@@ -45,9 +45,19 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC);
+unsigned getBrCond(CondCode CC, bool Imm = false);
 
 } // end of namespace RISCVCC
+
+// RISCV MachineCombiner patterns
+enum RISCVMachineCombinerPattern : unsigned {
+  FMADD_AX = MachineCombinerPattern::TARGET_PATTERN_START,
+  FMADD_XA,
+  FMSUB,
+  FNMSUB,
+  SHXADD_ADD_SLLI_OP1,
+  SHXADD_ADD_SLLI_OP2,
+};
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
 
@@ -55,7 +65,7 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -66,13 +76,16 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
-                         unsigned Opc, unsigned NF = 1) const;
+                         const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
@@ -193,12 +206,16 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   // Calculate target-specific information for a set of outlining candidates.
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MBBI,
                        unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
@@ -229,29 +246,35 @@ public:
                           unsigned OpIdx,
                           const TargetRegisterInfo *TRI) const override;
 
-  void getVLENFactoredAmount(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator II, const DebugLoc &DL, Register DestReg,
-      int64_t Amount, MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+  /// Generate code to multiply the value in DestReg by Amt - handles all
+  /// the common optimizations for this idiom, and supports fallback for
+  /// subtargets which don't support multiply instructions.
+  void mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
+              MachineBasicBlock::iterator II, const DebugLoc &DL,
+              Register DestReg, uint32_t Amt, MachineInstr::MIFlag Flag) const;
 
   bool useMachineCombiner() const override { return true; }
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
+
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+
+  bool hasReassociableOperands(const MachineInstr &Inst,
+                               const MachineBasicBlock *MBB) const override;
 
   bool hasReassociableSibling(const MachineInstr &Inst,
                               bool &Commuted) const override;
@@ -261,29 +284,27 @@ public:
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
+  void getReassociateOperandIndices(
+      const MachineInstr &Root, unsigned Pattern,
+      std::array<unsigned, 5> &OperandIndices) const override;
+
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    switch (RegClassID) {
-    case RISCV::VRRegClassID:
-      return RISCV::PseudoRVVInitUndefM1;
-    case RISCV::VRM2RegClassID:
-      return RISCV::PseudoRVVInitUndefM2;
-    case RISCV::VRM4RegClassID:
-      return RISCV::PseudoRVVInitUndefM4;
-    case RISCV::VRM8RegClassID:
-      return RISCV::PseudoRVVInitUndefM8;
-    default:
-      llvm_unreachable("Unexpected register class.");
-    }
-  }
+  unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
 protected:
   const RISCVSubtarget &STI;
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;
+
+  bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
+                                         bool Invert = false) const;
+  bool areRVVInstsReassociable(const MachineInstr &MI1,
+                               const MachineInstr &MI2) const;
+  bool hasReassociableVectorSibling(const MachineInstr &Inst,
+                                    bool &Commuted) const;
 };
 
 namespace RISCV {
@@ -318,6 +339,10 @@ std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
 // Returns the MC opcode of RVV pseudo instruction.
 unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
+// For a (non-pseudo) RVV instruction \p Desc and the given \p Log2SEW, returns
+// the log2 EEW of the destination operand.
+unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
@@ -345,6 +370,17 @@ struct PseudoInfo {
 #include "RISCVGenSearchableTables.inc"
 
 } // end namespace RISCVVPseudosTable
+
+namespace RISCV {
+
+struct RISCVMaskedPseudoInfo {
+  uint16_t MaskedPseudo;
+  uint16_t UnmaskedPseudo;
+  uint8_t MaskOpIdx;
+};
+#define GET_RISCVMaskedPseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCV
 
 } // end namespace llvm
 #endif

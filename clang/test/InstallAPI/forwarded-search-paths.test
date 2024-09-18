@@ -1,0 +1,34 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/input.json.in > %t/input.json
+
+; RUN: mkdir -p %t/System/Library/Frameworks 
+; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
+; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
+; RUN: mkdir -p %t/usr/include/after
+
+; RUN: clang-installapi -target x86_64-apple-macosx10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3 -compatibility_version 1 -o %t/Simple.tbd \
+; RUN: -idirafter %t/usr/include/after \
+; RUN: -F %t/System/Library/Frameworks \
+; RUN: --verify-against=%t/Simple --verify-mode=ErrorsOnly \
+; RUN: %t/input.json  -v 2>&1 | FileCheck %s
+
+; CHECK: "-idirafter" {{.*}}/usr/include/after"
+; CHECK: #include "..." search starts here:
+; CHECK: #include <...> search starts here:
+; CHECK: usr/include/after 
+; CHECK-NEXT: End of search list.
+
+;--- input.json.in
+{
+  "version" : "3",
+  "headers" : [
+    {
+      "type" : "public",
+      "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/Headers/Basic.h"
+    }
+  ]
+}

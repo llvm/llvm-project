@@ -10,7 +10,7 @@ define void @foo() {
 ; CHECK-NEXT:    br label [[BCI_252:%.*]]
 ; CHECK:       bci_252:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, [[BCI_0:%.*]] ], [ [[TMP16:%.*]], [[BCI_252_1:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP6]], zeroinitializer

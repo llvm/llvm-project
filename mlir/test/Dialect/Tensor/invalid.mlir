@@ -273,21 +273,10 @@ func.func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8
 
 // -----
 
-func.func @illegal_expanding_reshape_dynamic_tensor
-  (%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?x4x?xf32> {
-  // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
-  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
-      : tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
-  return %0 : tensor<?x?x?x4x?xf32>
-}
-
-// -----
-
-
 func.func @illegal_expanding_reshape_static_tensor
     (%arg0: tensor<2x3x20xf32>) -> tensor<2x3x2x4x5xf32> {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]] output_shape [2, 3, 2, 4, 5]
       : tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
   return %0 : tensor<2x3x2x4x5xf32>
 }
@@ -304,23 +293,32 @@ func.func @illegal_collapsing_reshape_static_tensor
 
 // -----
 
-func.func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>)
+func.func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>, %sz0: index)
     -> tensor<?x4x5xf32> {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = tensor.expand_shape %arg0 [[0, 1], [2]]
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [%sz0, 4, 5]
       : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
 
 // -----
 
-func.func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>)
+func.func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>, %sz0: index)
     -> tensor<?x4x5xf32> {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%sz0, 4, 5]
       : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
+
+// -----
+
+func.func @expand_shape_illegal_output_shape(%arg0: tensor<2xf32>) {
+  // expected-error @+1 {{expected number of static shape dims to be equal to the output rank (3) but found 2 inputs instead}}
+  %0 = tensor.expand_shape %arg0 [[0, 1, 2]] output_shape [1, 2] : tensor<2xf32> into tensor<1x1x2xf32>
+  return
+}
+
 
 // -----
 
@@ -457,41 +455,59 @@ func.func @gather_coordinate_rank_overflow(
 
 // -----
 
+func.func @gather_coordinate_rank_mismatch0(
+    %source: tensor<4x5x6xf32>, %indices: tensor<index>) {
+  // expected-error@+1 {{gather_dims length must match the size of last dimension of indices}}
+  %out = tensor.gather %source[%indices] gather_dims([0, 1, 2]):
+    (tensor<4x5x6xf32>, tensor<index>) -> tensor<1x2xf32>
+}
+
+// -----
+
+func.func @gather_coordinate_rank_mismatch1(
+    %source: tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
+  // expected-error@+1 {{gather_dims length must match the size of last dimension of indices}}
+  %out = tensor.gather %source[%indices] gather_dims([0, 1, 2]):
+    (tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2xf32>
+}
+
+// -----
+
 func.func @gather_coordinate_negative(
-    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x1xindex>) {
   // expected-error@+1 {{gather_dims value must be non-negative}}
   %out = tensor.gather %source[%indices] gather_dims([-1]):
-    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<4x5x6xf32>, tensor<1x2x1xindex>) -> tensor<1x2x1xf32>
   return
 }
 
 // -----
 
 func.func @gather_coordinate_overflow(
-    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x1xindex>) {
   // expected-error@+1 {{gather_dims value must be smaller than source rank}}
   %out = tensor.gather %source[%indices] gather_dims([42]):
-    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<4x5x6xf32>, tensor<1x2x1xindex>) -> tensor<1x2x1xf32>
   return
 }
 
 // -----
 
-func.func @gather_coordinate_overflow(
-    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+func.func @gather_coordinate_increase(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
   // expected-error@+1 {{gather_dims values must be strictly increasing}}
   %out = tensor.gather %source[%indices] gather_dims([1, 0]):
-    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2x1x1xf32>
   return
 }
 
 // -----
 
 func.func @gather_wrong_result_type(
-    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
   // expected-error@+1 {{result type mismatch: expected 'tensor<1x2x1x5x1xf32>' or its rank-reduced variant 'tensor<1x2x5xf32>' (got: 'tensor<1x2x1xf32>')}}
   %out = tensor.gather %source[%indices] gather_dims([0, 2]):
-    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+    (tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2x1xf32>
   return
 }
 
@@ -519,12 +535,34 @@ func.func @scatter_coordinate_rank_overflow(
 
 // -----
 
+func.func @scatter_coordinate_rank_mismatch0(
+    %source : tensor<f32>,
+    %dest : tensor<4x5x6xf32>, %indices: tensor<index>) {
+  // expected-error@+1 {{scatter_dims length must match the size of last dimension of indices}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 1, 2]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<index>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_coordinate_rank_mismatch1(
+    %source : tensor<f32>,
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
+  // expected-error@+1 {{scatter_dims length must match the size of last dimension of indices}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 1, 2]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
 func.func @scatter_coordinate_negative(
     %source : tensor<f32>,
-    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x1xindex>) {
   // expected-error@+1 {{scatter_dims value must be non-negative}}
   %out = tensor.scatter %source into %dest[%indices] scatter_dims([-1]) unique:
-    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x1xindex>) -> tensor<1x2x1xf32>
   return
 }
 
@@ -532,21 +570,21 @@ func.func @scatter_coordinate_negative(
 
 func.func @scatter_coordinate_overflow(
     %source : tensor<f32>,
-    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x1xindex>) {
   // expected-error@+1 {{scatter_dims value must be smaller than dest rank}}
   %out = tensor.scatter %source into %dest[%indices] scatter_dims([42]) unique:
-    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x1xindex>) -> tensor<1x2x1xf32>
   return
 }
 
 // -----
 
-func.func @scatter_coordinate_overflow(
+func.func @scatter_coordinate_increase(
     %source : tensor<f32>,
-    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
   // expected-error@+1 {{scatter_dims values must be strictly increasing}}
   %out = tensor.scatter %source into %dest[%indices] scatter_dims([1, 0]) unique:
-    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2x1x1xf32>
   return
 }
 
@@ -554,10 +592,10 @@ func.func @scatter_coordinate_overflow(
 
 func.func @scatter_missing_unique(
     %source : tensor<f32>,
-    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
   // expected-error@+1 {{requires 'unique' attribute to be set}}
   %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 2]):
-    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2x1xf32>
   return
 }
 
@@ -565,10 +603,10 @@ func.func @scatter_missing_unique(
 
 func.func @scatter_wrong_result_type(
     %source : tensor<f32>,
-    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x2xindex>) {
   // expected-error@+1 {{source type mismatch: expected 'tensor<1x2x1x5x1xf32>' or its rank-reduced variant 'tensor<1x2x5xf32>' (got: 'tensor<f32>')}}
   %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 2]) unique:
-    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x2xindex>) -> tensor<1x2x1xf32>
   return
 }
 
@@ -634,6 +672,14 @@ func.func @pack_invalid_duplicate_element_in_outer_perm(%input: tensor<256x128xf
   // expected-error@+1 {{invalid outer_dims_perm vector}}
   %0 = tensor.pack %input outer_dims_perm = [1, 1] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
   return %0 : tensor<8x8x32x16xf32>
+}
+
+// -----
+
+func.func @pack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tensor<64x32x16xf32>) -> tensor<64x32x16xf32> {
+  // expected-error@+1 {{packed rank must equal unpacked rank + tiling factors}}
+  %0 = tensor.pack %input inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<64x32x16xf32>
+  return %0 : tensor<64x32x16xf32>
 }
 
 // -----

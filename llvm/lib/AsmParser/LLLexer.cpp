@@ -566,6 +566,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(fast);
   KEYWORD(nuw);
   KEYWORD(nsw);
+  KEYWORD(nusw);
   KEYWORD(exact);
   KEYWORD(disjoint);
   KEYWORD(inbounds);
@@ -603,6 +604,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(aarch64_vector_pcs);
   KEYWORD(aarch64_sve_vector_pcs);
   KEYWORD(aarch64_sme_preservemost_from_x0);
+  KEYWORD(aarch64_sme_preservemost_from_x1);
   KEYWORD(aarch64_sme_preservemost_from_x2);
   KEYWORD(msp430_intrcc);
   KEYWORD(avr_intrcc);
@@ -640,6 +642,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
+  KEYWORD(riscv_vector_cc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -701,6 +704,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
+  KEYWORD(usub_cond);
+  KEYWORD(usub_sat);
 
   KEYWORD(splat);
   KEYWORD(vscale);
@@ -708,6 +713,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
   KEYWORD(no_cfi);
+  KEYWORD(ptrauth);
 
   // Metadata types.
   KEYWORD(distinct);
@@ -736,6 +742,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(live);
   KEYWORD(dsoLocal);
   KEYWORD(canAutoHide);
+  KEYWORD(importType);
+  KEYWORD(definition);
+  KEYWORD(declaration);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
@@ -831,7 +840,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("ppc_fp128", Type::getPPC_FP128Ty(Context));
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));
-  TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
   TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));

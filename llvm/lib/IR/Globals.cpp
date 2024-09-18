@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
@@ -71,6 +72,10 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     removeSanitizerMetadata();
 }
 
+GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
+  return MD5Hash(GlobalName);
+}
+
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \
@@ -114,6 +119,10 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
   return hasDefaultVisibility() &&
          GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
          !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
+}
+
+const DataLayout &GlobalValue::getDataLayout() const {
+  return getParent()->getDataLayout();
 }
 
 void GlobalObject::setAlignment(MaybeAlign Align) {
@@ -160,7 +169,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     else
       GlobalName += FileName;
 
-    GlobalName += kGlobalIdentifierDelimiter;
+    GlobalName += GlobalIdentifierDelimiter;
   }
   GlobalName += Name;
   return GlobalName;
@@ -243,6 +252,13 @@ void GlobalValue::removeSanitizerMetadata() {
   HasSanitizerMetadata = false;
 }
 
+void GlobalValue::setNoSanitizeMetadata() {
+  SanitizerMetadata Meta;
+  Meta.NoAddress = true;
+  Meta.NoHWAddress = true;
+  setSanitizerMetadata(Meta);
+}
+
 StringRef GlobalObject::getSectionImpl() const {
   assert(hasSection());
   return getContext().pImpl->GlobalObjectSections[this];
@@ -322,6 +338,16 @@ bool GlobalObject::canIncreaseAlignment() const {
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatELF());
   if (isELF && !isDSOLocal())
     return false;
+
+  // GV with toc-data attribute is defined in a TOC entry. To mitigate TOC
+  // overflow, the alignment of such symbol should not be increased. Otherwise,
+  // padding is needed thus more TOC entries are wasted.
+  bool isXCOFF =
+      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
+  if (isXCOFF)
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
+      if (GV->hasAttribute("toc-data"))
+        return false;
 
   return true;
 }
@@ -416,9 +442,8 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
                                Constant *InitVal, const Twine &Name,
                                ThreadLocalMode TLMode, unsigned AddressSpace,
                                bool isExternallyInitialized)
-    : GlobalObject(Ty, Value::GlobalVariableVal,
-                   OperandTraits<GlobalVariable>::op_begin(this),
-                   InitVal != nullptr, Link, Name, AddressSpace),
+    : GlobalObject(Ty, Value::GlobalVariableVal, AllocMarker, Link, Name,
+                   AddressSpace),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
   assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
@@ -428,6 +453,8 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
     assert(InitVal->getType() == Ty &&
            "Initializer should be the same type as the GlobalVariable!");
     Op<0>() = InitVal;
+  } else {
+    setGlobalVariableNumOperands(0);
   }
 }
 
@@ -477,6 +504,12 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
   }
 }
 
+void GlobalVariable::replaceInitializer(Constant *InitVal) {
+  assert(InitVal && "Can't compute type of null initializer");
+  ValueType = InitVal->getType();
+  setInitializer(InitVal);
+}
+
 /// Copy all additional attributes (those not needed to create a GlobalVariable)
 /// from the GlobalVariable Src to this one.
 void GlobalVariable::copyAttributesFrom(const GlobalVariable *Src) {
@@ -508,7 +541,7 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
 GlobalAlias::GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          const Twine &Name, Constant *Aliasee,
                          Module *ParentModule)
-    : GlobalValue(Ty, Value::GlobalAliasVal, &Op<0>(), 1, Link, Name,
+    : GlobalValue(Ty, Value::GlobalAliasVal, AllocMarker, Link, Name,
                   AddressSpace) {
   setAliasee(Aliasee);
   if (ParentModule)
@@ -565,7 +598,7 @@ const GlobalObject *GlobalAlias::getAliaseeObject() const {
 GlobalIFunc::GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
                          const Twine &Name, Constant *Resolver,
                          Module *ParentModule)
-    : GlobalObject(Ty, Value::GlobalIFuncVal, &Op<0>(), 1, Link, Name,
+    : GlobalObject(Ty, Value::GlobalIFuncVal, AllocMarker, Link, Name,
                    AddressSpace) {
   setResolver(Resolver);
   if (ParentModule)

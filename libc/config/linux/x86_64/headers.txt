@@ -2,6 +2,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.assert
     libc.include.ctype
     libc.include.dirent
+    libc.include.dlfcn
+    libc.include.elf
     libc.include.errno
     libc.include.fcntl
     libc.include.features
@@ -10,6 +12,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdint
     libc.include.inttypes
     libc.include.limits
+    libc.include.link
     libc.include.math
     libc.include.pthread
     libc.include.sched
@@ -29,6 +32,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.time
     libc.include.unistd
     libc.include.wchar
+    libc.include.uchar
+    libc.include.locale
 
     libc.include.arpa_inet
 
@@ -43,6 +48,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_select
     libc.include.sys_socket
     libc.include.sys_stat
+    libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types

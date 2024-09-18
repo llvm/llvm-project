@@ -268,7 +268,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
   return DAG.getMemcpy(
       Chain, DL, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
       /*isVolatile=*/false, /*AlwaysInline=*/true,
-      /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -939,6 +939,7 @@ SDValue M68kTargetLowering::LowerFormalArguments(
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     assert(VA.getValNo() != LastVal && "Same value in different locations");
+    (void)LastVal;
 
     LastVal = VA.getValNo();
 
@@ -3074,9 +3075,9 @@ static bool checkAndUpdateCCRKill(MachineBasicBlock::iterator SelectItr,
   MachineBasicBlock::iterator miI(std::next(SelectItr));
   for (MachineBasicBlock::iterator miE = BB->end(); miI != miE; ++miI) {
     const MachineInstr &mi = *miI;
-    if (mi.readsRegister(M68k::CCR))
+    if (mi.readsRegister(M68k::CCR, /*TRI=*/nullptr))
       return false;
-    if (mi.definesRegister(M68k::CCR))
+    if (mi.definesRegister(M68k::CCR, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -3207,7 +3208,7 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   MachineInstr *LastCCRSUser = CascadedCMOV ? CascadedCMOV : LastCMOV;
-  if (!LastCCRSUser->killsRegister(M68k::CCR) &&
+  if (!LastCCRSUser->killsRegister(M68k::CCR, /*TRI=*/nullptr) &&
       !checkAndUpdateCCRKill(LastCCRSUser, MBB, TRI)) {
     Copy0MBB->addLiveIn(M68k::CCR);
     SinkMBB->addLiveIn(M68k::CCR);

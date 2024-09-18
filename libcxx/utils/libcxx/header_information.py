@@ -30,22 +30,6 @@ header_restrictions = {
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-
-    # headers with #error directives
-    "barrier": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "future": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "latch": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "semaphore": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "stop_token": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
-
-    # headers with #error directives
-    "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "wctype.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    # transitive includers of the above headers
-    "cwchar": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-    "cwctype": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
 }
 
 lit_header_restrictions = {
@@ -143,6 +127,7 @@ headers_not_available = [
     "flat_set",
     "generator",
     "hazard_pointer",
+    "inplace_vector",
     "linalg",
     "rcu",
     "spanstream",
@@ -159,6 +144,10 @@ def is_header(file):
         "CMakeLists.txt",
         "libcxx.imp",
     ]
+
+
+def is_public_header(header):
+    return "__" not in header and not header.startswith("ext/")
 
 
 def is_modulemap_header(header):
@@ -192,17 +181,18 @@ test = pathlib.Path(os.path.join(libcxx_root, "test"))
 assert libcxx_root.exists()
 
 all_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.rglob("[a-z]*") if is_header(p)
+    p.relative_to(include).as_posix() for p in include.rglob("[_a-z]*") if is_header(p)
 )
 toplevel_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
+    p.relative_to(include).as_posix() for p in include.glob("[_a-z]*") if is_header(p)
 )
 experimental_headers = sorted(
     p.relative_to(include).as_posix()
     for p in include.glob("experimental/[a-z]*")
     if is_header(p)
 )
-public_headers = toplevel_headers + experimental_headers
+
+public_headers = [p for p in all_headers if is_public_header(p)]
 
 # The headers used in the std and std.compat modules.
 #
@@ -210,7 +200,7 @@ public_headers = toplevel_headers + experimental_headers
 module_headers = [
     header
     for header in toplevel_headers
-    if not header.endswith(".h")
+    if not header.endswith(".h") and is_public_header(header)
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
 ]

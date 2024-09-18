@@ -575,7 +575,7 @@ public:
   // Emit code to generate this result as a Value *.
   std::string asValue() override {
     if (AddressType)
-      return "(" + varname() + ".getPointer())";
+      return "(" + varname() + ".emitRawPointer(*this))";
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }
@@ -658,9 +658,9 @@ public:
   std::vector<Ptr> Args;
   std::set<unsigned> AddressArgs;
   std::map<unsigned, std::string> IntegerArgs;
-  IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
-                  std::set<unsigned> AddressArgs,
-                  std::map<unsigned, std::string> IntegerArgs)
+  IRBuilderResult(StringRef CallPrefix, const std::vector<Ptr> &Args,
+                  const std::set<unsigned> &AddressArgs,
+                  const std::map<unsigned, std::string> &IntegerArgs)
       : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntegerArgs(IntegerArgs) {}
   void genCode(raw_ostream &OS,
@@ -727,8 +727,9 @@ public:
   std::string IntrinsicID;
   std::vector<const Type *> ParamTypes;
   std::vector<Ptr> Args;
-  IRIntrinsicResult(StringRef IntrinsicID, std::vector<const Type *> ParamTypes,
-                    std::vector<Ptr> Args)
+  IRIntrinsicResult(StringRef IntrinsicID,
+                    const std::vector<const Type *> &ParamTypes,
+                    const std::vector<Ptr> &Args)
       : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
         Args(Args) {}
   void genCode(raw_ostream &OS,
@@ -892,8 +893,8 @@ public:
   }
   bool hasCode() const { return Code != nullptr; }
 
-  static std::string signedHexLiteral(const llvm::APInt &iOrig) {
-    llvm::APInt i = iOrig.trunc(64);
+  static std::string signedHexLiteral(const APInt &iOrig) {
+    APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
     return std::string(s);
@@ -906,7 +907,7 @@ public:
     for (const auto &kv : ImmediateArgs) {
       const ImmediateArg &IA = kv.second;
 
-      llvm::APInt lo(128, 0), hi(128, 0);
+      APInt lo(128, 0), hi(128, 0);
       switch (IA.boundsType) {
       case ImmediateArg::BoundsType::ExplicitRange:
         lo = IA.i1;
@@ -914,7 +915,7 @@ public:
         break;
       case ImmediateArg::BoundsType::UInt:
         lo = 0;
-        hi = llvm::APInt::getMaxValue(IA.i1).zext(128);
+        hi = APInt::getMaxValue(IA.i1).zext(128);
         break;
       }
 
@@ -924,11 +925,11 @@ public:
       // immediate is smaller than the _possible_ range of values for
       // its type.
       unsigned ArgTypeBits = IA.ArgType->sizeInBits();
-      llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
-      llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
+      APInt ArgTypeRange = APInt::getMaxValue(ArgTypeBits).zext(128);
+      APInt ActualRange = (hi - lo).trunc(64).sext(128);
       if (ActualRange.ult(ArgTypeRange))
-        SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
-                             ", " + signedHexLiteral(lo) + ", " +
+        SemaChecks.push_back("SemaRef.BuiltinConstantArgRange(TheCall, " +
+                             Index + ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
@@ -942,7 +943,7 @@ public:
           }
           Suffix = (Twine(", ") + Arg).str();
         }
-        SemaChecks.push_back((Twine("SemaBuiltinConstantArg") +
+        SemaChecks.push_back((Twine("SemaRef.BuiltinConstantArg") +
                               IA.ExtraCheckType + "(TheCall, " + Index +
                               Suffix + ")")
                                  .str());
@@ -957,7 +958,7 @@ public:
            ";\n";
   }
 
-  ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param);
+  ACLEIntrinsic(EmitterBase &ME, const Record *R, const Type *Param);
 };
 
 // -----------------------------------------------------------------------------
@@ -987,7 +988,7 @@ public:
   const ScalarType *getScalarType(StringRef Name) {
     return ScalarTypes[std::string(Name)].get();
   }
-  const ScalarType *getScalarType(Record *R) {
+  const ScalarType *getScalarType(const Record *R) {
     return getScalarType(R->getName());
   }
   const VectorType *getVectorType(const ScalarType *ST, unsigned Lanes) {
@@ -1027,7 +1028,7 @@ public:
   // the Params list in the Tablegen record for the intrinsic), which is used
   // to expand Tablegen classes like 'Vector' which mean something different in
   // each member of a parametric family.
-  const Type *getType(Record *R, const Type *Param);
+  const Type *getType(const Record *R, const Type *Param);
   const Type *getType(DagInit *D, const Type *Param);
   const Type *getType(Init *I, const Type *Param);
 
@@ -1045,7 +1046,7 @@ public:
 
   // Constructor and top-level functions.
 
-  EmitterBase(RecordKeeper &Records);
+  EmitterBase(const RecordKeeper &Records);
   virtual ~EmitterBase() = default;
 
   virtual void EmitHeader(raw_ostream &OS) = 0;
@@ -1064,7 +1065,7 @@ const Type *EmitterBase::getType(Init *I, const Type *Param) {
   PrintFatalError("Could not convert this value into a type");
 }
 
-const Type *EmitterBase::getType(Record *R, const Type *Param) {
+const Type *EmitterBase::getType(const Record *R, const Type *Param) {
   // Pass to a subfield of any wrapper records. We don't expect more than one
   // of these: immediate operands are used as plain numbers rather than as
   // llvm::Value, so it's meaningless to promote their type anyway.
@@ -1087,7 +1088,7 @@ const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
   // The meat of the getType system: types in the Tablegen are represented by a
   // dag whose operators select sub-cases of this function.
 
-  Record *Op = cast<DefInit>(D->getOperator())->getDef();
+  const Record *Op = cast<DefInit>(D->getOperator())->getDef();
   if (!Op->isSubClassOf("ComplexTypeOp"))
     PrintFatalError(
         "Expected ComplexTypeOp as dag operator in type expression");
@@ -1153,7 +1154,7 @@ const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
 
 Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
                                        const Type *Param) {
-  Record *Op = cast<DefInit>(D->getOperator())->getDef();
+  const Record *Op = cast<DefInit>(D->getOperator())->getDef();
 
   if (Op->getName() == "seq") {
     Result::Scope SubScope = Scope;
@@ -1210,7 +1211,7 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
   } else if (Op->getName() == "unsignedflag") {
     if (D->getNumArgs() != 1)
       PrintFatalError("unsignedflag should have exactly one argument");
-    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    const Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
     if (!TypeRec->isSubClassOf("Type"))
       PrintFatalError("unsignedflag's argument should be a type");
     if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
@@ -1222,7 +1223,7 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
   } else if (Op->getName() == "bitsize") {
     if (D->getNumArgs() != 1)
       PrintFatalError("bitsize should have exactly one argument");
-    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    const Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
     if (!TypeRec->isSubClassOf("Type"))
       PrintFatalError("bitsize's argument should be a type");
     if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
@@ -1238,7 +1239,7 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     if (Op->isSubClassOf("IRBuilderBase")) {
       std::set<unsigned> AddressArgs;
       std::map<unsigned, std::string> IntegerArgs;
-      for (Record *sp : Op->getValueAsListOfDefs("special_params")) {
+      for (const Record *sp : Op->getValueAsListOfDefs("special_params")) {
         unsigned Index = sp->getValueAsInt("index");
         if (sp->isSubClassOf("IRBuilderAddrParam")) {
           AddressArgs.insert(Index);
@@ -1250,7 +1251,7 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
                                                Args, AddressArgs, IntegerArgs);
     } else if (Op->isSubClassOf("IRIntBase")) {
       std::vector<const Type *> ParamTypes;
-      for (Record *RParam : Op->getValueAsListOfDefs("params"))
+      for (const Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
       std::string IntName = std::string(Op->getValueAsString("intname"));
       if (Op->getValueAsBit("appendKind"))
@@ -1293,7 +1294,7 @@ Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
     return getCodeForDag(DI, Scope, Param);
 
   if (auto *DI = dyn_cast<DefInit>(Arg)) {
-    Record *Rec = DI->getDef();
+    const Record *Rec = DI->getDef();
     if (Rec->isSubClassOf("Type")) {
       const Type *T = getType(Rec, Param);
       return std::make_shared<TypeResult>(T);
@@ -1327,7 +1328,8 @@ Result::Ptr EmitterBase::getCodeForArg(unsigned ArgNum, const Type *ArgType,
   return V;
 }
 
-ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
+ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
+                             const Type *Param)
     : ReturnType(ME.getType(R->getValueAsDef("ret"), Param)) {
   // Derive the intrinsic's full name, by taking the name of the
   // Tablegen record (or override) and appending the suffix from its
@@ -1345,7 +1347,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
   // full name as specified by its 'pnt' member ('polymorphic name type'),
   // which indicates how many type suffixes to remove, and any other piece of
   // the name that should be removed.
-  Record *PolymorphicNameType = R->getValueAsDef("pnt");
+  const Record *PolymorphicNameType = R->getValueAsDef("pnt");
   SmallVector<StringRef, 8> NameParts;
   StringRef(FullName).split(NameParts, '_');
   for (unsigned i = 0, e = PolymorphicNameType->getValueAsInt(
@@ -1392,11 +1394,11 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
     // what values it can take, for Sema checking.
     bool Immediate = false;
     if (auto TypeDI = dyn_cast<DefInit>(TypeInit)) {
-      Record *TypeRec = TypeDI->getDef();
+      const Record *TypeRec = TypeDI->getDef();
       if (TypeRec->isSubClassOf("Immediate")) {
         Immediate = true;
 
-        Record *Bounds = TypeRec->getValueAsDef("bounds");
+        const Record *Bounds = TypeRec->getValueAsDef("bounds");
         ImmediateArg &IA = ImmediateArgs[i];
         if (Bounds->isSubClassOf("IB_ConstRange")) {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
@@ -1439,7 +1441,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
   // Finally, go through the codegen dag and translate it into a Result object
   // (with an arbitrary DAG of depended-on Results hanging off it).
   DagInit *CodeDag = R->getValueAsDag("codegen");
-  Record *MainOp = cast<DefInit>(CodeDag->getOperator())->getDef();
+  const Record *MainOp = cast<DefInit>(CodeDag->getOperator())->getDef();
   if (MainOp->isSubClassOf("CustomCodegen")) {
     // Or, if it's the special case of CustomCodegen, just accumulate
     // a list of parameters we're going to assign to variables before
@@ -1463,7 +1465,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, Record *R, const Type *Param)
   }
 }
 
-EmitterBase::EmitterBase(RecordKeeper &Records) {
+EmitterBase::EmitterBase(const RecordKeeper &Records) {
   // Construct the whole EmitterBase.
 
   // First, look up all the instances of PrimitiveType. This gives us the list
@@ -1471,13 +1473,13 @@ EmitterBase::EmitterBase(RecordKeeper &Records) {
   // collect all the useful ScalarType instances into a big list so that we can
   // use it for operations such as 'find the unsigned version of this signed
   // integer type'.
-  for (Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
+  for (const Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
     ScalarTypes[std::string(R->getName())] = std::make_unique<ScalarType>(R);
 
   // Now go through the instances of Intrinsic, and for each one, iterate
   // through its list of type parameters making an ACLEIntrinsic for each one.
-  for (Record *R : Records.getAllDerivedDefinitions("Intrinsic")) {
-    for (Record *RParam : R->getValueAsListOfDefs("params")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("Intrinsic")) {
+    for (const Record *RParam : R->getValueAsListOfDefs("params")) {
       const Type *Param = getType(RParam, getVoidType());
       auto Intrinsic = std::make_unique<ACLEIntrinsic>(*this, R, Param);
       ACLEIntrinsics[Intrinsic->fullName()] = std::move(Intrinsic);
@@ -1581,7 +1583,6 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
     CodeGenParamAllocator ParamAllocPrelim{&MG.ParamTypes, &OI.ParamValues};
     raw_string_ostream OS(MG.Code);
     Int.genCode(OS, ParamAllocPrelim, 1);
-    OS.flush();
 
     MergeableGroupsPrelim[MG].insert(OI);
   }
@@ -1653,7 +1654,6 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
                                        &ParamNumbers};
       raw_string_ostream OS(MG.Code);
       Int->genCode(OS, ParamAlloc, 2);
-      OS.flush();
 
       MergeableGroups[MG].insert(OI);
     }
@@ -1751,7 +1751,7 @@ void EmitterBase::GroupSemaChecks(
 
 class MveEmitter : public EmitterBase {
 public:
-  MveEmitter(RecordKeeper &Records) : EmitterBase(Records){};
+  MveEmitter(const RecordKeeper &Records) : EmitterBase(Records) {}
   void EmitHeader(raw_ostream &OS) override;
   void EmitBuiltinDef(raw_ostream &OS) override;
   void EmitBuiltinSema(raw_ostream &OS) override;
@@ -2009,14 +2009,14 @@ class CdeEmitter : public EmitterBase {
   std::map<StringRef, FunctionMacro> FunctionMacros;
 
 public:
-  CdeEmitter(RecordKeeper &Records);
+  CdeEmitter(const RecordKeeper &Records);
   void EmitHeader(raw_ostream &OS) override;
   void EmitBuiltinDef(raw_ostream &OS) override;
   void EmitBuiltinSema(raw_ostream &OS) override;
 };
 
-CdeEmitter::CdeEmitter(RecordKeeper &Records) : EmitterBase(Records) {
-  for (Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
+CdeEmitter::CdeEmitter(const RecordKeeper &Records) : EmitterBase(Records) {
+  for (const Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
     FunctionMacros.emplace(R->getName(), FunctionMacro(*R));
 }
 
@@ -2178,45 +2178,45 @@ namespace clang {
 
 // MVE
 
-void EmitMveHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveHeader(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitHeader(OS);
 }
 
-void EmitMveBuiltinDef(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinDef(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinDef(OS);
 }
 
-void EmitMveBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinSema(OS);
 }
 
-void EmitMveBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinCG(OS);
 }
 
-void EmitMveBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
+void EmitMveBuiltinAliases(const RecordKeeper &Records, raw_ostream &OS) {
   MveEmitter(Records).EmitBuiltinAliases(OS);
 }
 
 // CDE
 
-void EmitCdeHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeHeader(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitHeader(OS);
 }
 
-void EmitCdeBuiltinDef(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinDef(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinDef(OS);
 }
 
-void EmitCdeBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinSema(OS);
 }
 
-void EmitCdeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinCG(OS);
 }
 
-void EmitCdeBuiltinAliases(RecordKeeper &Records, raw_ostream &OS) {
+void EmitCdeBuiltinAliases(const RecordKeeper &Records, raw_ostream &OS) {
   CdeEmitter(Records).EmitBuiltinAliases(OS);
 }
 

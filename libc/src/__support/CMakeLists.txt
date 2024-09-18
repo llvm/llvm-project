@@ -2,6 +2,47 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  block
+  HDRS
+    block.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
+  freelist
+  HDRS
+    freelist.h
+  DEPENDS
+    libc.src.__support.fixedvector
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.span
+)
+
+add_header_library(
+  freelist_heap
+  HDRS
+    freelist_heap.h
+  DEPENDS
+    .block
+    .freelist
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.libc_assert
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_header_library(
   blockstore
   HDRS
     blockstore.h
@@ -39,6 +80,14 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  sign
+  HDRS
+    sign.h
+  DEPENDS
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
@@ -96,7 +145,7 @@ add_header_library(
   HDRS
     integer_to_string.h
   DEPENDS
-    .uint
+    .big_int
     libc.src.__support.common
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
@@ -141,10 +190,11 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
     libc.src.errno.errno
 )
 
@@ -196,9 +246,9 @@ add_header_library(
 )
 
 add_header_library(
-  uint
+  big_int
   HDRS
-    UInt.h
+    big_int.h
   DEPENDS
     .math_extras
     .number_pair
@@ -212,9 +262,9 @@ add_header_library(
 add_header_library(
   uint128
   HDRS
-    UInt128.h
+    uint128.h
   DEPENDS
-    .uint
+    .big_int
     libc.src.__support.macros.properties.types
 )
 
@@ -273,3 +323,5 @@ add_subdirectory(File)
 add_subdirectory(HashTable)
 
 add_subdirectory(fixed_point)
+
+add_subdirectory(time)

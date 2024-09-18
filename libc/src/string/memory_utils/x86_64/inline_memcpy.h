@@ -26,7 +26,7 @@
 #error LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace x86 {
 
@@ -69,14 +69,21 @@ inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
 }
 
+[[maybe_unused]] LIBC_INLINE void inline_memcpy_prefetch(Ptr __restrict dst,
+                                                         CPtr __restrict src,
+                                                         size_t distance) {
+  prefetch_to_local_cache(src + distance);
+  prefetch_for_write(dst + distance);
+}
+
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
   using namespace LIBC_NAMESPACE::x86;
-  prefetch_to_local_cache(src + K_ONE_CACHELINE);
+  inline_memcpy_prefetch(dst, src, K_ONE_CACHELINE);
   if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
-  prefetch_to_local_cache(src + K_TWO_CACHELINES);
+  inline_memcpy_prefetch(dst, src, K_TWO_CACHELINES);
   // Aligning 'dst' on a 32B boundary.
   builtin::Memcpy<32>::block(dst, src);
   align_to_next_boundary<32, Arg::Dst>(dst, src, count);
@@ -90,35 +97,41 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
   if (count < 352) {
     // Two cache lines at a time.
     while (offset + K_TWO_CACHELINES + 32 <= count) {
-      prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
-      prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
+      inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
+      inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
       builtin::Memcpy<K_TWO_CACHELINES>::block_offset(dst, src, offset);
       offset += K_TWO_CACHELINES;
     }
   } else {
     // Three cache lines at a time.
     while (offset + K_THREE_CACHELINES + 32 <= count) {
-      prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
-      prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
-      prefetch_to_local_cache(src + offset + K_THREE_CACHELINES);
+      inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
+      inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
+      inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
       // It is likely that this copy will be turned into a 'rep;movsb' on
       // non-AVX machines.
       builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
       offset += K_THREE_CACHELINES;
     }
   }
-  return builtin::Memcpy<32>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 32 <= count) {
+    builtin::Memcpy<32>::block_offset(dst, src, offset);
+    offset += 32;
+  }
+  return builtin::Memcpy<32>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
                                           CPtr __restrict src, size_t count) {
   using namespace LIBC_NAMESPACE::x86;
-  prefetch_to_local_cache(src + K_ONE_CACHELINE);
+  inline_memcpy_prefetch(dst, src, K_ONE_CACHELINE);
   if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
-  prefetch_to_local_cache(src + K_TWO_CACHELINES);
-  prefetch_to_local_cache(src + K_THREE_CACHELINES);
+  inline_memcpy_prefetch(dst, src, K_TWO_CACHELINES);
+  inline_memcpy_prefetch(dst, src, K_THREE_CACHELINES);
   if (count < 256)
     return builtin::Memcpy<128>::head_tail(dst, src, count);
   // Aligning 'dst' on a 32B boundary.
@@ -133,13 +146,19 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
   // - count >= 128.
   while (offset + K_THREE_CACHELINES + 64 <= count) {
     // Three cache lines at a time.
-    prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
-    prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
-    prefetch_to_local_cache(src + offset + K_THREE_CACHELINES);
+    inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
+    inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
+    inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
     builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
     offset += K_THREE_CACHELINES;
   }
-  return builtin::Memcpy<64>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 64 <= count) {
+    builtin::Memcpy<64>::block_offset(dst, src, offset);
+    offset += 64;
+  }
+  return builtin::Memcpy<64>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
@@ -210,6 +229,6 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H

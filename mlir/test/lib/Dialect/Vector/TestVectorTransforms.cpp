@@ -96,15 +96,14 @@ private:
           return std::nullopt;
         dstVec = vecType;
       }
-      return SmallVector<int64_t>(dstVec.getShape().begin(),
-                                  dstVec.getShape().end());
+      return SmallVector<int64_t>(dstVec.getShape());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
         return std::nullopt;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
-      return SmallVector<int64_t>(shape.begin(), shape.end());
+      return SmallVector<int64_t>(shape);
     }
     return std::nullopt;
   }
@@ -375,27 +374,27 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 };
 
-struct TestSinkVectorBroadcast
-    : public PassWrapper<TestSinkVectorBroadcast, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSinkVectorBroadcast)
+struct TestVectorSinkPatterns
+    : public PassWrapper<TestVectorSinkPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorSinkPatterns)
 
-  TestSinkVectorBroadcast() = default;
-  TestSinkVectorBroadcast(const TestSinkVectorBroadcast &pass) = default;
+  TestVectorSinkPatterns() = default;
+  TestVectorSinkPatterns(const TestVectorSinkPatterns &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, affine::AffineDialect>();
   }
 
-  StringRef getArgument() const final { return "test-sink-vector-broadcast"; }
+  StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
     return "Test lowering patterns that eliminate redundant brodacast "
-           "operations.";
+           "and transpose operations.";
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateSinkVectorBroadcastPatterns(patterns);
+    populateSinkVectorOpsPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -489,7 +488,9 @@ struct TestFlattenVectorTransferPatterns
   Option<unsigned> targetVectorBitwidth{
       *this, "target-vector-bitwidth",
       llvm::cl::desc(
-          "Minimum vector bitwidth to enable the flattening transformation"),
+          "Minimum vector bitwidth to enable the flattening transformation. "
+          "For scalable vectors this is the base size, i.e. the size "
+          "corresponding to vscale=1."),
       llvm::cl::init(std::numeric_limits<unsigned>::max())};
 
   void runOnOperation() override {
@@ -865,9 +866,38 @@ struct TestVectorLinearize final
 
     vector::populateVectorLinearizeTypeConversionsAndLegality(
         typeConverter, patterns, target, targetVectorBitwidth);
+    vector::populateVectorLinearizeShuffleLikeOpsPatterns(
+        typeConverter, patterns, target, targetVectorBitwidth);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       return signalPassFailure();
+  }
+};
+
+struct TestEliminateVectorMasks
+    : public PassWrapper<TestEliminateVectorMasks,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestEliminateVectorMasks)
+
+  TestEliminateVectorMasks() = default;
+  TestEliminateVectorMasks(const TestEliminateVectorMasks &pass)
+      : PassWrapper(pass) {}
+
+  Option<unsigned> vscaleMin{
+      *this, "vscale-min", llvm::cl::desc("Minimum possible value of vscale."),
+      llvm::cl::init(1)};
+  Option<unsigned> vscaleMax{
+      *this, "vscale-max", llvm::cl::desc("Maximum possible value of vscale."),
+      llvm::cl::init(16)};
+
+  StringRef getArgument() const final { return "test-eliminate-vector-masks"; }
+  StringRef getDescription() const final {
+    return "Test eliminating vector masks";
+  }
+  void runOnOperation() override {
+    IRRewriter rewriter(&getContext());
+    eliminateVectorMasks(rewriter, getOperation(),
+                         VscaleRange{vscaleMin, vscaleMax});
   }
 };
 } // namespace
@@ -889,7 +919,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
-  PassRegistration<TestSinkVectorBroadcast>();
+  PassRegistration<TestVectorSinkPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
@@ -916,6 +946,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorEmulateMaskedLoadStore>();
 
   PassRegistration<TestVectorLinearize>();
+
+  PassRegistration<TestEliminateVectorMasks>();
 }
 } // namespace test
 } // namespace mlir

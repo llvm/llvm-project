@@ -186,7 +186,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           Register SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
-              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,
+              TLI->ParseConstraints(Fn->getDataLayout(), TRI,
                                     *Call);
           for (TargetLowering::AsmOperandInfo &Op : Ops) {
             if (Op.Type == InlineAsm::isClobber) {
@@ -214,6 +214,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (CI->isMustTailCall() && Fn->isVarArg())
             MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
         }
+
+        // Determine if there is a call to setjmp in the machine function.
+        if (Call->hasFnAttr(Attribute::ReturnsTwice))
+          MF->setExposesReturnsTwice(true);
       }
 
       // Mark values used outside their block as exported, by allocating
@@ -222,14 +226,17 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         if (!isa<AllocaInst>(I) || !StaticAllocaMap.count(cast<AllocaInst>(&I)))
           InitializeRegForValue(&I);
 
-      // Decide the preferred extend type for a value.
-      PreferredExtendType[&I] = getPreferredExtendForValue(&I);
+      // Decide the preferred extend type for a value. This iterates over all
+      // users and therefore isn't cheap, so don't do this at O0.
+      if (DAG->getOptLevel() != CodeGenOptLevel::None)
+        PreferredExtendType[&I] = getPreferredExtendForValue(&I);
     }
   }
 
   // Create an initial MachineBasicBlock for each LLVM BasicBlock in F.  This
   // also creates the initial PHI MachineInstrs, though none of the input
   // operands are populated.
+  MBBMap.resize(Fn->getMaxBlockNumber());
   for (const BasicBlock &BB : *Fn) {
     // Don't create MachineBasicBlocks for imaginary EH pad blocks. These blocks
     // are really data, and no instructions can live here.
@@ -255,7 +262,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     }
 
     MachineBasicBlock *MBB = mf.CreateMachineBasicBlock(&BB);
-    MBBMap[&BB] = MBB;
+    MBBMap[BB.getNumber()] = MBB;
     MF->push_back(MBB);
 
     // Transfer the address-taken flag. This is necessary because there could
@@ -301,20 +308,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (H.Handler)
-          H.Handler = MBBMap[cast<const BasicBlock *>(H.Handler)];
+          H.Handler = getMBB(cast<const BasicBlock *>(H.Handler));
       }
     }
     for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
       if (UME.Cleanup)
-        UME.Cleanup = MBBMap[cast<const BasicBlock *>(UME.Cleanup)];
-    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(UME.Handler);
-      UME.Handler = MBBMap[BB];
-    }
-    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-      const auto *BB = cast<const BasicBlock *>(CME.Handler);
-      CME.Handler = MBBMap[BB];
-    }
+        UME.Cleanup = getMBB(cast<const BasicBlock *>(UME.Cleanup));
+    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap)
+      UME.Handler = getMBB(cast<const BasicBlock *>(UME.Handler));
+    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap)
+      CME.Handler = getMBB(cast<const BasicBlock *>(CME.Handler));
   } else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
     calculateWasmEHInfo(&fn, EHInfo);
@@ -324,16 +327,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.SrcToUnwindDest) {
       const auto *Src = cast<const BasicBlock *>(KV.first);
       const auto *Dest = cast<const BasicBlock *>(KV.second);
-      SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
+      SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
     DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
-      UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
+      MachineBasicBlock *DestMBB = getMBB(Dest);
+      UnwindDestToSrcs[DestMBB] = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
-        UnwindDestToSrcs[MBBMap[Dest]].insert(
-            MBBMap[cast<const BasicBlock *>(P)]);
+        UnwindDestToSrcs[DestMBB].insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
@@ -358,7 +361,7 @@ void FunctionLoweringInfo::clear() {
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
   PreprocessedDbgDeclares.clear();
-  PreprocessedDPVDeclares.clear();
+  PreprocessedDVRDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
@@ -564,7 +567,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
     SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {
       ValueVTs.clear();
-      ComputeValueVTs(*TLI, Fn->getParent()->getDataLayout(),
+      ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
       unsigned Reg = P.second;
       for (EVT VT : ValueVTs) {

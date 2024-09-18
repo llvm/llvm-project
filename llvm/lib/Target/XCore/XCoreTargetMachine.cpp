@@ -107,7 +107,7 @@ void XCorePassConfig::addPreEmitPass() {
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeXCoreDAGToDAGISelPass(PR);
+  initializeXCoreDAGToDAGISelLegacyPass(PR);
 }
 
 TargetTransformInfo

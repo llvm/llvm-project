@@ -353,8 +353,7 @@ function build_with_cmake_cache() {
   env CC="$c_compiler" CXX="$cxx_compiler" \
   cmake -G "$generator" -B $CMakeBuildDir -S $SrcDir/llvm \
         -C $SrcDir/clang/cmake/caches/Release.cmake \
-	-DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_POSITION_INDEPENDENT_CODE;LLVM_LIT_ARGS" \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+	-DCLANG_BOOTSTRAP_PASSTHROUGH="LLVM_LIT_ARGS" \
         -DLLVM_LIT_ARGS="-j $NumJobs $LitVerbose" \
         $ExtraConfigureFlags
         2>&1 | tee $LogDir/llvm.configure-$Flavor.log
@@ -648,7 +647,7 @@ if [ $do_test_suite = "yes" ]; then
   TestSuiteSrcDir="$BuildDir/llvm-test-suite"
 
   ${venv} $SandboxDir
-  $SandboxDir/bin/python $BuildDir/llvm-project/llvm/utils/lit/setup.py install
+  $SandboxDir/bin/python -m pip install $BuildDir/llvm-project/llvm/utils/lit
   mkdir -p $TestSuiteBuildDir
 fi
 

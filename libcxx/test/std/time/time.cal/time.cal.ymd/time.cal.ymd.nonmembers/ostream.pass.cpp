@@ -13,9 +13,6 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
-// TODO FMT Investigate Windows issues.
-// XFAIL: msvc
-
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
@@ -89,20 +86,9 @@ static void test() {
   TEST_EQUAL(stream_c_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{2000}, std::chrono::month{2}, std::chrono::day{29}}),
              SV("2000-02-29"));
-
-#if defined(_AIX)
-  TEST_EQUAL(stream_c_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV("+32767-12-31"));
-#elif defined(_WIN32) // defined(_AIX)
-  TEST_EQUAL(stream_c_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV(""));
-#else                 //  defined(_AIX)
   TEST_EQUAL(stream_c_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
              SV("32767-12-31"));
-#endif                // defined(_AIX)
 
   TEST_EQUAL(stream_fr_FR_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::day{1}}),
@@ -122,19 +108,9 @@ static void test() {
   TEST_EQUAL(stream_fr_FR_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{2000}, std::chrono::month{2}, std::chrono::day{29}}),
              SV("2000-02-29"));
-#if defined(_AIX)
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV("+32767-12-31"));
-#elif defined(_WIN32) // defined(_AIX)
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV(""));
-#else                 // defined(_AIX)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
              SV("32767-12-31"));
-#endif                // defined(_AIX)
 
   TEST_EQUAL(stream_ja_JP_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::day{1}}),
@@ -154,19 +130,9 @@ static void test() {
   TEST_EQUAL(stream_ja_JP_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{2000}, std::chrono::month{2}, std::chrono::day{29}}),
              SV("2000-02-29"));
-#if defined(_AIX)
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV("+32767-12-31"));
-#elif defined(_WIN32) // defined(_AIX)
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(
-                 std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
-             SV(""));
-#else                 // defined(_AIX)
   TEST_EQUAL(stream_ja_JP_locale<CharT>(
                  std::chrono::year_month_day{std::chrono::year{32'767}, std::chrono::month{12}, std::chrono::day{31}}),
              SV("32767-12-31"));
-#endif                // defined(_AIX)
 }
 
 int main(int, char**) {

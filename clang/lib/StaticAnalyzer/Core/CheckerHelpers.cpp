@@ -183,12 +183,22 @@ OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
   }
 }
 
-std::optional<DefinedSVal> getPointeeDefVal(SVal PtrSVal,
-                                            ProgramStateRef State) {
+std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State) {
   if (const auto *Ptr = PtrSVal.getAsRegion()) {
-    return State->getSVal(Ptr).getAs<DefinedSVal>();
+    return State->getSVal(Ptr);
   }
   return std::nullopt;
+}
+
+bool isWithinStdNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  while (DC) {
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->isStdNamespace())
+      return true;
+    DC = DC->getParent();
+  }
+  return false;
 }
 
 } // namespace ento

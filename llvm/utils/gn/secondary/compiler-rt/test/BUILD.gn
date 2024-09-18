@@ -56,6 +56,7 @@ write_cmake_config("lit_common_configured") {
     "COMPILER_RT_INTERCEPT_LIBDISPATCH_PYBOOL=False",
     "COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR=" +
         rebase_path(crt_current_out_dir),
+    "COMPILER_RT_RESOLVED_OUTPUT_DIR=" + rebase_path(crt_current_out_dir),
     "COMPILER_RT_EMULATOR=",
     "COMPILER_RT_ASAN_SHADOW_SCALE=",
     "COMPILER_RT_MEMPROF_SHADOW_SCALE=",
@@ -65,6 +66,7 @@ write_cmake_config("lit_common_configured") {
     "SANITIZER_USE_STATIC_CXX_ABI_PYBOOL=False",
     "SANITIZER_USE_STATIC_LLVM_UNWINDER_PYBOOL=False",
     "COMPILER_RT_HAS_AARCH64_SME_PYBOOL=False",
+    "COMPILER_RT_DARWIN_LINKER_VERSION=",
     "COMPILER_RT_HAS_LLD_PYBOOL=True",
     "COMPILER_RT_HAS_GWP_ASAN_PYBOOL=False",
     "HAVE_RPC_XDR_H=0",
@@ -109,8 +111,17 @@ write_cmake_config("lit_common_configured") {
   }
 
   if (llvm_enable_zlib) {
-    values += [ "ZLIB_FOUND_PYBOOL=1" ]
+    # FIXME: Include dir and library are wrong on Windows; look at zlib_path.
+    values += [
+      "ZLIB_FOUND_PYBOOL=1",
+      "ZLIB_INCLUDE_DIR=-I=",
+      "ZLIB_LIBRARY=-lz",
+    ]
   } else {
-    values += [ "ZLIB_FOUND_PYBOOL=0" ]
+    values += [
+      "ZLIB_FOUND_PYBOOL=0",
+      "ZLIB_INCLUDE_DIR=",
+      "ZLIB_LIBRARY=",
+    ]
   }
 }

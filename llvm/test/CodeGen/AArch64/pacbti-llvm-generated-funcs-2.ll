@@ -35,7 +35,8 @@ entry:
 ;; CHECK-LABEL: __llvm_gcov_writeout:
 ;; CHECK:       .cfi_b_key_frame
 ;; CHECK-NEXT:  pacibsp
-;; CHECK-NEXT: .cfi_negate_ra_state
+;; CHECK:       .cfi_negate_ra_state
+;; CHECK-NEXT:  .cfi_def_cfa_offset
 
 define internal void @__llvm_gcov_reset() unnamed_addr #2 {
 entry:
@@ -55,17 +56,15 @@ entry:
 ;; CHECK-LABEL: __llvm_gcov_init:
 ;; CHECK:      .cfi_b_key_frame
 ;; CHECK-NEXT:  pacibsp
-;; CHECK-NEXT: .cfi_negate_ra_state
+;; CHECK-NEXT:  .cfi_negate_ra_state
+;; CHECK-NOT:   .cfi_
+;; CHECK:       .cfi_endproc
 
 attributes #0 = { norecurse nounwind readnone "sign-return-address"="all" "sign-return-address-key"="b_key" }
-attributes #1 = { noinline }
-attributes #2 = { nofree noinline norecurse nounwind writeonly }
+attributes #1 = { noinline "sign-return-address"="all" "sign-return-address-key"="b_key" }
+attributes #2 = { nofree noinline norecurse nounwind writeonly "sign-return-address"="all" "sign-return-address-key"="b_key" }
 
-!llvm.module.flags = !{!0, !1, !2, !3, !4, !5}
+!llvm.module.flags = !{!0, !1}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !{i32 1, !"wchar_size", i32 4}
-!2 = !{i32 8, !"branch-target-enforcement", i32 0}
-!3 = !{i32 8, !"sign-return-address", i32 1}
-!4 = !{i32 8, !"sign-return-address-all", i32 1}
-!5 = !{i32 8, !"sign-return-address-with-bkey", i32 1}

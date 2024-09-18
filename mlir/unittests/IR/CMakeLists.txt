@@ -1,7 +1,9 @@
 add_mlir_unittest(MLIRIRTests
   AdaptorTest.cpp
+  AffineExprTest.cpp
   AffineMapTest.cpp
   AttributeTest.cpp
+  AttrTypeReplacerTest.cpp
   DialectTest.cpp
   InterfaceTest.cpp
   IRMapping.cpp

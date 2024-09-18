@@ -8,21 +8,24 @@ add_llvm_component_library(LLVMInstrumentation
   BlockCoverageInference.cpp
   MemProfiler.cpp
   MemorySanitizer.cpp
+  NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
-  Instrumentation.cpp
   InstrOrderFile.cpp
   InstrProfiling.cpp
   KCFI.cpp
+  LowerAllowCheckPass.cpp
+  PGOCtxProfFlattening.cpp
+  PGOCtxProfLowering.cpp
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp
   PoisonChecking.cpp
-  RemoveTrapsPass.cpp
   SanitizerCoverage.cpp
   SanitizerBinaryMetadata.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
   HWAddressSanitizer.cpp
+  RealtimeSanitizer.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

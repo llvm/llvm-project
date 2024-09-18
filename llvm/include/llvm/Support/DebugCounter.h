@@ -17,14 +17,13 @@
 /// debug.  That is where debug counting steps in.  You can instrument the pass
 /// with a debug counter before it does a certain thing, and depending on the
 /// counts, it will either execute that thing or not.  The debug counter itself
-/// consists of a skip and a count.  Skip is the number of times shouldExecute
-/// needs to be called before it returns true.  Count is the number of times to
-/// return true once Skip is 0.  So a skip=47, count=2 ,would skip the first 47
-/// executions by returning false from shouldExecute, then execute twice, and
-/// then return false again.
-/// Note that a counter set to a negative number will always execute.
-/// For a concrete example, during predicateinfo creation, the renaming pass
-/// replaces each use with a renamed use.
+/// consists of a list of chunks (inclusive numeric ranges). `shouldExecute`
+/// returns true iff the list is empty or the current count is in one of the
+/// chunks.
+///
+/// Note that a counter set to a negative number will always execute. For a
+/// concrete example, during predicateinfo creation, the renaming pass replaces
+/// each use with a renamed use.
 ////
 /// If I use DEBUG_COUNTER to create a counter called "predicateinfo", and
 /// variable name RenameCounter, and then instrument this renaming with a debug
@@ -34,15 +33,16 @@
 /// <continue or return or whatever not executing looks like>
 ///
 /// Now I can, from the command line, make it rename or not rename certain uses
-/// by setting the skip and count.
+/// by setting the chunk list.
 /// So for example
-/// bin/opt -debug-counter=predicateinfo-skip=47,predicateinfo-count=1
+/// bin/opt -debug-counter=predicateinfo=47
 /// will skip renaming the first 47 uses, then rename one, then skip the rest.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_DEBUGCOUNTER_H
 #define LLVM_SUPPORT_DEBUGCOUNTER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/UniqueVector.h"
@@ -55,6 +55,19 @@ class raw_ostream;
 
 class DebugCounter {
 public:
+  struct Chunk {
+    int64_t Begin;
+    int64_t End;
+    void print(llvm::raw_ostream &OS);
+    bool contains(int64_t Idx) { return Idx >= Begin && Idx <= End; }
+  };
+
+  static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
+
+  /// Return true on parsing error and print the error message on the
+  /// llvm::errs()
+  static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
+
   /// Returns a reference to the singleton instance.
   static DebugCounter &instance();
 
@@ -69,29 +82,12 @@ public:
   static unsigned registerCounter(StringRef Name, StringRef Desc) {
     return instance().addCounter(std::string(Name), std::string(Desc));
   }
+  static bool shouldExecuteImpl(unsigned CounterName);
+
   inline static bool shouldExecute(unsigned CounterName) {
     if (!isCountingEnabled())
       return true;
-
-    auto &Us = instance();
-    auto Result = Us.Counters.find(CounterName);
-    if (Result != Us.Counters.end()) {
-      auto &CounterInfo = Result->second;
-      ++CounterInfo.Count;
-
-      // We only execute while the Skip is not smaller than Count,
-      // and the StopAfter + Skip is larger than Count.
-      // Negative counters always execute.
-      if (CounterInfo.Skip < 0)
-        return true;
-      if (CounterInfo.Skip >= CounterInfo.Count)
-        return false;
-      if (CounterInfo.StopAfter < 0)
-        return true;
-      return CounterInfo.StopAfter + CounterInfo.Skip >= CounterInfo.Count;
-    }
-    // Didn't find the counter, should we warn?
-    return true;
+    return shouldExecuteImpl(CounterName);
   }
 
   // Return true if a given counter had values set (either programatically or on
@@ -101,18 +97,25 @@ public:
     return instance().Counters[ID].IsSet;
   }
 
-  // Return the Count for a counter. This only works for set counters.
-  static int64_t getCounterValue(unsigned ID) {
+  struct CounterState {
+    int64_t Count;
+    uint64_t ChunkIdx;
+  };
+
+  // Return the state of a counter. This only works for set counters.
+  static CounterState getCounterState(unsigned ID) {
     auto &Us = instance();
     auto Result = Us.Counters.find(ID);
     assert(Result != Us.Counters.end() && "Asking about a non-set counter");
-    return Result->second.Count;
+    return {Result->second.Count, Result->second.CurrChunkIdx};
   }
 
-  // Set a registered counter to a given Count value.
-  static void setCounterValue(unsigned ID, int64_t Count) {
+  // Set a registered counter to a given state.
+  static void setCounterState(unsigned ID, CounterState State) {
     auto &Us = instance();
-    Us.Counters[ID].Count = Count;
+    auto &Counter = Us.Counters[ID];
+    Counter.Count = State.Count;
+    Counter.CurrChunkIdx = State.ChunkIdx;
   }
 
   // Dump or print the current counter set into llvm::dbgs().
@@ -152,11 +155,11 @@ public:
 #ifdef NDEBUG
     return false;
 #else
-    return instance().Enabled;
+    return instance().Enabled || instance().ShouldPrintCounter;
 #endif
   }
 
-private:
+protected:
   unsigned addCounter(const std::string &Name, const std::string &Desc) {
     unsigned Result = RegisteredCounters.insert(Name);
     Counters[Result] = {};
@@ -166,17 +169,22 @@ private:
   // Struct to store counter info.
   struct CounterInfo {
     int64_t Count = 0;
-    int64_t Skip = 0;
-    int64_t StopAfter = -1;
+    uint64_t CurrChunkIdx = 0;
     bool IsSet = false;
     std::string Desc;
+    SmallVector<Chunk> Chunks;
   };
+
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
 
   // Whether we should do DebugCounting at all. DebugCounters aren't
   // thread-safe, so this should always be false in multithreaded scenarios.
   bool Enabled = false;
+
+  bool ShouldPrintCounter = false;
+
+  bool BreakOnLast = false;
 };
 
 #define DEBUG_COUNTER(VARNAME, COUNTERNAME, DESC)                              \

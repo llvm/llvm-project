@@ -116,31 +116,112 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
+/// Checks whether \p SU can use the cached DAG pressure diffs to compute the
+/// current register pressure.
+///
+/// This works for the common case, but it has a few exceptions that have been
+/// observed through trial and error:
+///   - Explicit physical register operands
+///   - Subregister definitions
+///
+/// In both of those cases, PressureDiff doesn't represent the actual pressure,
+/// and querying LiveIntervals through the RegPressureTracker is needed to get
+/// an accurate value.
+///
+/// We should eventually only use PressureDiff for maximum performance, but this
+/// already allows 80% of SUs to take the fast path without changing scheduling
+/// at all. Further changes would either change scheduling, or require a lot
+/// more logic to recover an accurate pressure estimate from the PressureDiffs.
+static bool canUsePressureDiffs(const SUnit &SU) {
+  if (!SU.isInstr())
+    return false;
+
+  // Cannot use pressure diffs for subregister defs or with physregs, it's
+  // imprecise in both cases.
+  for (const auto &Op : SU.getInstr()->operands()) {
+    if (!Op.isReg() || Op.isImplicit())
+      continue;
+    if (Op.getReg().isPhysical() ||
+        (Op.isDef() && Op.getSubReg() != AMDGPU::NoSubRegister))
+      return false;
+  }
+  return true;
+}
+
+static void getRegisterPressures(bool AtTop,
+                                 const RegPressureTracker &RPTracker, SUnit *SU,
+                                 std::vector<unsigned> &Pressure,
+                                 std::vector<unsigned> &MaxPressure) {
+  // getDownwardPressure() and getUpwardPressure() make temporary changes to
+  // the tracker, so we need to pass those function a non-const copy.
+  RegPressureTracker &TempTracker = const_cast<RegPressureTracker &>(RPTracker);
+  if (AtTop)
+    TempTracker.getDownwardPressure(SU->getInstr(), Pressure, MaxPressure);
+  else
+    TempTracker.getUpwardPressure(SU->getInstr(), Pressure, MaxPressure);
+}
+
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
                                      const SIRegisterInfo *SRI,
                                      unsigned SGPRPressure,
-                                     unsigned VGPRPressure) {
+                                     unsigned VGPRPressure, bool IsBottomUp) {
   Cand.SU = SU;
   Cand.AtTop = AtTop;
 
   if (!DAG->isTrackingPressure())
     return;
 
-  // getDownwardPressure() and getUpwardPressure() make temporary changes to
-  // the tracker, so we need to pass those function a non-const copy.
-  RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
-
   Pressure.clear();
   MaxPressure.clear();
 
-  if (AtTop)
-    TempTracker.getDownwardPressure(SU->getInstr(), Pressure, MaxPressure);
-  else {
-    // FIXME: I think for bottom up scheduling, the register pressure is cached
-    // and can be retrieved by DAG->getPressureDif(SU).
-    TempTracker.getUpwardPressure(SU->getInstr(), Pressure, MaxPressure);
+  // We try to use the cached PressureDiffs in the ScheduleDAG whenever
+  // possible over querying the RegPressureTracker.
+  //
+  // RegPressureTracker will make a lot of LIS queries which are very
+  // expensive, it is considered a slow function in this context.
+  //
+  // PressureDiffs are precomputed and cached, and getPressureDiff is just a
+  // trivial lookup into an array. It is pretty much free.
+  //
+  // In EXPENSIVE_CHECKS, we always query RPTracker to verify the results of
+  // PressureDiffs.
+  if (AtTop || !canUsePressureDiffs(*SU)) {
+    getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure);
+  } else {
+    // Reserve 4 slots.
+    Pressure.resize(4, 0);
+    Pressure[AMDGPU::RegisterPressureSets::SReg_32] = SGPRPressure;
+    Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = VGPRPressure;
+
+    for (const auto &Diff : DAG->getPressureDiff(SU)) {
+      if (!Diff.isValid())
+        continue;
+      // PressureDiffs is always bottom-up so if we're working top-down we need
+      // to invert its sign.
+      Pressure[Diff.getPSet()] +=
+          (IsBottomUp ? Diff.getUnitInc() : -Diff.getUnitInc());
+    }
+
+#ifdef EXPENSIVE_CHECKS
+    std::vector<unsigned> CheckPressure, CheckMaxPressure;
+    getRegisterPressures(AtTop, RPTracker, SU, CheckPressure, CheckMaxPressure);
+    if (Pressure[AMDGPU::RegisterPressureSets::SReg_32] !=
+            CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
+        Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
+            CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32]) {
+      errs() << "Register Pressure is inaccurate when calculated through "
+                "PressureDiff\n"
+             << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
+             << ", expected "
+             << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n"
+             << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
+             << ", expected "
+             << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n";
+      report_fatal_error("inaccurate register pressure calculation");
+    }
+#endif
   }
 
   unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
@@ -157,7 +238,6 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   const unsigned MaxVGPRPressureInc = 16;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
   bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
-
 
   // FIXME: We have to enter REG-EXCESS before we reach the actual threshold
   // to increase the likelihood we don't go over the limits.  We should improve
@@ -207,7 +287,8 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          const CandPolicy &ZonePolicy,
                                          const RegPressureTracker &RPTracker,
-                                         SchedCandidate &Cand) {
+                                         SchedCandidate &Cand,
+                                         bool IsBottomUp) {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
@@ -220,8 +301,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   for (SUnit *SU : Q) {
 
     SchedCandidate TryCand(ZonePolicy);
-    initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI,
-                  SGPRPressure, VGPRPressure);
+    initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
+                  VGPRPressure, IsBottomUp);
     // Pass SchedBoundary only when comparing nodes from the same boundary.
     SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
     tryCandidate(Cand, TryCand, ZoneArg);
@@ -262,7 +343,8 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   if (!BotCand.isValid() || BotCand.SU->isScheduled ||
       BotCand.Policy != BotPolicy) {
     BotCand.reset(CandPolicy());
-    pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), BotCand);
+    pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), BotCand,
+                      /*IsBottomUp=*/true);
     assert(BotCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
@@ -270,7 +352,8 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     if (VerifyScheduling) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
-      pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand);
+      pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand,
+                        /*IsBottomUp=*/true);
       assert(TCand.SU == BotCand.SU &&
              "Last pick result should correspond to re-picking right now");
     }
@@ -282,7 +365,8 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   if (!TopCand.isValid() || TopCand.SU->isScheduled ||
       TopCand.Policy != TopPolicy) {
     TopCand.reset(CandPolicy());
-    pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TopCand);
+    pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TopCand,
+                      /*IsBottomUp=*/false);
     assert(TopCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
@@ -290,7 +374,8 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     if (VerifyScheduling) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
-      pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand);
+      pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,
+                        /*IsBottomUp=*/false);
       assert(TCand.SU == TopCand.SU &&
            "Last pick result should correspond to re-picking right now");
     }
@@ -327,7 +412,8 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
       if (!SU) {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
-        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
+        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand,
+                          /*IsBottomUp=*/false);
         assert(TopCand.Reason != NoCand && "failed to find a candidate");
         SU = TopCand.SU;
       }
@@ -337,7 +423,8 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
       if (!SU) {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
-        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
+        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand,
+                          /*IsBottomUp=*/true);
         assert(BotCand.Reason != NoCand && "failed to find a candidate");
         SU = BotCand.SU;
       }
@@ -973,12 +1060,17 @@ void GCNSchedStage::checkScheduling() {
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
   }
-
+  // The maximum number of arch VGPR on non-unified register file, or the
+  // maximum VGPR + AGPR in the unified register file case.
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  // The maximum number of arch VGPR for both unified and non-unified register
+  // file.
+  unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
-      PressureAfter.getAGPRNum() > MaxVGPRs ||
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
+      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
@@ -1555,11 +1647,10 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return std::any_of(
-      DAG->begin(), DAG->end(), [](MachineBasicBlock::iterator MI) {
-        unsigned Opc = MI->getOpcode();
-        return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
-      });
+  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
+    unsigned Opc = MI->getOpcode();
+    return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+  });
 }
 
 GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(

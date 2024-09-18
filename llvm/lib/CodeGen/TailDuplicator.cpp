@@ -68,6 +68,18 @@ static cl::opt<unsigned> TailDupIndirectBranchSize(
              "end with indirect branches."), cl::init(20),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    TailDupPredSize("tail-dup-pred-size",
+                    cl::desc("Maximum predecessors (maximum successors at the "
+                             "same time) to consider tail duplicating blocks."),
+                    cl::init(16), cl::Hidden);
+
+static cl::opt<unsigned>
+    TailDupSuccSize("tail-dup-succ-size",
+                    cl::desc("Maximum successors (maximum predecessors at the "
+                             "same time) to consider tail duplicating blocks."),
+                    cl::init(16), cl::Hidden);
+
 static cl::opt<bool>
     TailDupVerify("tail-dup-verify",
                   cl::desc("Verify sanity of PHI instructions during taildup"),
@@ -85,7 +97,6 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &MF->getRegInfo();
-  MMI = &MF->getMMI();
   MBPI = MBPIin;
   MBFI = MBFIin;
   PSI = PSIin;
@@ -189,8 +200,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Update SSA form.
   if (!SSAUpdateVRs.empty()) {
-    for (unsigned i = 0, e = SSAUpdateVRs.size(); i != e; ++i) {
-      unsigned VReg = SSAUpdateVRs[i];
+    for (unsigned VReg : SSAUpdateVRs) {
       SSAUpdate.Initialize(VReg);
 
       // If the original definition is still around, add it as an available
@@ -241,8 +251,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Eliminate some of the copies inserted by tail duplication to maintain
   // SSA form.
-  for (unsigned i = 0, e = Copies.size(); i != e; ++i) {
-    MachineInstr *Copy = Copies[i];
+  for (MachineInstr *Copy : Copies) {
     if (!Copy->isCopy())
       continue;
     Register Dst = Copy->getOperand(0).getReg();
@@ -563,6 +572,14 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
 
   // Don't try to tail-duplicate single-block loops.
   if (TailBB.isSuccessor(&TailBB))
+    return false;
+
+  // Duplicating a BB which has both multiple predecessors and successors will
+  // result in a complex CFG and also may cause huge amount of PHI nodes. If we
+  // want to remove this limitation, we have to address
+  // https://github.com/llvm/llvm-project/issues/78578.
+  if (TailBB.pred_size() > TailDupPredSize &&
+      TailBB.succ_size() > TailDupSuccSize)
     return false;
 
   // Set the limit on the cost to duplicate. When optimizing for size,

@@ -19,6 +19,7 @@
 //   bool wait_for(Lock& lock, stop_token stoken,
 //                 const chrono::duration<Rep, Period>& rel_time, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <concepts>
@@ -119,7 +120,7 @@ void test() {
     bool flag   = false;
     auto thread = support::make_test_thread([&]() {
       std::this_thread::sleep_for(2ms);
-      Lock lock2{mutex};
+      std::unique_lock<Mutex> lock2{mutex};
       flag = true;
       cv.notify_all();
     });

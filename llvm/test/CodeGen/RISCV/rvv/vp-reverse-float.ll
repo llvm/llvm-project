@@ -25,10 +25,8 @@ define <vscale x 1 x double> @test_vp_reverse_nxv1f64(<vscale x 1 x double> %src
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> undef, <vscale x 1 x i32> zeroinitializer
 
-  %dst = call <vscale x 1 x double> @llvm.experimental.vp.reverse.nxv1f64(<vscale x 1 x double> %src, <vscale x 1 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 1 x double> @llvm.experimental.vp.reverse.nxv1f64(<vscale x 1 x double> %src, <vscale x 1 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 1 x double> %dst
 }
 
@@ -56,10 +54,8 @@ define <vscale x 2 x float> @test_vp_reverse_nxv2f32(<vscale x 2 x float> %src, 
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 
-  %dst = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %src, <vscale x 2 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %src, <vscale x 2 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 2 x float> %dst
 }
 
@@ -87,10 +83,8 @@ define <vscale x 2 x double> @test_vp_reverse_nxv2f64(<vscale x 2 x double> %src
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 
-  %dst = call <vscale x 2 x double> @llvm.experimental.vp.reverse.nxv2f64(<vscale x 2 x double> %src, <vscale x 2 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 2 x double> @llvm.experimental.vp.reverse.nxv2f64(<vscale x 2 x double> %src, <vscale x 2 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 2 x double> %dst
 }
 
@@ -118,10 +112,8 @@ define <vscale x 4 x float> @test_vp_reverse_nxv4f32(<vscale x 4 x float> %src, 
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 
-  %dst = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> %src, <vscale x 4 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> %src, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x float> %dst
 }
 
@@ -149,10 +141,8 @@ define <vscale x 4 x double> @test_vp_reverse_nxv4f64(<vscale x 4 x double> %src
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 
-  %dst = call <vscale x 4 x double> @llvm.experimental.vp.reverse.nxv4f64(<vscale x 4 x double> %src, <vscale x 4 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 4 x double> @llvm.experimental.vp.reverse.nxv4f64(<vscale x 4 x double> %src, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x double> %dst
 }
 
@@ -180,10 +170,8 @@ define <vscale x 8 x float> @test_vp_reverse_nxv8f32(<vscale x 8 x float> %src, 
 ; CHECK-NEXT:    vrgather.vv v12, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 
-  %dst = call <vscale x 8 x float> @llvm.experimental.vp.reverse.nxv8f32(<vscale x 8 x float> %src, <vscale x 8 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 8 x float> @llvm.experimental.vp.reverse.nxv8f32(<vscale x 8 x float> %src, <vscale x 8 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 8 x float> %dst
 }
 
@@ -211,10 +199,8 @@ define <vscale x 8 x double> @test_vp_reverse_nxv8f64(<vscale x 8 x double> %src
 ; CHECK-NEXT:    vrgather.vv v16, v8, v24
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 
-  %dst = call <vscale x 8 x double> @llvm.experimental.vp.reverse.nxv8f64(<vscale x 8 x double> %src, <vscale x 8 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 8 x double> @llvm.experimental.vp.reverse.nxv8f64(<vscale x 8 x double> %src, <vscale x 8 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 8 x double> %dst
 }
 
@@ -242,10 +228,8 @@ define <vscale x 16 x float> @test_vp_reverse_nxv16f32(<vscale x 16 x float> %sr
 ; CHECK-NEXT:    vrgather.vv v16, v8, v24
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
 
-  %dst = call <vscale x 16 x float> @llvm.experimental.vp.reverse.nxv16f32(<vscale x 16 x float> %src, <vscale x 16 x i1> %allones, i32 %evl)
+  %dst = call <vscale x 16 x float> @llvm.experimental.vp.reverse.nxv16f32(<vscale x 16 x float> %src, <vscale x 16 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 16 x float> %dst
 }
 

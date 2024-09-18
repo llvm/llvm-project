@@ -54,7 +54,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
@@ -95,7 +95,6 @@ public:
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
-    case Value::Kind::Record:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
@@ -126,8 +125,9 @@ public:
       return;
 
     JOS.attribute("type", L.getType().getAsString());
-    if (auto *V = Env.getValue(L))
-      dump(*V);
+    if (!L.getType()->isRecordType())
+      if (auto *V = Env.getValue(L))
+        dump(*V);
 
     if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
       for (const auto &Child : RLoc->children())
@@ -162,7 +162,7 @@ class HTMLLogger : public Logger {
   llvm::raw_string_ostream JStringStream{JSON};
   llvm::json::OStream JOS{JStringStream, /*Indent=*/2};
 
-  const ControlFlowContext *CFC;
+  const AdornedCFG *ACFG;
   // Timeline of iterations of CFG block visitation.
   std::vector<Iteration> Iters;
   // Indexes  in `Iters` of the iterations for each block.
@@ -176,15 +176,15 @@ class HTMLLogger : public Logger {
 
 public:
   explicit HTMLLogger(StreamFactory Streams) : Streams(std::move(Streams)) {}
-  void beginAnalysis(const ControlFlowContext &CFC,
+  void beginAnalysis(const AdornedCFG &ACFG,
                      TypeErasedDataflowAnalysis &A) override {
     OS = Streams();
-    this->CFC = &CFC;
+    this->ACFG = &ACFG;
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").first;
 
-    BlockConverged.resize(CFC.getCFG().getNumBlockIDs());
+    BlockConverged.resize(ACFG.getCFG().getNumBlockIDs());
 
-    const auto &D = CFC.getDecl();
+    const auto &D = ACFG.getDecl();
     const auto &SM = A.getASTContext().getSourceManager();
     *OS << "<title>";
     if (const auto *ND = dyn_cast<NamedDecl>(&D))
@@ -281,9 +281,10 @@ public:
             Iters.back().Block->Elements[ElementIndex - 1].getAs<CFGStmt>();
         if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr) {
           if (E->isPRValue()) {
-            if (auto *V = State.Env.getValue(*E))
-              JOS.attributeObject(
-                  "value", [&] { ModelDumper(JOS, State.Env).dump(*V); });
+            if (!E->getType()->isRecordType())
+              if (auto *V = State.Env.getValue(*E))
+                JOS.attributeObject(
+                    "value", [&] { ModelDumper(JOS, State.Env).dump(*V); });
           } else {
             if (auto *Loc = State.Env.getStorageLocation(*E))
               JOS.attributeObject(
@@ -345,7 +346,7 @@ private:
   // tokens are associated with, and even which BB element (so that clicking
   // can select the right element).
   void writeCode() {
-    const auto &AST = CFC->getDecl().getASTContext();
+    const auto &AST = ACFG->getDecl().getASTContext();
     bool Invalid = false;
 
     // Extract the source code from the original file.
@@ -353,7 +354,7 @@ private:
     // indentation to worry about), but we need the boundaries of particular
     // AST nodes and the printer doesn't provide this.
     auto Range = clang::Lexer::makeFileCharRange(
-        CharSourceRange::getTokenRange(CFC->getDecl().getSourceRange()),
+        CharSourceRange::getTokenRange(ACFG->getDecl().getSourceRange()),
         AST.getSourceManager(), AST.getLangOpts());
     if (Range.isInvalid())
       return;
@@ -419,7 +420,7 @@ private:
     // Construct one TokenInfo per character in a flat array.
     // This is inefficient (chars in a token all have the same info) but simple.
     std::vector<TokenInfo> State(Code.size());
-    for (const auto *Block : CFC->getCFG()) {
+    for (const auto *Block : ACFG->getCFG()) {
       unsigned EltIndex = 0;
       for (const auto& Elt : *Block) {
         ++EltIndex;
@@ -480,7 +481,7 @@ private:
   // out to `dot` to turn it into an SVG.
   void writeCFG() {
     *OS << "<template data-copy='cfg'>\n";
-    if (auto SVG = renderSVG(buildCFGDot(CFC->getCFG())))
+    if (auto SVG = renderSVG(buildCFGDot(ACFG->getCFG())))
       *OS << *SVG;
     else
       *OS << "Can't draw CFG: " << toString(SVG.takeError());

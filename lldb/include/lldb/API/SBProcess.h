@@ -209,6 +209,16 @@ public:
 
   lldb::addr_t ReadPointerFromMemory(addr_t addr, lldb::SBError &error);
 
+  lldb::SBAddressRangeList FindRangesInMemory(const void *buf, uint64_t size,
+                                              const SBAddressRangeList &ranges,
+                                              uint32_t alignment,
+                                              uint32_t max_matches,
+                                              SBError &error);
+
+  lldb::addr_t FindInMemory(const void *buf, uint64_t size,
+                            const SBAddressRange &range, uint32_t alignment,
+                            SBError &error);
+
   // Events
   static lldb::StateType GetStateFromEvent(const lldb::SBEvent &event);
 
@@ -367,6 +377,12 @@ public:
   ///
   /// \param[in] file_name - The name of the file to save the core file to.
   lldb::SBError SaveCore(const char *file_name);
+
+  /// Save the state of the process with the desired settings
+  /// as defined in the options object.
+  ///
+  /// \param[in] options - The options to use when saving the core file.
+  lldb::SBError SaveCore(SBSaveCoreOptions &options);
 
   /// Query the address load_addr and store the details of the memory
   /// region that contains it in the supplied SBMemoryRegionInfo object.
@@ -562,12 +578,15 @@ public:
 
   lldb::SBScriptObject GetScriptedImplementation();
 
+  void GetStatus(SBStream &status);
+
 protected:
   friend class SBAddress;
   friend class SBBreakpoint;
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

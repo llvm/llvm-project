@@ -87,8 +87,8 @@ void MaybeStartBackgroudThread() {
   if (!common_flags()->hard_rss_limit_mb &&
       !common_flags()->soft_rss_limit_mb &&
       !common_flags()->heap_profile) return;
-  if (!&real_pthread_create) {
-    VPrintf(1, "%s: real_pthread_create undefined\n", SanitizerToolName);
+  if (!&internal_pthread_create) {
+    VPrintf(1, "%s: internal_pthread_create undefined\n", SanitizerToolName);
     return;  // Can't spawn the thread anyway.
   }
 
@@ -169,9 +169,9 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
                      : !MmapFixedNoReserve(beg, size, name)) {
     Report(
         "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
-        "Perhaps you're using ulimit -v\n",
+        "Perhaps you're using ulimit -v or ulimit -d\n",
         size);
-    Abort();
+    Die();
   }
   if (madvise_shadow && common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(beg, size);

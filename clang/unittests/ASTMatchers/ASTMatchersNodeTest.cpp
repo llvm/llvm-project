@@ -614,8 +614,10 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
-                      cxxDependentScopeMemberExpr()));
+  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
+  EXPECT_TRUE(
+      notMatches("template <class T> class X : T { void f() { T::v; } };",
+                 cxxDependentScopeMemberExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }
@@ -1425,8 +1427,8 @@ TEST_P(ASTMatchersTest,
     return;
   }
   StringRef code = "namespace std {"
-                   "template <typename> class initializer_list {"
-                   "  public: initializer_list() noexcept {}"
+                   "template <typename E> class initializer_list {"
+                   "  public: const E *a, *b;"
                    "};"
                    "}"
                    "struct A {"
@@ -2213,18 +2215,6 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
-TEST_P(
-    ASTMatchersTest,
-    TemplateSpecializationTypeLocTest_BindsToTemplateSpecializationExplicitInstantiation) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(
-      matches("template <typename T> class C {}; template class C<int>;",
-              classTemplateSpecializationDecl(
-                  hasName("C"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {
@@ -2321,6 +2311,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
       matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
   EXPECT_TRUE(
       matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "void f(int a) { int cc[a]; auto f = [&](){ return cc;}; }", matcher));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureWithInitializer) {

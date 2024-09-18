@@ -21,8 +21,9 @@
 //     static constexpr result_type default_seed = 1u;
 
 #include <random>
-#include <type_traits>
 #include <cassert>
+#include <climits>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -91,24 +92,34 @@ test()
   test1<T, A, 0, M>();
   test1<T, A, M - 2, M>();
   test1<T, A, M - 1, M>();
+}
 
-  /*
-  // Cases where m is odd and m % a > m / a (not implemented)
+template <class T>
+void test_ext() {
+  const T M(static_cast<T>(-1));
+
+  // Cases where m is odd and m % a > m / a
   test1<T, M - 2, 0, M>();
   test1<T, M - 2, M - 2, M>();
   test1<T, M - 2, M - 1, M>();
   test1<T, M - 1, 0, M>();
   test1<T, M - 1, M - 2, M>();
   test1<T, M - 1, M - 1, M>();
-  */
 }
 
 int main(int, char**)
 {
     test<unsigned short>();
+    test_ext<unsigned short>();
     test<unsigned int>();
+    test_ext<unsigned int>();
     test<unsigned long>();
+    test_ext<unsigned long>();
     test<unsigned long long>();
+    // This isn't implemented on platforms without __int128
+#ifndef _LIBCPP_HAS_NO_INT128
+    test_ext<unsigned long long>();
+#endif
 
-  return 0;
+    return 0;
 }

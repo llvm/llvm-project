@@ -18,9 +18,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -35,6 +37,7 @@ namespace {
 class RISCVCodeGenPrepare : public FunctionPass,
                             public InstVisitor<RISCVCodeGenPrepare, bool> {
   const DataLayout *DL;
+  const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
@@ -48,12 +51,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
+  bool expandVPStrideLoad(IntrinsicInst &I);
 };
 
 } // end anonymous namespace
@@ -115,19 +120,24 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 //
 // loop:
 // %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %phi,
+//                                                    <vscale x 2 x float> %vec)
 //
 // ->
 //
 // loop:
 // %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
 // %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc = call float @llvm.vector.reduce.fadd.nxv2f32(float %x,
+//                                                    <vscale x 2 x float> %vec)
 // %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
 // selection.
 bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  if (expandVPStrideLoad(I))
+    return true;
+
   if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
     return false;
 
@@ -155,6 +165,38 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   return true;
 }
 
+// Always expand zero strided loads so we match more .vx splat patterns, even if
+// we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
+// it back to a strided load if it's optimized.
+bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
+  Value *BasePtr, *VL;
+
+  using namespace PatternMatch;
+  if (!match(&II, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                      m_Value(BasePtr), m_Zero(), m_AllOnes(), m_Value(VL))))
+    return false;
+
+  // If SEW>XLEN then a splat will get lowered as a zero strided load anyway, so
+  // avoid expanding here.
+  if (II.getType()->getScalarSizeInBits() > ST->getXLen())
+    return false;
+
+  if (!isKnownNonZero(VL, {*DL, DT, nullptr, &II}))
+    return false;
+
+  auto *VTy = cast<VectorType>(II.getType());
+
+  IRBuilder<> Builder(&II);
+  Type *STy = VTy->getElementType();
+  Value *Val = Builder.CreateLoad(STy, BasePtr);
+  Value *Res = Builder.CreateIntrinsic(Intrinsic::experimental_vp_splat, {VTy},
+                                       {Val, II.getOperand(2), VL});
+
+  II.replaceAllUsesWith(Res);
+  II.eraseFromParent();
+  return true;
+}
+
 bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -163,7 +205,8 @@ bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   ST = &TM.getSubtarget<RISCVSubtarget>(F);
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   bool MadeChange = false;
   for (auto &BB : F)

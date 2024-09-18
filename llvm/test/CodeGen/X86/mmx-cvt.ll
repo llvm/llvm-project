@@ -8,20 +8,10 @@
 define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvtpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvt_v2f64_v2i32:
@@ -33,9 +23,9 @@ define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
   %3 = tail call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %0)
   %4 = bitcast <4 x i32> %3 to <2 x i64>
   %5 = extractelement <2 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
-  %8 = bitcast x86_mmx %7 to i64
+  %6 = bitcast i64 %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %6, <1 x i64> %6)
+  %8 = bitcast <1 x i64> %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
   store <1 x i64> %9, ptr %1
   ret void
@@ -44,20 +34,10 @@ define void @cvt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvtt_v2f64_v2i32:
@@ -69,9 +49,9 @@ define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
   %3 = tail call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %0)
   %4 = bitcast <4 x i32> %3 to <2 x i64>
   %5 = extractelement <2 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
-  %8 = bitcast x86_mmx %7 to i64
+  %6 = bitcast i64 %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %6, <1 x i64> %6)
+  %8 = bitcast <1 x i64> %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
   store <1 x i64> %9, ptr %1
   ret void
@@ -80,20 +60,10 @@ define void @cvtt_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f64_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttpd2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v2f64_v2i32:
@@ -103,9 +73,9 @@ define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 ; X64-NEXT:    movq %mm0, (%rdi)
 ; X64-NEXT:    retq
   %3 = fptosi <2 x double> %0 to <2 x i32>
-  %4 = bitcast <2 x i32> %3 to x86_mmx
-  %5 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %4, x86_mmx %4)
-  %6 = bitcast x86_mmx %5 to i64
+  %4 = bitcast <2 x i32> %3 to <1 x i64>
+  %5 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %4, <1 x i64> %4)
+  %6 = bitcast <1 x i64> %5 to i64
   %7 = insertelement <1 x i64> undef, i64 %6, i32 0
   store <1 x i64> %7, ptr %1
   ret void
@@ -114,20 +84,10 @@ define void @fptosi_v2f64_v2i32(<2 x double>, ptr) nounwind {
 define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvt_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvtps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvt_v2f32_v2i32:
@@ -139,9 +99,9 @@ define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
   %3 = tail call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %0)
   %4 = bitcast <4 x i32> %3 to <2 x i64>
   %5 = extractelement <2 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
-  %8 = bitcast x86_mmx %7 to i64
+  %6 = bitcast i64 %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %6, <1 x i64> %6)
+  %8 = bitcast <1 x i64> %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
   store <1 x i64> %9, ptr %1
   ret void
@@ -150,20 +110,10 @@ define void @cvt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: cvtt_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cvtt_v2f32_v2i32:
@@ -175,9 +125,9 @@ define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
   %3 = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %0)
   %4 = bitcast <4 x i32> %3 to <2 x i64>
   %5 = extractelement <2 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
-  %8 = bitcast x86_mmx %7 to i64
+  %6 = bitcast i64 %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %6, <1 x i64> %6)
+  %8 = bitcast <1 x i64> %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
   store <1 x i64> %9, ptr %1
   ret void
@@ -186,20 +136,10 @@ define void @cvtt_v2f32_v2i32(<4 x float>, ptr) nounwind {
 define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v4f32_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v4f32_v4i32:
@@ -210,9 +150,9 @@ define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 ; X64-NEXT:    retq
   %3 = fptosi <4 x float> %0 to <4 x i32>
   %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
-  %5 = bitcast <2 x i32> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  %7 = bitcast x86_mmx %6 to i64
+  %5 = bitcast <2 x i32> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  %7 = bitcast <1 x i64> %6 to i64
   %8 = insertelement <1 x i64> undef, i64 %7, i32 0
   store <1 x i64> %8, ptr %1
   ret void
@@ -221,20 +161,10 @@ define void @fptosi_v4f32_v4i32(<4 x float>, ptr) nounwind {
 define void @fptosi_v2f32_v2i32(<4 x float>, ptr) nounwind {
 ; X86-LABEL: fptosi_v2f32_v2i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cvttps2pi %xmm0, %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movl (%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptosi_v2f32_v2i32:
@@ -246,9 +176,9 @@ define void @fptosi_v2f32_v2i32(<4 x float>, ptr) nounwind {
   %3 = fptosi <4 x float> %0 to <4 x i32>
   %4 = bitcast <4 x i32> %3 to <2 x i64>
   %5 = extractelement <2 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %6, x86_mmx %6)
-  %8 = bitcast x86_mmx %7 to i64
+  %6 = bitcast i64 %5 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %6, <1 x i64> %6)
+  %8 = bitcast <1 x i64> %7 to i64
   %9 = insertelement <1 x i64> undef, i64 %8, i32 0
   store <1 x i64> %9, ptr %1
   ret void
@@ -280,9 +210,9 @@ define <2 x double> @sitofp_v2i32_v2f64(ptr) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = load x86_mmx, ptr %0, align 8
-  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
-  %4 = bitcast x86_mmx %3 to i64
+  %2 = load <1 x i64>, ptr %0, align 8
+  %3 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %2, <1 x i64> %2)
+  %4 = bitcast <1 x i64> %3 to i64
   %5 = insertelement <2 x i64> undef, i64 %4, i32 0
   %6 = bitcast <2 x i64> %5 to <4 x i32>
   %7 = shufflevector <4 x i32> %6, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
@@ -307,9 +237,9 @@ define <4 x float> @sitofp_v2i32_v2f32(ptr) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = load x86_mmx, ptr %0, align 8
-  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
-  %4 = bitcast x86_mmx %3 to <2 x i32>
+  %2 = load <1 x i64>, ptr %0, align 8
+  %3 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %2, <1 x i64> %2)
+  %4 = bitcast <1 x i64> %3 to <2 x i32>
   %5 = shufflevector <2 x i32> %4, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %6 = sitofp <4 x i32> %5 to <4 x float>
   ret <4 x float> %6
@@ -339,9 +269,9 @@ define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %2 = load x86_mmx, ptr %0, align 8
-  %3 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %2, x86_mmx %2)
-  %4 = bitcast x86_mmx %3 to i64
+  %2 = load <1 x i64>, ptr %0, align 8
+  %3 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %2, <1 x i64> %2)
+  %4 = bitcast <1 x i64> %3 to i64
   %5 = insertelement <2 x i64> undef, i64 %4, i32 0
   %6 = insertelement <2 x i64> %5, i64 0, i32 1
   %7 = bitcast <2 x i64> %6 to <4 x i32>
@@ -349,7 +279,7 @@ define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
   ret <4 x float> %8
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
 declare <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double>)
 declare <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double>)
 declare <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float>)

@@ -30,6 +30,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableMachineCombinerPass(
+    "systemz-machine-combiner",
+    cl::desc("Enable the machine combiner pass"),
+    cl::init(true), cl::Hidden);
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
@@ -42,7 +47,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
-  initializeSystemZDAGToDAGISelPass(PR);
+  initializeSystemZDAGToDAGISelLegacyPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -53,6 +58,14 @@ static std::string computeDataLayout(const Triple &TT) {
 
   // Data mangling.
   Ret += DataLayout::getManglingComponent(TT);
+
+  // Special features for z/OS.
+  if (TT.isOSzOS()) {
+    if (TT.isArch64Bit()) {
+      // Custom address space for ptr32.
+      Ret += "-p1:32:32";
+    }
+  }
 
   // Make sure that global data has at least 16 bits of alignment by
   // default, so that we can refer to it using LARL.  We don't have any
@@ -245,6 +258,10 @@ bool SystemZPassConfig::addInstSelector() {
 
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
+
+  if (EnableMachineCombinerPass)
+    addPass(&MachineCombinerID);
+
   return true;
 }
 

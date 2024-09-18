@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "DAGISelMatcher.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/DAGISelMatcher.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -47,7 +47,7 @@ static unsigned getResultPatternCost(TreePatternNode &P,
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P.getOperator();
+  const Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost++;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -67,7 +67,7 @@ static unsigned getResultPatternSize(TreePatternNode &P,
     return 0;
 
   unsigned Cost = 0;
-  Record *Op = P.getOperator();
+  const Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }

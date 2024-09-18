@@ -53,6 +53,7 @@ void *from_val_array(value Elements);
 #define Metadata_val(v) ((LLVMMetadataRef)from_val(v))
 #define Type_val(v) ((LLVMTypeRef)from_val(v))
 #define Value_val(v) ((LLVMValueRef)from_val(v))
+#define DbgRecord_val(v) ((LLVMDbgRecordRef)from_val(v))
 #define Use_val(v) ((LLVMUseRef)from_val(v))
 #define BasicBlock_val(v) ((LLVMBasicBlockRef)from_val(v))
 #define MemoryBuffer_val(v) ((LLVMMemoryBufferRef)from_val(v))

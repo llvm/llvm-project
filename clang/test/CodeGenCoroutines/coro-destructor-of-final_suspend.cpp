@@ -1,6 +1,6 @@
 // This addresses https://github.com/llvm/llvm-project/issues/57339
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fcxx-exceptions \
-// RUN:     -fexceptions -S -emit-llvm -o - %s -O1 | FileCheck %s
+// RUN:     -fexceptions -emit-llvm -o - %s -O1 | FileCheck %s
 
 #include "Inputs/coroutine.h"
 

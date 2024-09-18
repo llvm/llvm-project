@@ -17,11 +17,11 @@ define <2 x i1> @bool_true_or_false_vec(<2 x i1> %cond) {
   ret <2 x i1> %s
 }
 
-define <2 x i1> @bool_true_or_false_vec_undef(<2 x i1> %cond) {
-; CHECK-LABEL: @bool_true_or_false_vec_undef(
+define <2 x i1> @bool_true_or_false_vec_poison(<2 x i1> %cond) {
+; CHECK-LABEL: @bool_true_or_false_vec_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[COND:%.*]]
 ;
-  %s = select <2 x i1> %cond, <2 x i1> <i1 undef, i1 true>, <2 x i1> <i1 false, i1 undef>
+  %s = select <2 x i1> %cond, <2 x i1> <i1 poison, i1 true>, <2 x i1> <i1 false, i1 poison>
   ret <2 x i1> %s
 }
 
@@ -57,27 +57,27 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
   ret <2 x i32> %V
 }
 
-define <2 x i32> @equal_arms_vec_undef(<2 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_undef(
+define <2 x i32> @equal_arms_vec_poison(<2 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_poison(
 ; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
 ;
-  %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
+  %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 poison>, <2 x i32> <i32 poison, i32 42>
   ret <2 x i32> %V
 }
 
-define <3 x float> @equal_arms_vec_less_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_less_undef(
+define <3 x float> @equal_arms_vec_less_poison(<3 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_less_poison(
 ; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.300000e+01>
 ;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
+  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float poison, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
   ret <3 x float> %V
 }
 
-define <3 x float> @equal_arms_vec_more_undef(<3 x i1> %cond) {
-; CHECK-LABEL: @equal_arms_vec_more_undef(
-; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float undef, float 4.300000e+01>
+define <3 x float> @equal_arms_vec_more_poison(<3 x i1> %cond) {
+; CHECK-LABEL: @equal_arms_vec_more_poison(
+; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float poison, float 4.300000e+01>
 ;
-  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float undef>, <3 x float> <float undef, float undef, float 43.0>
+  %V = select <3 x i1> %cond, <3 x float> <float 42.0, float poison, float poison>, <3 x float> <float poison, float poison, float 43.0>
   ret <3 x float> %V
 }
 
@@ -105,19 +105,19 @@ define <2 x i8> @vsel_mixedvec() {
   ret <2 x i8> %s
 }
 
-define <3 x i8> @vsel_undef_true_op(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @vsel_undef_true_op(
+define <3 x i8> @vsel_poison_true_op(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @vsel_poison_true_op(
 ; CHECK-NEXT:    ret <3 x i8> [[X:%.*]]
 ;
-  %s = select <3 x i1><i1 1, i1 undef, i1 1>, <3 x i8> %x, <3 x i8> %y
+  %s = select <3 x i1><i1 1, i1 poison, i1 1>, <3 x i8> %x, <3 x i8> %y
   ret <3 x i8> %s
 }
 
-define <3 x i4> @vsel_undef_false_op(<3 x i4> %x, <3 x i4> %y) {
-; CHECK-LABEL: @vsel_undef_false_op(
+define <3 x i4> @vsel_poison_false_op(<3 x i4> %x, <3 x i4> %y) {
+; CHECK-LABEL: @vsel_poison_false_op(
 ; CHECK-NEXT:    ret <3 x i4> [[Y:%.*]]
 ;
-  %s = select <3 x i1><i1 0, i1 undef, i1 undef>, <3 x i4> %x, <3 x i4> %y
+  %s = select <3 x i1><i1 0, i1 poison, i1 poison>, <3 x i4> %x, <3 x i4> %y
   ret <3 x i4> %s
 }
 
@@ -940,13 +940,13 @@ define i1 @expand_binop_undef(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
-  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
   %shifted = lshr i32 %arg, %trailing
   %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
   ret i32 %r1.sroa.0.1

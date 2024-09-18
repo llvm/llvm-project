@@ -56,9 +56,9 @@ public:
 
 */
 
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__verbose_abort>
 #include <cstddef>
@@ -276,7 +276,20 @@ struct __type_info_implementations {
           __impl;
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI type_info {
+#    if __has_cpp_attribute(_Clang::__ptrauth_vtable_pointer__)
+#      if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
+#        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
+          [[_Clang::__ptrauth_vtable_pointer__(process_independent, address_discrimination, type_discrimination)]]
+#      else
+#        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
+          [[_Clang::__ptrauth_vtable_pointer__(                                                                        \
+              process_independent, no_address_discrimination, no_extra_discrimination)]]
+#      endif
+#    else
+#      define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH
+#    endif
+
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH type_info {
   type_info& operator=(const type_info&);
   type_info(const type_info&);
 
@@ -360,7 +373,7 @@ private:
 #endif // defined(_LIBCPP_ABI_VCRUNTIME) && _HAS_EXCEPTIONS == 0
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_cast();
 #else

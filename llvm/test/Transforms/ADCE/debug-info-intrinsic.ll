@@ -45,7 +45,7 @@ entry:
 ; CHECK-LABEL: define void @variable_in_parent_scope(
 define void @variable_in_parent_scope() !dbg !7 {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   call void @llvm.dbg.value
+; CHECK-NEXT:   #dbg_value
 ; CHECK-NEXT:   call void @sink
 ; CHECK-NEXT:   ret void
 entry:

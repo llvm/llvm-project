@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:22.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain
-ENV LLVM_VERSION=17.0.6
+ENV LLVM_VERSION=18.1.8
 
 RUN apt-get update && \
     apt-get install -y \
@@ -21,11 +21,9 @@ WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
 
 COPY bootstrap.patch /
 
-# TODO(boomanaiden154): Remove the patch pulled from a LLVM PR once we bump
-# the toolchain to version 18 and the patch is in-tree.
 # TODO(boomanaiden154): Remove the bootstrap patch once we unsplit the build
 # and no longer need to explicitly build the stage2 dependencies.
-RUN curl https://github.com/llvm/llvm-project/commit/dd0356d741aefa25ece973d6cc4b55dcb73b84b4.patch | patch -p1 && cat /bootstrap.patch | patch -p1
+RUN cat /bootstrap.patch | patch -p1
 
 RUN mkdir build
 
@@ -37,7 +35,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format" \
+  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
   -DCLANG_DEFAULT_LINKER="lld" \
   -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/llvm-project-llvmorg-$LLVM_VERSION/llvm
 

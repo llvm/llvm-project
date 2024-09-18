@@ -15,7 +15,6 @@
 #define MLIR_PASS_PASSOPTIONS_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,6 +59,20 @@ using has_stream_operator = llvm::is_detected<has_stream_operator_trait, T>;
 template <typename ParserT>
 static void printOptionValue(raw_ostream &os, const bool &value) {
   os << (value ? StringRef("true") : StringRef("false"));
+}
+template <typename ParserT>
+static void printOptionValue(raw_ostream &os, const std::string &str) {
+  // Check if the string needs to be escaped before writing it to the ostream.
+  const size_t spaceIndex = str.find_first_of(' ');
+  const size_t escapeIndex =
+      std::min({str.find_first_of('{'), str.find_first_of('\''),
+                str.find_first_of('"')});
+  const bool requiresEscape = spaceIndex < escapeIndex;
+  if (requiresEscape)
+    os << "{";
+  os << str;
+  if (requiresEscape)
+    os << "}";
 }
 template <typename ParserT, typename DataT>
 static std::enable_if_t<has_stream_operator<DataT>::value>
@@ -126,6 +139,25 @@ private:
     }
   };
 
+  /// This is the parser that is used by pass options that wrap PassOptions
+  /// instances. Like GenericOptionParser, this is a thin wrapper around
+  /// llvm::cl::basic_parser.
+  template <typename PassOptionsT>
+  struct PassOptionsParser : public llvm::cl::basic_parser<PassOptionsT> {
+    using llvm::cl::basic_parser<PassOptionsT>::basic_parser;
+    // Parse the options object by delegating to
+    // `PassOptionsT::parseFromString`.
+    bool parse(llvm::cl::Option &, StringRef, StringRef arg,
+               PassOptionsT &value) {
+      return failed(value.parseFromString(arg));
+    }
+
+    // Print the options object by delegating to `PassOptionsT::print`.
+    static void print(llvm::raw_ostream &os, const PassOptionsT &value) {
+      value.print(os);
+    }
+  };
+
   /// Utility methods for printing option values.
   template <typename DataT>
   static void printValue(raw_ostream &os, GenericOptionParser<DataT> &parser,
@@ -141,19 +173,24 @@ private:
   }
 
 public:
-  /// The specific parser to use depending on llvm::cl parser used. This is only
-  /// necessary because we need to provide additional methods for certain data
-  /// type parsers.
-  /// TODO: We should upstream the methods in GenericOptionParser to avoid the
-  /// need to do this.
+  /// The specific parser to use. This is necessary because we need to provide
+  /// additional methods for certain data type parsers.
   template <typename DataType>
-  using OptionParser =
+  using OptionParser = std::conditional_t<
+      // If the data type is derived from PassOptions, use the
+      // PassOptionsParser.
+      std::is_base_of_v<PassOptions, DataType>, PassOptionsParser<DataType>,
+      // Otherwise, use GenericOptionParser where it is well formed, and fall
+      // back to llvm::cl::parser otherwise.
+      // TODO: We should upstream the methods in GenericOptionParser to avoid
+      // the  need to do this.
       std::conditional_t<std::is_base_of<llvm::cl::generic_parser_base,
                                          llvm::cl::parser<DataType>>::value,
                          GenericOptionParser<DataType>,
-                         llvm::cl::parser<DataType>>;
+                         llvm::cl::parser<DataType>>>;
 
-  /// This class represents a specific pass option, with a provided data type.
+  /// This class represents a specific pass option, with a provided
+  /// data type.
   template <typename DataType, typename OptionParser = OptionParser<DataType>>
   class Option
       : public llvm::cl::opt<DataType, /*ExternalStorage=*/false, OptionParser>,
@@ -265,11 +302,12 @@ public:
       if ((**this).empty())
         return;
 
-      os << this->ArgStr << '=';
+      os << this->ArgStr << "={";
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
       };
       llvm::interleave(*this, os, printElementFn, ",");
+      os << "}";
     }
 
     /// Copy the value from the given option into this one.
@@ -293,11 +331,12 @@ public:
   /// Parse options out as key=value pairs that can then be handed off to the
   /// `llvm::cl` command line passing infrastructure. Everything is space
   /// separated.
-  LogicalResult parseFromString(StringRef options);
+  LogicalResult parseFromString(StringRef options,
+                                raw_ostream &errorStream = llvm::errs());
 
   /// Print the options held by this struct in a form that can be parsed via
   /// 'parseFromString'.
-  void print(raw_ostream &os);
+  void print(raw_ostream &os) const;
 
   /// Print the help string for the options held by this struct. `descIndent` is
   /// the indent that the descriptions should be aligned.

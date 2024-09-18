@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"

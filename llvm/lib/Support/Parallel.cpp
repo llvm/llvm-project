@@ -49,7 +49,7 @@ public:
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:
-  explicit ThreadPoolExecutor(ThreadPoolStrategy S = hardware_concurrency()) {
+  explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -57,7 +57,7 @@ public:
     Threads.resize(1);
     std::lock_guard<std::mutex> Lock(Mutex);
     // Use operator[] before creating the thread to avoid data race in .size()
-    // in “safe libc++” mode.
+    // in 'safe libc++' mode.
     auto &Thread0 = Threads[0];
     Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
@@ -156,6 +156,7 @@ private:
 };
 
 Executor *Executor::getDefaultExecutor() {
+#ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
   // stops the thread pool and waits for any worker thread creation to complete
@@ -179,6 +180,14 @@ Executor *Executor::getDefaultExecutor() {
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
   return Exec.get();
+#else
+  // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
+  // by llvm_shutdown(), worker threads will clean up and invoke TLS
+  // destructors. This can lead to race conditions if other threads attempt to
+  // access TLS objects that have already been destroyed.
+  static ThreadPoolExecutor Exec(strategy);
+  return &Exec;
+#endif
 }
 } // namespace
 } // namespace detail

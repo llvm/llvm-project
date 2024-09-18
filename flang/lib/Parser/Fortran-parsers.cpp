@@ -123,7 +123,8 @@ TYPE_PARSER(first(
 TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
     (construct<InternalSubprogram>(indirect(functionSubprogram)) ||
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
-        forceEndOfStmt)
+            forceEndOfStmt ||
+        construct<InternalSubprogram>(indirect(compilerDirective)))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,
@@ -437,7 +438,8 @@ TYPE_PARSER(construct<TypeParamDecl>(name, maybe("=" >> scalarIntConstantExpr)))
 TYPE_PARSER(recovery(
     withMessage("expected component definition"_err_en_US,
         first(construct<ComponentDefStmt>(Parser<DataComponentDefStmt>{}),
-            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}))),
+            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}),
+            construct<ComponentDefStmt>(indirect(compilerDirective)))),
     construct<ComponentDefStmt>(inStmtErrorRecovery)))
 
 // R737 data-component-def-stmt ->
@@ -702,13 +704,15 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     extension<LanguageFeature::CUDA>(
         construct<AttrSpec>(Parser<common::CUDADataAttr>{})))
 
-// CUDA-data-attr -> CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
+// CUDA-data-attr ->
+//     CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
 TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "DEVICE" >> pure(common::CUDADataAttr::Device) ||
     "MANAGED" >> pure(common::CUDADataAttr::Managed) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
-    "TEXTURE" >> pure(common::CUDADataAttr::Texture))
+    "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -731,7 +735,8 @@ TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
 //        BIND ( C [, NAME = scalar-default-char-constant-expr] )
 // R1528 proc-language-binding-spec -> language-binding-spec
 TYPE_PARSER(construct<LanguageBindingSpec>(
-    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr) / ")"))
+    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr),
+    (", CDEFINED" >> pure(true) || pure(false)) / ")"))
 
 // R809 coarray-spec -> deferred-coshape-spec-list | explicit-coshape-spec
 // N.B. Bracketed here rather than around references, for consistency with
@@ -1261,24 +1266,30 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
-// !DIR$ name...
+// !DIR$ name[=value] [, name[=value]]...
+// !DIR$ <anything else>
 constexpr auto ignore_tkr{
-    "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
-                             maybe(parenthesized(many(letter))), name))};
+    "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
+                        maybe(parenthesized(many(letter))), name))};
 constexpr auto loopCount{
-    "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
-                             parenthesized(nonemptyList(digitString64)))};
-constexpr auto assumeAligned{"DIR$ ASSUME_ALIGNED" >>
+    "LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
+                        parenthesized(nonemptyList(digitString64)))};
+constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
     optionalList(construct<CompilerDirective::AssumeAligned>(
         indirect(designator), ":"_tok >> digitString64))};
-TYPE_PARSER(beginDirective >>
-    sourced(construct<CompilerDirective>(ignore_tkr) ||
-        construct<CompilerDirective>(loopCount) ||
-        construct<CompilerDirective>(assumeAligned) ||
-        construct<CompilerDirective>(
-            "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
-                          maybe(("="_tok || ":"_tok) >> digitString64))))) /
-        endOfStmt)
+constexpr auto vectorAlways{
+    "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
+TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+    sourced((construct<CompilerDirective>(ignore_tkr) ||
+                construct<CompilerDirective>(loopCount) ||
+                construct<CompilerDirective>(assumeAligned) ||
+                construct<CompilerDirective>(vectorAlways) ||
+                construct<CompilerDirective>(
+                    many(construct<CompilerDirective::NameValue>(
+                        name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
+            endOfStmt ||
+        construct<CompilerDirective>(pure<CompilerDirective::Unrecognized>()) /
+            SkipTo<'\n'>{}))
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
     "nonstandard usage: based POINTER"_port_en_US,
@@ -1293,10 +1304,16 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(construct<CUDAAttributesStmt>(
     defaulted(
         maybe("::"_tok) >> nonemptyList("expected names"_err_en_US, name)))))
 
-// Subtle: the name includes the surrounding slashes, which avoids
+// Subtle: A structure's name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.
-TYPE_PARSER(construct<StructureStmt>(
-    "STRUCTURE" >> maybe(sourced("/" >> name / "/")), optionalList(entityDecl)))
+constexpr auto structureName{maybe(sourced("/" >> name / "/"))};
+
+// Note that Parser<StructureStmt>{} has a mandatory list of entity-decls
+// and is used only by NestedStructureStmt{}.Parse() in user-state.cpp.
+TYPE_PARSER(construct<StructureStmt>("STRUCTURE" >> structureName,
+    localRecovery(
+        "entity declarations are required on a nested structure"_err_en_US,
+        nonemptyList(entityDecl), ok)))
 
 constexpr auto nestedStructureDef{
     CONTEXT_PARSER("nested STRUCTURE definition"_en_US,
@@ -1312,7 +1329,9 @@ TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: STRUCTURE"_port_en_US,
-        construct<StructureDef>(statement(Parser<StructureStmt>{}),
+        construct<StructureDef>(
+            statement(construct<StructureStmt>(
+                "STRUCTURE" >> structureName, optionalList(entityDecl))),
             many(Parser<StructureField>{}),
             statement(construct<StructureDef::EndStructureStmt>(
                 "END STRUCTURE"_tok)))))

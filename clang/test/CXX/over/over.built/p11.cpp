@@ -7,6 +7,6 @@ void f(int i, float f, bool b, char c, int* pi, T* pt) {
   (void)~b;
   (void)~c;
   (void)~pi; // expected-error {{invalid argument type}}
-  (void)~pt; // FIXME: we should be able to give an error here.
+  (void)~pt; // expected-error {{invalid argument type}}
 }
 
