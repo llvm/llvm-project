@@ -531,6 +531,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Custom);
 
     if (Subtarget.hasStdExtZfa()) {
       setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
@@ -581,6 +583,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
   }
 
   if (Subtarget.is64Bit()) {
@@ -938,12 +942,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more ops.
     static const unsigned ZvfhminPromoteOps[] = {
-        ISD::FMINNUM,     ISD::FMAXNUM,     ISD::FADD,         ISD::FSUB,
-        ISD::FMUL,        ISD::FMA,         ISD::FDIV,         ISD::FSQRT,
-        ISD::FCEIL,       ISD::FFLOOR,      ISD::FROUND,       ISD::FROUNDEVEN,
-        ISD::FRINT,       ISD::FNEARBYINT,  ISD::IS_FPCLASS,   ISD::SETCC,
-        ISD::FMAXIMUM,    ISD::FMINIMUM,    ISD::STRICT_FADD,  ISD::STRICT_FSUB,
-        ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
+        ISD::FMINNUM,     ISD::FMAXNUM,     ISD::FADD,        ISD::FSUB,
+        ISD::FMUL,        ISD::FMA,         ISD::FDIV,        ISD::FSQRT,
+        ISD::FCEIL,       ISD::FTRUNC,      ISD::FFLOOR,      ISD::FROUND,
+        ISD::FROUNDEVEN,  ISD::FRINT,       ISD::FNEARBYINT,  ISD::IS_FPCLASS,
+        ISD::SETCC,       ISD::FMAXIMUM,    ISD::FMINIMUM,    ISD::STRICT_FADD,
+        ISD::STRICT_FSUB, ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FSQRT,
+        ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminPromoteVPOps[] = {ISD::VP_FADD,
@@ -6889,33 +6894,45 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getNode(ISD::FP_EXTEND, DL, VT, Res);
     return Res;
   }
+  case ISD::STRICT_FP_TO_FP16:
   case ISD::FP_TO_FP16: {
     // Custom lower to ensure the libcall return is passed in an FPR on hard
     // float ABIs.
     assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalisation");
     SDLoc DL(Op);
     MakeLibCallOptions CallOptions;
-    RTLIB::Libcall LC =
-        RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::f16);
-    SDValue Res =
-        makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+    bool IsStrict = Op->isStrictFPOpcode();
+    SDValue Op0 = IsStrict ? Op.getOperand(1) : Op.getOperand(0);
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    RTLIB::Libcall LC = RTLIB::getFPROUND(Op0.getValueType(), MVT::f16);
+    SDValue Res;
+    std::tie(Res, Chain) =
+        makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
     if (Subtarget.is64Bit())
       return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
-    return DAG.getBitcast(MVT::i32, Res);
+    SDValue Result = DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
+    if (IsStrict)
+      return DAG.getMergeValues({Result, Chain}, DL);
+    return Result;
   }
+  case ISD::STRICT_FP16_TO_FP:
   case ISD::FP16_TO_FP: {
     // Custom lower to ensure the libcall argument is passed in an FPR on hard
     // float ABIs.
     assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalisation");
     SDLoc DL(Op);
     MakeLibCallOptions CallOptions;
+    bool IsStrict = Op->isStrictFPOpcode();
+    SDValue Op0 = IsStrict ? Op.getOperand(1) : Op.getOperand(0);
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
     SDValue Arg = Subtarget.is64Bit()
-                      ? DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32,
-                                    Op.getOperand(0))
-                      : DAG.getBitcast(MVT::f32, Op.getOperand(0));
-    SDValue Res =
-        makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg, CallOptions, DL)
-            .first;
+                      ? DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Op0)
+                      : DAG.getBitcast(MVT::f32, Op0);
+    SDValue Res;
+    std::tie(Res, Chain) = makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg,
+                                       CallOptions, DL, Chain);
+    if (IsStrict)
+      return DAG.getMergeValues({Res, Chain}, DL);
     return Res;
   }
   case ISD::FTRUNC:
@@ -6925,6 +6942,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+    if (Op.getValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:
