@@ -209,7 +209,6 @@ bool SetEnv(const char *name, const char *value) {
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
-
 static void GetGLibcVersion(int *major, int *minor, int *patch) {
   const char *p = gnu_get_libc_version();
   *major = internal_simple_strtoll(p, &p, 10);
@@ -218,26 +217,6 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
 }
-
-__attribute__((unused)) static size_t g_tls_size;
-
-void InitTlsSize() {
-  int major, minor, patch;
-  GetGLibcVersion(&major, &minor, &patch);
-  g_use_dlpi_tls_data = major == 2 && minor >= 25;
-
-#    if defined(__aarch64__) || defined(__x86_64__) || \
-        defined(__powerpc64__) || defined(__loongarch__)
-  auto *get_tls_static_info = (void (*)(size_t *, size_t *))dlsym(
-      RTLD_DEFAULT, "_dl_get_tls_static_info");
-  size_t tls_align;
-  // Can be null if static link.
-  if (get_tls_static_info)
-    get_tls_static_info(&g_tls_size, &tls_align);
-#    endif
-}
-#  else
-void InitTlsSize() {}
 #  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
@@ -341,6 +320,28 @@ uptr ThreadDescriptorSize() {
   return val;
 }
 
+#    if SANITIZER_GLIBC
+__attribute__((unused)) static size_t g_tls_size;
+#    endif
+
+void InitTlsSize() {
+#    if SANITIZER_GLIBC
+  int major, minor, patch;
+  GetGLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
+
+#      if defined(__aarch64__) || defined(__x86_64__) || \
+          defined(__powerpc64__) || defined(__loongarch__)
+  auto *get_tls_static_info = (void (*)(size_t *, size_t *))dlsym(
+      RTLD_DEFAULT, "_dl_get_tls_static_info");
+  size_t tls_align;
+  // Can be null if static link.
+  if (get_tls_static_info)
+    get_tls_static_info(&g_tls_size, &tls_align);
+#      endif
+#    endif  // SANITIZER_GLIBC
+}
+
 #    if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64 || \
         SANITIZER_LOONGARCH64
 // TlsPreTcbSize includes size of struct pthread_descr and size of tcb
@@ -361,8 +362,9 @@ static uptr TlsPreTcbSize() {
   return kTlsPreTcbSize;
 }
 #    endif
-
-#  endif
+#  else   // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+void InitTlsSize() {}
+#  endif  // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 
 #  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
       !SANITIZER_ANDROID && !SANITIZER_GO
