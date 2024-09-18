@@ -1064,20 +1064,24 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   //        whether we can use base + vec-of-smaller-indices or just
   //        vec-of-pointers.
   assert(VF.isVector() && "Invalid VF for histogram cost");
-  Value *Address = getOperand(0)->getUnderlyingValue();
-  Value *IncAmt = getOperand(1)->getUnderlyingValue();
-  Type *IncTy = IncAmt->getType();
+  Type *AddressTy = Ctx.Types.inferScalarType(getOperand(0));
+  VPValue *IncAmt = getOperand(1);
+  Type *IncTy = Ctx.Types.inferScalarType(IncAmt);
   VectorType *VTy = VectorType::get(IncTy, VF);
 
   // Assume that a non-constant update value (or a constant != 1) requires
   // a multiply, and add that into the cost.
+  Value *RHS = IncAmt->getUnderlyingValue();
+  // The underlying value may be null, check for a live-in if so.
+  if (!RHS && IncAmt->isLiveIn())
+    RHS = IncAmt->getLiveInIRValue();
   InstructionCost MulCost = TTI::TCC_Free;
-  ConstantInt *RHS = dyn_cast<ConstantInt>(IncAmt);
-  if (!RHS || RHS->getZExtValue() != 1)
+  ConstantInt *CI = dyn_cast_if_present<ConstantInt>(RHS);
+  if (!CI || CI->getZExtValue() != 1)
     MulCost = Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
 
   // Find the cost of the histogram operation itself.
-  Type *PtrTy = VectorType::get(Address->getType(), VF);
+  Type *PtrTy = VectorType::get(AddressTy, VF);
   Type *MaskTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
   IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
                               Type::getVoidTy(Ctx.LLVMCtx),

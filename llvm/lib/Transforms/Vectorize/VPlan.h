@@ -69,7 +69,6 @@ class LoopVectorizationCostModel;
 class LoopVersioning;
 
 struct VPCostContext;
-struct HistogramInfo;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -1672,6 +1671,7 @@ public:
 /// of intrinsics. The only update operations currently supported are
 /// 'add' and 'sub' where the other term is loop-invariant.
 class VPHistogramRecipe : public VPRecipeBase {
+  /// Opcode of the update operation, currently either add or sub.
   unsigned Opcode;
 
 public:

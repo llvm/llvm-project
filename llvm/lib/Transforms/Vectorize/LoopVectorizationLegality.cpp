@@ -1119,8 +1119,9 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Load(m_Value(VPtrVal)))))
     return false;
 
-  if (!isa<SCEVAddRecExpr>(PSE.getSE()->getSCEV(VPtrVal)) ||
-      TheLoop->isLoopInvariant(VPtrVal))
+  // Make sure the index address varies in this loop, not an outer loop.
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSE()->getSCEV(VPtrVal));
+  if (!AR || AR->getLoop() != TheLoop)
     return false;
 
   // Ensure we'll have the same mask by checking that all parts of the histogram
