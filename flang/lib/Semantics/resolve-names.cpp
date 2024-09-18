@@ -1530,6 +1530,23 @@ public:
   void Post(const parser::OpenMPDeclarativeAllocate &) {
     SkipImplicitTyping(false);
   }
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::OpenMPAtomicConstruct &x) {
+    return common::visit(common::visitors{[&](const auto &u) -> bool {
+      AddOmpSourceRange(u.source);
+      return true;
+    }},
+        x.u);
+  }
+  void Post(const parser::OpenMPAtomicConstruct &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
