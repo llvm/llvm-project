@@ -7443,31 +7443,9 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
-      VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
-    EVT HalfVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
-                                  VT.getVectorNumElements() / 2);
-    MVT HalfIntVT = MVT::getIntegerVT(HalfVT.getSizeInBits());
-
-    // Turn into pair of packed build_vectors.
-    // TODO: Special case for constants that can be materialized with s_mov_b64.
-    SmallVector<SDValue, 4> LoOps, HiOps;
-    for (unsigned I = 0, E = VT.getVectorNumElements() / 2; I != E; ++I) {
-      LoOps.push_back(Op.getOperand(I));
-      HiOps.push_back(Op.getOperand(I + E));
-    }
-    SDValue Lo = DAG.getBuildVector(HalfVT, SL, LoOps);
-    SDValue Hi = DAG.getBuildVector(HalfVT, SL, HiOps);
-
-    SDValue CastLo = DAG.getNode(ISD::BITCAST, SL, HalfIntVT, Lo);
-    SDValue CastHi = DAG.getNode(ISD::BITCAST, SL, HalfIntVT, Hi);
-
-    SDValue Blend = DAG.getBuildVector(MVT::getVectorVT(HalfIntVT, 2), SL,
-                                       { CastLo, CastHi });
-    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
-  }
-
-  if (VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16 ||
+  if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
+      VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16 ||
+      VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16 ||
       VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v32bf16) {
 
     // Split into 2-element chunks.
