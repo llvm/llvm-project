@@ -33,28 +33,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 
-namespace {
-// TODO: consider removing this altogether and merely inserting the scopes
-// directly in SetupMF.
-struct SyncScopeIDs {
-  llvm::SyncScope::ID Work_ItemSSID;
-  llvm::SyncScope::ID WorkGroupSSID;
-  llvm::SyncScope::ID DeviceSSID;
-  llvm::SyncScope::ID AllSVMDevicesSSID;
-  llvm::SyncScope::ID SubGroupSSID;
-
-  SyncScopeIDs() {}
-  SyncScopeIDs(llvm::LLVMContext &Context) {
-    Work_ItemSSID = Context.getOrInsertSyncScopeID("singlethread");
-    WorkGroupSSID = Context.getOrInsertSyncScopeID("workgroup");
-    DeviceSSID = Context.getOrInsertSyncScopeID("device");
-    AllSVMDevicesSSID = Context.getOrInsertSyncScopeID("all_svm_devices");
-    SubGroupSSID = Context.getOrInsertSyncScopeID("subgroup");
-  }
-};
-
-} // namespace
-
 #define DEBUG_TYPE "spirv-isel"
 
 using namespace llvm;
@@ -77,7 +55,6 @@ class SPIRVInstructionSelector : public InstructionSelector {
   const RegisterBankInfo &RBI;
   SPIRVGlobalRegistry &GR;
   MachineRegisterInfo *MRI;
-  SyncScopeIDs SSIDs;
   MachineFunction *HasVRegsReset = nullptr;
 
   /// We need to keep track of the number we give to anonymous global values to
@@ -306,7 +283,6 @@ void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                        CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
-  SSIDs = SyncScopeIDs(MF.getFunction().getContext());
   MRI = &MF.getRegInfo();
   GR.setCurrentFunc(MF);
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);

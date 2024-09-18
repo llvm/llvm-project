@@ -251,22 +251,32 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
-SPIRV::Scope::Scope getMemScope(const LLVMContext &Ctx, SyncScope::ID ID) {
-  SmallVector<StringRef> SSNs;
-  Ctx.getSyncScopeNames(SSNs);
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  static const struct {
+    // Named by
+    // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+    // We don't need aliases for Invocation and CrossDevice, as we already have
+    // them covered by "singlethread" and "" strings respectively (see
+    // implementation of LLVMContext::LLVMContext()).
+    llvm::SyncScope::ID SubGroupSSID =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+    llvm::SyncScope::ID WorkGroupSSID =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+    llvm::SyncScope::ID DeviceSSID =
+      Ctx.getOrInsertSyncScopeID("device");
+  } SSIDs{};
 
-  StringRef MemScope = SSNs[ID];
-  if (MemScope.empty() || MemScope == "all_svm_devices")
-    return SPIRV::Scope::CrossDevice;
-  if (MemScope == "device")
-    return SPIRV::Scope::Device;
-  if (MemScope == "workgroup")
-    return SPIRV::Scope::Workgroup;
-  if (MemScope == "subgroup")
-    return SPIRV::Scope::Subgroup;
-  if (MemScope == "singlethread")
+  if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
-  return SPIRV::Scope::Device; // Follow OpenCL convention for now.
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SSIDs.SubGroupSSID)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == SSIDs.WorkGroupSSID)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == SSIDs.DeviceSSID)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
