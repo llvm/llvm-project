@@ -2840,11 +2840,14 @@ private:
     if (AfterRParen->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
-    // Look for a cast `( x ) (`.
-    if (AfterRParen->is(tok::l_paren) && BeforeRParen->Previous) {
-      if (BeforeRParen->is(tok::identifier) &&
-          BeforeRParen->Previous->is(tok::l_paren)) {
-        return true;
+    // Look for a cast `( x ) (`, where x may be a qualified identifier.
+    if (AfterRParen->is(tok::l_paren)) {
+      for (const auto *Prev = BeforeRParen; Prev->is(tok::identifier);) {
+        Prev = Prev->Previous;
+        if (Prev->is(tok::coloncolon))
+          Prev = Prev->Previous;
+        if (Prev == LParen)
+          return true;
       }
     }
 
