@@ -55,13 +55,13 @@ using namespace llvm;
 namespace {
 
 class AsmWriterEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   CodeGenTarget Target;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions;
   std::vector<AsmWriterInst> Instructions;
 
 public:
-  AsmWriterEmitter(RecordKeeper &R);
+  AsmWriterEmitter(const RecordKeeper &R);
 
   void run(raw_ostream &o);
 
@@ -326,7 +326,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
     raw_ostream &O,
     std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
     unsigned &BitsLeft, unsigned &AsmStrBits) {
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
@@ -486,7 +486,7 @@ void AsmWriterEmitter::EmitPrintInstruction(
     std::vector<std::vector<std::string>> &TableDrivenOperandPrinters,
     unsigned &BitsLeft, unsigned &AsmStrBits) {
   const unsigned OpcodeInfoBits = 64;
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
@@ -596,8 +596,8 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
         AsmName = std::string(Reg.getName());
     } else {
       // Make sure the register has an alternate name for this index.
-      std::vector<Record *> AltNameList =
-          Reg.TheDef->getValueAsListOfDefs("RegAltNameIndices");
+      std::vector<const Record *> AltNameList =
+          Reg.TheDef->getValueAsListOfConstDefs("RegAltNameIndices");
       unsigned Idx = 0, e;
       for (e = AltNameList.size();
            Idx < e && (AltNameList[Idx]->getName() != AltName); ++Idx)
@@ -633,7 +633,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
 }
 
 void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   const auto &Registers = Target.getRegBank().getRegisters();
   ArrayRef<const Record *> AltNameIndices = Target.getRegAltNameIndices();
@@ -829,7 +829,7 @@ struct AliasPriorityComparator {
 } // end anonymous namespace
 
 void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
 
   O << "\n#ifdef PRINT_ALIAS_INSTR\n";
   O << "#undef PRINT_ALIAS_INSTR\n\n";
@@ -843,14 +843,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
-  std::vector<Record *> AllInstAliases =
-      Records.getAllDerivedDefinitions("InstAlias");
-
   // Create a map from the qualified name to a list of potential matches.
   typedef std::set<std::pair<CodeGenInstAlias, int>, AliasPriorityComparator>
       AliasWithPriority;
   std::map<std::string, AliasWithPriority> AliasMap;
-  for (Record *R : AllInstAliases) {
+  for (const Record *R : Records.getAllDerivedDefinitions("InstAlias")) {
     int Priority = R->getValueAsInt("EmitPriority");
     if (Priority < 1)
       continue; // Aliases with priority 0 are never emitted.
@@ -1011,17 +1008,17 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         MIOpNum += RO.getMINumOperands();
       }
 
-      std::vector<Record *> ReqFeatures;
+      std::vector<const Record *> ReqFeatures;
       if (PassSubtarget) {
         // We only consider ReqFeatures predicates if PassSubtarget
-        std::vector<Record *> RF =
-            CGA.TheDef->getValueAsListOfDefs("Predicates");
-        copy_if(RF, std::back_inserter(ReqFeatures), [](Record *R) {
+        std::vector<const Record *> RF =
+            CGA.TheDef->getValueAsListOfConstDefs("Predicates");
+        copy_if(RF, std::back_inserter(ReqFeatures), [](const Record *R) {
           return R->getValueAsBit("AssemblerMatcherPredicate");
         });
       }
 
-      for (Record *const R : ReqFeatures) {
+      for (const Record *R : ReqFeatures) {
         const DagInit *D = R->getValueAsDag("AssemblerCondDag");
         auto *Op = dyn_cast<DefInit>(D->getOperator());
         if (!Op)
@@ -1315,17 +1312,17 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O << "#endif // PRINT_ALIAS_INSTR\n";
 }
 
-AsmWriterEmitter::AsmWriterEmitter(RecordKeeper &R) : Records(R), Target(R) {
-  Record *AsmWriter = Target.getAsmWriter();
+AsmWriterEmitter::AsmWriterEmitter(const RecordKeeper &R)
+    : Records(R), Target(R) {
+  const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
   // Get the instruction numbering.
   NumberedInstructions = Target.getInstructionsByEnumValue();
 
-  for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
-    const CodeGenInstruction *I = NumberedInstructions[i];
+  for (const auto &[Idx, I] : enumerate(NumberedInstructions)) {
     if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")
-      Instructions.emplace_back(*I, i, Variant);
+      Instructions.emplace_back(*I, Idx, Variant);
   }
 }
 
