@@ -39,6 +39,8 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- The ``clang-rename`` tool has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
