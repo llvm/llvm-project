@@ -1331,8 +1331,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // If this isn't a LocalAsMetadata record, we're dropping it.  This used
     // to be legal, but there's no upgrade path.
     auto dropRecord = [&] {
-      MetadataList.assignValue(MDNode::get(Context, {}),
-                               NextMetadataNo);
+      MetadataList.assignValue(MDNode::get(Context, {}), NextMetadataNo);
       NextMetadataNo++;
     };
     if (Record.size() != 2) {

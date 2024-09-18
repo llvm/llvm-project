@@ -1421,8 +1421,7 @@ class CallInst : public CallBase {
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   const Twine &NameStr, AllocInfo AllocInfo,
                   InsertPosition InsertBefore)
-      : CallInst(Ty, Func, Args, {}, NameStr, AllocInfo,
-                 InsertBefore) {}
+      : CallInst(Ty, Func, Args, {}, NameStr, AllocInfo, InsertBefore) {}
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
                     AllocInfo AllocInfo, InsertPosition InsertBefore);
@@ -1457,8 +1456,8 @@ public:
                           const Twine &NameStr,
                           InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{ComputeNumOperands(Args.size())};
-    return new (AllocMarker) CallInst(Ty, Func, Args, {}, NameStr,
-                                      AllocMarker, InsertBefore);
+    return new (AllocMarker)
+        CallInst(Ty, Func, Args, {}, NameStr, AllocMarker, InsertBefore);
   }
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
@@ -3648,9 +3647,8 @@ public:
                             InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(unsigned(Args.size()))};
-    return new (AllocMarker)
-        InvokeInst(Ty, Func, IfNormal, IfException, Args, {},
-                   AllocMarker, NameStr, InsertBefore);
+    return new (AllocMarker) InvokeInst(Ty, Func, IfNormal, IfException, Args,
+                                        {}, AllocMarker, NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
@@ -3805,15 +3803,15 @@ public:
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size())};
     return new (AllocMarker)
-        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, {},
-                   AllocMarker, NameStr, InsertBefore);
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, {}, AllocMarker,
+                   NameStr, InsertBefore);
   }
 
   static CallBrInst *
   Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
          ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
-         ArrayRef<OperandBundleDef> Bundles = {},
-         const Twine &NameStr = "", InsertPosition InsertBefore = nullptr) {
+         ArrayRef<OperandBundleDef> Bundles = {}, const Twine &NameStr = "",
+         InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size(),
                            CountBundleInputs(Bundles)),
@@ -4163,8 +4161,7 @@ private:
                        NameStr, InsertBefore) {}
 
 public:
-  static CleanupPadInst *Create(Value *ParentPad,
-                                ArrayRef<Value *> Args = {},
+  static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args = {},
                                 const Twine &NameStr = "",
                                 InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{unsigned(1 + Args.size())};

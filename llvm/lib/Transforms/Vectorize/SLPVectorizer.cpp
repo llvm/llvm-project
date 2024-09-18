@@ -4841,8 +4841,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           TTI.getScalarizationOverhead(
               PtrVecTy, APInt::getOneBitSet(VecTy->getNumElements(), 0),
               /*Insert=*/true, /*Extract=*/false, CostKind) +
-          ::getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, {},
-                           CostKind);
+          ::getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, {}, CostKind);
     // The cost of scalar loads.
     InstructionCost ScalarLoadsCost =
         std::accumulate(VL.begin(), VL.end(), InstructionCost(),
@@ -8756,9 +8755,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                "SK_ExtractSubvector index out of range");
         Cost += ::getShuffleCost(
             TTI, TTI::SK_ExtractSubvector,
-            getWidenedType(ScalarTy, alignTo(NumElts, EltsPerVector)),
-            {}, CostKind, Idx,
-            getWidenedType(ScalarTy, EltsPerVector));
+            getWidenedType(ScalarTy, alignTo(NumElts, EltsPerVector)), {},
+            CostKind, Idx, getWidenedType(ScalarTy, EltsPerVector));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
@@ -9411,9 +9409,8 @@ public:
         }
         Cost += ::getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
-            FixedVectorType::get(ScalarTy, CommonMask.size()), {},
-            CostKind, Idx,
-            FixedVectorType::get(ScalarTy, E->getVectorFactor()));
+            FixedVectorType::get(ScalarTy, CommonMask.size()), {}, CostKind,
+            Idx, FixedVectorType::get(ScalarTy, E->getVectorFactor()));
         if (!CommonMask.empty()) {
           std::iota(std::next(CommonMask.begin(), Idx),
                     std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
@@ -9824,9 +9821,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy = getWidenedType(ScalarTy, VecSz);
-        Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, ActualVecTy,
-                                 {}, CostKind, OffsetBeg - Offset,
-                                 InsertVecTy);
+        Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, ActualVecTy, {},
+                                 CostKind, OffsetBeg - Offset, InsertVecTy);
       } else {
         for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
           Mask[I] = InMask.test(I) ? PoisonMaskElem : I;
@@ -15784,8 +15780,7 @@ bool BoUpSLP::collectValuesToDemote(
         return false;
       };
   auto TryProcessInstruction =
-      [&](unsigned &BitWidth,
-          ArrayRef<const TreeEntry *> Operands = {},
+      [&](unsigned &BitWidth, ArrayRef<const TreeEntry *> Operands = {},
           function_ref<bool(unsigned, unsigned)> Checker = {}) {
         if (Operands.empty()) {
           if (!IsTruncRoot)

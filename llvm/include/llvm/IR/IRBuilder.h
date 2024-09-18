@@ -638,8 +638,7 @@ public:
                          Value *ArraySize, Function *MallocF = nullptr,
                          const Twine &Name = "");
   /// Generate the IR for a call to the builtin free function.
-  CallInst *CreateFree(Value *Source,
-                       ArrayRef<OperandBundleDef> Bundles = {});
+  CallInst *CreateFree(Value *Source, ArrayRef<OperandBundleDef> Bundles = {});
 
   CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
                                                Value *Size, Align Alignment,
@@ -852,9 +851,8 @@ public:
   ///
   /// The optional argument \p OpBundles specifies operand bundles that are
   /// added to the call instruction.
-  CallInst *
-  CreateAssumption(Value *Cond,
-                   ArrayRef<OperandBundleDef> OpBundles = {});
+  CallInst *CreateAssumption(Value *Cond,
+                             ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a llvm.experimental.noalias.scope.decl intrinsic call.
   Instruction *CreateNoAliasScopeDeclaration(Value *Scope);
@@ -1212,8 +1210,7 @@ public:
   }
 
   InvokeInst *CreateInvoke(FunctionCallee Callee, BasicBlock *NormalDest,
-                           BasicBlock *UnwindDest,
-                           ArrayRef<Value *> Args = {},
+                           BasicBlock *UnwindDest, ArrayRef<Value *> Args = {},
                            const Twine &Name = "") {
     return CreateInvoke(Callee.getFunctionType(), Callee.getCallee(),
                         NormalDest, UnwindDest, Args, Name);
@@ -2439,8 +2436,8 @@ private:
 
 public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
-                       ArrayRef<Value *> Args = {},
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+                       ArrayRef<Value *> Args = {}, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
     CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
     if (IsFPConstrained)
       setConstrainedFPCallAttr(CI);
@@ -2460,8 +2457,7 @@ public:
     return Insert(CI, Name);
   }
 
-  CallInst *CreateCall(FunctionCallee Callee,
-                       ArrayRef<Value *> Args = {},
+  CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args, Name,
                       FPMathTag);

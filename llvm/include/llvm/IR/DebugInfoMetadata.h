@@ -3776,8 +3776,7 @@ class DIMacroNode : public MDNode {
 
 protected:
   DIMacroNode(LLVMContext &C, unsigned ID, StorageType Storage, unsigned MIType,
-              ArrayRef<Metadata *> Ops1,
-              ArrayRef<Metadata *> Ops2 = {})
+              ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {})
       : MDNode(C, ID, Storage, Ops1, Ops2) {
     assert(MIType < 1u << 16);
     SubclassData16 = MIType;

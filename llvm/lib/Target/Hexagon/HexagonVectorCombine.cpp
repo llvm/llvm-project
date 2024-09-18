@@ -318,8 +318,7 @@ private:
 
   Value *createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                     Value *Predicate, int Alignment, Value *Mask,
-                    Value *PassThru,
-                    ArrayRef<Value *> MDSources = {}) const;
+                    Value *PassThru, ArrayRef<Value *> MDSources = {}) const;
   Value *createSimpleLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                           int Alignment,
                           ArrayRef<Value *> MDSources = {}) const;
@@ -334,10 +333,9 @@ private:
   Value *createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                               Value *Predicate, int Alignment,
                               ArrayRef<Value *> MDSources = {}) const;
-  Value *
-  createPredicatedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
-                        Value *Predicate, int Alignment,
-                        ArrayRef<Value *> MDSources = {}) const;
+  Value *createPredicatedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                               Value *Predicate, int Alignment,
+                               ArrayRef<Value *> MDSources = {}) const;
 
   DepList getUpwardDeps(Instruction *In, Instruction *Base) const;
   bool createAddressGroups();
@@ -767,8 +765,8 @@ auto AlignVectors::createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy,
   auto V6_vL32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vL32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vL32b_pred_ai, ValTy,
-                                {Predicate, Ptr, HVC.getConstInt(0)},
-                                {}, MDSources);
+                                {Predicate, Ptr, HVC.getConstInt(0)}, {},
+                                MDSources);
 }
 
 auto AlignVectors::createStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
@@ -838,8 +836,8 @@ auto AlignVectors::createPredicatedStore(IRBuilderBase &Builder, Value *Val,
   auto V6_vS32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vS32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vS32b_pred_ai, nullptr,
-                                {Predicate, Ptr, HVC.getConstInt(0), Val},
-                                {}, MDSources);
+                                {Predicate, Ptr, HVC.getConstInt(0), Val}, {},
+                                MDSources);
 }
 
 auto AlignVectors::getUpwardDeps(Instruction *In, Instruction *Base) const

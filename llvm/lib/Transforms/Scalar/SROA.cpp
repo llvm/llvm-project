@@ -445,8 +445,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
     auto *NewAssign = UnwrapDbgInstPtr(
         DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
-                            Dest,
-                            DIExpression::get(Expr->getContext(), {}),
+                            Dest, DIExpression::get(Expr->getContext(), {}),
                             DbgAssign->getDebugLoc()),
         DbgAssign);
 

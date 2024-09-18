@@ -259,8 +259,7 @@ public:
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
                   ArrayRef<SMRange> Ranges = {}) {
-    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {},
-                    ShowColors);
+    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {}, ShowColors);
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {

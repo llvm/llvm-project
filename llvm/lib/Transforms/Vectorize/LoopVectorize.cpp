@@ -5672,8 +5672,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                               {}, CostKind, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
+                               CostKind, 0);
   return Cost;
 }
 
@@ -5752,8 +5752,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                               {}, CostKind, 0);
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
+                               CostKind, 0);
   }
   return Cost;
 }

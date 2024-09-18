@@ -1602,7 +1602,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
         *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
     Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
                          RegName.Value.size(), SourceMgr::DK_Error,
-                         "incorrect register class for field", RegName.Value, {}, {});
+                         "incorrect register class for field", RegName.Value,
+                         {}, {});
     SourceRange = RegName.SourceRange;
     return true;
   };
