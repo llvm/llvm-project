@@ -17586,7 +17586,7 @@ static void RemoveNestedImmediateInvocation(
         else
           break;
       }
-      /// ConstantExpr are the first layer of implicit node to be removed so if
+      /// ConstantExprs are the first layer of implicit node to be removed so if
       /// Init isn't a ConstantExpr, no ConstantExpr will be skipped.
       if (auto *CE = dyn_cast<ConstantExpr>(Init);
           CE && CE->isImmediateInvocation())
@@ -17599,7 +17599,7 @@ static void RemoveNestedImmediateInvocation(
     }
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Do not rebuild lambdas to avoid creating a new type.
-      // Lambdas have already been processed inside their eval context.
+      // Lambdas have already been processed inside their eval contexts.
       return E;
     }
     bool AlwaysRebuild() { return false; }

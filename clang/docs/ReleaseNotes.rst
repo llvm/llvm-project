@@ -277,7 +277,10 @@ Attribute Changes in Clang
   (#GH106864)
 
 - Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
-  to express elideability at call sites where the coroutine is co_awaited as a prvalue.
+  to express elideability at call sites where the coroutine is invoked under a safe elide context.
+
+- Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
+  to propagate safe elide context to arguments if such function is also under a safe elide context.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -417,8 +420,11 @@ Bug Fixes to C++ Support
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. #GH63819, #GH107560
+  pack. (#GH63819), (#GH107560)
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
+- Fixed an assertion failure in debug mode, and potential crashes in release mode, when
+  diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
