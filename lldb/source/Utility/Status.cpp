@@ -48,7 +48,7 @@ char ExpressionError::ID;
 namespace {
 /// A std::error_code category for eErrorTypeGeneric.
 class LLDBGenericCategory : public std::error_category {
-  const char *name() const override { return "LLDBGenericCategory"; }
+  const char *name() const noexcept override { return "LLDBGenericCategory"; }
   std::string message(int __ev) const override { return "generic LLDB error"; };
 };
 LLDBGenericCategory &lldb_generic_category() {
@@ -58,7 +58,9 @@ LLDBGenericCategory &lldb_generic_category() {
 
 /// A std::error_code category for eErrorTypeExpression.
 class ExpressionCategory : public std::error_category {
-  const char *name() const override { return "LLDBExpressionCategory"; }
+  const char *name() const noexcept override {
+    return "LLDBExpressionCategory";
+  }
   std::string message(int __ev) const override {
     return ExpressionResultAsCString(
         static_cast<lldb::ExpressionResults>(__ev));
