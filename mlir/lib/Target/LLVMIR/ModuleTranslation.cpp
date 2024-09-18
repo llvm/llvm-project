@@ -1050,6 +1050,9 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (op.getSection().has_value())
       var->setSection(*op.getSection());
 
+    if (op.getPartition().has_value())
+      var->setPartition(*op.getPartition());
+
     addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
     std::optional<uint64_t> alignment = op.getAlignment();
@@ -1346,6 +1349,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (std::optional<StringRef> section = func.getSection())
     llvmFunc->setSection(*section);
+
+  if (std::optional<StringRef> partition = func.getPartition())
+    llvmFunc->setPartition(*partition);
 
   if (func.getArmStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
