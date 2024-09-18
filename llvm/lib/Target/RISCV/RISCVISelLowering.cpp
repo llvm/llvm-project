@@ -942,12 +942,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more ops.
     static const unsigned ZvfhminPromoteOps[] = {
-        ISD::FMINNUM,     ISD::FMAXNUM,     ISD::FADD,         ISD::FSUB,
-        ISD::FMUL,        ISD::FMA,         ISD::FDIV,         ISD::FSQRT,
-        ISD::FCEIL,       ISD::FFLOOR,      ISD::FROUND,       ISD::FROUNDEVEN,
-        ISD::FRINT,       ISD::FNEARBYINT,  ISD::IS_FPCLASS,   ISD::SETCC,
-        ISD::FMAXIMUM,    ISD::FMINIMUM,    ISD::STRICT_FADD,  ISD::STRICT_FSUB,
-        ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
+        ISD::FMINNUM,     ISD::FMAXNUM,     ISD::FADD,        ISD::FSUB,
+        ISD::FMUL,        ISD::FMA,         ISD::FDIV,        ISD::FSQRT,
+        ISD::FCEIL,       ISD::FTRUNC,      ISD::FFLOOR,      ISD::FROUND,
+        ISD::FROUNDEVEN,  ISD::FRINT,       ISD::FNEARBYINT,  ISD::IS_FPCLASS,
+        ISD::SETCC,       ISD::FMAXIMUM,    ISD::FMINIMUM,    ISD::STRICT_FADD,
+        ISD::STRICT_FSUB, ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FSQRT,
+        ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminPromoteVPOps[] = {ISD::VP_FADD,
@@ -6941,6 +6942,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
+    if (Op.getValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:
