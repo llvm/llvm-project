@@ -350,6 +350,7 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
+    return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
   case MachineOperand::MO_ExternalSymbol: {
     MCSymbol *Sym = GetSymbolFromOperand(MO);
     Sym->setExternal(true);
