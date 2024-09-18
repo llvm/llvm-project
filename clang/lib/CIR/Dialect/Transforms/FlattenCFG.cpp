@@ -311,7 +311,6 @@ public:
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
     // Time to emit cleanup's.
-    assert(callsToRewrite.size() == 1 && "NYI");
     mlir::cir::CallOp callOp = callsToRewrite[callIdx];
     if (!callOp.getCleanup().empty()) {
       mlir::Block *cleanupBlock = &callOp.getCleanup().getBlocks().back();
@@ -365,7 +364,7 @@ public:
                       exceptionPtrType, typeIdType);
       landingPads.push_back(landingPadBlock);
       if (callIdx < numCalls - 1)
-        landingPadBlock = rewriter.createBlock(afterTry);
+        landingPadBlock = rewriter.createBlock(dispatcher);
     }
 
     return dispatcher;
