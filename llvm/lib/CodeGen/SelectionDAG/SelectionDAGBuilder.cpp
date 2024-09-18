@@ -845,13 +845,13 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   }
 }
 
-RegsForValue::RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt,
+RegsForValue::RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt,
                            EVT valuevt, std::optional<CallingConv::ID> CC)
     : ValueVTs(1, valuevt), RegVTs(1, regvt), Regs(regs),
       RegCount(1, regs.size()), CallConv(CC) {}
 
 RegsForValue::RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
-                           const DataLayout &DL, unsigned Reg, Type *Ty,
+                           const DataLayout &DL, Register Reg, Type *Ty,
                            std::optional<CallingConv::ID> CC) {
   ComputeValueVTs(TLI, DL, Ty, ValueVTs);
 
@@ -870,7 +870,7 @@ RegsForValue::RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
       Regs.push_back(Reg + i);
     RegVTs.push_back(RegisterVT);
     RegCount.push_back(NumRegs);
-    Reg += NumRegs;
+    Reg = Reg.id() + NumRegs;
   }
 }
 
@@ -1070,9 +1070,9 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   }
 }
 
-SmallVector<std::pair<unsigned, TypeSize>, 4>
+SmallVector<std::pair<Register, TypeSize>, 4>
 RegsForValue::getRegsAndSizes() const {
-  SmallVector<std::pair<unsigned, TypeSize>, 4> OutVec;
+  SmallVector<std::pair<Register, TypeSize>, 4> OutVec;
   unsigned I = 0;
   for (auto CountAndVT : zip_first(RegCount, RegVTs)) {
     unsigned RegCount = std::get<0>(CountAndVT);
@@ -5956,7 +5956,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // getUnderlyingArgRegs - Find underlying registers used for a truncated,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
-getUnderlyingArgRegs(SmallVectorImpl<std::pair<unsigned, TypeSize>> &Regs,
+getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
                      const SDValue &N) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
@@ -6101,7 +6101,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (FI != std::numeric_limits<int>::max())
     Op = MachineOperand::CreateFI(FI);
 
-  SmallVector<std::pair<unsigned, TypeSize>, 8> ArgRegsAndSizes;
+  SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
     getUnderlyingArgRegs(ArgRegsAndSizes, N);
     Register Reg;
@@ -6131,7 +6131,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   if (!Op) {
     // Create a DBG_VALUE for each decomposed value in ArgRegs to cover Reg
-    auto splitMultiRegDbgValue = [&](ArrayRef<std::pair<unsigned, TypeSize>>
+    auto splitMultiRegDbgValue = [&](ArrayRef<std::pair<Register, TypeSize>>
                                          SplitRegs) {
       unsigned Offset = 0;
       for (const auto &RegAndSize : SplitRegs) {
@@ -9653,7 +9653,7 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   MachineFunction &MF = DAG.getMachineFunction();
-  SmallVector<unsigned, 4> Regs;
+  SmallVector<Register, 4> Regs;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
   // No work to do for memory/address operands.
@@ -10078,7 +10078,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
             return;
           }
 
-          SmallVector<unsigned, 4> Regs;
+          SmallVector<Register, 4> Regs;
           MachineFunction &MF = DAG.getMachineFunction();
           MachineRegisterInfo &MRI = MF.getRegInfo();
           const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
@@ -12654,7 +12654,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
 
       // getRegistersForValue may produce 1 to many registers based on whether
       // the OpInfo.ConstraintVT is legal on the target or not.
-      for (unsigned &Reg : OpInfo.AssignedRegs.Regs) {
+      for (Register &Reg : OpInfo.AssignedRegs.Regs) {
         Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
         if (Register::isPhysicalRegister(OriginalDef))
           FuncInfo.MBB->addLiveIn(OriginalDef);

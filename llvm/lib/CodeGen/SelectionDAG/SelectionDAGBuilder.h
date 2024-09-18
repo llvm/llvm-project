@@ -740,7 +740,7 @@ struct RegsForValue {
   /// This list holds the registers assigned to the values.
   /// Each legal or promoted value requires one register, and each
   /// expanded value requires multiple registers.
-  SmallVector<unsigned, 4> Regs;
+  SmallVector<Register, 4> Regs;
 
   /// This list holds the number of registers for each value.
   SmallVector<unsigned, 4> RegCount;
@@ -750,10 +750,10 @@ struct RegsForValue {
   std::optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
-  RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
+  RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt, EVT valuevt,
                std::optional<CallingConv::ID> CC = std::nullopt);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
-               const DataLayout &DL, unsigned Reg, Type *Ty,
+               const DataLayout &DL, Register Reg, Type *Ty,
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
@@ -796,7 +796,7 @@ struct RegsForValue {
   }
 
   /// Return a list of registers and their sizes.
-  SmallVector<std::pair<unsigned, TypeSize>, 4> getRegsAndSizes() const;
+  SmallVector<std::pair<Register, TypeSize>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm
