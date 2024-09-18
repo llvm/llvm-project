@@ -1565,10 +1565,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     bool CanReduceVL = true;
     if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
       checkUsers(CommonVL, CanReduceVL, MI);
-    else {
-      CommonVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc())).getReg();
-      CanReduceVL = true;
-    }
 
     if (!CanReduceVL || !CommonVL)
       continue;
