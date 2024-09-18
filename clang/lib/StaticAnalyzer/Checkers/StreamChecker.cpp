@@ -1892,7 +1892,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
     if (ExplodedNode *N = C.generateErrorNode()) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterClose,
-          "Stream might be already closed. Causes undefined behaviour.", N);
+          "Use of a stream that might be already closed", N);
       R->addVisitor<StreamClosedVisitor>(Sym);
       C.emitReport(std::move(R));
       return nullptr;
