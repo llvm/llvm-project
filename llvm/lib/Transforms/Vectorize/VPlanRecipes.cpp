@@ -67,6 +67,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
     default:
       return true;
     }
+  case VPExpandSCEVSC:
+    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -159,6 +161,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPScalarCastSC:
     return false;
+  case VPExpandSCEVSC:
+    return getParent()->getPlan()->getTripCount() == getVPSingleValue();
   case VPInstructionSC:
     return mayWriteToMemory();
   case VPWidenCallSC: {
@@ -386,12 +390,14 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::AnyOf:
     return true;
   default:
     return false;
@@ -434,9 +440,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
-    Value *Cond = State.get(getOperand(0));
-    Value *Op1 = State.get(getOperand(1));
-    Value *Op2 = State.get(getOperand(2));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
     return Builder.CreateSelect(Cond, Op1, Op2, Name);
   }
   case VPInstruction::ActiveLaneMask: {
@@ -529,6 +536,34 @@ Value *VPInstruction::generate(VPTransformState &State) {
     CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
+  case VPInstruction::BranchMultipleConds: {
+    assert(getNumOperands() == 2 && "Must have exactly 2 conditions");
+    assert(getParent()->isExiting() && "Must be placed in exiting block");
+    assert(getParent()->getParent()->getNumSuccessors() == 2 &&
+           "Must have exactly 2 successors");
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    Value *Cond1 = State.get(getOperand(0), /*IsScalar*/ true);
+    Value *Cond2 = State.get(getOperand(1), /*IsScalar*/ true);
+    BasicBlock *BB = Builder.GetInsertBlock();
+    BasicBlock *BB2 =
+        BB->splitBasicBlock(BB->getTerminator(), BB->getName() + ".split");
+
+    Builder.SetInsertPoint(BB->getTerminator());
+    BranchInst *CondBr1 = Builder.CreateCondBr(Cond1, BB, BB2);
+
+    Builder.SetInsertPoint(BB2->getTerminator());
+    BranchInst *CondBr2 = Builder.CreateCondBr(Cond2, BB2, nullptr);
+    CondBr2->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
+    CondBr1->setSuccessor(0, nullptr);
+    CondBr2->setSuccessor(0, nullptr);
+    BB->getTerminator()->eraseFromParent();
+    BB2->getTerminator()->eraseFromParent();
+    State.CFG.PrevBB = BB2;
+    return CondBr2;
+  }
+
   case VPInstruction::BranchOnCount: {
     // First create the compare.
     Value *IV = State.get(getOperand(0), /*IsScalar*/ true);
@@ -666,6 +701,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     return NewPhi;
   }
+  case VPInstruction::AnyOf: {
+    Value *A = State.get(getOperand(0));
+    return Builder.CreateOrReduce(A);
+  }
 
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -674,7 +713,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ComputeReductionResult;
+         getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::AnyOf;
 }
 
 bool VPInstruction::isSingleScalar() const {
@@ -736,6 +776,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case Instruction::Select:
+  case Instruction::Or:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -746,6 +788,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
+  case VPInstruction::BranchMultipleConds:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -764,6 +807,7 @@ bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
     return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchMultipleConds:
   case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
@@ -810,6 +854,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
     break;
+  case VPInstruction::BranchMultipleConds:
+    O << "branch-on-multi-cond";
+    break;
   case VPInstruction::CalculateTripCountMinusVF:
     O << "TC > VF ? TC - VF : 0";
     break;
@@ -830,6 +877,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
+    break;
+  case VPInstruction::AnyOf:
+    O << "any-of";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());

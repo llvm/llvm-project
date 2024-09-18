@@ -287,6 +287,8 @@ public:
   /// we can use in-order reductions.
   bool canVectorizeFPMath(bool EnableStrictReductions);
 
+  bool canVectorizeMultiCond() const;
+
   /// Return true if we can vectorize this loop while folding its tail by
   /// masking.
   bool canFoldTailByMasking() const;
