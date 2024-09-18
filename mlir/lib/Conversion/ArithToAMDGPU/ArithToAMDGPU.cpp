@@ -72,11 +72,11 @@ struct TruncfToFloat16RewritePattern final
 
 } // end namespace
 
-static LogicalResult isSupportedFp8(Type elementType, Chipset chipset) {
-  if (chipset.isGfx940())
-    return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(elementType));
-  if (chipset.hasOcpFp8())
-    return success(isa<Float8E5M2Type, Float8E4M3FNType>(elementType));
+static LogicalResult isSupportedF8(Type elementType, Chipset chipset) {
+  if (isGfx940Series(chipset))
+    return success(isa<Float8E4M3FNUZType, Float8E5M2FNUZType>(elementType));
+  if (hasOcpFp8(chipset))
+    return success(isa<Float8E4M3FNType, Float8E5M2Type>(elementType));
   return failure();
 }
 
@@ -98,7 +98,7 @@ LogicalResult ExtFOnFloat8RewritePattern::match(arith::ExtFOp op) const {
       return failure();
     inType = inVecType.getElementType();
   }
-  return isSupportedFp8(inType, chipset);
+  return isSupportedF8(inType, chipset);
 }
 
 void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
@@ -232,7 +232,7 @@ LogicalResult TruncFToFloat8RewritePattern::match(arith::TruncFOp op) const {
     // Conversion between 8-bit floats is not supported with truncation enabled.
     return failure();
 
-  return isSupportedFp8(outType, chipset);
+  return isSupportedF8(outType, chipset);
 }
 
 void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
@@ -397,7 +397,7 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   }
 
   bool convertFP8Arithmetic =
-      maybeChipset->isGfx940() || maybeChipset->hasOcpFp8();
+      isGfx940Series(*maybeChipset) || hasOcpFp8(*maybeChipset);
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
       *maybeChipset);
