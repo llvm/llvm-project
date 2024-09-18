@@ -303,7 +303,7 @@ public:
   buildLandingPad(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
                   mlir::Block *beforeCatch,
                   SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
-                  mlir::ArrayAttr &caseAttrList) const {
+                  mlir::ArrayAttr &caseAttrList, unsigned callIdx) const {
 
     auto *landingPadBlock =
         rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
@@ -320,16 +320,10 @@ public:
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
     // Time to emit cleanup's.
-    if (tryOp.getCleanup()) {
-      assert(callsToRewrite.size() == 1 &&
-             "NYI: if this isn't enough, move region instead");
-      // TODO(cir): this might need to be duplicated instead of consumed since
-      // for user-written try/catch we want these cleanups to also run when the
-      // regular try scope adjurns (in case no exception is triggered).
-      assert(tryOp.getSynthetic() &&
-             "not implemented for user written try/catch");
-      mlir::Block *cleanupBlock =
-          &callsToRewrite[0].getCleanup().getBlocks().back();
+    assert(callsToRewrite.size() == 1 && "NYI");
+    mlir::cir::CallOp callOp = callsToRewrite[callIdx];
+    if (!callOp.getCleanup().empty()) {
+      mlir::Block *cleanupBlock = &callOp.getCleanup().getBlocks().back();
       auto cleanupYield =
           cast<mlir::cir::YieldOp>(cleanupBlock->getTerminator());
       cleanupYield->erase();
@@ -363,10 +357,16 @@ public:
                    SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
                    mlir::ArrayAttr &catchAttrList,
                    SmallVectorImpl<mlir::Block *> &landingPads) const {
-    LandingInfo landingInfo = buildLandingPad(tryOp, rewriter, beforeCatch,
-                                              callsToRewrite, catchAttrList);
-    landingPads.push_back(landingInfo.pad);
-    return landingInfo.dispatch;
+    unsigned numCalls = callsToRewrite.size();
+    mlir::Block *dispatch = nullptr;
+    for (unsigned callIdx = 0; callIdx != numCalls; ++callIdx) {
+      LandingInfo landingInfo = buildLandingPad(
+          tryOp, rewriter, beforeCatch, callsToRewrite, catchAttrList, callIdx);
+      landingPads.push_back(landingInfo.pad);
+      dispatch = landingInfo.dispatch;
+    }
+
+    return dispatch;
   }
 
   mlir::Block *buildCatch(mlir::cir::TryOp tryOp,
@@ -515,9 +515,11 @@ public:
     buildCatchers(tryOp, rewriter, afterBody, afterTry, callsToRewrite,
                   landingPads);
     rewriter.eraseOp(tryOp);
-    assert(landingPads.size() == 1 && "NYI");
+    assert((landingPads.size() == callsToRewrite.size()) &&
+           "expected matching number of entries");
 
     // Rewrite calls.
+    unsigned callIdx = 0;
     for (CallOp callOp : callsToRewrite) {
       mlir::Block *callBlock = callOp->getBlock();
       mlir::Block *cont =
@@ -533,10 +535,12 @@ public:
       if (callOp.getNumResults() > 0)
         resTy = callOp.getResult().getType();
       auto tryCall = rewriter.replaceOpWithNewOp<mlir::cir::TryCallOp>(
-          callOp, symbol, resTy, cont, landingPads[0], callOp.getOperands());
+          callOp, symbol, resTy, cont, landingPads[callIdx],
+          callOp.getOperands());
       tryCall.setExtraAttrsAttr(extraAttrs);
       if (ast)
         tryCall.setAstAttr(*ast);
+      callIdx++;
     }
 
     // Quick block cleanup: no indirection to the post try block.
