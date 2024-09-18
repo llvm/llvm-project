@@ -216,15 +216,23 @@ define void @memops(ptr %ptr) {
   %b = load volatile i8, ptr %ptr
   %c = load i8, ptr %ptr, align 8
   %d = load atomic i8, ptr %ptr acquire, align 32
+  %e = load atomic i8, ptr %ptr syncscope("singlethread") acquire, align 32
   store i8 0, ptr %ptr
   store volatile i8 0, ptr %ptr
   store i8 0, ptr %ptr, align 8
   store atomic i8 0, ptr %ptr release, align 32
-  %e = atomicrmw add ptr %ptr, i8 0 monotonic, align 1
-  %f = atomicrmw volatile xchg ptr %ptr, i8 0 acq_rel, align 8
-  %g = cmpxchg ptr %ptr, i8 1, i8 2 seq_cst acquire, align 1
-  %h = cmpxchg weak ptr %ptr, i8 1, i8 2 seq_cst acquire, align 8
-  %i = cmpxchg volatile ptr %ptr, i8 1, i8 2 monotonic monotonic, align 16
+  store atomic i8 0, ptr %ptr syncscope("singlethread") release, align 32
+  %f = atomicrmw add ptr %ptr, i8 0 monotonic, align 1
+  %g = atomicrmw volatile xchg ptr %ptr, i8 0 acq_rel, align 8
+  %h = atomicrmw volatile xchg ptr %ptr, i8 0 syncscope("singlethread") acq_rel, align 8
+  %i = atomicrmw volatile xchg ptr %ptr, i8 0 syncscope("agent") acq_rel, align 8
+  %j = cmpxchg ptr %ptr, i8 1, i8 2 seq_cst acquire, align 1
+  %k = cmpxchg weak ptr %ptr, i8 1, i8 2 seq_cst acquire, align 8
+  %l = cmpxchg volatile ptr %ptr, i8 1, i8 2 monotonic monotonic, align 16
+  %m = cmpxchg volatile ptr %ptr, i8 1, i8 2 syncscope("singlethread") monotonic monotonic, align 16
+  %n = cmpxchg volatile ptr %ptr, i8 1, i8 2 syncscope("agent") monotonic monotonic, align 16
+  fence syncscope("singlethread") acquire
+  fence syncscope("agent") acquire
   ret void
 }
 

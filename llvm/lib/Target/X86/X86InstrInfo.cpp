@@ -2953,6 +2953,42 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPBUUDSYrr:
   case X86::VPDPBUUDrr:
   case X86::VPDPBUUDYrr:
+  case X86::VPDPBSSDSZ128r:
+  case X86::VPDPBSSDSZ128rk:
+  case X86::VPDPBSSDSZ128rkz:
+  case X86::VPDPBSSDSZ256r:
+  case X86::VPDPBSSDSZ256rk:
+  case X86::VPDPBSSDSZ256rkz:
+  case X86::VPDPBSSDSZr:
+  case X86::VPDPBSSDSZrk:
+  case X86::VPDPBSSDSZrkz:
+  case X86::VPDPBSSDZ128r:
+  case X86::VPDPBSSDZ128rk:
+  case X86::VPDPBSSDZ128rkz:
+  case X86::VPDPBSSDZ256r:
+  case X86::VPDPBSSDZ256rk:
+  case X86::VPDPBSSDZ256rkz:
+  case X86::VPDPBSSDZr:
+  case X86::VPDPBSSDZrk:
+  case X86::VPDPBSSDZrkz:
+  case X86::VPDPBUUDSZ128r:
+  case X86::VPDPBUUDSZ128rk:
+  case X86::VPDPBUUDSZ128rkz:
+  case X86::VPDPBUUDSZ256r:
+  case X86::VPDPBUUDSZ256rk:
+  case X86::VPDPBUUDSZ256rkz:
+  case X86::VPDPBUUDSZr:
+  case X86::VPDPBUUDSZrk:
+  case X86::VPDPBUUDSZrkz:
+  case X86::VPDPBUUDZ128r:
+  case X86::VPDPBUUDZ128rk:
+  case X86::VPDPBUUDZ128rkz:
+  case X86::VPDPBUUDZ256r:
+  case X86::VPDPBUUDZ256rk:
+  case X86::VPDPBUUDZ256rkz:
+  case X86::VPDPBUUDZr:
+  case X86::VPDPBUUDZrk:
+  case X86::VPDPBUUDZrkz:
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128rk:
   case X86::VPDPWSSDZ128rkz:
@@ -2971,6 +3007,24 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPWSSDSZr:
   case X86::VPDPWSSDSZrk:
   case X86::VPDPWSSDSZrkz:
+  case X86::VPDPWUUDZ128r:
+  case X86::VPDPWUUDZ128rk:
+  case X86::VPDPWUUDZ128rkz:
+  case X86::VPDPWUUDZ256r:
+  case X86::VPDPWUUDZ256rk:
+  case X86::VPDPWUUDZ256rkz:
+  case X86::VPDPWUUDZr:
+  case X86::VPDPWUUDZrk:
+  case X86::VPDPWUUDZrkz:
+  case X86::VPDPWUUDSZ128r:
+  case X86::VPDPWUUDSZ128rk:
+  case X86::VPDPWUUDSZ128rkz:
+  case X86::VPDPWUUDSZ256r:
+  case X86::VPDPWUUDSZ256rk:
+  case X86::VPDPWUUDSZ256rkz:
+  case X86::VPDPWUUDSZr:
+  case X86::VPDPWUUDSZrk:
+  case X86::VPDPWUUDSZrkz:
   case X86::VPMADD52HUQrr:
   case X86::VPMADD52HUQYrr:
   case X86::VPMADD52HUQZ128r:
@@ -3537,10 +3591,10 @@ static bool isX87Reg(unsigned Reg) {
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
-  // Call defs X87 register, so we special case it here because
+  // Call and inlineasm defs X87 register, so we special case it here because
   // otherwise calls are incorrectly flagged as x87 instructions
   // as a result.
-  if (MI.isCall())
+  if (MI.isCall() || MI.isInlineAsm())
     return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
@@ -4239,7 +4293,8 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
 void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               MCRegister SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
   bool HasVLX = Subtarget.hasVLX();
@@ -10467,10 +10522,11 @@ FunctionPass *llvm::createCleanupLocalDynamicTLSPass() {
 ///
 enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 X86InstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
     // FIXME: x86 doesn't implement getInstSizeInBytes, so
@@ -10507,9 +10563,10 @@ X86InstrInfo::getOutliningCandidateInfo(
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 
-    return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                      0, // Number of bytes to emit frame.
-                                      MachineOutlinerTailCall // Type of frame.
+    return std::make_unique<outliner::OutlinedFunction>(
+        RepeatedSequenceLocs, SequenceSize,
+        0,                      // Number of bytes to emit frame.
+        MachineOutlinerTailCall // Type of frame.
     );
   }
 
@@ -10519,8 +10576,8 @@ X86InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     C.setCallInfo(MachineOutlinerDefault, 1);
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize, 1,
-                                    MachineOutlinerDefault);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, 1, MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(

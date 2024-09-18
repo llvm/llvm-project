@@ -298,13 +298,13 @@ let Predicates = [IsTargetXPLINK64] in {
   }
 
   let hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+    def ADA_ENTRY : Alias<12, (outs ADDR64:$Reg), (ins adasym:$addr,
                               ADDR64:$ADA, imm64:$Offset),
                             [(set i64:$Reg, (z_ada_entry i64:$addr,
                               i64:$ADA, i64:$Offset))]>;
   }
   let mayLoad = 1, AddedComplexity = 20, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY_VALUE : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+    def ADA_ENTRY_VALUE : Alias<12, (outs ADDR64:$Reg), (ins adasym:$addr,
                               ADDR64:$ADA, imm64:$Offset),
                             [(set i64:$Reg, (z_load (z_ada_entry
                               iPTR:$addr, iPTR:$ADA, i64:$Offset)))]>;

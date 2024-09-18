@@ -101,7 +101,7 @@ list(APPEND scanf_deps
       libc.hdr.types.FILE
 )
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   list(APPEND scanf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
@@ -144,11 +144,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    vfscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
   scanf
   SRCS
     scanf.cpp
   HDRS
     scanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    vscanf.h
   DEPENDS
     ${scanf_deps}
 )
@@ -176,6 +196,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asprintf
+  SRCS
+    asprintf.cpp
+  HDRS
+    asprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.vasprintf_internal
+)
+
+add_entrypoint_object(
   vsprintf
   SRCS
     vsprintf.cpp
@@ -195,6 +225,16 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  vasprintf
+  SRCS
+    vasprintf.cpp
+  HDRS
+    vasprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.vasprintf_internal
 )
 
 add_subdirectory(printf_core)

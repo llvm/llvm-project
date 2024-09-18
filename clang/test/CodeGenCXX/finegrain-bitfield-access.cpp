@@ -15,7 +15,7 @@ struct S1 {
 S1 a1;
 unsigned read8_1() {
   // CHECK-LABEL: @_Z7read8_1v
-  // CHECK: %bf.load = load i8, ptr getelementptr inbounds (%struct.S1, ptr @a1, i32 0, i32 1), align 1
+  // CHECK: %bf.load = load i8, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 1), align 1
   // CHECK-NEXT: %bf.cast = zext i8 %bf.load to i32
   // CHECK-NEXT: ret i32 %bf.cast
   // SANITIZE-LABEL: @_Z7read8_1v
@@ -27,7 +27,7 @@ unsigned read8_1() {
 }
 void write8_1() {
   // CHECK-LABEL: @_Z8write8_1v
-  // CHECK: store i8 3, ptr getelementptr inbounds (%struct.S1, ptr @a1, i32 0, i32 1), align 1
+  // CHECK: store i8 3, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 1), align 1
   // CHECK-NEXT: ret void
   // SANITIZE-LABEL: @_Z8write8_1v
   // SANITIZE: %bf.load = load i32, ptr {{.*}}, align 4
@@ -40,7 +40,7 @@ void write8_1() {
 
 unsigned read8_2() {
   // CHECK-LABEL: @_Z7read8_2v
-  // CHECK: %bf.load = load i16, ptr getelementptr inbounds (%struct.S1, ptr @a1, i32 0, i32 2), align 2
+  // CHECK: %bf.load = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 2), align 2
   // CHECK-NEXT: %bf.lshr = lshr i16 %bf.load, 4
   // CHECK-NEXT: %bf.clear = and i16 %bf.lshr, 255
   // CHECK-NEXT: %bf.cast = zext i16 %bf.clear to i32
@@ -54,10 +54,10 @@ unsigned read8_2() {
 }
 void write8_2() {
   // CHECK-LABEL: @_Z8write8_2v
-  // CHECK: %bf.load = load i16, ptr getelementptr inbounds (%struct.S1, ptr @a1, i32 0, i32 2), align 2
+  // CHECK: %bf.load = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 2), align 2
   // CHECK-NEXT: %bf.clear = and i16 %bf.load, -4081
   // CHECK-NEXT: %bf.set = or i16 %bf.clear, 48
-  // CHECK-NEXT: store i16 %bf.set, ptr getelementptr inbounds (%struct.S1, ptr @a1, i32 0, i32 2), align 2
+  // CHECK-NEXT: store i16 %bf.set, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 2), align 2
   // CHECK-NEXT: ret void
   // SANITIZE-LABEL: @_Z8write8_2v
   // SANITIZE: %bf.load = load i32, ptr {{.*}}, align 4
@@ -90,7 +90,7 @@ unsigned read16_1() {
 }
 unsigned read16_2() {
   // CHECK-LABEL: @_Z8read16_2v
-  // CHECK: %bf.load = load i16, ptr getelementptr inbounds (%struct.S2, ptr @a2, i32 0, i32 1), align 2
+  // CHECK: %bf.load = load i16, ptr getelementptr inbounds nuw (%struct.S2, ptr @a2, i32 0, i32 1), align 2
   // CHECK-NEXT: %bf.cast = zext i16 %bf.load to i64
   // CHECK-NEXT: %conv = trunc i64 %bf.cast to i32
   // CHECK-NEXT: ret i32 %conv
@@ -117,7 +117,7 @@ void write16_1() {
 }
 void write16_2() {
   // CHECK-LABEL: @_Z9write16_2v
-  // CHECK: store i16 5, ptr getelementptr inbounds (%struct.S2, ptr @a2, i32 0, i32 1), align 2
+  // CHECK: store i16 5, ptr getelementptr inbounds nuw (%struct.S2, ptr @a2, i32 0, i32 1), align 2
   // CHECK-NEXT: ret void
   // SANITIZE-LABEL: @_Z9write16_2v
   // SANITIZE: %bf.load = load i64, ptr {{.*}}, align 8
@@ -137,7 +137,7 @@ struct S3 {
 S3 a3;
 unsigned read32_1() {
   // CHECK-LABEL: @_Z8read32_1v
-  // CHECK: %bf.load = load i32, ptr getelementptr inbounds (%struct.S3, ptr @a3, i32 0, i32 1), align 4
+  // CHECK: %bf.load = load i32, ptr getelementptr inbounds nuw (%struct.S3, ptr @a3, i32 0, i32 1), align 4
   // CHECK-NEXT: %bf.cast = zext i32 %bf.load to i64
   // CHECK-NEXT: %conv = trunc i64 %bf.cast to i32
   // CHECK-NEXT: ret i32 %conv
@@ -150,7 +150,7 @@ unsigned read32_1() {
 }
 void write32_1() {
   // CHECK-LABEL: @_Z9write32_1v
-  // CHECK: store i32 5, ptr getelementptr inbounds (%struct.S3, ptr @a3, i32 0, i32 1), align 4
+  // CHECK: store i32 5, ptr getelementptr inbounds nuw (%struct.S3, ptr @a3, i32 0, i32 1), align 4
   // CHECK-NEXT: ret void
   // SANITIZE-LABEL: @_Z9write32_1v
   // SANITIZE: %bf.load = load i64, ptr {{.*}}, align 8

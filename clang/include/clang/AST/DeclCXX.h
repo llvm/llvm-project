@@ -256,6 +256,7 @@ public:
 
 /// Represents a C++ struct/union/class.
 class CXXRecordDecl : public RecordDecl {
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -1206,6 +1207,13 @@ public:
     return D.HasPublicFields || D.HasProtectedFields || D.HasPrivateFields;
   }
 
+  /// If this is a standard-layout class or union, any and all data members will
+  /// be declared in the same type.
+  ///
+  /// This retrieves the type where any fields are declared,
+  /// or the current class if there is no class with fields.
+  const CXXRecordDecl *getStandardLayoutBaseWithFields() const;
+
   /// Whether this class is polymorphic (C++ [class.virtual]),
   /// which means that the class contains or inherits a virtual function.
   bool isPolymorphic() const { return data().Polymorphic; }
@@ -1538,6 +1546,10 @@ public:
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
+
+  /// Returns true if the class contains HLSL intangible type, either as
+  /// a field or in base class.
+  bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
 
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.

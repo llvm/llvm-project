@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -passes='print<cycles>' 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-output -passes='verify<cycles>,print<cycles>' 2>&1 | FileCheck %s
 ; CHECK-LABEL: CycleInfo for function: unreachable
 ; CHECK:    depth=1: entries(loop.body) loop.latch inner.block
 define void @unreachable(i32 %n) {

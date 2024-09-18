@@ -42,8 +42,14 @@ class ELFFileBase;
 class SharedFile;
 class InputSectionBase;
 class EhInputSection;
+class Defined;
 class Symbol;
 class BitcodeCompiler;
+class OutputSection;
+class LinkerScript;
+class TargetInfo;
+struct Partition;
+struct PhdrEntry;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -218,7 +224,8 @@ struct Config {
   bool allowMultipleDefinition;
   bool fatLTOObjects;
   bool androidPackDynRelocs = false;
-  bool armThumbPLTs = false;
+  bool armHasArmISA = false;
+  bool armHasThumb2ISA = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
@@ -478,6 +485,64 @@ struct DuplicateSymbol {
 
 struct Ctx {
   LinkerDriver driver;
+  LinkerScript *script;
+  TargetInfo *target;
+
+  // These variables are initialized by Writer and should not be used before
+  // Writer is initialized.
+  uint8_t *bufferStart;
+  Partition *mainPart;
+  PhdrEntry *tlsPhdr;
+  struct OutSections {
+    OutputSection *elfHeader;
+    OutputSection *programHeaders;
+    OutputSection *preinitArray;
+    OutputSection *initArray;
+    OutputSection *finiArray;
+  };
+  OutSections out;
+  SmallVector<OutputSection *, 0> outputSections;
+
+  // Some linker-generated symbols need to be created as
+  // Defined symbols.
+  struct ElfSym {
+    // __bss_start
+    Defined *bss;
+
+    // etext and _etext
+    Defined *etext1;
+    Defined *etext2;
+
+    // edata and _edata
+    Defined *edata1;
+    Defined *edata2;
+
+    // end and _end
+    Defined *end1;
+    Defined *end2;
+
+    // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
+    // be at some offset from the base of the .got section, usually 0 or
+    // the end of the .got.
+    Defined *globalOffsetTable;
+
+    // _gp, _gp_disp and __gnu_local_gp symbols. Only for MIPS.
+    Defined *mipsGp;
+    Defined *mipsGpDisp;
+    Defined *mipsLocalGp;
+
+    // __global_pointer$ for RISC-V.
+    Defined *riscvGlobalPointer;
+
+    // __rel{,a}_iplt_{start,end} symbols.
+    Defined *relaIpltStart;
+    Defined *relaIpltEnd;
+
+    // _TLS_MODULE_BASE_ on targets that support TLSDESC.
+    Defined *tlsModuleBase;
+  };
+  ElfSym sym;
+
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
   SmallVector<SharedFile *, 0> sharedFiles;
@@ -522,6 +587,11 @@ struct Ctx {
   // before a possible `sym = expr;`.
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
+  // The set of TOC entries (.toc + addend) for which we should not apply
+  // toc-indirect to toc-relative relaxation. const Symbol * refers to the
+  // STT_SECTION symbol associated to the .toc input section.
+  llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
   void reset();
 

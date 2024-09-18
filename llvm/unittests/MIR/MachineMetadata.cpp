@@ -79,7 +79,7 @@ protected:
   }
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
-                                   const char *FnName, MachineModuleInfo &MMI) {
+                                   MachineModuleInfo &MMI) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -227,7 +227,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -338,7 +338,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -376,7 +376,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -474,7 +474,7 @@ body:             |
 )MIR";
 
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "test0", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
 
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
@@ -563,7 +563,7 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
@@ -594,7 +594,7 @@ body:             |
 ...
 )MIR";
   MachineModuleInfo MMI(TM.get());
-  M = parseMIR(*TM, MIRString, "foo", MMI);
+  M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();

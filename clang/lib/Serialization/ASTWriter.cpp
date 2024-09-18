@@ -34,6 +34,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -559,6 +560,11 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
@@ -927,6 +933,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
+  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -2610,7 +2617,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
       // We write out exported module macros for PCH as well.
       auto Leafs = PP.getLeafModuleMacros(Name);
-      SmallVector<ModuleMacro *, 8> Worklist(Leafs.begin(), Leafs.end());
+      SmallVector<ModuleMacro *, 8> Worklist(Leafs);
       llvm::DenseMap<ModuleMacro *, unsigned> Visits;
       while (!Worklist.empty()) {
         auto *Macro = Worklist.pop_back_val();
@@ -3961,6 +3968,13 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
 }
 
+void ASTWriter::handleVTable(CXXRecordDecl *RD) {
+  if (!RD->isInNamedModule())
+    return;
+
+  PendingEmittingVTables.push_back(RD);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4729,6 +4743,7 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
+    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -5163,6 +5178,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
+
+  // Write all classes that need to emit the vtable definitions if required.
+  if (isWritingStdCXXNamedModules())
+    for (CXXRecordDecl *RD : PendingEmittingVTables)
+      GetDeclRef(RD);
+  else
+    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5317,6 +5339,17 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
+
+  RecordData VTablesToEmit;
+  for (CXXRecordDecl *RD : PendingEmittingVTables) {
+    if (!wasDeclEmitted(RD))
+      continue;
+
+    AddDeclRef(RD, VTablesToEmit);
+  }
+
+  if (!VTablesToEmit.empty())
+    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -6559,10 +6592,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   // computed.
   Record->push_back(D->getODRHash());
 
-  bool ModulesDebugInfo =
-      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
-  Record->push_back(ModulesDebugInfo);
-  if (ModulesDebugInfo)
+  bool ModulesCodegen =
+      !D->isDependentType() &&
+     (Writer->Context->getLangOpts().ModulesDebugInfo ||
+      D->isInNamedModule());
+  Record->push_back(ModulesCodegen);
+  if (ModulesCodegen)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.
@@ -6727,6 +6762,12 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
   // higher module file indexes.
   if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
+}
+
+void ASTWriter::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  assert(D->isCanonicalDecl() && "predefined decl is not canonical");
+  DeclIDs[D] = LocalDeclID(ID);
+  PredefinedDecls.insert(D);
 }
 
 void ASTWriter::SelectorRead(SelectorID ID, Selector S) {
@@ -7204,6 +7245,34 @@ void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
 void OMPClauseWriter::VisitOMPAcqRelClause(OMPAcqRelClause *) {}
 
+void OMPClauseWriter::VisitOMPAbsentClause(OMPAbsentClause *C) {
+  Record.push_back(static_cast<uint64_t>(C->getDirectiveKinds().size()));
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto K : C->getDirectiveKinds()) {
+    Record.writeEnum(K);
+  }
+}
+
+void OMPClauseWriter::VisitOMPHoldsClause(OMPHoldsClause *C) {
+  Record.AddStmt(C->getExpr());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPContainsClause(OMPContainsClause *C) {
+  Record.push_back(static_cast<uint64_t>(C->getDirectiveKinds().size()));
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto K : C->getDirectiveKinds()) {
+    Record.writeEnum(K);
+  }
+}
+
+void OMPClauseWriter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
+
+void OMPClauseWriter::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseWriter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
+
 void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}
@@ -7528,15 +7597,19 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
-  Record.AddStmt(C->getNumTeams());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
-  Record.AddStmt(C->getThreadLimit());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {

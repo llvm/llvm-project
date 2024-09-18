@@ -575,8 +575,7 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
     return;
 
   // Otherwise, do some replacement.
-  if (!IgnoreMissingLocals &&
-      llvm::any_of(NewVals, [&](Value *V) { return V == nullptr; })) {
+  if (!IgnoreMissingLocals && llvm::is_contained(NewVals, nullptr)) {
     V.setKillLocation();
   } else {
     // Either we have all non-empty NewVals, or we're permitted to ignore

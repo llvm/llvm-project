@@ -350,6 +350,7 @@ void SourceManager::clearIDTables() {
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
 
+  IncludedLocMap.clear();
   if (LineTable)
     LineTable->clear();
 
@@ -2038,8 +2039,7 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
   if (InSameTU.first)
     return InSameTU.second;
-  // TODO: This should be unreachable, but some clients are calling this
-  //       function before making sure LHS and RHS are in the same TU.
+  // This case is used by libclang: clang_isBeforeInTranslationUnit
   return LOffs.first < ROffs.first;
 }
 

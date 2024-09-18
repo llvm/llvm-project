@@ -444,7 +444,8 @@ static void __kmp_dist_barrier_release(
       next_go = my_current_iter + distributedBarrier::MAX_ITERS;
       my_go_index = tid / b->threads_per_go;
       if (this_thr->th.th_used_in_team.load() == 3) {
-        KMP_COMPARE_AND_STORE_ACQ32(&(this_thr->th.th_used_in_team), 3, 1);
+        (void)KMP_COMPARE_AND_STORE_ACQ32(&(this_thr->th.th_used_in_team), 3,
+                                          1);
       }
       // Check if go flag is set
       if (b->go[my_go_index].go.load() != next_go) {

@@ -46,7 +46,6 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandCCOp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   MachineBasicBlock::iterator &NextMBBI);
-  bool expandVSetVL(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandVMSET_VMCLR(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, unsigned Opcode);
   bool expandRV32ZdinxStore(MachineBasicBlock &MBB,
@@ -139,10 +138,6 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCORN:
   case RISCV::PseudoCCXNOR:
     return expandCCOp(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoVSETVLI:
-  case RISCV::PseudoVSETVLIX0:
-  case RISCV::PseudoVSETIVLI:
-    return expandVSetVL(MBB, MBBI);
   case RISCV::PseudoVMCLR_M_B1:
   case RISCV::PseudoVMCLR_M_B2:
   case RISCV::PseudoVMCLR_M_B4:
@@ -258,36 +253,6 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVExpandPseudo::expandVSetVL(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI) {
-  assert(MBBI->getNumExplicitOperands() == 3 && MBBI->getNumOperands() >= 5 &&
-         "Unexpected instruction format");
-
-  DebugLoc DL = MBBI->getDebugLoc();
-
-  assert((MBBI->getOpcode() == RISCV::PseudoVSETVLI ||
-          MBBI->getOpcode() == RISCV::PseudoVSETVLIX0 ||
-          MBBI->getOpcode() == RISCV::PseudoVSETIVLI) &&
-         "Unexpected pseudo instruction");
-  unsigned Opcode;
-  if (MBBI->getOpcode() == RISCV::PseudoVSETIVLI)
-    Opcode = RISCV::VSETIVLI;
-  else
-    Opcode = RISCV::VSETVLI;
-  const MCInstrDesc &Desc = TII->get(Opcode);
-  assert(Desc.getNumOperands() == 3 && "Unexpected instruction format");
-
-  Register DstReg = MBBI->getOperand(0).getReg();
-  bool DstIsDead = MBBI->getOperand(0).isDead();
-  BuildMI(MBB, MBBI, DL, Desc)
-      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-      .add(MBBI->getOperand(1))  // VL
-      .add(MBBI->getOperand(2)); // VType
-
-  MBBI->eraseFromParent(); // The pseudo instruction is gone now.
-  return true;
-}
-
 bool RISCVExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           unsigned Opcode) {
@@ -326,9 +291,6 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       .setMemRefs(MMOLo);
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
-    // FIXME: Zdinx RV32 can not work on unaligned scalar memory.
-    assert(!STI->enableUnalignedScalarMem());
-
     assert(MBBI->getOperand(2).getOffset() % 8 == 0);
     MBBI->getOperand(2).setOffset(MBBI->getOperand(2).getOffset() + 4);
     BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
@@ -379,7 +341,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     auto Offset = MBBI->getOperand(2).getOffset();
-    assert(MBBI->getOperand(2).getOffset() % 8 == 0);
+    assert(Offset % 8 == 0);
     MBBI->getOperand(2).setOffset(Offset + 4);
     BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
         .addReg(MBBI->getOperand(1).getReg())

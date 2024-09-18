@@ -1695,6 +1695,8 @@ public:
 
   void setPseudo(bool Pseudo) { IsPseudo = Pseudo; }
 
+  void setPreserveNops(bool Value) { PreserveNops = Value; }
+
   BinaryFunction &setUsesGnuArgsSize(bool Uses = true) {
     UsesGnuArgsSize = Uses;
     return *this;

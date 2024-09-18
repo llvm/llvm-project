@@ -1378,7 +1378,7 @@ void OpEmitter::genPropertiesSupport() {
                ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
         {0}
       };
-      {2};
+      {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
       if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
@@ -1419,7 +1419,7 @@ void OpEmitter::genPropertiesSupport() {
                                      &fctx.addSubst("_attr", propertyAttr)
                                           .addSubst("_storage", propertyStorage)
                                           .addSubst("_diag", propertyDiag)),
-                               name, getAttr);
+                               getAttr);
       if (prop.hasStorageTypeValueOverride()) {
         setPropMethod << formatv(attrGetDefaultFmt, name,
                                  prop.getStorageTypeValueOverride());
@@ -2085,21 +2085,8 @@ static void generateValueRangeStartAndEnd(
 }
 
 static std::string generateTypeForGetter(const NamedTypeConstraint &value) {
-  std::string str = "::mlir::Value";
-  /// If the CPPClassName is not a fully qualified type. Uses of types
-  /// across Dialect fail because they are not in the correct namespace. So we
-  /// dont generate TypedValue unless the type is fully qualified.
-  /// getCPPClassName doesn't return the fully qualified path for
-  /// `mlir::pdl::OperationType` see
-  /// https://github.com/llvm/llvm-project/issues/57279.
-  /// Adaptor will have values that are not from the type of their operation and
-  /// this is expected, so we dont generate TypedValue for Adaptor
-  if (value.constraint.getCPPClassName() != "::mlir::Type" &&
-      StringRef(value.constraint.getCPPClassName()).starts_with("::"))
-    str = llvm::formatv("::mlir::TypedValue<{0}>",
-                        value.constraint.getCPPClassName())
-              .str();
-  return str;
+  return llvm::formatv("::mlir::TypedValue<{0}>", value.constraint.getCppType())
+      .str();
 }
 
 // Generates the named operand getter methods for the given Operator `op` and
@@ -2781,11 +2768,10 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
          << "u && \"mismatched number of return types\");";
   body << "\n    " << builderOpState << ".addTypes(inferredReturnTypes);";
 
-  body << formatv(R"(
-  } else {{
+  body << R"(
+  } else {
     ::llvm::report_fatal_error("Failed to infer result type(s).");
-  })",
-                  opClass.getClassName(), builderOpState);
+  })";
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
@@ -3895,7 +3881,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
 
     auto getSuccessor =
         formatv(successor.isVariadic() ? "{0}()" : getSingleSuccessor,
-                successor.name, it.index())
+                successor.name)
             .str();
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
@@ -3944,7 +3930,7 @@ void OpEmitter::genTraits() {
   // For single result ops with a known specific type, generate a OneTypedResult
   // trait.
   if (numResults == 1 && numVariadicResults == 0) {
-    auto cppName = op.getResults().begin()->constraint.getCPPClassName();
+    auto cppName = op.getResults().begin()->constraint.getCppType();
     opClass.addTrait("::mlir::OpTrait::OneTypedResult<" + cppName + ">::Impl");
   }
 
@@ -4517,7 +4503,7 @@ void OpOperandAdaptorEmitter::emitDef(
 /// Emit the class declarations or definitions for the given op defs.
 static void
 emitOpClasses(const RecordKeeper &recordKeeper,
-              const std::vector<Record *> &defs, raw_ostream &os,
+              const std::vector<const Record *> &defs, raw_ostream &os,
               const StaticVerifierFunctionEmitter &staticVerifierEmitter,
               bool emitDecl) {
   if (defs.empty())
@@ -4554,7 +4540,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &recordKeeper,
-                             const std::vector<Record *> &defs,
+                             const std::vector<const Record *> &defs,
                              raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
@@ -4576,7 +4562,7 @@ static void emitOpClassDecls(const RecordKeeper &recordKeeper,
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &recordKeeper,
-                            ArrayRef<Record *> defs, raw_ostream &os,
+                            ArrayRef<const Record *> defs, raw_ostream &os,
                             StringRef constraintPrefix = "") {
   if (defs.empty())
     return;
@@ -4597,12 +4583,12 @@ static void emitOpClassDefs(const RecordKeeper &recordKeeper,
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClassDecls(recordKeeper, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
   if (defs.empty() || shardedDefs.size() <= 1)
     return false;
@@ -4625,9 +4611,9 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 /// Generate the dialect op registration hook and the op class definitions for a
 /// shard of ops.
 static void emitOpDefShard(const RecordKeeper &recordKeeper,
-                           ArrayRef<Record *> defs, const Dialect &dialect,
-                           unsigned shardIndex, unsigned shardCount,
-                           raw_ostream &os) {
+                           ArrayRef<const Record *> defs,
+                           const Dialect &dialect, unsigned shardIndex,
+                           unsigned shardCount, raw_ostream &os) {
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
@@ -4651,7 +4637,7 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
                 "Op Registration Hook")
      << formatv(opRegistrationHook, dialect.getCppNamespace(),
                 dialect.getCppClassName(), shardIndex);
-  for (Record *def : defs) {
+  for (const Record *def : defs) {
     os << formatv("  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
                   Operator(def).getQualCppClassName());
   }
@@ -4665,8 +4651,8 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 
   // If no shard was requested, emit the regular op list and class definitions.
@@ -4675,7 +4661,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
       IfDefScope scope("GET_OP_LIST", os);
       interleave(
           defs, os,
-          [&](Record *def) { os << Operator(def).getQualCppClassName(); },
+          [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {

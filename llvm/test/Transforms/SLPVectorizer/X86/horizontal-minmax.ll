@@ -1016,15 +1016,13 @@ define i32 @maxi8_wrong_parent(i32) {
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @arr, align 16
 ; THRESH-NEXT:    br label [[PP:%.*]]
 ; THRESH:       pp:
-; THRESH-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
-; THRESH-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; THRESH-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-; THRESH-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP9]])
-; THRESH-NEXT:    ret i32 [[TMP10]]
+; THRESH-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 4), align 16
+; THRESH-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP4]], i64 4)
+; THRESH-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP2]], i64 0)
+; THRESH-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP3]], i64 2)
+; THRESH-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP7]])
+; THRESH-NEXT:    ret i32 [[TMP8]]
 ;
   %2 = load i32, ptr @arr, align 16
   %3 = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 1), align 4

@@ -28,4 +28,5 @@ add_llvm_unittest(GlobalISelTests
   GISelUtilsTest.cpp
   GISelAliasTest.cpp
   CallLowering.cpp
+  InstructionSelectTest.cpp
   )

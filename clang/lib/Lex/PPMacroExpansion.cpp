@@ -290,7 +290,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
        State ? State->getActiveModuleMacros(*this, II) : std::nullopt)
     Active.insert(MM);
   llvm::DenseSet<ModuleMacro*> Visited;
-  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf.begin(), Leaf.end());
+  llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
   while (!Worklist.empty()) {
     auto *MM = Worklist.pop_back_val();
     llvm::errs() << " ModuleMacro " << MM << " "

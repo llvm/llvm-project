@@ -630,6 +630,12 @@ public:
     return false;
   }
 
+  /// Returns true if RC is a class/subclass of general purpose register.
+  virtual bool
+  isGeneralPurposeRegisterClass(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).
@@ -1196,15 +1202,6 @@ public:
   /// in certain cases.
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
-  }
-
-  /// Returns the Largest Super Class that is being initialized. There
-  /// should be a Pseudo Instruction implemented for the super class
-  /// that is being returned to ensure that Init Undef can apply the
-  /// initialization correctly.
-  virtual const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const {
-    llvm_unreachable("Unexpected target register class.");
   }
 
   /// Returns if the architecture being targeted has the required Pseudo

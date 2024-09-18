@@ -312,7 +312,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       DL.getTypeAllocSize(Init->getType()->getArrayElementType());
   auto MaskIdx = [&](Value *Idx) {
     if (!GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0) {
-      Value *Mask = ConstantInt::get(Idx->getType(), -1);
+      Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, llvm::countr_zero(ElementSize));
       Idx = Builder.CreateAnd(Idx, Mask);
     }
@@ -1725,7 +1725,8 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
   // preferable because it allows the C2 << Y expression to be hoisted out of a
   // loop if Y is invariant and X is not.
   if (Shift->hasOneUse() && C1.isZero() && Cmp.isEquality() &&
-      !Shift->isArithmeticShift() && !isa<Constant>(Shift->getOperand(0))) {
+      !Shift->isArithmeticShift() &&
+      ((!IsShl && C2.isOne()) || !isa<Constant>(Shift->getOperand(0)))) {
     // Compute C2 << Y.
     Value *NewShift =
         IsShl ? Builder.CreateLShr(And->getOperand(1), Shift->getOperand(1))
@@ -3076,6 +3077,12 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
   }
 
+  if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
+      C.isNonNegative() && (C - *C2).isNonNegative() &&
+      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
+    return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
+                        ConstantInt::get(Ty, C - *C2));
+
   auto CR = ConstantRange::makeExactICmpRegion(Pred, C).subtract(*C2);
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
@@ -3529,6 +3536,52 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       Value *And = Builder.CreateAnd(BOp0, NotBOC);
       return new ICmpInst(Pred, And, NotBOC);
     }
+    // (icmp eq (or (select cond, 0, NonZero), Other), 0)
+    //  -> (and cond, (icmp eq Other, 0))
+    // (icmp ne (or (select cond, NonZero, 0), Other), 0)
+    //  -> (or cond, (icmp ne Other, 0))
+    Value *Cond, *TV, *FV, *Other, *Sel;
+    if (C.isZero() &&
+        match(BO,
+              m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
+                                           m_Select(m_Value(Cond), m_Value(TV),
+                                                    m_Value(FV))),
+                              m_Value(Other))))) {
+      const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+      // Easy case is if eq/ne matches whether 0 is trueval/falseval.
+      if (Pred == ICmpInst::ICMP_EQ
+              ? (match(TV, m_Zero()) && isKnownNonZero(FV, Q))
+              : (match(FV, m_Zero()) && isKnownNonZero(TV, Q))) {
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            Cond);
+      }
+      // Harder case is if eq/ne matches whether 0 is falseval/trueval. In this
+      // case we need to invert the select condition so we need to be careful to
+      // avoid creating extra instructions.
+      // (icmp ne (or (select cond, 0, NonZero), Other), 0)
+      //  -> (or (not cond), (icmp ne Other, 0))
+      // (icmp eq (or (select cond, NonZero, 0), Other), 0)
+      //  -> (and (not cond), (icmp eq Other, 0))
+      //
+      // Only do this if the inner select has one use, in which case we are
+      // replacing `select` with `(not cond)`. Otherwise, we will create more
+      // uses. NB: Trying to freely invert cond doesn't make sense here, as if
+      // cond was freely invertable, the select arms would have been inverted.
+      if (Sel->hasOneUse() &&
+          (Pred == ICmpInst::ICMP_EQ
+               ? (match(FV, m_Zero()) && isKnownNonZero(TV, Q))
+               : (match(TV, m_Zero()) && isKnownNonZero(FV, Q)))) {
+        Value *NotCond = Builder.CreateNot(Cond);
+        Value *Cmp = Builder.CreateICmp(
+            Pred, Other, Constant::getNullValue(Other->getType()));
+        return BinaryOperator::Create(
+            Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or, Cmp,
+            NotCond);
+      }
+    }
     break;
   }
   case Instruction::UDiv:
@@ -3965,6 +4018,16 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
       NewPredicate = ICmpInst::ICMP_ULE;
     break;
 
+  case ICmpInst::ICMP_ULT:
+    if (C.ugt(1))
+      NewPredicate = ICmpInst::ICMP_UGE;
+    break;
+
+  case ICmpInst::ICMP_UGT:
+    if (!C.isZero() && !C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_ULT;
+    break;
+
   default:
     break;
   }
@@ -4146,6 +4209,14 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
   if (Op2)
     CI = dyn_cast<ConstantInt>(Op2);
 
+  auto Simplifies = [&](Value *Op, unsigned Idx) {
+    // A comparison of ucmp/scmp with a constant will fold into an icmp.
+    const APInt *Dummy;
+    return Op ||
+           (isa<CmpIntrinsic>(SI->getOperand(Idx)) &&
+            SI->getOperand(Idx)->hasOneUse() && match(RHS, m_APInt(Dummy)));
+  };
+
   // We only want to perform this transformation if it will not lead to
   // additional code. This is true if either both sides of the select
   // fold to a constant (in which case the icmp is replaced with a select
@@ -4156,7 +4227,7 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
   bool Transform = false;
   if (Op1 && Op2)
     Transform = true;
-  else if (Op1 || Op2) {
+  else if (Simplifies(Op1, 1) || Simplifies(Op2, 2)) {
     // Local case
     if (SI->hasOneUse())
       Transform = true;
@@ -7980,6 +8051,67 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
+/// Optimize sqrt(X) compared with zero.
+static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *X;
+  if (!match(I.getOperand(0), m_Sqrt(m_Value(X))))
+    return nullptr;
+
+  if (!match(I.getOperand(1), m_PosZeroFP()))
+    return nullptr;
+
+  auto ReplacePredAndOp0 = [&](FCmpInst::Predicate P) {
+    I.setPredicate(P);
+    return IC.replaceOperand(I, 0, X);
+  };
+
+  // Clear ninf flag if sqrt doesn't have it.
+  if (!cast<Instruction>(I.getOperand(0))->hasNoInfs())
+    I.setHasNoInfs(false);
+
+  switch (I.getPredicate()) {
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_UGE:
+    // sqrt(X) < 0.0 --> false
+    // sqrt(X) u>= 0.0 --> true
+    llvm_unreachable("fcmp should have simplified");
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_ULE:
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UNE:
+    // sqrt(X) u< 0.0 --> X u< 0.0
+    // sqrt(X) u<= 0.0 --> X u<= 0.0
+    // sqrt(X) > 0.0 --> X > 0.0
+    // sqrt(X) >= 0.0 --> X >= 0.0
+    // sqrt(X) == 0.0 --> X == 0.0
+    // sqrt(X) u!= 0.0 --> X u!= 0.0
+    return IC.replaceOperand(I, 0, X);
+
+  case FCmpInst::FCMP_OLE:
+    // sqrt(X) <= 0.0 --> X == 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OEQ);
+  case FCmpInst::FCMP_UGT:
+    // sqrt(X) u> 0.0 --> X u!= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_UNE);
+  case FCmpInst::FCMP_UEQ:
+    // sqrt(X) u== 0.0 --> X u<= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_ULE);
+  case FCmpInst::FCMP_ONE:
+    // sqrt(X) != 0.0 --> X > 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OGT);
+  case FCmpInst::FCMP_ORD:
+    // !isnan(sqrt(X)) --> X >= 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_OGE);
+  case FCmpInst::FCMP_UNO:
+    // isnan(sqrt(X)) --> X u< 0.0
+    return ReplacePredAndOp0(FCmpInst::FCMP_ULT);
+  default:
+    llvm_unreachable("Unexpected predicate!");
+  }
+}
+
 static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   CmpInst::Predicate Pred = I.getPredicate();
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -8245,6 +8377,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
     return R;
 
   if (match(Op0, m_FNeg(m_Value(X)))) {

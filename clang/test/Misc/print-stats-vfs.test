@@ -1,0 +1,17 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -fsyntax-only %t/tu.c -I %t/dir1 -I %t/dir2 -print-stats 2>&1 | FileCheck %s
+
+//--- tu.c
+#include "header.h"
+//--- dir1/other.h
+//--- dir2/header.h
+
+// CHECK:      *** Virtual File System Stats:
+// CHECK-NEXT: {{[[:digit:]]+}} status() calls
+// CHECK-NEXT: {{[[:digit:]]+}} openFileForRead() calls
+// CHECK-NEXT: {{[[:digit:]]+}} dir_begin() calls
+// CHECK-NEXT: {{[[:digit:]]+}} getRealPath() calls
+// CHECK-NEXT: {{[[:digit:]]+}} exists() calls
+// CHECK-NEXT: {{[[:digit:]]+}} isLocal() calls

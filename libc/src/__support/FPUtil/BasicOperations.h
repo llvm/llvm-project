@@ -321,12 +321,8 @@ totalorder(T x, T y) {
   StorageType x_u = x_bits.uintval();
   StorageType y_u = y_bits.uintval();
 
-  using signed_t = make_integral_or_big_int_signed_t<StorageType>;
-  signed_t x_signed = static_cast<signed_t>(x_u);
-  signed_t y_signed = static_cast<signed_t>(y_u);
-
-  bool both_neg = (x_u & y_u & FPBits::SIGN_MASK) != 0;
-  return x_signed == y_signed || ((x_signed <= y_signed) != both_neg);
+  bool has_neg = ((x_u | y_u) & FPBits::SIGN_MASK) != 0;
+  return x_u == y_u || ((x_u < y_u) != has_neg);
 }
 
 template <typename T>
@@ -377,7 +373,8 @@ setpayload(T &res, T pl) {
   }
 
   using StorageType = typename FPBits::StorageType;
-  StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
+  StorageType v(pl_bits.get_explicit_mantissa() >>
+                (FPBits::FRACTION_LEN - pl_exp));
 
   if constexpr (IsSignaling)
     res = FPBits::signaling_nan(Sign::POS, v).get_val();

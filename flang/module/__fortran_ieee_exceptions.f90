@@ -11,7 +11,7 @@
 ! here under another name so that IEEE_ARITHMETIC can USE it and export its
 ! declarations without clashing with a non-intrinsic module in a program.
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 module __fortran_ieee_exceptions
   use __fortran_builtins, only: &
@@ -129,7 +129,7 @@ module __fortran_ieee_exceptions
   public :: ieee_set_modes
 
   interface ieee_set_status
-    subroutine ieee_set_status_0(status)
+    pure subroutine ieee_set_status_0(status)
       import ieee_status_type
       type(ieee_status_type), intent(in) :: status
     end subroutine ieee_set_status_0

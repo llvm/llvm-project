@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_DIVTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_DIVTEST_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"

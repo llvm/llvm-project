@@ -22,6 +22,7 @@ class Context;
 class Value;
 class User;
 class CallBase;
+class CallBrInst;
 class PHINode;
 
 /// Represents a Def-use/Use-def edge in SandboxIR.
@@ -60,7 +61,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
+  void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };

@@ -77,6 +77,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    libc.hdr.types.stack_t
 )
 
 add_entrypoint_object(
@@ -126,6 +127,7 @@ add_entrypoint_object(
   DEPENDS
     .sigaction
     libc.hdr.signal_macros
+    libc.hdr.types.sighandler_t
 )
 
 add_entrypoint_object(

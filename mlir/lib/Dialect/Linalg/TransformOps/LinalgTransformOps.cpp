@@ -1117,10 +1117,8 @@ transform::InterchangeOp::applyToOne(transform::TransformRewriter &rewriter,
            << ") different from the number of loops in the target operation ("
            << numLoops << ")";
   }
-  FailureOr<GenericOp> res =
-      interchangeGenericOp(rewriter, target,
-                           SmallVector<unsigned>(interchangeVector.begin(),
-                                                 interchangeVector.end()));
+  FailureOr<GenericOp> res = interchangeGenericOp(
+      rewriter, target, SmallVector<unsigned>(interchangeVector));
   if (failed(res))
     return emitDefiniteFailure() << "failed to apply";
   results.push_back(res->getOperation());
@@ -3454,7 +3452,7 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   if (!getDisableMultiReductionToContractPatterns())
     vector::populateVectorReductionToContractPatterns(patterns);
 
-  vector::populateSinkVectorBroadcastPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 
   patterns.add<linalg::LinalgCopyVTRForwardingPattern,
                linalg::LinalgCopyVTWForwardingPattern>(ctx,
@@ -3847,6 +3845,47 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
 
   if (supported && failed(maybeTransformed)) {
     return emitSilenceableError() << "apply Winograd Conv2D failed";
+  }
+
+  results.push_back(*maybeTransformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  FailureOr<Operation *> maybeTransformed = failure();
+  bool supported =
+      TypeSwitch<Operation *, bool>(target)
+          .Case([&](linalg::WinogradFilterTransformOp op) {
+            maybeTransformed = decomposeWinogradFilterTransformOp(rewriter, op);
+            return true;
+          })
+          .Case([&](linalg::WinogradInputTransformOp op) {
+            maybeTransformed = decomposeWinogradInputTransformOp(rewriter, op);
+            return true;
+          })
+          .Case([&](linalg::WinogradOutputTransformOp op) {
+            maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
+            return true;
+          })
+          .Default([&](Operation *op) { return false; });
+
+  if (!supported) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "this operation is not supported to decompose into other operations";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+
+  if (supported && failed(maybeTransformed)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "decompose Winograd operations failed";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
   }
 
   results.push_back(*maybeTransformed);

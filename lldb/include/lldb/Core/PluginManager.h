@@ -194,7 +194,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const lldb_private::SaveCoreOptions &core_options);
+                         lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(

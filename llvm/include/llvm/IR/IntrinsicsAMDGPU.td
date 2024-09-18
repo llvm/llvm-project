@@ -799,16 +799,11 @@ class AMDGPUDimNoSampleProfile<string opmod,
 
 class AMDGPUDimAtomicProfile<string opmod,
                              AMDGPUDimProps dim,
-                             list<AMDGPUArg> dataargs> : AMDGPUDimProfile<opmod, dim> {
-  let RetTypes = [llvm_anyint_ty];
+                             list<AMDGPUArg> dataargs,
+                             LLVMType rettype> : AMDGPUDimProfile<opmod, dim> {
+  let RetTypes = [rettype];
   let DataArgs = dataargs;
   let IsAtomic = true;
-}
-
-class AMDGPUDimAtomicFloatProfile<string opmod, AMDGPUDimProps dim,
-                                  list<AMDGPUArg> dataargs>
-    : AMDGPUDimAtomicProfile<opmod, dim, dataargs> {
-  let RetTypes = [llvm_anyfloat_ty];
 }
 
 class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim>
@@ -1023,26 +1018,24 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
 //////////////////////////////////////////////////////////////////////////
 defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   multiclass AMDGPUImageDimAtomicX<string opmod, list<AMDGPUArg> dataargs,
-                                   int isFloat = 0> {
+                                   LLVMType rettype = llvm_anyint_ty> {
         foreach dim = AMDGPUDims.All in {
-          def !strconcat(NAME, "_", dim.Name): AMDGPUImageDimIntrinsic<
-              !if (isFloat, AMDGPUDimAtomicFloatProfile<opmod, dim, dataargs>,
-                   AMDGPUDimAtomicProfile<opmod, dim, dataargs>),
-              [], [SDNPMemOperand]>;
+          def !strconcat(NAME, "_", dim.Name):
+            AMDGPUImageDimIntrinsic<AMDGPUDimAtomicProfile<opmod, dim, dataargs, rettype>,
+            [], [SDNPMemOperand]>;
         }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod, int isFloat = 0> {
-    defm ""
-        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">],
-                                isFloat>;
-  }
+  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> :
+    AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
 
-  multiclass AMDGPUImageDimFloatAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, 1 /*isFloat*/>;
-  }
+  multiclass AMDGPUImageDimFloatAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
 
-  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAtomic<"ATOMIC_SWAP">;
+  multiclass AMDGPUImageDimAnyAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
+
+  defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAnyAtomic<"ATOMIC_SWAP">;
   defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;
   defm int_amdgcn_image_atomic_sub : AMDGPUImageDimAtomic<"ATOMIC_SUB">;
   defm int_amdgcn_image_atomic_smin : AMDGPUImageDimAtomic<"ATOMIC_SMIN">;
@@ -1723,6 +1716,15 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS;
 
+def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // offset (imm)
+   llvm_i32_ty],       // len (SGPR/imm)
+  [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<0>,
+  ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
+
 } // defset AMDGPUBufferIntrinsics
 
 // Uses that do not set the done bit should set IntrWriteMem on the
@@ -2343,6 +2345,8 @@ def int_amdgcn_buffer_wbinvl1_vol :
 // VI Intrinsics
 //===----------------------------------------------------------------------===//
 
+// The llvm.amdgcn.mov.dpp.i32 intrinsic represents the mov.dpp operation in AMDGPU.
+// This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.i32.
 // llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 def int_amdgcn_mov_dpp :
   Intrinsic<[llvm_anyint_ty],
@@ -2352,6 +2356,10 @@ def int_amdgcn_mov_dpp :
              ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
 
+// The llvm.amdgcn.update.dpp.i32 intrinsic represents the update.dpp operation in AMDGPU.
+// It takes an old value, a source operand, a DPP control operand, a row mask, a bank mask, and a bound control.
+// This operation is equivalent to a sequence of v_mov_b32 operations.
+// It is preferred over llvm.amdgcn.mov.dpp.i32 for future use.
 // llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 // Should be equivalent to:
 // v_mov_b32 <dest> <old>
@@ -2683,6 +2691,14 @@ def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
+def int_amdgcn_s_prefetch_data :
+  Intrinsic<[],
+  [llvm_anyptr_ty, // Pointer to a constant/global memory
+   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
@@ -2903,8 +2919,6 @@ def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
 // gfx908 intrinsics
 // ===----------------------------------------------------------------------===//
 
-def int_amdgcn_global_atomic_fadd : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-
 // llvm.amdgcn.mfma.*.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
 class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
@@ -2943,7 +2957,6 @@ def int_amdgcn_mfma_f32_16x16x8bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v
 
 def int_amdgcn_global_atomic_fmin : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fadd   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmin   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
@@ -2989,10 +3002,6 @@ multiclass AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> {
   foreach kind = ["bf8_bf8", "bf8_fp8", "fp8_bf8", "fp8_fp8"] in
     def NAME#"_"#kind : AMDGPUMFp8SmfmacIntrinsic<DestTy>;
 }
-
-// bf16 atomics use v2i16 argument since there is no bf16 data type in the llvm.
-def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUAtomicRtn<llvm_v2i16_ty>;
-def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUAtomicRtn<llvm_v2i16_ty>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics940 = {
 def int_amdgcn_mfma_i32_16x16x32_i8     : AMDGPUMfmaIntrinsic<llvm_v4i32_ty,  llvm_i64_ty>;

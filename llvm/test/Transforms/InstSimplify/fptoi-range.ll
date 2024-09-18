@@ -32,12 +32,30 @@ define i1 @f16_si16_max2(half %f) {
   ret i1 %c
 }
 
+define i1 @f16_si128_max2(half %f) {
+; CHECK-LABEL: @f16_si128_max2(
+; CHECK-NEXT:    ret i1 false
+;
+  %i = fptosi half %f to i128
+  %c = icmp sgt i128 %i, 65504
+  ret i1 %c
+}
+
 define i1 @f16_si_min1(half %f) {
 ; CHECK-LABEL: @f16_si_min1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %i = fptosi half %f to i32
   %c = icmp sge i32 %i, -65504
+  ret i1 %c
+}
+
+define i1 @f16_si128_min1(half %f) {
+; CHECK-LABEL: @f16_si128_min1(
+; CHECK-NEXT:    ret i1 true
+;
+  %i = fptosi half %f to i128
+  %c = icmp sge i128 %i, -65504
   ret i1 %c
 }
 

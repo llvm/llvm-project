@@ -67,9 +67,7 @@ static bool canAdvanceAssignment(AssignedLevel Level) {
 static void updateAssignmentLevel(
     const FieldDecl *Field, const Expr *Init, const CXXConstructorDecl *Ctor,
     llvm::DenseMap<const FieldDecl *, AssignedLevel> &AssignedFields) {
-  auto It = AssignedFields.find(Field);
-  if (It == AssignedFields.end())
-    It = AssignedFields.insert({Field, AssignedLevel::None}).first;
+  auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
 
   if (!canAdvanceAssignment(It->second))
     // fast path for already decided field.

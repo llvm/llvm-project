@@ -33,7 +33,7 @@ define i32 @foo2(ptr %arg) {
   store ptr %arg, ptr %arg.indirect_addr
   call void @llvm.dbg.declare(metadata ptr %arg.indirect_addr, metadata !25, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2)), !dbg !40
   ; CHECK-LABEL: @foo2
-  ; CHECK-NEXT:     #dbg_value(ptr undef, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2),
+  ; CHECK-NEXT:     #dbg_value(ptr poison, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2),
   %val = load i32, ptr %arg
   ret i32 %val
 }

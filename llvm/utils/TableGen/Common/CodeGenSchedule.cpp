@@ -14,6 +14,7 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
+#include "Utils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -42,7 +43,7 @@ namespace {
 
 // (instrs a, b, ...) Evaluate and union all arguments. Identical to AddOp.
 struct InstrsOp : public SetTheory::Operator {
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ST.evaluate(Expr->arg_begin(), Expr->arg_end(), Elts, Loc);
   }
@@ -74,7 +75,7 @@ struct InstRegexOp : public SetTheory::Operator {
     return Result;
   }
 
-  void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
+  void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ArrayRef<const CodeGenInstruction *> Instructions =
         Target.getInstructionsByEnumValue();
@@ -533,17 +534,9 @@ void CodeGenSchedModels::collectOptionalProcessorInfo() {
 /// Gather all processor models.
 void CodeGenSchedModels::collectProcModels() {
   RecVec ProcRecords = Records.getAllDerivedDefinitions("Processor");
-  llvm::sort(ProcRecords, LessRecordFieldName());
 
-  // Check for duplicated names.
-  auto I = std::adjacent_find(ProcRecords.begin(), ProcRecords.end(),
-                              [](const Record *Rec1, const Record *Rec2) {
-                                return Rec1->getValueAsString("Name") ==
-                                       Rec2->getValueAsString("Name");
-                              });
-  if (I != ProcRecords.end())
-    PrintFatalError((*I)->getLoc(), "Duplicate processor name " +
-                                        (*I)->getValueAsString("Name"));
+  // Sort and check duplicate Processor name.
+  sortAndReportDuplicates(ProcRecords, "Processor");
 
   // Reserve space because we can. Reallocation would be ok.
   ProcModels.reserve(ProcRecords.size() + 1);
@@ -616,7 +609,7 @@ void CodeGenSchedModels::collectSchedRW() {
   // Find all SchedReadWrites referenced by instruction defs.
   RecVec SWDefs, SRDefs;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    Record *SchedDef = Inst->TheDef;
+    const Record *SchedDef = Inst->TheDef;
     if (SchedDef->isValueUnset("SchedRW"))
       continue;
     RecVec RWs = SchedDef->getValueAsListOfDefs("SchedRW");
@@ -993,8 +986,8 @@ CodeGenSchedModels::createSchedClassName(Record *ItinClassDef,
   return Name;
 }
 
-std::string CodeGenSchedModels::createSchedClassName(const RecVec &InstDefs) {
-
+std::string
+CodeGenSchedModels::createSchedClassName(const ConstRecVec &InstDefs) {
   std::string Name;
   ListSeparator LS("_");
   for (const Record *InstDef : InstDefs) {
@@ -1046,13 +1039,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   // intersects with an existing class via a previous InstRWDef. Instrs that do
   // not intersect with an existing class refer back to their former class as
   // determined from ItinDef or SchedRW.
-  SmallMapVector<unsigned, SmallVector<Record *, 8>, 4> ClassInstrs;
+  SmallMapVector<unsigned, SmallVector<const Record *, 8>, 4> ClassInstrs;
   // Sort Instrs into sets.
-  const RecVec *InstDefs = Sets.expand(InstRWDef);
+  const ConstRecVec *InstDefs = Sets.expand(InstRWDef);
   if (InstDefs->empty())
     PrintFatalError(InstRWDef->getLoc(), "No matching instruction opcodes");
 
-  for (Record *InstDef : *InstDefs) {
+  for (const Record *InstDef : *InstDefs) {
     InstClassMapTy::const_iterator Pos = InstrClassMap.find(InstDef);
     if (Pos == InstrClassMap.end())
       PrintFatalError(InstDef->getLoc(), "No sched class for instruction.");
@@ -1063,16 +1056,17 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   // the Instrs to it.
   for (auto &Entry : ClassInstrs) {
     unsigned OldSCIdx = Entry.first;
-    ArrayRef<Record *> InstDefs = Entry.second;
+    ArrayRef<const Record *> InstDefs = Entry.second;
     // If the all instrs in the current class are accounted for, then leave
     // them mapped to their old class.
     if (OldSCIdx) {
       const RecVec &RWDefs = SchedClasses[OldSCIdx].InstRWs;
       if (!RWDefs.empty()) {
-        const RecVec *OrigInstDefs = Sets.expand(RWDefs[0]);
-        unsigned OrigNumInstrs = count_if(*OrigInstDefs, [&](Record *OIDef) {
-          return InstrClassMap[OIDef] == OldSCIdx;
-        });
+        const ConstRecVec *OrigInstDefs = Sets.expand(RWDefs[0]);
+        unsigned OrigNumInstrs =
+            count_if(*OrigInstDefs, [&](const Record *OIDef) {
+              return InstrClassMap[OIDef] == OldSCIdx;
+            });
         if (OrigNumInstrs == InstDefs.size()) {
           assert(SchedClasses[OldSCIdx].ProcIndices[0] == 0 &&
                  "expected a generic SchedClass");
@@ -1132,7 +1126,7 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       }
     }
     // Map each Instr to this new class.
-    for (Record *InstDef : InstDefs)
+    for (const Record *InstDef : InstDefs)
       InstrClassMap[InstDef] = SCIdx;
     SC.InstRWs.push_back(InstRWDef);
   }
@@ -1269,8 +1263,8 @@ void CodeGenSchedModels::inferFromInstRWs(unsigned SCIdx) {
   for (unsigned I = 0, E = SchedClasses[SCIdx].InstRWs.size(); I != E; ++I) {
     assert(SchedClasses[SCIdx].InstRWs.size() == E && "InstrRWs was mutated!");
     Record *Rec = SchedClasses[SCIdx].InstRWs[I];
-    const RecVec *InstDefs = Sets.expand(Rec);
-    RecIter II = InstDefs->begin(), IE = InstDefs->end();
+    const std::vector<const Record *> *InstDefs = Sets.expand(Rec);
+    ConstRecIter II = InstDefs->begin(), IE = InstDefs->end();
     for (; II != IE; ++II) {
       if (InstrClassMap[*II] == SCIdx)
         break;

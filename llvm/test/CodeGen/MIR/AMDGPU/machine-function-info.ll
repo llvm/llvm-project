@@ -273,12 +273,15 @@ define amdgpu_cs void @wwm_reserved_regs(ptr addrspace(1) %ptr, <4 x i32> inreg 
   %ld1 = load volatile i32, ptr addrspace(1) %ptr
   %inactive0 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld1, i32 0)
   %inactive1 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld0, i32 0)
-  store volatile i32 %inactive0, ptr addrspace(1) %ptr
-  store volatile i32 %inactive1, ptr addrspace(1) %ptr
+  %wwm0 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %inactive0)
+  %wwm1 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %inactive1)
+  store volatile i32 %wwm0, ptr addrspace(1) %ptr
+  store volatile i32 %wwm1, ptr addrspace(1) %ptr
   ret void
 }
 
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #6
+declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #6
 
 attributes #0 = { "no-signed-zeros-fp-math" = "true" }
 attributes #1 = { "amdgpu-dx10-clamp" = "false" }

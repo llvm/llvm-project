@@ -953,6 +953,12 @@ def FeatureRequiredExportPriority : SubtargetFeature<"required-export-priority",
   "Export priority must be explicitly manipulated on GFX11.5"
 >;
 
+def FeatureVmemWriteVgprInOrder : SubtargetFeature<"vmem-write-vgpr-in-order",
+  "HasVmemWriteVgprInOrder",
+  "true",
+  "VMEM instructions of the same type write VGPR results in order"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1123,7 +1129,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
+  FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1136,7 +1143,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
   FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
-  FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
+  FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
+  FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1152,7 +1160,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero
+   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1170,7 +1178,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureNegativeScratchOffsetBug, FeatureGWS, FeatureDefaultComponentZero
+   FeatureNegativeScratchOffsetBug, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1193,7 +1202,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
    FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
-   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
+   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1215,7 +1225,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
    FeatureGWS, FeatureDefaultComponentZero,
    FeatureMaxHardClauseLength32,
-   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -2241,9 +2252,6 @@ def HasDefaultComponentBroadcast
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
-
-def EnableLateCFGStructurize : Predicate<
-  "EnableLateStructurizeCFG">;
 
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
