@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/time_macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
@@ -40,9 +42,7 @@
 #include "src/time/clock_gettime.h"
 #include "src/unistd/fork.h"
 #include "test/IntegrationTest/test.h"
-#include <errno.h>
 #include <pthread.h>
-#include <time.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace rwlock {

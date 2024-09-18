@@ -1,5 +1,5 @@
 header: float.h
-standards: 
+standards:
   - stdc
 macros: []
 types: []

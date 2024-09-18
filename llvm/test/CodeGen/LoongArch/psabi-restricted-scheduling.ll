@@ -25,8 +25,7 @@ define void @foo() nounwind {
 ; MEDIUM_NO_SCH-NEXT:    ld.d $a0, $a0, %got_pc_lo12(G)
 ; MEDIUM_NO_SCH-NEXT:    ld.d $zero, $a0, 0
 ; MEDIUM_NO_SCH-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
-; MEDIUM_NO_SCH-NEXT:    addi.d $a0, $a0, %pc_lo12(.Lg$local)
-; MEDIUM_NO_SCH-NEXT:    ld.d $zero, $a0, 0
+; MEDIUM_NO_SCH-NEXT:    ld.d $zero, $a0, %pc_lo12(.Lg$local)
 ; MEDIUM_NO_SCH-NEXT:    ori $a0, $zero, 1
 ; MEDIUM_NO_SCH-NEXT:    pcaddu18i $ra, %call36(bar)
 ; MEDIUM_NO_SCH-NEXT:    jirl $ra, $ra, 0
@@ -55,8 +54,7 @@ define void @foo() nounwind {
 ; MEDIUM_SCH-NEXT:    ld.d $a0, $a0, %got_pc_lo12(G)
 ; MEDIUM_SCH-NEXT:    ld.d $zero, $a0, 0
 ; MEDIUM_SCH-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
-; MEDIUM_SCH-NEXT:    addi.d $a0, $a0, %pc_lo12(.Lg$local)
-; MEDIUM_SCH-NEXT:    ld.d $zero, $a0, 0
+; MEDIUM_SCH-NEXT:    ld.d $zero, $a0, %pc_lo12(.Lg$local)
 ; MEDIUM_SCH-NEXT:    ori $a0, $zero, 1
 ; MEDIUM_SCH-NEXT:    pcaddu18i $ra, %call36(bar)
 ; MEDIUM_SCH-NEXT:    jirl $ra, $ra, 0
@@ -91,8 +89,7 @@ define void @foo() nounwind {
 ; LARGE_NO_SCH-NEXT:    addi.d $a1, $zero, %pc_lo12(.Lg$local)
 ; LARGE_NO_SCH-NEXT:    lu32i.d $a1, %pc64_lo20(.Lg$local)
 ; LARGE_NO_SCH-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(.Lg$local)
-; LARGE_NO_SCH-NEXT:    add.d $a0, $a1, $a0
-; LARGE_NO_SCH-NEXT:    ld.d $zero, $a0, 0
+; LARGE_NO_SCH-NEXT:    ldx.d $zero, $a1, $a0
 ; LARGE_NO_SCH-NEXT:    ori $a0, $zero, 1
 ; LARGE_NO_SCH-NEXT:    pcalau12i $a1, %got_pc_hi20(bar)
 ; LARGE_NO_SCH-NEXT:    addi.d $ra, $zero, %got_pc_lo12(bar)
@@ -148,8 +145,7 @@ define void @foo() nounwind {
 ; LARGE_SCH-NEXT:    addi.d $a1, $zero, %pc_lo12(.Lg$local)
 ; LARGE_SCH-NEXT:    lu32i.d $a1, %pc64_lo20(.Lg$local)
 ; LARGE_SCH-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(.Lg$local)
-; LARGE_SCH-NEXT:    add.d $a0, $a1, $a0
-; LARGE_SCH-NEXT:    ld.d $zero, $a0, 0
+; LARGE_SCH-NEXT:    ldx.d $zero, $a1, $a0
 ; LARGE_SCH-NEXT:    ori $a0, $zero, 1
 ; LARGE_SCH-NEXT:    pcalau12i $a1, %got_pc_hi20(bar)
 ; LARGE_SCH-NEXT:    addi.d $ra, $zero, %got_pc_lo12(bar)

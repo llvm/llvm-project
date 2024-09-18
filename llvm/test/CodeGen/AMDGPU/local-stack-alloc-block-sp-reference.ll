@@ -161,8 +161,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:  .LBB1_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLATSCR-NEXT:    s_add_i32 s3, s33, 0x3000
-; FLATSCR-NEXT:    s_add_i32 s1, s0, s3
+; FLATSCR-NEXT:    s_add_i32 s3, s33, s0
+; FLATSCR-NEXT:    s_add_i32 s1, s3, 0x3000
 ; FLATSCR-NEXT:    s_add_i32 s0, s0, 1
 ; FLATSCR-NEXT:    s_cmpk_lt_u32 s0, 0x2120
 ; FLATSCR-NEXT:    scratch_store_byte off, v2, s1
@@ -170,8 +170,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %split
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
-; FLATSCR-NEXT:    s_add_i32 s1, s33, 0x3000
-; FLATSCR-NEXT:    s_add_i32 s0, s0, s1
+; FLATSCR-NEXT:    s_add_i32 s1, s33, s0
+; FLATSCR-NEXT:    s_add_i32 s0, s1, 0x3000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s0 offset:208 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x3000

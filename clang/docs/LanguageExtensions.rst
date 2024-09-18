@@ -667,6 +667,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
  T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
+ T __builtin_elementwise_popcount(T x)       return the number of 1 bits in x                                 integer types 
  T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
  T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
  T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
@@ -1483,6 +1484,7 @@ Generic lambda expressions                   __cpp_generic_lambdas            C+
 variable templates                           __cpp_variable_templates         C++14         C++03
 Binary literals                              __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Static assert with no message                __cpp_static_assert >= 201411L   C++17         C++11
 Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
 ``if constexpr``                             __cpp_if_constexpr               C++17         C++11
 fold expressions                             __cpp_fold_expressions           C++17         C++03
@@ -1503,8 +1505,10 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
+Variadic Friends                             __cpp_variadic_friend            C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
@@ -1547,6 +1551,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__builtin_is_implicit_lifetime`` (C++, GNU, Microsoft)
 * ``__builtin_is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__can_pass_in_regs`` (C++)
   Returns whether a class can be passed in registers under the current
@@ -3538,7 +3543,7 @@ the debugging experience.
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
-``__builtin_allow_runtime_check`` return true if the check at the current
+``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
 ``assert`` like checks which can be safely removed by optimizer.
 
@@ -3558,28 +3563,25 @@ program location should be executed. It is expected to be used to implement
 
 **Description**
 
-``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+``__builtin_allow_runtime_check`` is lowered to the `llvm.allow.runtime.check
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
-builtin.
+intrinsic.
 
-The ``__builtin_allow_runtime_check()`` is expected to be used with control
-flow conditions such as in ``if`` to guard expensive runtime checks. The
-specific rules for selecting permitted checks can differ and are controlled by
-the compiler options.
+The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+like ``if`` to guard expensive runtime checks. The return value is determined
+by the following compiler options and may differ per call site:
 
-Flags to control checks:
-* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
-cutoff in range ``[0, 999999]`` to disallow checks in hot code.
-* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
-``[0.0, 1.0]`` representation probability of keeping a check.
-* If both flags are specified, ``-lower-allow-check-random-rate`` takes
-precedence.
-* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
-``true``, allowing all checks.
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
+  code marked by the profile summary with a hotness cutoff in the range
+  ``[0, 999999]`` (a larger N disables more checks).
+* ``-mllvm -lower-allow-check-random-rate=P``: Keep a check with probability P,
+  a floating point number in the range ``[0.0, 1.0]``.
+* If both options are specified, a check is disabled if either condition is satisfied.
+* If neither is specified, all checks are allowed.
 
-Parameter ``kind`` is a string literal representing a user selected kind for
-guarded check. It's unused now. It will enable kind-specific lowering in future.
-E.g. a higher hotness cutoff can be used for more expensive kind of check.
+Parameter ``kind``, currently unused, is a string literal specifying the check
+kind. Future compiler versions may use this to allow for more granular control,
+such as applying different hotness cutoffs to different check kinds.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
@@ -3988,7 +3990,7 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
-``__builin_va_list`` object.
+``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
 
@@ -4322,7 +4324,7 @@ an appropriate value during the emission.
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
-token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
+token `none`. If a user calls `__builtin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
 Source location builtins

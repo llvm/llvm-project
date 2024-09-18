@@ -427,10 +427,6 @@ bool TargetTransformInfo::isNumRegsMajorCostOfLSR() const {
   return TTIImpl->isNumRegsMajorCostOfLSR();
 }
 
-bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
-  return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
-}
-
 bool TargetTransformInfo::shouldDropLSRSolutionIfLessProfitable() const {
   return TTIImpl->shouldDropLSRSolutionIfLessProfitable();
 }
@@ -589,6 +585,11 @@ bool TargetTransformInfo::shouldBuildRelLookupTables() const {
 
 bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
+}
+
+bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
+    Intrinsic::ID ID) const {
+  return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(

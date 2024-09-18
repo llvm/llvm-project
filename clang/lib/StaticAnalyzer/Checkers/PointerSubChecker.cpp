@@ -31,97 +31,10 @@ class PointerSubChecker
   const llvm::StringLiteral Msg_MemRegionDifferent =
       "Subtraction of two pointers that do not point into the same array "
       "is undefined behavior.";
-  const llvm::StringLiteral Msg_LargeArrayIndex =
-      "Using an array index greater than the array size at pointer subtraction "
-      "is undefined behavior.";
-  const llvm::StringLiteral Msg_NegativeArrayIndex =
-      "Using a negative array index at pointer subtraction "
-      "is undefined behavior.";
-  const llvm::StringLiteral Msg_BadVarIndex =
-      "Indexing the address of a variable with other than 1 at this place "
-      "is undefined behavior.";
-
-  /// Check that an array is indexed in the allowed range that is 0 to "one
-  /// after the end". The "array" can be address of a non-array variable.
-  /// @param E Expression of the pointer subtraction.
-  /// @param ElemReg An indexed region in the subtraction expression.
-  /// @param Reg Region of the other side of the expression.
-  bool checkArrayBounds(CheckerContext &C, const Expr *E,
-                        const ElementRegion *ElemReg,
-                        const MemRegion *Reg) const;
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 };
-}
-
-static bool isArrayVar(const MemRegion *R) {
-  while (R) {
-    if (isa<VarRegion>(R))
-      return true;
-    if (const auto *ER = dyn_cast<ElementRegion>(R))
-      R = ER->getSuperRegion();
-    else
-      return false;
-  }
-  return false;
-}
-
-bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
-                                         const ElementRegion *ElemReg,
-                                         const MemRegion *Reg) const {
-  if (!ElemReg)
-    return true;
-
-  const MemRegion *SuperReg = ElemReg->getSuperRegion();
-  if (!isArrayVar(SuperReg))
-    return true;
-
-  auto ReportBug = [&](const llvm::StringLiteral &Msg) {
-    if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-      auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
-      R->addRange(E->getSourceRange());
-      C.emitReport(std::move(R));
-    }
-  };
-
-  ProgramStateRef State = C.getState();
-  SValBuilder &SVB = C.getSValBuilder();
-
-  if (SuperReg == Reg) {
-    // Case like `(&x + 1) - &x`. Only 1 or 0 is allowed as index.
-    if (const llvm::APSInt *I = SVB.getKnownValue(State, ElemReg->getIndex());
-        I && (!I->isOne() && !I->isZero()))
-      ReportBug(Msg_BadVarIndex);
-    return false;
-  }
-
-  DefinedOrUnknownSVal ElemCount =
-      getDynamicElementCount(State, SuperReg, SVB, ElemReg->getElementType());
-  auto IndexTooLarge = SVB.evalBinOp(C.getState(), BO_GT, ElemReg->getIndex(),
-                                     ElemCount, SVB.getConditionType())
-                           .getAs<DefinedOrUnknownSVal>();
-  if (IndexTooLarge) {
-    ProgramStateRef S1, S2;
-    std::tie(S1, S2) = C.getState()->assume(*IndexTooLarge);
-    if (S1 && !S2) {
-      ReportBug(Msg_LargeArrayIndex);
-      return false;
-    }
-  }
-  auto IndexTooSmall = SVB.evalBinOp(State, BO_LT, ElemReg->getIndex(),
-                                     SVB.makeZeroVal(SVB.getArrayIndexType()),
-                                     SVB.getConditionType())
-                           .getAs<DefinedOrUnknownSVal>();
-  if (IndexTooSmall) {
-    ProgramStateRef S1, S2;
-    std::tie(S1, S2) = State->assume(*IndexTooSmall);
-    if (S1 && !S2) {
-      ReportBug(Msg_NegativeArrayIndex);
-      return false;
-    }
-  }
-  return true;
 }
 
 void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
@@ -151,9 +64,11 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   const auto *ElemLR = dyn_cast<ElementRegion>(LR);
   const auto *ElemRR = dyn_cast<ElementRegion>(RR);
 
-  if (!checkArrayBounds(C, B->getLHS(), ElemLR, RR))
+  // Allow cases like "(&x + 1) - &x".
+  if (ElemLR && ElemLR->getSuperRegion() == RR)
     return;
-  if (!checkArrayBounds(C, B->getRHS(), ElemRR, LR))
+  // Allow cases like "&x - (&x + 1)".
+  if (ElemRR && ElemRR->getSuperRegion() == LR)
     return;
 
   const ValueDecl *DiffDeclL = nullptr;

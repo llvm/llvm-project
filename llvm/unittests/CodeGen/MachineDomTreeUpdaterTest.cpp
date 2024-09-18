@@ -73,7 +73,7 @@ public:
     MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 
-  bool parseMIR(StringRef MIRCode, const char *FnName) {
+  bool parseMIR(StringRef MIRCode) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -149,7 +149,7 @@ body:             |
 ...
 )";
 
-  ASSERT_TRUE(parseMIR(MIRString, "f0"));
+  ASSERT_TRUE(parseMIR(MIRString));
 
   auto &MF =
       FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();
@@ -239,7 +239,7 @@ body:             |
 ...
 )";
 
-  ASSERT_TRUE(parseMIR(MIRString, "f0"));
+  ASSERT_TRUE(parseMIR(MIRString));
 
   auto &MF =
       FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();

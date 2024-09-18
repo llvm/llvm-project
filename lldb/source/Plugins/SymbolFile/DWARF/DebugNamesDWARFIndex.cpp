@@ -371,6 +371,7 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
         !ProcessEntry(entry, callback))
       return;
   }
+  m_fallback.GetFullyQualifiedType(context, callback);
 }
 
 bool DebugNamesDWARFIndex::SameParentChain(
@@ -500,5 +501,5 @@ void DebugNamesDWARFIndex::Dump(Stream &s) {
   std::string data;
   llvm::raw_string_ostream os(data);
   m_debug_names_up->dump(os);
-  s.PutCString(os.str());
+  s.PutCString(data);
 }

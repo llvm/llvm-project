@@ -22,6 +22,7 @@ add_llvm_library(omptarget
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
 
+  KernelLanguage/API.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}

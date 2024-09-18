@@ -198,7 +198,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
           uint64_t size = buffer->data[0];
           CUdeviceptr dev_ptr;
           if (CUresult err = cuMemAllocAsync(&dev_ptr, size, memory_stream))
-            handle_error(err);
+            dev_ptr = 0UL;
 
           // Wait until the memory allocation is complete.
           while (cuStreamQuery(memory_stream) == CUDA_ERROR_NOT_READY)

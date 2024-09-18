@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32

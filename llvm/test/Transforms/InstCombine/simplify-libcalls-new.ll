@@ -340,6 +340,94 @@ define void @array_new_align_nothrow_hot_cold() {
   ret void
 }
 
+;; Check that operator __size_returning_new(unsigned long) converted to
+;; __size_returning_new(unsigned long, __hot_cold_t) with a hot or cold attribute.
+; HOTCOLD-LABEL: @size_returning_test()
+define void @size_returning_test() {
+  ;; Attribute cold converted to __hot_cold_t cold value.
+  ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[COLD]])
+  %call = call {ptr, i64} @__size_returning_new(i64 10) #3
+  %p  = extractvalue {ptr, i64} %call, 0
+  call void @dummy(ptr %p)
+  ;; Attribute notcold has no effect.
+  ; HOTCOLD: @__size_returning_new(i64 10)
+  %call1 = call {ptr, i64} @__size_returning_new(i64 10) #4
+  %p1  = extractvalue {ptr, i64} %call1, 0
+  call void @dummy(ptr %p1)
+  ;; Attribute hot converted to __hot_cold_t hot value.
+  ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[HOT]])
+  %call2 = call {ptr, i64} @__size_returning_new(i64 10) #5
+  %p2  = extractvalue {ptr, i64} %call2, 0
+  call void @dummy(ptr %p2)
+  ret void
+}
+
+;; Check that operator __size_returning_new_aligned(unsigned long, std::align_val_t) converted to
+;; __size_returning_new_aligned(unsigned long, std::align_val_t, __hot_cold_t) with a hot or cold attribute.
+; HOTCOLD-LABEL: @size_returning_aligned_test()
+define void @size_returning_aligned_test() {
+  ;; Attribute cold converted to __hot_cold_t cold value.
+  ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[COLD]])
+  %call = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #3
+  %p  = extractvalue {ptr, i64} %call, 0
+  call void @dummy(ptr %p)
+  ;; Attribute notcold has no effect.
+  ; HOTCOLD: @__size_returning_new_aligned(i64 10, i64 8)
+  %call1 = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #4
+  %p1  = extractvalue {ptr, i64} %call1, 0
+  call void @dummy(ptr %p1)
+  ;; Attribute hot converted to __hot_cold_t hot value.
+  ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[HOT]])
+  %call2 = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #5
+  %p2  = extractvalue {ptr, i64} %call2, 0
+  call void @dummy(ptr %p2)
+  ret void
+}
+
+;; Check that __size_returning_new_hot_cold(unsigned long, __hot_cold_t)
+;; optionally has its hint updated.
+; HOTCOLD-LABEL: @size_returning_update_test()
+define void @size_returning_update_test() {
+  ;; Attribute cold converted to __hot_cold_t cold value.
+  ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[PREVHINTCOLD]])
+  %call = call {ptr, i64} @__size_returning_new_hot_cold(i64 10, i8 7) #3
+  %p  = extractvalue {ptr, i64} %call, 0
+  call void @dummy(ptr %p)
+  ;; Attribute notcold converted to __hot_cold_t notcold value.
+  ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[PREVHINTNOTCOLD]])
+  %call1 = call {ptr, i64} @__size_returning_new_hot_cold(i64 10, i8 7) #4
+  %p1 = extractvalue {ptr, i64} %call1, 0
+  call void @dummy(ptr %p1)
+  ;; Attribute hot converted to __hot_cold_t hot value.
+  ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[PREVHINTHOT]])
+  %call2 = call {ptr, i64} @__size_returning_new_hot_cold(i64 10, i8 7) #5
+  %p2 = extractvalue {ptr, i64} %call2, 0
+  call void @dummy(ptr %p2)
+  ret void
+}
+
+;; Check that __size_returning_new_aligned_hot_cold(unsigned long, __hot_cold_t)
+;; optionally has its hint updated.
+; HOTCOLD-LABEL: @size_returning_aligned_update_test()
+define void @size_returning_aligned_update_test() {
+  ;; Attribute cold converted to __hot_cold_t cold value.
+  ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[PREVHINTCOLD]])
+  %call = call {ptr, i64} @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 7) #3
+  %p  = extractvalue {ptr, i64} %call, 0
+  call void @dummy(ptr %p)
+  ;; Attribute notcold converted to __hot_cold_t notcold value.
+  ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[PREVHINTNOTCOLD]])
+  %call1 = call {ptr, i64} @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 7) #4
+  %p1 = extractvalue {ptr, i64} %call1, 0
+  call void @dummy(ptr %p1)
+  ;; Attribute hot converted to __hot_cold_t hot value.
+  ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[PREVHINTHOT]])
+  %call2 = call {ptr, i64} @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 7) #5
+  %p2 = extractvalue {ptr, i64} %call2, 0
+  call void @dummy(ptr %p2)
+  ret void
+}
+
 ;; So that instcombine doesn't optimize out the call.
 declare void @dummy(ptr)
 
@@ -360,6 +448,18 @@ declare ptr @_ZnamSt11align_val_t12__hot_cold_t(i64, i64, i8)
 declare ptr @_ZnamRKSt9nothrow_t12__hot_cold_t(i64, ptr, i8)
 declare ptr @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64, i64, ptr, i8)
 
+
+declare {ptr, i64} @__size_returning_new(i64)
+declare {ptr, i64} @__size_returning_new_hot_cold(i64, i8)
+declare {ptr, i64} @__size_returning_new_aligned(i64, i64)
+declare {ptr, i64} @__size_returning_new_aligned_hot_cold(i64, i64, i8)
+
 attributes #0 = { builtin allocsize(0) "memprof"="cold" }
 attributes #1 = { builtin allocsize(0) "memprof"="notcold" }
 attributes #2 = { builtin allocsize(0) "memprof"="hot" }
+
+;; Use separate attributes for __size_returning_new variants since they are not
+;; treated as builtins.
+attributes #3 = { "memprof" = "cold" }
+attributes #4 = { "memprof" = "notcold" }
+attributes #5 = { "memprof" = "hot" }

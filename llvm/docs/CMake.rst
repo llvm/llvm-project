@@ -218,6 +218,11 @@ used variables that control features of LLVM and enabled subprojects.
   If you are using an IDE such as Visual Studio or Xcode, you should use
   the IDE settings to set the build type.
 
+  Note: on Windows (building with MSVC or clang-cl), CMake's **RelWithDebInfo**
+  setting does not enable the same optimizations as **Release**. Using the
+  **Release** build type with :ref:`LLVM_ENABLE_PDB <llvm_enable_pdb>` set
+  may be a better option.
+
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed when the "install" target is built.
 
@@ -547,6 +552,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_MODULES**:BOOL
   Compile with `Clang Header Modules
   <https://clang.llvm.org/docs/Modules.html>`_.
+
+.. _llvm_enable_pdb:
+
+**LLVM_ENABLE_PDB**:BOOL
+  For Windows builds using MSVC or clang-cl, generate PDB files when
+  :ref:`CMAKE_BUILD_TYPE <cmake_build_type>` is set to Release.
 
 **LLVM_ENABLE_PEDANTIC**:BOOL
   Enable pedantic mode. This disables compiler-specific extensions, if

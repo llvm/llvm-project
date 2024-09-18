@@ -6,8 +6,7 @@ define <32 x i8> @shufflevector_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: shufflevector_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr2, $a0, 0
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_0)
 ; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    ret
     %c = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 8, i32 10, i32 12, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39,
@@ -20,8 +19,7 @@ define <16 x i16> @shufflevector_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: shufflevector_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr2, $a0, 0
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 78
 ; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
@@ -37,8 +35,7 @@ define <8 x i32> @shufflevector_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: shufflevector_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvld $xr2, $a0, 0
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI2_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
 ; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
@@ -53,8 +50,7 @@ define <4 x i64> @shufflevector_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: shufflevector_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    xvld $xr2, $a0, 0
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 238
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 238
 ; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
@@ -69,8 +65,7 @@ define <8 x float> @shufflevector_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: shufflevector_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvld $xr2, $a0, 0
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI4_0)
 ; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret

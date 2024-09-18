@@ -599,3 +599,70 @@ template <class DerT>
 unsigned long DerivedCollection<DerTs...>::index() {}
 
 } // namespace GH72557
+
+namespace GH101735 {
+
+template <class, class>
+concept True = true;
+
+template <typename T>
+class A {
+  template <typename... Ts>
+  void method(Ts&... ts)
+    requires requires (T t) {
+      { t.method(static_cast<Ts &&>(ts)...) } -> True<void>;
+    };
+};
+
+template <typename T>
+template <typename... Ts>
+void A<T>::method(Ts&... ts)
+  requires requires (T t) {
+    { t.method(static_cast<Ts &&>(ts)...) } -> True<void>;
+  } {}
+
+}
+
+namespace GH63782 {
+// GH63782 was also fixed by PR #80594, so let's add a test for it.
+
+template<bool... Vals>
+constexpr bool All = (Vals && ...);
+
+template<bool... Bs>
+class Class {
+  template<typename>
+  requires All<Bs...>
+  void Foo();
+};
+
+template<bool... Bs>
+template<typename>
+requires All<Bs...>
+void Class<Bs...>::Foo() {
+};
+
+} // namespace GH63782
+
+namespace eve {
+// Reduced from the "eve" project
+
+template <typename... Ts>
+struct tuple {
+  template <int I0> requires(I0 <= sizeof...(Ts))
+  constexpr auto split();
+};
+
+template <typename... Ts>
+template <int I0>
+requires(I0 <= sizeof...(Ts))
+constexpr auto tuple<Ts...>::split(){
+  return 0;
+}
+
+int foo() {
+  tuple<int, float> x;
+  return x.split<0>();
+}
+
+} // namespace eve

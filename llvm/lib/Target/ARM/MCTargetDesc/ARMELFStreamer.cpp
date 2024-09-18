@@ -34,6 +34,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
@@ -82,7 +83,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
   void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
   void emitUnwindRaw(int64_t Offset,
                      const SmallVectorImpl<uint8_t> &Opcodes) override;
@@ -164,8 +165,8 @@ void ARMTargetAsmStreamer::emitPad(int64_t Offset) {
   OS << "\t.pad\t#" << Offset << '\n';
 }
 
-void ARMTargetAsmStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                       bool isVector) {
+void ARMTargetAsmStreamer::emitRegSave(
+    const SmallVectorImpl<MCRegister> &RegList, bool isVector) {
   assert(RegList.size() && "RegList should not be empty");
   if (isVector)
     OS << "\t.vsave\t{";
@@ -403,7 +404,7 @@ private:
   void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
   void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
   void emitUnwindRaw(int64_t Offset,
                      const SmallVectorImpl<uint8_t> &Opcodes) override;
@@ -471,7 +472,7 @@ public:
   void emitSetFP(unsigned NewFpReg, unsigned NewSpReg, int64_t Offset = 0);
   void emitMovSP(unsigned Reg, int64_t Offset = 0);
   void emitPad(int64_t Offset);
-  void emitRegSave(const SmallVectorImpl<unsigned> &RegList, bool isVector);
+  void emitRegSave(const SmallVectorImpl<MCRegister> &RegList, bool isVector);
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc) override {
@@ -765,8 +766,8 @@ void ARMTargetELFStreamer::emitPad(int64_t Offset) {
   getStreamer().emitPad(Offset);
 }
 
-void ARMTargetELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                       bool isVector) {
+void ARMTargetELFStreamer::emitRegSave(
+    const SmallVectorImpl<MCRegister> &RegList, bool isVector) {
   getStreamer().emitRegSave(RegList, isVector);
 }
 
@@ -991,6 +992,10 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   // uses the FP_ARMV8_D16 build attribute.
   case ARM::FK_FPV5_SP_D16:
   case ARM::FK_FPV5_D16:
+  // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
+  // FPU, but there are two different names for it depending on the CPU.
+  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
+  case ARM::FK_FP_ARMV8_FULLFP16_D16:
     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
                        /* OverwriteExisting= */ false);
     break;
@@ -1113,6 +1118,25 @@ void ARMTargetELFStreamer::reset() { AttributeSection = nullptr; }
 void ARMTargetELFStreamer::finish() {
   ARMTargetStreamer::finish();
   finishAttributeSection();
+
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  MCContext &Ctx = getStreamer().getContext();
+  auto &Asm = getStreamer().getAssembler();
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
+  }
 }
 
 void ARMELFStreamer::reset() {
@@ -1388,17 +1412,17 @@ void ARMELFStreamer::emitPad(int64_t Offset) {
 
 static std::pair<unsigned, unsigned>
 collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
-              const SmallVectorImpl<unsigned> &RegList, bool IsVector,
+              const SmallVectorImpl<MCRegister> &RegList, bool IsVector,
               uint32_t &Mask_) {
   uint32_t Mask = 0;
   unsigned Count = 0;
   while (Idx > 0) {
-    unsigned Reg = RegList[Idx - 1];
+    MCRegister Reg = RegList[Idx - 1];
     if (Reg == ARM::RA_AUTH_CODE)
       break;
-    Reg = MRI.getEncodingValue(Reg);
-    assert(Reg < (IsVector ? 32U : 16U) && "Register out of range");
-    unsigned Bit = (1u << Reg);
+    unsigned RegEnc = MRI.getEncodingValue(Reg);
+    assert(RegEnc < (IsVector ? 32U : 16U) && "Register out of range");
+    unsigned Bit = (1u << RegEnc);
     if ((Mask & Bit) == 0) {
       Mask |= Bit;
       ++Count;
@@ -1410,7 +1434,7 @@ collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
   return {Idx, Count};
 }
 
-void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+void ARMELFStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                  bool IsVector) {
   uint32_t Mask;
   unsigned Idx, Count;

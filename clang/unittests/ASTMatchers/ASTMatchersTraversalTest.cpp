@@ -1745,6 +1745,18 @@ TEST(MatchBinaryOperator, HasOperands) {
   EXPECT_TRUE(notMatches("void x() { 0 + 1; }", HasOperands));
 }
 
+TEST(MatchBinaryOperator, HasOperandsEnsureOrdering) {
+  StatementMatcher HasOperandsWithBindings = binaryOperator(hasOperands(
+      cStyleCastExpr(has(declRefExpr(hasDeclaration(valueDecl().bind("d"))))),
+      declRefExpr(hasDeclaration(valueDecl(equalsBoundNode("d"))))));
+  EXPECT_TRUE(matches(
+      "int a; int b = ((int) a) + a;",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+  EXPECT_TRUE(matches(
+      "int a; int b = a + ((int) a);",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+}
+
 TEST(Matcher, BinaryOperatorTypes) {
   // Integration test that verifies the AST provides all binary operators in
   // a way we expect.
@@ -5038,6 +5050,19 @@ TEST(ForEachConstructorInitializer, MatchesInitializers) {
   EXPECT_TRUE(matches(
     "struct X { X() : i(42), j(42) {} int i, j; };",
     cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer()))));
+}
+
+TEST(LambdaCapture, InvalidLambdaCapture) {
+  // not crash
+  EXPECT_FALSE(matches(
+      R"(int main() {
+        struct A { A()=default; A(A const&)=delete; };
+        A a; [a]() -> void {}();
+        return 0;
+      })",
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(has(lambdaCapture()))),
+      langCxx11OrLater()));
 }
 
 TEST(ForEachLambdaCapture, MatchesCaptures) {

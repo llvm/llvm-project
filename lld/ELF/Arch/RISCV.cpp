@@ -200,16 +200,16 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
-    write64le(buf, mainPart->dynamic->getVA());
+    write64le(buf, ctx.mainPart->dynamic->getVA());
   else
-    write32le(buf, mainPart->dynamic->getVA());
+    write32le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   if (config->is64)
-    write64le(buf, in.plt->getVA());
+    write64le(buf, ctx.in.plt->getVA());
   else
-    write32le(buf, in.plt->getVA());
+    write32le(buf, ctx.in.plt->getVA());
 }
 
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -230,12 +230,12 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   // srli t1, t1, (rv64?1:2); t1 = &.got.plt[i] - &.got.plt[0]
   // l[wd] t0, Wordsize(t0); t0 = link_map
   // jr t3
-  uint32_t offset = in.gotPlt->getVA() - in.plt->getVA();
+  uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
   uint32_t load = config->is64 ? LD : LW;
   write32le(buf + 0, utype(AUIPC, X_T2, hi20(offset)));
   write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T3));
   write32le(buf + 8, itype(load, X_T3, X_T2, lo12(offset)));
-  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -target->pltHeaderSize - 12));
+  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 12));
   write32le(buf + 16, itype(ADDI, X_T0, X_T2, lo12(offset)));
   write32le(buf + 20, itype(SRLI, X_T1, X_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, config->wordsize));
@@ -256,8 +256,8 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType RISCV::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_RISCV_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_RISCV_NONE);
 }
 
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
@@ -1178,8 +1178,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
-  in.riscvAttributes = std::make_unique<RISCVAttributesSection>();
-  auto &merged = static_cast<RISCVAttributesSection &>(*in.riscvAttributes);
+  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>();
+  auto &merged = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
 
   // Collect all tags values from attributes section.
   const auto &attributesTags = RISCVAttrs::getRISCVAttributeTags();

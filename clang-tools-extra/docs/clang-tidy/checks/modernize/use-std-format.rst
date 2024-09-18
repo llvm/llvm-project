@@ -43,7 +43,7 @@ Options
     extern std::string strprintf(const char *format, ...);
     int i = -42;
     unsigned int u = 0xffffffff;
-    return strprintf("%d %u\n", i, u);
+    return strprintf("%u %d\n", i, u);
 
   would be converted to
 
@@ -64,8 +64,9 @@ Options
    A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter contains the
    printf-style format string and the arguments to be formatted follow
-   immediately afterwards. The default value for this option is
-   `absl::StrFormat`.
+   immediately afterwards. Qualified member function names are supported,
+   but the replacement function name must be unqualified. The default value
+   for this option is `absl::StrFormat`.
 
 .. option:: ReplacementFormatFunction
 

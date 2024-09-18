@@ -1,0 +1,80 @@
+// Implement WorstCase functions to compute the worst case for x mod C, with
+// the exponent of x ranges from emin to emax, and precision of x is p.
+// Adapted to Sollya from the Maple function in 
+//   J-M. Muller, "Elementary Functions", 3rd ed, Section 11.3.2.
+//
+// Some examples:
+//
+// 1) Worst case for trig range reduction fast passes:
+//
+// Single precision
+// > WorstCase(24, -6, 32, pi/32, 128); 
+// numbermin :  10741887
+// expmin    :  7
+// Worst case:  0x1.47d0fep30
+// numberofdigits :  -32.888
+//
+// Double precision
+// > WorstCase(53, -8, 32, pi/128, 256);
+// numbermin :  6411027962775774
+// expmin    :  -53
+// Worst case:  0x1.6c6cbc45dc8dep-1
+// numberofdigits :  -66.4867
+//
+// 2) Worst case for exponential function range reduction:
+//
+// Single precision
+// > WorstCase(24, 1, 8, log(2), 128);
+// numbermin :  2907270
+// expmin    :  -22
+// Worst case:  0x1.62e43p-1
+// numberofdigits :  -28.9678
+//
+// Double precision
+// > WorstCase(53, 0, 11, log(2), 128);
+// numbermin :  7804143460206699
+// expmin    :  -51
+// Worst case:  0x1.bb9d3beb8c86bp1
+// numberofdigits :  -57.4931
+//
+verbosity=0;
+procedure WorstCase(p, emin, emax, C, ndigits) {
+    epsilonmin = 12345.0;
+    Digits = ndigits;
+
+    powerofBoverC = 2^(emin - p) / C;
+    for e from emin - p + 1 to emax - p + 1 do {
+        powerofBoverC = 2 * powerofBoverC;
+        a = floor(powerofBoverC);
+        Plast = a;
+        r = round(1/(powerofBoverC - a), ndigits, RN);
+        a = floor(r);
+        Qlast = 1;
+        Q = a;
+        P = Plast * a + 1;
+        while (Q < 2^p - 1) do {
+            r = round(1/(r - a), ndigits, RN);
+            a = floor(r);
+            NewQ = Q * a + Qlast;
+            NewP = P * a + Plast;
+            Qlast = Q;
+            Plast = P;
+            Q = NewQ;
+            P = NewP;
+        };
+        epsilon = C * abs(Plast - Qlast * powerofBoverC);
+        if (epsilon < epsilonmin) then {
+            epsilonmin = epsilon;
+            numbermin = Qlast;
+            expmin = e;
+        };
+    };
+    display=decimal!;
+    print("numbermin : ", numbermin);
+    print("expmin    : ", expmin);
+    display=hexadecimal!;
+    print("Worst case: ", numbermin * 2^expmin);
+    display=decimal!;
+    ell = round(log2(epsilonmin), ndigits, RN);
+    print("numberofdigits : ", ell);
+};

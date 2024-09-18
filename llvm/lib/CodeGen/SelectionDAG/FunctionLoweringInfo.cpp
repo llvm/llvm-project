@@ -236,6 +236,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   // Create an initial MachineBasicBlock for each LLVM BasicBlock in F.  This
   // also creates the initial PHI MachineInstrs, though none of the input
   // operands are populated.
+  MBBMap.resize(Fn->getMaxBlockNumber());
   for (const BasicBlock &BB : *Fn) {
     // Don't create MachineBasicBlocks for imaginary EH pad blocks. These blocks
     // are really data, and no instructions can live here.
@@ -261,7 +262,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     }
 
     MachineBasicBlock *MBB = mf.CreateMachineBasicBlock(&BB);
-    MBBMap[&BB] = MBB;
+    MBBMap[BB.getNumber()] = MBB;
     MF->push_back(MBB);
 
     // Transfer the address-taken flag. This is necessary because there could

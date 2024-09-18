@@ -36,11 +36,11 @@ enum LineType {
 };
 
 enum ScopeType {
+  // Contained in child block.
+  ST_ChildBlock,
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within function definition.
-  ST_Function,
-  // Contained within other scope block (loop, if/else, etc).
+  // Contained within other scope block (function, loop, if/else, etc).
   ST_Other,
 };
 
@@ -269,7 +269,7 @@ private:
 
   const AdditionalKeywords &Keywords;
 
-  SmallVector<ScopeType> Scopes;
+  SmallVector<ScopeType> Scopes, MacroBodyScopes;
 };
 
 } // end namespace format

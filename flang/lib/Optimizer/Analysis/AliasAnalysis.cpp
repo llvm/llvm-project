@@ -60,7 +60,15 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
-bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
+bool AliasAnalysis::isRecordWithPointerComponent(mlir::Type ty) {
+  auto eleTy = fir::dyn_cast_ptrEleTy(ty);
+  if (!eleTy)
+    return false;
+  // TO DO: Look for pointer components
+  return mlir::isa<fir::RecordType>(eleTy);
+}
+
+bool AliasAnalysis::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -86,15 +94,7 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
-  auto eleTy = fir::dyn_cast_ptrEleTy(valueType);
-  if (!eleTy)
-    return false;
-  // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
-}
-
-AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
@@ -111,6 +111,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // it aliases with everything
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
   }
 
@@ -169,10 +170,12 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Box for POINTER component inside an object of a derived type
   // may alias box of a POINTER object, as well as boxes for POINTER
   // components inside two objects of derived types may alias.
-  if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
-      (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
-      (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent())) {
+  if ((isRecordWithPointerComponent(src1->valueType) &&
+       src2->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src2->valueType) &&
+       src1->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src1->valueType) &&
+       isRecordWithPointerComponent(src2->valueType))) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
     return AliasResult::MayAlias;
   }
@@ -310,7 +313,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
-          if (Source::isPointerReference(ty))
+          if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
@@ -387,7 +390,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
 
-      if (Source::isPointerReference(ty))
+      if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
     }
 

@@ -191,12 +191,6 @@ public:
   /// __gnu__::__attr__ will be normalized to gnu::attr).
   std::string getNormalizedFullName() const;
 
-  /// Generate a normalized full name, with syntax, scope and name.
-  static std::string
-  normalizeFullNameWithSyntax(const IdentifierInfo *Name,
-                              const IdentifierInfo *Scope,
-                              AttributeCommonInfo::Syntax SyntaxUsed);
-
   bool isDeclspecAttribute() const { return SyntaxUsed == AS_Declspec; }
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
 

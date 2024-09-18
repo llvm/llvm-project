@@ -21,6 +21,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -77,6 +78,35 @@ static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
 
 static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
+}
+
+/// Returns true if \ref VD is a a holding variable (aka a
+/// VarDecl retrieved using \ref BindingDecl::getHoldingVar).
+static bool IsDecomposedVarDecl(VarDecl const *VD) {
+  auto const *Init = VD->getInit();
+  if (!Init)
+    return false;
+
+  auto const *RefExpr =
+      llvm::dyn_cast_or_null<DeclRefExpr>(Init->IgnoreUnlessSpelledInSource());
+  if (!RefExpr)
+    return false;
+
+  return llvm::dyn_cast_or_null<DecompositionDecl>(RefExpr->getDecl());
+}
+
+/// Returns true if \ref VD is a compiler-generated variable
+/// and should be treated as artificial for the purposes
+/// of debug-info generation.
+static bool IsArtificial(VarDecl const *VD) {
+  // Tuple-like bindings are marked as implicit despite
+  // being spelled out in source. Don't treat them as artificial
+  // variables.
+  if (IsDecomposedVarDecl(VD))
+    return false;
+
+  return VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
+                              cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
@@ -870,13 +900,12 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId)        \
   case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
-          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
-                                     MangledName, TheCU, TheCU->getFile(), 0); \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
+                                     TheCU, TheCU->getFile(), 0);              \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -2354,7 +2383,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str(), defaultParameter));
+          TheCU, Name, nullptr, QualName, defaultParameter));
       break;
     }
     case TemplateArgument::Pack:
@@ -3531,6 +3560,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  assert(ED && "An enumeration definition is required");
   for (const auto *Enum : ED->enumerators()) {
     Enumerators.push_back(
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
@@ -3820,6 +3850,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::HLSLAttributedResource:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
@@ -4766,11 +4797,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   if (VD->hasAttr<NoDebugAttr>())
     return nullptr;
 
-  bool Unwritten =
-      VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
-                           cast<Decl>(VD->getDeclContext())->isImplicit());
+  const bool VarIsArtificial = IsArtificial(VD);
+
   llvm::DIFile *Unit = nullptr;
-  if (!Unwritten)
+  if (!VarIsArtificial)
     Unit = getOrCreateFile(VD->getLocation());
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
@@ -4787,13 +4817,13 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // Get location information.
   unsigned Line = 0;
   unsigned Column = 0;
-  if (!Unwritten) {
+  if (!VarIsArtificial) {
     Line = getLineNumber(VD->getLocation());
     Column = getColumnNumber(VD->getLocation());
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (VD->isImplicit())
+  if (VarIsArtificial)
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
@@ -5622,7 +5652,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
       std::string CanonicalOriginalName;
       llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
       ND->getNameForDiagnostic(OriginalOS, PP, Qualified);
-      assert(EncodedOriginalNameOS.str() == OriginalOS.str());
+      assert(EncodedOriginalName == CanonicalOriginalName);
 #endif
     }
   }

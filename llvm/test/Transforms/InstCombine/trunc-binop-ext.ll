@@ -5,7 +5,7 @@ define i16 @narrow_sext_and(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_sext_and(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -18,7 +18,7 @@ define i16 @narrow_zext_and(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_zext_and(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -31,7 +31,7 @@ define i16 @narrow_sext_or(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_sext_or(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = or i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -44,7 +44,7 @@ define i16 @narrow_zext_or(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_zext_or(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = or i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -57,7 +57,7 @@ define i16 @narrow_sext_xor(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_sext_xor(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = xor i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = xor i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -70,7 +70,7 @@ define i16 @narrow_zext_xor(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_zext_xor(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = xor i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = xor i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -83,7 +83,7 @@ define i16 @narrow_sext_add(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_sext_add(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = add i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = add i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -96,7 +96,7 @@ define i16 @narrow_zext_add(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_zext_add(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = add i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = add i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -135,7 +135,7 @@ define i16 @narrow_sext_mul(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_sext_mul(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = mul i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = mul i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -148,7 +148,7 @@ define i16 @narrow_zext_mul(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: define i16 @narrow_zext_mul(
 ; CHECK-SAME: i16 [[X16:%.*]], i32 [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y32]] to i16
-; CHECK-NEXT:    [[R:%.*]] = mul i16 [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = mul i16 [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -165,7 +165,7 @@ define <2 x i16> @narrow_sext_and_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -180,7 +180,7 @@ define <2 x i16> @narrow_zext_and_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -195,7 +195,7 @@ define <2 x i16> @narrow_sext_or_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -210,7 +210,7 @@ define <2 x i16> @narrow_zext_or_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -225,7 +225,7 @@ define <2 x i16> @narrow_sext_xor_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -240,7 +240,7 @@ define <2 x i16> @narrow_zext_xor_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -255,7 +255,7 @@ define <2 x i16> @narrow_sext_add_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -270,7 +270,7 @@ define <2 x i16> @narrow_zext_add_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -315,7 +315,7 @@ define <2 x i16> @narrow_sext_mul_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -330,7 +330,7 @@ define <2 x i16> @narrow_zext_mul_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-SAME: <2 x i16> [[X16:%.*]], <2 x i32> [[Y32:%.*]]) {
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> [[Y32]], <i32 7, i32 -17>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[TMP1]], [[X16]]
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[X16]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>

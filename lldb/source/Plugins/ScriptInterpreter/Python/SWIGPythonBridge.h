@@ -86,7 +86,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
-  static PythonObject ToSWIGWrapper(const Status &status);
+  static PythonObject ToSWIGWrapper(Status status);
   static PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
   static PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
   static PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
@@ -225,6 +225,9 @@ public:
 
   static PyObject *
   LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
+                                        const lldb::StackFrameSP &frame_sp);
+
+  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
                                         const lldb::StackFrameSP &frame_sp);
 
   static bool LLDBSWIGPythonRunScriptKeywordProcess(

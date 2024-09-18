@@ -495,6 +495,20 @@ define <4 x float> @load_zero_lane_f32x4(ptr %addr.a, ptr %addr.b, ptr %addr.c, 
   ret <4 x float> %v.3
 }
 
+define <4 x float> @load_zero_undef_lane_f32x4(ptr %addr.a, ptr %addr.b) {
+; CHECK-LABEL: load_zero_undef_lane_f32x4:
+; CHECK:         .functype load_zero_undef_lane_f32x4 (i32, i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.load32_splat $push0=, 0($0)
+; CHECK-NEXT:    v128.load32_lane $push1=, 0($1), $pop0, 3
+; CHECK-NEXT:    return $pop1
+  %a = load float, ptr %addr.a
+  %b = load float, ptr %addr.b
+  %v = insertelement <4 x float> undef, float %a, i32 1
+  %v.1 = insertelement <4 x float> %v, float %b, i32 3
+  ret <4 x float> %v.1
+}
+
 define <2 x double> @load_zero_lane_f64x2(ptr %addr.a, ptr %addr.b) {
 ; CHECK-LABEL: load_zero_lane_f64x2:
 ; CHECK:         .functype load_zero_lane_f64x2 (i32, i32) -> (v128)

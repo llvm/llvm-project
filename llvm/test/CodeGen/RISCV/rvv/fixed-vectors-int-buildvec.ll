@@ -680,8 +680,8 @@ define void @buildvec_seq_v9i8(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v9, 2, v0
 ; CHECK-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v9, 2, v0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <9 x i8> <i8 1, i8 2, i8 3, i8 1, i8 2, i8 3, i8 1, i8 2, i8 3>, ptr %x
