@@ -10,10 +10,7 @@ struct FEATURES {
 
 extern struct FEATURES __aarch64_cpu_features;
 
-#if __GNUC__ >= 9
-#pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
-#endif
-__attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
+CONSTRUCTOR_ATTRIBUTE static void get_aarch64_cpu_features(void) {
   if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 

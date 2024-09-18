@@ -6,14 +6,14 @@ enums: []
 objects: []
 functions:
   - name: longjmp
-    standards: 
+    standards:
       - stdc
     return_type: _Noreturn void
     arguments:
-      - type: jmp_buf 
+      - type: jmp_buf
       - type: int
   - name: setjmp
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:

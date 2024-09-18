@@ -178,6 +178,7 @@ cc_library(
         ":PluginCPlusPlusLanguageHeaders",
         ":PluginExpressionParserClangHeaders",
         ":PluginObjCRuntime",
+        ":PluginPlatformMacOSX",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
         "//clang:ast",
@@ -445,6 +446,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:DebugInfoCodeView",
         "//llvm:DebugInfoPDB",
+        "//llvm:config",
     ],
 )
 
@@ -489,6 +491,7 @@ cc_library(
         "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:config",
         "@llvm_zlib//:zlib",
     ],
 )
@@ -1390,6 +1393,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
+        "//llvm:config",
         "@llvm_zlib//:zlib",
     ],
 )

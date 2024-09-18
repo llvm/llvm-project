@@ -11,8 +11,11 @@ def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
 def SMEMOffset : ImmOperand<i32, "SMEMOffset", 1>;
-def SMEMOffsetMod : NamedIntOperand<i32, "offset", 0>;
-def OptSMEMOffsetMod : NamedIntOperand<i32, "offset"> {
+def SMEMOffsetMod : NamedIntOperand<"offset", 0> {
+  let AlwaysPrint = 1;
+  let PrintInHex = 1;
+}
+def OptSMEMOffsetMod : NamedIntOperand<"offset"> {
   let ImmTy = SMEMOffsetMod.ImmTy;
   let PredicateMethod = SMEMOffsetMod.PredicateMethod;
   let PrintMethod = SMEMOffsetMod.PrintMethod;
@@ -1148,6 +1151,39 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
 defm : SMPrefetchPat<"DATA", i32imm_one>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
+    (S_PREFETCH_DATA $sbase, $offset, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), (i32 SReg_32:$len)),
+    (S_PREFETCH_DATA $sbase, 0, $len, 0)
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), imm:$len),
+    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), imm:$len),
+    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len))
+
+  >;
+
+  def : GCNPat <
+    (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), (i32 SReg_32:$len)),
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, $len, 0)
+  >;
+
+  def : GCNPat <
+    (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), imm:$len),
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+} // End let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
 // GFX10.

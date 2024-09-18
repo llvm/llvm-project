@@ -1,3 +1,10 @@
+// Test that -static is forwarded to the linker
+
+// RUN: %clang --target=x86_64-scei-ps4 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC %s
+
+// CHECK-STATIC: {{ld(\.exe)?}}"
+// CHECK-STATIC-SAME: "-static"
+
 // Test the driver's control over the JustMyCode behavior with linker flags.
 
 // RUN: %clang --target=x86_64-scei-ps4 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LTO,CHECK-LIB %s
@@ -16,3 +23,17 @@
 // RUN: %clang --target=x86_64-scei-ps4 -flto=full -fcrash-diagnostics-dir=mydumps %s -### 2>&1 | FileCheck --check-prefixes=CHECK-DIAG-LTO %s
 
 // CHECK-DIAG-LTO: "-lto-debug-options= -crash-diagnostics-dir=mydumps"
+
+// Test that -lto-debug-options is only supplied to the linker when necessary
+
+// RUN: %clang --target=x86_64-scei-ps4 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-LTO %s
+// CHECK-NO-LTO-NOT: -lto-debug-options
+
+// Test the driver passes a sysroot to the linker. Without --sysroot, its value
+// is sourced from the SDK environment variable.
+
+// RUN: env SCE_ORBIS_SDK_DIR=mysdk %clang --target=x64_64-scei-ps4 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SYSROOT %s
+// RUN: env SCE_ORBIS_SDK_DIR=other %clang --target=x64_64-scei-ps4 %s -### --sysroot=mysdk 2>&1 | FileCheck --check-prefixes=CHECK-SYSROOT %s
+
+// CHECK-SYSROOT: {{ld(\.exe)?}}"
+// CHECK-SYSROOT-SAME: "--sysroot=mysdk"

@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:
@@ -455,14 +455,9 @@ An example build would look like:
 
   $ ninja -C build cxx-benchmarks
 
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
+This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
-
-Also See:
-
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
+``build/libcxx/test/benchmarks``.
 
 Running Benchmarks
 ------------------
@@ -474,9 +469,9 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.bench.out # Runs all the benchmarks
-  $ ./algorithms.bench.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ cd build/libcxx/test/benchmarks
+  $ ./find.bench.out # Runs all the benchmarks
+  $ ./find.bench.out --benchmark_filter="bm_ranges_find<std::vector<char>>" # Only runs that specific benchmark
 
 For more information about running benchmarks see `Google Benchmark`_.
 

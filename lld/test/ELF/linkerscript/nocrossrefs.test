@@ -2,6 +2,7 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc --triple=x86_64 -filetype=obj a.s -o a.o
+# RUN: llvm-mc --triple=x86_64 -filetype=obj -crel a.s -o ac.o
 # RUN: llvm-mc --triple=x86_64 -filetype=obj data.s -o data.o
 # RUN: ld.lld a.o data.o -T 0.t 2>&1 | FileCheck %s --check-prefix=CHECK0 --implicit-check-not=warning:
 
@@ -9,7 +10,8 @@
 # CHECK0-NEXT: warning: 0.t:4: ignored with fewer than 2 output sections
 
 # RUN: not ld.lld a.o data.o -T 1.t 2>&1 | FileCheck %s --check-prefix=CHECK1 --implicit-check-not=error:
-# CHECK1:      error: a.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'
+# RUN: not ld.lld ac.o data.o -T 1.t 2>&1 | FileCheck %s --check-prefix=CHECK1 --implicit-check-not=error:
+# CHECK1:      error: a{{.?}}.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'
 
 ## .text and .text1 are in two NOCROSSREFS commands. Violations are reported twice.
 # RUN: not ld.lld --threads=1 a.o data.o -T 2.t 2>&1 | FileCheck %s --check-prefix=CHECK2 --implicit-check-not=error:

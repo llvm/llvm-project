@@ -13,7 +13,8 @@
 
 #if defined(__FLT16_MANT_DIG__) &&                                             \
     (!defined(__GNUC__) || __GNUC__ >= 13 || defined(__clang__)) &&            \
-    !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv)
+    !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
+    !defined(_WIN32)
 #define LIBC_TYPES_HAS_FLOAT16
 
 // TODO: This would no longer be required if HdrGen let us guard function

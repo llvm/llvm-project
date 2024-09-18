@@ -971,8 +971,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // (e.g. breakLoopBackedgeAndSimplify) and reused in loop-deletion.
     BasicBlock *RemainderLatch = remainderLoop->getLoopLatch();
     assert(RemainderLatch);
-    SmallVector<BasicBlock*> RemainderBlocks(remainderLoop->getBlocks().begin(),
-                                             remainderLoop->getBlocks().end());
+    SmallVector<BasicBlock *> RemainderBlocks(remainderLoop->getBlocks());
     breakLoopBackedge(remainderLoop, *DT, *SE, *LI, nullptr);
     remainderLoop = nullptr;
 

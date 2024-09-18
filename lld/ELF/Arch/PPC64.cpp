@@ -210,7 +210,7 @@ uint64_t elf::getPPC64TocBase() {
   // TOC starts where the first of these sections starts. We always create a
   // .got when we see a relocation that uses it, so for us the start is always
   // the .got.
-  uint64_t tocVA = in.got->getVA();
+  uint64_t tocVA = ctx.in.got->getVA();
 
   // Per the ppc64-elf-linux ABI, The TOC base is TOC value plus 0x8000
   // thus permitting a full 64 Kbytes segment. Note that the glibc startup
@@ -409,8 +409,8 @@ static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
     return false;
 
   // Add PPC64TocOffset that will be subtracted by PPC64::relocate().
-  static_cast<const PPC64 &>(*target).relaxGot(bufLoc, rel,
-                                               tocRelative + ppc64TocOffset);
+  static_cast<const PPC64 &>(*ctx.target)
+      .relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
   return true;
 }
 
@@ -1155,7 +1155,7 @@ void PPC64::writePltHeader(uint8_t *buf) const {
   // The 'bcl' instruction will set the link register to the address of the
   // following instruction ('mflr r11'). Here we store the offset from that
   // instruction  to the first entry in the GotPlt section.
-  int64_t gotPltOffset = in.gotPlt->getVA() - (in.plt->getVA() + 8);
+  int64_t gotPltOffset = ctx.in.gotPlt->getVA() - (ctx.in.plt->getVA() + 8);
   write64(buf + 52, gotPltOffset);
 }
 
@@ -1593,7 +1593,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+      if (ctx.ppc64noTocRelax.count({rel.sym, rel.addend}) ||
           !tryRelaxPPC64TocIndirection(rel, loc))
         relocate(loc, rel, val);
       break;

@@ -65,7 +65,7 @@ int main(int, char**) {
   {
     TEST_LIBCPP_ASSERT_FAILURE(
         ([=] {
-          std::layout_stride::mapping<std::extents<char, D>> m(
+          std::layout_stride::mapping<std::extents<signed char, D>> m(
               std::layout_stride::mapping<std::extents<int, D>>(std::extents<int, D>(500), std::array<int, 1>{1}));
         }()),
         "extents ctor: arguments must be representable as index_type and nonnegative");
@@ -73,7 +73,7 @@ int main(int, char**) {
   // all strides must be larger than zero
   {
     always_convertible_layout::mapping<std::dextents<int, 2>> offset_map(std::dextents<int, 2>{10, 10}, 100, -1);
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<signed char, D, D>> m(offset_map); }()),
                                "layout_stride::mapping converting ctor: all strides must be greater than 0");
   }
   // required_span_size not representable, while individual extents are
@@ -81,10 +81,10 @@ int main(int, char**) {
     std::extents<int, D, D> arg_exts{100, 5};
     std::layout_stride::mapping<std::extents<int, D, D>> arg(arg_exts, std::array<int, 2>{1, 100});
     // check extents would be constructible
-    [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
+    [[maybe_unused]] std::extents<signed char, D, 5> e(arg_exts);
     // but the product is not, so we can't use it for layout_stride
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_stride::mapping<std::extents<char, D, 5>> m(arg); }()),
+        ([=] { std::layout_stride::mapping<std::extents<signed char, D, 5>> m(arg); }()),
         "layout_stride::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   // required_span_size not representable, while individual extents are, edge case
@@ -104,7 +104,7 @@ int main(int, char**) {
   // base offset must be 0 (i.e. mapping(0,...,0)==0) for a strided layout with positive strides
   {
     always_convertible_layout::mapping<std::dextents<int, 2>> offset_map(std::dextents<int, 2>{10, 10}, 3);
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<char, D, D>> m(offset_map); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_stride::mapping<std::extents<signed char, D, D>> m(offset_map); }()),
                                "layout_stride::mapping converting ctor: base offset of mapping must be zero.");
   }
   return 0;

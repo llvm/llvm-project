@@ -14,7 +14,7 @@
 // xlclang++ compiler included in this file. This file tests for the 32-bit
 // mode.
 
-# REQUIRES: target=powerpc-ibm-aix
+# REQUIRES: target=powerpc-ibm-aix{{.*}}
 # UNSUPPORTED: no-exceptions
 
 // RUN: %{cxx} -c %s -o %t1_32.o -DT1_CPP_CODE %{flags} %{compile_flags}

@@ -231,6 +231,51 @@ define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline(
   ret void
 }
 
+define void @nonzt0_callee() {
+; CHECK-LABEL: define void @nonzt0_callee
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @shared_zt0_caller_nonzt0_callee_dont_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_nonzt0_callee_dont_inline
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void @nonzt0_callee()
+; CHECK-NEXT:    ret void
+;
+  call void @nonzt0_callee()
+  ret void
+}
+
+define void @shared_zt0_callee() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_callee
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @shared_zt0_caller_shared_zt0_callee_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_shared_zt0_callee_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void @shared_zt0_callee()
+  ret void
+}
+
 declare void @__arm_za_disable()
 declare void @__arm_tpidr2_save()
 declare void @__arm_tpidr2_restore(ptr)

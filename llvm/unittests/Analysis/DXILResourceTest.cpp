@@ -90,10 +90,10 @@ testing::AssertionResult MDTupleEq(const char *LHSExpr, const char *RHSExpr,
   return testing::AssertionFailure() << "Expected equality:\n"
                                      << "  " << LHSExpr << "\n"
                                      << "Which is:\n"
-                                     << "  " << LHSS.str() << "\n\n"
+                                     << "  " << LHSRepr << "\n\n"
                                      << "  " << RHSExpr << "\n"
                                      << "Which is:\n"
-                                     << "  " << RHSS.str();
+                                     << "  " << RHSRepr;
 }
 #define EXPECT_MDEQ(X, Y) EXPECT_PRED_FORMAT2(MDTupleEq, X, Y)
 } // namespace
@@ -150,6 +150,19 @@ TEST(DXILResource, AnnotationsAndMetadata) {
   MD = Resource.getAsMetadata(Context);
   EXPECT_MDEQ(
       MD, TestMD.get(0, Symbol, "Buffer0", 0, 0, 1, 12, 0, TestMD.get(1, 16)));
+
+  // StructuredBuffer<float3> Buffer1 : register(t1);
+  Symbol = UndefValue::get(StructType::create(
+      Context, {Floatx3Ty}, "class.StructuredBuffer<vector<float, 3> >"));
+  Resource = ResourceInfo::StructuredBuffer(Symbol, "Buffer1",
+                                            /*Stride=*/12, {});
+  Resource.bind(1, 0, 1, 1);
+  Props = Resource.getAnnotateProps();
+  EXPECT_EQ(Props.first, 0x0000000cU);
+  EXPECT_EQ(Props.second, 0x0000000cU);
+  MD = Resource.getAsMetadata(Context);
+  EXPECT_MDEQ(
+      MD, TestMD.get(1, Symbol, "Buffer1", 0, 1, 1, 12, 0, TestMD.get(1, 12)));
 
   // Texture2D<float4> ColorMapTexture : register(t2);
   Symbol = UndefValue::get(StructType::create(

@@ -38,9 +38,9 @@ def HasExtendedConst :
     Predicate<"Subtarget->hasExtendedConst()">,
     AssemblerPredicate<(all_of FeatureExtendedConst), "extended-const">;
 
-def HasHalfPrecision :
-    Predicate<"Subtarget->hasHalfPrecision()">,
-    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
+def HasFP16 :
+    Predicate<"Subtarget->hasFP16()">,
+    AssemblerPredicate<(all_of FeatureFP16), "fp16">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,

@@ -265,8 +265,8 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
   llvm_unreachable("Reached root without finding the declaration of VD");
 }
 
-bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
-                            ExplodedNode *Pred, unsigned &maxStep) {
+static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
+                                   ExplodedNode *Pred, unsigned &maxStep) {
 
   if (!isLoopStmt(LoopStmt))
     return false;
@@ -297,7 +297,7 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   return !isPossiblyEscaped(Pred, CounterVarRef);
 }
 
-bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
+static bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
   const Stmt *S = nullptr;
   while (!N->pred_empty()) {
     if (N->succ_size() > 1)

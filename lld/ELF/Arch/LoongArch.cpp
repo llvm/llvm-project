@@ -308,9 +308,9 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   if (config->is64)
-    write64le(buf, in.plt->getVA());
+    write64le(buf, ctx.in.plt->getVA());
   else
-    write32le(buf, in.plt->getVA());
+    write32le(buf, ctx.in.plt->getVA());
 }
 
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -341,7 +341,7 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   //   srli.[wd] $t1, $t1, (is64?1:2)             ; t1 = &.got.plt[i] - &.got.plt[0]
   //   ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
   //   jr        $t3
-  uint32_t offset = in.gotPlt->getVA() - in.plt->getVA();
+  uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
   uint32_t sub = config->is64 ? SUB_D : SUB_W;
   uint32_t ld = config->is64 ? LD_D : LD_W;
   uint32_t addi = config->is64 ? ADDI_D : ADDI_W;
@@ -349,7 +349,8 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
-  write32le(buf + 12, insn(addi, R_T1, R_T1, lo12(-target->pltHeaderSize - 12)));
+  write32le(buf + 12,
+            insn(addi, R_T1, R_T1, lo12(-ctx.target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
   write32le(buf + 20, insn(srli, R_T1, R_T1, config->is64 ? 1 : 2));
   write32le(buf + 24, insn(ld, R_T0, R_T0, config->wordsize));
@@ -374,8 +375,8 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType LoongArch::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_LARCH_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_LARCH_NONE);
 }
 
 RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
@@ -828,7 +829,7 @@ bool LoongArch::relaxOnce(int pass) const {
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
@@ -840,7 +841,7 @@ bool LoongArch::relaxOnce(int pass) const {
 void LoongArch::finalizeRelax(int passes) const {
   log("relaxation passes: " + Twine(passes));
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {

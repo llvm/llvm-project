@@ -189,6 +189,7 @@ add_header_library(
     .fp_bits
     .fenv_impl
     libc.src.__support.CPP.type_traits
+    libc.src.__support.big_int
     libc.src.__support.uint128
     libc.src.__support.common
     libc.src.__support.macros.optimization

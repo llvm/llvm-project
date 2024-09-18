@@ -84,7 +84,6 @@ std::string RunLLDBCommands(llvm::StringRef prefix,
   llvm::raw_string_ostream strm(s);
   required_command_failed =
       !RunLLDBCommands(prefix, commands, strm, parse_command_directives);
-  strm.flush();
   return s;
 }
 
@@ -110,6 +109,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonFork:
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
+  case lldb::eStopReasonInterrupt:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:

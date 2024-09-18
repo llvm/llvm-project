@@ -16,6 +16,7 @@ static_library("GSYM") {
     "InlineInfo.cpp",
     "LineTable.cpp",
     "LookupResult.cpp",
+    "MergedFunctionsInfo.cpp",
     "ObjectFileTransformer.cpp",
   ]
 }

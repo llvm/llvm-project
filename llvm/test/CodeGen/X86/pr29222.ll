@@ -62,9 +62,9 @@ define i32 @PR29222(i32) nounwind {
 ; X64-AVX-NEXT:    retq
   %2 = insertelement <2 x i32> undef, i32 %0, i32 0
   %3 = shufflevector <2 x i32> %2, <2 x i32> undef, <2 x i32> zeroinitializer
-  %4 = bitcast <2 x i32> %3 to x86_mmx
-  %5 = tail call x86_mmx @llvm.x86.mmx.packsswb(x86_mmx %4, x86_mmx %4)
-  %6 = bitcast x86_mmx %5 to i64
+  %4 = bitcast <2 x i32> %3 to <1 x i64>
+  %5 = tail call <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64> %4, <1 x i64> %4)
+  %6 = bitcast <1 x i64> %5 to i64
   %7 = insertelement <2 x i64> undef, i64 %6, i32 0
   %8 = bitcast <2 x i64> %7 to <8 x i16>
   %9 = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %8, <8 x i16> undef)
@@ -73,5 +73,5 @@ define i32 @PR29222(i32) nounwind {
   ret i32 %11
 }
 
-declare x86_mmx @llvm.x86.mmx.packsswb(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64>, <1 x i64>)
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)

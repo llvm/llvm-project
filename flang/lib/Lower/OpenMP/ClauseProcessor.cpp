@@ -181,19 +181,19 @@ static void addUseDeviceClause(
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
                               mlir::Location loc,
-                              mlir::omp::CollapseClauseOps &result,
+                              mlir::omp::LoopRelatedClauseOps &result,
                               std::size_t loopVarTypeSize) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)result.loopLBVar.size(); it++) {
-    result.loopLBVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopLBVar[it]);
-    result.loopUBVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopUBVar[it]);
-    result.loopStepVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopStepVar[it]);
+  for (unsigned it = 0; it < (unsigned)result.loopLowerBounds.size(); it++) {
+    result.loopLowerBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.loopLowerBounds[it]);
+    result.loopUpperBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.loopUpperBounds[it]);
+    result.loopSteps[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.loopSteps[it]);
   }
 }
 
@@ -203,7 +203,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::CollapseClauseOps &result,
+    mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -232,15 +232,15 @@ bool ClauseProcessor::processCollapse(
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
     lower::StatementContext stmtCtx;
-    result.loopLBVar.push_back(fir::getBase(
+    result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
-    result.loopUBVar.push_back(fir::getBase(
+    result.loopUpperBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
     if (bounds->step) {
-      result.loopStepVar.push_back(fir::getBase(
+      result.loopSteps.push_back(fir::getBase(
           converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
-      result.loopStepVar.push_back(firOpBuilder.createIntegerConstant(
+      result.loopSteps.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->name.thing.symbol);
@@ -256,28 +256,6 @@ bool ClauseProcessor::processCollapse(
   return found;
 }
 
-bool ClauseProcessor::processDefault() const {
-  if (auto *clause = findUniqueClause<omp::clause::Default>()) {
-    // Private, Firstprivate, Shared, None
-    switch (clause->v) {
-    case omp::clause::Default::DataSharingAttribute::Shared:
-    case omp::clause::Default::DataSharingAttribute::None:
-      // Default clause with shared or none do not require any handling since
-      // Shared is the default behavior in the IR and None is only required
-      // for semantic checks.
-      break;
-    case omp::clause::Default::DataSharingAttribute::Private:
-      // TODO Support default(private)
-      break;
-    case omp::clause::Default::DataSharingAttribute::Firstprivate:
-      // TODO Support default(firstprivate)
-      break;
-    }
-    return true;
-  }
-  return false;
-}
-
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
                                     mlir::omp::DeviceClauseOps &result) const {
   const parser::CharBlock *source = nullptr;
@@ -291,8 +269,7 @@ bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
       }
     }
     const auto &deviceExpr = std::get<omp::SomeExpr>(clause->t);
-    result.deviceVar =
-        fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
+    result.device = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
     return true;
   }
   return false;
@@ -322,10 +299,10 @@ bool ClauseProcessor::processDistSchedule(
     lower::StatementContext &stmtCtx,
     mlir::omp::DistScheduleClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::DistSchedule>()) {
-    result.distScheduleStaticAttr = converter.getFirOpBuilder().getUnitAttr();
+    result.distScheduleStatic = converter.getFirOpBuilder().getUnitAttr();
     const auto &chunkSize = std::get<std::optional<ExprTy>>(clause->t);
     if (chunkSize)
-      result.distScheduleChunkSizeVar =
+      result.distScheduleChunkSize =
           fir::getBase(converter.genExprValue(*chunkSize, stmtCtx));
     return true;
   }
@@ -335,7 +312,7 @@ bool ClauseProcessor::processDistSchedule(
 bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
                                     mlir::omp::FilterClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
-    result.filteredThreadIdVar =
+    result.filteredThreadId =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -351,7 +328,7 @@ bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
 
     mlir::Value finalVal =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
-    result.finalVar = firOpBuilder.createConvert(
+    result.final = firOpBuilder.createConvert(
         clauseLocation, firOpBuilder.getI1Type(), finalVal);
     return true;
   }
@@ -362,7 +339,7 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Hint>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t hintValue = *evaluate::ToInt64(clause->v);
-    result.hintAttr = firOpBuilder.getI64IntegerAttr(hintValue);
+    result.hint = firOpBuilder.getI64IntegerAttr(hintValue);
     return true;
   }
   return false;
@@ -370,11 +347,11 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
 
 bool ClauseProcessor::processMergeable(
     mlir::omp::MergeableClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Mergeable>(result.mergeableAttr);
+  return markClauseOccurrence<omp::clause::Mergeable>(result.mergeable);
 }
 
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Nowait>(result.nowaitAttr);
+  return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
 
 bool ClauseProcessor::processNumTeams(
@@ -383,9 +360,13 @@ bool ClauseProcessor::processNumTeams(
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
-    auto &upperBound = std::get<ExprTy>(clause->t);
-    result.numTeamsUpperVar =
+    // The num_teams directive accepts a list of team lower/upper bounds.
+    // This is an extension to support grid specification for ompx_bare.
+    // Here, only expect a single element in the list.
+    assert(clause->v.size() == 1);
+    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
+    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
+    result.numTeamsUpper =
         fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;
   }
@@ -397,7 +378,7 @@ bool ClauseProcessor::processNumThreads(
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreadsVar =
+    result.numThreads =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -408,17 +389,17 @@ bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
   using Order = omp::clause::Order;
   if (auto *clause = findUniqueClause<Order>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
+    result.order = mlir::omp::ClauseOrderKindAttr::get(
         firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
     const auto &modifier =
         std::get<std::optional<Order::OrderModifier>>(clause->t);
     if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
-      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+      result.orderMod = mlir::omp::OrderModifierAttr::get(
           firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
     } else {
       // "If order-modifier is not unconstrained, the behavior is as if the
       // reproducible modifier is present."
-      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+      result.orderMod = mlir::omp::OrderModifierAttr::get(
           firOpBuilder.getContext(), mlir::omp::OrderModifier::reproducible);
     }
     return true;
@@ -433,7 +414,7 @@ bool ClauseProcessor::processOrdered(
     int64_t orderedClauseValue = 0l;
     if (clause->v.has_value())
       orderedClauseValue = *evaluate::ToInt64(*clause->v);
-    result.orderedAttr = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    result.ordered = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
     return true;
   }
   return false;
@@ -443,8 +424,7 @@ bool ClauseProcessor::processPriority(
     lower::StatementContext &stmtCtx,
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
-    result.priorityVar =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
@@ -454,7 +434,7 @@ bool ClauseProcessor::processProcBind(
     mlir::omp::ProcBindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ProcBind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result.procBindKindAttr = genProcBindKindAttr(firOpBuilder, *clause);
+    result.procBindKind = genProcBindKindAttr(firOpBuilder, *clause);
     return true;
   }
   return false;
@@ -465,7 +445,7 @@ bool ClauseProcessor::processSafelen(
   if (auto *clause = findUniqueClause<omp::clause::Safelen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     const std::optional<std::int64_t> safelenVal = evaluate::ToInt64(clause->v);
-    result.safelenAttr = firOpBuilder.getI64IntegerAttr(*safelenVal);
+    result.safelen = firOpBuilder.getI64IntegerAttr(*safelenVal);
     return true;
   }
   return false;
@@ -498,19 +478,19 @@ bool ClauseProcessor::processSchedule(
       break;
     }
 
-    result.scheduleValAttr =
+    result.scheduleKind =
         mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
 
-    mlir::omp::ScheduleModifier scheduleModifier = getScheduleModifier(*clause);
-    if (scheduleModifier != mlir::omp::ScheduleModifier::none)
-      result.scheduleModAttr =
-          mlir::omp::ScheduleModifierAttr::get(context, scheduleModifier);
+    mlir::omp::ScheduleModifier scheduleMod = getScheduleModifier(*clause);
+    if (scheduleMod != mlir::omp::ScheduleModifier::none)
+      result.scheduleMod =
+          mlir::omp::ScheduleModifierAttr::get(context, scheduleMod);
 
     if (getSimdModifier(*clause) != mlir::omp::ScheduleModifier::none)
-      result.scheduleSimdAttr = firOpBuilder.getUnitAttr();
+      result.scheduleSimd = firOpBuilder.getUnitAttr();
 
     if (const auto &chunkExpr = std::get<omp::MaybeExpr>(clause->t))
-      result.scheduleChunkVar =
+      result.scheduleChunk =
           fir::getBase(converter.genExprValue(*chunkExpr, stmtCtx));
 
     return true;
@@ -523,7 +503,7 @@ bool ClauseProcessor::processSimdlen(
   if (auto *clause = findUniqueClause<omp::clause::Simdlen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     const std::optional<std::int64_t> simdlenVal = evaluate::ToInt64(clause->v);
-    result.simdlenAttr = firOpBuilder.getI64IntegerAttr(*simdlenVal);
+    result.simdlen = firOpBuilder.getI64IntegerAttr(*simdlenVal);
     return true;
   }
   return false;
@@ -533,7 +513,7 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimitVar =
+    result.threadLimit =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -541,7 +521,7 @@ bool ClauseProcessor::processThreadLimit(
 }
 
 bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Untied>(result.untiedAttr);
+  return markClauseOccurrence<omp::clause::Untied>(result.untied);
 }
 
 //===----------------------------------------------------------------------===//
@@ -565,7 +545,7 @@ static void
 addAlignedClause(lower::AbstractConverter &converter,
                  const omp::clause::Aligned &clause,
                  llvm::SmallVectorImpl<mlir::Value> &alignedVars,
-                 llvm::SmallVectorImpl<mlir::Attribute> &alignmentAttrs) {
+                 llvm::SmallVectorImpl<mlir::Attribute> &alignments) {
   using Aligned = omp::clause::Aligned;
   lower::StatementContext stmtCtx;
   mlir::IntegerAttr alignmentValueAttr;
@@ -594,7 +574,7 @@ addAlignedClause(lower::AbstractConverter &converter,
     alignmentValueAttr = builder.getI64IntegerAttr(alignment);
     // All the list items in a aligned clause will have same alignment
     for (std::size_t i = 0; i < objects.size(); i++)
-      alignmentAttrs.push_back(alignmentValueAttr);
+      alignments.push_back(alignmentValueAttr);
   }
 }
 
@@ -603,7 +583,7 @@ bool ClauseProcessor::processAligned(
   return findRepeatableClause<omp::clause::Aligned>(
       [&](const omp::clause::Aligned &clause, const parser::CharBlock &) {
         addAlignedClause(converter, clause, result.alignedVars,
-                         result.alignmentAttrs);
+                         result.alignments);
       });
 }
 
@@ -639,9 +619,7 @@ bool ClauseProcessor::processCopyin() const {
               checkAndCopyHostAssociateVar(&*mem, &insPt);
             break;
           }
-          if (semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate()))
-            TODO(converter.getCurrentLocation(),
-                 "pointer or allocatable variables in Copyin clause");
+
           assert(sym->has<semantics::HostAssocDetails>() &&
                  "No host-association found");
           checkAndCopyHostAssociateVar(sym);
@@ -798,7 +776,7 @@ bool ClauseProcessor::processCopyprivate(
     result.copyprivateVars.push_back(cpVar);
     mlir::func::FuncOp funcOp =
         createCopyFunc(currentLocation, converter, cpVar.getType(), attrs);
-    result.copyprivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
+    result.copyprivateSyms.push_back(mlir::SymbolRefAttr::get(funcOp));
   };
 
   bool hasCopyPrivate = findRepeatableClause<clause::Copyprivate>(
@@ -832,7 +810,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
 
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
             genDependKindAttr(firOpBuilder, kind);
-        result.dependTypeAttrs.append(objects.size(), dependTypeOperand);
+        result.dependKinds.append(objects.size(), dependTypeOperand);
 
         for (const omp::Object &object : objects) {
           assert(object.ref() && "Expecting designator");
@@ -877,7 +855,7 @@ bool ClauseProcessor::processIf(
     // Assume that, at most, a single 'if' clause will be applicable to the
     // given directive.
     if (operand) {
-      result.ifVar = operand;
+      result.ifExpr = operand;
       found = true;
     }
   });
@@ -907,13 +885,64 @@ bool ClauseProcessor::processLink(
       });
 }
 
+void ClauseProcessor::processMapObjects(
+    lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+    const omp::ObjectList &objects,
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+    std::map<const semantics::Symbol *,
+             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    llvm::SmallVectorImpl<mlir::Value> &mapVars,
+    llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms,
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  for (const omp::Object &object : objects) {
+    llvm::SmallVector<mlir::Value> bounds;
+    std::stringstream asFortran;
+
+    lower::AddrAndBoundsInfo info =
+        lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                              mlir::omp::MapBoundsType>(
+            converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
+            object.ref(), clauseLocation, asFortran, bounds,
+            treatIndexAsSection);
+
+    // Explicit map captures are captured ByRef by default,
+    // optimisation passes may alter this to ByCopy or other capture
+    // types to optimise
+    mlir::Value baseOp = info.rawInput;
+    auto location = mlir::NameLoc::get(
+        mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
+        baseOp.getLoc());
+    mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+        firOpBuilder, location, baseOp,
+        /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+        /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            mapTypeBits),
+        mlir::omp::VariableCaptureKind::ByRef, baseOp.getType());
+
+    if (object.sym()->owner().IsDerivedType()) {
+      addChildIndexAndMapToParent(object, parentMemberIndices, mapOp, semaCtx);
+    } else {
+      mapVars.push_back(mapOp);
+      if (mapSyms)
+        mapSyms->push_back(object.sym());
+      if (mapSymTypes)
+        mapSymTypes->push_back(baseOp.getType());
+      if (mapSymLocs)
+        mapSymLocs->push_back(baseOp.getLoc());
+    }
+  }
+}
+
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // We always require tracking of symbols, even if the caller does not,
   // so we create an optionally used local set of symbols when the mapSyms
   // argument is not present.
@@ -968,56 +997,59 @@ bool ClauseProcessor::processMap(
           mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
-
-        for (const omp::Object &object : std::get<omp::ObjectList>(clause.t)) {
-          llvm::SmallVector<mlir::Value> bounds;
-          std::stringstream asFortran;
-
-          lower::AddrAndBoundsInfo info =
-              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                    mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
-                  object.ref(), clauseLocation, asFortran, bounds,
-                  treatIndexAsSection);
-
-          auto origSymbol = converter.getSymbolAddress(*object.sym());
-          mlir::Value symAddr = info.addr;
-          if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
-            symAddr = origSymbol;
-
-          // Explicit map captures are captured ByRef by default,
-          // optimisation passes may alter this to ByCopy or other capture
-          // types to optimise
-          auto location = mlir::NameLoc::get(
-              mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
-              symAddr.getLoc());
-          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, location, symAddr,
-              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
-              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
-              static_cast<
-                  std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
-
-          if (object.sym()->owner().IsDerivedType()) {
-            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
-                                        semaCtx);
-          } else {
-            result.mapVars.push_back(mapOp);
-            ptrMapSyms->push_back(object.sym());
-            if (mapSymTypes)
-              mapSymTypes->push_back(symAddr.getType());
-            if (mapSymLocs)
-              mapSymLocs->push_back(symAddr.getLoc());
-          }
-        }
+        processMapObjects(stmtCtx, clauseLocation,
+                          std::get<omp::ObjectList>(clause.t), mapTypeBits,
+                          parentMemberIndices, result.mapVars, ptrMapSyms,
+                          mapSymLocs, mapSymTypes);
       });
 
   insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
                                *ptrMapSyms, mapSymTypes, mapSymLocs);
 
   return clauseFound;
+}
+
+bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
+                                           mlir::omp::MapClauseOps &result) {
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+
+  auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
+    mlir::Location clauseLocation = converter.genLocation(source);
+
+    // TODO Support motion modifiers: present, mapper, iterator.
+    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+        std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
+                      mapTypeBits, parentMemberIndices, result.mapVars,
+                      &mapSymbols);
+  };
+
+  bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
+  clauseFound =
+      findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  return clauseFound;
+}
+
+bool ClauseProcessor::processNontemporal(
+    mlir::omp::NontemporalClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Nontemporal>(
+      [&](const omp::clause::Nontemporal &clause, const parser::CharBlock &) {
+        for (const Object &object : clause.v) {
+          semantics::Symbol *sym = object.sym();
+          mlir::Value symVal = converter.getSymbolAddress(*sym);
+          result.nontemporalVars.push_back(symVal);
+        }
+      });
 }
 
 bool ClauseProcessor::processReduction(
@@ -1037,10 +1069,9 @@ bool ClauseProcessor::processReduction(
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
-        llvm::copy(reduceVarByRef,
-                   std::back_inserter(result.reductionVarsByRef));
+        llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
-                   std::back_inserter(result.reductionDeclSymbols));
+                   std::back_inserter(result.reductionSyms));
 
         if (outReductionTypes) {
           outReductionTypes->reserve(outReductionTypes->size() +
@@ -1075,27 +1106,55 @@ bool ClauseProcessor::processEnter(
 }
 
 bool ClauseProcessor::processUseDeviceAddr(
-    mlir::omp::UseDeviceAddrClauseOps &result,
+    lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
-  return findRepeatableClause<omp::clause::UseDeviceAddr>(
-      [&](const omp::clause::UseDeviceAddr &clause, const parser::CharBlock &) {
-        addUseDeviceClause(converter, clause.v, result.useDeviceAddrVars,
-                           useDeviceTypes, useDeviceLocs, useDeviceSyms);
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
+      [&](const omp::clause::UseDeviceAddr &clause,
+          const parser::CharBlock &source) {
+        mlir::Location location = converter.genLocation(source);
+        llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+                          parentMemberIndices, result.useDeviceAddrVars,
+                          &useDeviceSyms, &useDeviceLocs, &useDeviceTypes);
       });
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices,
+                               result.useDeviceAddrVars, useDeviceSyms,
+                               &useDeviceTypes, &useDeviceLocs);
+  return clauseFound;
 }
 
 bool ClauseProcessor::processUseDevicePtr(
-    mlir::omp::UseDevicePtrClauseOps &result,
+    lower::StatementContext &stmtCtx, mlir::omp::UseDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
-  return findRepeatableClause<omp::clause::UseDevicePtr>(
-      [&](const omp::clause::UseDevicePtr &clause, const parser::CharBlock &) {
-        addUseDeviceClause(converter, clause.v, result.useDevicePtrVars,
-                           useDeviceTypes, useDeviceLocs, useDeviceSyms);
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  bool clauseFound = findRepeatableClause<omp::clause::UseDevicePtr>(
+      [&](const omp::clause::UseDevicePtr &clause,
+          const parser::CharBlock &source) {
+        mlir::Location location = converter.genLocation(source);
+        llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+                          parentMemberIndices, result.useDevicePtrVars,
+                          &useDeviceSyms, &useDeviceLocs, &useDeviceTypes);
       });
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices,
+                               result.useDevicePtrVars, useDeviceSyms,
+                               &useDeviceTypes, &useDeviceLocs);
+  return clauseFound;
 }
 
 } // namespace omp

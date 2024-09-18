@@ -161,7 +161,7 @@ public:
   void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
                   TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
-    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags.begin(), ExtraFlags.end());
+    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
 
     for (const auto &Flag : Flags) {
       if (Flag.Value == 0)

@@ -93,20 +93,26 @@ static bool isDereferenceableAndAlignedPointer(
                                               Visited, MaxDepth);
   }
 
-  bool CheckForNonNull, CheckForFreed;
-  APInt KnownDerefBytes(Size.getBitWidth(),
-                        V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                          CheckForFreed));
-  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-      !CheckForFreed)
-    if (!CheckForNonNull ||
-        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
-      // As we recursed through GEPs to get here, we've incrementally checked
-      // that each step advanced by a multiple of the alignment. If our base is
-      // properly aligned, then the original offset accessed must also be.
-      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-      return isAligned(V, Offset, Alignment, DL);
-    }
+  auto IsKnownDeref = [&]() {
+    bool CheckForNonNull, CheckForFreed;
+    APInt KnownDerefBytes(Size.getBitWidth(),
+                          V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                            CheckForFreed));
+    if (!KnownDerefBytes.getBoolValue() || !KnownDerefBytes.uge(Size) ||
+        CheckForFreed)
+      return false;
+    if (CheckForNonNull &&
+        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+      return false;
+    return true;
+  };
+  if (IsKnownDeref()) {
+    // As we recursed through GEPs to get here, we've incrementally checked
+    // that each step advanced by a multiple of the alignment. If our base is
+    // properly aligned, then the original offset accessed must also be.
+    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
+    return isAligned(V, Offset, Alignment, DL);
+  }
 
   /// TODO refactor this function to be able to search independently for
   /// Dereferencability and Alignment requirements.
@@ -345,6 +351,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                             HeaderFirstNonPHI, AC, &DT);
 }
 
+static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
+  const Function &F = *CtxI.getFunction();
+  // Speculative load may create a race that did not exist in the source.
+  return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         // Speculative load may load data from dirty regions.
+         F.hasFnAttribute(Attribute::SanitizeAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeHWAddress);
+}
+
+bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
+  return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
+}
+
 /// Check if executing a load of this pointer value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
@@ -365,8 +384,12 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
   // If DT is not specified we can't make context-sensitive query
   const Instruction* CtxI = DT ? ScanFrom : nullptr;
   if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
-                                         TLI))
-    return true;
+                                         TLI)) {
+    // With sanitizers `Dereferenceable` is not always enough for unconditional
+    // load.
+    if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))
+      return true;
+  }
 
   if (!ScanFrom)
     return false;

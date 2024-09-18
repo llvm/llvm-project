@@ -353,13 +353,15 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       d.AsFortran(ss);
-      Say(*m, description_, ss.str());
+      Say(*m, description_, buf);
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
     return false;
+  } else {
+    context_.NoteDefinedSymbol(*base);
+    return true;
   }
-  return true;
 }
 
 // Common handling for procedure pointer right-hand sides

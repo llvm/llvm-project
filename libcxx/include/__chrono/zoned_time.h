@@ -22,12 +22,14 @@
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb_list.h>
+#  include <__concepts/constructible.h>
 #  include <__config>
-#  include <__fwd/string_view.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/remove_cvref.h>
+#  include <__utility/declval.h>
 #  include <__utility/move.h>
+#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -201,8 +203,8 @@ template <class _TimeZonePtrOrName, class _Duration>
 zoned_time(_TimeZonePtrOrName&&, local_time<_Duration>, choose = choose::earliest)
     -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
 
-template <class _Duration, class _TimeZonePtrOrName, class TimeZonePtr2>
-zoned_time(_TimeZonePtrOrName&&, zoned_time<_Duration, TimeZonePtr2>, choose = choose::earliest)
+template <class _Duration, class _TimeZonePtrOrName, class _TimeZonePtr2>
+zoned_time(_TimeZonePtrOrName&&, zoned_time<_Duration, _TimeZonePtr2>, choose = choose::earliest)
     -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
 
 using zoned_seconds = zoned_time<seconds>;

@@ -38,9 +38,9 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -1715,7 +1715,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                Map.getShadow(BinOp->getOperand(1)));
 
   if (isa<UIToFPInst>(&Inst) || isa<SIToFPInst>(&Inst)) {
-    auto *Cast = dyn_cast<CastInst>(&Inst);
+    auto *Cast = cast<CastInst>(&Inst);
     return Builder.CreateCast(Cast->getOpcode(), Cast->getOperand(0),
                               ExtendedVT);
   }
@@ -2038,7 +2038,8 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
+      F.isDeclaration())
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within
@@ -2168,7 +2169,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
 
   // The last pass populates shadow phis with shadow values.
   for (PHINode *Phi : OriginalPhis) {
-    PHINode *ShadowPhi = dyn_cast<PHINode>(ValueToShadow.getShadow(Phi));
+    PHINode *ShadowPhi = cast<PHINode>(ValueToShadow.getShadow(Phi));
     for (unsigned I : seq(Phi->getNumOperands())) {
       Value *V = Phi->getOperand(I);
       Value *Shadow = ValueToShadow.getShadow(V);
