@@ -474,15 +474,15 @@ public:
   ~FuncResultStack();
 
   struct FuncInfo {
-    explicit FuncInfo(const Scope &s) : scope{s} {}
+    FuncInfo(const Scope &s, SourceName at) : scope{s}, source{at} {}
     const Scope &scope;
+    SourceName source;
     // Parse tree of the type specification in the FUNCTION prefix
     const parser::DeclarationTypeSpec *parsedType{nullptr};
     // Name of the function RESULT in the FUNCTION suffix, if any
     const parser::Name *resultName{nullptr};
     // Result symbol
     Symbol *resultSymbol{nullptr};
-    std::optional<SourceName> source;
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
   };
 
@@ -492,7 +492,9 @@ public:
   void CompleteTypeIfFunctionResult(Symbol &);
 
   FuncInfo *Top() { return stack_.empty() ? nullptr : &stack_.back(); }
-  FuncInfo &Push(const Scope &scope) { return stack_.emplace_back(scope); }
+  FuncInfo &Push(const Scope &scope, SourceName at) {
+    return stack_.emplace_back(scope, at);
+  }
   void Pop();
 
 private:
@@ -3799,11 +3801,13 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
   if (const auto *parsedType{std::get_if<parser::DeclarationTypeSpec>(&x.u)}) {
     if (FuncResultStack::FuncInfo * info{funcResultStack().Top()}) {
       if (info->parsedType) { // C1543
-        Say(currStmtSource().value(),
+        Say(currStmtSource().value_or(info->source),
             "FUNCTION prefix cannot specify the type more than once"_err_en_US);
       } else {
         info->parsedType = parsedType;
-        info->source = currStmtSource();
+        if (auto at{currStmtSource()}) {
+          info->source = *at;
+        }
       }
     } else {
       Say(currStmtSource().value(),
@@ -3978,6 +3982,9 @@ bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
   FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
   CHECK(!info.inFunctionStmt);
   info.inFunctionStmt = true;
+  if (auto at{currStmtSource()}) {
+    info.source = *at;
+  }
   return BeginAttrs();
 }
 bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
@@ -4344,15 +4351,18 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     Symbol::Flag subpFlag, bool hasModulePrefix,
     const parser::LanguageBindingSpec *bindingSpec,
     const ProgramTree::EntryStmtList *entryStmts) {
+  bool isValid{true};
   if (hasModulePrefix && !currScope().IsModule() &&
       !currScope().IsSubmodule()) { // C1547
     Say(name,
         "'%s' is a MODULE procedure which must be declared within a "
         "MODULE or SUBMODULE"_err_en_US);
-    return false;
+    // Don't return here because it can be useful to have the scope set for
+    // other semantic checks run before we print the errors
+    isValid = false;
   }
   Symbol *moduleInterface{nullptr};
-  if (hasModulePrefix && !inInterfaceBlock()) {
+  if (isValid && hasModulePrefix && !inInterfaceBlock()) {
     moduleInterface = FindSeparateModuleProcedureInterface(name);
     if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
@@ -4507,7 +4517,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
   symbol->set(subpFlag);
   PushScope(Scope::Kind::Subprogram, symbol);
   if (subpFlag == Symbol::Flag::Function) {
-    funcResultStack().Push(currScope());
+    funcResultStack().Push(currScope(), name.source);
   }
   if (inInterfaceBlock()) {
     auto &details{symbol->get<SubprogramDetails>()};

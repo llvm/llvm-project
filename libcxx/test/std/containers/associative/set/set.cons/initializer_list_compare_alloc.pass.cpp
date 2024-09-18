@@ -17,6 +17,8 @@
 
 #include <set>
 #include <cassert>
+#include <iterator>
+
 #include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"

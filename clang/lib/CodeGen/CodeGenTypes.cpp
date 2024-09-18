@@ -509,9 +509,20 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                             Info.EC.getKnownMinValue() *
-                                                 Info.NumVectors);
+        auto VTy =
+            llvm::VectorType::get(ConvertType(Info.ElementType), Info.EC);
+        switch (Info.NumVectors) {
+        default:
+          llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
+        case 1:
+          return VTy;
+        case 2:
+          return llvm::StructType::get(VTy, VTy);
+        case 3:
+          return llvm::StructType::get(VTy, VTy, VTy);
+        case 4:
+          return llvm::StructType::get(VTy, VTy, VTy, VTy);
+        }
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
@@ -547,8 +558,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId)        \
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
 #include "clang/Basic/AMDGPUTypes.def"

@@ -163,22 +163,22 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 0 for VF 4 For instruction: store double %v5, ptr %out5, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 4 For instruction: store double %v6, ptr %out6, align 8
 ; AVX512:  LV: Found an estimated cost of 46 for VF 4 For instruction: store double %v7, ptr %out7, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v0, ptr %out0, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v1, ptr %out1, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v2, ptr %out2, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v3, ptr %out3, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v4, ptr %out4, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v5, ptr %out5, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 8 For instruction: store double %v6, ptr %out6, align 8
-; AVX512:  LV: Found an estimated cost of 80 for VF 8 For instruction: store double %v7, ptr %out7, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v0, ptr %out0, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v1, ptr %out1, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v2, ptr %out2, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v3, ptr %out3, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v4, ptr %out4, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v5, ptr %out5, align 8
-; AVX512:  LV: Found an estimated cost of 0 for VF 16 For instruction: store double %v6, ptr %out6, align 8
-; AVX512:  LV: Found an estimated cost of 160 for VF 16 For instruction: store double %v7, ptr %out7, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v0, ptr %out0, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v1, ptr %out1, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v2, ptr %out2, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v4, ptr %out4, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v5, ptr %out5, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v6, ptr %out6, align 8
+; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store double %v7, ptr %out7, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v0, ptr %out0, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v1, ptr %out1, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v2, ptr %out2, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v4, ptr %out4, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v5, ptr %out5, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v6, ptr %out6, align 8
+; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store double %v7, ptr %out7, align 8
 ;
 entry:
   br label %for.body

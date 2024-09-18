@@ -160,7 +160,7 @@ append_list_if(MINGW "${MINGW_LIBRARIES}" ASAN_DYNAMIC_LIBS)
 add_compiler_rt_object_libraries(RTAsan_dynamic
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   ARCHS ${ASAN_SUPPORTED_ARCH}
-  SOURCES ${ASAN_SOURCES}
+  SOURCES ${ASAN_SOURCES} ${ASAN_CXX_SOURCES}
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
@@ -312,7 +312,6 @@ else()
       SHARED
       ARCHS ${arch}
       OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
-              RTAsan_cxx
               RTAsan_dynamic
               # The only purpose of RTAsan_dynamic_version_script_dummy is to
               # carry a dependency of the shared runtime on the version script.

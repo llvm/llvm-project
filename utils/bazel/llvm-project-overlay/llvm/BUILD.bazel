@@ -1408,7 +1408,7 @@ cc_library(
         "lib/Transforms/Instrumentation/*.inc",
     ]),
     hdrs = glob(["include/llvm/Transforms/Instrumentation/*.h"]) + [
-        "include/llvm/Transforms/Instrumentation.h",
+        "include/llvm/Transforms/Utils/Instrumentation.h",
     ],
     copts = llvm_copts,
     deps = [
@@ -1485,13 +1485,11 @@ cc_library(
 cc_library(
     name = "Vectorize",
     srcs = glob([
-        "lib/Transforms/Vectorize/*.cpp",
-        "lib/Transforms/Vectorize/*.h",
-        "lib/Transforms/Vectorize/SandboxVectorizer/*.cpp",
+        "lib/Transforms/Vectorize/**/*.cpp",
+        "lib/Transforms/Vectorize/**/*.h",
     ]),
     hdrs = glob([
-        "include/llvm/Transforms/Vectorize/*.h",
-        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
+        "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -2364,6 +2362,7 @@ gentbl(
         ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerLowering", "lib/Target/RISCV/RISCVGenPostLegalizeGILowering.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",

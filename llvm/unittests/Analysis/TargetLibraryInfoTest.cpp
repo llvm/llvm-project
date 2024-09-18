@@ -37,7 +37,7 @@ protected:
     Error.print("", os);
 
     if (!M)
-      report_fatal_error(Twine(os.str()));
+      report_fatal_error(Twine(errMsg));
   }
 
   ::testing::AssertionResult isLibFunc(const Function *FDecl,
@@ -339,6 +339,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare float @sinhf(float)\n"
       "declare x86_fp80 @sinhl(x86_fp80)\n"
       "declare x86_fp80 @sinl(x86_fp80)\n"
+      "declare void @sincos(double, ptr, ptr)\n"
+      "declare void @sincosf(float, ptr, ptr)\n"
+      "declare void @sincosl(x86_fp80, ptr, ptr)\n"
       "declare i32 @snprintf(i8*, i64, i8*, ...)\n"
       "declare i32 @sprintf(i8*, i8*, ...)\n"
       "declare double @sqrt(double)\n"
