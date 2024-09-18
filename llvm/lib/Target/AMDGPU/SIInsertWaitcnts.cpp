@@ -868,7 +868,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_CONSUME &&
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (const MachineOperand &Op : Inst.all_uses()) {
-          if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
+          if (TRI->isVectorRegister(*MRI, Op.getReg()))
             setExpScore(&Inst, TRI, MRI, Op, CurrScore);
         }
       }
@@ -920,7 +920,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         }
       }
       for (const MachineOperand &Op : Inst.all_uses()) {
-        if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (TRI->isVectorRegister(*MRI, Op.getReg()))
           setExpScore(&Inst, TRI, MRI, Op, CurrScore);
       }
     }
@@ -2585,7 +2585,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
           HasVMemStore = true;
       }
       for (const MachineOperand &Op : MI.all_uses()) {
-        if (!Op.isReg() || !TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (!TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
         RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
         // Vgpr use
