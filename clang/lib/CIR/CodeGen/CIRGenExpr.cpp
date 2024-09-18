@@ -1376,6 +1376,28 @@ RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
   return buildCall(E->getCallee()->getType(), callee, E, ReturnValue);
 }
 
+RValue CIRGenFunction::GetUndefRValue(QualType ty) {
+  if (ty->isVoidType())
+    return RValue::get(nullptr);
+
+  switch (getEvaluationKind(ty)) {
+  case TEK_Complex: {
+    llvm_unreachable("NYI");
+  }
+
+  // If this is a use of an undefined aggregate type, the aggregate must have
+  // an identifiable address. Just because the contents of the value are
+  // undefined doesn't mean that the address can't be taken and compared.
+  case TEK_Aggregate: {
+    llvm_unreachable("NYI");
+  }
+
+  case TEK_Scalar:
+    llvm_unreachable("NYI");
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
 LValue CIRGenFunction::buildStmtExprLValue(const StmtExpr *E) {
   // Can only get l-value for message expression returning aggregate type
   RValue RV = buildAnyExprToTemp(E);
