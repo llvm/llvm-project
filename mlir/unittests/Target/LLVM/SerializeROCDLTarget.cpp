@@ -124,9 +124,7 @@ TEST_F(MLIRTargetLLVMROCDL,
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
-    ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
-    ASSERT_TRUE(StringRef(object->data(), object->size())
+    EXPECT_TRUE(StringRef(object->data(), object->size())
                     .contains(".amdhsa_code_object_version 5"));
   }
 }
@@ -152,9 +150,7 @@ TEST_F(MLIRTargetLLVMROCDL,
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
-    ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
-    ASSERT_TRUE(StringRef(object->data(), object->size())
+    EXPECT_TRUE(StringRef(object->data(), object->size())
                     .contains(".amdhsa_code_object_version 4"));
   }
 }

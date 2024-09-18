@@ -80,8 +80,8 @@ public:
   LogicalResult handleBitcodeFile(llvm::Module &module) override;
 
 protected:
-  /// Adds `oclc` control variables to the LLVM Module if needed and sets
-  /// `amdhsa_code_object_version` module flag.
+  /// Adds `oclc` control variables to the LLVM Module if needed. It also sets
+  /// `amdhsa_code_object_version` module flag which is equal to ABI version.
   void addControlVariables(llvm::Module &module, AMDGCNLibraries libs,
                            bool wave64, bool daz, bool finiteOnly,
                            bool unsafeMath, bool fastMath, bool correctSqrt,
