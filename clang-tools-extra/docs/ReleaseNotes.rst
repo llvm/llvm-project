@@ -43,6 +43,8 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+- The ``clang-pseudo`` tool has been removed.
+
 ...
 
 Improvements to clangd
