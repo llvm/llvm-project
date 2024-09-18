@@ -374,6 +374,11 @@ static_assert(+"foo\0bar" != +"foo\0baz", "");
 static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
 static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
 
+constexpr const char *string = "hello";
+constexpr const char *also_string = string;
+static_assert(string == string, "");
+static_assert(string == also_string, "");
+
 // These strings may overlap, and so the result of the comparison is unknown.
 constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of literals}}
 constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of literals}}
