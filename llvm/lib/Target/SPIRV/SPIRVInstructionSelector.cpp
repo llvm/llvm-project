@@ -1143,10 +1143,17 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // and the two members must be the same type."
   Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
   ResTy = StructType::create(SmallVector<Type *, 2>{ResElemTy, ResElemTy});
-  // Build SPIR-V type if needed.
+  // Build SPIR-V types and constant(s) if needed.
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *StructType = GR.getOrCreateSPIRVType(
       ResTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  assert(I.getNumDefs() > 1 && "Not enought operands");
+  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  if (N > 1)
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
+  Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
+  Register ZeroReg = buildZerosVal(ResType, I);
   // A new virtual register to store the result struct.
   Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
@@ -1155,9 +1162,10 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
     buildOpName(StructVReg, ResName, MIRBuilder);
   // Build the arithmetic with overflow instruction.
   MachineBasicBlock &BB = *I.getParent();
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-                 .addDef(StructVReg)
-                 .addUse(GR.getSPIRVTypeID(StructType));
+  auto MIB =
+      BuildMI(BB, MIRBuilder.getInsertPt(), I.getDebugLoc(), TII.get(Opcode))
+          .addDef(StructVReg)
+          .addUse(GR.getSPIRVTypeID(StructType));
   for (unsigned i = I.getNumDefs(); i < I.getNumOperands(); ++i)
     MIB.addUse(I.getOperand(i).getReg());
   bool Status = MIB.constrainAllUses(TII, TRI, RBI);
@@ -1175,16 +1183,11 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
     Status &= MIB.constrainAllUses(TII, TRI, RBI);
   }
   // Build boolean value from the higher part.
-  assert(I.getNumDefs() > 1 && "Not enought operands");
-  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
-  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-  if (N > 1)
-    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Status &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
                 .addDef(I.getOperand(1).getReg())
-                .addUse(GR.getSPIRVTypeID(BoolType))
+                .addUse(BoolTypeReg)
                 .addUse(HigherVReg)
-                .addUse(buildZerosVal(ResType, I))
+                .addUse(ZeroReg)
                 .constrainAllUses(TII, TRI, RBI);
   return Status;
 }
