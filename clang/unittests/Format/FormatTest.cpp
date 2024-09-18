@@ -17282,6 +17282,12 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
   Spaces.SpacesInParensOptions = {};
   Spaces.SpacesInParensOptions.Other = true;
+
+  EXPECT_FALSE(Spaces.SpacesInParensOptions.InConditionalStatements);
+  verifyFormat("if (a)\n"
+               "  return;",
+               Spaces);
+
   Spaces.SpacesInParensOptions.InConditionalStatements = true;
   verifyFormat("do_something( ::globalVar );", Spaces);
   verifyFormat("call( x, y, z );", Spaces);
