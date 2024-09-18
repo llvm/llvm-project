@@ -1799,9 +1799,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if ((Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
-      report("Source type and index must not cause extract to overrun to the "
-             "destination type",
+    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+      report("Destination type and index must not cause extract to overrun the "
+             "source vector",
              MI);
       break;
     }
