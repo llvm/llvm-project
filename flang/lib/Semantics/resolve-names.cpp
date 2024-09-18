@@ -8748,6 +8748,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   CheckImports();
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
+    if (inInterfaceBlock()) {
+      ConvertToObjectEntity(symbol);
+    }
     if (NeedsExplicitType(symbol)) {
       ApplyImplicitRules(symbol);
     }
