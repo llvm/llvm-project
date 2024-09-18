@@ -3076,6 +3076,12 @@ as follows:
     address space 0, this property only affects the default value to be used
     when creating globals without additional contextual information (e.g. in
     LLVM passes).
+``U<address space>``
+    Specifies the undesirable address space for a target. This specification does
+    not define a new address space; it must correspond to a valid, existing address
+    space and be capable of lossless conversion to other address spaces. If this
+    specification is absent, it indicates that the target does not have such an
+    address space.
 
 .. _alloca_addrspace:
 

@@ -5574,6 +5574,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    // Add flat address space.
+    if (!DL.contains("-U0") && !DL.starts_with("U0"))
+      Res.append("-U0");
+
     return Res;
   }
 
@@ -5634,6 +5638,12 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     auto I = Ref.find("-f80:32-");
     if (I != StringRef::npos)
       Res = (Ref.take_front(I) + "-f80:128-" + Ref.drop_front(I + 8)).str();
+  }
+
+  if (T.isNVPTX()) {
+    // Add flat address space.
+    if (!DL.contains("-U0") && !DL.starts_with("U0"))
+      Res.append("-U0");
   }
 
   return Res;

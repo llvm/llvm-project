@@ -94,6 +94,7 @@ private:
   unsigned AllocaAddrSpace = 0;
   unsigned ProgramAddrSpace = 0;
   unsigned DefaultGlobalsAddrSpace = 0;
+  std::optional<unsigned> UndesirableAddressSpace;
 
   MaybeAlign StackNaturalAlign;
   MaybeAlign FunctionPtrAlign;
@@ -244,6 +245,9 @@ public:
   unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
   unsigned getDefaultGlobalsAddressSpace() const {
     return DefaultGlobalsAddrSpace;
+  }
+  std::optional<unsigned> getUndesirableAddressSpace() const {
+    return UndesirableAddressSpace;
   }
 
   bool hasMicrosoftFastStdCallMangling() const {
