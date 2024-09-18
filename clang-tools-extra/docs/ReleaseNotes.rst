@@ -139,6 +139,10 @@ Changes in existing checks
   as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
 
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
+  using loop variable in initializer of lambda capture.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
