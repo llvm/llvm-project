@@ -11029,27 +11029,20 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   }
 
   if (TVA) {
+    llvm::SmallVector<StringRef, 8> Feats;
     if (S.getASTContext().getTargetInfo().getTriple().isRISCV()) {
       ParsedTargetAttr ParseInfo =
           S.getASTContext().getTargetInfo().parseTargetAttr(TVA->getName());
-      for (const auto &Feat : ParseInfo.Features) {
-        StringRef BareFeat = StringRef{Feat}.substr(1);
-
-        if (!TargetInfo.isValidFeatureName(BareFeat)) {
-          S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-              << Feature << BareFeat;
-          return true;
-        }
-      }
+      for (auto &Feat : ParseInfo.Features)
+        Feats.push_back(StringRef{Feat}.substr(1));
     } else {
-      llvm::SmallVector<StringRef, 8> Feats;
       TVA->getFeatures(Feats);
-      for (const auto &Feat : Feats) {
-        if (!TargetInfo.validateCpuSupports(Feat)) {
-          S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-              << Feature << Feat;
-          return true;
-        }
+    }
+    for (const auto &Feat : Feats) {
+      if (!TargetInfo.validateCpuSupports(Feat)) {
+        S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
+            << Feature << Feat;
+        return true;
       }
     }
   }
