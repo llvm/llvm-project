@@ -1371,6 +1371,7 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
 
 /// This class defines the interface to the ThinLTO backend.
 /// Test
+/// Test2
 class lto::ThinBackendProc {
 protected:
   const Config &Conf;
