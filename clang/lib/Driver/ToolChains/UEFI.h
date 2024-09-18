@@ -12,8 +12,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
-namespace clang {
-namespace driver {
+namespace clang::driver {
 namespace tools {
 namespace uefi {
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
@@ -55,7 +54,6 @@ public:
 };
 
 } // namespace toolchains
-} // namespace driver
-} // namespace clang
+} // namespace clang::driver
 
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_UEFI_H
