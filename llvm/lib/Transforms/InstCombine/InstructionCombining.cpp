@@ -2007,16 +2007,12 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 static std::optional<bool> shouldFoldOpIntoSelect(BinaryOperator &I, Value *Op,
                                                   Value *OpOther,
                                                   bool AllowMultiUse) {
-  if (!AllowMultiUse && !Op->hasOneUse())
+  if (!isa<SelectInst>(Op) || (!AllowMultiUse && !Op->hasOneUse()))
     return std::nullopt;
-  if (isa<SelectInst>(Op)) {
-    // If we will be able to constant fold the incorporated binop, then
-    // multi-use. Otherwise single-use.
-    return match(OpOther, m_ImmConstant()) &&
-           match(Op, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()));
-  }
-
-  return std::nullopt;
+  // If we will be able to constant fold the incorporated binop, then
+  // multi-use. Otherwise single-use.
+  return match(OpOther, m_ImmConstant()) &&
+         match(Op, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()));
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelect(BinaryOperator &I,
