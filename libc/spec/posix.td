@@ -80,6 +80,7 @@ def GetoptArgvT : NamedType<"__getoptargv_t">;
 
 def SAFamilyType : NamedType<"sa_family_t">;
 def SocklenType : NamedType<"socklen_t">;
+def SocklenPtr : PtrType<SocklenType>;
 
 def StructSockAddr : NamedType<"struct sockaddr">;
 def StructSockAddrPtr : PtrType<StructSockAddr>;
@@ -1736,6 +1737,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "socketpair",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntPtr>]
+        >,
+        FunctionSpec<
           "bind",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
@@ -1758,6 +1764,25 @@ def POSIX : StandardSpec<"POSIX"> {
           "sendmsg",
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<ConstStructMsghdrPtr>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "recv",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "recvfrom",
+          RetValSpec<SSizeTType>,
+          [
+            ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>,
+            ArgSpec<IntType>, ArgSpec<StructSockAddrPtr>,
+            ArgSpec<SocklenPtr>
+          ]
+        >,
+        FunctionSpec<
+          "recvmsg",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<StructMsghdrPtr>, ArgSpec<IntType>]
         >,
       ]  // Functions
   >;

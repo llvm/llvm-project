@@ -107,3 +107,12 @@ functions:
       - type: int
       - type: int
       - type: int
+  - name: socketpair
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+      - type: int
+      - type: int*

@@ -14,6 +14,19 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  socketpair_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    socketpair_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.errno.errno
+    libc.src.sys.socket.socketpair
+    libc.src.unistd.close
+)
+
+add_libc_unittest(
   bind_test
   SUITE
     libc_sys_socket_unittests
