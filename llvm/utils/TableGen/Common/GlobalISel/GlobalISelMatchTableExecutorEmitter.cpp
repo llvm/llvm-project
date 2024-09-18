@@ -49,14 +49,14 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   // Emit a table containing the PredicateBitsets objects needed by the matcher
   // and an enum for the matcher to reference them with.
-  std::vector<std::pair<std::vector<Record *>, int>> FeatureBitsets;
+  std::vector<std::pair<std::vector<const Record *>, int>> FeatureBitsets;
   FeatureBitsets.reserve(Rules.size());
   for (auto &Rule : Rules)
     FeatureBitsets.emplace_back(Rule.getRequiredFeatures(),
                                 Rule.getHwModeIdx());
   llvm::sort(FeatureBitsets,
-             [&](const std::pair<std::vector<Record *>, int> &A,
-                 const std::pair<std::vector<Record *>, int> &B) {
+             [&](const std::pair<std::vector<const Record *>, int> &A,
+                 const std::pair<std::vector<const Record *>, int> &B) {
                if (A.first.size() < B.first.size())
                  return true;
                if (A.first.size() > B.first.size())
