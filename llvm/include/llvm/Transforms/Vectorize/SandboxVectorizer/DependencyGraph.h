@@ -35,9 +35,16 @@ class DGNode {
   Instruction *I;
   /// Memory predecessors.
   DenseSet<DGNode *> MemPreds;
+  /// This is true if this may read/write memory, or if it has some ordering
+  /// constraings, like with stacksave/stackrestore and alloca/inalloca.
+  bool IsMem;
 
 public:
-  DGNode(Instruction *I) : I(I) {}
+  DGNode(Instruction *I) : I(I) {
+    IsMem = I->isMemDepCandidate() ||
+            (isa<AllocaInst>(I) && cast<AllocaInst>(I)->isUsedWithInAlloca()) ||
+            I->isStackSaveOrRestoreIntrinsic();
+  }
   Instruction *getInstruction() const { return I; }
   void addMemPred(DGNode *PredN) { MemPreds.insert(PredN); }
   /// \Returns all memory dependency predecessors.
@@ -46,6 +53,9 @@ public:
   }
   /// \Returns true if there is a memory dependency N->this.
   bool hasMemPred(DGNode *N) const { return MemPreds.count(N); }
+  /// \Returns true if this may read/write memory, or if it has some ordering
+  /// constraings, like with stacksave/stackrestore and alloca/inalloca.
+  bool isMem() const { return IsMem; }
 #ifndef NDEBUG
   void print(raw_ostream &OS, bool PrintDeps = true) const;
   friend raw_ostream &operator<<(DGNode &N, raw_ostream &OS) {
