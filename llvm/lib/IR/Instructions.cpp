@@ -1559,8 +1559,8 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
 /// are zero except the last indice.
 bool GetElementPtrInst::hasAllZeroIndicesExceptLast() const {
   for (unsigned i = 1, e = getNumOperands() - 1; i != e; ++i) {
-    if (!isa<ConstantInt>(getOperand(i)) ||
-        !cast<ConstantInt>(getOperand(i))->isZero())
+    ConstantInt *Val = dyn_cast<ConstantInt>(getOperand(i));
+    if (!Val || !Val->isZero())
       return false;
   }
   return true;
