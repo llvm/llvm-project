@@ -496,7 +496,7 @@ Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     if (EmitIR) {
-      MIRBuilder.buildSplatVector(SpvVecConst, SpvScalConst);
+      MIRBuilder.buildSplatBuildVector(SpvVecConst, SpvScalConst);
     } else {
       if (Val) {
         auto MIB = MIRBuilder.buildInstr(SPIRV::OpConstantComposite)

@@ -306,6 +306,11 @@ BBIterator &BBIterator::operator--() {
   return *this;
 }
 
+BasicBlock *BBIterator::getNodeParent() const {
+  llvm::BasicBlock *Parent = const_cast<BBIterator *>(this)->It.getNodeParent();
+  return cast<BasicBlock>(Ctx->getValue(Parent));
+}
+
 const char *Instruction::getOpcodeName(Opcode Opc) {
   switch (Opc) {
 #define OP(OPC)                                                                \
@@ -2532,6 +2537,10 @@ template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
                                  llvm::GlobalObject>;
 template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
                                  llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                                 GlobalObject, llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                                 llvm::GlobalValue>;
 } // namespace llvm::sandboxir
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
@@ -2550,6 +2559,57 @@ Constant *GlobalIFunc::getResolver() const {
 Function *GlobalIFunc::getResolverFunction() {
   return cast<Function>(Ctx.getOrCreateConstant(
       cast<llvm::GlobalIFunc>(Val)->getResolverFunction()));
+}
+
+GlobalVariable &
+GlobalVariable::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV) const {
+  return cast<GlobalVariable>(*Ctx.getValue(&LLVMGV));
+}
+
+Constant *GlobalVariable::getInitializer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::GlobalVariable>(Val)->getInitializer());
+}
+
+void GlobalVariable::setInitializer(Constant *InitVal) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getInitializer,
+                                       &GlobalVariable::setInitializer>>(this);
+  cast<llvm::GlobalVariable>(Val)->setInitializer(
+      cast<llvm::Constant>(InitVal->Val));
+}
+
+void GlobalVariable::setConstant(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::isConstant,
+                                       &GlobalVariable::setConstant>>(this);
+  cast<llvm::GlobalVariable>(Val)->setConstant(V);
+}
+
+void GlobalVariable::setExternallyInitialized(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalVariable::isExternallyInitialized,
+                        &GlobalVariable::setExternallyInitialized>>(this);
+  cast<llvm::GlobalVariable>(Val)->setExternallyInitialized(V);
+}
+
+void GlobalAlias::setAliasee(Constant *Aliasee) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalAlias::getAliasee, &GlobalAlias::setAliasee>>(
+          this);
+  cast<llvm::GlobalAlias>(Val)->setAliasee(cast<llvm::Constant>(Aliasee->Val));
+}
+
+Constant *GlobalAlias::getAliasee() const {
+  return cast<Constant>(
+      Ctx.getOrCreateConstant(cast<llvm::GlobalAlias>(Val)->getAliasee()));
+}
+
+const GlobalObject *GlobalAlias::getAliaseeObject() const {
+  return cast<GlobalObject>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalAlias>(Val)->getAliaseeObject()));
 }
 
 void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
@@ -2763,6 +2823,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::GlobalIFuncVal:
       It->second = std::unique_ptr<GlobalIFunc>(
           new GlobalIFunc(cast<llvm::GlobalIFunc>(C), *this));
+      break;
+    case llvm::Value::GlobalVariableVal:
+      It->second = std::unique_ptr<GlobalVariable>(
+          new GlobalVariable(cast<llvm::GlobalVariable>(C), *this));
+      break;
+    case llvm::Value::GlobalAliasVal:
+      It->second = std::unique_ptr<GlobalAlias>(
+          new GlobalAlias(cast<llvm::GlobalAlias>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
