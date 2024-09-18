@@ -188,26 +188,22 @@ void RTDECL(ReduceReal8DimValue)(Descriptor &result, const Descriptor &array,
     ValueReductionOperation<double>, const char *source, int line, int dim,
     const Descriptor *mask = nullptr, const double *identity = nullptr,
     bool ordered = true);
-#if HAS_FLOAT80
-CppTypeFor<TypeCategory::Real, 10> RTDECL(ReduceReal10Ref)(const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Real, 10>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Real, 10> *identity = nullptr,
-    bool ordered = true);
-CppTypeFor<TypeCategory::Real, 10> RTDECL(ReduceReal10Value)(const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Real, 10>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Real, 10> *identity = nullptr,
-    bool ordered = true);
+#if LDBL_MANT_DIG == 64
+long double RTDECL(ReduceReal10Ref)(const Descriptor &,
+    ReferenceReductionOperation<long double>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const long double *identity = nullptr, bool ordered = true);
+long double RTDECL(ReduceReal10Value)(const Descriptor &,
+    ValueReductionOperation<long double>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const long double *identity = nullptr, bool ordered = true);
 void RTDECL(ReduceReal10DimRef)(Descriptor &result, const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Real, 10>>,
-    const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Real, 10> *identity = nullptr,
-    bool ordered = true);
+    ReferenceReductionOperation<long double>, const char *source, int line,
+    int dim, const Descriptor *mask = nullptr,
+    const long double *identity = nullptr, bool ordered = true);
 void RTDECL(ReduceReal10DimValue)(Descriptor &result, const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Real, 10>>,
-    const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Real, 10> *identity = nullptr,
+    ValueReductionOperation<long double>, const char *source, int line, int dim,
+    const Descriptor *mask = nullptr, const long double *identity = nullptr,
     bool ordered = true);
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -229,152 +225,112 @@ void RTDECL(ReduceReal16DimValue)(Descriptor &result, const Descriptor &array,
     const CppFloat128Type *identity = nullptr, bool ordered = true);
 #endif
 
-void RTDECL(CppReduceComplex2Ref)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex2Value)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+void RTDECL(CppReduceComplex2Ref)(std::complex<float> &, const Descriptor &,
+    ReferenceReductionOperation<std::complex<float>>, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex2Value)(std::complex<float> &, const Descriptor &,
+    ValueReductionOperation<std::complex<float>>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex2DimRef)(Descriptor &result,
-    const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ReferenceReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex2DimValue)(Descriptor &result,
-    const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ValueReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex3Ref)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex3Value)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex3Ref)(std::complex<float> &, const Descriptor &,
+    ReferenceReductionOperation<std::complex<float>>, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex3Value)(std::complex<float> &, const Descriptor &,
+    ValueReductionOperation<std::complex<float>>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex3DimRef)(Descriptor &result,
-    const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ReferenceReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex3DimValue)(Descriptor &result,
-    const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ValueReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex4Ref)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex4Value)(CppTypeFor<TypeCategory::Complex, 4> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex4Ref)(std::complex<float> &, const Descriptor &,
+    ReferenceReductionOperation<std::complex<float>>, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex4Value)(std::complex<float> &, const Descriptor &,
+    ValueReductionOperation<std::complex<float>>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex4DimRef)(Descriptor &result,
-    const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ReferenceReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex4DimValue)(Descriptor &result,
-    const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 4>>,
+    const Descriptor &array, ValueReductionOperation<std::complex<float>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 4> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex8Ref)(CppTypeFor<TypeCategory::Complex, 8> &,
-    const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 8>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 8> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex8Value)(CppTypeFor<TypeCategory::Complex, 8> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 8>>,
-    const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 8> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<float> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex8Ref)(std::complex<double> &, const Descriptor &,
+    ReferenceReductionOperation<std::complex<double>>, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<double> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex8Value)(std::complex<double> &, const Descriptor &,
+    ValueReductionOperation<std::complex<double>>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::complex<double> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex8DimRef)(Descriptor &result,
-    const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 8>>,
+    const Descriptor &array, ReferenceReductionOperation<std::complex<double>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 8> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<double> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex8DimValue)(Descriptor &result,
-    const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 8>>,
+    const Descriptor &array, ValueReductionOperation<std::complex<double>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 8> *identity = nullptr,
-    bool ordered = true);
-#if HAS_FLOAT80
-void RTDECL(CppReduceComplex10Ref)(CppTypeFor<TypeCategory::Complex, 10> &,
-    const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 10>>,
+    const std::complex<double> *identity = nullptr, bool ordered = true);
+#if LDBL_MANT_DIG == 64
+void RTDECL(CppReduceComplex10Ref)(std::complex<long double> &,
+    const Descriptor &, ReferenceReductionOperation<std::complex<long double>>,
     const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 10> *identity = nullptr,
-    bool ordered = true);
-void RTDECL(CppReduceComplex10Value)(CppTypeFor<TypeCategory::Complex, 10> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 10>>,
+    const std::complex<long double> *identity = nullptr, bool ordered = true);
+void RTDECL(CppReduceComplex10Value)(std::complex<long double> &,
+    const Descriptor &, ValueReductionOperation<std::complex<long double>>,
     const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 10> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<long double> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex10DimRef)(Descriptor &result,
     const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 10>>,
-    const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 10> *identity = nullptr,
-    bool ordered = true);
+    ReferenceReductionOperation<std::complex<long double>>, const char *source,
+    int line, int dim, const Descriptor *mask = nullptr,
+    const std::complex<long double> *identity = nullptr, bool ordered = true);
 void RTDECL(CppReduceComplex10DimValue)(Descriptor &result,
-    const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 10>>,
+    const Descriptor &array, ValueReductionOperation<std::complex<long double>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 10> *identity = nullptr,
-    bool ordered = true);
+    const std::complex<long double> *identity = nullptr, bool ordered = true);
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-void RTDECL(CppReduceComplex16Ref)(CppTypeFor<TypeCategory::Complex, 16> &,
+void RTDECL(CppReduceComplex16Ref)(std::complex<CppFloat128Type> &,
     const Descriptor &,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>,
+    ReferenceReductionOperation<std::complex<CppFloat128Type>>,
     const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 16> *identity = nullptr,
+    const std::complex<CppFloat128Type> *identity = nullptr,
     bool ordered = true);
-void RTDECL(CppReduceComplex16Value)(CppTypeFor<TypeCategory::Complex, 16> &,
-    const Descriptor &,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>,
+void RTDECL(CppReduceComplex16Value)(std::complex<CppFloat128Type> &,
+    const Descriptor &, ValueReductionOperation<std::complex<CppFloat128Type>>,
     const char *source, int line, int dim = 0, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 16> *identity = nullptr,
+    const std::complex<CppFloat128Type> *identity = nullptr,
     bool ordered = true);
 void RTDECL(CppReduceComplex16DimRef)(Descriptor &result,
     const Descriptor &array,
-    ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>,
+    ReferenceReductionOperation<std::complex<CppFloat128Type>>,
     const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 16> *identity = nullptr,
+    const std::complex<CppFloat128Type> *identity = nullptr,
     bool ordered = true);
 void RTDECL(CppReduceComplex16DimValue)(Descriptor &result,
     const Descriptor &array,
-    ValueReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>,
-    const char *source, int line, int dim, const Descriptor *mask = nullptr,
-    const CppTypeFor<TypeCategory::Complex, 16> *identity = nullptr,
+    ValueReductionOperation<std::complex<CppFloat128Type>>, const char *source,
+    int line, int dim, const Descriptor *mask = nullptr,
+    const std::complex<CppFloat128Type> *identity = nullptr,
     bool ordered = true);
 #endif
 
