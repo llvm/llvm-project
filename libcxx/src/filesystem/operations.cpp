@@ -32,11 +32,16 @@
 #  include <dirent.h>
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
+#  include <sys/types.h>
 #  include <unistd.h>
 #endif
 #include <fcntl.h> /* values for fchmodat */
 #include <time.h>
 
+// since Linux 4.5 and FreeBSD 13
+#if defined(__linux__) || defined(__FreeBSD__)
+#  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
+#endif
 #if __has_include(<sys/sendfile.h>)
 #  include <sys/sendfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_SENDFILE
@@ -178,8 +183,36 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
 namespace detail {
 namespace {
 
+#if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
+  // do not modify the fd positions as copy_file_impl_sendfile may be called after a partial copy
+  off_t off_in  = 0;
+  off_t off_out = 0;
+  do {
+    ssize_t res;
+
+    if ((res = ::copy_file_range(read_fd.fd, &off_in, write_fd.fd, &off_out, count, 0)) == -1) {
+      ec = capture_errno();
+      return false;
+    }
+    count -= res;
+  } while (count > 0);
+
+  ec.clear();
+
+  return true;
+}
+#endif
+
 #if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
-bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   size_t count = read_fd.get_stat().st_size;
   do {
     ssize_t res;
@@ -193,6 +226,46 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   ec.clear();
 
   return true;
+}
+#endif
+
+#if defined(__linux__) || defined(__FreeBSD__)
+bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+#  if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
+  if (copy_file_impl_copy_file_range(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: src and dst are the same file (this is not cheaply
+  // detectable from userspace)
+  // EINVAL: copy_file_range is unsupported for this file type by the
+  // underlying filesystem
+  // ENOTSUP: undocumented, can arise with old kernels and NFS
+  // EOPNOTSUPP: filesystem does not implement copy_file_range
+  // ETXTBSY: src or dst is an active swapfile (nonsensical, but allowed
+  // with normal copying)
+  // EXDEV: src and dst are on different filesystems that do not support
+  // cross-fs copy_file_range
+  // ENOENT: undocumented, can arise with CIFS
+  // ENOSYS: unsupported by kernel or blocked by seccomp
+  if (ec.value() != EINVAL && ec.value() != ENOTSUP && ec.value() != EOPNOTSUPP && ec.value() != ETXTBSY &&
+      ec.value() != EXDEV && ec.value() != ENOENT && ec.value() != ENOSYS) {
+    return false;
+  }
+  ec.clear();
+#  endif
+
+#  if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
+  if (copy_file_impl_sendfile(read_fd, write_fd, ec)) {
+    return true;
+  }
+  // EINVAL: unsupported file type
+  if (ec.value() != EINVAL) {
+    return false;
+  }
+  ec.clear();
+#  endif
+  ec = {EINVAL, generic_category()};
+  return false;
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
