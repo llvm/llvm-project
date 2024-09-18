@@ -656,6 +656,35 @@ func.func @conv_1d_nwc_wcf_mixed_int_fp_memref(%input: memref<1x2x3xi8>, %filter
 
 // -----
 
+func.func @conv2d_i1_i1_i1(%arg0: tensor<1x8x6xi1>, %arg1: tensor<8x8x1xi1>, %arg2: tensor<1x8x6xi1>) -> tensor<1x8x6xi1> {
+  %0 = linalg.conv_1d_ncw_fcw 
+  {dilations = dense<1> : vector<1xi64>, strides = dense<1> : vector<1xi64>}
+   ins(%arg0, %arg1 : tensor<1x8x6xi1>, tensor<8x8x1xi1>) 
+   outs(%arg2 : tensor<1x8x6xi1>) -> tensor<1x8x6xi1>
+  return %0 : tensor<1x8x6xi1>
+}
+
+// CHECK-LABEL:  func @conv2d_i1_i1_i1
+// CHECK-SAME:   (%[[INPUT:[0-9a-z]+]]: tensor<1x8x6xi1>, %[[FILTER:[0-9a-z]+]]: tensor<8x8x1xi1>, %[[OUTPUT:[0-9a-z]+]]: tensor<1x8x6xi1>) -> tensor<1x8x6xi1> {
+// CHECK-DAG:    %[[I0:.+]] = arith.constant 0 : index
+// CHECK-DAG:    %[[FALSE:.+]] = arith.constant false
+// CHECK-DAG:    %[[READ0:.+]] = vector.transfer_read %[[INPUT]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
+// CHECK-DAG:    %[[READ1:.+]] = vector.transfer_read %[[FILTER]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
+// CHECK-DAG:    %[[READ2:.+]] = vector.transfer_read %[[OUTPUT]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
+// CHECK-DAG:    %[[TREAD0:.+]] = vector.transpose %[[READ0]], [0, 2, 1] : vector<1x8x6xi1> to vector<1x6x8xi1>
+// CHECK-DAG:    %[[TREAD1:.+]] = vector.transpose %[[READ1]], [2, 1, 0] : vector<8x8x1xi1> to vector<1x8x8xi1>
+// CHECK-DAG:    %[[TREAD2:.+]] = vector.transpose %[[READ2]], [0, 2, 1] : vector<1x8x6xi1> to vector<1x6x8xi1>
+// CHECK:        %[[EXTRACT:.+]] = vector.extract %[[TREAD1]][0] : vector<8x8xi1> from vector<1x8x8xi1>
+// CHECK:        %[[CONTRACT:.+]] = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"], kind = #vector.kind<or>} 
+// CHECK-SAME:   %[[TREAD0]], %[[EXTRACT]], %[[TREAD2]] : vector<1x6x8xi1>, vector<8x8xi1> into vector<1x6x8xi1>
+// CHECK:        %[[TCONTRACT:.+]] = vector.transpose %[[CONTRACT]], [0, 2, 1] : vector<1x6x8xi1> to vector<1x8x6xi1>
+// CHECK:        %[[RESULT:.+]] = vector.transfer_write %[[TCONTRACT]], %[[OUTPUT]][%[[I0]], %[[I0]], %[[I0]]] 
+// CHECK:        return %[[RESULT]] : tensor<1x8x6xi1>
+
+
+
+// -----
+
 func.func @pooling_nwc_sum_memref_1_2_1_3(%input: memref<4x4x3xf32>, %filter: memref<1xf32>, %output: memref<4x2x3xf32>) {
   linalg.pooling_nwc_sum
     {dilations = dense<1> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>}

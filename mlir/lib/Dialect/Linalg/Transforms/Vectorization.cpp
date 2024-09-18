@@ -2947,12 +2947,14 @@ struct Conv1DGenerator
 
     if (!setOperKind(reduceOp))
       return;
-    auto maybeKind = getCombinerOpKind(reduceOp);
-    if (!maybeKind || (*maybeKind != vector::CombiningKind::ADD &&
+    maybeKind = getCombinerOpKind(reduceOp);
+    // Typically convolution will have a `Add` CombiningKind but for i1 type it
+    // can get strength reduced to `OR` which is also supported.
+    if (!maybeKind || ((*maybeKind != vector::CombiningKind::ADD &&
+                        *maybeKind != vector::CombiningKind::OR) &&
                        (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
       return;
     }
-
     auto rhsRank = rhsShapedType.getRank();
     switch (oper) {
     case Conv:
@@ -3156,9 +3158,9 @@ struct Conv1DGenerator
                                                    lhsVals[linearIndex(kw, w)],
                                                    rhsVals[kw], resVals[w]);
           } else {
-            resVals[w] = conv1dSliceAsContraction(rewriter, loc,
-                                                  lhsVals[linearIndex(kw, w)],
-                                                  rhsVals[kw], resVals[w]);
+            resVals[w] = conv1dSliceAsContraction(
+                rewriter, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw],
+                resVals[w], maybeKind);
           }
           break;
         case Pool:
@@ -3226,18 +3228,24 @@ struct Conv1DGenerator
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
-  Value conv1dSliceAsContraction(RewriterBase &rewriter, Location loc,
-                                 Value lhs, Value rhs, Value res) {
+  Value
+  conv1dSliceAsContraction(RewriterBase &rewriter, Location loc, Value lhs,
+                           Value rhs, Value res,
+                           std::optional<vector::CombiningKind> maybeKind) {
     vector::IteratorType par = vector::IteratorType::parallel;
     vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
     lhs = promote(rewriter, loc, lhs, res.getType());
     rhs = promote(rewriter, loc, rhs, res.getType());
-    return rewriter.create<vector::ContractionOp>(
+    auto ContrationOp = rewriter.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
         /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
+    if (maybeKind) {
+      ContrationOp.setKind(*maybeKind);
+    }
+    return ContrationOp;
   }
 
   // Create an outerproduct: lhs{w} * rhs{1} -> res{w} for single channel
@@ -3627,6 +3635,7 @@ private:
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
+  std::optional<vector::CombiningKind> maybeKind;
 
   // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
   // Returns true iff it is a valid conv/pooling op.
@@ -3642,7 +3651,8 @@ private:
     switch (numBlockArguments) {
     case 1: {
       // Will be convolution if feeder is a MulOp.
-      // Otherwise, if it can be pooling.
+      // A strength reduced version of MulOp for i1 type is AndOp which is also
+      // supported. Otherwise, it can be pooling.
       auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
                                          llvm::IsaPred<BlockArgument>);
       Operation *feedOp = (*feedValIt).getDefiningOp();
@@ -3650,7 +3660,9 @@ private:
         oper = Pool;
         isPoolExt = true;
         poolExtOp = feedOp->getName().getIdentifier();
-      } else if (!(isa<arith::MulIOp, arith::MulFOp>(feedOp) &&
+      } else if (!((isa<arith::MulIOp, arith::MulFOp>(feedOp) ||
+                    (isa<arith::AndIOp>(feedOp) &&
+                     feedOp->getResultTypes()[0].isInteger(1))) &&
                    llvm::all_of(feedOp->getOperands(), [](Value v) {
                      if (isa<BlockArgument>(v))
                        return true;
