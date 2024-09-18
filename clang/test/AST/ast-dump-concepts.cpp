@@ -120,3 +120,11 @@ void g(C<T> auto Foo) {}
 // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:8, col:11>
 
 }
+
+namespace constructor {
+  struct A {
+    template <class>
+      requires requires { 0; }
+    A();
+  };
+} // namespace constructor

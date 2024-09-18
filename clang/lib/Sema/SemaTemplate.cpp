@@ -989,15 +989,12 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
                                 TInfo->getTypeLoc().getBeginLoc());
 }
 
-NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
-                                    SourceLocation EllipsisLoc,
-                                    SourceLocation KeyLoc,
-                                    IdentifierInfo *ParamName,
-                                    SourceLocation ParamNameLoc,
-                                    unsigned Depth, unsigned Position,
-                                    SourceLocation EqualLoc,
-                                    ParsedType DefaultArg,
-                                    bool HasTypeConstraint) {
+NamedDecl *
+Sema::ActOnTypeParameter(Scope *S, bool Typename, SourceLocation EllipsisLoc,
+                         SourceLocation KeyLoc, IdentifierInfo *ParamName,
+                         SourceLocation ParamNameLoc, unsigned Depth,
+                         unsigned Position, SourceLocation EqualLoc,
+                         ParsedType DefaultArg, bool HasTypeConstraint) {
   assert(S->isTemplateParamScope() &&
          "Template type parameter not in template parameter scope!");
 
@@ -3380,6 +3377,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     std::optional<ContextRAII> SavedContext;
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
+
+    EnterExpressionEvaluationContext Eval(
+        *this, currentEvaluationContext().Context, Pattern, SugaredConverted);
 
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
@@ -8367,6 +8367,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       CanonType = Context.getTypeDeclType(Specialization);
     }
   }
+  UpdateCurrentContextDecl(Specialization);
 
   // C++ [temp.expl.spec]p6:
   //   If a template, a member template or the member of a class template is
@@ -8477,10 +8478,21 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   return Specialization;
 }
 
-Decl *Sema::ActOnTemplateDeclarator(Scope *S,
-                              MultiTemplateParamsArg TemplateParameterLists,
-                                    Declarator &D) {
+Decl *Sema::ActOnTemplateDeclarator(
+    Scope *S, MultiTemplateParamsArg TemplateParameterLists, Declarator &D) {
   Decl *NewDecl = HandleDeclarator(S, D, TemplateParameterLists);
+  if (auto *D = NewDecl) {
+    if (auto *TD = dyn_cast<FunctionTemplateDecl>(D))
+      D = TD->getTemplatedDecl();
+    else if (auto *TD = dyn_cast<VarTemplateDecl>(D))
+      D = TD->getTemplatedDecl();
+    else if (!(isa<FunctionDecl>(D) || isa<VarDecl>(D) ||
+               isa<VarTemplateSpecializationDecl>(D))) {
+      D->dumpColor();
+      llvm_unreachable("FU");
+    }
+    UpdateCurrentContextDecl(D);
+  }
   ActOnDocumentableDecl(NewDecl);
   return NewDecl;
 }

@@ -453,9 +453,9 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
   const auto *FP = cast<FunctionProtoType>(BuiltinFuncType);
   SmallVector<ParmVarDecl *, 8> ParmList;
   for (unsigned IParm = 0, E = FP->getNumParams(); IParm != E; ++IParm) {
-    ParmVarDecl *Parm =
-        ParmVarDecl::Create(Context, RVVIntrinsicDecl, Loc, Loc, nullptr,
-                            FP->getParamType(IParm), nullptr, SC_None, nullptr);
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        Context, RVVIntrinsicDecl, Loc, Loc, nullptr, FP->getParamType(IParm),
+        nullptr, SC_None, nullptr, /*TemplateDepth=*/0);
     Parm->setScopeInfo(0, IParm);
     ParmList.push_back(Parm);
   }

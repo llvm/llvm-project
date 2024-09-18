@@ -3239,7 +3239,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     for (QualType T : Params) {
       ParamDecls.push_back(ParmVarDecl::Create(
           Context, Alloc, SourceLocation(), SourceLocation(), nullptr, T,
-          /*TInfo=*/nullptr, SC_None, nullptr));
+          /*TInfo=*/nullptr, SC_None, nullptr, Alloc->getTemplateDepth()));
       ParamDecls.back()->setImplicit();
     }
     Alloc->setParams(ParamDecls);
@@ -9500,11 +9500,16 @@ Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
 RequiresExprBodyDecl *
 Sema::ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
                              ArrayRef<ParmVarDecl *> LocalParameters,
-                             Scope *BodyScope) {
+                             Scope *BodyScope, unsigned TemplateDepth) {
   assert(BodyScope);
-
-  RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(Context, CurContext,
-                                                            RequiresKWLoc);
+  ContextDeclOrLazy CurContextDecl = currentEvaluationContext().ContextDecl;
+  RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
+      Context, CurContext,
+      CurContextDecl.hasValue() ? *CurContextDecl
+                                : ContextDeclOrSentinel(TemplateDepth),
+      currentEvaluationContext().ContextArgs, RequiresKWLoc);
+  if (!CurContextDecl.hasValue())
+    PendingLazyContextDecls.push_back(Body);
 
   PushDeclContext(BodyScope, Body);
 

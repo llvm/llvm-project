@@ -6623,11 +6623,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     auto &Lambda = D->getLambdaData();
 
     BitsPacker LambdaBits;
-    LambdaBits.addBits(Lambda.DependencyKind, /*Width=*/2);
     LambdaBits.addBit(Lambda.IsGenericLambda);
     LambdaBits.addBits(Lambda.CaptureDefault, /*Width=*/2);
     LambdaBits.addBits(Lambda.NumCaptures, /*Width=*/15);
     LambdaBits.addBit(Lambda.HasKnownInternalLinkage);
+    if (D->getLambdaContext().CDS)
+      LambdaBits.addBit(Lambda.getContextIsMangled());
     Record->push_back(LambdaBits);
 
     Record->push_back(Lambda.NumExplicitCaptures);

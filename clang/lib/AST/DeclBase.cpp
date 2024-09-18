@@ -293,7 +293,21 @@ bool Decl::isTemplated() const {
          getDescribedTemplateParams();
 }
 
-unsigned Decl::getTemplateDepth() const {
+unsigned Decl::getTemplateDepth(ArrayRef<TemplateArgument> SpecArgs) const {
+  if (auto *AD = dyn_cast<TypeAliasDecl>(this)) {
+    if (TypeAliasTemplateDecl *TD = AD->getDescribedAliasTemplate()) {
+      bool Instantiated =
+          !SpecArgs.empty() &&
+          llvm::none_of(SpecArgs, [](const TemplateArgument &A) {
+            return A.isInstantiationDependent();
+          });
+      return TD->getTemplateParameters()->getDepth() + !Instantiated;
+    }
+  }
+  // The other declarations either cannot be specialized, or have a dedicated
+  // specialization declaration.
+  assert(SpecArgs.empty());
+
   if (auto *DC = dyn_cast<DeclContext>(this))
     if (DC->isFileContext())
       return 0;
@@ -301,13 +315,42 @@ unsigned Decl::getTemplateDepth() const {
   if (auto *TPL = getDescribedTemplateParams())
     return TPL->getDepth() + 1;
 
-  // If this is a dependent lambda, there might be an enclosing variable
-  // template. In this case, the next step is not the parent DeclContext (or
-  // even a DeclContext at all).
-  auto *RD = dyn_cast<CXXRecordDecl>(this);
-  if (RD && RD->isDependentLambda())
-    if (Decl *Context = RD->getLambdaContextDecl())
-      return Context->getTemplateDepth();
+  // A ConceptDecl can't be declared in a templated context, so it's always
+  // depth 1.
+  if (isa<ConceptDecl>(this))
+    return 1;
+  // Therefore, their specializations always live at depth 0.
+  if (isa<ImplicitConceptSpecializationDecl>(this))
+    return 0;
+
+  if (auto *D = dyn_cast<TemplateTypeParmDecl>(this))
+    return D->getDepth() + 1;
+  if (auto *D = dyn_cast<NonTypeTemplateParmDecl>(this))
+    return D->getDepth() + 1;
+  if (auto *D = dyn_cast<TemplateTemplateParmDecl>(this))
+    return D->getDepth() + 1;
+
+  if (auto *PD = dyn_cast<ParmVarDecl>(this))
+    return PD->getTemplateDepth();
+
+  auto handleContext =
+      [](ContextDeclAndArgs Context) -> std::optional<unsigned> {
+    if (!Context.CDS.hasValue())
+      return Context.CDS.getTemplateDepth();
+    if (Decl *LCD = Context.CDS.getValue())
+      return LCD->getTemplateDepth(Context.Args);
+    return std::nullopt;
+  };
+
+  // For certain declarations, there might be an enclosing templated entity
+  // which is not a DeclContext.
+  if (auto *RD = dyn_cast<CXXRecordDecl>(this); RD && RD->isLambda())
+    if (auto DepthOrNone = handleContext(RD->getLambdaContext()))
+      return *DepthOrNone;
+
+  if (auto *RD = dyn_cast<RequiresExprBodyDecl>(this))
+    if (auto DepthOrNone = handleContext(RD->getContext()))
+      return *DepthOrNone;
 
   const DeclContext *DC =
       getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
@@ -1097,7 +1140,7 @@ bool Decl::AccessDeclContextCheck() const {
       isa<StaticAssertDecl>(this) || isa<BlockDecl>(this) ||
       // FIXME: a ParmVarDecl can have ClassTemplateSpecialization
       // as DeclContext (?).
-      isa<ParmVarDecl>(this) ||
+      isa<ParmVarDecl>(this) || isa<RequiresExprBodyDecl>(this) ||
       // FIXME: a ClassTemplateSpecialization or CXXRecordDecl can have
       // AS_none as access specifier.
       isa<CXXRecordDecl>(this) || isa<LifetimeExtendedTemporaryDecl>(this))
@@ -1331,37 +1374,7 @@ bool DeclContext::isStdNamespace() const {
 }
 
 bool DeclContext::isDependentContext() const {
-  if (isFileContext())
-    return false;
-
-  if (isa<ClassTemplatePartialSpecializationDecl>(this))
-    return true;
-
-  if (const auto *Record = dyn_cast<CXXRecordDecl>(this)) {
-    if (Record->getDescribedClassTemplate())
-      return true;
-
-    if (Record->isDependentLambda())
-      return true;
-    if (Record->isNeverDependentLambda())
-      return false;
-  }
-
-  if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
-    if (Function->getDescribedFunctionTemplate())
-      return true;
-
-    // Friend function declarations are dependent if their *lexical*
-    // context is dependent.
-    if (cast<Decl>(this)->getFriendObjectKind())
-      return getLexicalParent()->isDependentContext();
-  }
-
-  // FIXME: A variable template is a dependent context, but is not a
-  // DeclContext. A context within it (such as a lambda-expression)
-  // should be considered dependent.
-
-  return getParent() && getParent()->isDependentContext();
+  return Decl::castFromDeclContext(this)->getTemplateDepth() > 0;
 }
 
 bool DeclContext::isTransparentContext() const {

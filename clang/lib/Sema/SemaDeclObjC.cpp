@@ -4805,9 +4805,9 @@ Decl *SemaObjC::ActOnMethodDeclaration(
       ? DI->getTypeLoc().getBeginLoc()
       : ArgInfo[i].NameLoc;
 
-    ParmVarDecl *Param =
-        SemaRef.CheckParameter(ObjCMethod, StartLoc, ArgInfo[i].NameLoc,
-                               ArgInfo[i].Name, ArgType, DI, SC_None);
+    ParmVarDecl *Param = SemaRef.CheckParameter(
+        ObjCMethod, StartLoc, ArgInfo[i].NameLoc, ArgInfo[i].Name, ArgType, DI,
+        SC_None, ObjCMethod->getTemplateDepth());
 
     Param->setObjCMethodScopeInfo(i);
 

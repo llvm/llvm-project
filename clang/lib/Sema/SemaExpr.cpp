@@ -6255,10 +6255,10 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   FT = cast<FunctionProtoType>(OverloadTy);
   for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
     QualType ParamType = FT->getParamType(i);
-    ParmVarDecl *Parm =
-        ParmVarDecl::Create(Context, OverloadDecl, SourceLocation(),
-                                SourceLocation(), nullptr, ParamType,
-                                /*TInfo=*/nullptr, SC_None, nullptr);
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        Context, OverloadDecl, SourceLocation(), SourceLocation(), nullptr,
+        ParamType,
+        /*TInfo=*/nullptr, SC_None, nullptr, OverloadDecl->getTemplateDepth());
     Parm->setScopeInfo(0, i);
     Params.push_back(Parm);
   }
@@ -16026,13 +16026,13 @@ void Sema::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
   BlockDecl *Block = BlockDecl::Create(Context, CurContext, CaretLoc);
 
   if (LangOpts.CPlusPlus) {
-    MangleNumberingContext *MCtx;
-    Decl *ManglingContextDecl;
-    std::tie(MCtx, ManglingContextDecl) =
-        getCurrentMangleNumberContext(Block->getDeclContext());
+    Decl *ManglingContextDecl = *ExprEvalContexts.back().ContextDecl;
+    auto [MCtx, ManglingContext] = getCurrentMangleNumberContext(
+        Block->getDeclContext(), ManglingContextDecl);
     if (MCtx) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Block);
-      Block->setBlockMangling(ManglingNumber, ManglingContextDecl);
+      Block->setBlockMangling(ManglingNumber,
+                              ManglingContext ? ManglingContextDecl : nullptr);
     }
   }
 
@@ -17260,12 +17260,13 @@ TypeSourceInfo *Sema::TransformToPotentiallyEvaluated(TypeSourceInfo *TInfo) {
   return TransformToPE(*this).TransformType(TInfo);
 }
 
-void
-Sema::PushExpressionEvaluationContext(
-    ExpressionEvaluationContext NewContext, Decl *LambdaContextDecl,
+void Sema::PushExpressionEvaluationContext(
+    ExpressionEvaluationContext NewContext, ContextDeclOrLazy ContextDecl,
+    ArrayRef<TemplateArgument> ContextArgs,
     ExpressionEvaluationContextRecord::ExpressionKind ExprContext) {
   ExprEvalContexts.emplace_back(NewContext, ExprCleanupObjects.size(), Cleanup,
-                                LambdaContextDecl, ExprContext);
+                                ContextDecl, ContextArgs, ExprContext,
+                                PendingLazyContextDecls.size());
 
   // Discarded statements and immediate contexts nested in other
   // discarded statements or immediate context are themselves
@@ -17293,8 +17294,11 @@ void
 Sema::PushExpressionEvaluationContext(
     ExpressionEvaluationContext NewContext, ReuseLambdaContextDecl_t,
     ExpressionEvaluationContextRecord::ExpressionKind ExprContext) {
-  Decl *ClosureContextDecl = ExprEvalContexts.back().ManglingContextDecl;
-  PushExpressionEvaluationContext(NewContext, ClosureContextDecl, ExprContext);
+  const auto &PrevRec = ExprEvalContexts.back();
+  PushExpressionEvaluationContext(NewContext, PrevRec.ContextDecl,
+                                  PrevRec.ContextArgs, ExprContext);
+  ExprEvalContexts.back().HasReusedDeclContext = true;
+  ExprEvalContexts.back().LazyContextDeclPos = PrevRec.LazyContextDeclPos;
 }
 
 namespace {
@@ -17694,8 +17698,49 @@ HandleImmediateInvocations(Sema &SemaRef,
   }
 }
 
+static void setContextDecl(Sema &S, Decl *Base, Decl *ContextDecl) {
+  switch (Base->getKind()) {
+  case Decl::CXXRecord: {
+    auto *RD = cast<CXXRecordDecl>(Base);
+    RD->setLambdaContextDecl(ContextDecl);
+    S.handleLambdaNumbering(RD, RD->getLambdaCallOperator(),
+                            /*NumberingOverride=*/std::nullopt,
+                            /*InSignature=*/true);
+  } break;
+  case Decl::RequiresExprBody:
+    cast<RequiresExprBodyDecl>(Base)->setContextDecl(ContextDecl);
+    break;
+  default:
+    llvm_unreachable("Undexpected Decl Kind");
+  }
+}
+
+void Sema::UpdateCurrentContextDecl(Decl *ContextDecl) {
+  assert(ContextDecl);
+  ExpressionEvaluationContextRecord &Rec = ExprEvalContexts.back();
+  assert(!Rec.ContextDecl.hasValue());
+  assert(Rec.LazyContextDeclPos <= PendingLazyContextDecls.size());
+  Rec.ContextDecl = ContextDecl;
+  while (PendingLazyContextDecls.size() > Rec.LazyContextDeclPos)
+    setContextDecl(*this, PendingLazyContextDecls.pop_back_val(), ContextDecl);
+}
+
 void Sema::PopExpressionEvaluationContext() {
   ExpressionEvaluationContextRecord& Rec = ExprEvalContexts.back();
+  assert(Rec.LazyContextDeclPos <= PendingLazyContextDecls.size());
+  if (!Rec.HasReusedDeclContext) {
+    if (Rec.ContextDecl.hasValue()) {
+      assert(Rec.LazyContextDeclPos == PendingLazyContextDecls.size());
+    } else {
+      while (PendingLazyContextDecls.size() > Rec.LazyContextDeclPos) {
+        Decl *D = PendingLazyContextDecls.pop_back_val();
+        setContextDecl(*this, D, nullptr);
+        if (auto *TD = dyn_cast<TagDecl>(D); TD && !TD->isCompleteDefinition())
+          TD->setInvalidDecl();
+      }
+    }
+  }
+
   unsigned NumTypos = Rec.NumTypos;
 
   if (!Rec.Lambdas.empty()) {
@@ -17764,8 +17809,22 @@ void Sema::PopExpressionEvaluationContext() {
                             Rec.SavedMaybeODRUseExprs.end());
   }
 
+  bool HasReusedDeclContext = Rec.HasReusedDeclContext;
+  unsigned LazyContextDeclPos = Rec.LazyContextDeclPos;
+  ContextDeclOrLazy ContextDecl = Rec.ContextDecl;
+  ArrayRef<TemplateArgument> ContextArgs = Rec.ContextArgs;
+
   // Pop the current expression evaluation context off the stack.
   ExprEvalContexts.pop_back();
+
+  if (HasReusedDeclContext) {
+    assert(ContextDecl.hasValue() ||
+           !ExprEvalContexts.back().ContextDecl.hasValue());
+    assert(ExprEvalContexts.back().LazyContextDeclPos <= LazyContextDeclPos);
+    ExprEvalContexts.back().ContextDecl = ContextDecl;
+    ExprEvalContexts.back().ContextArgs = ContextArgs;
+    ExprEvalContexts.back().LazyContextDeclPos = LazyContextDeclPos;
+  }
 
   // The global expression evaluation context record is never popped.
   ExprEvalContexts.back().NumTypos += NumTypos;
@@ -18786,6 +18845,12 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
   }
 }
 
+static auto skipRequiresBody(DeclContext *DC) {
+  while (DC->isRequiresExprBody())
+    DC = DC->getParent();
+  return DC;
+}
+
 bool Sema::tryCaptureVariable(
     ValueDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
     SourceLocation EllipsisLoc, bool BuildAndDiagnose, QualType &CaptureType,
@@ -18793,23 +18858,14 @@ bool Sema::tryCaptureVariable(
   // An init-capture is notionally from the context surrounding its
   // declaration, but its parent DC is the lambda class.
   DeclContext *VarDC = Var->getDeclContext();
-  DeclContext *DC = CurContext;
-
   // Skip past RequiresExprBodys because they don't constitute function scopes.
-  while (DC->isRequiresExprBody())
-    DC = DC->getParent();
+  DeclContext *DC = skipRequiresBody(CurContext);
 
   // tryCaptureVariable is called every time a DeclRef is formed,
   // it can therefore have non-negigible impact on performances.
   // For local variables and when there is no capturing scope,
   // we can bailout early.
   if (CapturingFunctionScopes == 0 && (!BuildAndDiagnose || VarDC == DC))
-    return true;
-
-  // Exception: Function parameters are not tied to the function's DeclContext
-  // until we enter the function definition. Capturing them anyway would result
-  // in an out-of-bounds error while traversing DC and its parents.
-  if (isa<ParmVarDecl>(Var) && !VarDC->isFunctionOrMethod())
     return true;
 
   const auto *VD = dyn_cast<VarDecl>(Var);
@@ -19036,7 +19092,7 @@ bool Sema::tryCaptureVariable(
     Explicit = false;
     FunctionScopesIndex--;
     if (IsInScopeDeclarationContext)
-      DC = ParentDC;
+      DC = skipRequiresBody(ParentDC);
   } while (!VarDC->Equals(DC));
 
   // Walk back down the scope stack, (e.g. from outer lambda to inner lambda)
@@ -20034,9 +20090,9 @@ bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
   // static data member is not syntactically a constant evaluated constant,
   // but nonetheless is always required to be a constant expression, so we
   // can skip diagnosing.
-  // FIXME: Using the mangling context here is a hack.
-  if (auto *VD = dyn_cast_or_null<VarDecl>(
-          ExprEvalContexts.back().ManglingContextDecl)) {
+  if (auto ContextDecl = currentEvaluationContext().ContextDecl;
+      auto *VD =
+          dyn_cast_or_null<VarDecl>(ContextDecl ? *ContextDecl : nullptr)) {
     if (VD->isConstexpr() ||
         (VD->isStaticDataMember() && VD->isFirstDecl() && !VD->isInline()))
       return false;

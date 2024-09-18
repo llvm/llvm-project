@@ -776,12 +776,6 @@ public:
   /// the body.
   StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
-  CXXRecordDecl::LambdaDependencyKind
-  ComputeLambdaDependency(LambdaScopeInfo *LSI) {
-    return static_cast<CXXRecordDecl::LambdaDependencyKind>(
-        LSI->Lambda->getLambdaDependencyKind());
-  }
-
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -5640,7 +5634,8 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
 
   // Array bounds are constant expressions.
   EnterExpressionEvaluationContext Unevaluated(
-      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      Sema::ReuseLambdaContextDecl);
 
   // If we have a VLA then it won't be a constant.
   SemaRef.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
@@ -5975,15 +5970,12 @@ ParmVarDecl *TreeTransform<Derived>::TransformFunctionTypeParam(
   if (NewDI == OldDI && indexAdjustment == 0)
     return OldParm;
 
-  ParmVarDecl *newParm = ParmVarDecl::Create(SemaRef.Context,
-                                             OldParm->getDeclContext(),
-                                             OldParm->getInnerLocStart(),
-                                             OldParm->getLocation(),
-                                             OldParm->getIdentifier(),
-                                             NewDI->getType(),
-                                             NewDI,
-                                             OldParm->getStorageClass(),
-                                             /* DefArg */ nullptr);
+  DeclContext *DC = OldParm->getDeclContext();
+  ParmVarDecl *newParm = ParmVarDecl::Create(
+      SemaRef.Context, DC, OldParm->getInnerLocStart(), OldParm->getLocation(),
+      OldParm->getIdentifier(), NewDI->getType(), NewDI,
+      OldParm->getStorageClass(),
+      /*DefArg=*/nullptr, Decl::castFromDeclContext(DC)->getTemplateDepth());
   newParm->setScopeInfo(OldParm->getFunctionScopeDepth(),
                         OldParm->getFunctionScopeIndex() + indexAdjustment);
   transformedLocalDecl(OldParm, {newParm});
@@ -6645,7 +6637,8 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
 
   // decltype expressions are not potentially evaluated contexts
   EnterExpressionEvaluationContext Unevaluated(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl,
       Sema::ExpressionEvaluationContextRecord::EK_Decltype);
 
   ExprResult E = getDerived().TransformExpr(T->getUnderlyingExpr());
@@ -8111,7 +8104,8 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   if (!ConstexprConditionValue || *ConstexprConditionValue) {
     EnterExpressionEvaluationContext Ctx(
         getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
-        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        nullptr, std::nullopt,
+        Sema::ExpressionEvaluationContextRecord::EK_Other,
         S->isNonNegatedConsteval());
 
     Then = getDerived().TransformStmt(S->getThen());
@@ -8130,7 +8124,8 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   if (!ConstexprConditionValue || !*ConstexprConditionValue) {
     EnterExpressionEvaluationContext Ctx(
         getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
-        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        /*ContextDecl=*/nullptr, /*ContextArgs=*/std::nullopt,
+        Sema::ExpressionEvaluationContextRecord::EK_Other,
         S->isNegatedConsteval());
 
     Else = getDerived().TransformStmt(S->getElse());
@@ -8934,7 +8929,7 @@ StmtResult
 TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   EnterExpressionEvaluationContext ForRangeInitContext(
       getSema(), Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-      /*LambdaContextDecl=*/nullptr,
+      /*ContextDecl=*/nullptr, /*ContextArgs*/ std::nullopt,
       Sema::ExpressionEvaluationContextRecord::EK_Other,
       getSema().getLangOpts().CPlusPlus23);
 
@@ -14080,15 +14075,23 @@ TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
   SmallVector<QualType, 4> TransParamTypes;
   Sema::ExtParameterInfoBuilder ExtParamInfos;
 
+  RequiresExprBodyDecl *OldBody = E->getBody();
+  Sema::ContextDeclOrLazy ContextDecl =
+      getSema().currentEvaluationContext().ContextDecl;
+  RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
+      getSema().Context, getSema().CurContext,
+      ContextDecl.hasValue()
+          ? *ContextDecl
+          : ContextDeclOrSentinel(getDerived().TransformTemplateDepth(
+                OldBody->getTemplateDepth())),
+      getSema().currentEvaluationContext().ContextArgs, OldBody->getBeginLoc());
+  if (!ContextDecl.hasValue())
+    getSema().PendingLazyContextDecls.push_back(Body);
+
   // C++2a [expr.prim.req]p2
   // Expressions appearing within a requirement-body are unevaluated operands.
   EnterExpressionEvaluationContext Ctx(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
-      Sema::ReuseLambdaContextDecl);
-
-  RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
-      getSema().Context, getSema().CurContext,
-      E->getBody()->getBeginLoc());
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
 
   Sema::ContextRAII SavedContext(getSema(), Body, /*NewThisContext*/false);
 
@@ -14569,42 +14572,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   // Create the local class that will describe the lambda.
 
-  // FIXME: DependencyKind below is wrong when substituting inside a templated
-  // context that isn't a DeclContext (such as a variable template), or when
-  // substituting an unevaluated lambda inside of a function's parameter's type
-  // - as parameter types are not instantiated from within a function's DC. We
-  // use evaluation contexts to distinguish the function parameter case.
-  CXXRecordDecl::LambdaDependencyKind DependencyKind =
-      CXXRecordDecl::LDK_Unknown;
-  DeclContext *DC = getSema().CurContext;
-  // A RequiresExprBodyDecl is not interesting for dependencies.
-  // For the following case,
-  //
-  // template <typename>
-  // concept C = requires { [] {}; };
-  //
-  // template <class F>
-  // struct Widget;
-  //
-  // template <C F>
-  // struct Widget<F> {};
-  //
-  // While we are substituting Widget<F>, the parent of DC would be
-  // the template specialization itself. Thus, the lambda expression
-  // will be deemed as dependent even if there are no dependent template
-  // arguments.
-  // (A ClassTemplateSpecializationDecl is always a dependent context.)
-  while (DC->isRequiresExprBody())
-    DC = DC->getParent();
-  if ((getSema().isUnevaluatedContext() ||
-       getSema().isConstantEvaluatedContext()) &&
-      (DC->isFileContext() || !DC->getParent()->isDependentContext()))
-    DependencyKind = CXXRecordDecl::LDK_NeverDependent;
-
   CXXRecordDecl *OldClass = E->getLambdaClass();
   CXXRecordDecl *Class = getSema().createLambdaClosureType(
-      E->getIntroducerRange(), /*Info=*/nullptr, DependencyKind,
-      E->getCaptureDefault());
+      E->getIntroducerRange(), /*Info=*/nullptr, E->getCaptureDefault(),
+      getDerived().TransformTemplateDepth(OldClass->getTemplateDepth()));
   getDerived().transformedLocalDecl(OldClass, {Class});
 
   CXXMethodDecl *NewCallOperator =
@@ -14618,6 +14589,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // Introduce the context of the call operator.
   Sema::ContextRAII SavedContext(getSema(), NewCallOperator,
                                  /*NewThisContext*/false);
+  std::optional<EnterExpressionEvaluationContext> Eval;
+  Eval.emplace(getSema(), getSema().currentEvaluationContext().Context,
+               NewCallOperator);
 
   bool Invalid = false;
 
@@ -14808,12 +14782,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       NewCallOpType = TransformFunctionProtoTypeLoc(NewCallOpTLBuilder, FPTL);
     }
 
-    if (NewCallOpType.isNull())
-      return ExprError();
-    LSI->ContainsUnexpandedParameterPack |=
-        NewCallOpType->containsUnexpandedParameterPack();
-    NewCallOpTSI =
-        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
+    if (NewCallOpType.isNull()) {
+      NewCallOpTSI = getSema().Context.getTrivialTypeSourceInfo(
+          getSema().Context.getFunctionType(getSema().Context.IntTy,
+                                            std::nullopt,
+                                            FunctionProtoType::ExtProtoInfo()));
+      Invalid = true;
+    } else {
+      LSI->ContainsUnexpandedParameterPack |=
+          NewCallOpType->containsUnexpandedParameterPack();
+      NewCallOpTSI = NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context,
+                                                          NewCallOpType);
+    }
   }
 
   ArrayRef<ParmVarDecl *> Params;
@@ -14847,6 +14827,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().handleLambdaNumbering(Class, NewCallOperator, Numbering);
   }
 
+  Eval.reset();
   // FIXME: Sema's lambda-building mechanism expects us to push an expression
   // evaluation context even if we're not transforming the function body.
   getSema().PushExpressionEvaluationContext(
@@ -14886,41 +14867,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
 
-  // Recompute the dependency of the lambda so that we can defer the lambda call
-  // construction until after we have all the necessary template arguments. For
-  // example, given
-  //
-  // template <class> struct S {
-  //   template <class U>
-  //   using Type = decltype([](U){}(42.0));
-  // };
-  // void foo() {
-  //   using T = S<int>::Type<float>;
-  //             ^~~~~~
-  // }
-  //
-  // We would end up here from instantiating S<int> when ensuring its
-  // completeness. That would transform the lambda call expression regardless of
-  // the absence of the corresponding argument for U.
-  //
-  // Going ahead with unsubstituted type U makes things worse: we would soon
-  // compare the argument type (which is float) against the parameter U
-  // somewhere in Sema::BuildCallExpr. Then we would quickly run into a bogus
-  // error suggesting unmatched types 'U' and 'float'!
-  //
-  // That said, everything will be fine if we defer that semantic checking.
-  // Fortunately, we have such a mechanism that bypasses it if the CallExpr is
-  // dependent. Since the CallExpr's dependency boils down to the lambda's
-  // dependency in this case, we can harness that by recomputing the dependency
-  // from the instantiation arguments.
-  //
-  // FIXME: Creating the type of a lambda requires us to have a dependency
-  // value, which happens before its substitution. We update its dependency
-  // *after* the substitution in case we can't decide the dependency
-  // so early, e.g. because we want to see if any of the *substituted*
-  // parameters are dependent.
-  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
-  Class->setLambdaDependencyKind(DependencyKind);
   // Clean up the type cache created previously. Then, we re-create a type for
   // such Decl with the new DependencyKind.
   Class->setTypeForDecl(nullptr);

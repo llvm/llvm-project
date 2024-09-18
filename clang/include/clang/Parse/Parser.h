@@ -2080,7 +2080,9 @@ private:
   // C++ 5.3.4 and 5.3.5: C++ new and delete
   bool ParseExpressionListOrTypeId(SmallVectorImpl<Expr*> &Exprs,
                                    Declarator &D);
-  void ParseDirectNewDeclarator(Declarator &D);
+  void
+  ParseDirectNewDeclarator(Declarator &D,
+                           TemplateParameterDepthRAII *CurTemplateDepthTracker);
   ExprResult ParseCXXNewExpression(bool UseGlobal, SourceLocation Start);
   ExprResult ParseCXXDeleteExpression(bool UseGlobal,
                                             SourceLocation Start);
@@ -3200,11 +3202,15 @@ private:
   };
 
   /// ParseDeclarator - Parse and verify a newly-initialized declarator.
-  void ParseDeclarator(Declarator &D);
+  void ParseDeclarator(
+      Declarator &D,
+      TemplateParameterDepthRAII *CurTemplateDepthTracker = nullptr);
   /// A function that parses a variant of direct-declarator.
-  typedef void (Parser::*DirectDeclParseFunction)(Declarator&);
-  void ParseDeclaratorInternal(Declarator &D,
-                               DirectDeclParseFunction DirectDeclParser);
+  typedef void (Parser::*DirectDeclParseFunction)(
+      Declarator &, TemplateParameterDepthRAII *CurTemplateDepthTracker);
+  void ParseDeclaratorInternal(
+      Declarator &D, DirectDeclParseFunction DirectDeclParser,
+      TemplateParameterDepthRAII *CurTemplateDepthTracker = nullptr);
 
   enum AttrRequirements {
     AR_NoAttributesParsed = 0, ///< No attributes are diagnosed.
@@ -3224,12 +3230,16 @@ private:
       bool AtomicAllowed = true, bool IdentifierRequired = false,
       std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
           std::nullopt);
-  void ParseDirectDeclarator(Declarator &D);
+  void ParseDirectDeclarator(
+      Declarator &D,
+      TemplateParameterDepthRAII *CurTemplateDepthTracker = nullptr);
   void ParseDecompositionDeclarator(Declarator &D);
   void ParseParenDeclarator(Declarator &D);
-  void ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
-                               BalancedDelimiterTracker &Tracker,
-                               bool IsAmbiguous, bool RequiresArg = false);
+  void
+  ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
+                          BalancedDelimiterTracker &Tracker,
+                          TemplateParameterDepthRAII *CurTemplateDepthTracker,
+                          bool IsAmbiguous, bool RequiresArg = false);
   void InitCXXThisScopeForDeclaratorIfRelevant(
       const Declarator &D, const DeclSpec &DS,
       std::optional<Sema::CXXThisScopeRAII> &ThisScope);
@@ -3242,16 +3252,19 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      TemplateParameterDepthRAII *CurTemplateDepthTracker) {
     return ParseParameterDeclarationClause(
-        D.getContext(), attrs, ParamInfo, EllipsisLoc,
+        D.getContext(), attrs, ParamInfo, EllipsisLoc, CurTemplateDepthTracker,
         D.getCXXScopeSpec().isSet() &&
             D.isFunctionDeclaratorAFunctionDeclaration());
   }
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc,
+      TemplateParameterDepthRAII *CurTemplateDepthTracker,
+      bool IsACXXFunctionDeclaration = false);
 
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);

@@ -3093,8 +3093,10 @@ static TypeSourceInfo *
 GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
                                QualType T, TypeSourceInfo *ReturnTypeInfo);
 
-static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
-                                             TypeSourceInfo *&ReturnTypeInfo) {
+static QualType
+GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
+                             TypeSourceInfo *&ReturnTypeInfo,
+                             bool *StartImplcitTemplate = nullptr) {
   Sema &SemaRef = state.getSema();
   Declarator &D = state.getDeclarator();
   QualType T;
@@ -3215,8 +3217,12 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       // We'll deal with inventing template parameters for 'auto' in trailing
       // return types when we pick up the trailing return type when processing
       // the function chunk.
-      if (!DeducedIsTrailingReturnType)
+      if (!DeducedIsTrailingReturnType) {
+        if (StartImplcitTemplate && Info->NumExplicitTemplateParams == 0 &&
+            Info->TemplateParams.empty())
+          *StartImplcitTemplate = true;
         T = InventTemplateParameter(state, T, nullptr, Auto, *Info).first;
+      }
       break;
     }
     case DeclaratorContext::Member: {
@@ -5674,14 +5680,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
-TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D) {
+TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D,
+                                           bool *StartImplcitTemplate) {
   // Determine the type of the declarator. Not all forms of declarator
   // have a type.
 
   TypeProcessingState state(*this, D);
 
   TypeSourceInfo *ReturnTypeInfo = nullptr;
-  QualType T = GetDeclSpecTypeForDeclarator(state, ReturnTypeInfo);
+  QualType T =
+      GetDeclSpecTypeForDeclarator(state, ReturnTypeInfo, StartImplcitTemplate);
   if (D.isPrototypeContext() && getLangOpts().ObjCAutoRefCount)
     inferARCWriteback(state, T);
 

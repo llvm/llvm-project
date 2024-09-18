@@ -32,3 +32,8 @@ template <typename T> void g(int n) requires requires (T m) {
 } {}
 // CHECK: define {{.*}}@_Z1gIiEviQrQT__XplfL0p_fp_E(
 template void g<int>(int);
+
+// FIXME: GCC mangles this as _Z7lambda1IiQrqXcltlUlvE_EEEEvv
+template <class T> requires requires { []{}(); } void lambda1() {}
+template void lambda1<int>();
+// CHECK: define {{.*}}@_Z7lambda1IiQrqXclLUlvE_EEEEvv

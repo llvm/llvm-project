@@ -244,7 +244,8 @@ ExprResult Parser::ParseConstantExpression() {
 
 ExprResult Parser::ParseArrayBoundExpression() {
   EnterExpressionEvaluationContext ConstantEvaluated(
-      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      Sema::ReuseLambdaContextDecl);
   // If we parse the bound of a VLA... we parse a non-constant
   // constant-expression!
   Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
@@ -267,7 +268,8 @@ ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
 /// \endverbatim
 ExprResult Parser::ParseConstraintExpression() {
   EnterExpressionEvaluationContext ConstantEvaluated(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
   ExprResult LHS(ParseCastExpression(AnyCastExpr));
   ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::LogicalOr));
   if (Res.isUsable() && !Actions.CheckConstraintExpression(Res.get())) {
@@ -289,7 +291,8 @@ ExprResult Parser::ParseConstraintExpression() {
 ExprResult
 Parser::ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause) {
   EnterExpressionEvaluationContext ConstantEvaluated(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
   bool NotPrimaryExpression = false;
   auto ParsePrimary = [&] () {
     ExprResult E = ParseCastExpression(PrimaryExprOnly,

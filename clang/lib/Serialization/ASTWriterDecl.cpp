@@ -1251,6 +1251,8 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   assert(D->getPreviousDecl() == nullptr && "PARM_VAR_DECL can't be redecl");
   assert(!D->isStaticDataMember() &&
          "PARM_VAR_DECL can't be static data member");
+  // assert(D->getTemplateDepth() ==
+  //        Decl::castFromDeclContext(D->getDeclContext())->getTemplateDepth());
 }
 
 void ASTDeclWriter::VisitDecompositionDecl(DecompositionDecl *D) {
@@ -1515,9 +1517,13 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   } else if (D->isLambda()) {
     // For a lambda, we need some information early for merging.
     Record.push_back(CXXLambda);
-    if (auto *Context = D->getLambdaContextDecl()) {
-      Record.AddDeclRef(Context);
+    if (auto Context = D->getLambdaContext();
+        auto *ContextDecl = Context.CDS.getValue()) {
+      Record.AddDeclRef(ContextDecl);
       Record.push_back(D->getLambdaIndexInContext());
+      Record.push_back(Context.Args.size());
+      for (const TemplateArgument &Arg : Context.Args)
+        Record.AddTemplateArgument(Arg);
     } else {
       Record.push_back(0);
     }
@@ -1701,6 +1707,19 @@ void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
 }
 
 void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
+  Decl *ContextDecl = D->getContext().CDS.getValue();
+  Record.push_back(ContextDecl ? D->getContextArgs().size() + 1 : 0);
+#ifndef NDEBUG
+  if (ContextDecl) {
+    Record.push_back(D->getTemplateDepth(D->getContextArgs()));
+  }
+#endif
+  VisitDecl(D);
+  if (ContextDecl) {
+    Record.AddDeclRef(ContextDecl);
+    for (const TemplateArgument &Arg : D->getContextArgs())
+      Record.AddTemplateArgument(Arg);
+  }
   Code = serialization::DECL_REQUIRES_EXPR_BODY;
 }
 

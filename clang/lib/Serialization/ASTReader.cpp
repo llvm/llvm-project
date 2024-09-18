@@ -8972,12 +8972,15 @@ void ASTReader::ReadLateParsedTemplates(
 }
 
 void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
-  if (!Lambda->getLambdaContextDecl())
+  auto CDS = Lambda->getLambdaContext().CDS;
+  if (!CDS.hasValue())
+    return;
+  Decl *ContextDecl = CDS.getValue();
+  if (!ContextDecl)
     return;
 
-  auto LambdaInfo =
-      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-                     Lambda->getLambdaIndexInContext());
+  auto LambdaInfo = std::make_pair(ContextDecl->getCanonicalDecl(),
+                                   Lambda->getLambdaIndexInContext());
 
   // Handle the import and then include case for lambdas.
   if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
@@ -9842,6 +9845,16 @@ void ASTReader::finishPendingActions() {
       loadPendingDeclChain(PendingDeclChains[I].first,
                            PendingDeclChains[I].second);
     PendingDeclChains.clear();
+
+    for (auto &[D, ID] : PendingContextDecls)
+      switch (D->getKind()) {
+      case Decl::RequiresExprBody:
+        cast<RequiresExprBodyDecl>(D)->setContextDecl(GetDecl(ID));
+        break;
+      default:
+        llvm_unreachable("Unexpected Decl Kind");
+      }
+    PendingContextDecls.clear();
 
     // Make the most recent of the top-level declarations visible.
     for (TopLevelDeclsMap::iterator TLD = TopLevelDecls.begin(),

@@ -530,8 +530,8 @@ void Environment::initialize() {
                 SurroundingMethodDecl->getFunctionObjectParameterType();
             setThisPointeeStorageLocation(
                 cast<RecordStorageLocation>(createObject(ThisPointeeType)));
-          } else if (auto *FieldBeingInitialized =
-                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
+          } else if (auto *FieldBeingInitialized = dyn_cast<FieldDecl>(
+                         Parent->getLambdaContext().CDS.getValue())) {
             // This is in a field initializer, rather than a method.
             setThisPointeeStorageLocation(
                 cast<RecordStorageLocation>(createObject(QualType(

@@ -1151,3 +1151,14 @@ int test() {
 }
 
 }
+
+namespace deduction_guide {
+  template <class> struct basic_string_view {
+    template <class _Range>
+      requires requires { 0; }
+    basic_string_view();
+  };
+
+  template <class _It, class _End>
+  basic_string_view(_It, _End) -> basic_string_view<_It>;
+} // namespace deduction_guide

@@ -986,6 +986,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsObjCMethodParam : 1;
 
+    /// Whether this parameter was initially created in a context with a
+    /// different template depth.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasLazyTemplateDepth : 1;
+
     /// If IsObjCMethodParam, a Decl::ObjCDeclQualifier.
     /// Otherwise, the number of function parameter scopes enclosing
     /// the function parameter scope in which this parameter was
@@ -1719,7 +1724,8 @@ public:
 };
 
 /// Represents a parameter to a function.
-class ParmVarDecl : public VarDecl {
+class ParmVarDecl final : public VarDecl,
+                          private llvm::TrailingObjects<ParmVarDecl, uint16_t> {
 public:
   enum { MaxFunctionScopeDepth = 255 };
   enum { MaxFunctionScopeIndex = 255 };
@@ -1727,13 +1733,20 @@ public:
 protected:
   ParmVarDecl(Kind DK, ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
               SourceLocation IdLoc, const IdentifierInfo *Id, QualType T,
-              TypeSourceInfo *TInfo, StorageClass S, Expr *DefArg)
+              TypeSourceInfo *TInfo, StorageClass S, Expr *DefArg,
+              std::optional<unsigned> TemplateDepth)
       : VarDecl(DK, C, DC, StartLoc, IdLoc, Id, T, TInfo, S) {
     assert(ParmVarDeclBits.HasInheritedDefaultArg == false);
     assert(ParmVarDeclBits.DefaultArgKind == DAK_None);
     assert(ParmVarDeclBits.IsKNRPromoted == false);
     assert(ParmVarDeclBits.IsObjCMethodParam == false);
     setDefaultArg(DefArg);
+    ParmVarDeclBits.HasLazyTemplateDepth = bool(TemplateDepth);
+    if (TemplateDepth) {
+      assert(*TemplateDepth !=
+             Decl::castFromDeclContext(DC)->getTemplateDepth());
+      *getTrailingObjects<uint16_t>() = *TemplateDepth;
+    }
   }
 
 public:
@@ -1741,7 +1754,8 @@ public:
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              const IdentifierInfo *Id, QualType T,
                              TypeSourceInfo *TInfo, StorageClass S,
-                             Expr *DefArg);
+                             Expr *DefArg,
+                             std::optional<unsigned> TemplateDepth);
 
   static ParmVarDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -1872,6 +1886,12 @@ public:
     ParmVarDeclBits.HasInheritedDefaultArg = I;
   }
 
+  unsigned getTemplateDepth() const {
+    if (numTrailingObjects(OverloadToken<uint16_t>()))
+      return *getTrailingObjects<uint16_t>();
+    return Decl::castFromDeclContext(getDeclContext())->getTemplateDepth();
+  }
+
   QualType getOriginalType() const;
 
   /// Sets the function declaration that owns this
@@ -1885,10 +1905,15 @@ public:
   static bool classofKind(Kind K) { return K == ParmVar; }
 
 private:
+  friend TrailingObjects;
   friend class ASTDeclReader;
 
   enum { ParameterIndexSentinel = (1 << NumParameterIndexBits) - 1 };
   SourceLocation ExplicitObjectParameterIntroducerLoc;
+
+  size_t numTrailingObjects(OverloadToken<uint16_t>) const {
+    return ParmVarDeclBits.HasLazyTemplateDepth;
+  }
 
   void setParameterIndex(unsigned parameterIndex) {
     if (parameterIndex >= ParameterIndexSentinel) {

@@ -961,6 +961,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
 
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
+  MLTAL.setKind(TemplateSubstitutionKind::Rewrite);
 
   Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
 

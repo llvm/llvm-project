@@ -667,7 +667,7 @@ TEST_F(ClangRenameTest, ReferencesInLambdaFunctionParameters) {
       namespace ns {
       class New {};
       void f() {
-        function<void(::new_ns::New)> func;
+        function<void(New)> func;
       }
       }  // namespace ns)";
   std::string After = runClangRenameOnCode(Before, "ns::Old", "::new_ns::New");

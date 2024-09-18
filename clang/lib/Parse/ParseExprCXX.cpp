@@ -25,6 +25,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/Template.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -1365,7 +1366,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                                    Scope::FunctionPrototypeScope);
 
   Actions.PushLambdaScope();
-  Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
+  Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope(),
+                                               TemplateParameterDepth);
 
   ParsedAttributes Attributes(AttrFactory);
   if (getLangOpts().CUDA) {
@@ -1469,15 +1471,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     if (Tok.isNot(tok::r_paren)) {
       Actions.RecordParsingTemplateParameterDepth(
           CurTemplateDepthTracker.getOriginalDepth());
-
-      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc);
-      // For a generic lambda, each 'auto' within the parameter declaration
-      // clause creates a template type parameter, so increment the depth.
-      // If we've parsed any explicit template parameters, then the depth will
-      // have already been incremented. So we make sure that at most a single
-      // depth level is added.
-      if (Actions.getCurGenericLambda())
-        CurTemplateDepthTracker.setAddedDepth(1);
+      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc,
+                                      &CurTemplateDepthTracker);
     }
 
     T.consumeClose();
@@ -1612,6 +1607,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                         Scope::CompoundStmtScope;
   ParseScope BodyScope(this, ScopeFlags);
 
+  // ActOnStartOfLambdaDefinition reintroduces the context
+  Actions.PopExpressionEvaluationContext();
   Actions.ActOnStartOfLambdaDefinition(Intro, D, DS);
 
   // Parse compound-statement.
@@ -2085,6 +2082,10 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   DeclGroupPtrTy DG;
   SourceLocation DeclStart = ConsumeToken(), DeclEnd;
 
+  EnterExpressionEvaluationContext Eval(
+      Actions, Actions.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
+
   DG = ParseUsingDeclaration(Context, {}, DeclStart, DeclEnd, Attrs, AS_none);
   if (!DG)
     return DG;
@@ -2242,6 +2243,10 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   // If this is a for loop, we're entering its condition.
   ForConditionScope.enter(/*IsConditionVariable=*/true);
+
+  EnterExpressionEvaluationContext Eval(
+      Actions, Actions.currentEvaluationContext().Context,
+      Sema::LazyContextDecl);
 
   // type-specifier-seq
   DeclSpec DS(AttrFactory);
@@ -3426,7 +3431,8 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
 ///                   '[' expression[opt] ']'
 ///                   direct-new-declarator '[' constant-expression ']'
 ///
-void Parser::ParseDirectNewDeclarator(Declarator &D) {
+void Parser::ParseDirectNewDeclarator(Declarator &D,
+                                      TemplateParameterDepthRAII *) {
   // Parse the array dimensions.
   bool First = true;
   while (Tok.is(tok::l_square)) {
@@ -3622,9 +3628,11 @@ ExprResult Parser::ParseRequiresExpression() {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
       SourceLocation EllipsisLoc;
       llvm::SmallVector<DeclaratorChunk::ParamInfo, 2> LocalParameters;
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
       ParseParameterDeclarationClause(DeclaratorContext::RequiresExpr,
                                       FirstArgAttrs, LocalParameters,
-                                      EllipsisLoc);
+                                      EllipsisLoc, &CurTemplateDepthTracker);
       if (EllipsisLoc.isValid())
         Diag(EllipsisLoc, diag::err_requires_expr_parameter_list_ellipsis);
       for (auto &ParamInfo : LocalParameters)
@@ -3640,18 +3648,23 @@ ExprResult Parser::ParseRequiresExpression() {
   // Start of requirement list
   llvm::SmallVector<concepts::Requirement *, 2> Requirements;
 
-  // C++2a [expr.prim.req]p2
-  //   Expressions appearing within a requirement-body are unevaluated operands.
-  EnterExpressionEvaluationContext Ctx(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
-
   ParseScope BodyScope(this, Scope::DeclScope);
   // Create a separate diagnostic pool for RequiresExprBodyDecl.
   // Dependent diagnostics are attached to this Decl and non-depenedent
   // diagnostics are surfaced after this parse.
   ParsingDeclRAIIObject ParsingBodyDecl(*this, ParsingDeclRAIIObject::NoParent);
-  RequiresExprBodyDecl *Body = Actions.ActOnStartRequiresExpr(
-      RequiresKWLoc, LocalParameterDecls, getCurScope());
+  RequiresExprBodyDecl *Body =
+      Actions.ActOnStartRequiresExpr(RequiresKWLoc, LocalParameterDecls,
+                                     getCurScope(), TemplateParameterDepth);
+
+  LocalInstantiationScope InstScope(getActions());
+  for (ParmVarDecl *D : LocalParameterDecls)
+    InstScope.InstantiatedLocal(D, D);
+
+  // C++2a [expr.prim.req]p2
+  //   Expressions appearing within a requirement-body are unevaluated operands.
+  EnterExpressionEvaluationContext Ctx(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
   if (Tok.is(tok::r_brace)) {
     // Grammar does not allow an empty body.

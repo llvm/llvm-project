@@ -205,11 +205,12 @@ class ASTDeclReader : public DeclVisitor<ASTDeclReader, void> {
 
   Module *readModule() { return Record.getSubmodule(readSubmoduleID()); }
 
-  void ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
-                               Decl *LambdaContext = nullptr,
-                               unsigned IndexInLambdaContext = 0);
+  void ReadCXXRecordDefinition(
+      CXXRecordDecl *D, bool Update, Decl *LambdaContext = nullptr,
+      ArrayRef<TemplateArgument> LambdaContextArgs = std::nullopt,
+      unsigned IndexInLambdaContext = 0);
   void ReadCXXDefinitionData(struct CXXRecordDecl::DefinitionData &Data,
-                             const CXXRecordDecl *D, Decl *LambdaContext,
+                             const CXXRecordDecl *D, bool HasLambdaContext,
                              unsigned IndexInLambdaContext);
   void ReadObjCDefinitionData(struct ObjCInterfaceDecl::DefinitionData &Data);
   void ReadObjCDefinitionData(struct ObjCProtocolDecl::DefinitionData &Data);
@@ -600,7 +601,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   D->FromASTFile = true;
 
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
-      isa<ParmVarDecl, ObjCTypeParamDecl>(D)) {
+      isa<ParmVarDecl, ObjCTypeParamDecl, RequiresExprBodyDecl>(D)) {
     // We don't want to deserialize the DeclContext of a template
     // parameter or of a parameter of a function template immediately.   These
     // entities might be used in the formulation of its DeclContext (for
@@ -1964,7 +1965,7 @@ void ASTDeclReader::VisitUnresolvedUsingIfExistsDecl(
 
 void ASTDeclReader::ReadCXXDefinitionData(
     struct CXXRecordDecl::DefinitionData &Data, const CXXRecordDecl *D,
-    Decl *LambdaContext, unsigned IndexInLambdaContext) {
+    bool HasLambdaContext, unsigned IndexInLambdaContext) {
 
   BitsUnpacker CXXRecordDeclBits = Record.readInt();
 
@@ -1993,7 +1994,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
   assert(Data.Definition && "Data.Definition should be already set!");
 
   if (!Data.IsLambda) {
-    assert(!LambdaContext && !IndexInLambdaContext &&
+    assert(!HasLambdaContext && !IndexInLambdaContext &&
            "given lambda context for non-lambda");
 
     Data.NumBases = Record.readInt();
@@ -2011,18 +2012,17 @@ void ASTDeclReader::ReadCXXDefinitionData(
     auto &Lambda = static_cast<CXXRecordDecl::LambdaDefinitionData &>(Data);
 
     BitsUnpacker LambdaBits(Record.readInt());
-    Lambda.DependencyKind = LambdaBits.getNextBits(/*Width=*/2);
     Lambda.IsGenericLambda = LambdaBits.getNextBit();
     Lambda.CaptureDefault = LambdaBits.getNextBits(/*Width=*/2);
     Lambda.NumCaptures = LambdaBits.getNextBits(/*Width=*/15);
     Lambda.HasKnownInternalLinkage = LambdaBits.getNextBit();
+    if (HasLambdaContext)
+      Lambda.setContextMangling(LambdaBits.getNextBit(), IndexInLambdaContext);
 
     Lambda.NumExplicitCaptures = Record.readInt();
     Lambda.ManglingNumber = Record.readInt();
     if (unsigned DeviceManglingNumber = Record.readInt())
       Reader.getContext().DeviceLambdaManglingNumbers[D] = DeviceManglingNumber;
-    Lambda.IndexInContext = IndexInLambdaContext;
-    Lambda.ContextDecl = LambdaContext;
     Capture *ToCapture = nullptr;
     if (Lambda.NumCaptures) {
       ToCapture = (Capture *)Reader.getContext().Allocate(sizeof(Capture) *
@@ -2119,7 +2119,6 @@ void ASTDeclMerger::MergeDefinitionData(
   if (DD.IsLambda) {
     auto &Lambda1 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(DD);
     auto &Lambda2 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(MergeDD);
-    DetectedOdrViolation |= Lambda1.DependencyKind != Lambda2.DependencyKind;
     DetectedOdrViolation |= Lambda1.IsGenericLambda != Lambda2.IsGenericLambda;
     DetectedOdrViolation |= Lambda1.CaptureDefault != Lambda2.CaptureDefault;
     DetectedOdrViolation |= Lambda1.NumCaptures != Lambda2.NumCaptures;
@@ -2152,9 +2151,10 @@ void ASTDeclMerger::MergeDefinitionData(
         {MergeDD.Definition, &MergeDD});
 }
 
-void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
-                                            Decl *LambdaContext,
-                                            unsigned IndexInLambdaContext) {
+void ASTDeclReader::ReadCXXRecordDefinition(
+    CXXRecordDecl *D, bool Update, Decl *LambdaContext,
+    ArrayRef<TemplateArgument> LambdaContextArgs,
+    unsigned IndexInLambdaContext) {
   struct CXXRecordDecl::DefinitionData *DD;
   ASTContext &C = Reader.getContext();
 
@@ -2164,8 +2164,9 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
   assert(!(IsLambda && Update) &&
          "lambda definition should not be added by update record");
   if (IsLambda)
-    DD = new (C) CXXRecordDecl::LambdaDefinitionData(
-        D, nullptr, CXXRecordDecl::LDK_Unknown, false, LCD_None);
+    DD = CXXRecordDecl::LambdaDefinitionData::Create(
+        C, D, /*Info=*/nullptr, /*IsGeneric=*/false, LCD_None,
+        /*ContextDecl=*/LambdaContext, LambdaContextArgs);
   else
     DD = new (C) struct CXXRecordDecl::DefinitionData(D);
 
@@ -2176,7 +2177,7 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update,
   if (!Canon->DefinitionData)
     Canon->DefinitionData = DD;
   D->DefinitionData = Canon->DefinitionData;
-  ReadCXXDefinitionData(*DD, D, LambdaContext, IndexInLambdaContext);
+  ReadCXXDefinitionData(*DD, D, LambdaContext != nullptr, IndexInLambdaContext);
 
   // Mark this declaration as being a definition.
   D->setCompleteDefinition(true);
@@ -2210,6 +2211,7 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
 
   Decl *LambdaContext = nullptr;
   unsigned IndexInLambdaContext = 0;
+  llvm::SmallVector<TemplateArgument, 4> LambdaContextArgs;
 
   switch ((CXXRecKind)Record.readInt()) {
   case CXXRecNotTemplate:
@@ -2244,14 +2246,18 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   }
   case CXXLambda: {
     LambdaContext = readDecl();
-    if (LambdaContext)
+    if (LambdaContext) {
       IndexInLambdaContext = Record.readInt();
-    if (LambdaContext)
+      unsigned NumContextArgs = Record.readInt();
+      for (unsigned I = 0; I < NumContextArgs; ++I)
+        LambdaContextArgs.push_back(
+            Record.readTemplateArgument(/*Canonicalize=*/false));
       MergeImpl.mergeLambda(D, Redecl, *LambdaContext, IndexInLambdaContext);
-    else
+    } else {
       // If we don't have a mangling context, treat this like any other
       // declaration.
       mergeRedeclarable(D, Redecl);
+    }
     break;
   }
   }
@@ -2259,7 +2265,7 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   bool WasDefinition = Record.readInt();
   if (WasDefinition)
     ReadCXXRecordDefinition(D, /*Update=*/false, LambdaContext,
-                            IndexInLambdaContext);
+                            LambdaContextArgs, IndexInLambdaContext);
   else
     // Propagate DefinitionData pointer from the canonical declaration.
     D->DefinitionData = D->getCanonicalDecl()->DefinitionData;
@@ -2407,6 +2413,15 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
 }
 
 void ASTDeclReader::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
+  VisitDecl(D);
+  if (D->numTrailingObjects(
+          RequiresExprBodyDecl::OverloadToken<ContextDeclOrSentinel>())) {
+    Reader.PendingContextDecls.emplace_back(D, Record.readDeclID());
+    llvm::SmallVector<TemplateArgument, 4> Args;
+    for (unsigned I = 0; I < D->getContextArgs().size(); ++I)
+      Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
+    D->setContextArgs(Args);
+  }
 }
 
 RedeclarableResult
@@ -4008,9 +4023,21 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_CONCEPT:
     D = ConceptDecl::CreateDeserialized(Context, ID);
     break;
-  case DECL_REQUIRES_EXPR_BODY:
-    D = RequiresExprBodyDecl::CreateDeserialized(Context, ID);
-    break;
+  case DECL_REQUIRES_EXPR_BODY: {
+    // FIXME: Add template depth.
+    unsigned NumContextArgsOrNoContext = Record.readInt();
+    bool HasContextDecl = NumContextArgsOrNoContext != 0;
+    unsigned TemplateDepth = 0;
+#ifndef NDEBUG
+    if (HasContextDecl) {
+      TemplateDepth = Record.readInt();
+    }
+#endif
+    D = RequiresExprBodyDecl::CreateDeserialized(
+        Context, ID,
+        HasContextDecl ? ContextDeclOrSentinel(TemplateDepth) : nullptr,
+        HasContextDecl ? NumContextArgsOrNoContext - 1 : 0);
+  } break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
     break;

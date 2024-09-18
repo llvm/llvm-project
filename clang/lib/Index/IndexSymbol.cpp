@@ -77,6 +77,8 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
     case Linkage::Module:
     case Linkage::External:
       return false;
+    case Linkage::Computing:
+      llvm_unreachable("Linkage is being computed!");
     }
   }
 

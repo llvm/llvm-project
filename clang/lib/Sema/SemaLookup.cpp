@@ -888,7 +888,8 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
       for (unsigned IParm = 0, e = FP->getNumParams(); IParm != e; ++IParm) {
         ParmVarDecl *Parm = ParmVarDecl::Create(
             Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
-            nullptr, FP->getParamType(IParm), nullptr, SC_None, nullptr);
+            nullptr, FP->getParamType(IParm), nullptr, SC_None, nullptr,
+            /*TemplateDepth=*/0);
         Parm->setScopeInfo(0, IParm);
         ParmList.push_back(Parm);
       }

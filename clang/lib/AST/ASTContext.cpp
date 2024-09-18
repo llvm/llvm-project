@@ -7136,7 +7136,7 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
       return false;
     }
 
-    return FuncX->getLinkageInternal() == FuncY->getLinkageInternal() &&
+    return FuncX->getStorageClass() == FuncY->getStorageClass() &&
            hasSameOverloadableAttrs(FuncX, FuncY);
   }
 

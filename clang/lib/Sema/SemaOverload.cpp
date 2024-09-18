@@ -13566,6 +13566,9 @@ static void AddOverloadedCallCandidate(Sema &S,
     if (!isa<FunctionProtoType>(Func->getType()->getAs<FunctionType>()))
       return;
 
+    EnterExpressionEvaluationContext Eval(S,
+                                          S.currentEvaluationContext().Context,
+                                          /*ContextDecl=*/Func);
     S.AddOverloadCandidate(Func, FoundDecl, Args, CandidateSet,
                            /*SuppressUserConversions=*/false,
                            PartialOverloading);
@@ -13574,6 +13577,9 @@ static void AddOverloadedCallCandidate(Sema &S,
 
   if (FunctionTemplateDecl *FuncTemplate
       = dyn_cast<FunctionTemplateDecl>(Callee)) {
+    EnterExpressionEvaluationContext Eval(
+        S, S.currentEvaluationContext().Context,
+        /*ContextDecl=*/FuncTemplate->getTemplatedDecl());
     S.AddTemplateOverloadCandidate(FuncTemplate, FoundDecl,
                                    ExplicitTemplateArgs, Args, CandidateSet,
                                    /*SuppressUserConversions=*/false,

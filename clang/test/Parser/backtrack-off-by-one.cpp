@@ -13,14 +13,7 @@ template <typename T> class A {};
 
 // expected-error@+1 {{expected '{' after base class list}}
 template <typename T> class B : T // not ',' or '{'
-#if __cplusplus < 201103L
-// expected-error@+8 {{expected ';' after top level declarator}}
-#endif
-#if __cplusplus <= 201402L
-// expected-error@+5 {{a type specifier is required for all declarations}}
-#else
-// expected-error@+3 {{expected unqualified-id}}
-#endif
+// expected-error@+2 {{expected unqualified-id}}
 // expected-error@+1 {{expected ';' after class}}
 A<int> {
 };

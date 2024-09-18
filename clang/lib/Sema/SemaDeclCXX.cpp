@@ -3540,6 +3540,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
       NonTemplateMember = FunTmpl->getTemplatedDecl();
     else if (VarTemplateDecl *VarTmpl = dyn_cast<VarTemplateDecl>(Member))
       NonTemplateMember = VarTmpl->getTemplatedDecl();
+    UpdateCurrentContextDecl(NonTemplateMember);
 
     Member->setAccess(AS);
 
@@ -13520,6 +13521,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     NewND = NewTD;
   }
 
+  UpdateCurrentContextDecl(NewTD);
   PushOnScopeChains(NewND, S);
   ActOnDocumentableDecl(NewND);
   return NewND;
@@ -14009,7 +14011,8 @@ Sema::findInheritingConstructor(SourceLocation Loc,
         Context.getTrivialTypeSourceInfo(FPT->getParamType(I), UsingLoc);
     ParmVarDecl *PD = ParmVarDecl::Create(
         Context, DerivedCtor, UsingLoc, UsingLoc, /*IdentifierInfo=*/nullptr,
-        FPT->getParamType(I), TInfo, SC_None, /*DefArg=*/nullptr);
+        FPT->getParamType(I), TInfo, SC_None, /*DefArg=*/nullptr,
+        DerivedCtor->getTemplateDepth());
     PD->setScopeInfo(0, I);
     PD->setImplicit();
     // Ensure attributes are propagated onto parameters (this matters for
@@ -14802,11 +14805,10 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
         /* Diagnose */ false);
 
   // Add the parameter to the operator.
-  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, CopyAssignment,
-                                               ClassLoc, ClassLoc,
-                                               /*Id=*/nullptr, ArgType,
-                                               /*TInfo=*/nullptr, SC_None,
-                                               nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(
+      Context, CopyAssignment, ClassLoc, ClassLoc,
+      /*Id=*/nullptr, ArgType,
+      /*TInfo=*/nullptr, SC_None, nullptr, CopyAssignment->getTemplateDepth());
   CopyAssignment->setParams(FromParam);
 
   CopyAssignment->setTrivial(
@@ -15154,11 +15156,10 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
         /* Diagnose */ false);
 
   // Add the parameter to the operator.
-  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveAssignment,
-                                               ClassLoc, ClassLoc,
-                                               /*Id=*/nullptr, ArgType,
-                                               /*TInfo=*/nullptr, SC_None,
-                                               nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(
+      Context, MoveAssignment, ClassLoc, ClassLoc,
+      /*Id=*/nullptr, ArgType,
+      /*TInfo=*/nullptr, SC_None, nullptr, MoveAssignment->getTemplateDepth());
   MoveAssignment->setParams(FromParam);
 
   MoveAssignment->setTrivial(
@@ -15561,10 +15562,10 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
     TSI = Context.getTrivialTypeSourceInfo(ArgType);
 
   // Add the parameter to the constructor.
-  ParmVarDecl *FromParam =
-      ParmVarDecl::Create(Context, CopyConstructor, ClassLoc, ClassLoc,
-                          /*IdentifierInfo=*/nullptr, ArgType,
-                          /*TInfo=*/TSI, SC_None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(
+      Context, CopyConstructor, ClassLoc, ClassLoc,
+      /*IdentifierInfo=*/nullptr, ArgType,
+      /*TInfo=*/TSI, SC_None, nullptr, CopyConstructor->getTemplateDepth());
   CopyConstructor->setParams(FromParam);
 
   CopyConstructor->setTrivial(
@@ -15699,11 +15700,10 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
         /* Diagnose */ false);
 
   // Add the parameter to the constructor.
-  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveConstructor,
-                                               ClassLoc, ClassLoc,
-                                               /*IdentifierInfo=*/nullptr,
-                                               ArgType, /*TInfo=*/nullptr,
-                                               SC_None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(
+      Context, MoveConstructor, ClassLoc, ClassLoc,
+      /*IdentifierInfo=*/nullptr, ArgType, /*TInfo=*/nullptr, SC_None, nullptr,
+      MoveConstructor->getTemplateDepth());
   MoveConstructor->setParams(FromParam);
 
   MoveConstructor->setTrivial(
@@ -17863,6 +17863,14 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   if (!ND) return nullptr;
 
   assert(ND->getLexicalDeclContext() == CurContext);
+
+  if (auto *D = ND) {
+    if (auto *TD = dyn_cast<FunctionTemplateDecl>(D))
+      D = TD->getTemplatedDecl();
+    else
+      assert(isa<FunctionDecl>(D));
+    UpdateCurrentContextDecl(D);
+  }
 
   // If we performed typo correction, we might have added a scope specifier
   // and changed the decl context.

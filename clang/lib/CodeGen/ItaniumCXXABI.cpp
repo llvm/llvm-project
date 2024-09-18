@@ -3999,6 +3999,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   switch (Ty->getLinkage()) {
   case Linkage::Invalid:
     llvm_unreachable("Linkage hasn't been computed!");
+  case Linkage::Computing:
+    llvm_unreachable("Linkage is being computed!");
 
   case Linkage::None:
   case Linkage::Internal:

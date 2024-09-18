@@ -6958,7 +6958,8 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
   for (const ParmVarDecl *P : FDWithProto->parameters()) {
     auto *Param = ParmVarDecl::Create(S.getASTContext(), FD, SourceLocation(),
                                       SourceLocation(), nullptr, P->getType(),
-                                      /*TInfo=*/nullptr, SC_None, nullptr);
+                                      /*TInfo=*/nullptr, SC_None, nullptr,
+                                      FD->getTemplateDepth());
     Param->setScopeInfo(0, Params.size());
     Param->setImplicit();
     Params.push_back(Param);

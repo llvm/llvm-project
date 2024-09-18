@@ -79,17 +79,6 @@ inline bool isGenericLambdaCallOperatorSpecialization(DeclContext *DC) {
                                           dyn_cast<CXXMethodDecl>(DC));
 }
 
-inline bool isGenericLambdaCallOperatorOrStaticInvokerSpecialization(
-    const DeclContext *DC) {
-  const auto *MD = dyn_cast<CXXMethodDecl>(DC);
-  if (!MD) return false;
-  const CXXRecordDecl *LambdaClass = MD->getParent();
-  if (LambdaClass && LambdaClass->isGenericLambda())
-    return (isLambdaCallOperator(MD) || MD->isLambdaStaticInvoker()) &&
-                    MD->isFunctionTemplateSpecialization();
-  return false;
-}
-
 // This returns the parent DeclContext ensuring that the correct
 // parent DeclContext is returned for Lambdas
 inline DeclContext *getLambdaAwareParentOfDeclContext(DeclContext *DC) {

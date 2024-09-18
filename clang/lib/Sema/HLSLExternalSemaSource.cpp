@@ -278,7 +278,7 @@ struct BuiltinTypeDeclBuilder {
         AST, MethodDecl->getDeclContext(), SourceLocation(), SourceLocation(),
         &II, AST.UnsignedIntTy,
         AST.getTrivialTypeSourceInfo(AST.UnsignedIntTy, SourceLocation()),
-        SC_None, nullptr);
+        SC_None, nullptr, MethodDecl->getTemplateDepth());
     MethodDecl->setParams({IdxParam});
 
     // Also add the parameter to the function prototype.

@@ -23,14 +23,15 @@ class EnterExpressionEvaluationContext {
 public:
   EnterExpressionEvaluationContext(
       Sema &Actions, Sema::ExpressionEvaluationContext NewContext,
-      Decl *LambdaContextDecl = nullptr,
+      Sema::ContextDeclOrLazy ContextDecl = nullptr,
+      ArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
       Sema::ExpressionEvaluationContextRecord::ExpressionKind ExprContext =
           Sema::ExpressionEvaluationContextRecord::EK_Other,
       bool ShouldEnter = true)
       : Actions(Actions), Entered(ShouldEnter) {
     if (Entered)
-      Actions.PushExpressionEvaluationContext(NewContext, LambdaContextDecl,
-                                              ExprContext);
+      Actions.PushExpressionEvaluationContext(NewContext, ContextDecl,
+                                              TemplateArgs, ExprContext);
   }
   EnterExpressionEvaluationContext(
       Sema &Actions, Sema::ExpressionEvaluationContext NewContext,

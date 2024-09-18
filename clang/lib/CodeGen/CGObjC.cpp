@@ -3738,12 +3738,12 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   ParmVarDecl *DstDecl = ParmVarDecl::Create(
       C, FD, SourceLocation(), SourceLocation(), nullptr, DestTy,
       C.getTrivialTypeSourceInfo(DestTy, SourceLocation()), SC_None,
-      /*DefArg=*/nullptr);
+      /*DefArg=*/nullptr, FD->getTemplateDepth());
   args.push_back(Params[0] = DstDecl);
   ParmVarDecl *SrcDecl = ParmVarDecl::Create(
       C, FD, SourceLocation(), SourceLocation(), nullptr, SrcTy,
       C.getTrivialTypeSourceInfo(SrcTy, SourceLocation()), SC_None,
-      /*DefArg=*/nullptr);
+      /*DefArg=*/nullptr, FD->getTemplateDepth());
   args.push_back(Params[1] = SrcDecl);
   FD->setParams(Params);
 
@@ -3836,12 +3836,12 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   ParmVarDecl *DstDecl = ParmVarDecl::Create(
       C, FD, SourceLocation(), SourceLocation(), nullptr, DestTy,
       C.getTrivialTypeSourceInfo(DestTy, SourceLocation()), SC_None,
-      /*DefArg=*/nullptr);
+      /*DefArg=*/nullptr, FD->getTemplateDepth());
   args.push_back(Params[0] = DstDecl);
   ParmVarDecl *SrcDecl = ParmVarDecl::Create(
       C, FD, SourceLocation(), SourceLocation(), nullptr, SrcTy,
       C.getTrivialTypeSourceInfo(SrcTy, SourceLocation()), SC_None,
-      /*DefArg=*/nullptr);
+      /*DefArg=*/nullptr, FD->getTemplateDepth());
   args.push_back(Params[1] = SrcDecl);
   FD->setParams(Params);
 
