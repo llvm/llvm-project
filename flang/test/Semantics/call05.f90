@@ -155,11 +155,13 @@ module m2
 
   function return_deferred_length_ptr()
     character(len=:), pointer :: return_deferred_length_ptr
+    return_deferred_length_ptr => p2
   end function
 
   function return_explicit_length_ptr(n)
     integer :: n
     character(len=n), pointer :: return_explicit_length_ptr
+    return_explicit_length_ptr => p2(1:n)
   end function
 
   subroutine test()

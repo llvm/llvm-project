@@ -36,10 +36,10 @@ declare void @sink(ptr, ptr)
 ; ANY: @str.3 = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
 ; ANY: @str.4 = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
 ; ANY: @str.5 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
-; ANY: @str.6 = private unnamed_addr constant [4 x i8] c"4\00\00\00", align 1
-; ANY: @str.7 = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
-; ANY: @str.8 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
-; ANY: @str.9 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
+; ANY: @str.6 = private unnamed_addr constant [3 x i8] c"4\00\00", align 1
+; ANY: @str.7 = private unnamed_addr constant [9 x i8] c"4\00\00\00\00\00\00\00\00", align 1
+; ANY: @str.8 = private unnamed_addr constant [9 x i8] c"1234\00\00\00\00\00", align 1
+; ANY: @str.9 = private unnamed_addr constant [9 x i8] c"1234\00\00\00\00\00", align 1
 ;.
 define void @fold_stpncpy_overlap(ptr %dst, i64 %n) {
 ; ANY-LABEL: @fold_stpncpy_overlap(

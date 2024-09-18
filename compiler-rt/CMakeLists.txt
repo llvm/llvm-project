@@ -284,6 +284,8 @@ endif()
 option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
+option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
 include(config-ix)
 
 #================================
@@ -379,7 +381,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
@@ -796,6 +798,10 @@ if(ANDROID)
   set(COMPILER_RT_TEST_USE_LLD TRUE)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
+endif()
+if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES sparc)
+  # lld has several bugs/limitations on SPARC, so disable (Issue #100320).
+  set(COMPILER_RT_HAS_LLD FALSE)
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)

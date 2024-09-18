@@ -148,6 +148,9 @@ if compiler_id == "Clang":
         # requested it because it makes ASan reports more precise.
         config.debug_info_flags.append("-gcodeview")
         config.debug_info_flags.append("-gcolumn-info")
+elif compiler_id == "MSVC":
+    config.debug_info_flags = ["/Z7"]
+    config.cxx_mode_flags = []
 elif compiler_id == "GNU":
     config.cxx_mode_flags = ["-x c++"]
     config.debug_info_flags = ["-g"]
@@ -312,6 +315,8 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib:
     config.available_features.add("zlib")
+    config.substitutions.append(("%zlib_include_dir", config.zlib_include_dir))
+    config.substitutions.append(("%zlib_library", config.zlib_library))
 
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")
@@ -674,7 +679,16 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37", "2.38"]:
+        for required in [
+            "2.19",
+            "2.27",
+            "2.30",
+            "2.33",
+            "2.34",
+            "2.37",
+            "2.38",
+            "2.40",
+        ]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True

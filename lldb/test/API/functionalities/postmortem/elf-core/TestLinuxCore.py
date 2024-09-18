@@ -21,7 +21,8 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_pid = 32259
     _s390x_pid = 1045
     _ppc64le_pid = 28147
-    _riscv64_pid = 89328
+    _riscv64_gpr_fpr_pid = 1089
+    _riscv64_gpr_only_pid = 97
 
     _aarch64_regions = 4
     _i386_regions = 4
@@ -61,9 +62,25 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions, "a.out")
 
     @skipIfLLVMTargetMissing("RISCV")
-    def test_riscv64(self):
+    def test_riscv64_gpr_fpr(self):
         """Test that lldb can read the process information from an riscv64 linux core file."""
-        self.do_test("linux-riscv64", self._riscv64_pid, self._riscv64_regions, "a.out")
+        self.do_test(
+            "linux-riscv64.gpr_fpr",
+            self._riscv64_gpr_fpr_pid,
+            self._riscv64_regions,
+            "a.out",
+        )
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_gpr_only(self):
+        """Test that lldb can read the process information from an riscv64 linux core file
+        made for a RV64IMAC target, having no FP-registers."""
+        self.do_test(
+            "linux-riscv64.gpr_only",
+            self._riscv64_gpr_only_pid,
+            self._riscv64_regions,
+            "a.out",
+        )
 
     @skipIfLLVMTargetMissing("X86")
     def test_same_pid_running(self):
@@ -247,6 +264,32 @@ class LinuxCoreTestCase(TestBase):
         # Check that we found a.out from the sysroot
         self.check_all(process, self._i386_pid, self._i386_regions, "a.out")
 
+        self.dbg.DeleteTarget(target)
+
+    def test_object_map(self):
+        """Test that lldb can find the exe for an i386 linux core file using the object map."""
+
+        # Copy linux-i386.out to lldb_i386_object_map/a.out
+        tmp_object_map_root = os.path.join(self.getBuildDir(), "lldb_i386_object_map")
+        executable = os.path.join(tmp_object_map_root, "a.out")
+        lldbutil.mkdir_p(os.path.dirname(executable))
+        shutil.copyfile("linux-i386.out", executable)
+
+        # Replace the original module path at /home/labath/test and load the core
+        self.runCmd(
+            "settings set target.object-map /home/labath/test {}".format(
+                tmp_object_map_root
+            )
+        )
+
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-i386.core")
+
+        # Check that we did load the mapped executable
+        exe_module_spec = process.GetTarget().GetModuleAtIndex(0).GetFileSpec()
+        self.assertTrue(exe_module_spec.fullpath.startswith(tmp_object_map_root))
+
+        self.check_all(process, self._i386_pid, self._i386_regions, "a.out")
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -642,46 +685,47 @@ class LinuxCoreTestCase(TestBase):
         self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("RISCV")
-    def test_riscv64_regs(self):
+    def test_riscv64_regs_gpr_fpr(self):
         # check basic registers using 64 bit RISC-V core file
         target = self.dbg.CreateTarget(None)
         self.assertTrue(target, VALID_TARGET)
-        process = target.LoadCore("linux-riscv64.core")
+        process = target.LoadCore("linux-riscv64.gpr_fpr.core")
 
         values = {}
-        values["pc"] = "0x000000000001015e"
-        values["ra"] = "0x000000000001018c"
-        values["sp"] = "0x0000003fffd132a0"
-        values["gp"] = "0x0000002ae919af50"
-        values["tp"] = "0x0000003fdceae3e0"
-        values["t0"] = "0x0"
-        values["t1"] = "0x0000002ae9187b1c"
-        values["t2"] = "0x0000000000000021"
-        values["fp"] = "0x0000003fffd132d0"
-        values["s1"] = "0x0000002ae919cd98"
+        values["pc"] = "0x000000000001016e"
+        values["ra"] = "0x00000000000101a4"
+        values["sp"] = "0x0000003fffc1d2d0"
+        values["gp"] = "0x0000002ae6eccf50"
+        values["tp"] = "0x0000003ff3cb5400"
+        values["t0"] = "0x7f7f7f7fffffffff"
+        values["t1"] = "0x0000002ae6eb9b1c"
+        values["t2"] = "0xffffffffffffffff"
+        values["fp"] = "0x0000003fffc1d300"
+        values["s1"] = "0x0000002ae6eced98"
         values["a0"] = "0x0"
         values["a1"] = "0x0000000000010144"
-        values["a2"] = "0x0000002ae919cdb0"
-        values["a3"] = "0x000000000000002f"
-        values["a4"] = "0x000000000000002f"
+        values["a2"] = "0x0000002ae6ecedb0"
+        values["a3"] = "0xafdbdbff81cf7f81"
+        values["a4"] = "0x00000000000101e4"
         values["a5"] = "0x0"
-        values["a6"] = "0x7efefefefefefeff"
+        values["a6"] = "0x2f5b5a40014e0001"
         values["a7"] = "0x00000000000000dd"
-        values["s2"] = "0x0000002ae9196860"
-        values["s3"] = "0x0000002ae919cdb0"
-        values["s4"] = "0x0000003fffc63be8"
-        values["s5"] = "0x0000002ae919cb78"
-        values["s6"] = "0x0000002ae9196860"
-        values["s7"] = "0x0000002ae9196860"
+        values["s2"] = "0x0000002ae6ec8860"
+        values["s3"] = "0x0000002ae6ecedb0"
+        values["s4"] = "0x0000003fff886c18"
+        values["s5"] = "0x0000002ae6eceb78"
+        values["s6"] = "0x0000002ae6ec8860"
+        values["s7"] = "0x0000002ae6ec8860"
         values["s8"] = "0x0"
         values["s9"] = "0x000000000000000f"
-        values["s10"] = "0x0000002ae919a8d0"
+        values["s10"] = "0x0000002ae6ecc8d0"
         values["s11"] = "0x0000000000000008"
-        values["t3"] = "0x0000003fdce07df4"
+        values["t3"] = "0x0000003ff3be3728"
         values["t4"] = "0x0"
-        values["t5"] = "0x0000000000000020"
-        values["t6"] = "0x0000002ae919f1b0"
+        values["t5"] = "0x0000000000000002"
+        values["t6"] = "0x0000002ae6ed08b9"
         values["zero"] = "0x0"
+        values["fa5"] = "0xffffffff423c0000"
         values["fcsr"] = "0x00000000"
 
         fpr_names = {
@@ -702,7 +746,7 @@ class LinuxCoreTestCase(TestBase):
             "fa2",
             "fa3",
             "fa4",
-            "fa5",
+            # fa5 is non-zero and checked in the list above.
             "fa6",
             "fa7",
             "fs0",
@@ -733,6 +777,61 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_regs_gpr_only(self):
+        # check registers using 64 bit RISC-V core file containing GP-registers only
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-riscv64.gpr_only.core")
+
+        values = {}
+        values["pc"] = "0x0000000000010164"
+        values["ra"] = "0x0000000000010194"
+        values["sp"] = "0x00fffffff4d5fcc0"
+        values["gp"] = "0x0000000000157678"
+        values["tp"] = "0x00ffffff99c43400"
+        values["t0"] = "0x00ffffff99c6b260"
+        values["t1"] = "0x00ffffff99b7bd54"
+        values["t2"] = "0x0000000003f0b27f"
+        values["fp"] = "0x00fffffff4d5fcf0"
+        values["s1"] = "0x0000000000000003"
+        values["a0"] = "0x0"
+        values["a1"] = "0x0000000000010144"
+        values["a2"] = "0x0000000000176460"
+        values["a3"] = "0x000000000015ee38"
+        values["a4"] = "0x00000000423c0000"
+        values["a5"] = "0x0"
+        values["a6"] = "0x0"
+        values["a7"] = "0x00000000000000dd"
+        values["s2"] = "0x0"
+        values["s3"] = "0x000000000014ddf8"
+        values["s4"] = "0x000000000003651c"
+        values["s5"] = "0x00fffffffccd8d28"
+        values["s6"] = "0x000000000014ddf8"
+        values["s7"] = "0x00ffffff99c69d48"
+        values["s8"] = "0x00ffffff99c6a008"
+        values["s9"] = "0x0"
+        values["s10"] = "0x0"
+        values["s11"] = "0x0"
+        values["t3"] = "0x00ffffff99c42000"
+        values["t4"] = "0x00ffffff99af8e20"
+        values["t5"] = "0x0000000000000005"
+        values["t6"] = "0x44760bdd8d5f6381"
+        values["zero"] = "0x0"
+
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        # Check that LLDB does not try to read other registers from core file
+        self.expect(
+            "register read --all",
+            matching=False,
+            substrs=["registers were unavailable"],
+        )
 
     def test_get_core_file_api(self):
         """

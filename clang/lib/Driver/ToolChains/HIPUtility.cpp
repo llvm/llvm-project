@@ -52,13 +52,16 @@ static std::string normalizeForBundler(const llvm::Triple &T,
 // input object or archive files.
 class HIPUndefinedFatBinSymbols {
 public:
-  HIPUndefinedFatBinSymbols(const Compilation &C)
-      : C(C), DiagID(C.getDriver().getDiags().getCustomDiagID(
-                  DiagnosticsEngine::Error,
-                  "Error collecting HIP undefined fatbin symbols: %0")),
+  HIPUndefinedFatBinSymbols(const Compilation &C,
+                            const llvm::opt::ArgList &Args_)
+      : C(C), Args(Args_),
+        DiagID(C.getDriver().getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Error collecting HIP undefined fatbin symbols: %0")),
         Quiet(C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)),
         Verbose(C.getArgs().hasArg(options::OPT_v)) {
     populateSymbols();
+    processStaticLibraries();
     if (Verbose) {
       for (const auto &Name : FatBinSymbols)
         llvm::errs() << "Found undefined HIP fatbin symbol: " << Name << "\n";
@@ -76,8 +79,70 @@ public:
     return GPUBinHandleSymbols;
   }
 
+  // Collect symbols from static libraries specified by -l options.
+  void processStaticLibraries() {
+    llvm::SmallVector<llvm::StringRef, 16> LibNames;
+    llvm::SmallVector<llvm::StringRef, 16> LibPaths;
+    llvm::SmallVector<llvm::StringRef, 16> ExactLibNames;
+    llvm::Triple Triple(C.getDriver().getTargetTriple());
+    bool IsMSVC = Triple.isWindowsMSVCEnvironment();
+    llvm::StringRef Ext = IsMSVC ? ".lib" : ".a";
+
+    for (const auto *Arg : Args.filtered(options::OPT_l)) {
+      llvm::StringRef Value = Arg->getValue();
+      if (Value.starts_with(":"))
+        ExactLibNames.push_back(Value.drop_front());
+      else
+        LibNames.push_back(Value);
+    }
+    for (const auto *Arg : Args.filtered(options::OPT_L)) {
+      auto Path = Arg->getValue();
+      LibPaths.push_back(Path);
+      if (Verbose)
+        llvm::errs() << "HIP fatbin symbol search uses library path:  " << Path
+                     << "\n";
+    }
+
+    auto ProcessLib = [&](llvm::StringRef LibName, bool IsExact) {
+      llvm::SmallString<256> FullLibName(
+          IsExact  ? Twine(LibName).str()
+          : IsMSVC ? (Twine(LibName) + Ext).str()
+                   : (Twine("lib") + LibName + Ext).str());
+
+      bool Found = false;
+      for (const auto Path : LibPaths) {
+        llvm::SmallString<256> FullPath = Path;
+        llvm::sys::path::append(FullPath, FullLibName);
+
+        if (llvm::sys::fs::exists(FullPath)) {
+          if (Verbose)
+            llvm::errs() << "HIP fatbin symbol search found library: "
+                         << FullPath << "\n";
+          auto BufferOrErr = llvm::MemoryBuffer::getFile(FullPath);
+          if (!BufferOrErr) {
+            errorHandler(llvm::errorCodeToError(BufferOrErr.getError()));
+            continue;
+          }
+          processInput(BufferOrErr.get()->getMemBufferRef());
+          Found = true;
+          break;
+        }
+      }
+      if (!Found && Verbose)
+        llvm::errs() << "HIP fatbin symbol search could not find library: "
+                     << FullLibName << "\n";
+    };
+
+    for (const auto LibName : ExactLibNames)
+      ProcessLib(LibName, true);
+
+    for (const auto LibName : LibNames)
+      ProcessLib(LibName, false);
+  }
+
 private:
   const Compilation &C;
+  const llvm::opt::ArgList &Args;
   unsigned DiagID;
   bool Quiet;
   bool Verbose;
@@ -301,7 +366,7 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   auto HostTriple =
       C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple();
 
-  HIPUndefinedFatBinSymbols Symbols(C);
+  HIPUndefinedFatBinSymbols Symbols(C, Args);
 
   std::string PrimaryHipFatbinSymbol;
   std::string PrimaryGpuBinHandleSymbol;

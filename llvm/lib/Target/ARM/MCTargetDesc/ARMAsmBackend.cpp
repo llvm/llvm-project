@@ -587,6 +587,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
         return 0;
     return 0xffffff & ((Value - 8) >> 2);
   case ARM::fixup_t2_uncondbranch: {
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     Value = Value - 4;
     if (!isInt<25>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
@@ -637,6 +645,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
     }
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
 
     // The value doesn't encode the low bit (always zero) and is offset by
     // four. The 32-bit immediate value is encoded as
@@ -666,6 +682,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                          Endian == llvm::endianness::little);
   }
   case ARM::fixup_arm_thumb_blx: {
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     // The value doesn't encode the low two bits (always zero) and is offset by
     // four (see fixup_arm_thumb_cp). The 32-bit immediate value is encoded as
     //   imm32 = SignExtend(S:I1:I2:imm10H:imm10L:00)
@@ -1161,14 +1185,14 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     return CU::UNWIND_ARM_MODE_DWARF;
 
   // Start off assuming CFA is at SP+0.
-  unsigned CFARegister = ARM::SP;
+  MCRegister CFARegister = ARM::SP;
   int CFARegisterOffset = 0;
   // Mark savable registers as initially unsaved
   DenseMap<unsigned, int> RegOffsets;
   int FloatRegCount = 0;
   // Process each .cfi directive and build up compact unwind info.
   for (const MCCFIInstruction &Inst : Instrs) {
-    unsigned Reg;
+    MCRegister Reg;
     switch (Inst.getOperation()) {
     case MCCFIInstruction::OpDefCfa: // DW_CFA_def_cfa
       CFARegisterOffset = Inst.getOffset();

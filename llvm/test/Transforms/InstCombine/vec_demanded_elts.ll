@@ -1163,7 +1163,7 @@ define i4 @common_binop_demand_via_extelt_op0_mismatch_elt1(<2 x i4> %x, <2 x i4
 define <2 x i8> @common_binop_demand_via_splat_mask_poison(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison(
 ; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[YSPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
 ; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[VV]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]
 ; CHECK-NEXT:    ret <2 x i8> [[RES]]
@@ -1179,7 +1179,7 @@ define <2 x i8> @common_binop_demand_via_splat_mask_poison(<2 x i8> %x, <2 x i8>
 define <2 x i8> @common_binop_demand_via_splat_mask_poison_2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison_2(
 ; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[YSPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
 ; CHECK-NEXT:    [[M:%.*]] = add <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[M]], <2 x i8> [[Y]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]
@@ -1196,7 +1196,7 @@ define <2 x i8> @common_binop_demand_via_splat_mask_poison_2(<2 x i8> %x, <2 x i
 define <2 x i8> @common_binop_demand_via_splat_mask_poison_3(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison_3(
 ; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[YSPLAT]], [[X:%.*]]
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
 ; CHECK-NEXT:    [[M:%.*]] = add <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[M]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]

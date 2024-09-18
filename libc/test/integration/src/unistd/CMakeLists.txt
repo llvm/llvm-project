@@ -31,8 +31,8 @@ add_integration_test(
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
     libc.src.unistd.fork
-    libc.src.unistd.getpid
     libc.src.unistd.gettid
+    libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
     libc.include.sys_syscall
 )

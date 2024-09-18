@@ -650,7 +650,77 @@ exit:
   ret void
 }
 
+define void @wombat(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc = trunc i64 %mul3 to i32
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @wombat2(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc.1, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc.0 = trunc i64 %mul3 to i60
+  %trunc.1 = trunc i60 %trunc.0 to i32
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @with_dead_use(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc = trunc i64 %mul3 to i32
+  %dead.and = and i32 %trunc, 123
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "min-legal-vector-width"="0" "target-cpu"="skylake-avx512" }
+attributes #1 = { "target-cpu"="skylake-avx512" "target-features"="-avx512f" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

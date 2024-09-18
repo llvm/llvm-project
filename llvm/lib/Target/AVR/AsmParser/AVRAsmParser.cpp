@@ -72,7 +72,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   int parseRegisterName();
   int parseRegister(bool RestoreOnFailure = false);
   bool tryParseRegisterOperand(OperandVector &Operands);
-  bool tryParseExpression(OperandVector &Operands);
+  bool tryParseExpression(OperandVector &Operands, int64_t offset);
   bool tryParseRelocExpression(OperandVector &Operands);
   void eatComma();
 
@@ -418,7 +418,7 @@ bool AVRAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
   return false;
 }
 
-bool AVRAsmParser::tryParseExpression(OperandVector &Operands) {
+bool AVRAsmParser::tryParseExpression(OperandVector &Operands, int64_t offset) {
   SMLoc S = Parser.getTok().getLoc();
 
   if (!tryParseRelocExpression(Operands))
@@ -436,6 +436,11 @@ bool AVRAsmParser::tryParseExpression(OperandVector &Operands) {
   MCExpr const *Expression;
   if (getParser().parseExpression(Expression))
     return true;
+
+  if (offset) {
+    Expression = MCBinaryExpr::createAdd(
+        Expression, MCConstantExpr::create(offset, getContext()), getContext());
+  }
 
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(AVROperand::CreateImm(Expression, S, E));
@@ -529,8 +534,9 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
     [[fallthrough]];
   case AsmToken::LParen:
   case AsmToken::Integer:
+    return tryParseExpression(Operands, 0);
   case AsmToken::Dot:
-    return tryParseExpression(Operands);
+    return tryParseExpression(Operands, 2);
   case AsmToken::Plus:
   case AsmToken::Minus: {
     // If the sign preceeds a number, parse the number,
@@ -540,7 +546,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
     case AsmToken::BigNum:
     case AsmToken::Identifier:
     case AsmToken::Real:
-      if (!tryParseExpression(Operands))
+      if (!tryParseExpression(Operands, 0))
         return false;
       break;
     default:
@@ -643,6 +649,7 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     // These specific operands should be treated as addresses/symbols/labels,
     // other than registers.
     bool maybeReg = true;
+
     if (OperandNum == 1) {
       std::array<StringRef, 8> Insts = {"lds", "adiw", "sbiw", "ldi"};
       for (auto Inst : Insts) {

@@ -242,7 +242,7 @@ define i32 @sub_ashr_or_i32_extra_use_ashr(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    store i32 [[SHR]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[SHR]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %sub = sub nsw i32 %y, %x
@@ -268,7 +268,7 @@ define i32 @sub_ashr_or_i32_no_nsw_nuw(i32 %x, i32 %y) {
 define i32 @neg_or_extra_use_ashr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_or_extra_use_ashr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[OR]], 31
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]

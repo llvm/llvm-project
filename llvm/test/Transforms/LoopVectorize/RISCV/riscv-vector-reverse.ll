@@ -52,8 +52,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<%0> = VF * UF
 ; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
@@ -135,7 +133,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Not Interleaving.
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
-; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {
@@ -257,8 +254,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<%0> = VF * UF
 ; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
@@ -340,7 +335,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Not Interleaving.
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
-; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {

@@ -119,7 +119,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-//  CHECK-DAG:  #[[MAP0:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
+//  CHECK-DAG:  #[[MAP0:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
 
 //      CHECK:  fold_extract_slice
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<?x128xf32>

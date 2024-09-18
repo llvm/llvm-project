@@ -209,9 +209,7 @@ public:
   operator!=(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ != __y.__current_;
   }
-#endif
 
-  // TODO(mordante) disable these overloads in the LLVM 20 release.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator<(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ < __y.__current_;
@@ -229,7 +227,7 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
-#if _LIBCPP_STD_VER >= 20
+#else
   _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
   operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept {
     if constexpr (three_way_comparable<_Iterator, strong_ordering>) {

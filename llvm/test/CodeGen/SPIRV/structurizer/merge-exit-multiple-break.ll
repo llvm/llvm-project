@@ -34,12 +34,28 @@ while.cond:
   %cmp = icmp ne i32 %2, 10
   br i1 %cmp, label %while.body, label %while.end
 
+; CHECK:   %[[#new_end]] = OpLabel
+; CHECK:    %[[#route:]] = OpPhi %[[#int_ty]] %[[#int_2]] %[[#while_cond]] %[[#int_0]] %[[#while_body]] %[[#int_1]] %[[#if_end:]]
+; CHECK:                   OpSwitch %[[#route]] %[[#if_then:]] 1 %[[#if_then2:]] 2 %[[#while_end_loopexit:]]
+
+; CHECK:   %[[#while_end_loopexit]] = OpLabel
+; CHECK:                               OpBranch %[[#while_end:]]
+
+; CHECK:   %[[#while_end]] = OpLabel
+; CHECK:                     OpReturn
+
+; CHECK:   %[[#if_then2]] = OpLabel
+; CHECK:                     OpBranch %[[#while_end]]
+
+; CHECK:   %[[#if_then]] = OpLabel
+; CHECK:                    OpBranch %[[#while_end]]
+
 ; CHECK:   %[[#while_body]] = OpLabel
 ; CHECK-NEXT:    %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]] Aligned 1
 ; CHECK-NEXT:                 OpStore %[[#idx]] %[[#tmp]] Aligned 4
 ; CHECK-NEXT:    %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
 ; CHECK-NEXT:   %[[#cmp1:]] = OpIEqual %[[#bool_ty]] %[[#tmp]] %[[#int_0]]
-; CHECK:                      OpBranchConditional %[[#cmp1]] %[[#new_end]] %[[#if_end:]]
+; CHECK:                      OpBranchConditional %[[#cmp1]] %[[#new_end]] %[[#if_end]]
 while.body:
   %3 = call i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %1) ]
   store i32 %3, ptr %idx, align 4
@@ -47,8 +63,6 @@ while.body:
   %cmp1 = icmp eq i32 %4, 0
   br i1 %cmp1, label %if.then, label %if.end
 
-; CHECK:   %[[#if_then:]] = OpLabel
-; CHECK:                    OpBranch %[[#while_end:]]
 if.then:
   br label %while.end
 
@@ -65,8 +79,6 @@ if.end:
   %cmp2 = icmp eq i32 %6, 0
   br i1 %cmp2, label %if.then2, label %if.end2
 
-; CHECK:   %[[#if_then2:]] = OpLabel
-; CHECK:                     OpBranch %[[#while_end:]]
 if.then2:
   br label %while.end
 
@@ -75,17 +87,10 @@ if.then2:
 if.end2:
   br label %while.cond
 
-; CHECK:   %[[#while_end_loopexit:]] = OpLabel
-; CHECK:                               OpBranch %[[#while_end]]
 
-; CHECK:   %[[#while_end]] = OpLabel
-; CHECK:                     OpReturn
 while.end:
   ret void
 
-; CHECK:   %[[#new_end]] = OpLabel
-; CHECK:    %[[#route:]] = OpPhi %[[#int_ty]] %[[#int_2]] %[[#while_cond]] %[[#int_0]] %[[#while_body]] %[[#int_1]] %[[#if_end]]
-; CHECK:                   OpSwitch %[[#route]] %[[#if_then]] 1 %[[#if_then2]] 2 %[[#while_end_loopexit]]
 }
 
 declare token @llvm.experimental.convergence.entry() #2

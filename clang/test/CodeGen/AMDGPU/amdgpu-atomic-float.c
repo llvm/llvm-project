@@ -99,20 +99,16 @@ float test_float_pre_inc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 8
-// SAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    ret double [[TMP1]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_post_inc.n to ptr), double 1.000000e+00 seq_cst, align 8
+// SAFE-NEXT:    ret double [[TMP0]]
 //
 // UNSAFE-LABEL: define dso_local double @test_double_post_inc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
-// UNSAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    ret double [[TMP1]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_post_inc.n to ptr), double 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    ret double [[TMP0]]
 //
 double test_double_post_inc()
 {
@@ -125,20 +121,16 @@ double test_double_post_inc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_post_dc.n to ptr), float 1.000000e+00 seq_cst, align 8
-// SAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    ret double [[TMP1]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_post_dc.n to ptr), double 1.000000e+00 seq_cst, align 8
+// SAFE-NEXT:    ret double [[TMP0]]
 //
 // UNSAFE-LABEL: define dso_local double @test_double_post_dc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_post_dc.n to ptr), float 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
-// UNSAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    ret double [[TMP1]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_post_dc.n to ptr), double 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    ret double [[TMP0]]
 //
 double test_double_post_dc()
 {
@@ -151,22 +143,18 @@ double test_double_post_dc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_pre_dc.n to ptr), float 1.000000e+00 seq_cst, align 8
-// SAFE-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// SAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    ret double [[TMP2]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_pre_dc.n to ptr), double 1.000000e+00 seq_cst, align 8
+// SAFE-NEXT:    [[TMP1:%.*]] = fsub double [[TMP0]], 1.000000e+00
+// SAFE-NEXT:    ret double [[TMP1]]
 //
 // UNSAFE-LABEL: define dso_local double @test_double_pre_dc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_pre_dc.n to ptr), float 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
-// UNSAFE-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// UNSAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    ret double [[TMP2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test_double_pre_dc.n to ptr), double 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    [[TMP1:%.*]] = fsub double [[TMP0]], 1.000000e+00
+// UNSAFE-NEXT:    ret double [[TMP1]]
 //
 double test_double_pre_dc()
 {
@@ -179,22 +167,18 @@ double test_double_pre_dc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 8
-// SAFE-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// SAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// SAFE-NEXT:    ret double [[TMP2]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_pre_inc.n to ptr), double 1.000000e+00 seq_cst, align 8
+// SAFE-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// SAFE-NEXT:    ret double [[TMP1]]
 //
 // UNSAFE-LABEL: define dso_local double @test_double_pre_inc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
-// UNSAFE-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// UNSAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL_ASCAST]], align 8
-// UNSAFE-NEXT:    ret double [[TMP2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_double_pre_inc.n to ptr), double 1.000000e+00 seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// UNSAFE-NEXT:    ret double [[TMP1]]
 //
 double test_double_pre_inc()
 {
@@ -207,20 +191,16 @@ double test_double_pre_inc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 2
-// SAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    [[TMP1:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    ret half [[TMP1]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), half 0xH3C00 seq_cst, align 2
+// SAFE-NEXT:    ret half [[TMP0]]
 //
 // UNSAFE-LABEL: define dso_local half @test__Float16_post_inc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
-// UNSAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    [[TMP1:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    ret half [[TMP1]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_post_inc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    ret half [[TMP0]]
 //
 _Float16 test__Float16_post_inc()
 {
@@ -233,20 +213,16 @@ _Float16 test__Float16_post_inc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), float 1.000000e+00 seq_cst, align 2
-// SAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    [[TMP1:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    ret half [[TMP1]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), half 0xH3C00 seq_cst, align 2
+// SAFE-NEXT:    ret half [[TMP0]]
 //
 // UNSAFE-LABEL: define dso_local half @test__Float16_post_dc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), float 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
-// UNSAFE-NEXT:    store float [[TMP0]], ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    [[TMP1:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    ret half [[TMP1]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_post_dc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    ret half [[TMP0]]
 //
 _Float16 test__Float16_post_dc()
 {
@@ -259,22 +235,18 @@ _Float16 test__Float16_post_dc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), float 1.000000e+00 seq_cst, align 2
-// SAFE-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// SAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    [[TMP2:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    ret half [[TMP2]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), half 0xH3C00 seq_cst, align 2
+// SAFE-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 0xH3C00
+// SAFE-NEXT:    ret half [[TMP1]]
 //
 // UNSAFE-LABEL: define dso_local half @test__Float16_pre_dc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), float 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
-// UNSAFE-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// UNSAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    [[TMP2:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    ret half [[TMP2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_dc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    [[TMP1:%.*]] = fsub half [[TMP0]], 0xH3C00
+// UNSAFE-NEXT:    ret half [[TMP1]]
 //
 _Float16 test__Float16_pre_dc()
 {
@@ -287,22 +259,18 @@ _Float16 test__Float16_pre_dc()
 // SAFE-NEXT:  [[ENTRY:.*:]]
 // SAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // SAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 2
-// SAFE-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// SAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    [[TMP2:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// SAFE-NEXT:    ret half [[TMP2]]
+// SAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), half 0xH3C00 seq_cst, align 2
+// SAFE-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH3C00
+// SAFE-NEXT:    ret half [[TMP1]]
 //
 // UNSAFE-LABEL: define dso_local half @test__Float16_pre_inc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-NEXT:    [[RETVAL:%.*]] = alloca half, align 2, addrspace(5)
 // UNSAFE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
-// UNSAFE-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// UNSAFE-NEXT:    store float [[TMP1]], ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    [[TMP2:%.*]] = load half, ptr [[RETVAL_ASCAST]], align 2
-// UNSAFE-NEXT:    ret half [[TMP2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test__Float16_pre_inc.n to ptr), half 0xH3C00 seq_cst, align 2, !amdgpu.no.fine.grained.memory [[META3]]
+// UNSAFE-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH3C00
+// UNSAFE-NEXT:    ret half [[TMP1]]
 //
 _Float16 test__Float16_pre_inc()
 {

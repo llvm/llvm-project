@@ -26,8 +26,8 @@ define i8 @ucmp.8.16(i16 zeroext %x, i16 zeroext %y) nounwind {
 define i8 @ucmp.8.32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ucmp.8.32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a1, $a1, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    sltu $a2, $a0, $a1
 ; CHECK-NEXT:    sltu $a0, $a1, $a0
 ; CHECK-NEXT:    sub.d $a0, $a0, $a2
@@ -71,8 +71,8 @@ define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 define i32 @ucmp.32.32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ucmp.32.32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a1, $a1, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    sltu $a2, $a0, $a1
 ; CHECK-NEXT:    sltu $a0, $a1, $a0
 ; CHECK-NEXT:    sub.d $a0, $a0, $a2

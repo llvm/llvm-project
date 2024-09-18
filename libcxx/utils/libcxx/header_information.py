@@ -32,15 +32,6 @@ header_restrictions = {
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
 
     # headers with #error directives
-    "barrier": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "future": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "latch": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "semaphore": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "stop_token": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
-
-    # headers with #error directives
     "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     "wctype.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     # transitive includers of the above headers

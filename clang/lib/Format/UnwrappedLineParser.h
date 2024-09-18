@@ -410,7 +410,7 @@ struct UnwrappedLineNode {
   UnwrappedLineNode() : Tok(nullptr) {}
   UnwrappedLineNode(FormatToken *Tok,
                     llvm::ArrayRef<UnwrappedLine> Children = {})
-      : Tok(Tok), Children(Children.begin(), Children.end()) {}
+      : Tok(Tok), Children(Children) {}
 
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;

@@ -17,9 +17,10 @@ set_output_directory(DynamicLibraryLib
 
 add_llvm_unittest(DynamicLibraryTests
   DynamicLibraryTest.cpp
+
+  EXPORT_SYMBOLS
   )
 target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
-export_executable_symbols(DynamicLibraryTests)
 
 function(dynlib_add_module NAME)
   add_library(${NAME} MODULE
@@ -38,7 +39,7 @@ function(dynlib_add_module NAME)
     )
 
   add_dependencies(DynamicLibraryTests ${NAME})
-  
+
   if(LLVM_INTEGRATED_CRT_ALLOC)
     # We need to link in the Support lib for the Memory allocator override,
     # otherwise the DynamicLibrary.Shutdown test will fail, because it would
@@ -48,7 +49,7 @@ function(dynlib_add_module NAME)
     llvm_map_components_to_libnames(llvm_libs Support)
     target_link_libraries(${NAME} ${llvm_libs} "-INCLUDE:malloc")
   endif()
-  
+
 endfunction(dynlib_add_module)
 
 # Revert -Wl,-z,nodelete on this test since it relies on the file

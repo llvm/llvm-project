@@ -7,7 +7,7 @@
 // derived type) where members of both the nested and outer record type have
 // members mapped.
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 llvm.func @_QQmain() {
     %0 = llvm.mlir.constant(10 : index) : i64
     %1 = llvm.mlir.constant(4 : index) : i64

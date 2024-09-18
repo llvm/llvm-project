@@ -243,10 +243,11 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // See `NoreturnDestructorTest` for concrete examples.
     if (Block.succ_begin()->getReachableBlock() != nullptr &&
         Block.succ_begin()->getReachableBlock()->hasNoReturnElement()) {
-      auto &StmtToBlock = AC.ACFG.getStmtToBlock();
-      auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
-      assert(StmtBlock != StmtToBlock.end());
-      llvm::erase(Preds, StmtBlock->getSecond());
+      const CFGBlock *StmtBlock = nullptr;
+      if (const Stmt *Terminator = Block.getTerminatorStmt())
+        StmtBlock = AC.ACFG.blockForStmt(*Terminator);
+      assert(StmtBlock != nullptr);
+      llvm::erase(Preds, StmtBlock);
     }
   }
 

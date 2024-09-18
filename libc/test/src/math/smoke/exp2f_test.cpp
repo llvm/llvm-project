@@ -8,7 +8,6 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"

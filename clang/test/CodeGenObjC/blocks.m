@@ -59,29 +59,29 @@ void test2(Test2 *x) {
   // CHECK-NEXT: store ptr
 
   // isa=1 for weak byrefs.
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 0
+  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 0
   // CHECK-NEXT: store ptr inttoptr (i32 1 to ptr), ptr [[T0]]
 
   // Forwarding.
-  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 1
+  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 1
   // CHECK-NEXT: store ptr [[WEAKX]], ptr [[T1]]
 
   // Flags.  This is just BLOCK_HAS_COPY_DISPOSE BLOCK_BYREF_LAYOUT_UNRETAINED
-  // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 2
+  // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 2
   // CHECK-NEXT: store i32 1375731712, ptr [[T2]]
 
   // Size.
-  // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 3
+  // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 3
   // CHECK-NEXT: store i32 28, ptr [[T3]]
 
   // Copy and dispose helpers.
-  // CHECK-NEXT: [[T4:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 4
+  // CHECK-NEXT: [[T4:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 4
   // CHECK-NEXT: store ptr @__Block_byref_object_copy_{{.*}}, ptr [[T4]]
-  // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 5
+  // CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 5
   // CHECK-NEXT: store ptr @__Block_byref_object_dispose_{{.*}}, ptr [[T5]]
 
   // Actually capture the value.
-  // CHECK-NEXT: [[T6:%.*]] = getelementptr inbounds [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 6
+  // CHECK-NEXT: [[T6:%.*]] = getelementptr inbounds nuw [[WEAK_T]], ptr [[WEAKX]], i32 0, i32 6
   // CHECK-NEXT: [[CAPTURE:%.*]] = load ptr, ptr [[X]]
   // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[T6]]
 
@@ -98,11 +98,11 @@ void test2(Test2 *x) {
 // In the test above, check that the use in the invocation function
 // doesn't require a read barrier.
 // CHECK-LABEL:    define internal void @__test2_block_invoke
-// CHECK:      [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
+// CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[WEAK_T]]{{.*}}, ptr [[T1]], i32 0, i32 1
+// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds nuw [[WEAK_T]]{{.*}}, ptr [[T1]], i32 0, i32 1
 // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr [[T3]]
-// CHECK-NEXT: [[WEAKX:%.*]] = getelementptr inbounds [[WEAK_T]]{{.*}}, ptr [[T4]], i32 0, i32 6
+// CHECK-NEXT: [[WEAKX:%.*]] = getelementptr inbounds nuw [[WEAK_T]]{{.*}}, ptr [[T4]], i32 0, i32 6
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[WEAKX]], align 4
 
 // Make sure that ... is appropriately positioned in a block call.
@@ -113,7 +113,7 @@ void test3(void (^block)(int, ...)) {
 // CHECK:      [[BLOCK:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: store ptr
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[BLOCK]], align 4
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T:%.*]], ptr [[T0]], i32 0, i32 3
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds nuw [[BLOCK_T:%.*]], ptr [[T0]], i32 0, i32 3
 // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr [[T2]]
 // CHECK-NEXT: call void (ptr, i32, ...) [[T4]](ptr noundef [[T0]], i32 noundef 0, i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // CHECK-NEXT: ret void
@@ -125,7 +125,7 @@ void test4(void (^block)()) {
 // CHECK:      [[BLOCK:%.*]] = alloca ptr, align 4
 // CHECK-NEXT: store ptr
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[BLOCK]], align 4
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T:%.*]], ptr [[T0]], i32 0, i32 3
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds nuw [[BLOCK_T:%.*]], ptr [[T0]], i32 0, i32 3
 // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr [[T2]]
 // CHECK-NEXT: call void [[T4]](ptr noundef [[T0]], i32 noundef 0, i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // CHECK-NEXT: ret void
@@ -136,10 +136,10 @@ void test5(A *a) {
 }
 
 // CHECK-LABEL: define void @test5(
-// CHECK: %[[FLAGS:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 1
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 1
 // SIG_STR: store i32 -1040187392, ptr %[[FLAGS]], align 4
 // NO_SIG_STR: store i32 -2113929216, ptr %[[FLAGS]], align 4
-// CHECK: %[[V0:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK: %[[V0:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR0]], ptr %[[V0]],
 
 void test6(id a, long long b) {

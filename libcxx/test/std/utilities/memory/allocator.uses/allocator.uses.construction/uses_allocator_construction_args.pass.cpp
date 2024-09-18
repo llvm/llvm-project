@@ -121,6 +121,63 @@ constexpr void testOne() {
     assert(std::get<2>(std::get<1>(ret)) == 3);
     assert(std::get<0>(std::get<2>(ret)) == 4);
   }
+  {
+    // Tests for ensuring forward declarations of uses_allocator_construction_args
+    // See https://github.com/llvm/llvm-project/issues/66714.
+    {
+      using NestedPairType = std::pair<int, std::pair<int, UsesAllocArgT>>;
+      std::same_as<std::tuple<
+          std::piecewise_construct_t,
+          std::tuple<>,
+          std::tuple<std::piecewise_construct_t, std::tuple<>, std::tuple<std::allocator_arg_t, const Alloc&>>>> auto
+          ret = test_uses_allocator_construction_args<NestedPairType>(a);
+      (void)ret;
+    }
+    {
+      using NestedPairType = std::pair<int, std::pair<UsesAllocArgT, int>>;
+      std::same_as<std::tuple<
+          std::piecewise_construct_t,
+          std::tuple<>,
+          std::tuple<std::piecewise_construct_t, std::tuple<std::allocator_arg_t, const Alloc&>, std::tuple<>>>> auto
+          ret = test_uses_allocator_construction_args<NestedPairType>(a);
+      (void)ret;
+    }
+    {
+      using PairType = std::pair<int, int>;
+      int up         = 1;
+      int vp         = 2;
+
+      std::same_as<std::tuple<std::piecewise_construct_t, std::tuple<int&&>, std::tuple<int&&>>> auto ret =
+          test_uses_allocator_construction_args<PairType>(a, std::move(up), std::move(vp));
+      (void)ret;
+    }
+    {
+      using PairType = const std::pair<int, int>;
+      PairType p(1, 2);
+
+      std::same_as<std::tuple<std::piecewise_construct_t, std::tuple<const int&>, std::tuple<const int&>>> auto ret =
+          test_uses_allocator_construction_args<PairType>(a, p);
+      (void)ret;
+    }
+    {
+      using PairType = std::pair<int, int>;
+      PairType p(1, 2);
+
+      std::same_as<std::tuple<std::piecewise_construct_t, std::tuple<int&&>, std::tuple<int&&>>> auto ret =
+          test_uses_allocator_construction_args<PairType>(a, std::move(p));
+      (void)ret;
+    }
+#if TEST_STD_VER >= 23
+    {
+      using PairType = const std::pair<int, int>;
+      PairType p(1, 2);
+
+      std::same_as<std::tuple<std::piecewise_construct_t, std::tuple<const int&&>, std::tuple<const int&&>>> auto ret =
+          test_uses_allocator_construction_args<PairType>(a, std::move(p));
+      (void)ret;
+    }
+#endif
+  }
 #if TEST_STD_VER >= 23
   {
     std::pair p{3, 4};

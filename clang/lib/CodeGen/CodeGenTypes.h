@@ -57,11 +57,6 @@ class CodeGenTypes {
   ASTContext &Context;
   llvm::Module &TheModule;
   const TargetInfo &Target;
-  CGCXXABI &TheCXXABI;
-
-  // This should not be moved earlier, since its initialization depends on some
-  // of the previous reference members being already initialized
-  const ABIInfo &TheABIInfo;
 
   /// The opaque type map for Objective-C interfaces. All direct
   /// manipulation is done by the runtime interfaces, which are
@@ -106,9 +101,8 @@ public:
   }
   CodeGenModule &getCGM() const { return CGM; }
   ASTContext &getContext() const { return Context; }
-  const ABIInfo &getABIInfo() const { return TheABIInfo; }
   const TargetInfo &getTarget() const { return Target; }
-  CGCXXABI &getCXXABI() const { return TheCXXABI; }
+  CGCXXABI &getCXXABI() const;
   llvm::LLVMContext &getLLVMContext() { return TheModule.getContext(); }
   const CodeGenOptions &getCodeGenOpts() const;
 

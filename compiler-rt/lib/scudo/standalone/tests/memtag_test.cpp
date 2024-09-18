@@ -63,7 +63,7 @@ protected:
   void TearDown() override {
     if (Buffer) {
       ASSERT_TRUE(MemMap.isAllocated());
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      MemMap.unmap();
     }
   }
 

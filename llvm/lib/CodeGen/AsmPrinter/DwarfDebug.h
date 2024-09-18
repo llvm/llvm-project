@@ -724,11 +724,16 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
-  /// Emits inital debug location directive.
-  DebugLoc emitInitialLocDirective(const MachineFunction &MF, unsigned CUID);
+  /// Emits inital debug location directive. Returns instruction at which
+  /// the function prologue ends.
+  const MachineInstr *emitInitialLocDirective(const MachineFunction &MF,
+                                              unsigned CUID);
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
+
+  /// Process beginning of code alignment.
+  void beginCodeAlignment(const MachineBasicBlock &MBB) override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);

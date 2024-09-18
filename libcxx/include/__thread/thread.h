@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___THREAD_THREAD_H
 #define _LIBCPP___THREAD_THREAD_H
 
+#include <__assert>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__exception/terminate.h>

@@ -8,19 +8,18 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-SAME: ptr [[I7:%.*]], i32 [[TMP0:%.*]], i1 [[TOBOOL62_NOT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RC21:%.*]] = alloca [0 x [0 x %struct.rect]], i32 0, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[RC21]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i32> [[TMP3]] to <2 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[X1:%.*]] = getelementptr i8, ptr [[RC21]], i64 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[X1]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = getelementptr i8, ptr [[RC21]], i64 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[Y0]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[I7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[RC21]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i32 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP11]], <2 x float> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP13]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP5]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP12]], <4 x float> zeroinitializer, <4 x float> [[TMP15]]

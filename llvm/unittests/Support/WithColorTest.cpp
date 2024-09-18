@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/WithColor.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "gtest/gtest.h"
 
 using namespace llvm;

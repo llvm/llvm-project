@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 
-add_subdirectory(Interp)
+add_subdirectory(ByteCode)
 
 add_clang_unittest(ASTTests
   ASTContextParentMapTest.cpp
@@ -26,6 +26,7 @@ add_clang_unittest(ASTTests
   CommentTextTest.cpp
   ConceptPrinterTest.cpp
   DataCollectionTest.cpp
+  DeclBaseTest.cpp
   DeclPrinterTest.cpp
   DeclTest.cpp
   EvaluateAsRValueTest.cpp

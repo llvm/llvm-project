@@ -191,6 +191,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__config>
 #include <__fwd/fstream.h>
 #include <__locale>
+#include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <__utility/move.h>
@@ -1136,11 +1137,12 @@ private:
 };
 
 template <class _CharT, class _Traits>
-inline basic_ifstream<_CharT, _Traits>::basic_ifstream() : basic_istream<char_type, traits_type>(&__sb_) {}
+inline basic_ifstream<_CharT, _Traits>::basic_ifstream()
+    : basic_istream<char_type, traits_type>(std::addressof(__sb_)) {}
 
 template <class _CharT, class _Traits>
 inline basic_ifstream<_CharT, _Traits>::basic_ifstream(const char* __s, ios_base::openmode __mode)
-    : basic_istream<char_type, traits_type>(&__sb_) {
+    : basic_istream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::in) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1148,15 +1150,16 @@ inline basic_ifstream<_CharT, _Traits>::basic_ifstream(const char* __s, ios_base
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
 template <class _CharT, class _Traits>
 inline basic_ifstream<_CharT, _Traits>::basic_ifstream(const wchar_t* __s, ios_base::openmode __mode)
-    : basic_istream<char_type, traits_type>(&__sb_) {
+    : basic_istream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::in) == nullptr)
     this->setstate(ios_base::failbit);
 }
 #  endif
 
+// extension
 template <class _CharT, class _Traits>
 inline basic_ifstream<_CharT, _Traits>::basic_ifstream(const string& __s, ios_base::openmode __mode)
-    : basic_istream<char_type, traits_type>(&__sb_) {
+    : basic_istream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::in) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1164,7 +1167,7 @@ inline basic_ifstream<_CharT, _Traits>::basic_ifstream(const string& __s, ios_ba
 template <class _CharT, class _Traits>
 inline basic_ifstream<_CharT, _Traits>::basic_ifstream(basic_ifstream&& __rhs)
     : basic_istream<char_type, traits_type>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-  this->set_rdbuf(&__sb_);
+  this->set_rdbuf(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>
@@ -1187,7 +1190,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(basic_ifstream<_CharT, _Traits>& __x, bas
 
 template <class _CharT, class _Traits>
 inline basic_filebuf<_CharT, _Traits>* basic_ifstream<_CharT, _Traits>::rdbuf() const {
-  return const_cast<basic_filebuf<char_type, traits_type>*>(&__sb_);
+  return const_cast<basic_filebuf<char_type, traits_type>*>(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>
@@ -1293,11 +1296,12 @@ private:
 };
 
 template <class _CharT, class _Traits>
-inline basic_ofstream<_CharT, _Traits>::basic_ofstream() : basic_ostream<char_type, traits_type>(&__sb_) {}
+inline basic_ofstream<_CharT, _Traits>::basic_ofstream()
+    : basic_ostream<char_type, traits_type>(std::addressof(__sb_)) {}
 
 template <class _CharT, class _Traits>
 inline basic_ofstream<_CharT, _Traits>::basic_ofstream(const char* __s, ios_base::openmode __mode)
-    : basic_ostream<char_type, traits_type>(&__sb_) {
+    : basic_ostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::out) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1305,15 +1309,16 @@ inline basic_ofstream<_CharT, _Traits>::basic_ofstream(const char* __s, ios_base
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
 template <class _CharT, class _Traits>
 inline basic_ofstream<_CharT, _Traits>::basic_ofstream(const wchar_t* __s, ios_base::openmode __mode)
-    : basic_ostream<char_type, traits_type>(&__sb_) {
+    : basic_ostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::out) == nullptr)
     this->setstate(ios_base::failbit);
 }
 #  endif
 
+// extension
 template <class _CharT, class _Traits>
 inline basic_ofstream<_CharT, _Traits>::basic_ofstream(const string& __s, ios_base::openmode __mode)
-    : basic_ostream<char_type, traits_type>(&__sb_) {
+    : basic_ostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode | ios_base::out) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1321,7 +1326,7 @@ inline basic_ofstream<_CharT, _Traits>::basic_ofstream(const string& __s, ios_ba
 template <class _CharT, class _Traits>
 inline basic_ofstream<_CharT, _Traits>::basic_ofstream(basic_ofstream&& __rhs)
     : basic_ostream<char_type, traits_type>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-  this->set_rdbuf(&__sb_);
+  this->set_rdbuf(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>
@@ -1344,7 +1349,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(basic_ofstream<_CharT, _Traits>& __x, bas
 
 template <class _CharT, class _Traits>
 inline basic_filebuf<_CharT, _Traits>* basic_ofstream<_CharT, _Traits>::rdbuf() const {
-  return const_cast<basic_filebuf<char_type, traits_type>*>(&__sb_);
+  return const_cast<basic_filebuf<char_type, traits_type>*>(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>
@@ -1454,11 +1459,12 @@ private:
 };
 
 template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream() : basic_iostream<char_type, traits_type>(&__sb_) {}
+inline basic_fstream<_CharT, _Traits>::basic_fstream()
+    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {}
 
 template <class _CharT, class _Traits>
 inline basic_fstream<_CharT, _Traits>::basic_fstream(const char* __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(&__sb_) {
+    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1466,7 +1472,7 @@ inline basic_fstream<_CharT, _Traits>::basic_fstream(const char* __s, ios_base::
 #  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
 template <class _CharT, class _Traits>
 inline basic_fstream<_CharT, _Traits>::basic_fstream(const wchar_t* __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(&__sb_) {
+    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode) == nullptr)
     this->setstate(ios_base::failbit);
 }
@@ -1474,15 +1480,16 @@ inline basic_fstream<_CharT, _Traits>::basic_fstream(const wchar_t* __s, ios_bas
 
 template <class _CharT, class _Traits>
 inline basic_fstream<_CharT, _Traits>::basic_fstream(const string& __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(&__sb_) {
+    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
   if (__sb_.open(__s, __mode) == nullptr)
     this->setstate(ios_base::failbit);
 }
 
+// extension
 template <class _CharT, class _Traits>
 inline basic_fstream<_CharT, _Traits>::basic_fstream(basic_fstream&& __rhs)
     : basic_iostream<char_type, traits_type>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-  this->set_rdbuf(&__sb_);
+  this->set_rdbuf(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>
@@ -1505,7 +1512,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream<_CharT, _Traits>& __x, basi
 
 template <class _CharT, class _Traits>
 inline basic_filebuf<_CharT, _Traits>* basic_fstream<_CharT, _Traits>::rdbuf() const {
-  return const_cast<basic_filebuf<char_type, traits_type>*>(&__sb_);
+  return const_cast<basic_filebuf<char_type, traits_type>*>(std::addressof(__sb_));
 }
 
 template <class _CharT, class _Traits>

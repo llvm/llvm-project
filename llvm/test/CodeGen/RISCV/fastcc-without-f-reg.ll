@@ -260,13 +260,13 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZHINX32-NEXT:    sw s9, 68(sp) # 4-byte Folded Spill
 ; ZHINX32-NEXT:    sw s10, 64(sp) # 4-byte Folded Spill
 ; ZHINX32-NEXT:    sw s11, 60(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    lh t0, 112(sp)
-; ZHINX32-NEXT:    sw t0, 56(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    lh t0, 116(sp)
-; ZHINX32-NEXT:    sw t0, 52(sp) # 4-byte Folded Spill
-; ZHINX32-NEXT:    lh t0, 120(sp)
-; ZHINX32-NEXT:    sw t0, 48(sp) # 4-byte Folded Spill
 ; ZHINX32-NEXT:    lh t0, 124(sp)
+; ZHINX32-NEXT:    sw t0, 56(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lh t0, 120(sp)
+; ZHINX32-NEXT:    sw t0, 52(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lh t0, 116(sp)
+; ZHINX32-NEXT:    sw t0, 48(sp) # 4-byte Folded Spill
+; ZHINX32-NEXT:    lh t0, 112(sp)
 ; ZHINX32-NEXT:    sw t0, 44(sp) # 4-byte Folded Spill
 ; ZHINX32-NEXT:    lh t6, 128(sp)
 ; ZHINX32-NEXT:    lh t5, 132(sp)
@@ -308,10 +308,10 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZHINX32-NEXT:    sh t4, 4(sp)
 ; ZHINX32-NEXT:    sh t5, 2(sp)
 ; ZHINX32-NEXT:    sh t6, 0(sp)
-; ZHINX32-NEXT:    lw t3, 56(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw t4, 52(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw t5, 48(sp) # 4-byte Folded Reload
-; ZHINX32-NEXT:    lw t6, 44(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t3, 44(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t4, 48(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t5, 52(sp) # 4-byte Folded Reload
+; ZHINX32-NEXT:    lw t6, 56(sp) # 4-byte Folded Reload
 ; ZHINX32-NEXT:    call callee_half_32
 ; ZHINX32-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
 ; ZHINX32-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
@@ -345,13 +345,13 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZHINX64-NEXT:    sd s9, 88(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    sd s10, 80(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    sd s11, 72(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lh t0, 176(sp)
-; ZHINX64-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lh t0, 184(sp)
-; ZHINX64-NEXT:    sd t0, 56(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lh t0, 192(sp)
-; ZHINX64-NEXT:    sd t0, 48(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    lh t0, 200(sp)
+; ZHINX64-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lh t0, 192(sp)
+; ZHINX64-NEXT:    sd t0, 56(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lh t0, 184(sp)
+; ZHINX64-NEXT:    sd t0, 48(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lh t0, 176(sp)
 ; ZHINX64-NEXT:    sd t0, 40(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    lh t6, 208(sp)
 ; ZHINX64-NEXT:    lh t5, 216(sp)
@@ -393,10 +393,10 @@ define half @caller_half_32(<32 x half> %A) nounwind {
 ; ZHINX64-NEXT:    sh t4, 4(sp)
 ; ZHINX64-NEXT:    sh t5, 2(sp)
 ; ZHINX64-NEXT:    sh t6, 0(sp)
-; ZHINX64-NEXT:    ld t3, 64(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t4, 56(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t5, 48(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t6, 40(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t3, 40(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t4, 48(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t5, 56(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t6, 64(sp) # 8-byte Folded Reload
 ; ZHINX64-NEXT:    call callee_half_32
 ; ZHINX64-NEXT:    ld ra, 168(sp) # 8-byte Folded Reload
 ; ZHINX64-NEXT:    ld s0, 160(sp) # 8-byte Folded Reload
@@ -931,13 +931,13 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZHINX64-NEXT:    sd s9, 136(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    sd s10, 128(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    sd s11, 120(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lw t0, 224(sp)
-; ZHINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lw t0, 232(sp)
-; ZHINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
-; ZHINX64-NEXT:    lw t0, 240(sp)
-; ZHINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    lw t0, 248(sp)
+; ZHINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lw t0, 240(sp)
+; ZHINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lw t0, 232(sp)
+; ZHINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
+; ZHINX64-NEXT:    lw t0, 224(sp)
 ; ZHINX64-NEXT:    sd t0, 88(sp) # 8-byte Folded Spill
 ; ZHINX64-NEXT:    lw t6, 256(sp)
 ; ZHINX64-NEXT:    lw t5, 264(sp)
@@ -979,10 +979,10 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZHINX64-NEXT:    sw t4, 8(sp)
 ; ZHINX64-NEXT:    sw t5, 4(sp)
 ; ZHINX64-NEXT:    sw t6, 0(sp)
-; ZHINX64-NEXT:    ld t3, 112(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t4, 104(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t5, 96(sp) # 8-byte Folded Reload
-; ZHINX64-NEXT:    ld t6, 88(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t3, 88(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t4, 96(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t5, 104(sp) # 8-byte Folded Reload
+; ZHINX64-NEXT:    ld t6, 112(sp) # 8-byte Folded Reload
 ; ZHINX64-NEXT:    call callee_float_32
 ; ZHINX64-NEXT:    ld ra, 216(sp) # 8-byte Folded Reload
 ; ZHINX64-NEXT:    ld s0, 208(sp) # 8-byte Folded Reload
@@ -1101,13 +1101,13 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZFINX64-NEXT:    sd s9, 136(sp) # 8-byte Folded Spill
 ; ZFINX64-NEXT:    sd s10, 128(sp) # 8-byte Folded Spill
 ; ZFINX64-NEXT:    sd s11, 120(sp) # 8-byte Folded Spill
-; ZFINX64-NEXT:    lw t0, 224(sp)
-; ZFINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
-; ZFINX64-NEXT:    lw t0, 232(sp)
-; ZFINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
-; ZFINX64-NEXT:    lw t0, 240(sp)
-; ZFINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
 ; ZFINX64-NEXT:    lw t0, 248(sp)
+; ZFINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
+; ZFINX64-NEXT:    lw t0, 240(sp)
+; ZFINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
+; ZFINX64-NEXT:    lw t0, 232(sp)
+; ZFINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
+; ZFINX64-NEXT:    lw t0, 224(sp)
 ; ZFINX64-NEXT:    sd t0, 88(sp) # 8-byte Folded Spill
 ; ZFINX64-NEXT:    lw t6, 256(sp)
 ; ZFINX64-NEXT:    lw t5, 264(sp)
@@ -1149,10 +1149,10 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZFINX64-NEXT:    sw t4, 8(sp)
 ; ZFINX64-NEXT:    sw t5, 4(sp)
 ; ZFINX64-NEXT:    sw t6, 0(sp)
-; ZFINX64-NEXT:    ld t3, 112(sp) # 8-byte Folded Reload
-; ZFINX64-NEXT:    ld t4, 104(sp) # 8-byte Folded Reload
-; ZFINX64-NEXT:    ld t5, 96(sp) # 8-byte Folded Reload
-; ZFINX64-NEXT:    ld t6, 88(sp) # 8-byte Folded Reload
+; ZFINX64-NEXT:    ld t3, 88(sp) # 8-byte Folded Reload
+; ZFINX64-NEXT:    ld t4, 96(sp) # 8-byte Folded Reload
+; ZFINX64-NEXT:    ld t5, 104(sp) # 8-byte Folded Reload
+; ZFINX64-NEXT:    ld t6, 112(sp) # 8-byte Folded Reload
 ; ZFINX64-NEXT:    call callee_float_32
 ; ZFINX64-NEXT:    ld ra, 216(sp) # 8-byte Folded Reload
 ; ZFINX64-NEXT:    ld s0, 208(sp) # 8-byte Folded Reload
@@ -1271,13 +1271,13 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZDINX64-NEXT:    sd s9, 136(sp) # 8-byte Folded Spill
 ; ZDINX64-NEXT:    sd s10, 128(sp) # 8-byte Folded Spill
 ; ZDINX64-NEXT:    sd s11, 120(sp) # 8-byte Folded Spill
-; ZDINX64-NEXT:    lw t0, 224(sp)
-; ZDINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
-; ZDINX64-NEXT:    lw t0, 232(sp)
-; ZDINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
-; ZDINX64-NEXT:    lw t0, 240(sp)
-; ZDINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
 ; ZDINX64-NEXT:    lw t0, 248(sp)
+; ZDINX64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
+; ZDINX64-NEXT:    lw t0, 240(sp)
+; ZDINX64-NEXT:    sd t0, 104(sp) # 8-byte Folded Spill
+; ZDINX64-NEXT:    lw t0, 232(sp)
+; ZDINX64-NEXT:    sd t0, 96(sp) # 8-byte Folded Spill
+; ZDINX64-NEXT:    lw t0, 224(sp)
 ; ZDINX64-NEXT:    sd t0, 88(sp) # 8-byte Folded Spill
 ; ZDINX64-NEXT:    lw t6, 256(sp)
 ; ZDINX64-NEXT:    lw t5, 264(sp)
@@ -1319,10 +1319,10 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 ; ZDINX64-NEXT:    sw t4, 8(sp)
 ; ZDINX64-NEXT:    sw t5, 4(sp)
 ; ZDINX64-NEXT:    sw t6, 0(sp)
-; ZDINX64-NEXT:    ld t3, 112(sp) # 8-byte Folded Reload
-; ZDINX64-NEXT:    ld t4, 104(sp) # 8-byte Folded Reload
-; ZDINX64-NEXT:    ld t5, 96(sp) # 8-byte Folded Reload
-; ZDINX64-NEXT:    ld t6, 88(sp) # 8-byte Folded Reload
+; ZDINX64-NEXT:    ld t3, 88(sp) # 8-byte Folded Reload
+; ZDINX64-NEXT:    ld t4, 96(sp) # 8-byte Folded Reload
+; ZDINX64-NEXT:    ld t5, 104(sp) # 8-byte Folded Reload
+; ZDINX64-NEXT:    ld t6, 112(sp) # 8-byte Folded Reload
 ; ZDINX64-NEXT:    call callee_float_32
 ; ZDINX64-NEXT:    ld ra, 216(sp) # 8-byte Folded Reload
 ; ZDINX64-NEXT:    ld s0, 208(sp) # 8-byte Folded Reload
