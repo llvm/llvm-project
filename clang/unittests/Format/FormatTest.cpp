@@ -27577,6 +27577,12 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
   verifyNoChange("int i;\n", Style);
   verifyFormat("int i;\n", "int i;", Style);
+
+  constexpr StringRef Code{"namespace {\n"
+                           "int i;\n"
+                           "} // namespace"};
+  verifyFormat(Code.str() + '\n', Code, Style,
+               {tooling::Range(19, 13)}); // line 3
 }
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
