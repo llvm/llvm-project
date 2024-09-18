@@ -161,6 +161,22 @@ lowerCIRVisibilityToLLVMVisibility(mlir::cir::VisibilityKind visibilityKind) {
     return ::mlir::LLVM::Visibility::Protected;
   }
 }
+
+// Make sure the LLVM function we are about to create a call for actually
+// exists, if not create one. Returns a function
+void getOrCreateLLVMFuncOp(mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Operation *srcOp, llvm::StringRef fnName,
+                           mlir::Type fnTy) {
+  auto modOp = srcOp->getParentOfType<mlir::ModuleOp>();
+  auto enclosingFnOp = srcOp->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+  auto *sourceSymbol = mlir::SymbolTable::lookupSymbolIn(modOp, fnName);
+  if (!sourceSymbol) {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(enclosingFnOp);
+    rewriter.create<mlir::LLVM::LLVMFuncOp>(srcOp->getLoc(), fnName, fnTy);
+  }
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1040,9 +1056,10 @@ public:
       auto personalityFnTy =
           mlir::LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {},
                                             /*isVarArg=*/true);
-      auto personalityFn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-          loc, "__gxx_personality_v0", personalityFnTy);
-      llvmFn.setPersonality(personalityFn.getName());
+      // Get or create `__gxx_personality_v0`
+      StringRef fnName = "__gxx_personality_v0";
+      getOrCreateLLVMFuncOp(rewriter, op, fnName, personalityFnTy);
+      llvmFn.setPersonality(fnName);
     }
     return mlir::success();
   }
@@ -3649,20 +3666,6 @@ public:
   }
 };
 
-// Make sure the LLVM function we are about to create a call for actually
-// exists, if not create one. Returns a function
-void getOrCreateLLVMFuncOp(mlir::ConversionPatternRewriter &rewriter,
-                           mlir::Location loc, mlir::ModuleOp mod,
-                           mlir::LLVM::LLVMFuncOp enclosingfnOp,
-                           llvm::StringRef fnName, mlir::Type fnTy) {
-  auto *sourceSymbol = mlir::SymbolTable::lookupSymbolIn(mod, fnName);
-  if (!sourceSymbol) {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(enclosingfnOp);
-    rewriter.create<mlir::LLVM::LLVMFuncOp>(loc, fnName, fnTy);
-  }
-}
-
 class CIRCatchParamOpLowering
     : public mlir::OpConversionPattern<mlir::cir::CatchParamOp> {
 public:
@@ -3671,16 +3674,13 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CatchParamOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto modOp = op->getParentOfType<mlir::ModuleOp>();
-    auto enclosingFnOp = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
     if (op.isBegin()) {
       // Get or create `declare ptr @__cxa_begin_catch(ptr)`
       StringRef fnName = "__cxa_begin_catch";
       auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
       auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {llvmPtrTy},
                                                     /*isVarArg=*/false);
-      getOrCreateLLVMFuncOp(rewriter, op.getLoc(), modOp, enclosingFnOp, fnName,
-                            fnTy);
+      getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
       rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op, mlir::TypeRange{llvmPtrTy}, fnName,
           mlir::ValueRange{adaptor.getExceptionPtr()});
@@ -3690,8 +3690,7 @@ public:
       auto fnTy = mlir::LLVM::LLVMFunctionType::get(
           mlir::LLVM::LLVMVoidType::get(rewriter.getContext()), {},
           /*isVarArg=*/false);
-      getOrCreateLLVMFuncOp(rewriter, op.getLoc(), modOp, enclosingFnOp, fnName,
-                            fnTy);
+      getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
       rewriter.create<mlir::LLVM::CallOp>(op.getLoc(), mlir::TypeRange{},
                                           fnName, mlir::ValueRange{});
       rewriter.eraseOp(op);
@@ -3739,14 +3738,11 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Get or create `declare ptr @__cxa_allocate_exception(i64)`
     StringRef fnName = "__cxa_allocate_exception";
-    auto modOp = op->getParentOfType<mlir::ModuleOp>();
-    auto enclosingFnOp = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
     auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     auto int64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {int64Ty},
                                                   /*isVarArg=*/false);
-    getOrCreateLLVMFuncOp(rewriter, op.getLoc(), modOp, enclosingFnOp, fnName,
-                          fnTy);
+    getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
     auto size = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(),
                                                         adaptor.getSizeAttr());
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
@@ -3765,15 +3761,12 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Get or create `declare void @__cxa_throw(ptr, ptr, ptr)`
     StringRef fnName = "__cxa_throw";
-    auto modOp = op->getParentOfType<mlir::ModuleOp>();
-    auto enclosingFnOp = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
     auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     auto voidTy = mlir::LLVM::LLVMVoidType::get(rewriter.getContext());
     auto fnTy = mlir::LLVM::LLVMFunctionType::get(
         voidTy, {llvmPtrTy, llvmPtrTy, llvmPtrTy},
         /*isVarArg=*/false);
-    getOrCreateLLVMFuncOp(rewriter, op.getLoc(), modOp, enclosingFnOp, fnName,
-                          fnTy);
+    getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
     mlir::Value typeInfo = rewriter.create<mlir::LLVM::AddressOfOp>(
         op.getLoc(), mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
         adaptor.getTypeInfoAttr());
