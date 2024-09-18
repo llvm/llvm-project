@@ -24,10 +24,7 @@ F:              ; preds = %0
 
 define i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 17, ptr [[A]], align 4
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 [[A_VAL]])
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 17)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %A = alloca i32         ; <ptr> [#uses=2]

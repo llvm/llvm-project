@@ -26,10 +26,7 @@ define i32 @f(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
-; CHECK-NEXT:    [[X_ADDR_VAL:%.*]] = load i32, ptr [[X_ADDR]], align 4
-; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @deref(i32 [[X_ADDR_VAL]])
+; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @deref(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
 entry:

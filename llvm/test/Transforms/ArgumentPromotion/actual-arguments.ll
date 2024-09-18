@@ -207,10 +207,7 @@ define i32 @caller_safe_args_2(i64 %n, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_safe_args_2
 ; CHECK-SAME: (i64 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @memset(ptr [[P]], i64 0, i64 [[N]])
-; CHECK-NEXT:    [[CALLER_C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 5, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[CALLER_C_VAL:%.*]] = load i32, ptr [[CALLER_C]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_can_promote_2(ptr [[P]], i32 [[CALLER_C_VAL]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @test_can_promote_2(ptr [[P]], i32 5)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   call void @memset(ptr %p, i64 0, i64 %n)

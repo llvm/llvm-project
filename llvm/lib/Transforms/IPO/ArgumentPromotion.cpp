@@ -227,6 +227,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     assert(CB.getCalledFunction() == F);
     const AttributeList &CallPAL = CB.getAttributes();
     IRBuilder<NoFolder> IRB(&CB);
+    SmallPtrSet<AllocaInst *, 4> Allocas;
 
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
@@ -264,6 +265,9 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
         }
+
+        if (AllocaInst *Alloca = dyn_cast<AllocaInst>(V->stripPointerCasts()))
+          Allocas.insert(Alloca);
       } else {
         assert(ArgsToPromote.count(&*I) && I->use_empty());
         DeadArgs.emplace_back(AI->get());
@@ -305,9 +309,20 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       NewCS->takeName(&CB);
     }
 
-    // Finally, remove the old call from the program, reducing the use-count of
-    // F.
+    // Remove the old call from the program, reducing the use-count of F.
     CB.eraseFromParent();
+
+    // See if there are any allocas that can now be promoted in the caller.
+    Allocas.remove_if([](auto *AI) { return !isAllocaPromotable(AI); });
+    if (!Allocas.empty()) {
+      Function *Caller = (*Allocas.begin())->getFunction();
+      auto &DT = FAM.getResult<DominatorTreeAnalysis>(*Caller);
+      auto &AC = FAM.getResult<AssumptionAnalysis>(*Caller);
+      SmallVector<AllocaInst *, 4> AllocasToPromote;
+      append_range(AllocasToPromote, Allocas);
+
+      PromoteMemToReg(AllocasToPromote, DT, &AC);
+    }
   }
 
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadArgs);
