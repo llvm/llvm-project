@@ -598,15 +598,15 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
                                              LiveIntervals *TheLIS) {
   assert(MRI && "call reset first");
   SlotIndex SI;
-  LiveIntervals *CurrLIS;
-  MachineInstr *CurrMI;
+  const LiveIntervals *CurrLIS;
+  const MachineInstr *CurrMI;
   if (UseInternalIterator) {
     if (!LastTrackedMI)
       return NextMI == MBBEnd;
 
     assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
-    CurrLIS = const_cast<LiveIntervals *>(&LIS);
-    CurrMI = const_cast<MachineInstr *>(LastTrackedMI);
+    CurrLIS = &LIS;
+    CurrMI = LastTrackedMI;
 
     SI = NextMI == MBBEnd
              ? CurrLIS->getInstructionIndex(*LastTrackedMI).getDeadSlot()
@@ -672,7 +672,7 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
     LastTrackedMI = MI;
   }
 
-  MachineInstr *CurrMI = const_cast<MachineInstr *>(LastTrackedMI);
+  const MachineInstr *CurrMI = LastTrackedMI;
 
   // Add new registers or mask bits.
   for (const auto &MO : CurrMI->all_defs()) {
