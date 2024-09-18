@@ -370,6 +370,13 @@ void nb25() [[clang::nonblocking]] {
 	compare(a, b);
 }
 
+// If the callee is both noreturn and noexcept, it presumably terminates.
+// Ignore it for the purposes of effect analysis.
+[[noreturn]] void abort_wrapper() noexcept;
+
+void nb26() [[clang::nonblocking]] {
+	abort_wrapper(); // no diagnostic
+}
 
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"

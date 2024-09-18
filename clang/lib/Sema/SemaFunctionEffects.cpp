@@ -1027,6 +1027,10 @@ private:
             return;
           }
         }
+        // If the callee is both noreturn and noexcept, it presumably
+        // terminates. Ignore it for the purposes of effect analysis.
+        if (FD->isNoReturn() && isNoexcept(FD))
+          return;
       }
 
       Outer.followCall(CurrentCaller, CurrentFunction, CI, CallLoc,
