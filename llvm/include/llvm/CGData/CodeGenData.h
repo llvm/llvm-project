@@ -164,13 +164,14 @@ publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
   CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
 }
 
-/// Initialize the two-codegen rounds.
 void initializeTwoCodegenRounds();
 
-/// Save the current module before the first codegen round.
+/// Save \p TheModule before the first codegen round.
+/// \p Task represents the partition number in the parallel code generation
+/// process.
 void saveModuleForTwoRounds(const Module &TheModule, unsigned Task);
 
-/// Load the current module before the second codegen round.
+/// Load the optimized module before the second codegen round.
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
                                                unsigned Task,
                                                LLVMContext &Context);
