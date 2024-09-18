@@ -46,7 +46,7 @@ macro (add_builtins_cpumodel_tests_for_arch arch)
     FOLDER "Compiler-RT Runtime tests")
   set(BUILTSIN_CPUMODEL_TEST_OBJECTS)
   generate_compiler_rt_tests(BUILTINS_CPUMODEL_TEST_OBJECTS
-    CtxProfileUnitTests "BuiltinsCPUModel-${arch}-UnitTest" ${arch}
+    BuiltinsCPUModelUnitTests "BuiltinsCPUModel-${arch}-UnitTest" ${arch}
     RUNTIME ${BUILTINS_CPUMODEL_TEST_RUNTIME}
     DEPS ${BUILTINS_CPUMODEL_UNITTEST_DEPS}
     SOURCES ${BUILTINS_CPUMODEL_SOURCES} ${BUILTINS_CPUMODEL_UNITTESTS} ${COMPILER_RT_GTEST_SOURCE}
@@ -54,6 +54,9 @@ macro (add_builtins_cpumodel_tests_for_arch arch)
     COMPILE_DEPS ${BUILTINS_CPUMODEL_UNITTEST_HEADERS}
     LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS} ${BUILTINS_CPUMODEL_UNITTEST_LINK_LIBRARIES})
 endmacro()
+
+add_custom_target(BuiltinsCPUModelUnitTests)
+set_target_properties(BuiltinsCPUModelUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
 set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
 
