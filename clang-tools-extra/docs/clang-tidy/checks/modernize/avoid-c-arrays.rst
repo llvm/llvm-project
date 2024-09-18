@@ -10,6 +10,9 @@ modernize-avoid-c-arrays
 Finds C-style array types and recommend to use ``std::array<>`` /
 ``std::vector<>``. All types of C arrays are diagnosed.
 
+For incomplete C-style array types appeared in parameters, It would be better to
+use ``std::span`` / ``gsl::span`` as replacement.
+
 However, fix-it are potentially dangerous in header files and are therefore not
 emitted right now.
 
