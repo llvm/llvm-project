@@ -2030,7 +2030,7 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
       if (stmt1VarSymbol != stmt2ExprSymbol)
         context_.Say(stmt1Var.GetSource(),
             "Updated variable %s "
-            "expected to be captured in statement 2 of "
+            "expected to be captured in the second statement of "
             "atomic capture construct"_err_en_US,
             stmt1Var.GetSource().ToString());
     }
