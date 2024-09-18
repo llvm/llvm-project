@@ -46,7 +46,7 @@ public:
     if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, {"-std=c++11"},
                                         FileName))
       return "";
-    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite);
+    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "file", {} /*StyleSearchPatsh*/);
     return format(Context.getRewrittenText(ID));
   }
 

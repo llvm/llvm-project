@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SourceCode.h"
 
+#include "Config.h"
 #include "FuzzyMatch.h"
 #include "Preamble.h"
 #include "Protocol.h"
@@ -597,7 +598,9 @@ format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
   // language is detected.
   if (!FormatFile)
     Content = {};
+  auto &Cfg = Config::current();
   auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                Cfg.Style.StyleSearchPaths,
                                 format::DefaultFallbackStyle, Content,
                                 TFS.view(/*CWD=*/std::nullopt).get());
   if (!Style) {

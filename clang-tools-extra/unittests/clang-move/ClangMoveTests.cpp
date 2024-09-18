@@ -226,7 +226,7 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   CreateFiles(TestCCName, CC);
 
   std::map<std::string, tooling::Replacements> FileToReplacements;
-  ClangMoveContext MoveContext = {Spec, FileToReplacements, Dir.c_str(), "LLVM",
+  ClangMoveContext MoveContext = {Spec, FileToReplacements, Dir.c_str(), /*StyleSearchPaths*/{}, "LLVM",
                                   Reporter != nullptr};
 
   auto Factory = std::make_unique<clang::move::ClangMoveActionFactory>(
@@ -236,7 +236,7 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
       Factory->create(), CC, Context.InMemoryFileSystem,
       {"-std=c++11", "-fparse-all-comments", "-I."}, TestCCName, "clang-move",
       std::make_shared<PCHContainerOperations>());
-  formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
+  formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm", /*StyleSearchPaths*/{});
   // The Key is file name, value is the new code after moving the class.
   std::map<std::string, std::string> Results;
   for (const auto &It : FileToReplacements) {

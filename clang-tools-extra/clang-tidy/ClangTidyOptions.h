@@ -42,6 +42,10 @@ struct ClangTidyGlobalOptions {
   /// Output warnings from certain line ranges of certain files only.
   /// If empty, no warnings will be filtered.
   std::vector<FileFilter> LineFilter;
+
+  /// Specifies the list of paths to be searched when BasedOnStyle
+  /// in a .clang-format file specifies an arbitrary file to include
+  std::vector<std::string> StyleSearchPaths;
 };
 
 /// Contains options for clang-tidy. These options may be read from

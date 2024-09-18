@@ -87,11 +87,13 @@ private:
 /// \param[in] Rewrite The `Rewritter` to apply replacements on.
 /// \param[in] Style The style name used for reformatting. See ```getStyle``` in
 /// "include/clang/Format/Format.h" for all possible style forms.
+/// \param[in] StyleSearchPaths A list of directories to search for clang-format
+/// files referenced in the BasedOnStyle directive.
 ///
 /// \returns true if all replacements applied and formatted. false otherwise.
 bool formatAndApplyAllReplacements(
     const std::map<std::string, Replacements> &FileToReplaces,
-    Rewriter &Rewrite, StringRef Style = "file");
+    Rewriter &Rewrite, StringRef Style, const std::vector<std::string>& StyleSearchPaths);
 
 } // end namespace tooling
 } // end namespace clang

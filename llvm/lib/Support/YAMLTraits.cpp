@@ -39,6 +39,10 @@ IO::IO(void *Context) : Ctxt(Context) {}
 
 IO::~IO() = default;
 
+SourceMgr& IO::getSourceMgr() {
+  llvm_unreachable("Only supported for Input");
+}
+
 void *IO::getContext() const {
   return Ctxt;
 }
@@ -48,6 +52,10 @@ void IO::setContext(void *Context) {
 }
 
 void IO::setAllowUnknownKeys(bool Allow) {
+  llvm_unreachable("Only supported for Input");
+}
+
+bool IO::allowUnknownKeys() const {
   llvm_unreachable("Only supported for Input");
 }
 
@@ -74,6 +82,8 @@ Input::Input(MemoryBufferRef Input, void *Ctxt,
 Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
+
+SourceMgr& Input::getSourceMgr() { return SrcMgr; }
 
 bool Input::outputting() const {
   return false;
@@ -472,6 +482,8 @@ void Input::setError(const Twine &Message) {
 }
 
 void Input::setAllowUnknownKeys(bool Allow) { AllowUnknownKeys = Allow; }
+
+bool Input::allowUnknownKeys() const { return AllowUnknownKeys; }
 
 bool Input::canElideEmptySequence() {
   return false;

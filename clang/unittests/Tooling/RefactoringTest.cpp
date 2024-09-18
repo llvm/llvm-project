@@ -540,7 +540,8 @@ TEST_F(ReplacementTest, MultipleFilesReplaceAndFormat) {
                             "10")});
   EXPECT_TRUE(
       formatAndApplyAllReplacements(FileToReplaces, Context.Rewrite,
-                                    "{BasedOnStyle: LLVM, ColumnLimit: 20}"));
+                                    "{BasedOnStyle: LLVM, ColumnLimit: 20}",
+                                    /*StyleSearchPaths*/{}));
   EXPECT_EQ(Expected1, Context.getRewrittenText(ID1));
   EXPECT_EQ(Expected2, Context.getRewrittenText(ID2));
 }

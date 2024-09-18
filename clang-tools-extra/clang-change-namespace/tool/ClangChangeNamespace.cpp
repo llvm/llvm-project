@@ -72,6 +72,22 @@ cl::opt<std::string> Style("style",
                            cl::desc("The style name used for reformatting."),
                            cl::init("LLVM"), cl::cat(ChangeNamespaceCategory));
 
+cl::list<std::string> StyleSearchPaths(
+    "style-search-path",
+    cl::desc("Directory to search for BasedOnStyle files, when the value of the\n"
+             "BasedOnStyle directive is not one of the predefined styles, nor\n"
+             "InheritFromParent. Multiple style search paths may be specified,\n"
+             "and will be searched in order, stopping at the first file found."),
+    cl::value_desc("directory"),
+    cl::cat(ChangeNamespaceCategory));
+
+cl::alias StyleSearchPathShort(
+    "S",
+    cl::desc("Alias for --style-search-path"),
+    cl::cat(ChangeNamespaceCategory),
+    cl::aliasopt(StyleSearchPaths),
+    cl::NotHidden);
+
 cl::opt<std::string> AllowedFile(
     "allowed_file",
     cl::desc("A file containing regexes of symbol names that are not expected "
@@ -135,7 +151,7 @@ int main(int argc, const char **argv) {
   SourceManager Sources(Diagnostics, FileMgr);
   Rewriter Rewrite(Sources, DefaultLangOptions);
 
-  if (!formatAndApplyAllReplacements(Tool.getReplacements(), Rewrite, Style)) {
+  if (!formatAndApplyAllReplacements(Tool.getReplacements(), Rewrite, Style, StyleSearchPaths)) {
     llvm::errs() << "Failed applying all replacements.\n";
     return 1;
   }

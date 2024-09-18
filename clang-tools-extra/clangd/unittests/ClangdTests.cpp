@@ -349,7 +349,7 @@ TEST(ClangdServerTest, RespectsConfig) {
 
   auto Opts = ClangdServer::optsForTest();
   Opts.ContextProvider =
-      ClangdServer::createConfiguredContextProvider(&CfgProvider, nullptr);
+      ClangdServer::createConfiguredContextProvider(&CfgProvider, nullptr, Opts.StyleSearchPaths);
   OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
                  CommandMangler::forTests());
   MockFS FS;

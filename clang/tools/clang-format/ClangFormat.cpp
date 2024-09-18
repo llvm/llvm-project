@@ -172,6 +172,24 @@ static cl::opt<bool>
                      cl::desc("If set, changes formatting warnings to errors"),
                      cl::cat(ClangFormatCategory));
 
+static cl::list<std::string>
+    StyleSearchPaths(
+    "style-search-path",
+    cl::desc("Directory to search for BasedOnStyle files, when the value of the\n"
+             "BasedOnStyle directive is not one of the predefined styles, nor\n"
+             "InheritFromParent. Multiple style search paths may be specified,\n"
+             "and will be searched in order, stopping at the first file found."),
+    cl::value_desc("directory"),
+    cl::cat(ClangFormatCategory));
+
+static cl::alias
+    StyleSearchPathShort(
+    "S",
+    cl::desc("Alias for --style-search-path"),
+    cl::cat(ClangFormatCategory),
+    cl::aliasopt(StyleSearchPaths),
+    cl::NotHidden);
+
 namespace {
 enum class WNoError { Unknown };
 }
@@ -452,7 +470,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   }
 
   Expected<FormatStyle> FormatStyle =
-      getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
+      getStyle(Style, AssumedFileName, StyleSearchPaths, FallbackStyle, Code->getBuffer(),
                nullptr, WNoErrorList.isSet(WNoError::Unknown));
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";
@@ -573,6 +591,7 @@ static int dumpConfig() {
   Expected<clang::format::FormatStyle> FormatStyle = clang::format::getStyle(
       Style,
       FileNames.empty() || FileNames[0] == "-" ? AssumeFileName : FileNames[0],
+      StyleSearchPaths,
       FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";

@@ -96,7 +96,8 @@ public:
   /// (This is typically used as ClangdServer::Options::ContextProvider).
   static std::function<Context(PathRef)>
   createConfiguredContextProvider(const config::Provider *Provider,
-                                  ClangdServer::Callbacks *);
+                                  ClangdServer::Callbacks *,
+                                  const std::vector<std::string> &StyleSearchPaths);
 
   struct Options {
     /// To process requests asynchronously, ClangdServer spawns worker threads.
@@ -141,6 +142,10 @@ public:
     /// The Options provider to use when running clang-tidy. If null, clang-tidy
     /// checks will be disabled.
     TidyProviderRef ClangTidyProvider;
+
+    /// Specifies the list of paths to be searched when BasedOnStyle
+    /// in a .clang-format file specifies an arbitrary file to include
+    std::vector<std::string> StyleSearchPaths;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
@@ -486,6 +491,10 @@ private:
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;
+
+  // Specifies the list of paths to be searched when BasedOnStyle
+  // in a .clang-format file specifies an arbitrary file to include
+  std::vector<std::string> StyleSearchPaths;
 
   bool UseDirtyHeaders = false;
 

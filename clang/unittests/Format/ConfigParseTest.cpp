@@ -80,27 +80,27 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
 
   Styles[0] = getGoogleStyle();
   Styles[1] = getLLVMStyle();
-  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Styles[1]).value());
+  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Styles[1], /*StyleSearchPaths*/{}).value());
   EXPECT_ALL_STYLES_EQUAL(Styles);
 
   Styles.resize(5);
   Styles[0] = getGoogleStyle(FormatStyle::LK_JavaScript);
   Styles[1] = getLLVMStyle();
   Styles[1].Language = FormatStyle::LK_JavaScript;
-  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Styles[1]).value());
+  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Styles[1], /*StyleSearchPaths*/{}).value());
 
   Styles[2] = getLLVMStyle();
   Styles[2].Language = FormatStyle::LK_JavaScript;
   EXPECT_EQ(0, parseConfiguration("Language: JavaScript\n"
                                   "BasedOnStyle: Google",
-                                  &Styles[2])
+                                  &Styles[2], /*StyleSearchPaths*/{})
                    .value());
 
   Styles[3] = getLLVMStyle();
   Styles[3].Language = FormatStyle::LK_JavaScript;
   EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google\n"
                                   "Language: JavaScript",
-                                  &Styles[3])
+                                  &Styles[3], /*StyleSearchPaths*/{})
                    .value());
 
   Styles[4] = getLLVMStyle();
@@ -111,16 +111,18 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
                                   "---\n"
                                   "BasedOnStyle: Google\n"
                                   "Language: JavaScript",
-                                  &Styles[4])
+                                  &Styles[4], /*StyleSearchPaths*/{})
                    .value());
   EXPECT_ALL_STYLES_EQUAL(Styles);
 }
 
 #define CHECK_PARSE_BOOL_FIELD(FIELD, CONFIG_NAME)                             \
   Style.FIELD = false;                                                         \
-  EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": true", &Style).value());      \
+  EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": true", &Style,                \
+                                  /*StyleSearchPaths*/{}).value());            \
   EXPECT_TRUE(Style.FIELD);                                                    \
-  EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": false", &Style).value());     \
+  EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": false", &Style,               \
+                                  /*StyleSearchPaths*/{}).value());            \
   EXPECT_FALSE(Style.FIELD)
 
 #define CHECK_PARSE_BOOL(FIELD) CHECK_PARSE_BOOL_FIELD(FIELD, #FIELD)
@@ -128,11 +130,13 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
 #define CHECK_PARSE_NESTED_BOOL_FIELD(STRUCT, FIELD, CONFIG_NAME)              \
   Style.STRUCT.FIELD = false;                                                  \
   EXPECT_EQ(0,                                                                 \
-            parseConfiguration(#STRUCT ":\n  " CONFIG_NAME ": true", &Style)   \
+            parseConfiguration(#STRUCT ":\n  " CONFIG_NAME ": true",           \
+                               &Style, /*StyleSearchPaths*/{})                 \
                 .value());                                                     \
   EXPECT_TRUE(Style.STRUCT.FIELD);                                             \
   EXPECT_EQ(0,                                                                 \
-            parseConfiguration(#STRUCT ":\n  " CONFIG_NAME ": false", &Style)  \
+            parseConfiguration(#STRUCT ":\n  " CONFIG_NAME ": false",          \
+                               &Style, /*StyleSearchPaths*/{})                 \
                 .value());                                                     \
   EXPECT_FALSE(Style.STRUCT.FIELD)
 
@@ -141,12 +145,13 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
 
 #define CHECK_PARSE(TEXT, FIELD, VALUE)                                        \
   EXPECT_NE(VALUE, Style.FIELD) << "Initial value already the same!";          \
-  EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
+  EXPECT_EQ(0, parseConfiguration(TEXT, &Style,                                \
+                                  /*StyleSearchPaths*/{}).value());            \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
-
 #define CHECK_PARSE_NESTED_VALUE(TEXT, STRUCT, FIELD, VALUE)                   \
   EXPECT_NE(VALUE, Style.STRUCT.FIELD) << "Initial value already the same!";   \
-  EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style).value());      \
+  EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style,                \
+                                  /*StyleSearchPaths*/{}).value());            \
   EXPECT_EQ(VALUE, Style.STRUCT.FIELD) << "Unexpected value after parsing!"
 
 TEST(ConfigParseTest, ParsesConfigurationBools) {
@@ -1065,13 +1070,13 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 12u);
   EXPECT_EQ(parseConfiguration("Language: JavaScript\n"
                                "IndentWidth: 34",
-                               &Style),
+                               &Style, /*StyleSearchPaths*/{}),
             ParseError::Unsuitable);
   FormatStyle BinPackedTCS = {};
   BinPackedTCS.Language = FormatStyle::LK_JavaScript;
   EXPECT_EQ(parseConfiguration("BinPackArguments: true\n"
                                "InsertTrailingCommas: Wrapped",
-                               &BinPackedTCS),
+                               &BinPackedTCS, /*StyleSearchPaths*/{}),
             ParseError::BinPackTrailingCommaConflict);
   EXPECT_EQ(12u, Style.IndentWidth);
   CHECK_PARSE("IndentWidth: 56", IndentWidth, 56u);
@@ -1084,7 +1089,7 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
   CHECK_PARSE("IndentWidth: 23", IndentWidth, 23u);
   EXPECT_EQ(parseConfiguration("Language: Cpp\n"
                                "IndentWidth: 34",
-                               &Style),
+                               &Style, /*StyleSearchPaths*/{}),
             ParseError::Unsuitable);
   EXPECT_EQ(23u, Style.IndentWidth);
   CHECK_PARSE("IndentWidth: 56", IndentWidth, 56u);
@@ -1136,7 +1141,7 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
                                   "BreakBeforeBraces: Stroustrup\n"
                                   "TabWidth: 789\n"
                                   "...\n",
-                                  &Style));
+                                  &Style, /*StyleSearchPaths*/{}));
   EXPECT_EQ(123u, Style.ColumnLimit);
   EXPECT_EQ(456u, Style.IndentWidth);
   EXPECT_EQ(FormatStyle::BS_Stroustrup, Style.BreakBeforeBraces);
@@ -1148,7 +1153,7 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
                                "---\n"
                                "IndentWidth: 78\n"
                                "...\n",
-                               &Style),
+                               &Style, /*StyleSearchPaths*/{}),
             ParseError::Error);
   EXPECT_EQ(parseConfiguration("---\n"
                                "Language: JavaScript\n"
@@ -1157,7 +1162,7 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
                                "Language: JavaScript\n"
                                "IndentWidth: 78\n"
                                "...\n",
-                               &Style),
+                               &Style, /*StyleSearchPaths*/{}),
             ParseError::Error);
 
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);
@@ -1184,7 +1189,7 @@ TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_JavaScript;
   Style.BreakBeforeTernaryOperators = true;
-  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Style).value());
+  EXPECT_EQ(0, parseConfiguration("BasedOnStyle: Google", &Style, /*StyleSearchPaths*/{}).value());
   EXPECT_FALSE(Style.BreakBeforeTernaryOperators);
 
   Style.BreakBeforeTernaryOperators = true;
@@ -1194,7 +1199,7 @@ TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {
                                   "Language: JavaScript\n"
                                   "IndentWidth: 76\n"
                                   "...\n",
-                                  &Style)
+                                  &Style, /*StyleSearchPaths*/{})
                    .value());
   EXPECT_FALSE(Style.BreakBeforeTernaryOperators);
   EXPECT_EQ(76u, Style.IndentWidth);
@@ -1206,13 +1211,13 @@ TEST(ConfigParseTest, ConfigurationRoundTripTest) {
   std::string YAML = configurationAsText(Style);
   FormatStyle ParsedStyle = {};
   ParsedStyle.Language = FormatStyle::LK_Cpp;
-  EXPECT_EQ(0, parseConfiguration(YAML, &ParsedStyle).value());
+  EXPECT_EQ(0, parseConfiguration(YAML, &ParsedStyle, /*StyleSearchPaths*/{}).value());
   EXPECT_EQ(Style, ParsedStyle);
 }
 
 TEST(ConfigParseTest, GetStyleWithEmptyFileName) {
   llvm::vfs::InMemoryFileSystem FS;
-  auto Style1 = getStyle("file", "", "Google", "", &FS);
+  auto Style1 = getStyle("file", "", /*StyleSearchPaths*/{}, "Google", "", &FS);
   ASSERT_TRUE((bool)Style1);
   ASSERT_EQ(*Style1, getGoogleStyle());
 }
@@ -1225,19 +1230,19 @@ TEST(ConfigParseTest, GetStyleOfFile) {
                  llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: LLVM")));
   ASSERT_TRUE(
       FS.addFile("/a/test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style1 = getStyle("file", "/a/.clang-format", "Google", "", &FS);
+  auto Style1 = getStyle("file", "/a/.clang-format", /*StyleSearchPaths*/{}, "Google", "", &FS);
   ASSERT_TRUE((bool)Style1);
   ASSERT_EQ(*Style1, getLLVMStyle());
 
   // Test 2.1: fallback to default.
   ASSERT_TRUE(
       FS.addFile("/b/test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style2 = getStyle("file", "/b/test.cpp", "Mozilla", "", &FS);
+  auto Style2 = getStyle("file", "/b/test.cpp", /*StyleSearchPaths*/{}, "Mozilla", "", &FS);
   ASSERT_TRUE((bool)Style2);
   ASSERT_EQ(*Style2, getMozillaStyle());
 
   // Test 2.2: no format on 'none' fallback style.
-  Style2 = getStyle("file", "/b/test.cpp", "none", "", &FS);
+  Style2 = getStyle("file", "/b/test.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE((bool)Style2);
   ASSERT_EQ(*Style2, getNoStyle());
 
@@ -1245,12 +1250,12 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   // 'none'.
   ASSERT_TRUE(FS.addFile("/b/.clang-format", 0,
                          llvm::MemoryBuffer::getMemBuffer("IndentWidth: 2")));
-  Style2 = getStyle("file", "/b/test.cpp", "none", "", &FS);
+  Style2 = getStyle("file", "/b/test.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE((bool)Style2);
   ASSERT_EQ(*Style2, getLLVMStyle());
 
   // Test 2.4: format if yaml with no based style, while fallback is 'none'.
-  Style2 = getStyle("{}", "a.h", "none", "", &FS);
+  Style2 = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE((bool)Style2);
   ASSERT_EQ(*Style2, getLLVMStyle());
 
@@ -1260,23 +1265,24 @@ TEST(ConfigParseTest, GetStyleOfFile) {
                  llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google")));
   ASSERT_TRUE(FS.addFile("/c/sub/sub/sub/test.cpp", 0,
                          llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style3 = getStyle("file", "/c/sub/sub/sub/test.cpp", "LLVM", "", &FS);
+  auto Style3 = getStyle("file", "/c/sub/sub/sub/test.cpp", /*StyleSearchPaths*/{}, "LLVM", "", &FS);
   ASSERT_TRUE((bool)Style3);
   ASSERT_EQ(*Style3, getGoogleStyle());
 
   // Test 4: error on invalid fallback style
-  auto Style4 = getStyle("file", "a.h", "KungFu", "", &FS);
+  auto Style4 = getStyle("file", "a.h", /*StyleSearchPaths*/{}, "KungFu", "", &FS);
   ASSERT_FALSE((bool)Style4);
   llvm::consumeError(Style4.takeError());
 
   // Test 5: error on invalid yaml on command line
   auto Style5 = getStyle("{invalid_key=invalid_value}", "a.h", "LLVM", "", &FS,
-                         /*AllowUnknownOptions=*/false, dropDiagnosticHandler);
+                         /*StyleSearchPaths*/{}, /*AllowUnknownOptions=*/false,
+                         dropDiagnosticHandler);
   ASSERT_FALSE((bool)Style5);
   llvm::consumeError(Style5.takeError());
 
   // Test 6: error on invalid style
-  auto Style6 = getStyle("KungFu", "a.h", "LLVM", "", &FS);
+  auto Style6 = getStyle("KungFu", "a.h", /*StyleSearchPaths*/{}, "LLVM", "", &FS);
   ASSERT_FALSE((bool)Style6);
   llvm::consumeError(Style6.takeError());
 
@@ -1288,16 +1294,18 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(
       FS.addFile("/d/test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int i;")));
   auto Style7a = getStyle("file", "/d/.clang-format", "LLVM", "", &FS,
-                          /*AllowUnknownOptions=*/false, dropDiagnosticHandler);
+                          /*StyleSearchPaths*/{}, /*AllowUnknownOptions=*/false,
+                          dropDiagnosticHandler);
   ASSERT_FALSE((bool)Style7a);
   llvm::consumeError(Style7a.takeError());
 
   auto Style7b = getStyle("file", "/d/.clang-format", "LLVM", "", &FS,
-                          /*AllowUnknownOptions=*/true, dropDiagnosticHandler);
+                          /*StyleSearchPaths*/{}, /*AllowUnknownOptions=*/true,
+                          dropDiagnosticHandler);
   ASSERT_TRUE((bool)Style7b);
 
   // Test 8: inferred per-language defaults apply.
-  auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);
+  auto StyleTd = getStyle("file", "x.td", /*StyleSearchPaths*/{}, "llvm", "", &FS);
   ASSERT_TRUE((bool)StyleTd);
   ASSERT_EQ(*StyleTd, getLLVMStyle(FormatStyle::LK_TableGen));
 
@@ -1309,7 +1317,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
                                        "ColumnLimit: 20")));
   ASSERT_TRUE(FS.addFile("/e/sub/code.cpp", 0,
                          llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style9 = getStyle("file", "/e/sub/code.cpp", "none", "", &FS);
+  auto Style9 = getStyle("file", "/e/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getNoStyle();
@@ -1330,7 +1338,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   NonDefaultWhiteSpaceMacros[1] = "BAR";
 
   ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
-  Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
+  Style9 = getStyle("file", "/e/sub/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [&NonDefaultWhiteSpaceMacros] {
     auto Style = getNoStyle();
@@ -1340,7 +1348,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   }());
 
   // Test 9.2: with LLVM fallback style
-  Style9 = getStyle("file", "/e/sub/code.cpp", "LLVM", "", &FS);
+  Style9 = getStyle("file", "/e/sub/code.cpp", /*StyleSearchPaths*/{}, "LLVM", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
@@ -1353,7 +1361,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
       FS.addFile("/e/.clang-format", 0,
                  llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google\n"
                                                   "UseTab: Always")));
-  Style9 = getStyle("file", "/e/sub/code.cpp", "none", "", &FS);
+  Style9 = getStyle("file", "/e/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getGoogleStyle();
@@ -1372,26 +1380,26 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   }();
 
   ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
-  Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
+  Style9 = getStyle("file", "/e/sub/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.5: use InheritParentConfig as style name
   Style9 =
-      getStyle("inheritparentconfig", "/e/sub/sub/code.cpp", "none", "", &FS);
+      getStyle("inheritparentconfig", "/e/sub/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.6: use command line style with inheritance
   Style9 = getStyle("{BasedOnStyle: InheritParentConfig}",
-                    "/e/sub/sub/code.cpp", "none", "", &FS);
+                    "/e/sub/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.7: use command line style with inheritance and own config
   Style9 = getStyle("{BasedOnStyle: InheritParentConfig, "
                     "WhitespaceSensitiveMacros: ['FOO', 'BAR']}",
-                    "/e/sub/code.cpp", "none", "", &FS);
+                    "/e/sub/code.cpp", /*StyleSearchPaths*/{}, "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 
@@ -1403,7 +1411,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
                  llvm::MemoryBuffer::getMemBuffer(
                      "BasedOnStyle: InheritParentConfig\nIndentWidth: 7")));
   // Make sure we do not use the fallback style
-  Style9 = getStyle("file", "/e/withoutbase/code.cpp", "google", "", &FS);
+  Style9 = getStyle("file", "/e/withoutbase/code.cpp", /*StyleSearchPaths*/{}, "google", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
@@ -1411,7 +1419,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
     return Style;
   }());
 
-  Style9 = getStyle("file", "/e/withoutbase/sub/code.cpp", "google", "", &FS);
+  Style9 = getStyle("file", "/e/withoutbase/sub/code.cpp", /*StyleSearchPaths*/{}, "google", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
@@ -1421,7 +1429,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   }());
 
   // Test 9.9: use inheritance from a specific config file.
-  Style9 = getStyle("file:/e/sub/sub/.clang-format", "/e/sub/sub/code.cpp",
+  Style9 = getStyle("file:/e/sub/sub/.clang-format", "/e/sub/sub/code.cpp", /*StyleSearchPaths*/{},
                     "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
@@ -1439,7 +1447,7 @@ TEST(ConfigParseTest, GetStyleOfSpecificFile) {
   ASSERT_TRUE(FS.addFile("/e/sub/sub/sub/test.cpp", 0,
                          llvm::MemoryBuffer::getMemBuffer("int i;")));
   auto Style = getStyle("file:/e/explicit.clang-format",
-                        "/e/sub/sub/sub/test.cpp", "LLVM", "", &FS);
+                        "/e/sub/sub/sub/test.cpp", /*StyleSearchPaths*/{}, "LLVM", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style));
   ASSERT_EQ(*Style, getGoogleStyle());
 
@@ -1448,12 +1456,12 @@ TEST(ConfigParseTest, GetStyleOfSpecificFile) {
       FS.addFile("../../e/explicit.clang-format", 0,
                  llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google")));
   Style = getStyle("file:../../e/explicit.clang-format",
-                   "/e/sub/sub/sub/test.cpp", "LLVM", "", &FS);
+                   "/e/sub/sub/sub/test.cpp", /*StyleSearchPaths*/{}, "LLVM", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style));
   ASSERT_EQ(*Style, getGoogleStyle());
 
   // Specify path to a format file that does not exist.
-  Style = getStyle("file:/e/missing.clang-format", "/e/sub/sub/sub/test.cpp",
+  Style = getStyle("file:/e/missing.clang-format", "/e/sub/sub/sub/test.cpp", /*StyleSearchPaths*/{},
                    "LLVM", "", &FS);
   ASSERT_FALSE(static_cast<bool>(Style));
   llvm::consumeError(Style.takeError());
@@ -1477,7 +1485,7 @@ TEST(ConfigParseTest, GetStyleOfSpecificFile) {
   CodeFileTest.close();
 
   std::string format_file_arg = std::string("file:") + FormatFilePath.c_str();
-  Style = getStyle(format_file_arg, TestFilePath, "LLVM", "", nullptr);
+  Style = getStyle(format_file_arg, TestFilePath, /*StyleSearchPaths*/{}, "LLVM", "", nullptr);
 
   llvm::sys::fs::remove(FormatFilePath.c_str());
   llvm::sys::fs::remove(TestFilePath.c_str());

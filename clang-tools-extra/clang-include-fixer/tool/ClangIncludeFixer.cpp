@@ -157,6 +157,24 @@ cl::opt<std::string>
                    "headers if there is no clang-format config file found."),
           cl::init("llvm"), cl::cat(IncludeFixerCategory));
 
+static cl::list<std::string>
+StyleSearchPaths(
+    "style-search-path",
+    cl::desc("Directory to search for BasedOnStyle files, when the value of the\n"
+             "BasedOnStyle directive is not one of the predefined styles, nor\n"
+             "InheritFromParent. Multiple style search paths may be specified,\n"
+             "and will be searched in order, stopping at the first file found."),
+    cl::value_desc("directory"),
+    cl::cat(IncludeFixerCategory));
+
+static cl::alias
+StyleSearchPathShort(
+    "S",
+    cl::desc("Alias for --style-search-path"),
+    cl::cat(IncludeFixerCategory),
+    cl::aliasopt(StyleSearchPaths),
+    cl::NotHidden );
+
 std::unique_ptr<include_fixer::SymbolIndexManager>
 createSymbolIndexManager(StringRef FilePath) {
   using find_all_symbols::SymbolInfo;
@@ -330,7 +348,7 @@ int includeFixerMain(int argc, const char **argv) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
     auto InsertStyle = format::getStyle(format::DefaultFormatStyle,
-                                        Context.getFilePath(), Style);
+                                        Context.getFilePath(), StyleSearchPaths, Style);
     if (!InsertStyle) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
@@ -410,7 +428,7 @@ int includeFixerMain(int argc, const char **argv) {
   for (const auto &Context : Contexts) {
     StringRef FilePath = Context.getFilePath();
     auto InsertStyle =
-        format::getStyle(format::DefaultFormatStyle, FilePath, Style);
+        format::getStyle(format::DefaultFormatStyle, FilePath, StyleSearchPaths, Style);
     if (!InsertStyle) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;

@@ -136,7 +136,7 @@ TEST_F(FormatTestRawStrings, UsesConfigurationOverBaseStyle) {
   EXPECT_EQ(0, parseConfiguration("---\n"
                                   "Language: Cpp\n"
                                   "BasedOnStyle: Google",
-                                  &Style)
+                                  &Style, /*StyleSearchPaths*/{})
                    .value());
   Style.RawStringFormats = {{
       FormatStyle::LK_Cpp,

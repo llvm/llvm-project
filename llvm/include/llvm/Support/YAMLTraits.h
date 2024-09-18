@@ -779,6 +779,8 @@ public:
   IO(void *Ctxt = nullptr);
   virtual ~IO();
 
+  virtual SourceMgr& getSourceMgr();
+
   virtual bool outputting() const = 0;
 
   virtual unsigned beginSequence() = 0;
@@ -819,6 +821,7 @@ public:
 
   virtual void setError(const Twine &) = 0;
   virtual void setAllowUnknownKeys(bool Allow);
+  virtual bool allowUnknownKeys() const;
 
   template <typename T>
   void enumCase(T &Val, const char* Str, const T ConstVal) {
@@ -1449,6 +1452,8 @@ public:
   // Check if there was an syntax or semantic error during parsing.
   std::error_code error();
 
+  SourceMgr& getSourceMgr() override;
+
 private:
   bool outputting() const override;
   bool mapTag(StringRef, bool) override;
@@ -1567,6 +1572,7 @@ public:
   const Node *getCurrentNode() const;
 
   void setAllowUnknownKeys(bool Allow) override;
+  bool allowUnknownKeys() const override;
 
 private:
   SourceMgr                           SrcMgr; // must be before Strm

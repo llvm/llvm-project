@@ -223,6 +223,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
       ImportInsertions(Opts.ImportInsertions),
       PublishInactiveRegions(Opts.PublishInactiveRegions),
+      StyleSearchPaths(Opts.StyleSearchPaths),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
@@ -335,17 +336,20 @@ std::shared_ptr<const std::string> ClangdServer::getDraft(PathRef File) const {
 
 std::function<Context(PathRef)>
 ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
-                                              Callbacks *Publish) {
+                                              Callbacks *Publish,
+                                              const std::vector<std::string> &StyleSearchPaths) {
   if (!Provider)
     return [](llvm::StringRef) { return Context::current().clone(); };
 
   struct Impl {
     const config::Provider *Provider;
     ClangdServer::Callbacks *Publish;
+    std::vector<std::string> StyleSearchPaths;
     std::mutex PublishMu;
 
-    Impl(const config::Provider *Provider, ClangdServer::Callbacks *Publish)
-        : Provider(Provider), Publish(Publish) {}
+    Impl(const config::Provider *Provider, ClangdServer::Callbacks *Publish,
+         const std::vector<std::string> &StyleSearchPaths)
+        : Provider(Provider), Publish(Publish), StyleSearchPaths(StyleSearchPaths) {}
 
     Context operator()(llvm::StringRef File) {
       config::Params Params;
@@ -378,6 +382,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
           Publish->onDiagnosticsReady(Entry.first(), /*Version=*/"",
                                       Entry.second);
       }
+      C.Style.StyleSearchPaths = StyleSearchPaths;
       return Context::current().derive(Config::Key, std::move(C));
     }
 
@@ -405,7 +410,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
   };
 
   // Copyable wrapper.
-  return [I(std::make_shared<Impl>(Provider, Publish))](llvm::StringRef Path) {
+  return [I(std::make_shared<Impl>(Provider, Publish, StyleSearchPaths))](llvm::StringRef Path) {
     return (*I)(Path);
   };
 }

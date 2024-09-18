@@ -69,6 +69,24 @@ static cl::opt<std::string>
     FormatStyleOpt("style", cl::desc(format::StyleOptionHelpDescription),
                    cl::init("LLVM"), cl::cat(FormattingCategory));
 
+static cl::list<std::string>
+StyleSearchPaths(
+    "style-search-path",
+    cl::desc("Directory to search for BasedOnStyle files, when the value of the\n"
+             "BasedOnStyle directive is not one of the predefined styles, nor\n"
+             "InheritFromParent. Multiple style search paths may be specified,\n"
+             "and will be searched in order, stopping at the first file found."),
+    cl::value_desc("directory"),
+    cl::cat(FormattingCategory));
+
+static cl::alias
+StyleSearchPathShort(
+    "S",
+    cl::desc("Alias for --style-search-path"),
+    cl::cat(FormattingCategory),
+    cl::aliasopt(StyleSearchPaths),
+    cl::NotHidden);
+
 namespace {
 // Helper object to remove the TUReplacement and TUDiagnostic (triggered by
 // "remove-change-desc-files" command line option) when exiting current scope.
@@ -102,6 +120,7 @@ int main(int argc, char **argv) {
 
   // Determine a formatting style from options.
   auto FormatStyleOrError = format::getStyle(FormatStyleOpt, FormatStyleConfig,
+                                             StyleSearchPaths,
                                              format::DefaultFallbackStyle);
   if (!FormatStyleOrError) {
     llvm::errs() << llvm::toString(FormatStyleOrError.takeError()) << "\n";

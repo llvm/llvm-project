@@ -32,7 +32,7 @@ protected:
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
-  auto Style = getStyle("LLVM", "<stdin>", "none",
+  auto Style = getStyle("LLVM", "<stdin>", /*StyleSearchPaths*/{}, "none",
                         "@interface\n"
                         "- (id)init;");
   ASSERT_TRUE((bool)Style);
@@ -40,67 +40,67 @@ TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
 }
 
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
-  auto Style = getStyle("LLVM", "a.h", "none",
+  auto Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                         "@interface\n"
                         "- (id)init;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("LLVM", "a.h", "none",
+  Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                    "@interface\n"
                    "+ (id)init;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("LLVM", "a.h", "none",
+  Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                    "@interface\n"
                    "@end\n"
                    "//comment");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("LLVM", "a.h", "none",
+  Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                    "@interface\n"
                    "@end //comment");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
   // No recognizable ObjC.
-  Style = getStyle("LLVM", "a.h", "none", "void f() {}");
+  Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none", "void f() {}");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "@interface Foo\n@end");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "@interface Foo\n@end");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none",
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none",
                    "const int interface = 1;\nconst int end = 2;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "@protocol Foo\n@end");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "@protocol Foo\n@end");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none",
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none",
                    "const int protocol = 1;\nconst int end = 2;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "typedef NS_ENUM(int, Foo) {};");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "typedef NS_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "typedef NS_CLOSED_ENUM(int, Foo) {};");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "typedef NS_CLOSED_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "typedef NS_ERROR_ENUM(int, Foo) {};");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "typedef NS_ERROR_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", R"objc(
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", R"objc(
 NS_ASSUME_NONNULL_BEGIN
 extern int i;
 NS_ASSUME_NONNULL_END
@@ -108,71 +108,71 @@ NS_ASSUME_NONNULL_END
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", R"objc(
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", R"objc(
 FOUNDATION_EXTERN void DoStuff(void);
 )objc");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", R"objc(
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", R"objc(
 FOUNDATION_EXPORT void DoStuff(void);
 )objc");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "enum Foo {};");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "enum Foo {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "inline void Foo() { Log(@\"Foo\"); }");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "inline void Foo() { Log(@\"Foo\"); }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "inline void Foo() { Log(\"Foo\"); }");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "inline void Foo() { Log(\"Foo\"); }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
   Style =
-      getStyle("{}", "a.h", "none", "inline void Foo() { id = @[1, 2, 3]; }");
+      getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "inline void Foo() { id = @[1, 2, 3]; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none",
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none",
                    "inline void Foo() { id foo = @{1: 2, 3: 4, 5: 6}; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none",
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none",
                    "inline void Foo() { int foo[] = {1, 2, 3}; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
   // ObjC characteristic types.
-  Style = getStyle("{}", "a.h", "none", "extern NSString *kFoo;");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "extern NSString *kFoo;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "extern NSInteger Foo();");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "extern NSInteger Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "NSObject *Foo();");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "NSObject *Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "NSSet *Foo();");
+  Style = getStyle("{}", "a.h", /*StyleSearchPaths*/{}, "none", "NSSet *Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 }
 
 TEST(FormatTestObjCStyle, AvoidDetectingDesignatedInitializersAsObjCInHeaders) {
-  auto Style = getStyle("LLVM", "a.h", "none",
+  auto Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                         "static const char *names[] = {[0] = \"foo\",\n"
                         "[kBar] = \"bar\"};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("LLVM", "a.h", "none",
+  Style = getStyle("LLVM", "a.h", /*StyleSearchPaths*/{}, "none",
                    "static const char *names[] = {[0] EQ \"foo\",\n"
                    "[kBar] EQ \"bar\"};");
   ASSERT_TRUE((bool)Style);

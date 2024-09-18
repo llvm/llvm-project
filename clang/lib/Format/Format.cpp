@@ -853,8 +853,21 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle::LanguageKind Language =
             ((FormatStyle *)IO.getContext())->Language;
         if (!getPredefinedStyle(BasedOnStyle, Language, &Style)) {
-          IO.setError(Twine("Unknown value for BasedOnStyle: ", BasedOnStyle));
-          return;
+          // OK, not a predefined style. See if this is an includable file.
+          SourceMgr& SrcMgr = IO.getSourceMgr();
+          std::string IncludedFile;
+          ErrorOr<std::unique_ptr<MemoryBuffer>> IncFileOrError = SrcMgr.OpenIncludeFile(BasedOnStyle.str(), IncludedFile);
+          if (!IncFileOrError) {
+            IO.setError(Twine("BasedOnStyle value is not a predefined style nor a file relative to the style search path: ", BasedOnStyle));
+            return;
+          }
+          Style.Language = Language;
+          if (auto EC = parseNestedConfiguration((*IncFileOrError)->getMemBufferRef(), &Style,
+                                                 SrcMgr.getIncludeDirs(), IO.allowUnknownKeys(),
+                                                 SrcMgr.getDiagHandler(), SrcMgr.getDiagContext())) {
+            IO.setError(Twine(EC.message()));
+            return;
+          }
         }
         Style.Language = OldLanguage;
       }
@@ -2033,7 +2046,9 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
 }
 
 std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
-                                   FormatStyle *Style, bool AllowUnknownOptions,
+                                   FormatStyle *Style,
+                                   const std::vector<std::string> &StyleSearchPaths,
+                                   bool AllowUnknownOptions,
                                    llvm::SourceMgr::DiagHandlerTy DiagHandler,
                                    void *DiagHandlerCtxt) {
   assert(Style);
@@ -2051,6 +2066,7 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   // base style.
   Input.setContext(Style);
   Input.setAllowUnknownKeys(AllowUnknownOptions);
+  Input.getSourceMgr().setIncludeDirs(StyleSearchPaths);
   Input >> Styles;
   if (Input.error())
     return Input.error();
@@ -2096,6 +2112,18 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   if (Style->QualifierAlignment != FormatStyle::QAS_Leave)
     return make_error_code(validateQualifierOrder(Style));
   return make_error_code(ParseError::Success);
+}
+
+std::error_code parseNestedConfiguration(llvm::MemoryBufferRef Config,
+                                         FormatStyle *Style,
+                                         const std::vector<std::string> &StyleSearchPaths,
+                                         bool AllowUnknownOptions,
+                                         llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                                         void *DiagHandlerCtxt) {
+  auto EC = parseConfiguration(Config, Style, StyleSearchPaths, AllowUnknownOptions, DiagHandler, DiagHandlerCtxt);
+  if (!EC)
+    Style->StyleSet.Clear();
+  return EC;
 }
 
 std::string configurationAsText(const FormatStyle &Style) {
@@ -3991,13 +4019,15 @@ const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
-                       FormatStyle *Style, bool AllowUnknownOptions,
+                       FormatStyle *Style,
+                       const std::vector<std::string> &StyleSearchPaths,
+                       bool AllowUnknownOptions,
                        llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
-  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,
+  if (auto EC = parseConfiguration(*Text.get(), Style, StyleSearchPaths, AllowUnknownOptions,
                                    DiagHandler)) {
     return EC;
   }
@@ -4005,6 +4035,7 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
 }
 
 Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
+                               const std::vector<std::string> &StyleSearchPaths,
                                StringRef FallbackStyleName, StringRef Code,
                                llvm::vfs::FileSystem *FS,
                                bool AllowUnknownOptions,
@@ -4021,7 +4052,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     StringRef Source = "<command-line>";
     if (std::error_code ec =
             parseConfiguration(llvm::MemoryBufferRef(StyleName, Source), &Style,
-                               AllowUnknownOptions, DiagHandler)) {
+                               StyleSearchPaths, AllowUnknownOptions, DiagHandler)) {
       return make_string_error("Error parsing -style: " + ec.message());
     }
 
@@ -4041,8 +4072,8 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
-                               DiagHandler);
+        loadAndParseConfigFile(ConfigFile, FS, &Style, StyleSearchPaths,
+                               AllowUnknownOptions, DiagHandler);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4082,7 +4113,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   auto applyChildFormatTexts = [&](FormatStyle *Style) {
     for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
       auto EC =
-          parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
+          parseConfiguration(*MemBuf, Style, StyleSearchPaths, AllowUnknownOptions,
                              DiagHandler ? DiagHandler : dropDiagnosticHandler);
       // It was already correctly parsed.
       assert(!EC);
@@ -4117,7 +4148,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       }
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+          loadAndParseConfigFile(ConfigFile, FS, &Style, StyleSearchPaths, AllowUnknownOptions,
                                  DiagHandler);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
