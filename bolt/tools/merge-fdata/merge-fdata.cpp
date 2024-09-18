@@ -392,6 +392,7 @@ int main(int argc, char **argv) {
     if (std::error_code EC = MB.getError())
       report_error(InputDataFilename, EC);
     yaml::Input YamlInput(MB.get()->getBuffer());
+    YamlInput.setAllowUnknownKeys(true);
 
     errs() << "Merging data from " << InputDataFilename << "...\n";
 

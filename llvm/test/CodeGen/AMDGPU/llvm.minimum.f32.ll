@@ -485,6 +485,7 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s0
 ; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call float @llvm.minimum.f32(float %src0, float %src1)
   call void asm sideeffect "; use $0", "s"(float %op)
@@ -888,6 +889,7 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s[0:1]
 ; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x float> @llvm.minimum.v2f32(<2 x float> %src0, <2 x float> %src1)
   call void asm sideeffect "; use $0", "s"(<2 x float> %op)

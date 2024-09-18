@@ -66,7 +66,6 @@ LogicalResult Pass::initializeOptions(
   std::string errStr;
   llvm::raw_string_ostream os(errStr);
   if (failed(passOptions.parseFromString(options, os))) {
-    os.flush();
     return errorHandler(errStr);
   }
   return success();
@@ -700,7 +699,7 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
     os << '\'' << pm.getOpAnchorName() << '\'';
   });
   os << ']';
-  return os.str();
+  return name;
 }
 
 void OpToOpPassAdaptor::runOnOperation() {
@@ -938,11 +937,9 @@ AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
   assert(impl->getOperation() == op->getParentOp() &&
          "expected immediate child operation");
 
-  auto it = impl->childAnalyses.find(op);
-  if (it == impl->childAnalyses.end())
-    it = impl->childAnalyses
-             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op, impl))
-             .first;
+  auto [it, inserted] = impl->childAnalyses.try_emplace(op);
+  if (inserted)
+    it->second = std::make_unique<NestedAnalysisMap>(op, impl);
   return {it->second.get()};
 }
 

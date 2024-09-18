@@ -57,9 +57,9 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -608,12 +608,29 @@ void HWAddressSanitizer::initializeModule() {
     // infer those attributes on libc functions, which is not true if those
     // are instrumented (Android) or intercepted.
 
-    // nobuiltin makes sure later passes don't restore assumptions about
-    // the function.
-    F.addFnAttr(llvm::Attribute::NoBuiltin);
-    F.removeFnAttr(llvm::Attribute::Memory);
-    for (auto &A : F.args())
-      A.removeAttr(llvm::Attribute::WriteOnly);
+    // The API is weird. `onlyReadsMemory` actually means "does not write", and
+    // `onlyWritesMemory` actually means "does not read". So we reconstruct
+    // "accesses memory" && "does not read" <=> "writes".
+    bool Changed = false;
+    if (!F.doesNotAccessMemory()) {
+      bool WritesMemory = !F.onlyReadsMemory();
+      bool ReadsMemory = !F.onlyWritesMemory();
+      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
+        F.removeFnAttr(Attribute::Memory);
+        Changed = true;
+      }
+    }
+    for (Argument &A : F.args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        Changed = true;
+        A.removeAttr(Attribute::WriteOnly);
+      }
+    }
+    if (Changed) {
+      // nobuiltin makes sure later passes don't restore assumptions about
+      // the function.
+      F.addFnAttr(Attribute::NoBuiltin);
+    }
   }
 
   // x86_64 currently has two modes:
@@ -1579,6 +1596,10 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
+    return;
+
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
     return;
 
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))

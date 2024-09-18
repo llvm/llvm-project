@@ -88,13 +88,13 @@ public:
 
   InputFile(FileEntryRef File, bool isOverridden = false,
             bool isOutOfDate = false) {
+    assert(!(isOverridden && isOutOfDate) &&
+           "an overridden cannot be out-of-date");
     unsigned intVal = 0;
-    // Make isOutOfDate with higher priority than isOverridden.
-    // It is possible if the recorded hash value mismatches.
-    if (isOutOfDate)
-      intVal = OutOfDate;
-    else if (isOverridden)
+    if (isOverridden)
       intVal = Overridden;
+    else if (isOutOfDate)
+      intVal = OutOfDate;
     Val.setPointerAndInt(&File.getMapEntry(), intVal);
   }
 

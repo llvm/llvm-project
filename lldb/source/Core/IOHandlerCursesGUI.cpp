@@ -6910,8 +6910,8 @@ public:
           } else {
             // File changed, set selected line to the line with the PC
             m_selected_line = m_pc_line;
-            m_file_sp = m_debugger.GetSourceManager().GetFile(
-                m_sc.line_entry.GetFile());
+            m_file_sp =
+                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file_sp);
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
               m_line_width = 1;

@@ -114,6 +114,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -2222,12 +2223,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForDebugging),
           "Attributes 'optdebug and optnone' are incompatible!", V);
   }
-
-  Check(!(Attrs.hasFnAttr(Attribute::SanitizeRealtime) &&
-          Attrs.hasFnAttr(Attribute::NoSanitizeRealtime)),
-        "Attributes "
-        "'sanitize_realtime and nosanitize_realtime' are incompatible!",
-        V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
@@ -6285,6 +6280,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a function argument", &Call);
     Check(!cast<Argument>(Call.getArgOperand(InactiveIdx))->hasInRegAttr(),
           "Value for inactive lanes must be a VGPR function argument", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    Check(
+        AMDGPU::isFlatGlobalAddrSpace(
+            Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
+        "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:

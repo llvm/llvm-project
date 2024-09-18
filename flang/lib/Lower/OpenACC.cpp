@@ -4293,23 +4293,30 @@ void Fortran::lower::attachDeclarePostAllocAction(
     const Fortran::semantics::Symbol &sym) {
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
-  mlir::Operation &op = builder.getInsertionBlock()->back();
+  mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (op.hasAttr(mlir::acc::getDeclareActionAttrName())) {
-    auto attr = op.getAttrOfType<mlir::acc::DeclareActionAttr>(
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
+    op = op->getPrevNode();
+  }
+  assert(op && "expect operation to attach the post allocation action");
+
+  if (op->hasAttr(mlir::acc::getDeclareActionAttrName())) {
+    auto attr = op->getAttrOfType<mlir::acc::DeclareActionAttr>(
         mlir::acc::getDeclareActionAttrName());
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(), attr.getPreAlloc(),
-                   /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
-                   attr.getPreDealloc(), attr.getPostDealloc()));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(), attr.getPreAlloc(),
+                    /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
+                    attr.getPreDealloc(), attr.getPostDealloc()));
   } else {
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(),
-                   /*preAlloc=*/{},
-                   /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
-                   /*preDealloc=*/{}, /*postDealloc=*/{}));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(),
+                    /*preAlloc=*/{},
+                    /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
+                    /*preDealloc=*/{}, /*postDealloc=*/{}));
   }
 }
 

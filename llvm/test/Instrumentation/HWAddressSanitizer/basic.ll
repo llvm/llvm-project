@@ -1542,43 +1542,43 @@ entry:
 
 define i8 @test_load_noattr(ptr %a) {
 ; CHECK-LABEL: define i8 @test_load_noattr
-; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
 ; NOFASTPATH-LABEL: define i8 @test_load_noattr
-; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; NOFASTPATH-SAME: (ptr [[A:%.*]]) {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i8 [[B]]
 ;
 ; FASTPATH-LABEL: define i8 @test_load_noattr
-; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; FASTPATH-SAME: (ptr [[A:%.*]]) {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i8 [[B]]
 ;
 ; ABORT-DYNAMIC-SHADOW-LABEL: define i8 @test_load_noattr
-; ABORT-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; ABORT-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) {
 ; ABORT-DYNAMIC-SHADOW-NEXT:  entry:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; RECOVER-DYNAMIC-SHADOW-LABEL: define i8 @test_load_noattr
-; RECOVER-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; RECOVER-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:  entry:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i8 @test_load_noattr
-; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i8 @test_load_noattr
-; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
@@ -1590,43 +1590,43 @@ entry:
 
 define i8 @test_load_notmyattr(ptr %a) sanitize_address {
 ; CHECK-LABEL: define i8 @test_load_notmyattr
-; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
 ; NOFASTPATH-LABEL: define i8 @test_load_notmyattr
-; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i8 [[B]]
 ;
 ; FASTPATH-LABEL: define i8 @test_load_notmyattr
-; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i8 [[B]]
 ;
 ; ABORT-DYNAMIC-SHADOW-LABEL: define i8 @test_load_notmyattr
-; ABORT-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; ABORT-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; ABORT-DYNAMIC-SHADOW-NEXT:  entry:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; RECOVER-DYNAMIC-SHADOW-LABEL: define i8 @test_load_notmyattr
-; RECOVER-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; RECOVER-DYNAMIC-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:  entry:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i8 @test_load_notmyattr
-; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
 ;
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i8 @test_load_notmyattr
-; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]

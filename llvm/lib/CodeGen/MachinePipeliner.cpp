@@ -1706,6 +1706,7 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
 /// Identify an elementary circuit in the dependence graph starting at the
 /// specified node.
 bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
+                                          const SwingSchedulerDAG *DAG,
                                           bool HasBackedge) {
   SUnit *SV = &SUnits[V];
   bool F = false;
@@ -1719,12 +1720,13 @@ bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
       continue;
     if (W == S) {
       if (!HasBackedge)
-        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end()));
+        NodeSets.push_back(NodeSet(Stack.begin(), Stack.end(), DAG));
       F = true;
       ++NumPaths;
       break;
-    } else if (!Blocked.test(W)) {
-      if (circuit(W, S, NodeSets,
+    }
+    if (!Blocked.test(W)) {
+      if (circuit(W, S, NodeSets, DAG,
                   Node2Idx->at(W) < Node2Idx->at(V) ? true : HasBackedge))
         F = true;
     }
@@ -1767,9 +1769,9 @@ void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
   Circuits Cir(SUnits, Topo);
   // Create the adjacency structure.
   Cir.createAdjacencyStructure(this);
-  for (int i = 0, e = SUnits.size(); i != e; ++i) {
+  for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Cir.reset();
-    Cir.circuit(i, i, NodeSets);
+    Cir.circuit(I, I, NodeSets, this);
   }
 
   // Change the dependences back so that we've created a DAG again.
@@ -2565,7 +2567,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
+bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
@@ -2719,7 +2721,7 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 /// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
 bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
-                                         bool isSucc) {
+                                         bool isSucc) const {
   if ((Dep.getKind() != SDep::Order && Dep.getKind() != SDep::Output) ||
       Dep.isArtificial() || Dep.getSUnit()->isBoundaryNode())
     return false;

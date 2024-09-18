@@ -39,6 +39,7 @@ add_llvm_target(BPFCodeGen
   BPFSubtarget.cpp
   BPFTargetMachine.cpp
   BPFMIPeephole.cpp
+  BPFMIChecking.cpp
   BPFMISimplifyPatchable.cpp
   BTFDebug.cpp
 

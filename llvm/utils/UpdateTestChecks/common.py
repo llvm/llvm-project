@@ -1,11 +1,8 @@
-from __future__ import print_function
-
 import argparse
 import bisect
 import collections
 import copy
 import glob
-import itertools
 import os
 import re
 import subprocess
@@ -517,12 +514,13 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
                     sep="",
                     file=sys.stderr,
                 )
-            # Python 2.7 doesn't have subprocess.DEVNULL:
-            with open(os.devnull, "w") as devnull:
-                pp = subprocess.Popen(
-                    preprocess_cmd, shell=True, stdin=devnull, stdout=subprocess.PIPE
-                )
-                ir_file = pp.stdout
+            pp = subprocess.Popen(
+                preprocess_cmd,
+                shell=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+            )
+            ir_file = pp.stdout
 
         if isinstance(cmd_args, list):
             args = [applySubstitutions(a, substitutions) for a in cmd_args]

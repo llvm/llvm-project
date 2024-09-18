@@ -789,6 +789,10 @@ public:
     return Cost;
   }
 
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
                                            bool Extract,
@@ -2196,6 +2200,12 @@ public:
     case Intrinsic::bitreverse:
       ISD = ISD::BITREVERSE;
       break;
+    case Intrinsic::ucmp:
+      ISD = ISD::UCMP;
+      break;
+    case Intrinsic::scmp:
+      ISD = ISD::SCMP;
+      break;
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
@@ -2430,6 +2440,34 @@ public:
             BinaryOperator::FCmp, FromTy, CondTy, CmpInst::FCMP_UNO, CostKind);
         Cost += thisT()->getCmpSelInstrCost(
             BinaryOperator::Select, RetTy, CondTy, CmpInst::FCMP_UNO, CostKind);
+      }
+      return Cost;
+    }
+    case Intrinsic::ucmp:
+    case Intrinsic::scmp: {
+      Type *CmpTy = Tys[0];
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost =
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CmpTy, CondTy,
+                                      CmpIntrinsic::getGTPredicate(IID),
+                                      CostKind) +
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CmpTy, CondTy,
+                                      CmpIntrinsic::getLTPredicate(IID),
+                                      CostKind);
+
+      EVT VT = TLI->getValueType(DL, CmpTy, true);
+      if (TLI->shouldExpandCmpUsingSelects(VT)) {
+        // x < y ? -1 : (x > y ? 1 : 0)
+        Cost += 2 * thisT()->getCmpSelInstrCost(
+                        BinaryOperator::Select, RetTy, CondTy,
+                        ICmpInst::BAD_ICMP_PREDICATE, CostKind);
+      } else {
+        // zext(x > y) - zext(x < y)
+        Cost +=
+            2 * thisT()->getCastInstrCost(CastInst::ZExt, RetTy, CondTy,
+                                          TTI::CastContextHint::None, CostKind);
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy,
+                                                CostKind);
       }
       return Cost;
     }
