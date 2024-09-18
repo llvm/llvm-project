@@ -264,3 +264,12 @@ void error_fseek_read_eof(void) {
   fgetc(F); // no warning
   fclose(F);
 }
+
+void check_note_at_use_after_close(void) {
+  FILE *F = tmpfile();
+  if (!F) // expected-note {{'F' is non-null}} expected-note {{Taking false branch}}
+    return;
+  fclose(F); // expected-note {{Stream is closed here}}
+  rewind(F); // expected-warning {{Stream might be already closed. Causes undefined behaviour}}
+  // expected-note@-1 {{Stream might be already closed. Causes undefined behaviour}}
+}
