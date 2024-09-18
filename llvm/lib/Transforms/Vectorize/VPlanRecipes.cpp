@@ -2941,10 +2941,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
            "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(
-            StartOffset,
-            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
-            "vector.gep"));
+        State.Builder.CreateMul(StartOffset, State.Builder.CreateVectorSplat(
+                                                 State.VF, ScalarStepValue)),
+        "vector.gep");
     State.set(this, GEP, Part);
   }
 }
