@@ -200,21 +200,6 @@ bool SetEnv(const char *name, const char *value) {
 }
 #  endif
 
-__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
-                                                   int *patch) {
-#  if SANITIZER_GLIBC
-  const char *p = gnu_get_libc_version();
-  *major = internal_simple_strtoll(p, &p, 10);
-  // Caller does not expect anything else.
-  CHECK_EQ(*major, 2);
-  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  return true;
-#  else
-  return false;
-#  endif
-}
-
 // True if we can use dlpi_tls_data. glibc before 2.25 may leave NULL (BZ
 // #19826) so dlpi_tls_data cannot be used.
 //
@@ -224,11 +209,22 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
+
+static void GetGLibcVersion(int *major, int *minor, int *patch) {
+  const char *p = gnu_get_libc_version();
+  *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
+  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+}
+
 __attribute__((unused)) static size_t g_tls_size;
+
 void InitTlsSize() {
   int major, minor, patch;
-  g_use_dlpi_tls_data =
-      GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
+  GetGLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
 
 #    if defined(__aarch64__) || defined(__x86_64__) || \
         defined(__powerpc64__) || defined(__loongarch__)
@@ -250,53 +246,53 @@ static atomic_uintptr_t thread_descriptor_size;
 
 // FIXME: Implementation is very GLIBC specific, but it's used by FREEBSD.
 static uptr ThreadDescriptorSizeFallback() {
-#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
+#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
+        SANITIZER_RISCV64
+#      if SANITIZER_GLIBC
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
-    /* sizeof(struct pthread) values from various glibc versions.  */
-    if (SANITIZER_X32)
-      return 1728;  // Assume only one particular version for x32.
-    // For ARM sizeof(struct pthread) changed in Glibc 2.23.
-    if (SANITIZER_ARM)
-      return minor <= 22 ? 1120 : 1216;
-    if (minor <= 3)
-      return FIRST_32_SECOND_64(1104, 1696);
-    if (minor == 4)
-      return FIRST_32_SECOND_64(1120, 1728);
-    if (minor == 5)
-      return FIRST_32_SECOND_64(1136, 1728);
-    if (minor <= 9)
-      return FIRST_32_SECOND_64(1136, 1712);
-    if (minor == 10)
-      return FIRST_32_SECOND_64(1168, 1776);
-    if (minor == 11 || (minor == 12 && patch == 1))
-      return FIRST_32_SECOND_64(1168, 2288);
-    if (minor <= 14)
-      return FIRST_32_SECOND_64(1168, 2304);
-    if (minor < 32)  // Unknown version
-      return FIRST_32_SECOND_64(1216, 2304);
-    // minor == 32
-    return FIRST_32_SECOND_64(1344, 2496);
-  }
+  GetGLibcVersion(&major, &minor, &patch);
+#      else   // SANITIZER_GLIBC
   return 0;
+#      endif  // SANITIZER_GLIBC
+#    endif
+
+#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
+  /* sizeof(struct pthread) values from various glibc versions.  */
+  if (SANITIZER_X32)
+    return 1728;  // Assume only one particular version for x32.
+  // For ARM sizeof(struct pthread) changed in Glibc 2.23.
+  if (SANITIZER_ARM)
+    return minor <= 22 ? 1120 : 1216;
+  if (minor <= 3)
+    return FIRST_32_SECOND_64(1104, 1696);
+  if (minor == 4)
+    return FIRST_32_SECOND_64(1120, 1728);
+  if (minor == 5)
+    return FIRST_32_SECOND_64(1136, 1728);
+  if (minor <= 9)
+    return FIRST_32_SECOND_64(1136, 1712);
+  if (minor == 10)
+    return FIRST_32_SECOND_64(1168, 1776);
+  if (minor == 11 || (minor == 12 && patch == 1))
+    return FIRST_32_SECOND_64(1168, 2288);
+  if (minor <= 14)
+    return FIRST_32_SECOND_64(1168, 2304);
+  if (minor < 32)  // Unknown version
+    return FIRST_32_SECOND_64(1216, 2304);
+  // minor == 32
+  return FIRST_32_SECOND_64(1344, 2496);
 #    endif
 
 #    if SANITIZER_RISCV64
-  int major;
-  int minor;
-  int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
-    // TODO: consider adding an optional runtime check for an unknown (untested)
-    // glibc version
-    if (minor <= 28)  // WARNING: the highest tested version is 2.29
-      return 1772;    // no guarantees for this one
-    if (minor <= 31)
-      return 1772;  // tested against glibc 2.29, 2.31
-    return 1936;    // tested against glibc 2.32
-  }
-  return 0;
+  // TODO: consider adding an optional runtime check for an unknown (untested)
+  // glibc version
+  if (minor <= 28)  // WARNING: the highest tested version is 2.29
+    return 1772;    // no guarantees for this one
+  if (minor <= 31)
+    return 1772;  // tested against glibc 2.29, 2.31
+  return 1936;    // tested against glibc 2.32
 #    endif
 
 #    if defined(__s390__) || defined(__sparc__)
