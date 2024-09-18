@@ -2012,7 +2012,7 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
       if (stmt2VarSymbol != stmt1ExprSymbol)
         context_.Say(stmt1Expr.source,
             "Captured variable %s "
-            "expected to be assigned in statement 2 of "
+            "expected to be assigned in the second statement of "
             "atomic capture construct"_err_en_US,
             stmt1ExprSymbol.name().ToString());
     }
