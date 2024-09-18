@@ -902,11 +902,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   return ret;
 }
 
-RValue CIRGenFunction::GetUndefRValue(QualType Ty) {
-  assert(Ty->isVoidType() && "Only VoidType supported so far.");
-  return RValue::get(nullptr);
-}
-
 mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
                                              mlir::cir::FuncOp callee,
                                              ArrayRef<mlir::Value> args) {
