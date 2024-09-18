@@ -10,6 +10,7 @@ body:             |
     %1:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
     %2:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
 
+    ; CHECK: generic instruction must use register operands
     ; CHECK: G_EXTRACT_SUBVECTOR first source must be a register
     %3:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR 1, 0
 
