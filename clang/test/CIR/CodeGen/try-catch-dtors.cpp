@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -DLLVM_IMPLEMENTED -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -DLLVM_IMPLEMENTED -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct Vec {
@@ -74,18 +74,6 @@ void yo2() {
     r++;
   }
 }
-
-void yo3(bool x) {
-  int r = 1;
-  try {
-    Vec v1, v2, v3, v4;
-  } catch (...) {
-    r++;
-  }
-}
-
-#endif
-
 // CIR: cir.func  @_Z3yo2v()
 // CIR:   cir.scope {
 // CIR:     cir.alloca ![[VecTy]]
@@ -107,6 +95,15 @@ void yo3(bool x) {
 // CIR:   }
 // CIR:   cir.return
 // CIR: }
+
+void yo3(bool x) {
+  int r = 1;
+  try {
+    Vec v1, v2, v3, v4;
+  } catch (...) {
+    r++;
+  }
+}
 
 // CIR: cir.scope {
 // CIR:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
@@ -139,3 +136,5 @@ void yo3(bool x) {
 // CIR:   }]
 // CIR: }
 // CIR: cir.return
+
+#endif
