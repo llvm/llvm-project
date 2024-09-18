@@ -45,10 +45,6 @@ public:
 
   bool isSourceOfDivergence(const Value *V);
 
-  unsigned getFlatAddressSpace() const {
-    return AddressSpace::ADDRESS_SPACE_GENERIC;
-  }
-
   bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
            AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
