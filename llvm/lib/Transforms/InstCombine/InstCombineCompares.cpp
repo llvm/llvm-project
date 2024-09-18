@@ -2239,8 +2239,8 @@ static Instruction *foldICmpShlLHSC(ICmpInst &Cmp, Instruction *Shl,
   unsigned TypeBits = C.getBitWidth();
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   if (Cmp.isUnsigned()) {
-    assert(!C2->isZero() && C2->ule(C) &&
-           "Should be simplified by InstSimplify");
+    if (C2->isZero() || C2->ugt(C))
+      return nullptr;
     APInt Div, Rem;
     APInt::udivrem(C, *C2, Div, Rem);
     bool CIsPowerOf2 = Rem.isZero() && Div.isPowerOf2();

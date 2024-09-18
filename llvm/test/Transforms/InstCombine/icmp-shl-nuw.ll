@@ -144,8 +144,6 @@ define i1 @fold_icmp_shl_nuw_c3(i32 %x) {
   ret i1 %cmp
 }
 
-; Negative tests
-
 define i1 @fold_icmp_shl_nuw_c2_indivisible(i32 %x) {
 ; CHECK-LABEL: @fold_icmp_shl_nuw_c2_indivisible(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 2
@@ -155,6 +153,8 @@ define i1 @fold_icmp_shl_nuw_c2_indivisible(i32 %x) {
   %cmp = icmp ult i32 %shl, 63
   ret i1 %cmp
 }
+
+; Negative tests
 
 define i1 @fold_icmp_shl_c2_without_nuw(i32 %x) {
 ; CHECK-LABEL: @fold_icmp_shl_c2_without_nuw(
