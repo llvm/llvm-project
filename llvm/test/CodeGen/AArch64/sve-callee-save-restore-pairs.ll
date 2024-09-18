@@ -91,16 +91,16 @@ define void @fbyte(<vscale x 16 x i8> %v) {
 ; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    ptrue pn8.b
 ; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #16, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #20, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #24, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #28, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
@@ -108,7 +108,8 @@ define void @fbyte(<vscale x 16 x i8> %v) {
 ; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #32, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; PAIR-NEXT:    .cfi_offset w30, -8
 ; PAIR-NEXT:    .cfi_offset w29, -16
@@ -122,15 +123,16 @@ define void @fbyte(<vscale x 16 x i8> %v) {
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
 ; PAIR-NEXT:    bl my_func
 ; PAIR-NEXT:    ptrue pn8.b
+; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #16, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #20, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #24, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #28, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #32, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -233,16 +235,16 @@ define void @fhalf(<vscale x 8 x half> %v) {
 ; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    ptrue pn8.b
 ; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #16, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #20, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #24, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #28, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
@@ -250,7 +252,8 @@ define void @fhalf(<vscale x 8 x half> %v) {
 ; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #32, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; PAIR-NEXT:    .cfi_offset w30, -8
 ; PAIR-NEXT:    .cfi_offset w29, -16
@@ -264,15 +267,16 @@ define void @fhalf(<vscale x 8 x half> %v) {
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
 ; PAIR-NEXT:    bl my_func
 ; PAIR-NEXT:    ptrue pn8.b
+; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #16, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #20, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #24, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #28, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #32, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -328,7 +332,7 @@ define aarch64_sve_vector_pcs void @test_clobbers_z_p_regs() {
 ; PAIR-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; PAIR-NEXT:    .cfi_offset w29, -16
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
@@ -338,7 +342,7 @@ define aarch64_sve_vector_pcs void @test_clobbers_z_p_regs() {
 ; PAIR-NEXT:    //NO_APP
 ; PAIR-NEXT:    ptrue pn8.b
 ; PAIR-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p8, [sp, #5, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -385,7 +389,7 @@ define aarch64_sve_vector_pcs  void @test_clobbers_z_p_regs2() {
 ; PAIR-NEXT:    ptrue pn9.b
 ; PAIR-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn9, [sp, #4, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z8.b, z9.b }, pn9, [sp, #2, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; PAIR-NEXT:    .cfi_offset w29, -16
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
@@ -396,7 +400,7 @@ define aarch64_sve_vector_pcs  void @test_clobbers_z_p_regs2() {
 ; PAIR-NEXT:    ptrue pn9.b
 ; PAIR-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn9/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn9/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    addvl sp, sp, #4
 ; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -431,17 +435,17 @@ define aarch64_sve_vector_pcs  void @test_clobbers_z_regs() {
 ; PAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; PAIR-NEXT:    addvl sp, sp, #-3
 ; PAIR-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    ptrue pn8.b
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; PAIR-NEXT:    .cfi_offset w29, -16
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
 ; PAIR-NEXT:    //APP
 ; PAIR-NEXT:    //NO_APP
-; PAIR-NEXT:    ptrue pn8.b
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    addvl sp, sp, #3
 ; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; PAIR-NEXT:    ret

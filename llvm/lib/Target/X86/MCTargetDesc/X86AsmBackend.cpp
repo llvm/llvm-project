@@ -1412,7 +1412,7 @@ public:
           // unwind encoding.
           return CU::UNWIND_MODE_DWARF;
 
-        unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
+        MCRegister Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
         MinAbsOffset = std::min(MinAbsOffset, std::abs(Inst.getOffset()));

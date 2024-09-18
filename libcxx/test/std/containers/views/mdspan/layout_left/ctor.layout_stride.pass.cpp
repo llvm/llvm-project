@@ -24,9 +24,11 @@
 // Effects: Direct-non-list-initializes extents_ with other.extents().
 
 #include <mdspan>
-#include <type_traits>
+#include <array>
 #include <cassert>
 #include <limits>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 

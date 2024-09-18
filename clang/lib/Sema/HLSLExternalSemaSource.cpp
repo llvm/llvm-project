@@ -13,10 +13,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <functional>
@@ -80,7 +83,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &
-  addMemberVariable(StringRef Name, QualType Type,
+  addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -96,13 +99,19 @@ struct BuiltinTypeDeclBuilder {
         nullptr, false, InClassInitStyle::ICIS_NoInit);
     Field->setAccess(Access);
     Field->setImplicit(true);
+    for (Attr *A : Attrs) {
+      if (A)
+        Field->addAttr(A);
+    }
+
     Record->addDecl(Field);
     Fields[Name] = Field;
     return *this;
   }
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(AccessSpecifier Access = AccessSpecifier::AS_private) {
+  addHandleMember(Sema &S, ResourceClass RC, ResourceKind RK, bool IsROV,
+                  AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
     QualType Ty = Record->getASTContext().VoidPtrTy;
@@ -112,17 +121,16 @@ struct BuiltinTypeDeclBuilder {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
     }
-    return addMemberVariable("h", Ty, Access);
-  }
 
-  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceClass RC,
-                                               ResourceKind RK, bool IsROV) {
-    if (Record->isCompleteDefinition())
-      return *this;
-    Record->addAttr(
-        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
-    Record->addAttr(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
+    // add handle member with resource type attributes
+    QualType AttributedResTy = QualType();
+    SmallVector<const Attr *> Attrs = {
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC),
+        IsROV ? HLSLROVAttr::CreateImplicit(Record->getASTContext()) : nullptr};
+    Attr *ResourceAttr =
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK);
+    if (CreateHLSLAttributedResourceType(S, Ty, Attrs, AttributedResTy))
+      addMemberVariable("h", AttributedResTy, {ResourceAttr}, Access);
     return *this;
   }
 
@@ -489,9 +497,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
-      .addHandleMember()
-      .addDefaultHandleConstructor(S, RC)
-      .annotateHLSLResource(RC, RK, IsROV);
+      .addHandleMember(S, RC, RK, IsROV)
+      .addDefaultHandleConstructor(S, RC);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
@@ -499,9 +506,11 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
+
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false)
+                    ResourceKind::TypedBuffer,
+                    /*IsROV=*/false)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
@@ -513,6 +522,16 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
                     ResourceKind::TypedBuffer, /*IsROV=*/true)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "StructuredBuffer")
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
+             .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+                    ResourceKind::TypedBuffer, /*IsROV=*/false)
         .addArraySubscriptOperators()
         .completeDefinition();
   });

@@ -109,7 +109,7 @@ bool ValueObjectRegisterSet::UpdateValue() {
     SetValueIsValid(true);
   } else {
     SetValueIsValid(false);
-    m_error.SetErrorToGenericError();
+    m_error = Status::FromErrorString("no register context");
     m_children.Clear();
   }
   return m_error.Success();
@@ -258,7 +258,7 @@ bool ValueObjectRegister::UpdateValue() {
   }
 
   SetValueIsValid(false);
-  m_error.SetErrorToGenericError();
+  m_error = Status::FromErrorString("no register context");
   return false;
 }
 
@@ -271,7 +271,7 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 
@@ -285,7 +285,7 @@ bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 

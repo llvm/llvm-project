@@ -5,4 +5,6 @@
 sqcvt z0.h, {z0.s, z1.s}
 // CHECK: sqcvt z0.h, { z0.s, z1.s }
 
-.arch armv9-a+nosme2p1
+.arch armv9-a+sme2+sve-b16b16
+bfclamp { z0.h, z1.h }, z0.h, z0.h
+// CHECK: bfclamp { z0.h, z1.h }, z0.h, z0.h

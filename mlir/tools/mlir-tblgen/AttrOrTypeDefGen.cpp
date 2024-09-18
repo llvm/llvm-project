@@ -30,7 +30,7 @@ using namespace mlir::tblgen;
 /// Find all the AttrOrTypeDef for the specified dialect. If no dialect
 /// specified and can only find one dialect's defs, use that.
 static void collectAllDefs(StringRef selectedDialect,
-                           std::vector<llvm::Record *> records,
+                           ArrayRef<const llvm::Record *> records,
                            SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
   // Nothing to do if no defs were found.
   if (records.empty())
@@ -93,8 +93,14 @@ private:
   void emitDialectName();
   /// Emit attribute or type builders.
   void emitBuilders();
-  /// Emit a verifier for the def.
-  void emitVerifier();
+  /// Emit a verifier declaration for custom verification (impl. provided by
+  /// the users).
+  void emitVerifierDecl();
+  /// Emit a verifier that checks type constraints.
+  void emitInvariantsVerifierImpl();
+  /// Emit an entry poiunt for verification that calls the invariants and
+  /// custom verifier.
+  void emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier);
   /// Emit parsers and printers.
   void emitParserPrinter();
   /// Emit parameter accessors, if required.
@@ -188,9 +194,17 @@ DefGen::DefGen(const AttrOrTypeDef &def)
   emitName();
   // Emit the dialect name.
   emitDialectName();
-  // Emit the verifier.
-  if (storageCls && def.genVerifyDecl())
-    emitVerifier();
+  // Emit verification of type constraints.
+  bool genVerifyInvariantsImpl = def.genVerifyInvariantsImpl();
+  if (storageCls && genVerifyInvariantsImpl)
+    emitInvariantsVerifierImpl();
+  // Emit the custom verifier (written by the user).
+  bool genVerifyDecl = def.genVerifyDecl();
+  if (storageCls && genVerifyDecl)
+    emitVerifierDecl();
+  // Emit the "verifyInvariants" function if there is any verification at all.
+  if (storageCls)
+    emitInvariantsVerifier(genVerifyInvariantsImpl, genVerifyDecl);
   // Emit the mnemonic, if there is one, and any associated parser and printer.
   if (def.getMnemonic())
     emitParserPrinter();
@@ -295,22 +309,86 @@ void DefGen::emitDialectName() {
 void DefGen::emitBuilders() {
   if (!def.skipDefaultBuilders()) {
     emitDefaultBuilder();
-    if (def.genVerifyDecl())
+    if (def.genVerifyDecl() || def.genVerifyInvariantsImpl())
       emitCheckedBuilder();
   }
   for (auto &builder : def.getBuilders()) {
     emitCustomBuilder(builder);
-    if (def.genVerifyDecl())
+    if (def.genVerifyDecl() || def.genVerifyInvariantsImpl())
       emitCheckedCustomBuilder(builder);
   }
 }
 
-void DefGen::emitVerifier() {
-  defCls.declare<UsingDeclaration>("Base::getChecked");
+void DefGen::emitVerifierDecl() {
   defCls.declareStaticMethod(
       "::llvm::LogicalResult", "verify",
       getBuilderParams({{"::llvm::function_ref<::mlir::InFlightDiagnostic()>",
                          "emitError"}}));
+}
+
+static const char *const patternParameterVerificationCode = R"(
+if (!({0})) {
+  emitError() << "failed to verify '{1}': {2}";
+  return ::mlir::failure();
+}
+)";
+
+void DefGen::emitInvariantsVerifierImpl() {
+  SmallVector<MethodParameter> builderParams = getBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}});
+  Method *verifier =
+      defCls.addMethod("::llvm::LogicalResult", "verifyInvariantsImpl",
+                       Method::Static, builderParams);
+  verifier->body().indent();
+
+  // Generate verification for each parameter that is a type constraint.
+  for (auto it : llvm::enumerate(def.getParameters())) {
+    const AttrOrTypeParameter &param = it.value();
+    std::optional<Constraint> constraint = param.getConstraint();
+    // No verification needed for parameters that are not type constraints.
+    if (!constraint.has_value())
+      continue;
+    FmtContext ctx;
+    // Note: Skip over the first method parameter (`emitError`).
+    ctx.withSelf(builderParams[it.index() + 1].getName());
+    std::string condition = tgfmt(constraint->getConditionTemplate(), &ctx);
+    verifier->body() << formatv(patternParameterVerificationCode, condition,
+                                param.getName(), constraint->getSummary())
+                     << "\n";
+  }
+  verifier->body() << "return ::mlir::success();";
+}
+
+void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
+  if (!hasImpl && !hasCustomVerifier)
+    return;
+  defCls.declare<UsingDeclaration>("Base::getChecked");
+  SmallVector<MethodParameter> builderParams = getBuilderParams(
+      {{"::llvm::function_ref<::mlir::InFlightDiagnostic()>", "emitError"}});
+  Method *verifier =
+      defCls.addMethod("::llvm::LogicalResult", "verifyInvariants",
+                       Method::Static, builderParams);
+  verifier->body().indent();
+
+  auto emitVerifierCall = [&](StringRef name) {
+    verifier->body() << strfmt("if (::mlir::failed({0}(", name);
+    llvm::interleaveComma(
+        llvm::map_range(builderParams,
+                        [](auto &param) { return param.getName(); }),
+        verifier->body());
+    verifier->body() << ")))\n";
+    verifier->body() << "  return ::mlir::failure();\n";
+  };
+
+  if (hasImpl) {
+    // Call the verifier that checks the type constraints.
+    emitVerifierCall("verifyInvariantsImpl");
+  }
+  if (hasCustomVerifier) {
+    // Call the custom verifier that is provided by the user.
+    emitVerifierCall("verify");
+  }
+  verifier->body() << "return ::mlir::success();";
 }
 
 void DefGen::emitParserPrinter() {
@@ -612,14 +690,15 @@ public:
   bool emitDefs(StringRef selectedDialect);
 
 protected:
-  DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
+  DefGenerator(ArrayRef<const llvm::Record *> defs, raw_ostream &os,
                StringRef defType, StringRef valueType, bool isAttrGenerator)
-      : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {
+      : defRecords(defs), os(os), defType(defType), valueType(valueType),
+        isAttrGenerator(isAttrGenerator) {
     // Sort by occurrence in file.
-    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
-      return lhs->getID() < rhs->getID();
-    });
+    llvm::sort(defRecords,
+               [](const llvm::Record *lhs, const llvm::Record *rhs) {
+                 return lhs->getID() < rhs->getID();
+               });
   }
 
   /// Emit the list of def type names.
@@ -628,7 +707,7 @@ protected:
   void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
 
   /// The set of def records to emit.
-  std::vector<llvm::Record *> defRecords;
+  std::vector<const llvm::Record *> defRecords;
   /// The attribute or type class to emit.
   /// The stream to emit to.
   raw_ostream &os;
@@ -946,6 +1025,55 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 }
 
 //===----------------------------------------------------------------------===//
+// Type Constraints
+//===----------------------------------------------------------------------===//
+
+/// Find all type constraints for which a C++ function should be generated.
+static std::vector<Constraint>
+getAllTypeConstraints(const llvm::RecordKeeper &records) {
+  std::vector<Constraint> result;
+  for (const llvm::Record *def :
+       records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
+    // Ignore constraints defined outside of the top-level file.
+    if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
+    Constraint constr(def);
+    // Generate C++ function only if "cppFunctionName" is set.
+    if (!constr.getCppFunctionName())
+      continue;
+    result.push_back(constr);
+  }
+  return result;
+}
+
+static void emitTypeConstraintDecls(const llvm::RecordKeeper &records,
+                                    raw_ostream &os) {
+  static const char *const typeConstraintDecl = R"(
+bool {0}(::mlir::Type type);
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records))
+    os << strfmt(typeConstraintDecl, *constr.getCppFunctionName());
+}
+
+static void emitTypeConstraintDefs(const llvm::RecordKeeper &records,
+                                   raw_ostream &os) {
+  static const char *const typeConstraintDef = R"(
+bool {0}(::mlir::Type type) {
+  return ({1});
+}
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records)) {
+    FmtContext ctx;
+    ctx.withSelf("type");
+    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
+    os << strfmt(typeConstraintDef, *constr.getCppFunctionName(), condition);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // GEN: Registration hooks
 //===----------------------------------------------------------------------===//
 
@@ -992,3 +1120,18 @@ static mlir::GenRegistration
                    TypeDefGenerator generator(records, os);
                    return generator.emitDecls(typeDialect);
                  });
+
+static mlir::GenRegistration
+    genTypeConstrDefs("gen-type-constraint-defs",
+                      "Generate type constraint definitions",
+                      [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                        emitTypeConstraintDefs(records, os);
+                        return false;
+                      });
+static mlir::GenRegistration
+    genTypeConstrDecls("gen-type-constraint-decls",
+                       "Generate type constraint declarations",
+                       [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                         emitTypeConstraintDecls(records, os);
+                         return false;
+                       });

@@ -147,6 +147,9 @@ def VG : AArch64Reg<0, "vg">, DwarfRegNum<[46]>;
 // Floating-point control register
 def FPCR : AArch64Reg<0, "fpcr">;
 
+// Floating-point Mode Register
+def FPMR : AArch64Reg<0, "fpmr">;
+
 // Floating-point status register.
 def FPSR : AArch64Reg<0, "fpsr">;
 

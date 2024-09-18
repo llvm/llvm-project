@@ -1,5 +1,5 @@
 header: stdint.h
-standards: 
+standards:
   - stdc
 macros: []
 types: []

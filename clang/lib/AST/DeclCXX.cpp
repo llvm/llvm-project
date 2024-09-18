@@ -109,7 +109,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsLambda(false),
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
       IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
       HasODRHash(false), Definition(D) {}
 
@@ -431,6 +431,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseClassDecl->isAnyDestructorNoReturn())
       data().IsAnyDestructorNoReturn = true;
 
+    if (BaseClassDecl->isHLSLIntangible())
+      data().IsHLSLIntangible = true;
+
     // C++11 [class.copy]p18:
     //   The implicitly-declared copy assignment operator for a class X will
     //   have the form 'X& X::operator=(const X&)' if each direct base class B
@@ -559,6 +562,42 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //   (possibly multi-dimensional) array thereof
   if (!Subobj->data().StructuralIfLiteral)
     data().StructuralIfLiteral = false;
+}
+
+const CXXRecordDecl *CXXRecordDecl::getStandardLayoutBaseWithFields() const {
+  assert(
+      isStandardLayout() &&
+      "getStandardLayoutBaseWithFields called on a non-standard-layout type");
+#ifdef EXPENSIVE_CHECKS
+  {
+    unsigned NumberOfBasesWithFields = 0;
+    if (!field_empty())
+      ++NumberOfBasesWithFields;
+    llvm::SmallPtrSet<const CXXRecordDecl *, 8> UniqueBases;
+    forallBases([&](const CXXRecordDecl *Base) -> bool {
+      if (!Base->field_empty())
+        ++NumberOfBasesWithFields;
+      assert(
+          UniqueBases.insert(Base->getCanonicalDecl()).second &&
+          "Standard layout struct has multiple base classes of the same type");
+      return true;
+    });
+    assert(NumberOfBasesWithFields <= 1 &&
+           "Standard layout struct has fields declared in more than one class");
+  }
+#endif
+  if (!field_empty())
+    return this;
+  const CXXRecordDecl *Result = this;
+  forallBases([&](const CXXRecordDecl *Base) -> bool {
+    if (!Base->field_empty()) {
+      // This is the base where the fields are declared; return early
+      Result = Base;
+      return false;
+    }
+    return true;
+  });
+  return Result;
 }
 
 bool CXXRecordDecl::hasConstexprDestructor() const {
@@ -1365,6 +1404,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   than subobjects of zero size
     if (data().Empty && !IsZeroSize)
       data().Empty = false;
+
+    if (getLangOpts().HLSL) {
+      const Type *Ty = Field->getType()->getUnqualifiedDesugaredType();
+      while (isa<ConstantArrayType>(Ty))
+        Ty = Ty->getArrayElementTypeNoTypeQual();
+
+      Ty = Ty->getUnqualifiedDesugaredType();
+      if (Ty->isBuiltinType())
+        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
+      else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
+        data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
+    }
   }
 
   // Handle using declarations of conversion functions.

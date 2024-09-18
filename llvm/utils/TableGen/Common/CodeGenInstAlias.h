@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H
 
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
@@ -95,11 +95,12 @@ public:
 
   CodeGenInstAlias(Record *R, CodeGenTarget &T);
 
-  bool tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo, Record *InstOpRec,
-                       bool hasSubOps, ArrayRef<SMLoc> Loc, CodeGenTarget &T,
+  bool tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
+                       const Record *InstOpRec, bool hasSubOps,
+                       ArrayRef<SMLoc> Loc, CodeGenTarget &T,
                        ResultOperand &ResOp);
 };
 
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H

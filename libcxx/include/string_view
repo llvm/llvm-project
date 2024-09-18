@@ -211,6 +211,7 @@ namespace std {
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/ostream.h>
+#include <__fwd/string.h>
 #include <__fwd/string_view.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
@@ -395,7 +396,7 @@ public:
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {
@@ -689,6 +690,9 @@ private:
 
   const value_type* __data_;
   size_type __size_;
+
+  template <class, class, class>
+  friend class basic_string;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 

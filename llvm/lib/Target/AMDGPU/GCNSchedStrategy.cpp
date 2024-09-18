@@ -1647,11 +1647,10 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return std::any_of(
-      DAG->begin(), DAG->end(), [](MachineBasicBlock::iterator MI) {
-        unsigned Opc = MI->getOpcode();
-        return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
-      });
+  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
+    unsigned Opc = MI->getOpcode();
+    return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+  });
 }
 
 GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(

@@ -13,9 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
-#define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H
 
+#include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
@@ -75,6 +76,8 @@ class CodeGenTarget {
 
   mutable StringRef InstNamespace;
   mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
+  mutable CodeGenIntrinsicMap Intrinsics;
+
   mutable unsigned NumPseudoInstructions = 0;
 
 public:
@@ -138,7 +141,7 @@ public:
     return RegAltNameIndices;
   }
 
-  const CodeGenRegisterClass &getRegisterClass(Record *R) const;
+  const CodeGenRegisterClass &getRegisterClass(const Record *R) const;
 
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.
@@ -225,6 +228,10 @@ public:
   /// properties?
   bool guessInstructionProperties() const;
 
+  const CodeGenIntrinsic &getIntrinsic(const Record *Def) const {
+    return Intrinsics[Def];
+  }
+
 private:
   void ComputeInstrsByEnum() const;
 };
@@ -252,4 +259,4 @@ public:
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENTARGET_H

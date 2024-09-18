@@ -34,7 +34,7 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
     "openmp-enable-delayed-privatization",
     llvm::cl::desc(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
     "openmp-enable-delayed-privatization-staging",
@@ -131,6 +131,13 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::TypeAttr varType = mlir::TypeAttr::get(
       llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
+
+  // For types with unknown extents such as <2x?xi32> we discard the incomplete
+  // type info and only retain the base type. The correct dimensions are later
+  // recovered through the bounds info.
+  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+    if (seqType.hasDynamicExtents())
+      varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
       loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,

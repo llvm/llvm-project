@@ -14,7 +14,7 @@
 // XFAIL: availability-tzdb-missing
 
 // TODO TZDB Investigate
-// XFAIL: target={{armv(7|8)l-linux-gnueabihf}}
+// UNSUPPORTED: target={{armv(7|8)l-linux-gnueabihf}}
 
 #include <chrono>
 #include <format>

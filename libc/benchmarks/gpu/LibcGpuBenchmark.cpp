@@ -115,7 +115,7 @@ void print_results(Benchmark *b) {
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
   LIBC_NAMESPACE::printf(
-      "%-20s |%8ld |%8ld |%8ld |%11d |%9ld %2s |%9ld |%9d |\n",
+      "%-24s |%8ld |%8ld |%8ld |%11d |%14ld %2s |%9ld |%9d |\n",
       b->get_test_name().data(), result.cycles, result.min, result.max,
       result.total_iterations, result.total_time, time_unit,
       static_cast<uint64_t>(result.standard_deviation), num_threads);
@@ -126,12 +126,14 @@ void print_header() {
   LIBC_NAMESPACE::printf("Running Suite: %-10s\n",
                          benchmarks[0]->get_suite_name().data());
   LIBC_NAMESPACE::printf("%s", RESET);
-  LIBC_NAMESPACE::printf("Benchmark            |  Cycles |     Min |     Max | "
-                         "Iterations |        "
-                         "Time |   Stddev |  Threads |\n");
-  LIBC_NAMESPACE::printf(
-      "---------------------------------------------------------------------"
-      "--------------------------------\n");
+  cpp::string titles =
+      "Benchmark                |  Cycles |     Min |     Max | "
+      "Iterations | Time / Iteration |   Stddev |  Threads |\n";
+  LIBC_NAMESPACE::printf(titles.data());
+
+  cpp::string separator(titles.size(), '-');
+  separator[titles.size() - 1] = '\n';
+  LIBC_NAMESPACE::printf(separator.data());
 }
 
 void Benchmark::run_benchmarks() {
@@ -222,7 +224,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   result.max = max;
   result.samples = samples;
   result.total_iterations = total_iterations;
-  result.total_time = total_time;
+  result.total_time = total_time / total_iterations;
   return result;
 };
 

@@ -1844,6 +1844,44 @@ static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   return TheCall;
 }
 
+static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return ExprError();
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return ExprError();
+  QualType ParamTy = Arg.get()->getType();
+  TheCall->setArg(0, Arg.get());
+  TheCall->setType(S.Context.BoolTy);
+
+  // Only accept pointers to objects as arguments, which should have object
+  // pointer or void pointer types.
+  if (const auto *PT = ParamTy->getAs<PointerType>()) {
+    // LWG4138: Function pointer types not allowed
+    if (PT->getPointeeType()->isFunctionType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(),
+             diag::err_builtin_is_within_lifetime_invalid_arg)
+          << 1;
+      return ExprError();
+    }
+    // Disallow VLAs too since those shouldn't be able to
+    // be a template parameter for `std::is_within_lifetime`
+    if (PT->getPointeeType()->isVariableArrayType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(), diag::err_vla_unsupported)
+          << 1 << "__builtin_is_within_lifetime";
+      return ExprError();
+    }
+  } else {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_is_within_lifetime_invalid_arg)
+        << 0;
+    return ExprError();
+  }
+
+  return TheCall;
+}
+
 // Emit an error and return true if the current object format type is in the
 // list of unsupported types.
 static bool CheckBuiltinTargetNotInUnsupported(
@@ -1862,7 +1900,7 @@ static bool CheckBuiltinTargetNotInUnsupported(
 // Emit an error and return true if the current architecture is not in the list
 // of supported architectures.
 static bool
-CheckBuiltinTargetInSupported(Sema &S, unsigned BuiltinID, CallExpr *TheCall,
+CheckBuiltinTargetInSupported(Sema &S, CallExpr *TheCall,
                               ArrayRef<llvm::Triple::ArchType> SupportedArchs) {
   llvm::Triple::ArchType CurArch =
       S.getASTContext().getTargetInfo().getTriple().getArch();
@@ -2151,7 +2189,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_interlockedbittestandreset_rel:
   case Builtin::BI_interlockedbittestandreset_nf:
     if (CheckBuiltinTargetInSupported(
-            *this, BuiltinID, TheCall,
+            *this, TheCall,
             {llvm::Triple::arm, llvm::Triple::thumb, llvm::Triple::aarch64}))
       return ExprError();
     break;
@@ -2164,7 +2202,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_interlockedbittestandreset64:
   case Builtin::BI_interlockedbittestandset64:
     if (CheckBuiltinTargetInSupported(
-            *this, BuiltinID, TheCall,
+            *this, TheCall,
             {llvm::Triple::x86_64, llvm::Triple::arm, llvm::Triple::thumb,
              llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
@@ -2172,7 +2210,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_set_flt_rounds:
     if (CheckBuiltinTargetInSupported(
-            *this, BuiltinID, TheCall,
+            *this, TheCall,
             {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
              llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
@@ -2276,6 +2314,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_launder:
     return BuiltinLaunder(*this, TheCall);
+  case Builtin::BI__builtin_is_within_lifetime:
+    return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -4880,7 +4920,8 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
     if (Arg->isTypeDependent())
       return false;
 
-    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy, AA_Passing);
+    ExprResult Res = PerformImplicitConversion(Arg, Context.IntTy,
+                                               AssignmentAction::Passing);
 
     if (Res.isInvalid())
       return true;
@@ -4895,10 +4936,19 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // Usual Unary Conversions will convert half to float, which we want for
   // machines that use fp16 conversion intrinsics. Else, we wnat to leave the
   // type how it is, but do normal L->Rvalue conversions.
-  if (Context.getTargetInfo().useFP16ConversionIntrinsics())
-    OrigArg = UsualUnaryConversions(OrigArg).get();
-  else
-    OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
+  if (Context.getTargetInfo().useFP16ConversionIntrinsics()) {
+    ExprResult Res = UsualUnaryConversions(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  } else {
+    ExprResult Res = DefaultFunctionArrayLvalueConversion(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  }
   TheCall->setArg(FPArgNo, OrigArg);
 
   QualType VectorResultTy;
@@ -11427,6 +11477,18 @@ static void AnalyzeImplicitConversions(
     return;
   }
 
+  if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    // The base expression is only used to initialize the parameter for
+    // arguments to `inout` parameters, so we only traverse down the base
+    // expression for `inout` cases.
+    if (OutArgE->isInOut())
+      WorkList.push_back(
+          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
+    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
+    return;
+  }
+
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     // Do a somewhat different check with comparison operators.
     if (BO->isComparisonOp())
@@ -13706,10 +13768,11 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
 
 //===--- Layout compatibility ----------------------------------------------//
 
-static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2);
+static bool isLayoutCompatible(const ASTContext &C, QualType T1, QualType T2);
 
 /// Check if two enumeration types are layout-compatible.
-static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
+static bool isLayoutCompatible(const ASTContext &C, const EnumDecl *ED1,
+                               const EnumDecl *ED2) {
   // C++11 [dcl.enum] p8:
   // Two enumeration types are layout-compatible if they have the same
   // underlying type.
@@ -13720,8 +13783,8 @@ static bool isLayoutCompatible(ASTContext &C, EnumDecl *ED1, EnumDecl *ED2) {
 /// Check if two fields are layout-compatible.
 /// Can be used on union members, which are exempt from alignment requirement
 /// of common initial sequence.
-static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
-                               FieldDecl *Field2,
+static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
+                               const FieldDecl *Field2,
                                bool AreUnionMembers = false) {
   [[maybe_unused]] const Type *Field1Parent =
       Field1->getParent()->getTypeForDecl();
@@ -13764,60 +13827,33 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
 
 /// Check if two standard-layout structs are layout-compatible.
 /// (C++11 [class.mem] p17)
-static bool isLayoutCompatibleStruct(ASTContext &C, RecordDecl *RD1,
-                                     RecordDecl *RD2) {
-  // If both records are C++ classes, check that base classes match.
-  if (const CXXRecordDecl *D1CXX = dyn_cast<CXXRecordDecl>(RD1)) {
-    // If one of records is a CXXRecordDecl we are in C++ mode,
-    // thus the other one is a CXXRecordDecl, too.
-    const CXXRecordDecl *D2CXX = cast<CXXRecordDecl>(RD2);
-    // Check number of base classes.
-    if (D1CXX->getNumBases() != D2CXX->getNumBases())
-      return false;
+static bool isLayoutCompatibleStruct(const ASTContext &C, const RecordDecl *RD1,
+                                     const RecordDecl *RD2) {
+  // Get to the class where the fields are declared
+  if (const CXXRecordDecl *D1CXX = dyn_cast<CXXRecordDecl>(RD1))
+    RD1 = D1CXX->getStandardLayoutBaseWithFields();
 
-    // Check the base classes.
-    for (CXXRecordDecl::base_class_const_iterator
-               Base1 = D1CXX->bases_begin(),
-           BaseEnd1 = D1CXX->bases_end(),
-              Base2 = D2CXX->bases_begin();
-         Base1 != BaseEnd1;
-         ++Base1, ++Base2) {
-      if (!isLayoutCompatible(C, Base1->getType(), Base2->getType()))
-        return false;
-    }
-  } else if (const CXXRecordDecl *D2CXX = dyn_cast<CXXRecordDecl>(RD2)) {
-    // If only RD2 is a C++ class, it should have zero base classes.
-    if (D2CXX->getNumBases() > 0)
-      return false;
-  }
+  if (const CXXRecordDecl *D2CXX = dyn_cast<CXXRecordDecl>(RD2))
+    RD2 = D2CXX->getStandardLayoutBaseWithFields();
 
   // Check the fields.
-  RecordDecl::field_iterator Field2 = RD2->field_begin(),
-                             Field2End = RD2->field_end(),
-                             Field1 = RD1->field_begin(),
-                             Field1End = RD1->field_end();
-  for ( ; Field1 != Field1End && Field2 != Field2End; ++Field1, ++Field2) {
-    if (!isLayoutCompatible(C, *Field1, *Field2))
-      return false;
-  }
-  if (Field1 != Field1End || Field2 != Field2End)
-    return false;
-
-  return true;
+  return llvm::equal(RD1->fields(), RD2->fields(),
+                     [&C](const FieldDecl *F1, const FieldDecl *F2) -> bool {
+                       return isLayoutCompatible(C, F1, F2);
+                     });
 }
 
 /// Check if two standard-layout unions are layout-compatible.
 /// (C++11 [class.mem] p18)
-static bool isLayoutCompatibleUnion(ASTContext &C, RecordDecl *RD1,
-                                    RecordDecl *RD2) {
-  llvm::SmallPtrSet<FieldDecl *, 8> UnmatchedFields;
+static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
+                                    const RecordDecl *RD2) {
+  llvm::SmallPtrSet<const FieldDecl *, 8> UnmatchedFields;
   for (auto *Field2 : RD2->fields())
     UnmatchedFields.insert(Field2);
 
   for (auto *Field1 : RD1->fields()) {
-    llvm::SmallPtrSet<FieldDecl *, 8>::iterator
-        I = UnmatchedFields.begin(),
-        E = UnmatchedFields.end();
+    auto I = UnmatchedFields.begin();
+    auto E = UnmatchedFields.end();
 
     for ( ; I != E; ++I) {
       if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
@@ -13834,8 +13870,8 @@ static bool isLayoutCompatibleUnion(ASTContext &C, RecordDecl *RD1,
   return UnmatchedFields.empty();
 }
 
-static bool isLayoutCompatible(ASTContext &C, RecordDecl *RD1,
-                               RecordDecl *RD2) {
+static bool isLayoutCompatible(const ASTContext &C, const RecordDecl *RD1,
+                               const RecordDecl *RD2) {
   if (RD1->isUnion() != RD2->isUnion())
     return false;
 
@@ -13846,7 +13882,7 @@ static bool isLayoutCompatible(ASTContext &C, RecordDecl *RD1,
 }
 
 /// Check if two types are layout-compatible in C++11 sense.
-static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
+static bool isLayoutCompatible(const ASTContext &C, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return false;
 

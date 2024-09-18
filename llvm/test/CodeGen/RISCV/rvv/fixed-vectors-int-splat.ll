@@ -279,9 +279,8 @@ define void @splat_zero_v2i32(ptr %p) {
 define void @splat_zero_v7i16(ptr %p) {
 ; CHECK-LABEL: splat_zero_v7i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <7 x i16> zeroinitializer, ptr %p

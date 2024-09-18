@@ -494,20 +494,8 @@ void SymbolTable::resolveRemainingUndefines() {
     StringRef name = undef->getName();
 
     // A weak alias may have been resolved, so check for that.
-    if (Defined *d = undef->getWeakAlias()) {
-      // We want to replace Sym with D. However, we can't just blindly
-      // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
-      // internal symbol, and internal symbols are stored as "unparented"
-      // Symbols. For that reason we need to check which type of symbol we
-      // are dealing with and copy the correct number of bytes.
-      if (isa<DefinedRegular>(d))
-        memcpy(sym, d, sizeof(DefinedRegular));
-      else if (isa<DefinedAbsolute>(d))
-        memcpy(sym, d, sizeof(DefinedAbsolute));
-      else
-        memcpy(sym, d, sizeof(SymbolUnion));
+    if (undef->resolveWeakAlias())
       continue;
-    }
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
@@ -551,6 +539,9 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
     sym->pendingArchiveLoad = false;
     sym->canInline = true;
     inserted = true;
+
+    if (isArm64EC(ctx.config.machine) && name.starts_with("EXP+"))
+      expSymbols.push_back(sym);
   }
   return {sym, inserted};
 }
@@ -566,7 +557,11 @@ void SymbolTable::addEntryThunk(Symbol *from, Symbol *to) {
   entryThunks.push_back({from, to});
 }
 
-void SymbolTable::initializeEntryThunks() {
+void SymbolTable::addExitThunk(Symbol *from, Symbol *to) {
+  exitThunks[from] = to;
+}
+
+void SymbolTable::initializeECThunks() {
   for (auto it : entryThunks) {
     auto *to = dyn_cast<Defined>(it.second);
     if (!to)
@@ -581,6 +576,16 @@ void SymbolTable::initializeEntryThunks() {
       continue;
     }
     from->getChunk()->setEntryThunk(to);
+  }
+
+  for (ImportFile *file : ctx.importFileInstances) {
+    if (!file->impchkThunk)
+      continue;
+
+    Symbol *sym = exitThunks.lookup(file->thunkSym);
+    if (!sym)
+      sym = exitThunks.lookup(file->impECSym);
+    file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
   }
 }
 
@@ -780,12 +785,13 @@ Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
   return s;
 }
 
-Symbol *SymbolTable::addImportData(StringRef n, ImportFile *f) {
+DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
+                                              Chunk *&location) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
-    replaceSymbol<DefinedImportData>(s, n, f);
-    return s;
+    replaceSymbol<DefinedImportData>(s, n, f, location);
+    return cast<DefinedImportData>(s);
   }
 
   reportDuplicate(s, f);
@@ -793,11 +799,11 @@ Symbol *SymbolTable::addImportData(StringRef n, ImportFile *f) {
 }
 
 Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
-                                    uint16_t machine) {
+                                    ImportThunkChunk *chunk) {
   auto [s, wasInserted] = insert(name, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
-    replaceSymbol<DefinedImportThunk>(s, ctx, name, id, machine);
+    replaceSymbol<DefinedImportThunk>(s, ctx, name, id, chunk);
     return s;
   }
 

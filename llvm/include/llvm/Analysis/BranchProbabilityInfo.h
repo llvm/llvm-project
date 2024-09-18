@@ -22,7 +22,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>

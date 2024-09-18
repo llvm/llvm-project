@@ -522,23 +522,6 @@ func.func @vector_print_on_scalar(%arg0: i64) {
   return
 }
 
-// CHECK-LABEL: @reshape
-func.func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
-  // CHECK:      %[[C2:.*]] = arith.constant 2 : index
-  %c2 = arith.constant 2 : index
-  // CHECK:      %[[C3:.*]] = arith.constant 3 : index
-  %c3 = arith.constant 3 : index
-  // CHECK:      %[[C6:.*]] = arith.constant 6 : index
-  %c6 = arith.constant 6 : index
-  // CHECK:      %[[C9:.*]] = arith.constant 9 : index
-  %c9 = arith.constant 9 : index
-  // CHECK: vector.reshape %{{.*}}, [%[[C3]], %[[C6]]], [%[[C2]], %[[C9]]], [4] : vector<3x2x4xf32> to vector<2x3x4xf32>
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-
-  return %1 : vector<2x3x4xf32>
-}
-
 // CHECK-LABEL: @shape_cast
 func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : vector<8x1xf32>,

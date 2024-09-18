@@ -446,6 +446,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
+  case Stmt::OMPAssumeDirectiveClass:
+    EmitOMPAssumeDirective(cast<OMPAssumeDirective>(*S));
+    break;
   case Stmt::OpenACCComputeConstructClass:
     EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
     break;
@@ -749,7 +752,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     } break;
     case attr::CXXAssume: {
       const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
-      if (getLangOpts().CXXAssumptions &&
+      if (getLangOpts().CXXAssumptions && Builder.GetInsertBlock() &&
           !Assumption->HasSideEffects(getContext())) {
         llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
         Builder.CreateAssumption(AssumptionVal);
@@ -3235,7 +3238,7 @@ CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
   llvm::Value *bundleArgs[] = {ParentToken};
   llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
   auto Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
+      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
   Input->replaceAllUsesWith(Output);
   Input->eraseFromParent();
   return Output;

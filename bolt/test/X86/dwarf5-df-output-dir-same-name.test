@@ -9,7 +9,7 @@
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-output-dir-same-name-helper.s \
 ; RUN: -split-dwarf-file=objects/o2/split.dwo -o helper.o
 ; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --dwarf-output-path=%t/dwo
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --dwarf-output-path=%t/dwo --debug-thread-count=4 --cu-processing-batch-size=4
 ; RUN: ls -l %t/dwo > log
 ; RUN: llvm-dwarfdump --debug-info main.exe.bolt >> log
 ; RUN: cat log | FileCheck -check-prefix=BOLT %s

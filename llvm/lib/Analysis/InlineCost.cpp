@@ -3246,8 +3246,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   };
   Module *M = F.getParent();
   ProfileSummaryInfo PSI(*M);
-  DataLayout DL(M);
-  TargetTransformInfo TTI(DL);
+  TargetTransformInfo TTI(M->getDataLayout());
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.

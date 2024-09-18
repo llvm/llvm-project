@@ -281,7 +281,8 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   E = WarnExpr;
   if (const auto *Cast = dyn_cast<CastExpr>(E))
     if (Cast->getCastKind() == CK_NoOp ||
-        Cast->getCastKind() == CK_ConstructorConversion)
+        Cast->getCastKind() == CK_ConstructorConversion ||
+        Cast->getCastKind() == CK_IntegralCast)
       E = Cast->getSubExpr()->IgnoreImpCasts();
 
   if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
@@ -3150,7 +3151,8 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
     if (ExprRes.isInvalid())
       return StmtError();
     E = ExprRes.get();
-    if (DiagnoseAssignmentResult(ConvTy, StarLoc, DestTy, ETy, E, AA_Passing))
+    if (DiagnoseAssignmentResult(ConvTy, StarLoc, DestTy, ETy, E,
+                                 AssignmentAction::Passing))
       return StmtError();
   }
 
@@ -3746,6 +3748,16 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     return StmtError(
         Diag(ReturnLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*return*/ 1 << /*out of */ 0);
+
+  // using plain return in a coroutine is not allowed.
+  FunctionScopeInfo *FSI = getCurFunction();
+  if (FSI->FirstReturnLoc.isInvalid() && FSI->isCoroutine()) {
+    assert(FSI->FirstCoroutineStmtLoc.isValid() &&
+           "first coroutine location not set");
+    Diag(ReturnLoc, diag::err_return_in_coroutine);
+    Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
+        << FSI->getFirstCoroutineStmtKeyword();
+  }
 
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);

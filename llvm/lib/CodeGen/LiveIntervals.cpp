@@ -1681,7 +1681,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   Indexes->repairIndexesInRange(MBB, Begin, End);
 
   // Make sure a live interval exists for all register operands in the range.
-  SmallVector<Register> RegsToRepair(OrigRegs.begin(), OrigRegs.end());
+  SmallVector<Register> RegsToRepair(OrigRegs);
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;

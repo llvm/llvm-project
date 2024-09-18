@@ -297,6 +297,9 @@ def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 /// NumericalStabilitySanitizer is on.
 def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
 
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -342,6 +345,10 @@ def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
 /// The coroutine would only be destroyed when it is complete.
 def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
 
+/// The coroutine call meets the elide requirement. Hint the optimization
+/// pipeline to perform elide on the call or invoke instruction.
+def CoroElideSafe : EnumAttr<"coro_elide_safe", [FnAttr]>;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
@@ -385,6 +392,7 @@ def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

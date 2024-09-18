@@ -314,7 +314,8 @@ namespace {
         Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, AM.Disp,
                                              AM.SymbolFlags);
       else
-        Disp = CurDAG->getTargetConstant(AM.Disp, DL, MVT::i32);
+        Disp =
+            CurDAG->getSignedConstant(AM.Disp, DL, MVT::i32, /*isTarget=*/true);
 
       if (AM.Segment.getNode())
         Segment = AM.Segment;
@@ -2130,7 +2131,7 @@ static bool foldMaskedShiftToScaledMask(SelectionDAG &DAG, SDValue N,
     X = NewX;
   }
 
-  SDValue NewMask = DAG.getConstant(Mask >> ShiftAmt, DL, VT);
+  SDValue NewMask = DAG.getSignedConstant(Mask >> ShiftAmt, DL, VT);
   SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, X, NewMask);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, NewAnd, Shift.getOperand(1));
 
@@ -3733,7 +3734,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       }
 
       if (MemVT != MVT::i64 || isInt<32>(OperandV)) {
-        Operand = CurDAG->getTargetConstant(OperandV, SDLoc(Node), MemVT);
+        Operand = CurDAG->getSignedConstant(OperandV, SDLoc(Node), MemVT,
+                                            /*isTarget=*/true);
         NewOpc = SelectImmOpcode(Opc);
       }
     }
@@ -4507,7 +4509,7 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
     X = NewX;
   }
 
-  SDValue NewCst = CurDAG->getConstant(ShiftedVal, dl, NVT);
+  SDValue NewCst = CurDAG->getSignedConstant(ShiftedVal, dl, NVT);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewCst);
   SDValue NewBinOp = CurDAG->getNode(Opcode, dl, NVT, X, NewCst);
   insertDAGNode(*CurDAG, SDValue(N, 0), NewBinOp);

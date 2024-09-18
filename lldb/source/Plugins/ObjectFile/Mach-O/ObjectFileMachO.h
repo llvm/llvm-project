@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/RangeMap.h"
@@ -62,7 +63,7 @@ public:
                                         lldb_private::ModuleSpecList &specs);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
-                       const lldb_private::SaveCoreOptions &options,
+                       lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,

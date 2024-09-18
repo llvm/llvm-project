@@ -18,6 +18,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -507,14 +508,15 @@ public:
     // Build a new AddRec by multiplying the step by StepMultiplier and
     // incrementing the start by Offset * step.
     Type *Ty = Expr->getType();
-    auto *Step = Expr->getStepRecurrence(SE);
+    const SCEV *Step = Expr->getStepRecurrence(SE);
     if (!SE.isLoopInvariant(Step, TheLoop)) {
       CannotAnalyze = true;
       return Expr;
     }
-    auto *NewStep = SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
-    auto *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
-    auto *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
+    const SCEV *NewStep =
+        SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
+    const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
+    const SCEV *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
     return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
   }
 
@@ -941,9 +943,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         VecCallVariantsFound = true;
 
       // Check that the instruction return type is vectorizable.
+      // We can't vectorize casts from vector type to scalar type.
       // Also, we can't vectorize extractelement instructions.
       if ((!VectorType::isValidElementType(I.getType()) &&
            !I.getType()->isVoidTy()) ||
+          (isa<CastInst>(I) &&
+           !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
           isa<ExtractElementInst>(I)) {
         reportVectorizationFailure("Found unvectorizable type",
             "instruction return type cannot be vectorized",
@@ -1339,12 +1344,21 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   // Collect the blocks that need predication.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    // We don't support switch statements inside loops.
-    if (!isa<BranchInst>(BB->getTerminator())) {
-      reportVectorizationFailure("Loop contains a switch statement",
-                                 "loop contains a switch statement",
-                                 "LoopContainsSwitch", ORE, TheLoop,
-                                 BB->getTerminator());
+    // We support only branches and switch statements as terminators inside the
+    // loop.
+    if (isa<SwitchInst>(BB->getTerminator())) {
+      if (TheLoop->isLoopExiting(BB)) {
+        reportVectorizationFailure("Loop contains an unsupported switch",
+                                   "loop contains an unsupported switch",
+                                   "LoopContainsUnsupportedSwitch", ORE,
+                                   TheLoop, BB->getTerminator());
+        return false;
+      }
+    } else if (!isa<BranchInst>(BB->getTerminator())) {
+      reportVectorizationFailure("Loop contains an unsupported terminator",
+                                 "loop contains an unsupported terminator",
+                                 "LoopContainsUnsupportedTerminator", ORE,
+                                 TheLoop, BB->getTerminator());
       return false;
     }
 
@@ -1440,10 +1454,12 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Check whether the loop-related control flow in the loop nest is expected by
   // vectorizer.
   if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
-    if (DoExtraAnalysis)
+    if (DoExtraAnalysis) {
+      LLVM_DEBUG(dbgs() << "LV: legality check failed: loop nest");
       Result = false;
-    else
+    } else {
       return false;
+    }
   }
 
   // We need to have a loop header.
@@ -1508,17 +1524,21 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
-                    << (LAI->getRuntimePointerChecking()->Need
-                            ? " (with a runtime bound check)"
-                            : "")
-                    << "!\n");
+  if (Result) {
+    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+                      << (LAI->getRuntimePointerChecking()->Need
+                              ? " (with a runtime bound check)"
+                              : "")
+                      << "!\n");
+  }
 
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
     SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
 
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
+                         "due to SCEVThreshold");
     reportVectorizationFailure("Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);

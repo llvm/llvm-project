@@ -1004,12 +1004,40 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
   }
 }
 LogicalResult NVVM::FenceProxyOp::verify() {
+  if (getKind() == NVVM::ProxyKind::TENSORMAP)
+    return emitOpError() << "tensormap proxy is not a supported proxy kind";
+  if (getKind() == NVVM::ProxyKind::GENERIC)
+    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
   if (getKind() != NVVM::ProxyKind::async_shared && getSpace().has_value()) {
     return emitOpError() << "only async_shared fence can have space attribute";
   }
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyAcquireOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyReleaseOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
   return success();
 }
 

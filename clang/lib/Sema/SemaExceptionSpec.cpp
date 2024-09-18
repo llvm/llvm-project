@@ -1395,6 +1395,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
+  case Expr::HLSLOutArgExprClass:
     // These expressions can never throw.
     return CT_Cannot;
 
@@ -1431,6 +1432,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPBarrierDirectiveClass:
   case Stmt::OMPCancelDirectiveClass:
   case Stmt::OMPCancellationPointDirectiveClass:

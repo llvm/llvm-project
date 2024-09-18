@@ -60,6 +60,10 @@ class PerfJITEventListener : public JITEventListener {
 public:
   PerfJITEventListener();
   ~PerfJITEventListener() {
+    // Lock a mutex to correctly synchronize with prior calls to
+    // `notifyObjectLoaded` and `notifyFreeingObject` that happened on other
+    // threads to prevent tsan from complaining.
+    std::lock_guard<sys::Mutex> Guard(Mutex);
     if (MarkerAddr)
       CloseMarker();
   }

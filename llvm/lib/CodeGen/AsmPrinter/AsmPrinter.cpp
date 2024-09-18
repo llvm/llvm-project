@@ -99,6 +99,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
@@ -107,6 +108,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -154,6 +156,11 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> EmitJumpTableSizesSection(
+    "emit-jump-table-sizes-section",
+    cl::desc("Emit a section containing jump table addresses and sizes"),
+    cl::Hidden, cl::init(false));
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -636,7 +643,7 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::WeakAnyLinkage:
   case GlobalValue::WeakODRLinkage:
-    if (MAI->hasWeakDefDirective()) {
+    if (MAI->isMachO()) {
       // .globl _foo
       OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
 
@@ -779,8 +786,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
-  if (GVKind.isBSS() && MAI->hasMachoZeroFillDirective() &&
-      TheSection->isVirtualSection()) {
+  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isVirtualSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
@@ -825,7 +831,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // TLOF class.  This will also make it more obvious that stuff like
   // MCStreamer::EmitTBSSSymbol is macho specific and only called from macho
   // specific code.
-  if (GVKind.isThreadLocal() && MAI->hasMachoTBSSDirective()) {
+  if (GVKind.isThreadLocal() && MAI->isMachO()) {
     // Emit the .tbss symbol
     MCSymbol *MangSym =
         OutContext.getOrCreateSymbol(GVSym->getName() + Twine("$tlv$init"));
@@ -1129,6 +1135,21 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
        << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
   }
   AP.OutStreamer->AddComment(Str);
+  AP.OutStreamer->addBlankLine();
+}
+
+static void emitFakeUse(const MachineInstr *MI, AsmPrinter &AP) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "fake_use:";
+  for (const MachineOperand &Op : MI->operands()) {
+    // In some circumstances we can end up with fake uses of constants; skip
+    // these.
+    if (!Op.isReg())
+      continue;
+    OS << ' ' << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
+  }
+  AP.OutStreamer->AddComment(OS.str());
   AP.OutStreamer->addBlankLine();
 }
 
@@ -1800,6 +1821,10 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::KILL:
         if (isVerbose()) emitKill(&MI, *this);
         break;
+      case TargetOpcode::FAKE_USE:
+        if (isVerbose())
+          emitFakeUse(&MI, *this);
+        break;
       case TargetOpcode::PSEUDO_PROBE:
         emitPseudoProbe(MI);
         break;
@@ -1813,6 +1838,10 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
         // This instruction is only used to note jump table debug info, it's
         // purely meta information.
+        break;
+      case TargetOpcode::INIT_UNDEF:
+        // This is only used to influence register allocation behavior, no
+        // actual initialization is needed.
         break;
       default:
         emitInstruction(&MI);
@@ -2148,7 +2177,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 
   const MCExpr *Expr = lowerConstant(GA.getAliasee());
 
-  if (MAI->hasAltEntry() && isa<MCBinaryExpr>(Expr))
+  if (MAI->isMachO() && isa<MCBinaryExpr>(Expr))
     OutStreamer->emitSymbolAttribute(Name, MCSA_AltEntry);
 
   // Emit the directives as assignments aka .set:
@@ -2453,8 +2482,8 @@ bool AsmPrinter::doFinalization(Module &M) {
       auto SymbolName = "swift_async_extendedFramePointerFlags";
       auto Global = M.getGlobalVariable(SymbolName);
       if (!Global) {
-        auto Int8PtrTy = PointerType::getUnqual(M.getContext());
-        Global = new GlobalVariable(M, Int8PtrTy, false,
+        auto PtrTy = PointerType::getUnqual(M.getContext());
+        Global = new GlobalVariable(M, PtrTy, false,
                                     GlobalValue::ExternalWeakLinkage, nullptr,
                                     SymbolName);
         OutStreamer->emitSymbolAttribute(getSymbol(Global), MCSA_WeakReference);
@@ -2764,8 +2793,60 @@ void AsmPrinter::emitJumpTableInfo() {
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JTI);
   }
+
+  if (EmitJumpTableSizesSection)
+    emitJumpTableSizesSection(MJTI, F);
+
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
+}
+
+void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+                                           const Function &F) const {
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+
+  if (JT.empty())
+    return;
+
+  StringRef GroupName = F.hasComdat() ? F.getComdat()->getName() : "";
+  MCSection *JumpTableSizesSection = nullptr;
+  StringRef sectionName = ".llvm_jump_table_sizes";
+
+  bool isElf = TM.getTargetTriple().isOSBinFormatELF();
+  bool isCoff = TM.getTargetTriple().isOSBinFormatCOFF();
+
+  if (!isCoff && !isElf)
+    return;
+
+  if (isElf) {
+    MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
+
+    JumpTableSizesSection = OutContext.getELFSection(
+        sectionName, ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName, F.hasComdat(),
+        MCSection::NonUniqueID, LinkedToSym);
+  } else if (isCoff) {
+    if (F.hasComdat()) {
+      JumpTableSizesSection = OutContext.getCOFFSection(
+          sectionName,
+          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+              COFF::IMAGE_SCN_LNK_COMDAT | COFF::IMAGE_SCN_MEM_DISCARDABLE,
+          F.getComdat()->getName(), COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+    } else {
+      JumpTableSizesSection = OutContext.getCOFFSection(
+          sectionName, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                           COFF::IMAGE_SCN_MEM_READ |
+                           COFF::IMAGE_SCN_MEM_DISCARDABLE);
+    }
+  }
+
+  OutStreamer->switchSection(JumpTableSizesSection);
+
+  for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
+    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), TM.getProgramPointerSize());
+    OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+  }
 }
 
 /// EmitJumpTableEntry - Emit a jump table entry for the specified MBB to the

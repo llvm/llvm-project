@@ -141,6 +141,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
 
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -235,9 +237,14 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_pie))
+  // Default to PIE for non-static executables.
+  const bool PIE =
+      !Args.hasArg(options::OPT_r, options::OPT_shared, options::OPT_static);
+  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
     CmdArgs.push_back("-pie");
 
+  if (Args.hasArg(options::OPT_static))
+    CmdArgs.push_back("-static");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("-export-dynamic");
   if (Args.hasArg(options::OPT_shared))
@@ -264,6 +271,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
+
+  AddLTOFlag("-emit-jump-table-sizes-section");
 
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
@@ -316,10 +325,6 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args, StringRef Platform,
                                    const char *EnvVar)
     : Generic_ELF(D, Triple, Args) {
-  if (Args.hasArg(clang::driver::options::OPT_static))
-    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
-        << "-static" << Platform;
-
   // Determine where to find the PS4/PS5 libraries.
   // If -isysroot was passed, use that as the SDK base path.
   // If not, we use the EnvVar if it exists; otherwise use the driver's
@@ -351,9 +356,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   SmallString<512> SDKLibDir(SDKRootDir);
   llvm::sys::path::append(SDKLibDir, "target/lib");
-  if (!Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs) &&
-      !Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
+  if (!Args.hasArg(options::OPT__sysroot_EQ) && !Args.hasArg(options::OPT_E) &&
       !Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S) &&
       !Args.hasArg(options::OPT_emit_ast) &&
       !llvm::sys::fs::exists(SDKLibDir)) {
@@ -482,6 +485,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=default");
     else
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=keep");
+  }
+
+  // Enable jump table sizes section for PS5.
+  if (getTriple().isPS5()) {
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-emit-jump-table-sizes-section");
   }
 }
 

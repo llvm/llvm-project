@@ -421,10 +421,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     return nullptr;
 
   IRBuilder<> Builder(GEP);
-  // Candidate does not necessarily have the same pointer type as GEP. Use
-  // bitcast or pointer cast to make sure they have the same type, so that the
-  // later RAUW doesn't complain.
-  Candidate = Builder.CreateBitOrPointerCast(Candidate, GEP->getType());
+  // Candidate should have the same pointer type as GEP.
   assert(Candidate->getType() == GEP->getType());
 
   // NewGEP = (char *)Candidate + RHS * sizeof(IndexedType)

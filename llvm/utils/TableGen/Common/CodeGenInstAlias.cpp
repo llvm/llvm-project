@@ -25,7 +25,7 @@ using namespace llvm;
 /// the corresponding operand of the instruction.  It returns true on a
 /// successful match, with ResOp set to the result operand to be used.
 bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
-                                       Record *InstOpRec, bool hasSubOps,
+                                       const Record *InstOpRec, bool hasSubOps,
                                        ArrayRef<SMLoc> Loc, CodeGenTarget &T,
                                        ResultOperand &ResOp) {
   Init *Arg = Result->getArg(AliasOpNo);
@@ -216,7 +216,7 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T) : TheDef(R) {
     if (AliasOpNo >= Result->getNumArgs())
       PrintFatalError(R->getLoc(), "not enough arguments for instruction!");
 
-    Record *InstOpRec = ResultInst->Operands[i].Rec;
+    const Record *InstOpRec = ResultInst->Operands[i].Rec;
     unsigned NumSubOps = ResultInst->Operands[i].MINumOperands;
     ResultOperand ResOp(static_cast<int64_t>(0));
     if (tryAliasOpMatch(Result, AliasOpNo, InstOpRec, (NumSubOps > 1),

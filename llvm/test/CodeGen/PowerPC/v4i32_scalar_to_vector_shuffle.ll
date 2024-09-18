@@ -743,25 +743,21 @@ define void @test_v8i16_v4i32(ptr %a) {
 ; CHECK-AIX-32-P8-LABEL: test_v8i16_v4i32:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r4, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r4
-; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
-; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs0, vs1
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v8i16_v4i32:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs0, vs1
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -842,25 +838,21 @@ define void @test_v8i16_v2i64(ptr %a) {
 ; CHECK-AIX-32-P8-LABEL: test_v8i16_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r4, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r4
-; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
-; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs0, vs1
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v8i16_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs0, vs1
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1030,25 +1022,21 @@ define void @test_v4i32_v8i16(ptr %a) {
 ; CHECK-AIX-32-P8-LABEL: test_v4i32_v8i16:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r4, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r4
-; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
-; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs0, vs1
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v4i32_v8i16:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1125,26 +1113,18 @@ define void @test_v4i32_v2i64(ptr %a) {
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v4i32_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
-; CHECK-AIX-32-P8-NEXT:    lwz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
 ; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v4i32_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    lwz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, 0, r3
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1212,14 +1192,11 @@ define void @test_v2i64_v2i64(ptr %a) {
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
-; CHECK-AIX-32-P8-NEXT:    lwz r4, 4(r3)
-; CHECK-AIX-32-P8-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    li r4, 4
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, r3, r4
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
@@ -1229,12 +1206,9 @@ define void @test_v2i64_v2i64(ptr %a) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    lwz r4, 4(r3)
-; CHECK-AIX-32-P9-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    li r4, 4
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, r3, r4
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
@@ -1308,26 +1282,18 @@ define void @test_v2i64_v4i32(ptr %a) {
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v4i32:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
-; CHECK-AIX-32-P8-NEXT:    lwz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    stw r4, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f1, 0, r3
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs1, vs1, 1
 ; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v4i32:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    lwz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs0, 0, r3
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1407,25 +1373,21 @@ define void @test_v2i64_v8i16(ptr %a) {
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v8i16:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P8-NEXT:    addi r4, r1, -32
-; CHECK-AIX-32-P8-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r4
-; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P8-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
-; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs1, vs0
+; CHECK-AIX-32-P8-NEXT:    xxspltw vs0, vs0, 1
+; CHECK-AIX-32-P8-NEXT:    xxmrghw vs0, vs0, vs1
 ; CHECK-AIX-32-P8-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v8i16:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lhz r4, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    sth r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    sth r4, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    lxvwsx vs1, 0, r3
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr

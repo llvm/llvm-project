@@ -41,8 +41,8 @@ class APInt;
 /// LLVM Constant Representation
 class Constant : public User {
 protected:
-  Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
-    : User(ty, vty, Ops, NumOps) {}
+  Constant(Type *ty, ValueTy vty, AllocInfo AllocInfo)
+      : User(ty, vty, AllocInfo) {}
 
   ~Constant() = default;
 
