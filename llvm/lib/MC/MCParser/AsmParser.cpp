@@ -2338,7 +2338,7 @@ bool AsmParser::parseAndMatchAndEmitTargetInstruction(ParseStatementInfo &Info,
   // Canonicalize the opcode to lower case.
   std::string OpcodeStr = IDVal.lower();
   ParseInstructionInfo IInfo(Info.AsmRewrites);
-  bool ParseHadError = getTargetParser().ParseInstruction(IInfo, OpcodeStr, ID,
+  bool ParseHadError = getTargetParser().parseInstruction(IInfo, OpcodeStr, ID,
                                                           Info.ParsedOperands);
   Info.ParseError = ParseHadError;
 
@@ -2395,7 +2395,7 @@ bool AsmParser::parseAndMatchAndEmitTargetInstruction(ParseStatementInfo &Info,
   // If parsing succeeded, match the instruction.
   if (!ParseHadError) {
     uint64_t ErrorInfo;
-    if (getTargetParser().MatchAndEmitInstruction(
+    if (getTargetParser().matchAndEmitInstruction(
             IDLoc, Info.Opcode, Info.ParsedOperands, Out, ErrorInfo,
             getTargetParser().isParsingMSInlineAsm()))
       return true;
@@ -6112,7 +6112,7 @@ bool AsmParser::parseMSInlineAsm(
 
       // Register operand.
       if (Operand.isReg() && !Operand.needAddressOf() &&
-          !getTargetParser().OmitRegisterFromClobberLists(Operand.getReg())) {
+          !getTargetParser().omitRegisterFromClobberLists(Operand.getReg())) {
         unsigned NumDefs = Desc.getNumDefs();
         // Clobber.
         if (NumDefs && Operand.getMCOperandNum() < NumDefs)
