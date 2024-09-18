@@ -70,12 +70,12 @@ bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 }
 
 bool RISCVZacasABIFix::runOnFunction(Function &F) {
-  if (skipFunction(F) || !ST->hasStdExtZacas())
-    return false;
-
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   ST = &TM.getSubtarget<RISCVSubtarget>(F);
+
+  if (skipFunction(F) || !ST->hasStdExtZacas())
+    return false;
 
   bool MadeChange = false;
   for (auto &BB : F)
