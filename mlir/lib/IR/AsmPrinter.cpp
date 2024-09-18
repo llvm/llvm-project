@@ -2063,10 +2063,9 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         os << ']';
       })
       .Default([&](LocationAttr loc) {
-        // Assumes that this is a dialect-specific attribute.
-        os << "dialect<";
+        // Assumes that this is a dialect-specific attribute and prints it
+        // directly.
         printAttribute(loc);
-        os << ">";
       });
 }
 
