@@ -9990,31 +9990,6 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
                                           SmallVectorImpl<Value*> &Ops,
                                           unsigned IntID) {
   llvm::ScalableVectorType *VTy = getSVEType(TypeFlags);
-
-  unsigned N;
-  switch (IntID) {
-  case Intrinsic::aarch64_sve_ld2_sret:
-  case Intrinsic::aarch64_sve_ld1_pn_x2:
-  case Intrinsic::aarch64_sve_ldnt1_pn_x2:
-  case Intrinsic::aarch64_sve_ld2q_sret:
-    N = 2;
-    break;
-  case Intrinsic::aarch64_sve_ld3_sret:
-  case Intrinsic::aarch64_sve_ld3q_sret:
-    N = 3;
-    break;
-  case Intrinsic::aarch64_sve_ld4_sret:
-  case Intrinsic::aarch64_sve_ld1_pn_x4:
-  case Intrinsic::aarch64_sve_ldnt1_pn_x4:
-  case Intrinsic::aarch64_sve_ld4q_sret:
-    N = 4;
-    break;
-  default:
-    llvm_unreachable("unknown intrinsic!");
-  }
-  auto RetTy = llvm::VectorType::get(VTy->getElementType(),
-                                     VTy->getElementCount() * N);
-
   Value *Predicate = EmitSVEPredicateCast(Ops[0], VTy);
   Value *BasePtr = Ops[1];
 
@@ -10023,15 +9998,7 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
     BasePtr = Builder.CreateGEP(VTy, BasePtr, Ops[2]);
 
   Function *F = CGM.getIntrinsic(IntID, {VTy});
-  Value *Call = Builder.CreateCall(F, {Predicate, BasePtr});
-  unsigned MinElts = VTy->getMinNumElements();
-  Value *Ret = llvm::PoisonValue::get(RetTy);
-  for (unsigned I = 0; I < N; I++) {
-    Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
-    Value *SRet = Builder.CreateExtractValue(Call, I);
-    Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
-  }
-  return Ret;
+  return Builder.CreateCall(F, {Predicate, BasePtr});
 }
 
 Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,
@@ -10304,6 +10271,19 @@ Value *CodeGenFunction::EmitSVEReinterpret(Value *Val, llvm::Type *Ty) {
   // view (when storing/reloading), whereas the svreinterpret builtin
   // implements bitwise equivalent cast from register point of view.
   // LLVM CodeGen for a bitcast must add an explicit REV for big-endian.
+
+  if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+    Value *Tuple = llvm::PoisonValue::get(Ty);
+
+    for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
+      Value *In = Builder.CreateExtractValue(Val, I);
+      Value *Out = Builder.CreateBitCast(In, StructTy->getTypeAtIndex(I));
+      Tuple = Builder.CreateInsertValue(Tuple, Out, I);
+    }
+
+    return Tuple;
+  }
+
   return Builder.CreateBitCast(Val, Ty);
 }
 
@@ -10346,44 +10326,26 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
 }
 
 Value *CodeGenFunction::EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
-                                             llvm::Type *Ty,
                                              ArrayRef<Value *> Ops) {
   assert((TypeFlags.isTupleSet() || TypeFlags.isTupleGet()) &&
          "Expects TypleFlags.isTupleSet() or TypeFlags.isTupleGet()");
-
-  unsigned I = cast<ConstantInt>(Ops[1])->getSExtValue();
-  auto *SingleVecTy = dyn_cast<llvm::ScalableVectorType>(
-      TypeFlags.isTupleSet() ? Ops[2]->getType() : Ty);
-
-  if (!SingleVecTy)
-    return nullptr;
-
-  Value *Idx = ConstantInt::get(CGM.Int64Ty,
-                                I * SingleVecTy->getMinNumElements());
+  unsigned Idx = cast<ConstantInt>(Ops[1])->getZExtValue();
 
   if (TypeFlags.isTupleSet())
-    return Builder.CreateInsertVector(Ty, Ops[0], Ops[2], Idx);
-  return Builder.CreateExtractVector(Ty, Ops[0], Idx);
+    return Builder.CreateInsertValue(Ops[0], Ops[2], Idx);
+  return Builder.CreateExtractValue(Ops[0], Idx);
 }
 
 Value *CodeGenFunction::EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
-                                             llvm::Type *Ty,
-                                             ArrayRef<Value *> Ops) {
+                                           llvm::Type *Ty,
+                                           ArrayRef<Value *> Ops) {
   assert(TypeFlags.isTupleCreate() && "Expects TypleFlag isTupleCreate");
 
-  auto *SrcTy = dyn_cast<llvm::ScalableVectorType>(Ops[0]->getType());
+  Value *Tuple = llvm::PoisonValue::get(Ty);
+  for (unsigned Idx = 0; Idx < Ops.size(); Idx++)
+    Tuple = Builder.CreateInsertValue(Tuple, Ops[Idx], Idx);
 
-  if (!SrcTy)
-    return nullptr;
-
-  unsigned MinElts = SrcTy->getMinNumElements();
-  Value *Call = llvm::PoisonValue::get(Ty);
-  for (unsigned I = 0; I < Ops.size(); I++) {
-    Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
-    Call = Builder.CreateInsertVector(Ty, Call, Ops[I], Idx);
-  }
-
-  return Call;
+  return Tuple;
 }
 
 Value *CodeGenFunction::FormSVEBuiltinResult(Value *Call) {
@@ -10453,27 +10415,14 @@ void CodeGenFunction::GetAArch64SVEProcessedOperands(
       continue;
     }
 
-    if (IsTupleGetOrSet || !isa<ScalableVectorType>(Arg->getType())) {
-      Ops.push_back(Arg);
+    if (isa<StructType>(Arg->getType()) && !IsTupleGetOrSet) {
+      for (unsigned I = 0; I < Arg->getType()->getStructNumElements(); ++I)
+        Ops.push_back(Builder.CreateExtractValue(Arg, I));
+
       continue;
     }
 
-    auto *VTy = cast<ScalableVectorType>(Arg->getType());
-    unsigned MinElts = VTy->getMinNumElements();
-    bool IsPred = VTy->getElementType()->isIntegerTy(1);
-    unsigned N = (MinElts * VTy->getScalarSizeInBits()) / (IsPred ? 16 : 128);
-
-    if (N == 1) {
-      Ops.push_back(Arg);
-      continue;
-    }
-
-    for (unsigned I = 0; I < N; ++I) {
-      Value *Idx = ConstantInt::get(CGM.Int64Ty, (I * MinElts) / N);
-      auto *NewVTy =
-          ScalableVectorType::get(VTy->getElementType(), MinElts / N);
-      Ops.push_back(Builder.CreateExtractVector(NewVTy, Arg, Idx));
-    }
+    Ops.push_back(Arg);
   }
 }
 
@@ -10511,7 +10460,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isStructStore())
     return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isTupleSet() || TypeFlags.isTupleGet())
-    return EmitSVETupleSetOrGet(TypeFlags, Ty, Ops);
+    return EmitSVETupleSetOrGet(TypeFlags, Ops);
   else if (TypeFlags.isTupleCreate())
     return EmitSVETupleCreate(TypeFlags, Ty, Ops);
   else if (TypeFlags.isUndef())

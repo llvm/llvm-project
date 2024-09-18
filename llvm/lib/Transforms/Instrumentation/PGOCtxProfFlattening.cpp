@@ -26,6 +26,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -34,6 +35,7 @@
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <deque>
 
 using namespace llvm;
 
@@ -51,6 +53,11 @@ class ProfileAnnotator final {
 
   class BBInfo {
     std::optional<uint64_t> Count;
+    // OutEdges is dimensioned to match the number of terminator operands.
+    // Entries in the vector match the index in the terminator operand list. In
+    // some cases - see `shouldExcludeEdge` and its implementation - an entry
+    // will be nullptr.
+    // InEdges doesn't have the above constraint.
     SmallVector<EdgeInfo *> OutEdges;
     SmallVector<EdgeInfo *> InEdges;
     size_t UnknownCountOutEdges = 0;
@@ -58,22 +65,30 @@ class ProfileAnnotator final {
 
     // Pass AssumeAllKnown when we try to propagate counts from edges to BBs -
     // because all the edge counters must be known.
-    uint64_t getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
-                        bool AssumeAllKnown) const {
-      uint64_t Sum = 0;
-      for (const auto *E : Edges)
-        if (E)
-          Sum += AssumeAllKnown ? *E->Count : E->Count.value_or(0U);
+    // Return std::nullopt if there were no edges to sum. The user can decide
+    // how to interpret that.
+    std::optional<uint64_t> getEdgeSum(const SmallVector<EdgeInfo *> &Edges,
+                                       bool AssumeAllKnown) const {
+      std::optional<uint64_t> Sum;
+      for (const auto *E : Edges) {
+        // `Edges` may be `OutEdges`, case in which `E` could be nullptr.
+        if (E) {
+          if (!Sum.has_value())
+            Sum = 0;
+          *Sum += (AssumeAllKnown ? *E->Count : E->Count.value_or(0U));
+        }
+      }
       return Sum;
     }
 
-    void computeCountFrom(const SmallVector<EdgeInfo *> &Edges) {
+    bool computeCountFrom(const SmallVector<EdgeInfo *> &Edges) {
       assert(!Count.has_value());
       Count = getEdgeSum(Edges, true);
+      return Count.has_value();
     }
 
     void setSingleUnknownEdgeCount(SmallVector<EdgeInfo *> &Edges) {
-      uint64_t KnownSum = getEdgeSum(Edges, false);
+      uint64_t KnownSum = getEdgeSum(Edges, false).value_or(0U);
       uint64_t EdgeVal = *Count > KnownSum ? *Count - KnownSum : 0U;
       EdgeInfo *E = nullptr;
       for (auto *I : Edges)
@@ -110,17 +125,15 @@ class ProfileAnnotator final {
     }
 
     bool tryTakeCountFromKnownOutEdges(const BasicBlock &BB) {
-      if (!succ_empty(&BB) && !UnknownCountOutEdges) {
-        computeCountFrom(OutEdges);
-        return true;
+      if (!UnknownCountOutEdges) {
+        return computeCountFrom(OutEdges);
       }
       return false;
     }
 
     bool tryTakeCountFromKnownInEdges(const BasicBlock &BB) {
-      if (!BB.isEntryBlock() && !UnknownCountInEdges) {
-        computeCountFrom(InEdges);
-        return true;
+      if (!UnknownCountInEdges) {
+        return computeCountFrom(InEdges);
       }
       return false;
     }
@@ -178,7 +191,7 @@ class ProfileAnnotator final {
     bool KeepGoing = true;
     while (KeepGoing) {
       KeepGoing = false;
-      for (const auto &BB : reverse(F)) {
+      for (const auto &BB : F) {
         auto &Info = getBBInfo(BB);
         if (!Info.hasCount())
           KeepGoing |= Info.tryTakeCountFromKnownOutEdges(BB) ||
@@ -198,6 +211,52 @@ class ProfileAnnotator final {
 
   BBInfo &getBBInfo(const BasicBlock &BB) { return BBInfos.find(&BB)->second; }
 
+  const BBInfo &getBBInfo(const BasicBlock &BB) const {
+    return BBInfos.find(&BB)->second;
+  }
+
+  // validation function after we propagate the counters: all BBs and edges'
+  // counters must have a value.
+  bool allCountersAreAssigned() const {
+    for (const auto &BBInfo : BBInfos)
+      if (!BBInfo.second.hasCount())
+        return false;
+    for (const auto &EdgeInfo : EdgeInfos)
+      if (!EdgeInfo.Count.has_value())
+        return false;
+    return true;
+  }
+
+  /// Check that all paths from the entry basic block that use edges with
+  /// non-zero counts arrive at a basic block with no successors (i.e. "exit")
+  bool allTakenPathsExit() const {
+    std::deque<const BasicBlock *> Worklist;
+    DenseSet<const BasicBlock *> Visited;
+    Worklist.push_back(&F.getEntryBlock());
+    Visited.insert(&F.getEntryBlock());
+    while (!Worklist.empty()) {
+      const auto *BB = Worklist.front();
+      Worklist.pop_front();
+      if (succ_size(BB) <= 1)
+        continue;
+      const auto &BBInfo = getBBInfo(*BB);
+      bool Inserted = false;
+      for (auto I = 0U; I < BB->getTerminator()->getNumSuccessors(); ++I) {
+        const auto *Succ = BB->getTerminator()->getSuccessor(I);
+        if (!shouldExcludeEdge(*BB, *Succ)) {
+          if (BBInfo.getEdgeCount(I) > 0)
+            if (Visited.insert(Succ).second) {
+              Worklist.push_back(Succ);
+              Inserted = true;
+            }
+        }
+      }
+      if (!Inserted)
+        return false;
+    }
+    return true;
+  }
+
 public:
   ProfileAnnotator(Function &F, const SmallVectorImpl<uint64_t> &Counters,
                    InstrProfSummaryBuilder &PB)
@@ -216,6 +275,9 @@ public:
                "profile is managed by IPO transforms");
         (void)Index;
         Count = Counters[Ins->getIndex()->getZExtValue()];
+      } else if (isa<UnreachableInst>(BB.getTerminator())) {
+        // The program presumably didn't crash.
+        Count = 0;
       }
       auto [It, Ins] =
           BBInfos.insert({&BB, {pred_size(&BB), succ_size(&BB), Count}});
@@ -268,14 +330,16 @@ public:
         PB.addInternalCount(EdgeCount);
       }
 
-      if (MaxCount == 0)
-        F.getContext().emitError(
-            "[ctx-prof] Encountered a BB with more than one successor, where "
-            "all outgoing edges have a 0 count. This occurs in non-exiting "
-            "functions (message pumps, usually) which are not supported in the "
-            "contextual profiling case");
-      setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
+      if (MaxCount != 0)
+        setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
     }
+    assert(allCountersAreAssigned() &&
+           "Expected all counters have been assigned.");
+    assert(allTakenPathsExit() &&
+           "[ctx-prof] Encountered a BB with more than one successor, where "
+           "all outgoing edges have a 0 count. This occurs in non-exiting "
+           "functions (message pumps, usually) which are not supported in the "
+           "contextual profiling case");
   }
 };
 
