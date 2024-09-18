@@ -1,17 +1,34 @@
-# TestSwiftFoundationValueTypes.py
-#
-# This source file is part of the Swift.org open source project
-#
-# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
-# Licensed under Apache License v2.0 with Runtime Library Exception
-#
-# See https://swift.org/LICENSE.txt for license information
-# See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
-#
-# ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
+import lldb
 from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.lldbutil as lldbutil
 
-lldbinline.MakeInlineTest(
-    __file__, globals(), decorators=
-    [skipUnlessDarwin,swiftTest])
+
+class TestSwiftFoundationTypeNotification(lldbtest.TestBase):
+
+    mydir = lldbtest.TestBase.compute_mydir(__file__)
+
+    @swiftTest
+    def test(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
+        self.expect("log enable lldb types -v")
+        # global
+        self.expect("target variable -d run g_notification",
+                    substrs=['name = ', '"MyNotification"',
+                             'object = nil',
+                             'userInfo = 0 key/value pairs'])
+        self.expect("expression -d run -- g_notification",
+                    substrs=['name = ', '"MyNotification"',
+                             'object = nil',
+                             'userInfo = 0 key/value pairs'])
+        # local
+        self.expect("frame variable -d run -- notification",
+                    substrs=['name = ', '"MyNotification"',
+                             'object = nil',
+                             'userInfo = 0 key/value pairs'])
+        self.expect("expression -d run -- notification",
+                    substrs=['name = ', '"MyNotification"',
+                             'object = nil',
+                             'userInfo = 0 key/value pairs'])
