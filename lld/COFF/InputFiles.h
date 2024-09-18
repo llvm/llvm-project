@@ -349,7 +349,7 @@ public:
   MachineTypes getMachineType() const override;
 
   DefinedImportData *impSym = nullptr;
-  Symbol *thunkSym = nullptr;
+  Defined *thunkSym = nullptr;
   ImportThunkChunkARM64EC *impchkThunk = nullptr;
   std::string dllName;
 
@@ -365,7 +365,7 @@ public:
   // Auxiliary IAT symbols and chunks on ARM64EC.
   DefinedImportData *impECSym = nullptr;
   Chunk *auxLocation = nullptr;
-  Symbol *auxThunkSym = nullptr;
+  Defined *auxThunkSym = nullptr;
   DefinedImportData *auxImpCopySym = nullptr;
   Chunk *auxCopyLocation = nullptr;
 

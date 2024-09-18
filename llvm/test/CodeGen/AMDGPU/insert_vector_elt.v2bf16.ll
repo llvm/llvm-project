@@ -965,11 +965,7 @@ define amdgpu_kernel void @v_insertelement_v8bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX900-NEXT:    v_mov_b32_e32 v5, 0x5040100
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
-; GFX900-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_bfi_b32 v3, s2, v3, v3
-; GFX900-NEXT:    v_bfi_b32 v2, s2, v2, v2
-; GFX900-NEXT:    v_bfi_b32 v0, s2, v0, v0
 ; GFX900-NEXT:    v_perm_b32 v1, s4, v1, v5
 ; GFX900-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX900-NEXT:    s_endpgm
@@ -980,14 +976,10 @@ define amdgpu_kernel void @v_insertelement_v8bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX940-NEXT:    s_load_dword s0, s[2:3], 0x10
 ; GFX940-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX940-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; GFX940-NEXT:    s_mov_b32 s1, 0xffff
+; GFX940-NEXT:    v_mov_b32_e32 v5, 0x5040100
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    global_load_dwordx4 v[0:3], v4, s[6:7]
-; GFX940-NEXT:    v_mov_b32_e32 v5, 0x5040100
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    v_bfi_b32 v3, s1, v3, v3
-; GFX940-NEXT:    v_bfi_b32 v2, s1, v2, v2
-; GFX940-NEXT:    v_bfi_b32 v0, s1, v0, v0
 ; GFX940-NEXT:    v_perm_b32 v1, s0, v1, v5
 ; GFX940-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] sc0 sc1
 ; GFX940-NEXT:    s_endpgm

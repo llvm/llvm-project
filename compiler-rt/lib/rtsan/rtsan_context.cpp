@@ -62,7 +62,7 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
     Until then, and to keep the first PRs small, only the exit mode
     is available.
 */
-static void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
+static void InvokeViolationDetectedAction() { Die(); }
 
 __rtsan::Context::Context() = default;
 
