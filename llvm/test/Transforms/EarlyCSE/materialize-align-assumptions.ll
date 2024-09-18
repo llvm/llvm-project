@@ -10,6 +10,7 @@ define ptr @align_replacement_does_not_have_align_metadata(ptr noalias %p) {
 ; CHECK-NEXT:    call void @foo(ptr [[L_1]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[L_1]], i64 4
 ; CHECK-NEXT:    store ptr [[GEP]], ptr [[P]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i64 4) ]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %l.1 = load ptr, ptr %p, align 8
@@ -27,6 +28,7 @@ define ptr @align_replacement_does_not_have_align_metadata2(ptr noalias %p) {
 ; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[L_1]], i64 4
 ; CHECK-NEXT:    store ptr [[GEP]], ptr [[P]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i64 4) ]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %l.1 = load ptr, ptr %p, align 8
@@ -54,6 +56,7 @@ define ptr @align_replacement_has_smaller_alignment(ptr noalias %p) {
 ; CHECK-SAME: ptr noalias [[P:%.*]]) {
 ; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[P]], align 8, !align [[META0]]
 ; CHECK-NEXT:    call void @foo(ptr [[L_1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_1]], i64 8) ]
 ; CHECK-NEXT:    ret ptr [[L_1]]
 ;
   %l.1 = load ptr, ptr %p, align 8, !align !0
