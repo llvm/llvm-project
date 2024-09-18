@@ -1210,6 +1210,14 @@ bool HasValueLocation(lldb::SBValue v) {
   return line_entry.IsValid();
 }
 
+int64_t PackLocation(int64_t var_ref, bool is_value_location) {
+   return var_ref << 1 | is_value_location;
+}
+
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
+   return std::pair{ location_id >> 1, location_id & 1};
+}
+
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -1414,10 +1422,10 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
     object.try_emplace("variablesReference", 0);
 
   if (v.GetDeclaration().IsValid())
-    object.try_emplace("declarationLocationReference", var_ref << 1);
+    object.try_emplace("declarationLocationReference", PackLocation(var_ref, false));
 
   if (HasValueLocation(v))
-    object.try_emplace("valueLocationReference", (var_ref << 1) | 1);
+    object.try_emplace("valueLocationReference", PackLocation(var_ref, true));
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     object.try_emplace("memoryReference", EncodeMemoryReference(addr));

@@ -461,6 +461,13 @@ struct VariableDescription {
 /// Does the given variable have an associated value location?
 bool HasValueLocation(lldb::SBValue v);
 
+/// Pack a location into a single integer which we can send via
+/// the debug adapter protocol.
+int64_t PackLocation(int64_t var_ref, bool is_value_location);
+
+/// Reverse of `PackLocation`
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
+
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned

@@ -1641,7 +1641,9 @@ void request_evaluate(const llvm::json::Object &request) {
       VariableDescription desc(value);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
-      auto var_ref = g_dap.variables.InsertVariable(
+      int64_t var_ref = 0;
+      if (value.MightHaveChildren() || HasValueLocation(value))
+         var_ref = g_dap.variables.InsertVariable(
           value, /*is_permanent=*/context == "repl");
       if (value.MightHaveChildren())
         body.try_emplace("variablesReference", var_ref);
@@ -4133,11 +4135,11 @@ void request_locations(const llvm::json::Object &request) {
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
 
-  uint64_t reference_id = GetUnsigned(arguments, "locationReference", 0);
+  uint64_t location_id = GetUnsigned(arguments, "locationReference", 0);
   // We use the lowest bit to distinguish between value location and declaration
   // location
-  bool isValueLocation = reference_id & 1;
-  lldb::SBValue variable = g_dap.variables.GetVariable(reference_id >> 1);
+  auto [var_ref, is_value_location] = UnpackLocation(location_id);
+  lldb::SBValue variable = g_dap.variables.GetVariable(var_ref);
   if (!variable.IsValid()) {
     response["success"] = false;
     response["message"] = "Invalid variable reference";
@@ -4146,7 +4148,7 @@ void request_locations(const llvm::json::Object &request) {
   }
 
   llvm::json::Object body;
-  if (isValueLocation) {
+  if (is_value_location) {
     // Get the value location
     if (!variable.GetType().IsPointerType() &&
         !variable.GetType().IsReferenceType()) {
