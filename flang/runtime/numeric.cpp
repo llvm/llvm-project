@@ -144,7 +144,7 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
 #ifdef FLANG_RUNTIME_NO_REAL_3
   mask &= ~(1 << 3);
 #endif
-#if !HAS_FLOAT80 || defined FLANG_RUNTIME_NO_REAL_10
+#if LDBL_MANT_DIG < 64 || defined FLANG_RUNTIME_NO_REAL_10
   mask &= ~(1 << 10);
 #endif
 #if LDBL_MANT_DIG < 64 || defined FLANG_RUNTIME_NO_REAL_16
@@ -276,7 +276,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Ceiling8_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Ceiling10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -332,7 +332,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(ErfcScaled8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return ErfcScaled(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return ErfcScaled(x);
@@ -361,7 +361,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent10_4)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
@@ -416,7 +416,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Floor8_16)(
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Floor10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -472,7 +472,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Fraction8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Fraction(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Fraction(x);
@@ -485,7 +485,7 @@ bool RTDEF(IsFinite4)(CppTypeFor<TypeCategory::Real, 4> x) {
 bool RTDEF(IsFinite8)(CppTypeFor<TypeCategory::Real, 8> x) {
   return std::isfinite(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 bool RTDEF(IsFinite10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isfinite(x);
 }
@@ -501,7 +501,7 @@ bool RTDEF(IsNaN4)(CppTypeFor<TypeCategory::Real, 4> x) {
 bool RTDEF(IsNaN8)(CppTypeFor<TypeCategory::Real, 8> x) {
   return std::isnan(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 bool RTDEF(IsNaN10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isnan(x);
 }
@@ -553,7 +553,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(ModReal8)(
     const char *sourceFile, int sourceLine) {
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(ModReal10)(
     CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
     const char *sourceFile, int sourceLine) {
@@ -603,7 +603,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(ModuloReal8)(
     const char *sourceFile, int sourceLine) {
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(ModuloReal10)(
     CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
     const char *sourceFile, int sourceLine) {
@@ -619,7 +619,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Nearest8)(
     CppTypeFor<TypeCategory::Real, 8> x, bool positive) {
   return Nearest<53>(x, positive);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10> x, bool positive) {
   return Nearest<64>(x, positive);
@@ -670,7 +670,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Nint8_16)(
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Nint10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -726,7 +726,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(RRSpacing8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return RRSpacing<53>(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return RRSpacing<64>(x);
@@ -741,7 +741,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(SetExponent8)(
     CppTypeFor<TypeCategory::Real, 8> x, std::int64_t p) {
   return SetExponent(x, p);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return SetExponent(x, p);
@@ -756,7 +756,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Scale8)(
     CppTypeFor<TypeCategory::Real, 8> x, std::int64_t p) {
   return Scale(x, p);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return Scale(x, p);
@@ -876,7 +876,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Spacing8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Spacing<53>(x);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Spacing<64>(x);
@@ -893,7 +893,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(FPow8i)(
     CppTypeFor<TypeCategory::Integer, 4> e) {
   return FPowI(b, e);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(FPow10i)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 4> e) {
@@ -918,7 +918,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(FPow8k)(
     CppTypeFor<TypeCategory::Integer, 8> e) {
   return FPowI(b, e);
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(FPow10k)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 8> e) {

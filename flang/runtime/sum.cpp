@@ -141,18 +141,18 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(SumReal8)(const Descriptor &x,
   return GetTotalReduction<TypeCategory::Real, 8>(
       x, source, line, dim, mask, RealSumAccumulator<double>{x}, "SUM");
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(SumReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
-      RealSumAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x}, "SUM");
+  return GetTotalReduction<TypeCategory::Real, 10>(
+      x, source, line, dim, mask, RealSumAccumulator<long double>{x}, "SUM");
 }
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(SumReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
-      RealSumAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x}, "SUM");
+  return GetTotalReduction<TypeCategory::Real, 16>(
+      x, source, line, dim, mask, RealSumAccumulator<long double>{x}, "SUM");
 }
 #endif
 
@@ -168,22 +168,20 @@ void RTDEF(CppSumComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
   result = GetTotalReduction<TypeCategory::Complex, 8>(
       x, source, line, dim, mask, ComplexSumAccumulator<double>{x}, "SUM");
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 void RTDEF(CppSumComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result =
-      GetTotalReduction<TypeCategory::Complex, 10>(x, source, line, dim, mask,
-          ComplexSumAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x}, "SUM");
+  result = GetTotalReduction<TypeCategory::Complex, 10>(
+      x, source, line, dim, mask, ComplexSumAccumulator<long double>{x}, "SUM");
 }
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 void RTDEF(CppSumComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result =
-      GetTotalReduction<TypeCategory::Complex, 16>(x, source, line, dim, mask,
-          ComplexSumAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x}, "SUM");
+  result = GetTotalReduction<TypeCategory::Complex, 16>(
+      x, source, line, dim, mask, ComplexSumAccumulator<long double>{x}, "SUM");
 }
 #endif
 

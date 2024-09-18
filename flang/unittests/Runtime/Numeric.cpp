@@ -34,7 +34,7 @@ TEST(Numeric, Floor) {
 TEST(Numeric, Erfc_scaled) {
   EXPECT_NEAR(RTNAME(ErfcScaled4)(Real<4>{20.0}), 0.02817434874, 1.0e-8);
   EXPECT_NEAR(RTNAME(ErfcScaled8)(Real<8>{20.0}), 0.02817434874, 1.0e-11);
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   EXPECT_NEAR(RTNAME(ErfcScaled10)(Real<10>{20.0}), 0.02817434874, 1.0e-8);
 #endif
 }
@@ -295,7 +295,7 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-3}, Int<8>{3}), Real<8>{-27});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-2}, Int<8>{-3}), Real<8>{-0.125});
 
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0}, Int<4>{0}), Real<10>{1});
   EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0.3}, Int<4>{0}), Real<10>{1});
   EXPECT_EQ(RTNAME(FPow10i)(Real<10>{2}, Int<4>{-1}), Real<10>{0.5});
