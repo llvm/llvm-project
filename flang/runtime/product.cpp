@@ -36,11 +36,16 @@ private:
   INTERMEDIATE product_{1};
 };
 
+// Suppress the warnings about calling __host__-only std::complex operators,
+// defined in C++ STD header files, from __device__ code.
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 template <typename PART> class ComplexProductAccumulator {
 public:
   explicit RT_API_ATTRS ComplexProductAccumulator(const Descriptor &array)
       : array_{array} {}
-  RT_API_ATTRS void Reinitialize() { product_ = rtcmplx::complex<PART>{1, 0}; }
+  RT_API_ATTRS void Reinitialize() { product_ = std::complex<PART>{1, 0}; }
   template <typename A>
   RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
     using ResultPart = typename A::value_type;
@@ -55,8 +60,10 @@ public:
 
 private:
   const Descriptor &array_;
-  rtcmplx::complex<PART> product_{1, 0};
+  std::complex<PART> product_{1, 0};
 };
+
+RT_DIAG_POP
 
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
@@ -109,7 +116,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(ProductReal8)(const Descriptor &x,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(ProductReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
@@ -140,7 +147,7 @@ void RTDEF(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
       mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 void RTDEF(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
