@@ -117,6 +117,9 @@ public:
 
   /// Get the instruction instrumenting a BB, or nullptr if not present.
   static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
+
+  /// Get the step instrumentation associated with a `select`
+  static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
 };
 
 class CtxProfAnalysisPrinterPass
