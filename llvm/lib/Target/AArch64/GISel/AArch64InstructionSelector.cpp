@@ -2045,7 +2045,7 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
               .addMemOperand(MF.getMachineMemOperand(
                   MMO->getPointerInfo().getWithOffset(OffsetBytes),
                   MachineMemOperand::MOStore, PtrSize,
-                  commonAlignment(MMO->getBaseAlign(), OffsetBytes)));
+                  MMO->getBaseAlign()));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
     OffsetBytes += PtrSize;
@@ -2081,7 +2081,7 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
               .addMemOperand(MF.getMachineMemOperand(
                   MMO->getPointerInfo().getWithOffset(OffsetBytes),
                   MachineMemOperand::MOStore, IntSize,
-                  commonAlignment(MMO->getBaseAlign(), OffsetBytes)));
+                  MMO->getBaseAlign()));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
     OffsetBytes += IntSize;
   };

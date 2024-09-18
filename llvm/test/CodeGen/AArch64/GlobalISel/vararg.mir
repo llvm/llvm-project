@@ -43,7 +43,7 @@ body: |
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 0
     ; CHECK-NEXT: STRWui [[MOVi32imm]], [[ADDXri]], 6 :: (store (s32) into %ir.ap + 24, align 8)
     ; CHECK-NEXT: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 0
-    ; CHECK-NEXT: STRWui [[MOVi32imm1]], [[ADDXri]], 7 :: (store (s32) into %ir.ap + 28)
+    ; CHECK-NEXT: STRWui [[MOVi32imm1]], [[ADDXri]], 7 :: (store (s32) into %ir.ap + 28, basealign 8)
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui %stack.2.ap, 7 :: (dereferenceable load (s32) from %ir.vr_offs_p)
     ; CHECK-NEXT: $w0 = COPY [[LDRWui]]
     LIFETIME_START %stack.2.ap
