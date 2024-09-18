@@ -27,6 +27,9 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#if defined(__QNX__)
+#include <sys/select.h>
+#endif
 #endif
 
 #if defined(_WIN32)

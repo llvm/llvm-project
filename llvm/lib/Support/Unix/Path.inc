@@ -79,6 +79,9 @@ extern char **environ;
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
 #define STATVFS_F_FRSIZE(vfs) vfs.f_frsize
+#if defined(__QNX__)
+#include <sys/mount.h>
+#endif
 #else
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
@@ -112,7 +115,7 @@ typedef uint_t uint;
 #endif
 
 #if defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) ||       \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__QNX__)
 #define STATVFS_F_FLAG(vfs) (vfs).f_flag
 #else
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
@@ -555,6 +558,13 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   // The file system can have an arbitrary structure on z/OS; must go with the
   // conservative answer.
   return false;
+#elif defined(__QNX__)
+  // statvfs::f_basetype contains the null-terminated name of the target file
+  // system.
+  StringRef fstype(Vfs.f_basetype);
+  // TODO: Confirm if NFS_FS_TYPE and CIFS_FS_TYPE are the only remote file
+  // systems.
+  return !fstype.equals(NFS_FS_TYPE) && !fstype.equals(CIFS_FS_TYPE);
 #else
   return !!(STATVFS_F_FLAG(Vfs) & MNT_LOCAL);
 #endif

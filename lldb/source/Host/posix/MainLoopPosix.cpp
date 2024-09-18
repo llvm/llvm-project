@@ -20,12 +20,14 @@
 #include <vector>
 
 // Multiplexing is implemented using kqueue on systems that support it (BSD
-// variants including OSX). On linux we use ppoll, while android uses pselect
-// (ppoll is present but not implemented properly). On windows we use WSApoll
-// (which does not support signals).
+// variants including OSX). On linux we use ppoll, while android and QNX use
+// pselect (ppoll is present on Android but not implemented properly). On
+// windows we use WSApoll (which does not support signals).
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
+#elif defined(__QNX__)
+#include <sys/select.h>
 #elif defined(__ANDROID__)
 #include <sys/syscall.h>
 #else
@@ -36,10 +38,17 @@ using namespace lldb;
 using namespace lldb_private;
 
 static sig_atomic_t g_signal_flags[NSIG];
+#if defined(__QNX__)
+static llvm::DenseMap<int, siginfo_t> g_signal_info;
+#endif
 
 static void SignalHandler(int signo, siginfo_t *info, void *) {
   assert(signo < NSIG);
   g_signal_flags[signo] = 1;
+#if defined(__QNX__)
+  siginfo_t siginfo(*info);
+  g_signal_info.insert({signo, siginfo});
+#endif
 }
 
 class MainLoopPosix::RunImpl {
@@ -59,7 +68,7 @@ private:
   int num_events = -1;
 
 #else
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__QNX__)
   fd_set read_fd_set;
 #else
   std::vector<struct pollfd> read_fds;
@@ -113,7 +122,7 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
 }
 #else
 MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__QNX__)
   read_fds.reserve(loop.m_read_fds.size());
 #endif
 }
@@ -129,7 +138,7 @@ sigset_t MainLoopPosix::RunImpl::get_sigmask() {
   return sigmask;
 }
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__QNX__)
 Status MainLoopPosix::RunImpl::Poll() {
   // ppoll(2) is not supported on older all android versions. Also, older
   // versions android (API <= 19) implemented pselect in a non-atomic way, as a
@@ -144,6 +153,7 @@ Status MainLoopPosix::RunImpl::Poll() {
     nfds = std::max(nfds, fd.first + 1);
   }
 
+#if defined(__ANDROID__)
   union {
     sigset_t set;
     uint64_t pad;
@@ -157,6 +167,11 @@ Status MainLoopPosix::RunImpl::Poll() {
   } extra_data = {&kernel_sigset, sizeof(kernel_sigset)};
   if (syscall(__NR_pselect6, nfds, &read_fd_set, nullptr, nullptr, nullptr,
               &extra_data) == -1) {
+#else
+  // QNX.
+  sigset_t sigmask = get_sigmask();
+  if (pselect(nfds, &read_fd_set, nullptr, nullptr, nullptr, &sigmask) == -1) {
+#endif
     if (errno != EINTR)
       return Status(errno, eErrorTypePOSIX);
     else
@@ -188,7 +203,7 @@ Status MainLoopPosix::RunImpl::Poll() {
 #endif
 
 void MainLoopPosix::RunImpl::ProcessEvents() {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__QNX__)
   // Collect first all readable file descriptors into a separate vector and
   // then iterate over it to invoke callbacks. Iterating directly over
   // loop.m_read_fds is not possible because the callbacks can modify the
@@ -213,14 +228,28 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
 
   std::vector<int> signals;
   for (const auto &entry : loop.m_signals)
+#if defined(__QNX__)
+    if (g_signal_flags[entry.first] != 0) {
+      signals.push_back(entry.first);
+      *(entry.second.siginfo.get()) = g_signal_info.find(entry.first)->second;
+    }
+#else
     if (g_signal_flags[entry.first] != 0)
       signals.push_back(entry.first);
+#endif
 
   for (const auto &signal : signals) {
     if (loop.m_terminate_request)
       return;
     g_signal_flags[signal] = 0;
+#if defined(__QNX__)
+    g_signal_info.erase(signal);
+#endif
     loop.ProcessSignal(signal);
+#if defined(__QNX__)
+    memset(loop.m_signals.find(signal)->second.siginfo.get(), 0,
+           sizeof(siginfo_t));
+#endif
   }
 }
 #endif
@@ -283,7 +312,12 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   if (signal_it != m_signals.end()) {
     auto callback_it = signal_it->second.callbacks.insert(
         signal_it->second.callbacks.end(), callback);
+#if defined(__QNX__)
+    std::weak_ptr<siginfo_t> siginfo = signal_it->second.siginfo;
+    return SignalHandleUP(new SignalHandle(*this, signo, callback_it, siginfo));
+#else
     return SignalHandleUP(new SignalHandle(*this, signo, callback_it));
+#endif
   }
 
   SignalInfo info;
@@ -316,11 +350,21 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   ret = pthread_sigmask(HAVE_SYS_EVENT_H ? SIG_UNBLOCK : SIG_BLOCK,
                         &new_action.sa_mask, &old_set);
   assert(ret == 0 && "pthread_sigmask failed");
+#if defined(__QNX__)
+  info.siginfo = std::make_shared<siginfo_t>();
+#endif
   info.was_blocked = sigismember(&old_set, signo);
   auto insert_ret = m_signals.insert({signo, info});
+#if defined(__QNX__)
+  std::weak_ptr<siginfo_t> siginfo = info.siginfo;
+#endif
 
   return SignalHandleUP(new SignalHandle(
+#if defined(__QNX__)
+      *this, signo, insert_ret.first->second.callbacks.begin(), siginfo));
+#else
       *this, signo, insert_ret.first->second.callbacks.begin()));
+#endif
 }
 
 void MainLoopPosix::UnregisterReadObject(IOObject::WaitableHandle handle) {

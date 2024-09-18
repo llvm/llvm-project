@@ -17,7 +17,11 @@
 #include "llvm/Support/Errno.h"
 
 #include <climits>
+#if defined(__QNX__)
+#include <spawn.h>
+#else
 #include <sys/ptrace.h>
+#endif
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -33,6 +37,10 @@
 #include <linux/personality.h>
 #elif defined(__linux__)
 #include <sys/personality.h>
+#endif
+
+#if !defined(EOK)
+#define EOK 0 /* No error */
 #endif
 
 using namespace lldb;
@@ -193,7 +201,9 @@ struct ForkLaunchInfo {
     }
 
     // Start tracing this child that is about to exec.
+#if !defined(__QNX__)
     if (ptrace(PT_TRACE_ME, 0, nullptr, 0) == -1)
+#endif
       ExitWithError(error_fd, "ptrace");
   }
 
@@ -221,6 +231,148 @@ struct ForkLaunchInfo {
 }
 
 // End of code running in the child process.
+
+#if defined(__QNX__)
+static ::pid_t PosixSpawn(const ForkLaunchInfo &info,
+                          posix_spawn_file_actions_t &file_actions,
+                          posix_spawnattr_t &attr, Status &error) {
+  uint32_t flags = 0;
+  sigset_t set;
+  ::pid_t pid;
+  int ret;
+
+  if (info.separate_process_group) {
+    flags |= POSIX_SPAWN_SETPGROUP;
+    if (::posix_spawnattr_setpgroup(&attr, 0) != EOK) {
+      error.SetErrorStringWithFormatv("posix_spawnattr_setpgroup failed with "
+                                      "error message: {0}",
+                                      llvm::sys::StrError());
+      return LLDB_INVALID_PROCESS_ID;
+    }
+  }
+
+  for (const ForkFileAction &action : info.actions) {
+    switch (action.action) {
+    case FileAction::eFileActionClose:
+      if (::posix_spawn_file_actions_addclose(&file_actions, action.fd) !=
+          EOK) {
+        error.SetErrorStringWithFormatv("posix_spawn_file_actions_addclose "
+                                        "failed with error message: {0}",
+                                        llvm::sys::StrError());
+        return LLDB_INVALID_PROCESS_ID;
+      }
+      break;
+    case FileAction::eFileActionDuplicate:
+      if (::posix_spawn_file_actions_adddup2(&file_actions, action.fd,
+                                             action.arg) != EOK) {
+        error.SetErrorStringWithFormatv("posix_spawn_file_actions_adddup2 "
+                                        "failed with error message: {0}",
+                                        llvm::sys::StrError());
+        return LLDB_INVALID_PROCESS_ID;
+      }
+      break;
+    case FileAction::eFileActionOpen:
+      if (::posix_spawn_file_actions_addopen(&file_actions, action.fd,
+                                             action.path.c_str(), action.arg,
+                                             0666) != EOK) {
+        error.SetErrorStringWithFormatv("posix_spawn_file_actions_addopen "
+                                        "failed with error message: {0}",
+                                        llvm::sys::StrError());
+        return LLDB_INVALID_PROCESS_ID;
+      }
+      break;
+    case FileAction::eFileActionNone:
+      break;
+    }
+  }
+
+  // Change the working directory.
+  if (!info.wd.empty()) {
+    flags |= POSIX_SPAWN_SETCWD;
+
+    int dirfd =
+        llvm::sys::RetryAfterSignal(-1, ::open, info.wd.c_str(), O_DIRECTORY);
+
+    if (dirfd == -1) {
+      error.SetErrorStringWithFormatv("open failed with error message: {0}",
+                                      llvm::sys::StrError());
+      return LLDB_INVALID_PROCESS_ID;
+    }
+
+    if (::posix_spawnattr_setcwd_np(&attr, dirfd) != EOK) {
+      error.SetErrorStringWithFormatv("posix_spawnattr_setcwd_np failed with "
+                                      "error message: {0}",
+                                      llvm::sys::StrError());
+      return LLDB_INVALID_PROCESS_ID;
+    }
+  }
+
+  if (info.disable_aslr) {
+    if (::posix_spawnattr_setaslr(&attr, POSIX_SPAWN_ASLR_DISABLE) != EOK) {
+      error.SetErrorStringWithFormatv("posix_spawnattr_setaslr failed with "
+                                      "error message: {0}",
+                                      llvm::sys::StrError());
+      return LLDB_INVALID_PROCESS_ID;
+    }
+  }
+
+  // Clear the signal mask to prevent the child from being affected by any
+  // masking done by the parent.
+  flags |= POSIX_SPAWN_SETSIGMASK;
+
+  if (sigemptyset(&set) != 0) {
+    error.SetErrorStringWithFormatv("sigemptyset failed with error message: "
+                                    "{0}",
+                                    llvm::sys::StrError());
+    return LLDB_INVALID_PROCESS_ID;
+  }
+
+  if (::posix_spawnattr_setsigmask(&attr, &set) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawnattr_setsigmask failed with "
+                                    "error message: {0}",
+                                    llvm::sys::StrError());
+    return LLDB_INVALID_PROCESS_ID;
+  }
+
+  if (info.debug) {
+    // Hold the child process as if it had received a SIGSTOP as soon as it was
+    // spawned.
+    flags |= POSIX_SPAWN_HOLD;
+
+    // Do not inherit setgid powers.
+    flags |= POSIX_SPAWN_RESETIDS;
+
+    // posix_spawn returns EBADF when requested to close all open file
+    // descriptors other than STDIN, STDOUT, and STDERR.
+    // TODO: Close everything besides STDIN, STDOUT, and STDERR that doesn't
+    // have any file action to avoid leaking descriptors.
+  }
+
+  if (::posix_spawnattr_setxflags(&attr, flags) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawnattr_setxflags failed with "
+                                    "error message: {0}",
+                                    llvm::sys::StrError());
+    return LLDB_INVALID_PROCESS_ID;
+  }
+
+  ret = ::posix_spawn(&pid, info.argv[0], &file_actions, &attr,
+                      const_cast<char *const *>(info.argv), info.envp);
+
+  if (ret != EOK) {
+    // posix_spawn failed.
+    error.SetErrorStringWithFormatv("posix_spawn failed with error message: "
+                                    "{0}",
+                                    llvm::sys::StrError());
+    return LLDB_INVALID_PROCESS_ID;
+  }
+
+  // If an error occurs after posix_spawn returns successfully, then the child
+  // process exits with status 127.
+  // TODO: Wait for the child process if it exits on account of any error.
+
+  return pid; // No error. We're done.
+}
+#endif
 
 ForkFileAction::ForkFileAction(const FileAction &act)
     : action(act.GetAction()), fd(act.GetFD()), path(act.GetPath().str()),
@@ -257,15 +409,53 @@ ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
 HostProcess
 ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                         Status &error) {
+#if !defined(__QNX__)
   // A pipe used by the child process to report errors.
   PipePosix pipe;
   const bool child_processes_inherit = false;
   error = pipe.CreateNew(child_processes_inherit);
   if (error.Fail())
     return HostProcess();
+#endif
 
   const ForkLaunchInfo fork_launch_info(launch_info);
+#if defined(__QNX__)
+  // A call to execve doesn't have the child process stopped by default on QNX.
+  // So, use posix_spawn instead.
+  posix_spawn_file_actions_t file_actions;
+  posix_spawnattr_t attr;
+  ::pid_t pid;
 
+  if (::posix_spawn_file_actions_init(&file_actions) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawn_file_actions_init failed with "
+                                    "error message: {0}",
+                                    llvm::sys::StrError());
+    return HostProcess();
+  }
+
+  if (::posix_spawnattr_init(&attr) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawnattr_init failed with error "
+                                    "message: {0}",
+                                    llvm::sys::StrError());
+    return HostProcess();
+  }
+
+  pid = PosixSpawn(fork_launch_info, file_actions, attr, error);
+
+  if (::posix_spawn_file_actions_destroy(&file_actions) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawn_file_actions_destroy failed "
+                                    "with error message: {0}",
+                                    llvm::sys::StrError());
+  }
+
+  if (::posix_spawnattr_destroy(&attr) != EOK) {
+    error.SetErrorStringWithFormatv("posix_spawnattr_destroy failed with error "
+                                    "message: {0}",
+                                    llvm::sys::StrError());
+  }
+
+  return HostProcess(pid);
+#else
   ::pid_t pid = ::fork();
   if (pid == -1) {
     // Fork failed
@@ -278,7 +468,6 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
     pipe.CloseReadFileDescriptor();
     ChildFunc(pipe.ReleaseWriteFileDescriptor(), fork_launch_info);
   }
-
   // parent process
 
   pipe.CloseWriteFileDescriptor();
@@ -302,4 +491,5 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   llvm::sys::RetryAfterSignal(-1, waitpid, pid, nullptr, 0);
 
   return HostProcess();
+#endif
 }
