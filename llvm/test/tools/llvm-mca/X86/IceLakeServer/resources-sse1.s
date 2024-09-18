@@ -335,7 +335,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -     24.00  66.92  28.92  29.00  29.00  4.50   31.92  0.25   4.50   4.50   4.50
+# CHECK-NEXT:  -     24.00  66.92  29.42  29.00  29.00  4.50   31.42  0.25   4.50   4.50   4.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -413,7 +413,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     pavgb	(%rax), %mm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     pavgw	%mm0, %mm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     pavgw	(%rax), %mm2
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     pextrw	$1, %mm0, %ecx
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     pinsrw	$1, %eax, %mm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     pinsrw	$1, (%rax), %mm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     pmaxsw	%mm0, %mm2

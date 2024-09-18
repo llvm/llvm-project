@@ -4460,8 +4460,13 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
 
   if (CurRec)
     CurRec->addDump(Loc, Message);
-  else
-    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
+  else {
+    HasReferenceResolver resolver{nullptr};
+    resolver.setFinal(true);
+    // force a resolution with a dummy resolver
+    Init *ResolvedMessage = Message->resolveReferences(resolver);
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, ResolvedMessage));
+  }
 
   return false;
 }

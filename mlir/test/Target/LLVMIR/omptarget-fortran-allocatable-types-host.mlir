@@ -6,7 +6,7 @@
 // alongside the omp.map.info, the test utilises mapping of array sections, 
 // full arrays and individual allocated scalars.
 
-module attributes {omp.is_target_device = false} {
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() {
     %0 = llvm.mlir.constant(5 : index) : i64
     %1 = llvm.mlir.constant(2 : index) : i64

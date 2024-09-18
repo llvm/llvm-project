@@ -8,15 +8,15 @@ enums: []
 objects: []
 functions:
   - name: wait
-    standards: 
+    standards:
       - POSIX
     return_type: pid_t
     arguments:
       - type: int *
   - name: wait4
-    standards: 
+    standards:
       - BSDExtensions
-      - POSIX 
+      - POSIX
     return_type: pid_t
     arguments:
       - type: pid_t
@@ -24,7 +24,7 @@ functions:
       - type: int
       - type: struct rusage *
   - name: waitpid
-    standards: 
+    standards:
       - POSIX
     return_type: pid_t
     arguments:

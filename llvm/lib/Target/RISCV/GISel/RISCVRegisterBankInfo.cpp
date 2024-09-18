@@ -310,10 +310,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_LOAD: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      break;
+    }
+
+    OpdsMapping[0] = GPRValueMapping;
+
     // Use FPR64 for s64 loads on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
@@ -333,10 +342,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_STORE: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      break;
+    }
+
+    OpdsMapping[0] = GPRValueMapping;
+
     // Use FPR64 for s64 stores on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;

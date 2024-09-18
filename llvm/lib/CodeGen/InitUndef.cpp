@@ -84,7 +84,7 @@ public:
 
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                         const DeadLaneDetector &DLD);
+                         const DeadLaneDetector *DLD);
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
   bool fixupIllOperand(MachineInstr *MI, MachineOperand &MO);
@@ -152,8 +152,7 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     if (Info.UsedLanes == Info.DefinedLanes)
       continue;
 
-    const TargetRegisterClass *TargetRegClass =
-        TRI->getLargestSuperClass(MRI->getRegClass(Reg));
+    const TargetRegisterClass *TargetRegClass = MRI->getRegClass(Reg);
 
     LaneBitmask NeedDef = Info.UsedLanes & ~Info.DefinedLanes;
 
@@ -172,13 +171,12 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {
       Changed = true;
-      const TargetRegisterClass *SubRegClass = TRI->getLargestSuperClass(
-          TRI->getSubRegisterClass(TargetRegClass, ind));
+      const TargetRegisterClass *SubRegClass =
+          TRI->getSubRegisterClass(TargetRegClass, ind);
       Register TmpInitSubReg = MRI->createVirtualRegister(SubRegClass);
       LLVM_DEBUG(dbgs() << "Register Class ID" << SubRegClass->getID() << "\n");
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
-              TII->get(TII->getUndefInitOpcode(SubRegClass->getID())),
-              TmpInitSubReg);
+              TII->get(TargetOpcode::INIT_UNDEF), TmpInitSubReg);
       Register NewReg = MRI->createVirtualRegister(TargetRegClass);
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
               TII->get(TargetOpcode::INSERT_SUBREG), NewReg)
@@ -198,14 +196,13 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 
   LLVM_DEBUG(
       dbgs() << "Emitting PseudoInitUndef Instruction for implicit register "
-             << MO.getReg() << '\n');
+             << printReg(MO.getReg()) << '\n');
 
-  const TargetRegisterClass *TargetRegClass =
-      TRI->getLargestSuperClass(MRI->getRegClass(MO.getReg()));
+  const TargetRegisterClass *TargetRegClass = MRI->getRegClass(MO.getReg());
   LLVM_DEBUG(dbgs() << "Register Class ID" << TargetRegClass->getID() << "\n");
-  unsigned Opcode = TII->getUndefInitOpcode(TargetRegClass->getID());
   Register NewReg = MRI->createVirtualRegister(TargetRegClass);
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(Opcode), NewReg);
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(TargetOpcode::INIT_UNDEF), NewReg);
   MO.setReg(NewReg);
   if (MO.isUndef())
     MO.setIsUndef(false);
@@ -213,7 +210,7 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 }
 
 bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                                  const DeadLaneDetector &DLD) {
+                                  const DeadLaneDetector *DLD) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
@@ -239,7 +236,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 
     if (isEarlyClobberMI(MI)) {
       if (MRI->subRegLivenessEnabled())
-        Changed |= handleSubReg(MF, MI, DLD);
+        Changed |= handleSubReg(MF, MI, *DLD);
       Changed |= handleReg(&MI);
     }
   }
@@ -263,15 +260,19 @@ bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   TRI = MRI->getTargetRegisterInfo();
 
   bool Changed = false;
-  DeadLaneDetector DLD(MRI, TRI);
-  DLD.computeSubRegisterLaneBitInfo();
+  std::unique_ptr<DeadLaneDetector> DLD;
+  if (MRI->subRegLivenessEnabled()) {
+    DLD = std::make_unique<DeadLaneDetector>(MRI, TRI);
+    DLD->computeSubRegisterLaneBitInfo();
+  }
 
   for (MachineBasicBlock &BB : MF)
-    Changed |= processBasicBlock(MF, BB, DLD);
+    Changed |= processBasicBlock(MF, BB, DLD.get());
 
   for (auto *DeadMI : DeadInsts)
     DeadMI->eraseFromParent();
   DeadInsts.clear();
+  NewRegs.clear();
 
   return Changed;
 }

@@ -40,17 +40,16 @@ namespace clang {
 namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
-  auto BlockIt = ACFG.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  if (BlockIt == ACFG.getStmtToBlock().end()) {
+  const CFGBlock *Block = ACFG.blockForStmt(S);
+  if (Block == nullptr) {
     assert(false);
-    // Return null to avoid dereferencing the end iterator in non-assert builds.
     return nullptr;
   }
-  if (!ACFG.isBlockReachable(*BlockIt->getSecond()))
+  if (!ACFG.isBlockReachable(*Block))
     return nullptr;
-  if (BlockIt->getSecond()->getBlockID() == CurBlockID)
+  if (Block->getBlockID() == CurBlockID)
     return &CurState.Env;
-  const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
+  const auto &State = BlockToState[Block->getBlockID()];
   if (!(State))
     return nullptr;
   return &State->Env;

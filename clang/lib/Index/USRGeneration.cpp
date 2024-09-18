@@ -785,6 +785,11 @@ void USRGenerator::VisitType(QualType T) {
     Out << "@BT@" << #Name;                                                    \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:

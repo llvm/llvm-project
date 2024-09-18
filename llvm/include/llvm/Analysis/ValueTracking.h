@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
@@ -30,12 +29,9 @@ namespace llvm {
 
 class Operator;
 class AddOperator;
-class AllocaInst;
-class APInt;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
-class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -43,7 +39,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
-class Value;
+template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
@@ -122,6 +118,9 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const Instruction *CxtI = nullptr,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
+
+bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
+                            const SimplifyQuery &Q);
 
 bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
 
@@ -791,13 +790,6 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// Return true if the only users of this pointer are lifetime markers or
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
-
-/// Return true if speculation of the given load must be suppressed to avoid
-/// ordering or interfering with an active sanitizer.  If not suppressed,
-/// dereferenceability and alignment must be proven separately.  Note: This
-/// is only needed for raw reasoning; if you use the interface below
-/// (isSafeToSpeculativelyExecute), this is handled internally.
-bool mustSuppressSpeculation(const LoadInst &LI);
 
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.

@@ -29,7 +29,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _Forw
 __partition_impl(_ForwardIterator __first, _Sentinel __last, _Predicate __pred, forward_iterator_tag) {
   while (true) {
     if (__first == __last)
-      return std::make_pair(std::move(__first), std::move(__first));
+      return std::make_pair(__first, __first);
     if (!__pred(*__first))
       break;
     ++__first;

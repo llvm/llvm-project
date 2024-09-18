@@ -120,6 +120,8 @@ __all__ = [
     "F32Type",
     "F64Type",
     "FlatSymbolRefAttr",
+    "Float6E3M2FNType",
+    "Float8E3M4Type",
     "Float8E4M3B11FNUZType",
     "Float8E4M3FNType",
     "Float8E4M3FNUZType",
@@ -128,6 +130,7 @@ __all__ = [
     "Float8E5M2Type",
     "FloatAttr",
     "FloatTF32Type",
+    "FloatType",
     "FunctionType",
     "IndexType",
     "InferShapedTypeOpInterface",
@@ -135,6 +138,7 @@ __all__ = [
     "InsertionPoint",
     "IntegerAttr",
     "IntegerSet",
+    "IntegerSetAttr",
     "IntegerSetConstraint",
     "IntegerSetConstraintList",
     "IntegerType",
@@ -1537,6 +1541,32 @@ class FlatSymbolRefAttr(Attribute):
         Returns the value of the FlatSymbolRef attribute as a string
         """
 
+class Float6E3M2FNType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Optional[Context] = None) -> Float6E3M2FNType:
+        """
+        Create a float6_e3m2fn type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E3M4Type(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Optional[Context] = None) -> Float8E3M4Type:
+        """
+        Create a float8_e3m4 type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
 class Float8E4M3B11FNUZType(FloatType):
     static_typeid: ClassVar[TypeID]
     @staticmethod
@@ -1875,6 +1905,21 @@ class IntegerSet:
     def n_inputs(self) -> int: ...
     @property
     def n_symbols(self) -> int: ...
+
+class IntegerSetAttr(Attribute):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(integer_set) -> IntegerSetAttr:
+        """
+        Gets an attribute wrapping an IntegerSet.
+        """
+    @staticmethod
+    def isinstance(other: Attribute) -> bool: ...
+    def __init__(self, cast_from_attr: Attribute) -> None: ...
+    @property
+    def type(self) -> Type: ...
+    @property
+    def typeid(self) -> TypeID: ...
 
 class IntegerSetConstraint:
     def __init__(self, *args, **kwargs) -> None: ...

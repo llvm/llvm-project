@@ -43,10 +43,10 @@ add_llvm_unittest(OrcJITTests
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
   WrapperFunctionUtilsTest.cpp
+
+  EXPORT_SYMBOLS
   )
 
 target_link_libraries(OrcJITTests PRIVATE
                         LLVMTestingSupport
                         ${ORC_JIT_TEST_LIBS})
-
-export_executable_symbols(OrcJITTests)

@@ -2002,10 +2002,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     if ((unsigned)llvm::popcount(P) < Count) {
       // Reset all occurences of P, if there are more occurrences of P
       // than there are bits in P.
-      for (unsigned &Q : Worklist) {
-        if (Q == P)
-          Q = 0;
-      }
+      llvm::replace(Worklist, P, 0U);
     }
   }
 

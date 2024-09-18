@@ -615,28 +615,20 @@ private:
     });
   }
 
-  void initMacroValues(CheckerContext &C) const {
+  void initMacroValues(const Preprocessor &PP) const {
     if (EofVal)
       return;
 
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("EOF", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("EOF", PP))
       EofVal = *OptInt;
     else
       EofVal = -1;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_SET", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_SET", PP))
       SeekSetVal = *OptInt;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_END", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_END", PP))
       SeekEndVal = *OptInt;
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("SEEK_CUR", C.getPreprocessor()))
+    if (const std::optional<int> OptInt = tryExpandAsInteger("SEEK_CUR", PP))
       SeekCurVal = *OptInt;
-  }
-
-  void initVaListType(CheckerContext &C) const {
-    VaListType = C.getASTContext().getBuiltinVaListType().getCanonicalType();
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
@@ -763,8 +755,17 @@ protected:
 
   bool doesFnIntendToHandleOwnership(const Decl *Callee,
                                      ASTContext &ACtx) final {
-    using namespace clang::ast_matchers;
     const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+
+    // Given that the stack frame was entered, the body should always be
+    // theoretically obtainable. In case of body farms, the synthesized body
+    // is not attached to declaration, thus triggering the '!FD->hasBody()'
+    // branch. That said, would a synthesized body ever intend to handle
+    // ownership? As of today they don't. And if they did, how would we
+    // put notes inside it, given that it doesn't match any source locations?
+    if (!FD || !FD->hasBody())
+      return false;
+    using namespace clang::ast_matchers;
 
     auto Matches =
         match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
@@ -880,9 +881,6 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
 
 void StreamChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  initMacroValues(C);
-  initVaListType(C);
-
   const FnDescription *Desc = lookupFn(Call);
   if (!Desc || !Desc->PreFn)
     return;
@@ -938,7 +936,6 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   assert(RetSym && "RetVal must be a symbol here.");
 
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
-  State = assumeNoAliasingWithStdStreams(State, RetVal, C);
 
   // Bifurcate the state into two: one with a valid FILE* pointer, the other
   // with a NULL.
@@ -950,6 +947,8 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
       StateNotNull->set<StreamMap>(RetSym, StreamState::getOpened(Desc));
   StateNull =
       StateNull->set<StreamMap>(RetSym, StreamState::getOpenFailed(Desc));
+
+  StateNotNull = assumeNoAliasingWithStdStreams(StateNotNull, RetVal, C);
 
   C.addTransition(StateNotNull,
                   constructLeakNoteTag(C, RetSym, "Stream opened here"));
@@ -1130,7 +1129,7 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   if (!ElemTy.isNull() && CountVal && Size && StartIndexVal) {
     int64_t NumBytesRead = Size.value() * CountVal.value();
     int64_t ElemSizeInChars = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
-    if (ElemSizeInChars == 0)
+    if (ElemSizeInChars == 0 || NumBytesRead < 0)
       return nullptr;
 
     bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;
@@ -2081,10 +2080,12 @@ getGlobalStreamPointerByName(const TranslationUnitDecl *TU, StringRef VarName) {
 }
 
 void StreamChecker::checkASTDecl(const TranslationUnitDecl *TU,
-                                 AnalysisManager &, BugReporter &) const {
+                                 AnalysisManager &Mgr, BugReporter &) const {
   StdinDecl = getGlobalStreamPointerByName(TU, "stdin");
   StdoutDecl = getGlobalStreamPointerByName(TU, "stdout");
   StderrDecl = getGlobalStreamPointerByName(TU, "stderr");
+  VaListType = TU->getASTContext().getBuiltinVaListType().getCanonicalType();
+  initMacroValues(Mgr.getPreprocessor());
 }
 
 //===----------------------------------------------------------------------===//

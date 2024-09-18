@@ -245,6 +245,9 @@ private:
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPrintFString(CallInst *CI, IRBuilderBase &B);
 
+  /// Exit functions
+  Value *optimizeExit(CallInst *CI);
+
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f
   bool hasFloatVersion(const Module *M, StringRef FuncName);

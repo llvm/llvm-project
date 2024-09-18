@@ -1097,7 +1097,7 @@ int internal_pthread_create(void *th, void *attr, void *(*callback)(void *),
 }
 int internal_pthread_join(void *th, void **ret) {
   ScopedIgnoreInterceptors ignore;
-  return REAL(pthread_join(th, ret));
+  return REAL(pthread_join)(th, ret);
 }
 }  // namespace __sanitizer
 

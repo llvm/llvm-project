@@ -147,11 +147,13 @@ static Value *memToShadow(Module &M, IRBuilder<> &IRB, Type *IntptrTy,
   return IRB.CreateAdd(Shadow, ShadowBase);
 }
 
-void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
-                       Instruction *InsertBefore, Value *Addr,
-                       MaybeAlign Alignment, uint32_t TypeStoreSize,
-                       bool IsWrite, Value *SizeArgument, bool UseCalls,
-                       bool Recover, int AsanScale, int AsanOffset) {
+static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
+                                  Instruction *OrigIns,
+                                  Instruction *InsertBefore, Value *Addr,
+                                  Align Alignment, uint32_t TypeStoreSize,
+                                  bool IsWrite, Value *SizeArgument,
+                                  bool UseCalls, bool Recover, int AsanScale,
+                                  int AsanOffset) {
   Type *AddrTy = Addr->getType();
   Type *IntptrTy = M.getDataLayout().getIntPtrType(
       M.getContext(), AddrTy->getPointerAddressSpace());
@@ -164,7 +166,7 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
   Value *ShadowPtr =
       memToShadow(M, IRB, IntptrTy, AddrLong, AsanScale, AsanOffset);
   const uint64_t ShadowAlign =
-      std::max<uint64_t>(Alignment.valueOrOne().value() >> AsanScale, 1);
+      std::max<uint64_t>(Alignment.value() >> AsanScale, 1);
   Value *ShadowValue = IRB.CreateAlignedLoad(
       ShadowTy, IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy), Align(ShadowAlign));
   Value *Cmp = IRB.CreateIsNotNull(ShadowValue);
@@ -177,6 +179,43 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
                         AccessSizeIndex, SizeArgument, Recover);
   Crash->setDebugLoc(OrigIns->getDebugLoc());
   return;
+}
+
+void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
+                       Instruction *InsertBefore, Value *Addr, Align Alignment,
+                       TypeSize TypeStoreSize, bool IsWrite,
+                       Value *SizeArgument, bool UseCalls, bool Recover,
+                       int AsanScale, int AsanOffset) {
+  if (!TypeStoreSize.isScalable()) {
+    unsigned Granularity = 1 << AsanScale;
+    const auto FixedSize = TypeStoreSize.getFixedValue();
+    switch (FixedSize) {
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+    case 128:
+      if (Alignment.value() >= Granularity ||
+          Alignment.value() >= FixedSize / 8)
+        return instrumentAddressImpl(
+            M, IRB, OrigIns, InsertBefore, Addr, Alignment, FixedSize, IsWrite,
+            SizeArgument, UseCalls, Recover, AsanScale, AsanOffset);
+    }
+  }
+  // Instrument unusual size or unusual alignment.
+  IRB.SetInsertPoint(InsertBefore);
+  Type *AddrTy = Addr->getType();
+  Type *IntptrTy = M.getDataLayout().getIntPtrType(AddrTy);
+  Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
+  Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
+  Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
+  Value *SizeMinusOne = IRB.CreateAdd(Size, ConstantInt::get(IntptrTy, -1));
+  Value *LastByte =
+      IRB.CreateIntToPtr(IRB.CreateAdd(AddrLong, SizeMinusOne), AddrTy);
+  instrumentAddressImpl(M, IRB, OrigIns, InsertBefore, Addr, {}, 8, IsWrite,
+                        SizeArgument, UseCalls, Recover, AsanScale, AsanOffset);
+  instrumentAddressImpl(M, IRB, OrigIns, InsertBefore, LastByte, {}, 8, IsWrite,
+                        SizeArgument, UseCalls, Recover, AsanScale, AsanOffset);
 }
 
 void getInterestingMemoryOperands(

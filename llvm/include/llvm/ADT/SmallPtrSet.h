@@ -16,9 +16,10 @@
 #define LLVM_ADT_SMALLPTRSET_H
 
 #include "llvm/ADT/EpochTracker.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -92,6 +93,7 @@ public:
 
   [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
+  size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -106,6 +108,27 @@ public:
 
     NumNonEmpty = 0;
     NumTombstones = 0;
+  }
+
+  void reserve(size_type NumEntries) {
+    incrementEpoch();
+    // Do nothing if we're given zero as a reservation size.
+    if (NumEntries == 0)
+      return;
+    // No need to expand if we're small and NumEntries will fit in the space.
+    if (isSmall() && NumEntries <= CurArraySize)
+      return;
+    // insert_imp_big will reallocate if stores is more than 75% full, on the
+    // /final/ insertion.
+    if (!isSmall() && ((NumEntries - 1) * 4) < (CurArraySize * 3))
+      return;
+    // We must Grow -- find the size where we'd be 75% full, then round up to
+    // the next power of two.
+    size_type NewSize = NumEntries + (NumEntries / 3);
+    NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    // Like insert_imp_big, always allocate at least 128 elements.
+    NewSize = std::max(128u, NewSize);
+    Grow(NewSize);
   }
 
 protected:
@@ -162,8 +185,8 @@ protected:
       return false;
     }
 
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket != Ptr)
+    auto *Bucket = doFind(Ptr);
+    if (!Bucket)
       return false;
 
     *const_cast<const void **>(Bucket) = getTombstoneMarker();
@@ -188,8 +211,7 @@ protected:
     }
 
     // Big set case.
-    auto *Bucket = FindBucketFor(Ptr);
-    if (*Bucket == Ptr)
+    if (auto *Bucket = doFind(Ptr))
       return Bucket;
     return EndPointer();
   }
@@ -199,6 +221,7 @@ protected:
 private:
   std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
+  const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
   void shrink_and_clear();
 

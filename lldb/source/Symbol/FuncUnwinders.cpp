@@ -334,12 +334,22 @@ UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
 
   m_tried_unwind_plan_assembly = true;
 
+  // Don't analyze more than 10 megabytes of instructions,
+  // if a function is legitimately larger than that, we'll
+  // miss the epilogue instructions, but guard against a
+  // bogusly large function and analyzing large amounts of
+  // non-instruction data.
+  AddressRange range = m_range;
+  const addr_t func_size =
+      std::min(range.GetByteSize(), (addr_t)1024 * 10 * 10);
+  range.SetByteSize(func_size);
+
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
     m_unwind_plan_assembly_sp =
         std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     if (!assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
-            m_range, thread, *m_unwind_plan_assembly_sp)) {
+            range, thread, *m_unwind_plan_assembly_sp)) {
       m_unwind_plan_assembly_sp.reset();
     }
   }

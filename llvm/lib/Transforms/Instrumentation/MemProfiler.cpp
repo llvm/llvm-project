@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
@@ -60,6 +61,9 @@ constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
 constexpr uint64_t DefaultMemGranularity = 64;
+
+// Size of memory mapped to a single histogram bucket.
+constexpr uint64_t HistogramGranularity = 8;
 
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
@@ -192,7 +196,7 @@ namespace {
 struct ShadowMapping {
   ShadowMapping() {
     Scale = ClMappingScale;
-    Granularity = ClMappingGranularity;
+    Granularity = ClHistogram ? HistogramGranularity : ClMappingGranularity;
     Mask = ~(Granularity - 1);
   }
 
@@ -276,6 +280,8 @@ MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
+  assert((!ClHistogram || ClMappingGranularity == DefaultMemGranularity) &&
+         "Memprof with histogram only supports default mapping granularity");
   Module &M = *F.getParent();
   MemProfiler Profiler(M);
   if (Profiler.instrumentFunction(F))
@@ -287,10 +293,6 @@ ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {
-
-  assert((!ClHistogram || (ClHistogram && ClUseCalls)) &&
-         "Cannot use -memprof-histogram without Callbacks. Set "
-         "memprof-use-callbacks");
 
   ModuleMemProfiler Profiler(M);
   if (Profiler.instrumentModule(M))
@@ -489,14 +491,21 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
     return;
   }
 
-  // Create an inline sequence to compute shadow location, and increment the
-  // value by one.
-  Type *ShadowTy = Type::getInt64Ty(*C);
+  Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
   Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
   Value *ShadowValue = IRB.CreateLoad(ShadowTy, ShadowAddr);
-  Value *Inc = ConstantInt::get(Type::getInt64Ty(*C), 1);
+  // If we are profiling with histograms, add overflow protection at 255.
+  if (ClHistogram) {
+    Value *MaxCount = ConstantInt::get(Type::getInt8Ty(*C), 255);
+    Value *Cmp = IRB.CreateICmpULT(ShadowValue, MaxCount);
+    Instruction *IncBlock =
+        SplitBlockAndInsertIfThen(Cmp, InsertBefore, /*Unreachable=*/false);
+    IRB.SetInsertPoint(IncBlock);
+  }
+  Value *Inc = ConstantInt::get(ShadowTy, 1);
   ShadowValue = IRB.CreateAdd(ShadowValue, Inc);
   IRB.CreateStore(ShadowValue, ShadowAddr);
 }
@@ -745,8 +754,8 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-static bool isNewWithHotColdVariant(Function *Callee,
-                                    const TargetLibraryInfo &TLI) {
+static bool isAllocationWithHotColdVariant(Function *Callee,
+                                           const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
   LibFunc Func;
@@ -761,6 +770,8 @@ static bool isNewWithHotColdVariant(Function *Callee,
   case LibFunc_ZnamRKSt9nothrow_t:
   case LibFunc_ZnamSt11align_val_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_aligned:
     return true;
   case LibFunc_Znwm12__hot_cold_t:
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
@@ -770,6 +781,8 @@ static bool isNewWithHotColdVariant(Function *Callee,
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned_hot_cold:
     return ClMemProfMatchHotColdNew;
   default:
     return false;
@@ -937,9 +950,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's locations match the prefix Frame locations on an
       // allocation context with the same leaf.
       if (AllocInfoIter != LocHashToAllocInfo.end()) {
-        // Only consider allocations via new, to reduce unnecessary metadata,
-        // since those are the only allocations that will be targeted initially.
-        if (!isNewWithHotColdVariant(CI->getCalledFunction(), TLI))
+        // Only consider allocations which support hinting.
+        if (!isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
           continue;
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to

@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
@@ -14,58 +15,101 @@
 #include <span>
 #include <cassert>
 #include <string>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename T>
-constexpr bool doCopy(const T &rhs)
-{
-    ASSERT_NOEXCEPT(T{rhs});
-    T lhs{rhs};
-    return lhs.data() == rhs.data()
-     &&    lhs.size() == rhs.size();
+template <class T>
+constexpr void test() {
+  ASSERT_NOEXCEPT(std::span<T>(std::declval<std::span<T> const&>()));
+  ASSERT_NOEXCEPT(std::span<T>{std::declval<std::span<T> const&>()});
+
+  // dynamic_extent
+  {
+    std::span<T> x;
+    std::span<T> copy(x);
+    assert(copy.data() == x.data());
+    assert(copy.size() == x.size());
+  }
+  {
+    T array[3] = {};
+    std::span<T> x(array, 3);
+    std::span<T> copy(x);
+    assert(copy.data() == array);
+    assert(copy.size() == 3);
+  }
+  {
+    T array[3] = {};
+    std::span<T> x(array, 2);
+    std::span<T> copy(x);
+    assert(copy.data() == array);
+    assert(copy.size() == 2);
+  }
+
+  // static extent
+  {
+    std::span<T, 0> x;
+    std::span<T, 0> copy(x);
+    assert(copy.data() == x.data());
+    assert(copy.size() == x.size());
+  }
+  {
+    T array[3] = {};
+    std::span<T, 3> x(array);
+    std::span<T, 3> copy(x);
+    assert(copy.data() == array);
+    assert(copy.size() == 3);
+  }
+  {
+    T array[2] = {};
+    std::span<T, 2> x(array);
+    std::span<T, 2> copy(x);
+    assert(copy.data() == array);
+    assert(copy.size() == 2);
+  }
 }
 
-struct A{};
+struct Foo {};
 
-template <typename T>
-void testCV ()
-{
-    int  arr[] = {1,2,3};
-    assert((doCopy(std::span<T>  ()          )));
-    assert((doCopy(std::span<T,0>()          )));
-    assert((doCopy(std::span<T>  (&arr[0], 1))));
-    assert((doCopy(std::span<T,1>(&arr[0], 1))));
-    assert((doCopy(std::span<T>  (&arr[0], 2))));
-    assert((doCopy(std::span<T,2>(&arr[0], 2))));
+constexpr bool test_all() {
+  test<int>();
+  test<const int>();
+  test<volatile int>();
+  test<const volatile int>();
+
+  test<long>();
+  test<const long>();
+  test<volatile long>();
+  test<const volatile long>();
+
+  test<double>();
+  test<const double>();
+  test<volatile double>();
+  test<const volatile double>();
+
+  // Note: Can't test non-fundamental types with volatile because we require `T*` to be indirectly_readable,
+  //       which isn't the case when T is volatile.
+  test<Foo>();
+  test<const Foo>();
+
+  test<std::string>();
+  test<const std::string>();
+
+  // Regression test for https://github.com/llvm/llvm-project/issues/104496
+  {
+    struct Incomplete;
+    std::span<Incomplete> x;
+    std::span<Incomplete> copy(x);
+    assert(copy.data() == x.data());
+    assert(copy.size() == x.size());
+  }
+
+  return true;
 }
 
-
-int main(int, char**)
-{
-    constexpr int carr[] = {1,2,3};
-
-    static_assert(doCopy(std::span<      int>  ()),            "");
-    static_assert(doCopy(std::span<      int,0>()),            "");
-    static_assert(doCopy(std::span<const int>  (&carr[0], 1)), "");
-    static_assert(doCopy(std::span<const int,1>(&carr[0], 1)), "");
-    static_assert(doCopy(std::span<const int>  (&carr[0], 2)), "");
-    static_assert(doCopy(std::span<const int,2>(&carr[0], 2)), "");
-
-    static_assert(doCopy(std::span<long>()),   "");
-    static_assert(doCopy(std::span<double>()), "");
-    static_assert(doCopy(std::span<A>()),      "");
-
-    std::string s;
-    assert(doCopy(std::span<std::string>   ()     ));
-    assert(doCopy(std::span<std::string, 0>()     ));
-    assert(doCopy(std::span<std::string>   (&s, 1)));
-    assert(doCopy(std::span<std::string, 1>(&s, 1)));
-
-    testCV<               int>();
-    testCV<const          int>();
-    testCV<      volatile int>();
-    testCV<const volatile int>();
+int main(int, char**) {
+  test_all();
+  static_assert(test_all());
 
   return 0;
 }

@@ -102,7 +102,6 @@ end
 ! CHECK:            %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:            fir.call @_QPinternal_call7(%[[VAL_3]]) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
 ! CHECK:            hlfir.copy_out %[[TMP_BOX]], %[[VAL_2]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:          } else {
 ! CHECK:          }
 ! CHECK:          return
 ! CHECK:        }
@@ -122,7 +121,6 @@ end
 ! CHECK:            %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 ! CHECK:            fir.call @_QPinternal_call8(%[[VAL_3]]) fastmath<contract> : (!fir.ref<!fir.array<?x?xf32>>) -> ()
 ! CHECK:            hlfir.copy_out %[[TMP_BOX]], %[[VAL_2]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, i1, !fir.box<!fir.array<?x?xf32>>) -> ()
-! CHECK:          } else {
 ! CHECK:          }
 ! CHECK:          return
 ! CHECK:        }

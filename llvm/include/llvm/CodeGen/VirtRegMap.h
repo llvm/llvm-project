@@ -114,7 +114,7 @@ class TargetInstrInfo;
     bool isShapeMapEmpty() const { return Virt2ShapeMap.empty(); }
 
     bool hasShape(Register virtReg) const {
-      return getShape(virtReg).isValid();
+      return Virt2ShapeMap.contains(virtReg);
     }
 
     ShapeT getShape(Register virtReg) const {

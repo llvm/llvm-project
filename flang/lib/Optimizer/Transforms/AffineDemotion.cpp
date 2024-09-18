@@ -125,9 +125,8 @@ public:
 };
 
 mlir::Type convertMemRef(mlir::MemRefType type) {
-  return fir::SequenceType::get(
-      SmallVector<int64_t>(type.getShape().begin(), type.getShape().end()),
-      type.getElementType());
+  return fir::SequenceType::get(SmallVector<int64_t>(type.getShape()),
+                                type.getElementType());
 }
 
 class StdAllocConversion : public mlir::OpRewritePattern<memref::AllocOp> {

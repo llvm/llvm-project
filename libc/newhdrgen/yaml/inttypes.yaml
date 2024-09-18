@@ -6,20 +6,20 @@ enums: []
 objects: []
 functions:
   - name: imaxabs
-    standards: 
+    standards:
       - stdc
     return_type: intmax_t
     arguments:
       - type: intmax_t
   - name: imaxdiv
-    standards: 
+    standards:
       - stdc
     return_type: imaxdiv_t
     arguments:
       - type: intmax_t
       - type: intmax_t
   - name: strtoimax
-    standards: 
+    standards:
       - stdc
     return_type: intmax_t
     arguments:
@@ -27,7 +27,7 @@ functions:
       - type: char * *__restrict
       - type: int
   - name: strtoumax
-    standards: 
+    standards:
       - stdc
     return_type: uintmax_t
     arguments:

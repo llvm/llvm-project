@@ -233,7 +233,7 @@ llvm::Expected<std::vector<
     std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
 runDataflowAnalysis(const AdornedCFG &ACFG, AnalysisT &Analysis,
                     const Environment &InitEnv,
-                    CFGEltCallbacks<AnalysisT> PostAnalysisCallbacks,
+                    CFGEltCallbacks<AnalysisT> PostAnalysisCallbacks = {},
                     std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
   CFGEltCallbacksTypeErased TypeErasedCallbacks;
   if (PostAnalysisCallbacks.Before) {
@@ -284,22 +284,6 @@ runDataflowAnalysis(const AdornedCFG &ACFG, AnalysisT &Analysis,
             });
       });
   return std::move(BlockStates);
-}
-
-/// Overload that takes only one post-analysis callback, which is run on the
-/// state after visiting the `CFGElement`. This is provided for backwards
-/// compatibility; new callers should call the overload taking `CFGEltCallbacks`
-/// instead.
-template <typename AnalysisT>
-llvm::Expected<std::vector<
-    std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runDataflowAnalysis(
-    const AdornedCFG &ACFG, AnalysisT &Analysis, const Environment &InitEnv,
-    CFGEltCallback<AnalysisT> PostAnalysisCallbackAfterElt = nullptr,
-    std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
-  return runDataflowAnalysis(ACFG, Analysis, InitEnv,
-                             {nullptr, PostAnalysisCallbackAfterElt},
-                             MaxBlockVisits);
 }
 
 // Create an analysis class that is derived from `DataflowAnalysis`. This is an

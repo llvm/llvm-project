@@ -242,9 +242,6 @@ private:
   /// Original size of the function.
   uint64_t Size;
 
-  /// Original instruction count of the function, if disassembly succeeded.
-  uint64_t InputInstructionCount{0};
-
   /// Address of the function in output.
   uint64_t OutputAddress{0};
 
@@ -1695,6 +1692,8 @@ public:
 
   void setPseudo(bool Pseudo) { IsPseudo = Pseudo; }
 
+  void setPreserveNops(bool Value) { PreserveNops = Value; }
+
   BinaryFunction &setUsesGnuArgsSize(bool Uses = true) {
     UsesGnuArgsSize = Uses;
     return *this;
@@ -2175,9 +2174,6 @@ public:
 
   /// Get the number of instructions within this function.
   uint64_t getInstructionCount() const;
-
-  /// Get the original number of instructions.
-  uint64_t getInputInstructionCount() const { return InputInstructionCount; }
 
   const CFIInstrMapType &getFDEProgram() const { return FrameInstructions; }
 

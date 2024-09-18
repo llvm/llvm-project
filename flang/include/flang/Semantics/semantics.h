@@ -254,6 +254,11 @@ public:
   // behavior.
   CommonBlockList GetCommonBlocks() const;
 
+  void NoteDefinedSymbol(const Symbol &);
+  bool IsSymbolDefined(const Symbol &) const;
+
+  void DumpSymbols(llvm::raw_ostream &);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -303,6 +308,7 @@ private:
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
+  UnorderedSymbolSet isDefined_;
 };
 
 class Semantics {

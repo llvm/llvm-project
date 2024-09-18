@@ -367,7 +367,7 @@ func.func @constant_wrong_type_string() {
 // -----
 
 llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  // expected-error @+1 {{expected array attribute of size 2}}
   %0 = llvm.mlir.constant([1.0 : f64]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -375,7 +375,7 @@ llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements of the same type}}
+  // expected-error @+1 {{struct element at index 1 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -383,7 +383,7 @@ llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  // expected-error @+1 {{expected array attribute}}
   %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -391,7 +391,7 @@ llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_one_element() -> !llvm.struct<(f64)> {
-  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  // expected-error @+1 {{expected array attribute of size 1}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64)>
   llvm.return %0 : !llvm.struct<(f64)>
 }
@@ -399,7 +399,7 @@ llvm.func @struct_one_element() -> !llvm.struct<(f64)> {
 // -----
 
 llvm.func @struct_two_different_elements() -> !llvm.struct<(f64, f32)> {
-  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  // expected-error @+1 {{struct element at index 1 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64, f32)>
   llvm.return %0 : !llvm.struct<(f64, f32)>
 }
@@ -410,6 +410,22 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
   // expected-error @+1 {{expected struct element types to be floating point type or integer type}}
   %0 = llvm.mlir.constant([dense<[1.0, 1.0]> : tensor<2xf64>, dense<[1.0, 1.0]> : tensor<2xf64>]) : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
   llvm.return %0 : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
+}
+
+// -----
+
+llvm.func @const_wrong_number_of_elements() -> vector<5xf64> {
+  // expected-error @+1{{type and attribute have a different number of elements: 5 vs. 2}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0]> : tensor<2xf64>) : vector<5xf64>
+  llvm.return %0 : vector<5xf64>
+}
+
+// -----
+
+llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
+  // expected-error @+1{{scalable vector type requires a splat attribute}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0, 2.0, 2.0]> : tensor<4xf64>) : vector<[4]xf64>
+  llvm.return %0 : vector<[4]xf64>
 }
 
 // -----

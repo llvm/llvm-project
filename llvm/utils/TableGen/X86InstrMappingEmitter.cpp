@@ -138,8 +138,8 @@ public:
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
-      Record *OldOpRec = OldInst->Operands[I].Rec;
-      Record *NewOpRec = NewInst->Operands[I].Rec;
+      const Record *OldOpRec = OldInst->Operands[I].Rec;
+      const Record *NewOpRec = NewInst->Operands[I].Rec;
 
       if (OldOpRec == NewOpRec)
         continue;
@@ -242,7 +242,8 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
       return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
-             Name == "HasAVXIFMA";
+             Name == "HasAVXIFMA" || Name == "HasAVXVNNIINT8" ||
+             Name == "HasAVXVNNIINT16";
     });
     if (It != Predicates.end())
       PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);

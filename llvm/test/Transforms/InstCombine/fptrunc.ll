@@ -4,7 +4,7 @@
 define float @fadd_fpext_op0(float %x, double %y) {
 ; CHECK-LABEL: @fadd_fpext_op0(
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = fadd reassoc double [[Y:%.*]], [[EXT]]
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[BO]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;

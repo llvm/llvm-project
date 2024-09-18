@@ -2,10 +2,6 @@
 // RUN:   %fcheck-generic --check-prefix=CHECK
 
 // REQUIRES: libc
-
-// AMDGPU and NVPTX without LTO uses the implementation in OpenMP currently.
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: amdgcn-amd-amdhsa
 // REQUIRES: gpu
 
 #include <assert.h>

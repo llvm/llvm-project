@@ -36,6 +36,7 @@ private:
 
   const bool AllowIntegerConditions;
   const bool AllowPointerConditions;
+  const bool UseUpperCaseLiteralSuffix;
 };
 
 } // namespace clang::tidy::readability
