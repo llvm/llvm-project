@@ -572,7 +572,7 @@ class TestCursor(unittest.TestCase):
 
     def test_enum_values_on_elaborated_type(self):
         tu = get_tu(
-            "using myUType = unsigned char; enum TEST : myUType { SPAM = 1, HAM = 0xff; }",
+            "using myUType = unsigned char; enum TEST : myUType { SPAM = 1, HAM = 0xff };",
             lang="cpp",
         )
         enum = get_cursor(tu, "TEST")
