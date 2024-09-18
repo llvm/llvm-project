@@ -2090,7 +2090,7 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
   consumeToken(Token::hash_identifier);
   StringRef identifier = tok.getSpelling().drop_front();
   assert(!identifier.contains('.') &&
-         "we should not be getting hash identifiers with dots here");
+         "unexpected dialect attribute token, expected alias");
 
   if (state.asmState)
     state.asmState->addAttrAliasUses(identifier, tok.getLocRange());

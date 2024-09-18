@@ -27,6 +27,8 @@ include "mlir/IR/OpAsmInterface.td"
 class Test_Attr<string name, list<Trait> traits = []>
     : AttrDef<Test_Dialect, name, traits>;
 
+class Test_LocAttr<string name> : LocationAttrDef<Test_Dialect, name, []>;
+
 def SimpleAttrA : Test_Attr<"SimpleA"> {
   let mnemonic = "smpla";
 }
@@ -378,8 +380,7 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
 
 
 // Test custom location handling.
-def TestCustomLocationAttr
-    : Test_Attr<"TestCustomLocation", [NativeAttrTrait<"IsLocation">]> {
+def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   let mnemonic = "custom_location";
   let parameters = (ins "mlir::StringAttr":$file, "unsigned":$line);
 

@@ -28,5 +28,26 @@ TEST(LocationTest, Walk) {
     return WalkResult::advance();
   });
 
-  EXPECT_EQ(llvm::ArrayRef(visited), ArrayRef<Attribute>({loc1, loc2, fused}));
+  EXPECT_EQ(llvm::ArrayRef(visited), ArrayRef<Attribute>({fused, loc1, loc2}));
+}
+
+// Check that we skip location attrs nested under a non-location attr.
+TEST(LocationTest, SkipNested) {
+  MLIRContext ctx;
+  Builder builder(&ctx);
+
+  Location loc1 = FileLineColLoc::get(builder.getStringAttr("foo"), 1, 2);
+  Location loc2 = FileLineColLoc::get(builder.getStringAttr("foo"), 3, 4);
+  Location loc3 = FileLineColLoc::get(builder.getStringAttr("bar"), 1, 2);
+  Location loc4 = FileLineColLoc::get(builder.getStringAttr("bar"), 3, 4);
+  ArrayAttr arr = builder.getArrayAttr({loc3, loc4});
+  Location fused = builder.getFusedLoc({loc1, loc2}, arr);
+
+  SmallVector<Attribute> visited;
+  fused->walk([&](Location l) {
+    visited.push_back(LocationAttr(l));
+    return WalkResult::advance();
+  });
+
+  EXPECT_EQ(llvm::ArrayRef(visited), ArrayRef<Attribute>({fused, loc1, loc2}));
 }

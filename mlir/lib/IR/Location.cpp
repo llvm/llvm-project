@@ -39,8 +39,14 @@ void BuiltinDialect::registerLocationAttributes() {
 
 WalkResult LocationAttr::walk(function_ref<WalkResult(Location)> walkFn) {
   AttrTypeWalker walker;
-  walker.addWalk([&](LocationAttr loc) { return walkFn(loc); });
-  return walker.walk(*this);
+  // Walk locations, but skip any other attribute.
+  walker.addWalk([&](Attribute attr) {
+    if (auto loc = llvm::dyn_cast<LocationAttr>(attr))
+      return walkFn(loc);
+
+    return WalkResult::skip();
+  });
+  return walker.walk<WalkOrder::PreOrder>(*this);
 }
 
 /// Methods for support type inquiry through isa, cast, and dyn_cast.
