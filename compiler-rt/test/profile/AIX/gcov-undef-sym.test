@@ -6,7 +6,7 @@ RUN: rm -rf %t0 && split-file %s %t0 && cd %t0
 RUN: %clang bar.c main.c undef.c --coverage -c
 RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
 RUN: %clang main.o -L. -lfoo --coverage -o main.exe
-RUN: main.exe
+RUN: %run ./main.exe
 RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
 RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
 
@@ -15,7 +15,7 @@ RUN: rm -rf %t1 && split-file %s %t1 && cd %t1
 RUN: %clang_pgogen bar.c main.c undef.c -fprofile-arcs -ftest-coverage -c
 RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
 RUN: %clang_pgogen main.o -L. -lfoo -fprofile-generate -fprofile-arcs -ftest-coverage -o main.exe
-RUN: main.exe
+RUN: %run ./main.exe
 RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
 RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
 
@@ -24,7 +24,7 @@ RUN: rm -rf %t2 && split-file %s %t2 && cd %t2
 RUN: %clang_pgogen bar.c main.c undef.c -fprofile-arcs -ftest-coverage -c
 RUN: ar -X32_64 -rv libfoo.a undef.o bar.o
 RUN: %clang_pgogen main.o -L. -lfoo -fprofile-generate -fprofile-arcs -ftest-coverage -Wl,-bcdtors:mbr -o main.exe
-RUN: main.exe
+RUN: %run ./main.exe
 RUN: llvm-cov gcov -t main.gcda |  FileCheck --check-prefix=MAIN %s
 RUN: llvm-cov gcov -t bar.gcda |  FileCheck --check-prefix=BAR %s
 
