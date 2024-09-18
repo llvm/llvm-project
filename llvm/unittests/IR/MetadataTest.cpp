@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Metadata.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
@@ -401,6 +402,17 @@ TEST_F(MDNodeTest, PrintFromMetadataAsValue) {
   EXPECT_PRINTER_EQ("!1", MAV1->printAsOperand(OS, false, MST));
   EXPECT_PRINTER_EQ("metadata !0", MAV0->printAsOperand(OS, true, MST));
   EXPECT_PRINTER_EQ("metadata !1", MAV1->printAsOperand(OS, true, MST));
+}
+
+TEST_F(MDNodeTest, ExtractFromValueOrMetadataWrappers) {
+  LLVMValueRef Val = LLVMConstInt(LLVMInt32TypeInContext(wrap(&Context)), 0, 0);
+  LLVMMetadataRef MD = LLVMMDStringInContext2(wrap(&Context), "foo", 3);
+
+  LLVMValueRef MAV = LLVMMetadataAsValue(wrap(&Context), MD);
+  LLVMMetadataRef VAM = LLVMValueAsMetadata(Val);
+
+  EXPECT_EQ(LLVMMetadataAsValue(wrap(&Context), VAM), Val);
+  EXPECT_EQ(LLVMValueAsMetadata(MAV), MD);
 }
 
 TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
