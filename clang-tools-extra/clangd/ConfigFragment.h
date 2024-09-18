@@ -310,11 +310,11 @@ struct Fragment {
     /// not visible. The required scope prefix will be inserted.
     std::optional<Located<bool>> AllScopes;
     /// How to present the argument list between '()' and '<>':
-    /// valid values are enum Config::ArgumentListsOption values:
+    /// valid values are enum Config::ArgumentListsPolicy values:
     ///   None: Nothing at all
     ///   OpenDelimiter: only opening delimiter "(" or "<"
     ///   Delimiters: empty pair of delimiters "()" or "<>"
-    ///   FullPlaceholders: full name of both type and variable
+    ///   FullPlaceholders: full name of both type and parameter
     std::optional<Located<std::string>> ArgumentLists;
   };
   CompletionBlock Completion;

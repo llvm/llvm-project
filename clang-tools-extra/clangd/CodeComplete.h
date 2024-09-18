@@ -105,8 +105,8 @@ struct CodeCompleteOptions {
   bool AllScopes = false;
 
   /// The way argument list on calls '()' and generics '<>' are handled.
-  Config::ArgumentListsOption ArgumentLists =
-      Config::ArgumentListsOption::UnsetDefault;
+  Config::ArgumentListsPolicy ArgumentLists =
+      Config::ArgumentListsPolicy::FullPlaceholders;
 
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).

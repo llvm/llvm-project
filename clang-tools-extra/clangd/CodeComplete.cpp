@@ -561,23 +561,14 @@ private:
   }
 
   std::string summarizeSnippet() const {
-
-    /// localize a ArgList depending on the config. If the config is unset we
-    /// will use our local (this) version, else use the one of the config
-    const Config::ArgumentListsOption ArgList =
-        Config::current().Completion.ArgumentLists !=
-                Config::ArgumentListsOption::UnsetDefault
-            ? Config::current().Completion.ArgumentLists
-            : ArgumentLists;
-
-    /// localize ArgList value, tests for better readability
-    const bool None = ArgList == Config::ArgumentListsOption::None;
-    const bool Open = ArgList == Config::ArgumentListsOption::OpenDelimiter;
-    const bool Delim = ArgList == Config::ArgumentListsOption::Delimiters;
+    /// localize ArgumentLists tests for better readability
+    const bool None = ArgumentLists == Config::ArgumentListsPolicy::None;
+    const bool Open =
+        ArgumentLists == Config::ArgumentListsPolicy::OpenDelimiter;
+    const bool Delim = ArgumentLists == Config::ArgumentListsPolicy::Delimiters;
     const bool Full =
-        ArgList == Config::ArgumentListsOption::FullPlaceholders ||
-        ArgList == Config::ArgumentListsOption::UnsetDefault ||
-        (!None && !Open && !Delim); // <-- failsafe
+        ArgumentLists == Config::ArgumentListsPolicy::FullPlaceholders ||
+        (!None && !Open && !Delim); // <-- failsafe: Full is default
 
     if (IsUsingDeclaration)
       return "";
@@ -673,7 +664,7 @@ private:
   CodeCompletion Completion;
   llvm::SmallVector<BundledEntry, 1> Bundled;
   /// the way argument lists are handled.
-  Config::ArgumentListsOption ArgumentLists;
+  Config::ArgumentListsPolicy ArgumentLists;
   // No snippets will be generated for using declarations and when the function
   // arguments are already present.
   bool IsUsingDeclaration;

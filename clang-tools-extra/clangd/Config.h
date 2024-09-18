@@ -127,18 +127,14 @@ struct Config {
   } Style;
 
   /// controls the completion options for argument lists.
-  enum class ArgumentListsOption {
-    /// the default value. This will imply FullPlaceholders unless overridden by
-    /// --function-arg-placeholders=0, in which case Delimiters is used.
-    /// any other use-case of --function-arg-placeholders is ignored
-    UnsetDefault = 0,
-    /// nothing, no argument list and also NO Delimiters "()" or "<>"
+  enum class ArgumentListsPolicy {
+    /// nothing, no argument list and also NO Delimiters "()" or "<>".
     None,
-    /// open, only opening delimiter "(" or "<"
+    /// open, only opening delimiter "(" or "<".
     OpenDelimiter,
-    /// empty pair of delimiters "()" or "<>" (or [legacy] alias 0)
+    /// empty pair of delimiters "()" or "<>".
     Delimiters,
-    /// full name of both type and variable (or [legacy] alias 1)
+    /// full name of both type and variable.
     FullPlaceholders,
   };
 
@@ -148,7 +144,7 @@ struct Config {
     /// scopes.
     bool AllScopes = true;
     /// controls the completion options for argument lists.
-    ArgumentListsOption ArgumentLists = ArgumentListsOption::UnsetDefault;
+    ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
   } Completion;
 
   /// Configures hover feature.

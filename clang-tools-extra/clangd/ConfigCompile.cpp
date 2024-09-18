@@ -504,10 +504,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
-                           "It will only run if ClangTidy.FastCheckFilter is "
-                           "Loose or None",
-                           Str)
+             llvm::formatv(
+                 "Latency of clang-tidy check '{0}' is not known. "
+                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
+                 Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
@@ -623,29 +623,19 @@ struct FragmentCompiler {
           });
     }
     if (F.ArgumentLists) {
-      if (**F.ArgumentLists == "None") {
-        Out.Apply.push_back(
-            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
-              C.Completion.ArgumentLists = Config::ArgumentListsOption::None;
-            });
-      } else if (**F.ArgumentLists == "OpenDelimiter") {
-        Out.Apply.push_back(
-            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
-              C.Completion.ArgumentLists =
-                  Config::ArgumentListsOption::OpenDelimiter;
-            });
-      } else if (**F.ArgumentLists == "Delimiters") {
-        Out.Apply.push_back([ArgumentLists(**F.ArgumentLists)](const Params &,
-                                                               Config &C) {
-          C.Completion.ArgumentLists = Config::ArgumentListsOption::Delimiters;
+      if (auto Val =
+              compileEnum<Config::ArgumentListsPolicy>("ArgumentLists",
+                                                       *F.ArgumentLists)
+                  .map("None", Config::ArgumentListsPolicy::None)
+                  .map("OpenDelimiter",
+                       Config::ArgumentListsPolicy::OpenDelimiter)
+                  .map("Delimiters", Config::ArgumentListsPolicy::Delimiters)
+                  .map("FullPlaceholders",
+                       Config::ArgumentListsPolicy::FullPlaceholders)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.ArgumentLists = *Val;
         });
-      } else if (**F.ArgumentLists == "FullPlaceholders") {
-        Out.Apply.push_back(
-            [ArgumentLists(**F.ArgumentLists)](const Params &, Config &C) {
-              C.Completion.ArgumentLists =
-                  Config::ArgumentListsOption::FullPlaceholders;
-            });
-      }
     }
   }
 

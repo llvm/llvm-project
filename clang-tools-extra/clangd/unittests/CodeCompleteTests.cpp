@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../Config.h"
 #include "ASTSignals.h"
 #include "Annotations.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Feature.h"
 #include "Matchers.h"
 #include "Protocol.h"
@@ -2596,10 +2596,10 @@ TEST(SignatureHelpTest, DynamicIndexDocumentation) {
               ElementsAre(AllOf(sig("foo() -> int"), sigDoc("Member doc"))));
 }
 
-TEST(CompletionTest, ArgumentListsNotFullPlaceholders) {
+TEST(CompletionTest, ArgumentListsPolicy) {
   CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
-  Opts.ArgumentLists = Config::ArgumentListsOption::Delimiters;
+  Opts.ArgumentLists = Config::ArgumentListsPolicy::Delimiters;
 
   {
     auto Results = completions(
@@ -2672,7 +2672,7 @@ TEST(CompletionTest, ArgumentListsNotFullPlaceholders) {
                                          named("FOO"), snippetSuffix("($0)"))));
   }
   {
-    Opts.ArgumentLists = Config::ArgumentListsOption::None;
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::None;
     auto Results = completions(
         R"cpp(
       void xfoo(int x, int y);
@@ -2682,7 +2682,7 @@ TEST(CompletionTest, ArgumentListsNotFullPlaceholders) {
                 UnorderedElementsAre(AllOf(named("xfoo"), snippetSuffix(""))));
   }
   {
-    Opts.ArgumentLists = Config::ArgumentListsOption::OpenDelimiter;
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::OpenDelimiter;
     auto Results = completions(
         R"cpp(
       void xfoo(int x, int y);

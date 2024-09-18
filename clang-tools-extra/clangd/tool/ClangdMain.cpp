@@ -242,16 +242,13 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<Config::ArgumentListsOption> PlaceholderOption{
-    "function-arg-placeholders", cat(Features),
-    desc("Set the way placeholders and delimiters are implemented."),
-    init(CodeCompleteOptions().ArgumentLists),
-    values(clEnumValN(Config::ArgumentListsOption::Delimiters, "0",
-                      "Empty pair of delimiters inserted"),
-           clEnumValN(
-               Config::ArgumentListsOption::FullPlaceholders, "1",
-               "[default] Delimiters and placeholder arguments are inserted."))
-
+opt<bool> EnableFunctionArgSnippets{
+    "function-arg-placeholders",
+    cat(Features),
+    desc("When disabled, completions contain only parentheses for "
+         "function calls. When enabled, completions also contain "
+         "placeholders for method parameters"),
+    init(true),
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
@@ -653,7 +650,7 @@ public:
     std::optional<Config::CDBSearchSpec> CDBSearch;
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
-    std::optional<Config::ArgumentListsOption> ArgumentLists;
+    std::optional<Config::ArgumentListsPolicy> ArgumentLists;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -698,8 +695,8 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    if (PlaceholderOption == Config::ArgumentListsOption::Delimiters) {
-      ArgumentLists = PlaceholderOption;
+    if (!EnableFunctionArgSnippets) {
+      ArgumentLists = Config::ArgumentListsPolicy::Delimiters;
     }
 
     Frag = [=](const config::Params &, Config &C) {
@@ -709,8 +706,7 @@ public:
         C.Index.External = *IndexSpec;
       if (BGPolicy)
         C.Index.Background = *BGPolicy;
-      if (ArgumentLists && C.Completion.ArgumentLists ==
-                               Config::ArgumentListsOption::UnsetDefault)
+      if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
