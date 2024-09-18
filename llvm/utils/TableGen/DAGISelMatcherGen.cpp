@@ -23,7 +23,7 @@ using namespace llvm;
 /// getRegisterValueType - Look up and return the ValueType of the specified
 /// register. If the register is a member of multiple register classes, they
 /// must all have the same type.
-static MVT::SimpleValueType getRegisterValueType(Record *R,
+static MVT::SimpleValueType getRegisterValueType(const Record *R,
                                                  const CodeGenTarget &T) {
   bool FoundRC = false;
   MVT::SimpleValueType VT = MVT::Other;
@@ -907,11 +907,11 @@ void MatcherGen::EmitResultInstructionAsOperand(
   if (isRoot && !Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
-    Record *HandledReg = nullptr;
+    const Record *HandledReg = nullptr;
     if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
       HandledReg = II.ImplicitDefs[0];
 
-    for (Record *Reg : Pattern.getDstRegs()) {
+    for (const Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg)
         continue;
       ResultVTs.push_back(getRegisterValueType(Reg, CGT));
@@ -1042,7 +1042,7 @@ void MatcherGen::EmitResultCode() {
   if (!Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
-    Record *HandledReg = nullptr;
+    const Record *HandledReg = nullptr;
     const TreePatternNode &DstPat = Pattern.getDstPattern();
     if (!DstPat.isLeaf() && DstPat.getOperator()->isSubClassOf("Instruction")) {
       const CodeGenTarget &CGT = CGP.getTargetInfo();
