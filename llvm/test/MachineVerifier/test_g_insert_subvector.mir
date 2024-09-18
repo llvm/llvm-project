@@ -41,4 +41,7 @@ body:             |
 
     ; CHECK: Index must be a multiple of the second source vector's minimum vector length
     %13:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %1, 3
+
+    ; CHECK: Index must be a multiple of the second source vector's minimum vector length
+    %13:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %1, 1
 ...

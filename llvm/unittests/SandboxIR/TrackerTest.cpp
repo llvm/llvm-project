@@ -1638,6 +1638,37 @@ define void @foo() {
   EXPECT_EQ(GV0->isExternallyInitialized(), OrigIsExtInit);
 }
 
+TEST_F(TrackerTest, GlobalAliasSetters) {
+  parseIR(C, R"IR(
+@alias = dso_local alias void(), ptr @foo
+declare void @bar();
+define void @foo() {
+  call void @alias()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *Callee1 = cast<sandboxir::Constant>(Call1->getCalledOperand());
+  auto *Alias = cast<sandboxir::GlobalAlias>(Call0->getCalledOperand());
+  // Check setAliasee().
+  auto *OrigAliasee = Alias->getAliasee();
+  auto *NewAliasee = Callee1;
+  EXPECT_NE(NewAliasee, OrigAliasee);
+  Ctx.save();
+  Alias->setAliasee(NewAliasee);
+  EXPECT_EQ(Alias->getAliasee(), NewAliasee);
+  Ctx.revert();
+  EXPECT_EQ(Alias->getAliasee(), OrigAliasee);
+}
+
 TEST_F(TrackerTest, SetVolatile) {
   parseIR(C, R"IR(
 define void @foo(ptr %arg0, i8 %val) {
