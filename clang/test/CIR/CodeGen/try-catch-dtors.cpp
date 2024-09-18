@@ -2,7 +2,7 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir-flat %s -o %t.flat.cir
 // RUN: FileCheck --input-file=%t.flat.cir --check-prefix=CIR_FLAT %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -DLLVM_IMPLEMENTED -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct Vec {
@@ -65,7 +65,6 @@ void yo() {
 // LLVM: [[RET_BB]]:
 // LLVM:   ret void
 
-#ifndef LLVM_IMPLEMENTED
 struct S1 {
   Vec v;
 };
@@ -120,7 +119,7 @@ void yo2() {
 // CIR_FLAT:    %exception_ptr_0, %type_id_1 = cir.eh.inflight_exception
 // CIR_FLAT:    cir.call @_ZN3VecD1Ev(%2) : (!cir.ptr<![[VecTy]]>) -> ()
 // CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_0 : !cir.ptr<!void>)
-// CIR_FLAT:  ^[[CATCH_BEGIN]](%5: !cir.ptr<!void>
+// CIR_FLAT:  ^[[CATCH_BEGIN]](
 // CIR_FLAT:    cir.catch_param begin
 // CIR_FLAT:    cir.br ^[[AFTER_TRY]]
 // CIR_FLAT:  ^[[AFTER_TRY]]:
@@ -214,4 +213,54 @@ void yo3(bool x) {
 // CIR_FLAT:  ^[[AFTER_TRY]]:
 // CIR_FLAT:    cir.return
 
-#endif
+// LLVM-LABEL: @_Z3yo3b
+// LLVM:   %[[V1:.*]] = alloca %struct.Vec
+// LLVM:   %[[V2:.*]] = alloca %struct.Vec
+// LLVM:   %[[V3:.*]] = alloca %struct.Vec
+// LLVM:   %[[V4:.*]] = alloca %struct.Vec
+// LLVM:   br label %[[CALL0:.*]],
+// LLVM: [[CALL0]]:
+// LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V1]])
+// LLVM:           to label %[[CALL1:.*]] unwind label %[[LPAD0:.*]],
+// LLVM: [[CALL1]]:
+// LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V2]])
+// LLVM:           to label %[[CALL2:.*]] unwind label %[[LPAD1:.*]],
+// LLVM: [[CALL2]]:
+// LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V3]])
+// LLVM:           to label %[[CALL3:.*]] unwind label %[[LPAD2:.*]],
+// LLVM: [[CALL3]]:
+// LLVM:   invoke void @_ZN3VecC1Ev(ptr %[[V4]])
+// LLVM:           to label %[[REGULAR_CLEANUP:.*]] unwind label %[[LPAD3:.*]],
+// LLVM: [[REGULAR_CLEANUP]]:
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V4]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
+// LLVM:   br label %[[RET:.*]],
+// LLVM: [[LPAD0]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:           catch ptr null,
+// LLVM:   br label %[[CATCH:.*]],
+// LLVM: [[LPAD1]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:           catch ptr null,
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
+// LLVM:   br label %[[CATCH]],
+// LLVM: [[LPAD2]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:           catch ptr null,
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
+// LLVM:   br label %[[CATCH]],
+// LLVM: [[LPAD3]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:           catch ptr null,
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V3]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V2]]),
+// LLVM:   call void @_ZN3VecD1Ev(ptr %[[V1]]),
+// LLVM:   br label %[[CATCH]],
+// LLVM: [[CATCH]]:
+// LLVM:   call ptr @__cxa_begin_catch
+// LLVM:   br label %[[RET]],
+// LLVM: [[RET]]:
+// LLVM:   ret void
