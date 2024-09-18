@@ -54,9 +54,9 @@ void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
 }
 
 // If the phi is within a phi web, which is formed by the def-use chain
-// of phis and all the phis in the web are only used in the other phis. 
+// of phis and all the phis in the web are only used in the other phis.
 // In this case, these phis are dead and we will remove all of them.
-bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN){
+bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
   SmallVector<PHINode *, 16> Stack;
   SmallPtrSet<PHINode *, 16> Visited;
   Stack.push_back(&PN);
@@ -1003,7 +1003,6 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   PHIArgMergedDebugLoc(NewCI, PN);
   return NewCI;
 }
-
 
 /// Return true if this phi node is always equal to NonPhiInVal.
 /// This happens with mutually cyclic phi nodes like:
