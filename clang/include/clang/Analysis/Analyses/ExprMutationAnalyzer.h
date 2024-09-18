@@ -119,18 +119,18 @@ public:
   getFunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,
                                   ExprMutationAnalyzer::Memoized &Memorized) {
     auto it = Memorized.FuncParmAnalyzer.find(&Func);
-    if (it == Memorized.FuncParmAnalyzer.end())
-      // We call try_emplace here, repeating a hash lookup on the same key. Note
-      // that creating a new instance of FunctionParmMutationAnalyzer below may
-      // add additional elements to FuncParmAnalyzer and invalidate iterators.
-      // That means that we cannot call try_emplace above and update the value
-      // portion (i.e. it->second) here.
+    if (it == Memorized.FuncParmAnalyzer.end()) {
+      // Creating a new instance of FunctionParmMutationAnalyzer below may add
+      // additional elements to FuncParmAnalyzer. If we did try_emplace before
+      // creating a new instance, the returned iterator of try_emplace could be
+      // invalidated.
       it =
           Memorized.FuncParmAnalyzer
               .try_emplace(&Func, std::unique_ptr<FunctionParmMutationAnalyzer>(
                                       new FunctionParmMutationAnalyzer(
                                           Func, Context, Memorized)))
               .first;
+    }
     return it->getSecond().get();
   }
 
