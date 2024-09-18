@@ -487,11 +487,10 @@ private:
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
-  ///   5. There are no loads after the early exit block.
-  ///   6. The loop does not contain reductions or recurrences.
-  ///   7. We can prove at compile-time that loops will not contain faulting
+  ///   5. The loop does not contain reductions or recurrences.
+  ///   6. We can prove at compile-time that loops will not contain faulting
   ///   loads.
-  ///   8. It is safe to speculatively execute instructions such as divide or
+  ///   7. It is safe to speculatively execute instructions such as divide or
   ///   call instructions.
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these

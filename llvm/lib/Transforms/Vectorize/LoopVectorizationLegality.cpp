@@ -1549,7 +1549,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       }
     }
 
-  // At least one of the exiting blocks must be the latch.
+  // The latch block must have a countable exit.
   if (isa<SCEVCouldNotCompute>(
           PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
     reportVectorizationFailure(
@@ -1562,18 +1562,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // The vectoriser cannot handle loads that occur after the early exit block.
   assert(LatchBB->getUniquePredecessor() == getSpeculativeEarlyExitingBlock() &&
          "Expected latch predecessor to be the early exiting block");
-  for (Instruction &I : *LatchBB) {
-    if (I.mayReadFromMemory()) {
-      reportVectorizationFailure(
-          "Loads not permitted after early exit",
-          "Cannot vectorize early exit loop with loads after early exit",
-          "LoadsAfterEarlyExit", ORE, TheLoop);
-      return false;
-    }
-    // Any other problematic instructions should have been caught earlier.
-    assert(!I.mayWriteToMemory() && !I.mayThrow() && !I.mayHaveSideEffects() &&
-           "Unexpected instructions in latch block of early exit loop");
-  }
 
   // TODO: Handle loops that may fault.
   if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC)) {
