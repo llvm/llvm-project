@@ -7,4 +7,4 @@ TEST(VecLibBitfieldTest, AllLibrariesFit) {
   EXPECT_LE(static_cast<size_t>(llvm::driver::VectorLibrary::MaxLibrary),
             (1 << VECLIB_BIT_COUNT))
       << "VecLib bitfield size is too small!";
-}
+ }
