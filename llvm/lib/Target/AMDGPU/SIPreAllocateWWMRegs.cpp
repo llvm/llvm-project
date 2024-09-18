@@ -376,8 +376,7 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       if (AllowRealloc && MI.isCall())
         CallIndexes.insert(LIS->getInstructionIndex(MI));
 
-      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
-          MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
+      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32)
         RegsAssigned |= processDef(MI.getOperand(0), false);
 
       if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {

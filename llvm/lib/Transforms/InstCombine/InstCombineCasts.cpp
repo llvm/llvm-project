@@ -2323,6 +2323,11 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   auto *DestVecTy = cast<FixedVectorType>(CI.getType());
   Value *IntInput = CI.getOperand(0);
 
+  // if the int input is just an undef value do not try to optimize to vector
+  // insertions as it will prevent undef propagation
+  if (isa<UndefValue>(IntInput))
+    return nullptr;
+
   SmallVector<Value*, 8> Elements(DestVecTy->getNumElements());
   if (!collectInsertionElements(IntInput, 0, Elements,
                                 DestVecTy->getElementType(),

@@ -1,0 +1,12 @@
+void foo() {
+    a = 2;
+    // expected-error@-1{{use of undeclared identifier 'a'}}
+    b = 2;// expected-error{{use of undeclared identifier 'b'}}
+    c = 2;
+    // expected-error@5{{use of undeclared identifier 'c'}}
+    d = 2; // expected-error-re{{use of {{.*}} identifier 'd'}}
+
+    // expected-error@+1{{use of undeclared identifier 'e'}}
+    e = 2; // error to trigger mismatch
+}
+

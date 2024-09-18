@@ -353,23 +353,20 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 }
 
 /// Match an fpext from half to float, or a constant we can convert.
-static bool matchFPExtFromF16(Value *Arg, Value *&FPExtSrc) {
-  if (match(Arg, m_OneUse(m_FPExt(m_Value(FPExtSrc)))))
-    return FPExtSrc->getType()->isHalfTy();
-
-  ConstantFP *CFP;
-  if (match(Arg, m_ConstantFP(CFP))) {
+static Value *matchFPExtFromF16(Value *Arg) {
+  Value *Src = nullptr;
+  ConstantFP *CFP = nullptr;
+  if (match(Arg, m_OneUse(m_FPExt(m_Value(Src))))) {
+    if (Src->getType()->isHalfTy())
+      return Src;
+  } else if (match(Arg, m_ConstantFP(CFP))) {
     bool LosesInfo;
     APFloat Val(CFP->getValueAPF());
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
-    if (LosesInfo)
-      return false;
-
-    FPExtSrc = ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
-    return true;
+    if (!LosesInfo)
+      return ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
   }
-
-  return false;
+  return nullptr;
 }
 
 // Trim all zero components from the end of the vector \p UseV and return
@@ -839,15 +836,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!ST->hasMed3_16())
       break;
 
-    Value *X, *Y, *Z;
-
     // Repeat floating-point width reduction done for minnum/maxnum.
     // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
-    if (matchFPExtFromF16(Src0, X) && matchFPExtFromF16(Src1, Y) &&
-        matchFPExtFromF16(Src2, Z)) {
-      Value *NewCall = IC.Builder.CreateIntrinsic(IID, {X->getType()},
-                                                  {X, Y, Z}, &II, II.getName());
-      return new FPExtInst(NewCall, II.getType());
+    if (Value *X = matchFPExtFromF16(Src0)) {
+      if (Value *Y = matchFPExtFromF16(Src1)) {
+        if (Value *Z = matchFPExtFromF16(Src2)) {
+          Value *NewCall = IC.Builder.CreateIntrinsic(
+              IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
+          return new FPExtInst(NewCall, II.getType());
+        }
+      }
     }
 
     break;

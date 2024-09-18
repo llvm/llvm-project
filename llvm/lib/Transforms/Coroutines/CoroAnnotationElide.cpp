@@ -16,7 +16,6 @@
 
 #include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 
-#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
@@ -96,24 +95,15 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
   CB->eraseFromParent();
 }
 
-PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
-                                               CGSCCAnalysisManager &AM,
-                                               LazyCallGraph &CG,
-                                               CGSCCUpdateResult &UR) {
+PreservedAnalyses CoroAnnotationElidePass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
   bool Changed = false;
-  CallGraphUpdater CGUpdater;
-  CGUpdater.initialize(CG, C, AM, UR);
 
-  auto &FAM =
-      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
-
-  for (LazyCallGraph::Node &N : C) {
-    Function *Callee = &N.getFunction();
-    Function *NewCallee = Callee->getParent()->getFunction(
-        (Callee->getName() + ".noalloc").str());
-    if (!NewCallee) {
-      continue;
-    }
+  Function *NewCallee =
+      F.getParent()->getFunction((F.getName() + ".noalloc").str());
+  if (!NewCallee) {
+    return PreservedAnalyses::all();
+  }
 
     auto FramePtrArgPosition = NewCallee->arg_size() - 1;
     auto FrameSize =
@@ -122,34 +112,31 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
         NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
 
     SmallVector<CallBase *, 4> Users;
-    for (auto *U : Callee->users()) {
+    for (auto *U : F.users()) {
       if (auto *CB = dyn_cast<CallBase>(U)) {
-        if (CB->getCalledFunction() == Callee)
+        if (CB->getCalledFunction() == &F)
           Users.push_back(CB);
       }
     }
 
-    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(*Callee);
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     for (auto *CB : Users) {
       auto *Caller = CB->getFunction();
       if (Caller && Caller->isPresplitCoroutine() &&
           CB->hasFnAttr(llvm::Attribute::CoroElideSafe)) {
 
-        auto *CallerN = CG.lookup(*Caller);
-        auto *CallerC = CG.lookupSCC(*CallerN);
         processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
 
         ORE.emit([&]() {
           return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
-                 << "'" << ore::NV("callee", Callee->getName())
-                 << "' elided in '" << ore::NV("caller", Caller->getName());
+                 << "'" << ore::NV("callee", F.getName()) << "' elided in '"
+                 << ore::NV("caller", Caller->getName());
         });
+        FAM.invalidate(*Caller, PreservedAnalyses::none());
         Changed = true;
-        updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
-                                               FAM);
       }
     }
-  }
+
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

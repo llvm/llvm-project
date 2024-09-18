@@ -1864,10 +1864,10 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 }
 
-static std::string findOperandDecoderMethod(Record *Record) {
+static std::string findOperandDecoderMethod(const Record *Record) {
   std::string Decoder;
 
-  RecordVal *DecoderString = Record->getValue("DecoderMethod");
+  const RecordVal *DecoderString = Record->getValue("DecoderMethod");
   StringInit *String =
       DecoderString ? dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
@@ -1890,10 +1890,11 @@ static std::string findOperandDecoderMethod(Record *Record) {
   return Decoder;
 }
 
-OperandInfo getOpInfo(Record *TypeRecord) {
+OperandInfo getOpInfo(const Record *TypeRecord) {
   std::string Decoder = findOperandDecoderMethod(TypeRecord);
 
-  RecordVal *HasCompleteDecoderVal = TypeRecord->getValue("hasCompleteDecoder");
+  const RecordVal *HasCompleteDecoderVal =
+      TypeRecord->getValue("hasCompleteDecoder");
   BitInit *HasCompleteDecoderBit =
       HasCompleteDecoderVal
           ? dyn_cast<BitInit>(HasCompleteDecoderVal->getValue())
@@ -1904,9 +1905,9 @@ OperandInfo getOpInfo(Record *TypeRecord) {
   return OperandInfo(Decoder, HasCompleteDecoder);
 }
 
-void parseVarLenInstOperand(const Record &Def,
-                            std::vector<OperandInfo> &Operands,
-                            const CodeGenInstruction &CGI) {
+static void parseVarLenInstOperand(const Record &Def,
+                                   std::vector<OperandInfo> &Operands,
+                                   const CodeGenInstruction &CGI) {
 
   const RecordVal *RV = Def.getValue("Inst");
   VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);

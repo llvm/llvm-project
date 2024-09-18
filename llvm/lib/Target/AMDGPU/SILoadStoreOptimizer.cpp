@@ -2014,7 +2014,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineOperand OffsetHi =
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
 
-  const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  const auto *CarryRC = TRI->getWaveMaskRegClass();
   Register CarryReg = MRI->createVirtualRegister(CarryRC);
   Register DeadCarryReg = MRI->createVirtualRegister(CarryRC);
 

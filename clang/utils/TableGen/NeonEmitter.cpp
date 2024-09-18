@@ -59,7 +59,7 @@ namespace {
 // While globals are generally bad, this one allows us to perform assertions
 // liberally and somehow still trace them back to the def they indirectly
 // came from.
-static Record *CurrentRecord = nullptr;
+static const Record *CurrentRecord = nullptr;
 static void assert_with_loc(bool Assertion, const std::string &Str) {
   if (!Assertion) {
     if (CurrentRecord)
@@ -308,7 +308,7 @@ public:
 /// a particular typespec and prototype.
 class Intrinsic {
   /// The Record this intrinsic was created from.
-  Record *R;
+  const Record *R;
   /// The unmangled name.
   std::string Name;
   /// The input and output typespecs. InTS == OutTS except when
@@ -371,7 +371,7 @@ class Intrinsic {
   }
 
 public:
-  Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
+  Intrinsic(const Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
             TypeSpec InTS, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
             StringRef ArchGuard, StringRef TargetGuard, bool IsUnavailable,
             bool BigEndianSafe)
@@ -434,15 +434,15 @@ public:
 
       ImmChecks.emplace_back(ArgIdx, Kind, EltSizeInBits, VecSizeInBits);
     }
-    llvm::sort(ImmChecks.begin(), ImmChecks.end(),
-               [](const ImmCheck &a, const ImmCheck &b) {
-                 return a.getImmArgIdx() < b.getImmArgIdx();
-               }); // Sort for comparison with other intrinsics which map to the
-                   // same builtin
+    sort(ImmChecks.begin(), ImmChecks.end(),
+         [](const ImmCheck &a, const ImmCheck &b) {
+           return a.getImmArgIdx() < b.getImmArgIdx();
+         }); // Sort for comparison with other intrinsics which map to the
+             // same builtin
   }
 
   /// Get the Record that this intrinsic is based off.
-  Record *getRecord() const { return R; }
+  const Record *getRecord() const { return R; }
   /// Get the set of Intrinsics that this intrinsic calls.
   /// this is the set of immediate dependencies, NOT the
   /// transitive closure.
@@ -456,7 +456,7 @@ public:
 
   /// Return true if the intrinsic takes an immediate operand.
   bool hasImmediate() const {
-    return llvm::any_of(Types, [](const Type &T) { return T.isImmediate(); });
+    return any_of(Types, [](const Type &T) { return T.isImmediate(); });
   }
 
   // Return if the supplied argument is an immediate
@@ -576,12 +576,12 @@ private:
 //===----------------------------------------------------------------------===//
 
 class NeonEmitter {
-  RecordKeeper &Records;
-  DenseMap<Record *, ClassKind> ClassMap;
+  const RecordKeeper &Records;
+  DenseMap<const Record *, ClassKind> ClassMap;
   std::map<std::string, std::deque<Intrinsic>> IntrinsicMap;
   unsigned UniqueNumber;
 
-  void createIntrinsic(Record *R, SmallVectorImpl<Intrinsic *> &Out);
+  void createIntrinsic(const Record *R, SmallVectorImpl<Intrinsic *> &Out);
   void genBuiltinsDef(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs);
   void genStreamingSVECompatibleList(raw_ostream &OS,
                                      SmallVectorImpl<Intrinsic *> &Defs);
@@ -601,15 +601,15 @@ public:
   /// Called by Intrinsic - returns a globally-unique number.
   unsigned getUniqueNumber() { return UniqueNumber++; }
 
-  NeonEmitter(RecordKeeper &R) : Records(R), UniqueNumber(0) {
-    Record *SI = R.getClass("SInst");
-    Record *II = R.getClass("IInst");
-    Record *WI = R.getClass("WInst");
-    Record *SOpI = R.getClass("SOpInst");
-    Record *IOpI = R.getClass("IOpInst");
-    Record *WOpI = R.getClass("WOpInst");
-    Record *LOpI = R.getClass("LOpInst");
-    Record *NoTestOpI = R.getClass("NoTestOpInst");
+  NeonEmitter(const RecordKeeper &R) : Records(R), UniqueNumber(0) {
+    const Record *SI = R.getClass("SInst");
+    const Record *II = R.getClass("IInst");
+    const Record *WI = R.getClass("WInst");
+    const Record *SOpI = R.getClass("SOpInst");
+    const Record *IOpI = R.getClass("IOpInst");
+    const Record *WOpI = R.getClass("WOpInst");
+    const Record *LOpI = R.getClass("LOpInst");
+    const Record *NoTestOpI = R.getClass("NoTestOpInst");
 
     ClassMap[SI] = ClassS;
     ClassMap[II] = ClassI;
@@ -1320,8 +1320,8 @@ void Intrinsic::emitShadowedArgs() {
 }
 
 bool Intrinsic::protoHasScalar() const {
-  return llvm::any_of(
-      Types, [](const Type &T) { return T.isScalar() && !T.isImmediate(); });
+  return any_of(Types,
+                [](const Type &T) { return T.isScalar() && !T.isImmediate(); });
 }
 
 void Intrinsic::emitBodyAsBuiltinCall() {
@@ -1636,7 +1636,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagShuffle(DagInit *DI){
       int64_t VectorSize = cast<IntInit>(Expr->getArg(0))->getValue();
       VectorSize /= ElementSize;
 
-      std::vector<Record *> Revved;
+      std::vector<const Record *> Revved;
       for (unsigned VI = 0; VI < Elts2.size(); VI += VectorSize) {
         for (int LI = VectorSize - 1; LI >= 0; --LI) {
           Revved.push_back(Elts2[VI + LI]);
@@ -1964,7 +1964,7 @@ Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
       continue;
 
     unsigned ArgNum = 0;
-    bool MatchingArgumentTypes = llvm::all_of(Types, [&](const auto &Type) {
+    bool MatchingArgumentTypes = all_of(Types, [&](const auto &Type) {
       return Type == I.getParamType(ArgNum++);
     });
 
@@ -1979,12 +1979,12 @@ Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
   return *GoodVec.front();
 }
 
-void NeonEmitter::createIntrinsic(Record *R,
+void NeonEmitter::createIntrinsic(const Record *R,
                                   SmallVectorImpl<Intrinsic *> &Out) {
   std::string Name = std::string(R->getValueAsString("Name"));
   std::string Proto = std::string(R->getValueAsString("Prototype"));
   std::string Types = std::string(R->getValueAsString("Types"));
-  Record *OperationRec = R->getValueAsDef("Operation");
+  const Record *OperationRec = R->getValueAsDef("Operation");
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
@@ -2022,7 +2022,7 @@ void NeonEmitter::createIntrinsic(Record *R,
     }
   }
 
-  llvm::sort(NewTypeSpecs);
+  sort(NewTypeSpecs);
   NewTypeSpecs.erase(std::unique(NewTypeSpecs.begin(), NewTypeSpecs.end()),
 		     NewTypeSpecs.end());
   auto &Entry = IntrinsicMap[Name];
@@ -2155,9 +2155,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
     }
 
     if (Mask) {
-      std::string Name = Def->getMangledName();
-      OverloadMap.insert(std::make_pair(Name, OverloadInfo()));
-      OverloadInfo &OI = OverloadMap[Name];
+      OverloadInfo &OI = OverloadMap[Def->getMangledName()];
       OI.Mask |= Mask;
       OI.PtrArgNum |= PtrArgNum;
       OI.HasConstPtr = HasConstPtr;
@@ -2240,10 +2238,8 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
 /// 2. the SemaChecking code for the type overload checking.
 /// 3. the SemaChecking code for validation of intrinsic immediate arguments.
 void NeonEmitter::runHeader(raw_ostream &OS) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-
   SmallVector<Intrinsic *, 128> Defs;
-  for (auto *R : RV)
+  for (const Record *R : Records.getAllDerivedDefinitions("Inst"))
     createIntrinsic(R, Defs);
 
   // Generate shared BuiltinsXXX.def
@@ -2402,14 +2398,13 @@ void NeonEmitter::run(raw_ostream &OS) {
         "__nodebug__))\n\n";
 
   SmallVector<Intrinsic *, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
+  for (const Record *R : Records.getAllDerivedDefinitions("Inst"))
     createIntrinsic(R, Defs);
 
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
+  stable_sort(Defs, deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2422,7 +2417,7 @@ void NeonEmitter::run(raw_ostream &OS) {
          I != Defs.end(); /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
-        if (llvm::is_contained(Defs, II))
+        if (is_contained(Defs, II))
           DependenciesSatisfied = false;
       }
       if (!DependenciesSatisfied) {
@@ -2510,14 +2505,13 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
         "__nodebug__))\n\n";
 
   SmallVector<Intrinsic *, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
+  for (const Record *R : Records.getAllDerivedDefinitions("Inst"))
     createIntrinsic(R, Defs);
 
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
+  stable_sort(Defs, deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2530,7 +2524,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
          I != Defs.end(); /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
-        if (llvm::is_contained(Defs, II))
+        if (is_contained(Defs, II))
           DependenciesSatisfied = false;
       }
       if (!DependenciesSatisfied) {
@@ -2619,14 +2613,13 @@ void NeonEmitter::runBF16(raw_ostream &OS) {
         "__nodebug__))\n\n";
 
   SmallVector<Intrinsic *, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
+  for (const Record *R : Records.getAllDerivedDefinitions("Inst"))
     createIntrinsic(R, Defs);
 
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
+  stable_sort(Defs, deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2639,7 +2632,7 @@ void NeonEmitter::runBF16(raw_ostream &OS) {
          I != Defs.end(); /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
-        if (llvm::is_contained(Defs, II))
+        if (is_contained(Defs, II))
           DependenciesSatisfied = false;
       }
       if (!DependenciesSatisfied) {
@@ -2674,26 +2667,26 @@ void NeonEmitter::runBF16(raw_ostream &OS) {
   OS << "#endif\n";
 }
 
-void clang::EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeon(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).run(OS);
 }
 
-void clang::EmitFP16(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitFP16(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runFP16(OS);
 }
 
-void clang::EmitBF16(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitBF16(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runBF16(OS);
 }
 
-void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeonSema(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
 }
 
-void clang::EmitVectorTypes(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitVectorTypes(const RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runVectorTypes(OS);
 }
 
-void clang::EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitNeonTest(const RecordKeeper &Records, raw_ostream &OS) {
   llvm_unreachable("Neon test generation no longer implemented!");
 }

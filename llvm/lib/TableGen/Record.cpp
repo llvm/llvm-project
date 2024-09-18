@@ -2802,10 +2802,10 @@ RecordRecTy *Record::getType() const {
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
-DefInit *Record::getDefInit() {
+DefInit *Record::getDefInit() const {
   if (!CorrespondingDefInit) {
-    CorrespondingDefInit =
-        new (TrackedRecords.getImpl().Allocator) DefInit(this);
+    CorrespondingDefInit = new (TrackedRecords.getImpl().Allocator)
+        DefInit(const_cast<Record *>(this));
   }
   return CorrespondingDefInit;
 }
@@ -3023,6 +3023,21 @@ Record::getValueAsListOfDefs(StringRef FieldName) const {
     else
       PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
         FieldName + "' list is not entirely DefInit!");
+  }
+  return Defs;
+}
+
+std::vector<const Record *>
+Record::getValueAsListOfConstDefs(StringRef FieldName) const {
+  ListInit *List = getValueAsListInit(FieldName);
+  std::vector<const Record *> Defs;
+  for (const Init *I : List->getValues()) {
+    if (const DefInit *DI = dyn_cast<DefInit>(I))
+      Defs.push_back(DI->getDef());
+    else
+      PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
+                                    FieldName +
+                                    "' list is not entirely DefInit!");
   }
   return Defs;
 }

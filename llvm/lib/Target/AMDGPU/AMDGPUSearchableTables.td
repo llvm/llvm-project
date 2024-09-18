@@ -329,6 +329,7 @@ def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
 def : SourceOfDivergence<int_amdgcn_writelane>;
+def : SourceOfDivergence<int_amdgcn_init_whole_wave>;
 def : SourceOfDivergence<int_amdgcn_waterfall_end>;
 
 foreach intr = AMDGPUMFMAIntrinsics908 in

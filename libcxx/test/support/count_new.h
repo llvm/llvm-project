@@ -24,14 +24,13 @@
 
 namespace detail
 {
-   TEST_NORETURN
-   inline void throw_bad_alloc_helper() {
+[[noreturn]] inline void throw_bad_alloc_helper() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-       throw std::bad_alloc();
+  throw std::bad_alloc();
 #else
        std::abort();
 #endif
-   }
+}
 }
 
 class MemCounter

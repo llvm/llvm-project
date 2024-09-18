@@ -1611,6 +1611,12 @@ public:
     // the nop.
     return true;
   }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
+  }
 #if LLPC_BUILD_GFX12
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
