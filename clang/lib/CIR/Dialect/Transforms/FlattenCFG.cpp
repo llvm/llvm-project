@@ -294,19 +294,11 @@ public:
     return mlir::ArrayAttr::get(caseAttrList.getContext(), symbolList);
   }
 
-  struct LandingInfo {
-    mlir::Block *pad = nullptr;
-    mlir::Block *dispatch = nullptr;
-  };
-
-  LandingInfo
-  buildLandingPad(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
-                  mlir::Block *beforeCatch,
-                  SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
-                  mlir::ArrayAttr &caseAttrList, unsigned callIdx) const {
-
-    auto *landingPadBlock =
-        rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
+  void buildLandingPad(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                       mlir::Block *beforeCatch, mlir::Block *landingPadBlock,
+                       mlir::Block *catchDispatcher,
+                       SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
+                       mlir::ArrayAttr &caseAttrList, unsigned callIdx) const {
     rewriter.setInsertionPointToEnd(landingPadBlock);
     auto exceptionPtrType = mlir::cir::PointerType::get(
         mlir::cir::VoidType::get(rewriter.getContext()));
@@ -331,42 +323,44 @@ public:
       rewriter.setInsertionPointToEnd(landingPadBlock);
     }
 
-    // Handle dispatch. In could in theory use a switch, but let's just
-    // mimic LLVM more closely since we have no specific thing to achieve
-    // doing that (might not play as well with existing optimizers either).
-    auto *nextDispatcher =
-        rewriter.splitBlock(landingPadBlock, rewriter.getInsertionPoint());
-    rewriter.setInsertionPointToEnd(landingPadBlock);
+    // Branch out to the catch clauses dispatcher.
     caseAttrList = tryOp.getCatchTypesAttr();
-    nextDispatcher->addArgument(exceptionPtr.getType(), tryOp.getLoc());
+    catchDispatcher->addArgument(exceptionPtr.getType(), tryOp.getLoc());
     SmallVector<mlir::Value> dispatcherInitOps = {exceptionPtr};
     bool tryOnlyHasCatchAll = caseAttrList.size() == 1 &&
                               isa<mlir::cir::CatchAllAttr>(caseAttrList[0]);
     if (!tryOnlyHasCatchAll) {
-      nextDispatcher->addArgument(selector.getType(), tryOp.getLoc());
+      catchDispatcher->addArgument(selector.getType(), tryOp.getLoc());
       dispatcherInitOps.push_back(selector);
     }
-    rewriter.create<mlir::cir::BrOp>(tryOp.getLoc(), nextDispatcher,
+    rewriter.create<mlir::cir::BrOp>(tryOp.getLoc(), catchDispatcher,
                                      dispatcherInitOps);
-    return LandingInfo{landingPadBlock, nextDispatcher};
+    return;
   }
 
   mlir::Block *
   buildLandingPads(mlir::cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
-                   mlir::Block *beforeCatch,
+                   mlir::Block *beforeCatch, mlir::Block *afterTry,
                    SmallVectorImpl<mlir::cir::CallOp> &callsToRewrite,
                    mlir::ArrayAttr &catchAttrList,
                    SmallVectorImpl<mlir::Block *> &landingPads) const {
     unsigned numCalls = callsToRewrite.size();
-    mlir::Block *dispatch = nullptr;
+    // Create the first landing pad block and a placeholder for the initial
+    // catch dispatcher (which will be the common destination for every new
+    // landing pad we create).
+    auto *landingPadBlock =
+        rewriter.splitBlock(beforeCatch, rewriter.getInsertionPoint());
+    mlir::Block *dispatcher = rewriter.createBlock(afterTry);
+
     for (unsigned callIdx = 0; callIdx != numCalls; ++callIdx) {
-      LandingInfo landingInfo = buildLandingPad(
-          tryOp, rewriter, beforeCatch, callsToRewrite, catchAttrList, callIdx);
-      landingPads.push_back(landingInfo.pad);
-      dispatch = landingInfo.dispatch;
+      buildLandingPad(tryOp, rewriter, beforeCatch, landingPadBlock, dispatcher,
+                      callsToRewrite, catchAttrList, callIdx);
+      landingPads.push_back(landingPadBlock);
+      if (callIdx < numCalls - 1)
+        landingPadBlock = rewriter.createBlock(afterTry);
     }
 
-    return dispatch;
+    return dispatcher;
   }
 
   mlir::Block *buildCatch(mlir::cir::TryOp tryOp,
@@ -442,7 +436,7 @@ public:
     // Start the landing pad by getting the inflight exception information.
     mlir::ArrayAttr catchAttrList;
     mlir::Block *nextDispatcher =
-        buildLandingPads(tryOp, rewriter, beforeCatch, callsToRewrite,
+        buildLandingPads(tryOp, rewriter, beforeCatch, afterTry, callsToRewrite,
                          catchAttrList, landingPads);
 
     // Fill in dispatcher to all catch clauses.
