@@ -33,8 +33,9 @@ void XeGPUDialect::initialize() {
 // XeGPU_BlockTensorDescAttr
 //===----------------------------------------------------------------------===//
 BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
-                                        xegpu::MemoryScope memory_scope,
-                                        int array_length, bool boundary_check) {
+                                             xegpu::MemoryScope memory_scope,
+                                             int array_length,
+                                             bool boundary_check) {
   auto scopeAttr = MemoryScopeAttr::get(context, memory_scope);
   auto lengthAttr =
       IntegerAttr::get(IntegerType::get(context, 64), array_length);
@@ -45,9 +46,9 @@ BlockTensorDescAttr BlockTensorDescAttr::get(mlir::MLIRContext *context,
 //===----------------------------------------------------------------------===//
 // XeGPU_ScatterTensorDescAttr
 //===----------------------------------------------------------------------===//
-ScatterTensorDescAttr ScatterTensorDescAttr::get(mlir::MLIRContext *context,
-                                            xegpu::MemoryScope memory_scope,
-                                            int chunk_size) {
+ScatterTensorDescAttr
+ScatterTensorDescAttr::get(mlir::MLIRContext *context,
+                           xegpu::MemoryScope memory_scope, int chunk_size) {
   auto scopeAttr = MemoryScopeAttr::get(context, memory_scope);
   auto chunkSizeAttr =
       IntegerAttr::get(IntegerType::get(context, 64), chunk_size);
@@ -120,9 +121,11 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int array_length,
-                                   bool boundary_check, MemoryScope memory_scope) {
+                                   bool boundary_check,
+                                   MemoryScope memory_scope) {
   auto context = elementType.getContext();
-  auto attr = BlockTensorDescAttr::get(context, memory_scope, array_length, boundary_check);
+  auto attr = BlockTensorDescAttr::get(context, memory_scope, array_length,
+                                       boundary_check);
   return Base::get(context, shape, elementType, attr);
 }
 

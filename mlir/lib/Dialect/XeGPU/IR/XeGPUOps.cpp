@@ -306,9 +306,11 @@ LogicalResult CreateDescOp::verify() {
   auto chunkSize = tdescTy.getChunkSize();
 
   // check chunk_size
-  llvm::SmallVector<int64_t> supportedChunkSizes = {1, 2, 3, 4, 8, 16, 32, 64, 128, 256};
+  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
+                                                    16, 32, 64, 128, 256};
   if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, 8, 16, 32, 64, 128, or 256.");
+    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
+                       "8, 16, 32, 64, 128, or 256.");
 
   // check total size
   auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
@@ -317,13 +319,16 @@ LogicalResult CreateDescOp::verify() {
     // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
     // For 32-bit data, the hardware can support larger larger chunk size. So
     // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
-    // But this requires the total size is 32 bit aligned to make the optimization work.
-    return emitOpError("access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
+    // But this requires the total size is 32 bit aligned to make the
+    // optimization work.
+    return emitOpError(
+        "access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
   }
 
   auto lscConstraints = 512 * 8; // each access is upto 512 bytes.
   if (elemBits * tdescTy.getNumElements() > lscConstraints)
-    return emitOpError("total access size (simd_lanes * chunk_size * sizeof(elemTy)) is upto 512 bytes.");
+    return emitOpError("total access size (simd_lanes * chunk_size * "
+                       "sizeof(elemTy)) is upto 512 bytes.");
 
   SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
   if (chunkSize != 1)
@@ -395,7 +400,6 @@ LogicalResult LoadGatherOp::verify() {
       return emitOpError("load_gather has to be transposed.");
     transpose({1, 0}, tdescShape);
   }
-
 
   if (valueShape != tdescShape)
     return emitOpError("Unexpected result shape")
