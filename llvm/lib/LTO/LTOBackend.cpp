@@ -611,7 +611,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Save the current module before the first codegen round.
         // Note that the second codegen round runs only `codegen()` without
         // running `opt()`. We're not reaching here as it's bailed out earlier
-        // with CodeGenOnly which has been set in `OptimizedBitcodeThinBackend`.
+        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
         if (CodeGenDataThinLTOTwoRounds)
           cgdata::saveModuleForTwoRounds(Mod, Task);
 

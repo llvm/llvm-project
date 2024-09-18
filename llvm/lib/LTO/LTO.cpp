@@ -1517,11 +1517,14 @@ public:
   }
 };
 
-/// This Backend will run ThinBackend process but throw away all the output from
-/// the codegen. This class facilitates the first codegen round.
-class NoOutputThinBackend : public InProcessThinBackend {
+/// This backend is utilized in the first round of a two-codegen round process.
+/// It first saves optimized bitcode files to disk before the codegen process
+/// begins. After codegen, it stores the resulting object files in a scratch
+/// buffer. Note the codegen data stored in the scratch buffer will be extracted
+/// and merged in the subsequent step.
+class FirstRoundThinBackend : public InProcessThinBackend {
 public:
-  NoOutputThinBackend(
+  FirstRoundThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
@@ -1533,25 +1536,31 @@ public:
               return std::make_unique<CachedFileStream>(
                   std::make_unique<raw_svector_ostream>((*Allocation)[Task]));
             },
-            FileCache(), nullptr, false, false),
+            FileCache(), /*OnWrite=*/nullptr, /*ShouldEmitIndexFiles=*/false,
+            /*ShouldEmitImportsFiles=*/false),
         Scratch(std::move(Scratch)) {}
 
   /// Scratch space for writing output during the codegen.
   std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch;
 };
 
-/// This Backend performs codegen on bitcode that was previously saved after
-/// going through optimization. This class facilitates the second codegen round.
-class OptimizedBitcodeThinBackend : public InProcessThinBackend {
+/// This backend operates in the second round of a two-codegen round process.
+/// It starts by reading the optimized bitcode files that were saved during the
+/// first round. The backend then executes the codegen only to further optimize
+/// the code, utilizing the codegen data merged from the first round. Finally,
+/// it writes the resulting object files as usual.
+class SecondRoundThinBackend : public InProcessThinBackend {
 public:
-  OptimizedBitcodeThinBackend(
+  SecondRoundThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
                              ModuleToDefinedGVSummaries, AddStream, FileCache(),
-                             nullptr, false, false) {}
+                             /*OnWrite=*/nullptr,
+                             /*ShouldEmitIndexFiles=*/false,
+                             /*ShouldEmitImportsFiles=*/false) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -1932,7 +1941,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Create a scratch output to hold intermediate results.
   auto Outputs =
       std::make_unique<std::vector<llvm::SmallString<0>>>(getMaxTasks());
-  auto FirstRoundLTO = std::make_unique<NoOutputThinBackend>(
+  auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
       ModuleToDefinedGVSummaries, std::move(Outputs));
   // First round: Run optimization and code generation with a scratch output.
@@ -1946,7 +1955,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   // Second round: Run code generation by reading IRs.
   std::unique_ptr<ThinBackendProc> SecondRoundLTO =
-      std::make_unique<OptimizedBitcodeThinBackend>(
+      std::make_unique<SecondRoundThinBackend>(
           Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
           ModuleToDefinedGVSummaries, AddStream);
   Error E = RunBackends(SecondRoundLTO.get());
