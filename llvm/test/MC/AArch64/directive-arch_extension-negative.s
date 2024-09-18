@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64_accdata,+flagm,+hbc,+mops \
 // RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
@@ -150,10 +150,25 @@ stilp w24, w0, [x16, #-8]!
 
 ld64b x0, [x13]
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ls64
+st64b x0, [x13]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ls64
+st64bv x8, x0, [x13]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ls64_v
+st64bv0 x8, x0, [x13]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: ls64_accdata
 .arch_extension nols64
 ld64b x0, [x13]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: ls64
 // CHECK-NEXT: ld64b x0, [x13]
+st64b x0, [x13]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ls64
+// CHECK-NEXT: st64b x0, [x13]
+st64bv x8, x0, [x13]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ls64_v
+// CHECK-NEXT: st64bv x8, x0, [x13]
+st64bv0 x8, x0, [x13]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ls64_accdata
+// CHECK-NEXT: st64bv0 x8, x0, [x13]
 
 cfinv
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: flagm

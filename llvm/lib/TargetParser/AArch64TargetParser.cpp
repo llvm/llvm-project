@@ -253,6 +253,14 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SM4);
   }
 
+  // FEAT_LS64, FEAT_LS64_V and FEAT_LS64_ACCDATA were historically lumped under
+  // the name 'ls64'. Therefore 'nols64' should disable all three even though
+  // their dependencies are not transitive.
+  if (E == AEK_LS64_ACCDATA) {
+    disable(AEK_LS64_V);
+    disable(AEK_LS64);
+  }
+
   if (!Enabled.test(E))
     return;
 
