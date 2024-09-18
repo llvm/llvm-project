@@ -116,9 +116,10 @@ private:
 
   static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
 
-  // Returns Memory Order and Scope of a memory instruction, and
-  // inserts any fence before the instruction that's required to
-  // implement its memory ordering.
+  // Returns the Memory Order and Scope that the PTX memory instruction should
+  // use, and inserts appropriate fence instruction before the memory
+  // instruction, if needed to implement the instructions memory order. Required
+  // fences after the instruction need to be handled elsewhere.
   std::pair<NVPTX::Ordering, NVPTX::Scope>
   insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
