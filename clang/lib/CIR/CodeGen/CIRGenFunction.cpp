@@ -393,6 +393,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
   // If a terminator is already present in the current block, nothing
   // else to do here.
   auto *currBlock = builder.getBlock();
+  if (isGlobalInit() && !currBlock)
+    return;
   if (currBlock->mightHaveTerminator() && currBlock->getTerminator())
     return;
 
