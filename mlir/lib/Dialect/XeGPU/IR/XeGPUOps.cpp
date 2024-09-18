@@ -228,8 +228,8 @@ LogicalResult LoadNdOp::verify() {
       tdescShape[axis] /= vnni_factor;
       tdescShape.push_back(vnni_factor);
     } else {
-      return emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
-                         "TensorDesc only).");
+      emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
+                  "TensorDesc only).");
     }
   }
 
@@ -305,6 +305,26 @@ LogicalResult CreateDescOp::verify() {
 
   auto chunkSize = tdescTy.getChunkSize();
 
+  // check chunk_size
+  llvm::SmallVector<int64_t> supportedChunkSizes = {1, 2, 3, 4, 8, 16, 32, 64, 128, 256};
+  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
+    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, 8, 16, 32, 64, 128, or 256.");
+
+  // check total size
+  auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
+  auto bitsPerLane = elemBits * chunkSize;
+  if (chunkSize > 1 && bitsPerLane % 32) {
+    // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
+    // For 32-bit data, the hardware can support larger larger chunk size. So
+    // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
+    // But this requires the total size is 32 bit aligned to make the optimization work.
+    return emitOpError("access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
+  }
+
+  auto lscConstraints = 512 * 8; // each access is upto 512 bytes.
+  if (elemBits * tdescTy.getNumElements() > lscConstraints)
+    return emitOpError("total access size (simd_lanes * chunk_size * sizeof(elemTy)) is upto 512 bytes.");
+
   SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
   if (chunkSize != 1)
     shape.push_back(chunkSize);
@@ -370,13 +390,12 @@ LogicalResult LoadGatherOp::verify() {
   if (tdescShape[0] != maskShape[0])
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
 
-  if (getTransposeAttr()) {
-    auto trans = getTranspose().value();
-    if (tdescShape.size() < trans.size())
-      emitWarning("Invalid transpose attr. It is ignored.");
-    else
-      transpose(trans, tdescShape);
+  if (tdescTy.getRank() == 2) {
+    if (!getTransposeAttr())
+      return emitOpError("load_gather has to be transposed.");
+    transpose({1, 0}, tdescShape);
   }
+
 
   if (valueShape != tdescShape)
     return emitOpError("Unexpected result shape")
@@ -404,10 +423,23 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("invlid l3_hint: ") << getL3HintAttr();
 
   auto maskTy = getMaskType();
+  auto valueTy = getValueType();
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
+  auto valueShape = getShapeOf(valueTy);
   if (tdescShape[0] != maskShape[0])
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
+
+  if (tdescTy.getRank() == 2) {
+    if (!getTransposeAttr())
+      return emitOpError("load_gather has to be transposed.");
+    transpose({1, 0}, tdescShape);
+  }
+
+  if (valueShape != tdescShape)
+    return emitOpError("Unexpected value shape")
+           << "(Expected shape: " << makeString(tdescShape)
+           << ", Given shape: " << makeString(valueShape) << ").\n";
 
   return success();
 }

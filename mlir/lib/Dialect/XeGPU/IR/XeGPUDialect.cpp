@@ -57,6 +57,7 @@ ScatterTensorDescAttr ScatterTensorDescAttr::get(mlir::MLIRContext *context,
 //===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
+
 mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
