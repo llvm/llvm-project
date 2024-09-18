@@ -61,9 +61,34 @@ mlir::Type getNestedTypeAndElemQuantity(mlir::Type Ty, unsigned &elemQuantity) {
   return nestTy;
 }
 
+template <typename StorageTy>
+void fillTrailingZeros(mlir::cir::ConstArrayAttr attr,
+                       llvm::SmallVectorImpl<StorageTy> &values) {
+  auto numTrailingZeros = attr.getTrailingZerosNum();
+  if (numTrailingZeros) {
+    auto localArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType());
+    assert(localArrayTy && "expected !cir.array");
+
+    auto nestTy = localArrayTy.getEltType();
+    if (!mlir::isa<mlir::cir::ArrayType>(nestTy))
+      values.insert(values.end(), numTrailingZeros,
+                    getZeroInitFromType<StorageTy>(nestTy));
+  }
+}
+
 template <typename AttrTy, typename StorageTy>
 void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
                                     llvm::SmallVectorImpl<StorageTy> &values) {
+  if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
+    if (auto arrayType = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType())) {
+      for (auto element : stringAttr) {
+        auto intAttr = mlir::cir::IntAttr::get(arrayType.getEltType(), element);
+        values.push_back(mlir::dyn_cast<AttrTy>(intAttr).getValue());
+      }
+      return;
+    }
+  }
+
   auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr.getElts());
   for (auto eltAttr : arrayAttr) {
     if (auto valueAttr = mlir::dyn_cast<AttrTy>(eltAttr)) {
@@ -71,6 +96,8 @@ void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
     } else if (auto subArrayAttr =
                    mlir::dyn_cast<mlir::cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values);
+      if (mlir::dyn_cast<mlir::StringAttr>(subArrayAttr.getElts()))
+        fillTrailingZeros(subArrayAttr, values);
     } else if (auto zeroAttr = mlir::dyn_cast<mlir::cir::ZeroAttr>(eltAttr)) {
       unsigned numStoredZeros = 0;
       auto nestTy =
@@ -84,16 +111,7 @@ void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
 
   // Only fill in trailing zeros at the local cir.array level where the element
   // type isn't another array (for the mult-dim case).
-  auto numTrailingZeros = attr.getTrailingZerosNum();
-  if (numTrailingZeros) {
-    auto localArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType());
-    assert(localArrayTy && "expected !cir.array");
-
-    auto nestTy = localArrayTy.getEltType();
-    if (!mlir::isa<mlir::cir::ArrayType>(nestTy))
-      values.insert(values.end(), numTrailingZeros,
-                    getZeroInitFromType<StorageTy>(nestTy));
-  }
+  fillTrailingZeros(attr, values);
 }
 
 template <typename AttrTy, typename StorageTy>
