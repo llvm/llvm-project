@@ -60,9 +60,9 @@ public:
 // only if the Zacas extension is enabled and the AtomicCmpXchgInst has a
 // SequentiallyConsistent failure ordering.
 bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  assert(ST->hasStdExtZacas() && "only necessary to run in presence of zacas");
   IRBuilder<> Builder(&I);
-  if (!ST->hasStdExtZacas() ||
-      I.getFailureOrdering() != AtomicOrdering::SequentiallyConsistent)
+  if (I.getFailureOrdering() != AtomicOrdering::SequentiallyConsistent)
     return false;
 
   Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
@@ -70,7 +70,7 @@ bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 }
 
 bool RISCVZacasABIFix::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  if (skipFunction(F) || !ST->hasStdExtZacas())
     return false;
 
   auto &TPC = getAnalysis<TargetPassConfig>();
