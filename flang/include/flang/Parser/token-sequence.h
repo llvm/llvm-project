@@ -105,7 +105,6 @@ public:
   void Put(const char *, std::size_t, Provenance);
   void Put(const CharBlock &, Provenance);
   void Put(const std::string &, Provenance);
-  void Put(llvm::raw_string_ostream &, Provenance);
 
   Provenance GetCharProvenance(std::size_t) const;
   Provenance GetTokenProvenance(

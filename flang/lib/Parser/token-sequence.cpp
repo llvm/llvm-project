@@ -147,10 +147,6 @@ void TokenSequence::Put(const std::string &s, Provenance provenance) {
   Put(s.data(), s.size(), provenance);
 }
 
-void TokenSequence::Put(llvm::raw_string_ostream &ss, Provenance provenance) {
-  Put(ss.str(), provenance);
-}
-
 TokenSequence &TokenSequence::ToLowerCase() {
   std::size_t tokens{start_.size()};
   std::size_t chars{char_.size()};
