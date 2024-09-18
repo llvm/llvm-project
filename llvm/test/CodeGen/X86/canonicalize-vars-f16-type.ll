@@ -66,7 +66,7 @@ define void @v_test_canonicalize__half(half addrspace(1)* %out) nounwind {
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %eax, %xmm1
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -82,7 +82,7 @@ define void @v_test_canonicalize__half(half addrspace(1)* %out) nounwind {
 ; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %eax, %xmm1
 ; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512BW-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512BW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512BW-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -218,7 +218,7 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ; AVX512F-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -250,7 +250,7 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ; AVX512BW-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
 ; AVX512BW-NEXT:    vmovd %eax, %xmm2
 ; AVX512BW-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512BW-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512BW-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512BW-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -270,4 +270,146 @@ entry:
   ret half %result
 }
 
-declare half @llvm.canonicalize.f16(half)
+define void @v_test_canonicalize_v2half(<2 x half> addrspace(1)* %out) nounwind {
+; SSE-LABEL: v_test_canonicalize_v2half:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    subq $48, %rsp
+; SSE-NEXT:    movq %rdi, %rbx
+; SSE-NEXT:    pinsrw $0, 2(%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; SSE-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    mulss %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    callq __truncsfhf2@PLT
+; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    mulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; SSE-NEXT:    callq __truncsfhf2@PLT
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
+; SSE-NEXT:    movw %ax, 2(%rbx)
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    pextrw $0, %xmm0, %eax
+; SSE-NEXT:    movw %ax, (%rbx)
+; SSE-NEXT:    addq $48, %rsp
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: v_test_canonicalize_v2half:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    pushq %rbx
+; AVX1-NEXT:    subq $48, %rsp
+; AVX1-NEXT:    movq %rdi, %rbx
+; AVX1-NEXT:    vpinsrw $0, 2(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    callq __extendhfsf2@PLT
+; AVX1-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; AVX1-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    callq __extendhfsf2@PLT
+; AVX1-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; AVX1-NEXT:    vmulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX1-NEXT:    callq __truncsfhf2@PLT
+; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    callq __extendhfsf2@PLT
+; AVX1-NEXT:    vmulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX1-NEXT:    callq __truncsfhf2@PLT
+; AVX1-NEXT:    vpextrw $0, %xmm0, 2(%rbx)
+; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rbx)
+; AVX1-NEXT:    addq $48, %rsp
+; AVX1-NEXT:    popq %rbx
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v_test_canonicalize_v2half:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    subq $48, %rsp
+; AVX2-NEXT:    movq %rdi, %rbx
+; AVX2-NEXT:    vpinsrw $0, 2(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; AVX2-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; AVX2-NEXT:    vmulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    callq __truncsfhf2@PLT
+; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmulss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    callq __truncsfhf2@PLT
+; AVX2-NEXT:    vpextrw $0, %xmm0, 2(%rbx)
+; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vpextrw $0, %xmm0, (%rbx)
+; AVX2-NEXT:    addq $48, %rsp
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: v_test_canonicalize_v2half:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512F-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm1
+; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512F-NEXT:    vmulss %xmm1, %xmm2, %xmm2
+; AVX512F-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3]
+; AVX512F-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512F-NEXT:    vmovd %xmm2, %eax
+; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512F-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm3[1,2,3]
+; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX512F-NEXT:    vmovd %xmm0, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v_test_canonicalize_v2half:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512BW-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm1
+; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vcvtph2ps %xmm2, %xmm2
+; AVX512BW-NEXT:    vmulss %xmm1, %xmm2, %xmm2
+; AVX512BW-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512BW-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3]
+; AVX512BW-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; AVX512BW-NEXT:    vmovd %xmm2, %eax
+; AVX512BW-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
+; AVX512BW-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512BW-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm3[1,2,3]
+; AVX512BW-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX512BW-NEXT:    vmovd %xmm0, (%rdi)
+; AVX512BW-NEXT:    retq
+entry:
+  %val = load <2 x half>, <2 x half> addrspace(1)* %out
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val)
+  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  ret void
+}
+

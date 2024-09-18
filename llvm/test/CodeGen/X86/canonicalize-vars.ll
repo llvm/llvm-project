@@ -251,15 +251,15 @@ define void @v_test_canonicalize_var_f32(float addrspace(1)* %out) #1 {
 ;
 ; SSE2-LABEL: v_test_canonicalize_var_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    mulss (%rdi), %xmm0
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: v_test_canonicalize_var_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; AVX1-NEXT:    vmulss (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovss %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
   %val = load float, float addrspace(1)* %out
@@ -311,15 +311,15 @@ define void @v_test_canonicalize_var_f64(double addrspace(1)* %out) #1 {
 ;
 ; SSE2-LABEL: v_test_canonicalize_var_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; SSE2-NEXT:    mulsd (%rdi), %xmm0
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movsd %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: v_test_canonicalize_var_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; AVX1-NEXT:    vmulsd (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 
@@ -354,7 +354,283 @@ define void @canonicalize_undef(double addrspace(1)* %out) {
   ret void
 }
 
-declare double @llvm.canonicalize.f64(double)
-declare float @llvm.canonicalize.f32(float)
-declare x86_fp80 @llvm.canonicalize.f80(x86_fp80)
+define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
+; SSE1-LABEL: canon_fp32_varargsv4f32:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fld %st(0)
+; SSE1-NEXT:    fmuls {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fld %st(1)
+; SSE1-NEXT:    fmuls {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fld %st(2)
+; SSE1-NEXT:    fmuls {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fxch %st(3)
+; SSE1-NEXT:    fmuls {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fstps 12(%eax)
+; SSE1-NEXT:    fxch %st(2)
+; SSE1-NEXT:    fstps 8(%eax)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    fstps 4(%eax)
+; SSE1-NEXT:    fstps (%eax)
+; SSE1-NEXT:    retl $4
+;
+; SSE2-LABEL: canon_fp32_varargsv4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: canon_fp32_varargsv4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: canon_fp32_varargsv4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512F-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+  %canonicalized = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %a)
+  ret <4 x float> %canonicalized
+}
 
+define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
+; SSE1-LABEL: canon_fp64_varargsv4f64:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fld %st(0)
+; SSE1-NEXT:    fmull {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fld %st(1)
+; SSE1-NEXT:    fmull {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fld %st(2)
+; SSE1-NEXT:    fmull {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fxch %st(3)
+; SSE1-NEXT:    fmull {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fstpl 24(%eax)
+; SSE1-NEXT:    fxch %st(2)
+; SSE1-NEXT:    fstpl 16(%eax)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    fstpl 8(%eax)
+; SSE1-NEXT:    fstpl (%eax)
+; SSE1-NEXT:    retl $4
+;
+; SSE2-LABEL: canon_fp64_varargsv4f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [1.0E+0,1.0E+0]
+; SSE2-NEXT:    mulpd %xmm2, %xmm0
+; SSE2-NEXT:    mulpd %xmm2, %xmm1
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: canon_fp64_varargsv4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: canon_fp64_varargsv4f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512F-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+  %canonicalized = call <4 x double> @llvm.canonicalize.v4f32(<4 x double> %a)
+  ret <4 x double> %canonicalized
+}
+
+define <2 x x86_fp80> @canon_fp80_varargsv2fp80(<2 x x86_fp80> %a) {
+; SSE1-LABEL: canon_fp80_varargsv2fp80:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fmul %st, %st(1)
+; SSE1-NEXT:    fmulp %st, %st(2)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    retl
+;
+; SSE2-LABEL: canon_fp80_varargsv2fp80:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE2-NEXT:    fldt {{[0-9]+}}(%rsp)
+; SSE2-NEXT:    fld1
+; SSE2-NEXT:    fmul %st, %st(1)
+; SSE2-NEXT:    fmulp %st, %st(2)
+; SSE2-NEXT:    fxch %st(1)
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: canon_fp80_varargsv2fp80:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX1-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX1-NEXT:    fld1
+; AVX1-NEXT:    fmul %st, %st(1)
+; AVX1-NEXT:    fmulp %st, %st(2)
+; AVX1-NEXT:    fxch %st(1)
+; AVX1-NEXT:    retq
+  %canonicalized = call <2 x x86_fp80> @llvm.canonicalize.v2f80(<2 x x86_fp80> %a)
+  ret <2 x x86_fp80> %canonicalized
+}
+
+define void @vec_canonicalize_var_v4f32(<4 x float> addrspace(1)* %out) #1 {
+; SSE1-LABEL: vec_canonicalize_var_v4f32:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fld %st(0)
+; SSE1-NEXT:    fmuls (%eax)
+; SSE1-NEXT:    fld %st(1)
+; SSE1-NEXT:    fmuls 4(%eax)
+; SSE1-NEXT:    fld %st(2)
+; SSE1-NEXT:    fmuls 8(%eax)
+; SSE1-NEXT:    fxch %st(3)
+; SSE1-NEXT:    fmuls 12(%eax)
+; SSE1-NEXT:    fstps 12(%eax)
+; SSE1-NEXT:    fxch %st(2)
+; SSE1-NEXT:    fstps 8(%eax)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    fstps 4(%eax)
+; SSE1-NEXT:    fstps (%eax)
+; SSE1-NEXT:    retl
+;
+; SSE2-LABEL: vec_canonicalize_var_v4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps (%rdi), %xmm0
+; SSE2-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movaps %xmm0, (%rdi)
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: vec_canonicalize_var_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmulps (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: vec_canonicalize_var_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512F-NEXT:    vmulps (%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX512F-NEXT:    retq
+  %val = load <4 x float>, <4 x float> addrspace(1)* %out
+  %canonicalized = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %val)
+  store <4 x float> %canonicalized, <4 x float> addrspace(1)* %out
+  ret void
+}
+
+define void @vec_canonicalize_var_v4f64(<4 x double> addrspace(1)* %out) #1 {
+; SSE1-LABEL: vec_canonicalize_var_v4f64:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fld %st(0)
+; SSE1-NEXT:    fmull (%eax)
+; SSE1-NEXT:    fld %st(1)
+; SSE1-NEXT:    fmull 8(%eax)
+; SSE1-NEXT:    fld %st(2)
+; SSE1-NEXT:    fmull 16(%eax)
+; SSE1-NEXT:    fxch %st(3)
+; SSE1-NEXT:    fmull 24(%eax)
+; SSE1-NEXT:    fstpl 24(%eax)
+; SSE1-NEXT:    fxch %st(2)
+; SSE1-NEXT:    fstpl 16(%eax)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    fstpl 8(%eax)
+; SSE1-NEXT:    fstpl (%eax)
+; SSE1-NEXT:    retl
+;
+; SSE2-LABEL: vec_canonicalize_var_v4f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,1.0E+0]
+; SSE2-NEXT:    movapd 16(%rdi), %xmm1
+; SSE2-NEXT:    mulpd %xmm0, %xmm1
+; SSE2-NEXT:    mulpd (%rdi), %xmm0
+; SSE2-NEXT:    movapd %xmm0, (%rdi)
+; SSE2-NEXT:    movapd %xmm1, 16(%rdi)
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: vec_canonicalize_var_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmulpd (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vmovapd %ymm0, (%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: vec_canonicalize_var_v4f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512F-NEXT:    vmulpd (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    vmovapd %ymm0, (%rdi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+  %val = load <4 x double>, <4 x double> addrspace(1)* %out
+  %canonicalized = call <4 x double> @llvm.canonicalize.v4f32(<4 x double> %val)
+  store <4 x double> %canonicalized, <4 x double> addrspace(1)* %out
+  ret void
+}
+
+define void @vec_canonicalize_x86_fp80(<4 x x86_fp80> addrspace(1)* %out) #1 {
+; SSE1-LABEL: vec_canonicalize_x86_fp80:
+; SSE1:       # %bb.0:
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1-NEXT:    fldt 30(%eax)
+; SSE1-NEXT:    fldt 20(%eax)
+; SSE1-NEXT:    fldt 10(%eax)
+; SSE1-NEXT:    fldt (%eax)
+; SSE1-NEXT:    fld1
+; SSE1-NEXT:    fmul %st, %st(1)
+; SSE1-NEXT:    fmul %st, %st(2)
+; SSE1-NEXT:    fmul %st, %st(3)
+; SSE1-NEXT:    fmulp %st, %st(4)
+; SSE1-NEXT:    fxch %st(3)
+; SSE1-NEXT:    fstpt 30(%eax)
+; SSE1-NEXT:    fxch %st(1)
+; SSE1-NEXT:    fstpt 20(%eax)
+; SSE1-NEXT:    fstpt 10(%eax)
+; SSE1-NEXT:    fstpt (%eax)
+; SSE1-NEXT:    retl
+;
+; SSE2-LABEL: vec_canonicalize_x86_fp80:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    fldt 30(%rdi)
+; SSE2-NEXT:    fldt 20(%rdi)
+; SSE2-NEXT:    fldt 10(%rdi)
+; SSE2-NEXT:    fldt (%rdi)
+; SSE2-NEXT:    fld1
+; SSE2-NEXT:    fmul %st, %st(1)
+; SSE2-NEXT:    fmul %st, %st(2)
+; SSE2-NEXT:    fmul %st, %st(3)
+; SSE2-NEXT:    fmulp %st, %st(4)
+; SSE2-NEXT:    fxch %st(3)
+; SSE2-NEXT:    fstpt 30(%rdi)
+; SSE2-NEXT:    fxch %st(1)
+; SSE2-NEXT:    fstpt 20(%rdi)
+; SSE2-NEXT:    fstpt 10(%rdi)
+; SSE2-NEXT:    fstpt (%rdi)
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: vec_canonicalize_x86_fp80:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    fldt 30(%rdi)
+; AVX1-NEXT:    fldt 20(%rdi)
+; AVX1-NEXT:    fldt 10(%rdi)
+; AVX1-NEXT:    fldt (%rdi)
+; AVX1-NEXT:    fld1
+; AVX1-NEXT:    fmul %st, %st(1)
+; AVX1-NEXT:    fmul %st, %st(2)
+; AVX1-NEXT:    fmul %st, %st(3)
+; AVX1-NEXT:    fmulp %st, %st(4)
+; AVX1-NEXT:    fxch %st(3)
+; AVX1-NEXT:    fstpt 30(%rdi)
+; AVX1-NEXT:    fxch %st(1)
+; AVX1-NEXT:    fstpt 20(%rdi)
+; AVX1-NEXT:    fstpt 10(%rdi)
+; AVX1-NEXT:    fstpt (%rdi)
+; AVX1-NEXT:    retq
+  %val = load <4 x x86_fp80>, <4 x x86_fp80> addrspace(1)* %out
+  %canonicalized = call <4 x x86_fp80> @llvm.canonicalize.f80(<4 x x86_fp80> %val)
+  store <4 x x86_fp80> %canonicalized, <4 x x86_fp80> addrspace(1)* %out
+  ret void
+}
