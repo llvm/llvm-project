@@ -372,6 +372,7 @@ extern "C++" {
 #    include <__math/remainder.h>
 #    include <__math/roots.h>
 #    include <__math/rounding_functions.h>
+#    include <__math/special_functions.h>
 #    include <__math/traits.h>
 #    include <__math/trigonometric_functions.h>
 #    include <__type_traits/enable_if.h>
