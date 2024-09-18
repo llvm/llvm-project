@@ -393,22 +393,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
-                                       DeviceImageTy &Image) override {
-    // Check for the presense of global destructors at initialization time. This
-    // is required when the image may be deallocated before destructors are run.
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
-      Image.setPendingGlobalDtors();
-
-    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
+  virtual Expected<StringRef>
+  getGlobalConstructorName(DeviceImageTy &Image) override {
+    if (auto Err = prepareGlobalCtorDtorCommon(Image, /*IsCtor=*/true))
+      return Err;
+    return "nvptx$device$init";
   }
-
-  virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
-                                      DeviceImageTy &Image) override {
-    if (Image.hasPendingGlobalDtors())
-      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
-    return Plugin::success();
+  virtual Expected<StringRef>
+  getGlobalDestructorName(DeviceImageTy &Image) override {
+    if (auto Err = prepareGlobalCtorDtorCommon(Image, /*IsCtor=*/false))
+      return Err;
+    return "nvptx$device$fini";
   }
 
   Expected<std::unique_ptr<MemoryBuffer>>
@@ -471,13 +466,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &>
+  constructKernelImpl(llvm::StringRef Name) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin.allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(Name);
+    new (CUDAKernel) CUDAKernelTy(Name.data());
 
     return *CUDAKernel;
   }
@@ -1149,8 +1145,7 @@ private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;
 
-  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                                 bool IsCtor) {
+  Error prepareGlobalCtorDtorCommon(DeviceImageTy &Image, bool IsCtor) {
     const char *KernelName = IsCtor ? "nvptx$device$init" : "nvptx$device$fini";
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.

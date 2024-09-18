@@ -400,6 +400,11 @@ void __tgt_target_data_update_nowait_mapper(
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                         int32_t ThreadLimit, void *HostPtr, KernelArgsTy *Args);
 
+/// Launch the kernel \p KernelName with a CUDA style launch and the given grid
+/// sizes and arguments (\p KernelArgs).
+int __tgt_launch_by_name(ident_t *Loc, int64_t DeviceId, const char *KernelName,
+		      KernelArgsTy *KernelArgs);
+
 // Non-blocking synchronization for target nowait regions. This function
 // acquires the asynchronous context from task data of the current task being
 // executed and tries to query for the completion of its operations. If the

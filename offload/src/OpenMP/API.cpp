@@ -392,25 +392,52 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     DP("filling memory on host via memset");
     memset(Ptr, ByteVal, NumBytes); // ignore return value, memset() cannot fail
   } else {
-    // TODO: replace the omp_target_memset() slow path with the fast path.
-    // That will require the ability to execute a kernel from within
-    // libomptarget.so (which we do not have at the moment).
+    struct LaunchArgsTy {
+      void *Ptr;
+      int ByteVal;
+      size_t NumBytes;
+    } LaunchArgs{Ptr, ByteVal, NumBytes};
 
-    // This is a very slow path: create a filled array on the host and upload
-    // it to the GPU device.
-    int InitialDevice = omp_get_initial_device();
-    void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
-    if (Shadow) {
-      (void)memset(Shadow, ByteVal, NumBytes);
-      (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
-                              InitialDevice);
-      (void)omp_target_free(Shadow, InitialDevice);
-    } else {
-      // If the omp_target_alloc has failed, let's just not do anything.
-      // omp_target_memset does not have any good way to fail, so we
-      // simply avoid a catastrophic failure of the process for now.
-      DP("omp_target_memset failed to fill memory due to error with "
-         "omp_target_alloc");
+    auto NumThreads = NumBytes > 256 ? 256 : NumBytes;
+    auto NumBlocks = (NumBytes + 255) / 256;
+    const char *KernelName = "__memset";
+    switch (ByteVal) {
+    case 0:
+      KernelName = "__memset_zero";
+      break;
+    case ~0:
+      KernelName = "__memset_ones";
+      break;
+    default:
+      break;
+    };
+    // Try to launch the __memset kernel first.
+    KernelArgsTy KernelArgs;
+    KernelArgs.NumTeams[0] = NumBlocks;
+    KernelArgs.ThreadLimit[0] = NumThreads;
+    struct {
+      size_t LaunchArgsSize;
+      void *LaunchArgs;
+    } WrappedLaunchArgs = {sizeof(LaunchArgs), &LaunchArgs};
+    KernelArgs.ArgPtrs = reinterpret_cast<void **>(&WrappedLaunchArgs);
+    KernelArgs.Flags.IsCUDA = true;
+    if (__tgt_launch_by_name(nullptr, DeviceNum, KernelName, &KernelArgs)) {
+      // This is a very slow path: create a filled array on the host and upload
+      // it to the GPU device.
+      int InitialDevice = omp_get_initial_device();
+      void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
+      if (Shadow) {
+        (void)memset(Shadow, ByteVal, NumBytes);
+        (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
+                                InitialDevice);
+        (void)omp_target_free(Shadow, InitialDevice);
+      } else {
+        // If the omp_target_alloc has failed, let's just not do anything.
+        // omp_target_memset does not have any good way to fail, so we
+        // simply avoid a catastrophic failure of the process for now.
+        DP("omp_target_memset failed to fill memory due to error with "
+           "omp_target_alloc");
+      }
     }
   }
 

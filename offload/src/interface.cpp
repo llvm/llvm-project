@@ -394,6 +394,21 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                    HostPtr, KernelArgs);
 }
 
+EXTERN int __tgt_launch_by_name(ident_t *Loc, int64_t DeviceId,
+                                const char *KernelName,
+                                KernelArgsTy *KernelArgs) {
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+  auto &Device = *DeviceOrErr;
+  void *Handle;
+  if (Device.getKernelHandle(KernelName, &Handle))
+    return OFFLOAD_FAIL;
+  AsyncInfoTy AsyncInfo(*DeviceOrErr);
+  return DeviceOrErr->launchKernel(Handle, nullptr, nullptr, *KernelArgs,
+                                   AsyncInfo);
+}
+
 /// Activates the record replay mechanism.
 /// \param DeviceId The device identifier to execute the target region.
 /// \param MemorySize The number of bytes to be (pre-)allocated

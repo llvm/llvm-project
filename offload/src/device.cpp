@@ -226,6 +226,17 @@ bool DeviceTy::printDeviceInfo() {
   return true;
 }
 
+int32_t DeviceTy::getKernelHandle(llvm::StringRef Name, void **HandlePtr) {
+  auto KernelOrErr = RTL->getDevice(RTLDeviceID).getKernel(Name);
+  if (!KernelOrErr) {
+    [[maybe_unused]] auto ErrStr = toString(KernelOrErr.takeError());
+    DP("%s\n", ErrStr.c_str());
+    return OFFLOAD_FAIL;
+  }
+  *HandlePtr = *KernelOrErr;
+  return OFFLOAD_SUCCESS;
+}
+
 // Whether data can be copied to DstDevice directly
 bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
   if (RTL != DstDevice.RTL)
