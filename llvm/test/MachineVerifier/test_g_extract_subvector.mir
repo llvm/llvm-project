@@ -19,7 +19,7 @@ body:             |
     ; CHECK: Destination type must be a vector
     %5:_(s32) = G_EXTRACT_SUBVECTOR %2, 0
 
-    ; CHECK: First source must be a vector
+    ; CHECK: Source must be a vector
     %6:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %0, 0
 
     %7:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
@@ -27,10 +27,10 @@ body:             |
     ; CHECK: Element type of vectors must be the same
     %8:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %7, 0
 
-    ; CHECK: Index must be a multiple of the destination vector's minimum vector length
+    ; CHECK: Destination vector must be smaller than source vector
     %9:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR  %1, 3
 
-    ; CHECK: Index must be a multiple of the destination vector's minimum vector length
+    ; CHECK: Destination vector must be smaller than source vector
     %10:_(<vscale x 4 x s32>) = G_EXTRACT_SUBVECTOR  %1, 2
 
     ; CHECK: Source type and index must not cause extract to overrun to the destination type
@@ -56,5 +56,7 @@ body:             |
     ; CHECK: Vector types must both be fixed or both be scalable
     %19:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 0
 
+    ; CHECK: Index must be a multiple of the destination vector's minimum vector length
+    %20:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 1
 
 ...
