@@ -231,19 +231,26 @@ bool ValueObjectVariable::UpdateValue() {
         if (type->GetForwardCompilerType()
                 .GetTypeSystem()
                 .dyn_cast_or_null<TypeSystemSwift>() &&
-            TypePayloadSwift(type->GetPayload()).IsFixedValueBuffer())
+            TypePayloadSwift(type->GetPayload()).IsFixedValueBuffer() &&
+            m_value.GetValueType() == Value::ValueType::FileAddress)
           if (auto process_sp = GetProcessSP())
             if (auto runtime = process_sp->GetLanguageRuntime(
                     compiler_type.GetMinimumLanguage())) {
               if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
-                lldb::addr_t addr =
-                    m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-                if (addr != LLDB_INVALID_ADDRESS) {
-                  Target &target = process_sp->GetTarget();
-                  size_t ptr_size = process_sp->GetAddressByteSize();
-                  lldb::addr_t deref_addr;
-                  target.ReadMemory(addr, &deref_addr, ptr_size, m_error, true);
-                  m_value.GetScalar() = deref_addr;
+                if (auto *scs = variable->GetSymbolContextScope()) {
+                  if (auto module_sp = scs->CalculateSymbolContextModule()) {
+                    lldb::addr_t file_addr =
+                      m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+                    Address address(file_addr, module_sp->GetSectionList());
+                    Target &target = process_sp->GetTarget();
+                    size_t ptr_size = process_sp->GetAddressByteSize();
+                    lldb::addr_t deref_addr;
+                    lldb::addr_t load_addr = address.GetLoadAddress(&target);
+                    // FIXME: Add error handling!
+                    if (target.ReadMemory(load_addr, &deref_addr, ptr_size,
+                                          m_error, process_is_alive))
+                      m_value.GetScalar() = deref_addr;
+                  }
                 }
               }
           }
