@@ -110,6 +110,14 @@ static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
                 std::make_error_code(std::errc::address_family_not_supported) ||
             ec == std::make_error_code(std::errc::address_not_available))
           HasProtocolError = true;
+      },
+      [&](std::unique_ptr<llvm::ECError> ECErr) {
+        // FIXME: This code path should not be reachable.
+        std::error_code ec = ECErr->convertToErrorCode();
+        if (ec ==
+            std::make_error_code(std::errc::address_family_not_supported) ||
+            ec == std::make_error_code(std::errc::address_not_available))
+          HasProtocolError = true;
       });
   if (HasProtocolError) {
     GTEST_LOG_(WARNING)
