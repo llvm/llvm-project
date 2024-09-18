@@ -24,6 +24,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -648,13 +649,12 @@ mlir::Value CIRGenModule::getGlobalValue(const Decl *D) {
   return CurCGF->symbolTable.lookup(D);
 }
 
-mlir::cir::GlobalOp
-CIRGenModule::createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
-                             StringRef name, mlir::Type t, bool isCst,
-                             mlir::cir::AddressSpaceAttr addrSpace,
-                             mlir::Operation *insertPoint) {
+mlir::cir::GlobalOp CIRGenModule::createGlobalOp(
+    CIRGenModule &cgm, mlir::Location loc, StringRef name, mlir::Type t,
+    bool isConstant, mlir::cir::AddressSpaceAttr addrSpace,
+    mlir::Operation *insertPoint, mlir::cir::GlobalLinkageKind linkage) {
   mlir::cir::GlobalOp g;
-  auto &builder = CGM.getBuilder();
+  auto &builder = cgm.getBuilder();
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -662,17 +662,17 @@ CIRGenModule::createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
     // void s() { const char *s = "yolo"; ... }
     //
     // Be sure to insert global before the current function
-    auto *curCGF = CGM.getCurrCIRGenFun();
+    auto *curCGF = cgm.getCurrCIRGenFun();
     if (curCGF)
       builder.setInsertionPoint(curCGF->CurFn);
 
-    g = builder.create<mlir::cir::GlobalOp>(
-        loc, name, t, isCst, GlobalLinkageKind::ExternalLinkage, addrSpace);
+    g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isConstant, linkage,
+                                            addrSpace);
     if (!curCGF) {
       if (insertPoint)
-        CGM.getModule().insert(insertPoint, g);
+        cgm.getModule().insert(insertPoint, g);
       else
-        CGM.getModule().push_back(g);
+        cgm.getModule().push_back(g);
     }
 
     // Default to private until we can judge based on the initializer,
@@ -1563,6 +1563,123 @@ void CIRGenModule::buildLinkageSpec(const LinkageSpecDecl *LSD) {
     return;
   }
   buildDeclContext(LSD);
+}
+
+mlir::Operation *
+CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *expr,
+                                       const Expr *init) {
+  assert((expr->getStorageDuration() == SD_Static ||
+          expr->getStorageDuration() == SD_Thread) &&
+         "not a global temporary");
+  const auto *varDecl = cast<VarDecl>(expr->getExtendingDecl());
+
+  // If we're not materializing a subobject of the temporay, keep the
+  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  QualType materializedType = init->getType();
+  if (init == expr->getSubExpr())
+    materializedType = expr->getType();
+
+  [[maybe_unused]] CharUnits align =
+      getASTContext().getTypeAlignInChars(materializedType);
+
+  auto insertResult = materializedGlobalTemporaryMap.insert({expr, nullptr});
+  if (!insertResult.second) {
+    llvm_unreachable("NYI");
+  }
+
+  // FIXME: If an externally-visible declaration extends multiple temporaries,
+  // we need to give each temporary the same name in every translation unit (and
+  // we also need to make the temporaries externally-visible).
+  llvm::SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  getCXXABI().getMangleContext().mangleReferenceTemporary(
+      varDecl, expr->getManglingNumber(), out);
+
+  APValue *value = nullptr;
+  if (expr->getStorageDuration() == SD_Static && varDecl->evaluateValue()) {
+    // If the initializer of the extending declaration is a constant
+    // initializer, we should have a cached constant initializer for this
+    // temporay. Note taht this m ight have a different value from the value
+    // computed by evaluating the initializer if the surrounding constant
+    // expression modifies the temporary.
+    value = expr->getOrCreateValue(false);
+  }
+
+  // Try evaluating it now, it might have a constant initializer
+  Expr::EvalResult evalResult;
+  if (!value && init->EvaluateAsRValue(evalResult, getASTContext()) &&
+      !evalResult.hasSideEffects())
+    value = &evalResult.Val;
+
+  LangAS addrSpace = getGlobalVarAddressSpace(varDecl);
+
+  std::optional<ConstantEmitter> emitter;
+  mlir::Attribute initialValue = nullptr;
+  bool isConstant = false;
+  mlir::Type type;
+  if (value) {
+    emitter.emplace(*this);
+    initialValue =
+        emitter->emitForInitializer(*value, addrSpace, materializedType);
+
+    isConstant = materializedType.isConstantStorage(
+        getASTContext(), /*ExcludeCtor*/ value, /*ExcludeDtor*/ false);
+
+    type = mlir::cast<mlir::TypedAttr>(initialValue).getType();
+  } else {
+    // No initializer, the initialization will be provided when we initialize
+    // the declaration which performed lifetime extension.
+    llvm_unreachable("else value");
+  }
+
+  // Create a global variable for this lifetime-extended temporary.
+  mlir::cir::GlobalLinkageKind linkage =
+      getCIRLinkageVarDefinition(varDecl, false);
+  if (linkage == mlir::cir::GlobalLinkageKind::ExternalLinkage) {
+    const VarDecl *initVD;
+    if (varDecl->isStaticDataMember() && varDecl->getAnyInitializer(initVD) &&
+        isa<CXXRecordDecl>(initVD->getLexicalDeclContext())) {
+      // Temporaries defined inside a class get linkonce_odr linkage because the
+      // calss can be defined in multiple translation units.
+      llvm_unreachable("staticdatamember NYI");
+    } else {
+      // There is no need for this temporary to have external linkage if the
+      // VarDecl has external linkage.
+      linkage = mlir::cir::GlobalLinkageKind::InternalLinkage;
+    }
+  }
+  auto targetAS = builder.getAddrSpaceAttr(addrSpace);
+
+  auto loc = getLoc(expr->getSourceRange());
+  auto gv = createGlobalOp(*this, loc, name, type, isConstant, targetAS,
+                           nullptr, linkage);
+  gv.setInitialValueAttr(initialValue);
+
+  if (emitter)
+    emitter->finalize(gv);
+  // Don't assign dllimport or dllexport to lcoal linkage globals
+  if (!gv.hasLocalLinkage()) {
+    llvm_unreachable("NYI");
+  }
+  gv.setAlignment(align.getAsAlign().value());
+  if (supportsCOMDAT() && gv.isWeakForLinker())
+    llvm_unreachable("NYI");
+  if (varDecl->getTLSKind())
+    llvm_unreachable("NYI");
+  mlir::Operation *cv = gv;
+  if (addrSpace != LangAS::Default)
+    llvm_unreachable("NYI");
+
+  // Update the map with the new temporay. If we created a placeholder above,
+  // replace it with the new global now.
+  mlir::Operation *&entry = materializedGlobalTemporaryMap[expr];
+  if (entry) {
+    entry->replaceAllUsesWith(cv);
+    entry->erase();
+  }
+  entry = cv;
+
+  return cv;
 }
 
 // Emit code for a single top level declaration.

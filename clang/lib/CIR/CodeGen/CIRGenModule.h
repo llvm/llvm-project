@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
+#include "Address.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenOpenCLRuntime.h"
@@ -143,6 +144,9 @@ private:
   /// most up to date ValueDecl that will have all the inherited annotations.
   llvm::DenseMap<StringRef, const ValueDecl *> deferredAnnotations;
 
+  llvm::DenseMap<const Expr *, mlir::Operation *>
+      materializedGlobalTemporaryMap;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -248,10 +252,12 @@ public:
                                         mlir::Type Ty);
 
   static mlir::cir::GlobalOp
-  createGlobalOp(CIRGenModule &CGM, mlir::Location loc, StringRef name,
-                 mlir::Type t, bool isCst = false,
+  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, StringRef name,
+                 mlir::Type t, bool isConstant = false,
                  mlir::cir::AddressSpaceAttr addrSpace = {},
-                 mlir::Operation *insertPoint = nullptr);
+                 mlir::Operation *insertPoint = nullptr,
+                 mlir::cir::GlobalLinkageKind linkage =
+                     mlir::cir::GlobalLinkageKind::ExternalLinkage);
 
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority = 65535);
@@ -647,6 +653,12 @@ public:
   void Release();
 
   bool shouldEmitFunction(clang::GlobalDecl GD);
+
+  /// Returns a pointer to a global variable representing a temporary with
+  /// static or thread storage duration.
+  mlir::Operation *
+  getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *expr,
+                           const Expr *init);
 
   // Produce code for this constructor/destructor. This method doesn't try to
   // apply any ABI rules about which other constructors/destructors are needed

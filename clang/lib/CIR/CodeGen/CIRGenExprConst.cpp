@@ -24,6 +24,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -1261,7 +1262,7 @@ private:
   ConstantLValue VisitBlockExpr(const BlockExpr *E);
   ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   ConstantLValue
-  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
+  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *expr);
 
   bool hasNonZeroOffset() const { return !Value.getLValueOffset().isZero(); }
 
@@ -1499,9 +1500,13 @@ ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
 }
 
 ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
-    const MaterializeTemporaryExpr *E) {
-  assert(0 && "NYI");
-  return nullptr;
+    const MaterializeTemporaryExpr *expr) {
+  assert(expr->getStorageDuration() == SD_Static);
+  const Expr *inner = expr->getSubExpr()->skipRValueSubobjectAdjustments();
+  mlir::Operation *globalTemp = CGM.getAddrOfGlobalTemporary(expr, inner);
+  CIRGenBuilderTy builder = CGM.getBuilder();
+  return ConstantLValue(
+      builder.getGlobalViewAttr(mlir::cast<mlir::cir::GlobalOp>(globalTemp)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1530,6 +1535,15 @@ mlir::Attribute ConstantEmitter::tryEmitForInitializer(const Expr *E,
                                                        QualType destType) {
   initializeNonAbstract(destAddrSpace);
   return markIfFailed(tryEmitPrivateForMemory(E, destType));
+}
+
+mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,
+                                                    LangAS destAddrSpace,
+                                                    QualType destType) {
+  initializeNonAbstract(destAddrSpace);
+  auto c = tryEmitPrivateForMemory(value, destType);
+  assert(c && "couldn't emit constant value non-abstractly?");
+  return c;
 }
 
 void ConstantEmitter::finalize(mlir::cir::GlobalOp global) {

@@ -26,6 +26,8 @@ namespace cir {
 // Indicates whether a pointer is known not to be null.
 enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
 
+/// Like RawAddress, an abstract representation of an aligned address, but the
+/// pointer contained in this class is possibly signed.
 class Address {
   llvm::PointerIntPair<mlir::Value, 1, bool> PointerAndKnownNonNull;
   mlir::Type ElementType;

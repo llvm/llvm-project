@@ -76,6 +76,9 @@ public:
   mlir::Attribute tryEmitForInitializer(const Expr *E, LangAS destAddrSpace,
                                         QualType destType);
 
+  mlir::Attribute emitForInitializer(const APValue &value, LangAS destAddrSpace,
+                                     QualType destType);
+
   void finalize(mlir::cir::GlobalOp global);
 
   // All of the "abstract" emission methods below permit the emission to
