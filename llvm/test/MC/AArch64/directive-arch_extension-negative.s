@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte2,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
 // RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
@@ -106,10 +106,15 @@ dc cvadp, x7
 
 irg x0, x1
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: mte
-.arch_extension nomte
+ldgm x0, [x1]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: mte2
+.arch_extension nomemtag
 irg x0, x1
 // CHECK: [[@LINE-1]]:1: error: instruction requires: mte
 // CHECK-NEXT: irg x0, x1
+ldgm x0, [x1]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: mte2
+// CHECK-NEXT: ldgm x0, [x1]
 
 tlbi vmalle1os
 // CHECK-NOT: [[@LINE-1]]:6: error: TLBI VMALLE1OS requires: tlb-rmi

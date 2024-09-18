@@ -152,24 +152,27 @@ let Requires = [{ {AArch64::FeatureCacheDeepPersist} }] in
 def : DC<"CVADP",  0b011, 0b0111, 0b1101, 0b001>;
 
 let Requires = [{ {AArch64::FeatureMTE} }] in {
-def : DC<"IGVAC",   0b000, 0b0111, 0b0110, 0b011>;
-def : DC<"IGSW",    0b000, 0b0111, 0b0110, 0b100>;
-def : DC<"CGSW",    0b000, 0b0111, 0b1010, 0b100>;
-def : DC<"CIGSW",   0b000, 0b0111, 0b1110, 0b100>;
 def : DC<"CGVAC",   0b011, 0b0111, 0b1010, 0b011>;
 def : DC<"CGVAP",   0b011, 0b0111, 0b1100, 0b011>;
 def : DC<"CGVADP",  0b011, 0b0111, 0b1101, 0b011>;
 def : DC<"CIGVAC",  0b011, 0b0111, 0b1110, 0b011>;
 def : DC<"GVA",     0b011, 0b0111, 0b0100, 0b011>;
-def : DC<"IGDVAC",  0b000, 0b0111, 0b0110, 0b101>;
-def : DC<"IGDSW",   0b000, 0b0111, 0b0110, 0b110>;
-def : DC<"CGDSW",   0b000, 0b0111, 0b1010, 0b110>;
-def : DC<"CIGDSW",  0b000, 0b0111, 0b1110, 0b110>;
 def : DC<"CGDVAC",  0b011, 0b0111, 0b1010, 0b101>;
 def : DC<"CGDVAP",  0b011, 0b0111, 0b1100, 0b101>;
 def : DC<"CGDVADP", 0b011, 0b0111, 0b1101, 0b101>;
 def : DC<"CIGDVAC", 0b011, 0b0111, 0b1110, 0b101>;
 def : DC<"GZVA",    0b011, 0b0111, 0b0100, 0b100>;
+}
+
+let Requires = [{ {AArch64::FeatureMTE2} }] in {
+def : DC<"IGVAC",   0b000, 0b0111, 0b0110, 0b011>;
+def : DC<"IGSW",    0b000, 0b0111, 0b0110, 0b100>;
+def : DC<"CGSW",    0b000, 0b0111, 0b1010, 0b100>;
+def : DC<"CIGSW",   0b000, 0b0111, 0b1110, 0b100>;
+def : DC<"IGDVAC",  0b000, 0b0111, 0b0110, 0b101>;
+def : DC<"IGDSW",   0b000, 0b0111, 0b0110, 0b110>;
+def : DC<"CGDSW",   0b000, 0b0111, 0b1010, 0b110>;
+def : DC<"CIGDSW",  0b000, 0b0111, 0b1110, 0b110>;
 }
 
 let Requires = [{ {AArch64::FeatureMEC} }] in {
@@ -1639,8 +1642,9 @@ def : RWSysReg<"SSBS", 0b11, 0b011, 0b0100, 0b0010, 0b110>;
 
 // v8.5a Memory Tagging Extension
 //                                 Op0   Op1    CRn     CRm     Op2
-let Requires = [{ {AArch64::FeatureMTE} }] in {
+let Requires = [{ {AArch64::FeatureMTE} }] in
 def : RWSysReg<"TCO",              0b11, 0b011, 0b0100, 0b0010, 0b111>;
+let Requires = [{ {AArch64::FeatureMTE2} }] in {
 def : RWSysReg<"GCR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b110>;
 def : RWSysReg<"RGSR_EL1",         0b11, 0b000, 0b0001, 0b0000, 0b101>;
 def : RWSysReg<"TFSR_EL1",         0b11, 0b000, 0b0101, 0b0110, 0b000>;
@@ -1649,7 +1653,7 @@ def : RWSysReg<"TFSR_EL3",         0b11, 0b110, 0b0101, 0b0110, 0b000>;
 def : RWSysReg<"TFSR_EL12",        0b11, 0b101, 0b0101, 0b0110, 0b000>;
 def : RWSysReg<"TFSRE0_EL1",       0b11, 0b000, 0b0101, 0b0110, 0b001>;
 def : ROSysReg<"GMID_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b100>;
-} // HasMTE
+}
 
 // Embedded Trace Extension R/W System registers
 let Requires = [{ {AArch64::FeatureETE} }] in {

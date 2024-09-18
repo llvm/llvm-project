@@ -1293,7 +1293,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVE2,         AArch64::AEK_SVE2AES,
       AArch64::AEK_SVE2SM4,      AArch64::AEK_SVE2SHA3,
       AArch64::AEK_SVE2BITPERM,  AArch64::AEK_RCPC,
-      AArch64::AEK_RAND,         AArch64::AEK_MTE,
+      AArch64::AEK_RAND,         AArch64::AEK_SVEB16B16,
       AArch64::AEK_SSBS,         AArch64::AEK_SB,
       AArch64::AEK_PREDRES,      AArch64::AEK_BF16,
       AArch64::AEK_I8MM,         AArch64::AEK_F32MM,
@@ -1319,7 +1319,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,
       AArch64::AEK_FCMA,         AArch64::AEK_FP8,
-      AArch64::AEK_SVEB16B16,
+      AArch64::AEK_MTE,          AArch64::AEK_MTE2,
   };
 
   std::vector<StringRef> Features;
@@ -1361,6 +1361,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+rcpc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+rand"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mte"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mte2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ssbs"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sb"));
   EXPECT_TRUE(llvm::is_contained(Features, "+predres"));
@@ -1513,7 +1514,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
       {"rcpc", "norcpc", "+rcpc", "-rcpc"},
       {"rng", "norng", "+rand", "-rand"},
-      {"memtag", "nomemtag", "+mte", "-mte"},
+      {"memtag", "nomemtag", "+mte2", "-mte2"},
       {"tme", "notme", "+tme", "-tme"},
       {"pauth", "nopauth", "+pauth", "-pauth"},
       {"ssbs", "nossbs", "+ssbs", "-ssbs"},
@@ -1898,7 +1899,7 @@ AArch64ExtensionDependenciesBaseCPUTestParams
         {"cortex-a520",
          {},
          {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
-          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
+          "fullfp16", "fp16fml", "i8mm", "lse",          "mte2",  "pauth",
           "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
           "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
          {}},

@@ -253,6 +253,12 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SM4);
   }
 
+  // FEAT_MTE and FEAT_MTE2 were historically lumped under the name 'memtag'.
+  // Therefore 'nomemtag' should disable FEAT_MTE too even though it does not
+  // depend on FEAT_MTE2.
+  if (E == AEK_MTE2)
+    disable(AEK_MTE);
+
   if (!Enabled.test(E))
     return;
 

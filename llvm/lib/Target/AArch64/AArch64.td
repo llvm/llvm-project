@@ -87,9 +87,8 @@ def SMEUnsupported : AArch64Unsupported {
                       SME2Unsupported.F);
 }
 
-def MTEUnsupported : AArch64Unsupported {
-  let F = [HasMTE];
-}
+let F = [HasMTE, HasMTE2] in
+def MTEUnsupported : AArch64Unsupported;
 
 let F = [HasPAuth, HasPAuthLR] in
 def PAUnsupported : AArch64Unsupported;

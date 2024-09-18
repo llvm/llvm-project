@@ -119,6 +119,11 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     /* ID_AA64ISAR1_EL1.LS64 >= 0b0011  */
     if (extractBits(ftr, 60, 4) >= 0x3)
       setCPUFeature(FEAT_LS64_ACCDATA);
+
+    getCPUFeature(ID_AA64PFR1_EL1, ftr);
+    // ID_AA64PFR1_EL1.MTE >= 0b0001
+    if (extractBits(ftr, 8, 4) >= 0x1)
+      setCPUFeature(FEAT_MEMTAG);
   }
   if (hwcap & HWCAP_FP) {
     setCPUFeature(FEAT_FP);

@@ -1,6 +1,6 @@
-# RUN:     llvm-mc -triple=aarch64 -mattr=+mte   -disassemble < %s      | FileCheck %s
+# RUN:     llvm-mc -triple=aarch64 -mattr=+mte2   -disassemble < %s      | FileCheck %s
 # RUN: not llvm-mc -triple=aarch64 -mattr=+v8.5a -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
-# RUN: not llvm-mc -triple=aarch64 -mattr=-mte   -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
+# RUN: not llvm-mc -triple=aarch64 -mattr=-mte2   -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
 
 [0x20,0x10,0xdf,0x9a]
 [0x3f,0x10,0xdf,0x9a]

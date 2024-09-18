@@ -31,7 +31,8 @@
 // CHECK-NEXT:     FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_LSE2                                              Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules
 // CHECK-NEXT:     FEAT_MPAM                                              Enable Armv8.4-A Memory system Partitioning and Monitoring extension
-// CHECK-NEXT:     FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
+// CHECK-NEXT:     FEAT_MTE                                               Enable Memory Tagging Extension 1
+// CHECK-NEXT:     FEAT_MTE2                                              Enable Memory Tagging Extension 2
 // CHECK-NEXT:     FEAT_NV, FEAT_NV2                                      Enable Armv8.4-A Nested Virtualization Enchancement
 // CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
 // CHECK-NEXT:     FEAT_PAN2                                              Enable Armv8.2-A PAN s1e1R and s1e1W Variants

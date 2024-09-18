@@ -26,7 +26,8 @@ def FalkorModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC]);
+                                                    MTEUnsupported.F,
+                                                    [HasCSSC]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
 }

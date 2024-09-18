@@ -1059,7 +1059,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
       HasFP16FML = true;
     }
-    if (Feature == "+mte")
+    if (Feature == "+mte2")
       HasMTE = true;
     if (Feature == "+tme")
       HasTME = true;

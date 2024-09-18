@@ -37,7 +37,7 @@
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
-// CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
+// CHECK-NEXT:     memtag              FEAT_MTE2                                              Enable Memory Tagging Extension 2
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements

@@ -1,6 +1,6 @@
-// RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+mte   < %s      | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+mte2   < %s      | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+v8.5a < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
-// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-mte   < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
+// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-mte2   < %s 2>&1 | FileCheck %s --check-prefix=NOMTE
 
 irg x0, x1
 irg sp, x1
@@ -441,19 +441,19 @@ dc gzva, x17
 // CHECK: dc cigdvac, x16       // encoding: [0xb0,0x7e,0x0b,0xd5]
 // CHECK: dc gzva, x17          // encoding: [0x91,0x74,0x0b,0xd5]
 
-// NOMTE: DC IGVAC requires: mte
-// NOMTE: DC IGSW requires: mte
-// NOMTE: DC CGSW requires: mte
-// NOMTE: DC CIGSW requires: mte
+// NOMTE: DC IGVAC requires: mte2
+// NOMTE: DC IGSW requires: mte2
+// NOMTE: DC CGSW requires: mte2
+// NOMTE: DC CIGSW requires: mte2
 // NOMTE: DC CGVAC requires: mte
 // NOMTE: DC CGVAP requires: mte
 // NOMTE: DC CGVADP requires: mte
 // NOMTE: DC CIGVAC requires: mte
 // NOMTE: DC GVA requires: mte
-// NOMTE: DC IGDVAC requires: mte
-// NOMTE: DC IGDSW requires: mte
-// NOMTE: DC CGDSW requires: mte
-// NOMTE: DC CIGDSW requires: mte
+// NOMTE: DC IGDVAC requires: mte2
+// NOMTE: DC IGDSW requires: mte2
+// NOMTE: DC CGDSW requires: mte2
+// NOMTE: DC CIGDSW requires: mte2
 // NOMTE: DC CGDVAC requires: mte
 // NOMTE: DC CGDVAP requires: mte
 // NOMTE: DC CGDVADP requires: mte
@@ -590,9 +590,9 @@ ldgm xzr, [x2]
 // CHECK: ldgm x1, [sp]  // encoding: [0xe1,0x03,0xe0,0xd9]
 // CHECK: ldgm xzr, [x2] // encoding: [0x5f,0x00,0xe0,0xd9]
 
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2
 
 stgm x0, [x1]
 stgm x1, [sp]
@@ -602,9 +602,9 @@ stgm xzr, [x2]
 // CHECK: stgm x1, [sp]  // encoding: [0xe1,0x03,0xa0,0xd9]
 // CHECK: stgm xzr, [x2] // encoding: [0x5f,0x00,0xa0,0xd9]
 
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2
 
 stzgm x0, [x1]
 stzgm x1, [sp]
@@ -614,6 +614,6 @@ stzgm xzr, [x2]
 // CHECK: stzgm x1, [sp]  // encoding: [0xe1,0x03,0x20,0xd9]
 // CHECK: stzgm xzr, [x2] // encoding: [0x5f,0x00,0x20,0xd9]
 
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
-// NOMTE: instruction requires: mte
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2
+// NOMTE: instruction requires: mte2

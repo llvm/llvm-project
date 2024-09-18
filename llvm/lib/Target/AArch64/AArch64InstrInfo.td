@@ -263,6 +263,8 @@ def HasBTI           : Predicate<"Subtarget->hasBTI()">,
                        AssemblerPredicateWithAll<(all_of FeatureBranchTargetId), "bti">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                        AssemblerPredicateWithAll<(all_of FeatureMTE), "mte">;
+def HasMTE2          : Predicate<"Subtarget->hasMTE2()">,
+                       AssemblerPredicateWithAll<(all_of FeatureMTE2), "mte2">;
 def HasTME           : Predicate<"Subtarget->hasTME()">,
                        AssemblerPredicateWithAll<(all_of FeatureTME), "tme">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
@@ -2656,15 +2658,6 @@ def : Pat<(int_aarch64_ldg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn,  simm9s16:$
 
 def : InstAlias<"ldg $Rt, [$Rn]", (LDG GPR64:$Rt, GPR64sp:$Rn, 0), 1>;
 
-def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
-                   (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
-def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
-                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
-def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
-                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
-  let Inst{23} = 0;
-}
-
 defm STG   : MemTagStore<0b00, "stg">;
 defm STZG  : MemTagStore<0b01, "stzg">;
 defm ST2G  : MemTagStore<0b10, "st2g">;
@@ -2729,6 +2722,17 @@ def STZGloop
 }
 
 } // Predicates = [HasMTE]
+
+let Predicates = [HasMTE2] in {
+def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
+                   (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
+def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
+                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
+def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
+                   (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
+  let Inst{23} = 0;
+}
+} // Predicates = [HasMTE2]
 
 //===----------------------------------------------------------------------===//
 // Logical instructions.

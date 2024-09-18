@@ -268,11 +268,14 @@ let ArchExtKindSpelling = "AEK_RAND", UserVisibleName = "rng" in
 def FeatureRandGen : ExtensionWithMArch<"rand", "RandGen", "FEAT_RNG",
   "Enable Random Number generation instructions">;
 
+def FeatureMTE : Extension<"mte", "MTE", "FEAT_MTE",
+  "Enable Memory Tagging Extension 1">;
+
 // NOTE: "memtag" means FEAT_MTE + FEAT_MTE2 for -march or
 // __attribute((target(...))), but only FEAT_MTE for FMV.
 let UserVisibleName = "memtag" in
-def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
-  "Enable Memory Tagging Extension">;
+def FeatureMTE2 : ExtensionWithMArch<"mte2", "MTE2", "FEAT_MTE2",
+  "Enable Memory Tagging Extension 2", [FeatureMTE]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.6 Architecture Extensions
