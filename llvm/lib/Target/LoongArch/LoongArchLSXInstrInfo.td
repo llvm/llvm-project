@@ -1238,6 +1238,10 @@ def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
 def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
 def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
 
+let usesCustomInserter = 1 in
+def PseudoCTPOP : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                         [(set GPR:$rd, (ctpop GPR:$rj))]>;
+
 } // Predicates = [HasExtLSX]
 
 multiclass PatVr<SDPatternOperator OpNode, string Inst> {

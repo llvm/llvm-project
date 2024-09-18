@@ -107,10 +107,10 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -945,23 +945,21 @@ void FunctionInstrumenter::instrument() {
       for (auto &BB : F)
         for (auto &Instr : BB)
           if (auto *CS = dyn_cast<CallBase>(&Instr)) {
-            if ((CS->getCalledFunction() &&
-                 CS->getCalledFunction()->isIntrinsic()) ||
-                dyn_cast<InlineAsm>(CS->getCalledOperand()))
+            if (!InstrProfCallsite::canInstrumentCallsite(*CS))
               continue;
             Visitor(CS);
           }
     };
     // First, count callsites.
-    uint32_t TotalNrCallsites = 0;
-    Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
+    uint32_t TotalNumCallsites = 0;
+    Visit([&TotalNumCallsites](auto *) { ++TotalNumCallsites; });
 
     // Now instrument.
     uint32_t CallsiteIndex = 0;
     Visit([&](auto *CB) {
       IRBuilder<> Builder(CB);
       Builder.CreateCall(CSIntrinsic,
-                         {Name, CFGHash, Builder.getInt32(TotalNrCallsites),
+                         {Name, CFGHash, Builder.getInt32(TotalNumCallsites),
                           Builder.getInt32(CallsiteIndex++),
                           CB->getCalledOperand()});
     });

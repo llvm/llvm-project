@@ -1401,8 +1401,6 @@ define <32 x i64> @vsaddu_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
   ret <32 x i64> %v
 }
 
-; FIXME: We don't match vsaddu.vi on RV32.
-
 define <32 x i64> @vsaddu_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
 ; CHECK-LABEL: vsaddu_vx_v32i64_evl12:
 ; CHECK:       # %bb.0:

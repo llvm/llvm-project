@@ -22,8 +22,9 @@
 namespace Fortran::semantics {
 
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
-    : name_{name}, typeSymbol_{typeSymbol} {
-  CHECK(typeSymbol.has<DerivedTypeDetails>());
+    : name_{name}, originalTypeSymbol_{typeSymbol},
+      typeSymbol_{typeSymbol.GetUltimate()} {
+  CHECK(typeSymbol_.has<DerivedTypeDetails>());
 }
 DerivedTypeSpec::DerivedTypeSpec(const DerivedTypeSpec &that) = default;
 DerivedTypeSpec::DerivedTypeSpec(DerivedTypeSpec &&that) = default;
@@ -340,9 +341,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   const Scope &typeScope{DEREF(typeSymbol_.scope())};
   if (!MightBeParameterized()) {
     scope_ = &typeScope;
-    if (typeScope.derivedTypeSpec()) {
-      CHECK(*this == *typeScope.derivedTypeSpec());
-    } else {
+    if (!typeScope.derivedTypeSpec() || *this != *typeScope.derivedTypeSpec()) {
       Scope &mutableTypeScope{const_cast<Scope &>(typeScope)};
       mutableTypeScope.set_derivedTypeSpec(*this);
       InstantiateNonPDTScope(mutableTypeScope, containingScope);
@@ -658,13 +657,13 @@ std::string DerivedTypeSpec::VectorTypeAsFortran() const {
   case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
     Fortran::common::die("Vector element type not implemented");
   }
-  return ss.str();
+  return buf;
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
-  ss << name_;
+  ss << originalTypeSymbol_.name();
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());
     ss << '(';
@@ -694,7 +693,7 @@ std::string DerivedTypeSpec::AsFortran() const {
     }
     ss << ')';
   }
-  return ss.str();
+  return buf;
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
@@ -771,7 +770,7 @@ std::string ParamValue::AsFortran() const {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       expr_->AsFortran(ss);
-      return ss.str();
+      return buf;
     } else {
       return "";
     }
@@ -795,7 +794,7 @@ static std::string KindAsFortran(const KindExpr &kind) {
   } else {
     kind.AsFortran(ss);
   }
-  return ss.str();
+  return buf;
 }
 
 std::string IntrinsicTypeSpec::AsFortran() const {
@@ -891,15 +890,6 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
-}
-
-std::optional<bool> IsInteroperableIntrinsicType(
-    const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
-  if (auto dyType{evaluate::DynamicType::From(type)}) {
-    return IsInteroperableIntrinsicType(*dyType, &features);
-  } else {
-    return std::nullopt;
-  }
 }
 
 } // namespace Fortran::semantics

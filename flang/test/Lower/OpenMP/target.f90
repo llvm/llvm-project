@@ -460,7 +460,7 @@ subroutine omp_target_implicit_bounds(n)
    integer :: n
    integer :: a(n)
    !CHECK: %[[VAL_14:.*]] = omp.map.bounds lower_bound(%c0{{.*}} : index) upper_bound(%[[UB]] : index) extent(%[[VAL_7]] : index) stride(%c1{{.*}} : index) start_idx(%c1{{.*}} : index)
-   !CHECK: %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
+   !CHECK: %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
    !CHECK: %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
    !CHECK: omp.target map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
    !CHECK: ^bb0(%[[VAL_17]]: !fir.ref<!fir.array<?xi32>>, %[[VAL_18]]: !fir.ref<i32>):

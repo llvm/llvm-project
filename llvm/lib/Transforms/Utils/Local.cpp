@@ -1034,7 +1034,14 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   if (!BB->hasNPredecessorsOrMore(2))
     return false;
 
-  // Get single common predecessors of both BB and Succ
+  if (any_of(BBPreds, [](const BasicBlock *Pred) {
+        return isa<PHINode>(Pred->begin()) &&
+               isa<IndirectBrInst>(Pred->getTerminator());
+      }))
+    return false;
+
+  // Get the single common predecessor of both BB and Succ. Return false
+  // when there are more than one common predecessors.
   for (BasicBlock *SuccPred : SuccPreds) {
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
@@ -1167,7 +1174,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
-  // Even if we can not fold bB into Succ, we may be able to redirect the
+  // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
   bool BBPhisMergeable =
       BBKillable ||

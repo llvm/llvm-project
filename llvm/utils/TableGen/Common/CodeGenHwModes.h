@@ -28,7 +28,7 @@ class RecordKeeper;
 struct CodeGenHwModes;
 
 struct HwMode {
-  HwMode(Record *R);
+  HwMode(const Record *R);
   StringRef Name;
   std::string Features;
   std::string Predicates;
@@ -36,8 +36,8 @@ struct HwMode {
 };
 
 struct HwModeSelect {
-  HwModeSelect(Record *R, CodeGenHwModes &CGH);
-  typedef std::pair<unsigned, Record *> PairType;
+  HwModeSelect(const Record *R, CodeGenHwModes &CGH);
+  typedef std::pair<unsigned, const Record *> PairType;
   std::vector<PairType> Items;
   void dump() const;
 };
@@ -46,8 +46,8 @@ struct CodeGenHwModes {
   enum : unsigned { DefaultMode = 0 };
   static StringRef DefaultModeName;
 
-  CodeGenHwModes(RecordKeeper &R);
-  unsigned getHwModeId(Record *R) const;
+  CodeGenHwModes(const RecordKeeper &R);
+  unsigned getHwModeId(const Record *R) const;
   const HwMode &getMode(unsigned Id) const {
     assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
     return Modes[Id - 1];
@@ -57,18 +57,18 @@ struct CodeGenHwModes {
       return DefaultModeName;
     return getMode(Id).Name;
   }
-  const HwModeSelect &getHwModeSelect(Record *R) const;
-  const std::map<Record *, HwModeSelect> &getHwModeSelects() const {
+  const HwModeSelect &getHwModeSelect(const Record *R) const;
+  const std::map<const Record *, HwModeSelect> &getHwModeSelects() const {
     return ModeSelects;
   }
   unsigned getNumModeIds() const { return Modes.size() + 1; }
   void dump() const;
 
 private:
-  RecordKeeper &Records;
-  DenseMap<Record *, unsigned> ModeIds; // HwMode Record -> HwModeId
+  const RecordKeeper &Records;
+  DenseMap<const Record *, unsigned> ModeIds; // HwMode Record -> HwModeId
   std::vector<HwMode> Modes;
-  std::map<Record *, HwModeSelect> ModeSelects;
+  std::map<const Record *, HwModeSelect> ModeSelects;
 };
 } // namespace llvm
 

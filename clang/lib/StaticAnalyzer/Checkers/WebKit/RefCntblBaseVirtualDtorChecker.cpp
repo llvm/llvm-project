@@ -67,6 +67,39 @@ public:
     const Decl *D = CE->getCalleeDecl();
     if (D && D->hasBody())
       return VisitBody(D->getBody());
+    else {
+      auto name = safeGetName(D);
+      if (name == "ensureOnMainThread" || name == "ensureOnMainRunLoop") {
+        for (unsigned i = 0; i < CE->getNumArgs(); ++i) {
+          auto *Arg = CE->getArg(i);
+          if (VisitLambdaArgument(Arg))
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool VisitLambdaArgument(const Expr *E) {
+    E = E->IgnoreParenCasts();
+    if (auto *TempE = dyn_cast<CXXBindTemporaryExpr>(E))
+      E = TempE->getSubExpr();
+    E = E->IgnoreParenCasts();
+    if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
+      if (auto *VD = dyn_cast_or_null<VarDecl>(Ref->getDecl()))
+        return VisitLambdaArgument(VD->getInit());
+      return false;
+    }
+    if (auto *Lambda = dyn_cast<LambdaExpr>(E)) {
+      if (VisitBody(Lambda->getBody()))
+        return true;
+    }
+    if (auto *ConstructE = dyn_cast<CXXConstructExpr>(E)) {
+      for (unsigned i = 0; i < ConstructE->getNumArgs(); ++i) {
+        if (VisitLambdaArgument(ConstructE->getArg(i)))
+          return true;
+      }
+    }
     return false;
   }
 

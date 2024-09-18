@@ -47,10 +47,10 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
-  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
+  template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
-      BB->insert(VPI, InsertPt);
-    return VPI;
+      BB->insert(R, InsertPt);
+    return R;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -69,6 +69,9 @@ public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
   VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    setInsertPoint(TheBB, IP);
+  }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -200,7 +203,33 @@ public:
   /// and \p B.
   /// TODO: add createFCmp when needed.
   VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = {}, const Twine &Name = "");
+                      DebugLoc DL = {}, const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+           Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+  }
+
+  VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPCanonicalIVPHIRecipe *CanonicalIV,
+                                     VPValue *Step) {
+    return tryInsertInstruction(
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+  }
+
+  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                       Type *ResultTy) {
+    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPScalarIVStepsRecipe *
+  createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+    return tryInsertInstruction(new VPScalarIVStepsRecipe(
+        IV, Step, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+  }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.

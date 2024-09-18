@@ -1180,8 +1180,7 @@ void BeforeSet::checkBeforeAfter(const ValueDecl* StartVd,
       }
       // Transitively search other before sets, and warn on cycles.
       if (traverse(Vdb)) {
-        if (!CycMap.contains(Vd)) {
-          CycMap.insert(std::make_pair(Vd, true));
+        if (CycMap.try_emplace(Vd, true).second) {
           StringRef L1 = Vd->getName();
           Analyzer.Handler.handleBeforeAfterCycle(L1, Vd->getLocation());
         }

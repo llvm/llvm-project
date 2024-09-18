@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -831,6 +832,12 @@ public:
   /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// trunc (binop X, C) --> binop (trunc X, trunc C).
+  bool matchNarrowBinop(const MachineInstr &TruncMI,
+                        const MachineInstr &BinopMI, BuildFnTy &MatchInfo);
+
+  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo);
+
   /// Combine addos.
   bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 
@@ -902,6 +909,9 @@ public:
 
   bool matchCastOfBuildVector(const MachineInstr &CastMI,
                               const MachineInstr &BVMI, BuildFnTy &MatchInfo);
+
+  bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -1017,6 +1027,11 @@ private:
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
   bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
+                        const GIConstant &RHSCst, BuildFnTy &MatchInfo);
+  bool constantFoldFCmp(const GFCmp &FCmp, const GFConstant &LHSCst,
+                        const GFConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 
