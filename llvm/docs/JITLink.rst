@@ -11,7 +11,7 @@ Introduction
 This document aims to provide a high-level overview of the design and API
 of the JITLink library. It assumes some familiarity with linking and
 relocatable object files, but should not require deep expertise. If you know
-what a section, symbol, and relocation then you should find this document
+what a section, symbol, and relocation are then you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
