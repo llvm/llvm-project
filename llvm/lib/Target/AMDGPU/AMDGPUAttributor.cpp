@@ -440,12 +440,23 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       return;
     }
 
+    SmallPtrSet<const Constant *, 8> VisitedConsts;
+
     for (Instruction &I : instructions(F)) {
       if (isa<AddrSpaceCastInst>(I) &&
-          cast<AddrSpaceCastInst &>(I).getSrcAddressSpace() ==
+          cast<AddrSpaceCastInst>(I).getSrcAddressSpace() ==
               AMDGPUAS::PRIVATE_ADDRESS) {
         removeAssumedBits(FLAT_SCRATCH_INIT);
         return;
+      }
+      // check for addrSpaceCast in constant expressions
+      for (const Use &U : I.operands()) {
+        if (const auto *C = dyn_cast<Constant>(U)) {
+          if (constHasASCast(C, VisitedConsts)) {
+            removeAssumedBits(FLAT_SCRATCH_INIT);
+            return;
+          }
+        }
       }
     }
   }
@@ -714,9 +725,9 @@ private:
       // already removed in updateImpl() and execution won't reach here.
       if (!Callee)
         return true;
-      else
-        return Callee->getIntrinsicID() !=
-               Intrinsic::amdgcn_addrspacecast_nonnull;
+
+      return Callee->getIntrinsicID() !=
+             Intrinsic::amdgcn_addrspacecast_nonnull;
     };
 
     bool UsedAssumedInformation = false;
@@ -725,6 +736,28 @@ private:
     // function returns true.
     return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
                                               UsedAssumedInformation);
+  }
+
+  bool constHasASCast(const Constant *C,
+                      SmallPtrSetImpl<const Constant *> &Visited) {
+    if (!Visited.insert(C).second)
+      return false;
+
+    if (const auto *CE = dyn_cast<ConstantExpr>(C))
+      if (CE->getOpcode() == Instruction::AddrSpaceCast &&
+          CE->getOperand(0)->getType()->getPointerAddressSpace() ==
+              AMDGPUAS::PRIVATE_ADDRESS)
+        return true;
+
+    for (const Use &U : C->operands()) {
+      const auto *OpC = dyn_cast<Constant>(U);
+      if (!OpC || !Visited.insert(OpC).second)
+        continue;
+
+      if (constHasASCast(OpC, Visited))
+        return true;
+    }
+    return false;
   }
 };
 
