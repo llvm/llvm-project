@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir-flat %s -o %t.flat.cir
+// RUN: FileCheck --input-file=%t.flat.cir --check-prefix=CIR_FLAT %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -DLLVM_IMPLEMENTED -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
@@ -20,6 +22,9 @@ void yo() {
 
 // CIR-DAG: ![[VecTy:.*]] = !cir.struct<struct "Vec" {!cir.int<u, 8>}>
 // CIR-DAG: ![[S1:.*]] = !cir.struct<struct "S1" {!cir.struct<struct "Vec" {!cir.int<u, 8>}>}>
+
+// CIR_FLAT-DAG: ![[VecTy:.*]] = !cir.struct<struct "Vec" {!cir.int<u, 8>}>
+// CIR_FLAT-DAG: ![[S1:.*]] = !cir.struct<struct "S1" {!cir.struct<struct "Vec" {!cir.int<u, 8>}>}>
 
 // CIR: cir.scope {
 // CIR:   %[[VADDR:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v", init]
@@ -74,7 +79,7 @@ void yo2() {
     r++;
   }
 }
-// CIR: cir.func  @_Z3yo2v()
+// CIR-LABEL: @_Z3yo2v
 // CIR:   cir.scope {
 // CIR:     cir.alloca ![[VecTy]]
 // CIR:     cir.try {
@@ -96,6 +101,32 @@ void yo2() {
 // CIR:   cir.return
 // CIR: }
 
+// CIR_FLAT-LABEL: @_Z3yo2v
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%2) ^[[NEXT_CALL_PREP:.*]], ^[[PAD_NODTOR:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:  ^[[NEXT_CALL_PREP]]:
+// CIR_FLAT:    cir.br ^[[NEXT_CALL:.*]] loc
+// CIR_FLAT:  ^[[NEXT_CALL]]:
+// CIR_FLAT:    cir.try_call @_ZN3VecC1EOS_({{.*}}) ^[[CONT0:.*]], ^[[PAD_DTOR:.*]] :
+// CIR_FLAT:  ^[[CONT0]]:
+// CIR_FLAT:    cir.call @_ZN2S1D2Ev
+// CIR_FLAT:    cir.br ^[[CONT1:.*]] loc
+// CIR_FLAT:  ^[[CONT1]]:
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev
+// CIR_FLAT:    cir.br ^[[AFTER_TRY:.*]] loc
+// CIR_FLAT:  ^[[PAD_NODTOR]]:
+// CIR_FLAT:    %exception_ptr, %type_id = cir.eh.inflight_exception
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN:.*]](%exception_ptr : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[PAD_DTOR]]:
+// CIR_FLAT:    %exception_ptr_0, %type_id_1 = cir.eh.inflight_exception
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%2) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_0 : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[CATCH_BEGIN]](%5: !cir.ptr<!void>
+// CIR_FLAT:    cir.catch_param begin
+// CIR_FLAT:    cir.br ^[[AFTER_TRY]]
+// CIR_FLAT:  ^[[AFTER_TRY]]:
+// CIR_FLAT:    cir.return
+// CIR_FLAT:  }
+
 void yo3(bool x) {
   int r = 1;
   try {
@@ -105,6 +136,7 @@ void yo3(bool x) {
   }
 }
 
+// CIR-LABEL: @_Z3yo3b
 // CIR: cir.scope {
 // CIR:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
 // CIR:   %[[V2:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v2"
@@ -136,5 +168,50 @@ void yo3(bool x) {
 // CIR:   }]
 // CIR: }
 // CIR: cir.return
+
+// CIR_FLAT-LABEL: @_Z3yo3b
+// CIR_FLAT:  ^bb1:
+// CIR_FLAT:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
+// CIR_FLAT:   %[[V2:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v2"
+// CIR_FLAT:   %[[V3:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v3"
+// CIR_FLAT:   %[[V4:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v4"
+// CIR_FLAT:    cir.br ^[[CALL0:.*]] loc
+// CIR_FLAT:  ^[[CALL0]]:
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%[[V1]]) ^[[CALL1:.*]], ^[[CLEANUP_V1:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:  ^[[CALL1]]:
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%[[V2]]) ^[[CALL2:.*]], ^[[CLEANUP_V2:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:  ^[[CALL2]]:
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%[[V3]]) ^[[CALL3:.*]], ^[[CLEANUP_V3:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:  ^[[CALL3]]:
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%[[V4]]) ^[[NOTROW_CLEANUP:.*]], ^[[CLEANUP_V4:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:  ^[[NOTROW_CLEANUP]]:
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V4]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.br ^[[AFTER_TRY:.*]] loc
+// CIR_FLAT:  ^[[CLEANUP_V1]]:
+// CIR_FLAT:    %exception_ptr, %type_id = cir.eh.inflight_exception
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN:.*]](%exception_ptr : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[CLEANUP_V2]]:
+// CIR_FLAT:    %exception_ptr_0, %type_id_1 = cir.eh.inflight_exception
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_0 : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[CLEANUP_V3]]:
+// CIR_FLAT:    %exception_ptr_2, %type_id_3 = cir.eh.inflight_exception
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_2 : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[CLEANUP_V4]]:
+// CIR_FLAT:    %exception_ptr_4, %type_id_5 = cir.eh.inflight_exception
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_4 : !cir.ptr<!void>)
+// CIR_FLAT:  ^[[CATCH_BEGIN]]({{.*}}
+// CIR_FLAT:    cir.catch_param begin
+// CIR_FLAT:    cir.br ^[[AFTER_TRY]]
+// CIR_FLAT:  ^[[AFTER_TRY]]:
+// CIR_FLAT:    cir.return
 
 #endif
