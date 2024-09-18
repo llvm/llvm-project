@@ -53,6 +53,34 @@ void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   }
 }
 
+// If the phi is within a phi web, which is formed by the def-use chain
+// of phis and all the phis in the web are only used in the other phis. 
+// In this case, these phis are dead and we will remove all of them.
+bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN){
+  SmallVector<PHINode *, 16> Stack;
+  SmallPtrSet<PHINode *, 16> Visited;
+  Stack.push_back(&PN);
+  while (!Stack.empty()) {
+    PHINode *Phi = Stack.pop_back_val();
+    if (!Visited.insert(Phi).second)
+      continue;
+    // Early stop if the set of PHIs is large
+    if (Visited.size() == 16)
+      return false;
+    for (User *Use : Phi->users()) {
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+        Stack.push_back(PhiUse);
+      else
+        return false;
+    }
+  }
+  for (PHINode *Phi : Visited)
+    replaceInstUsesWith(*Phi, PoisonValue::get(Phi->getType()));
+  for (PHINode *Phi : Visited)
+    eraseInstFromFunction(*Phi);
+  return true;
+}
+
 // Replace Integer typed PHI PN if the PHI's value is used as a pointer value.
 // If there is an existing pointer typed PHI that produces the same value as PN,
 // replace PN and the IntToPtr operation with it. Otherwise, synthesize a new
@@ -976,27 +1004,6 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   return NewCI;
 }
 
-/// Return true if this PHI node is only used by a PHI node web that is dead.
-static bool isDeadPHIWeb(PHINode *PN) {
-  SmallVector<PHINode *, 16> Stack;
-  SmallPtrSet<PHINode *, 16> Visited;
-  Stack.push_back(PN);
-  while (!Stack.empty()) {
-    PHINode *Phi = Stack.pop_back_val();
-    if (!Visited.insert(Phi).second)
-      continue;
-    // Early stop if the set of PHIs is large
-    if (Visited.size() == 16)
-      return false;
-    for (User *Use : Phi->users()) {
-      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
-        Stack.push_back(PhiUse);
-      else
-        return false;
-    }
-  }
-  return true;
-}
 
 /// Return true if this phi node is always equal to NonPhiInVal.
 /// This happens with mutually cyclic phi nodes like:
@@ -1476,11 +1483,8 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     }
   }
 
-  // If the phi is within a phi web, which is formed by the def-use chain
-  // of phis and all the phis in the web are only used in the other phis. In
-  // this case, these phis are dead. We can break the web by removing PN.
-  if (isDeadPHIWeb(&PN))
-    return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
+  if (foldDeadPhiWeb(PN))
+    return nullptr;
 
   // Optimization when the phi only has one use
   if (PN.hasOneUse()) {
