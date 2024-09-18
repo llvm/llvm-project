@@ -58517,24 +58517,6 @@ static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// static SDValue combineCanonicalize(SDNode *N, SelectionDAG &DAG) {
-//   SDValue Operand = N->getOperand(0);
-//   EVT VT = Operand.getValueType();
-//   SDLoc dl(N);
-
-//   SDValue One = DAG.getConstantFP(1.0, dl, VT);
-
-//   // TODO: Fix Crash for bf16 when generating strict_fmul as it
-//   // leads to a error : SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul
-//   t0,
-//   // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
-//   // promote this operator's result!
-//   SDValue Chain = DAG.getEntryNode();
-//   SDValue StrictFmul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-//                                    {Chain, Operand, One});
-//   return StrictFmul;
-// }
-
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
