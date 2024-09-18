@@ -270,6 +270,6 @@ void check_note_at_use_after_close(void) {
   if (!F) // expected-note {{'F' is non-null}} expected-note {{Taking false branch}}
     return;
   fclose(F); // expected-note {{Stream is closed here}}
-  rewind(F); // expected-warning {{Stream might be already closed. Causes undefined behaviour}}
-  // expected-note@-1 {{Stream might be already closed. Causes undefined behaviour}}
+  rewind(F); // expected-warning {{Use of a stream that might be already closed}}
+  // expected-note@-1 {{Use of a stream that might be already closed}}
 }
