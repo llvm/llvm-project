@@ -776,7 +776,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                                                    SyncScope::OpenCLDevice,
                                                    Order, CGF.getLLVMContext());
     else
-      SS = CGF.getLLVMContext().getOrInsertSyncScopeID("");
+      SS = llvm::SyncScope::System;
     EmitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
                  Order, SS);
     return;

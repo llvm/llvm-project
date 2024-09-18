@@ -11,7 +11,7 @@
 // AMDGCN:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR3:.+]] syncscope("wavefront-one-as") monotonic, align 4
 // AMDGCN:    [[TMP4:%.*]] = load atomic i32, ptr [[PTR4:.+]] syncscope("singlethread-one-as") monotonic, align 4
 // SPIRV: define hidden spir_func i32 @fi1a(
-// SPIRV:    [[TMP0:%.*]] = load atomic i32, ptr [[PTR0:.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    [[TMP0:%.*]] = load atomic i32, ptr [[PTR0:.+]] monotonic, align 4
 // SPIRV:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR1:.+]] syncscope("device") monotonic, align 4
 // SPIRV:    [[TMP2:%.*]] = load atomic i32, ptr [[PTR2:.+]] syncscope("workgroup") monotonic, align 4
 // SPIRV:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR3:.+]] syncscope("subgroup") monotonic, align 4
@@ -33,7 +33,7 @@ int fi1a(int *i) {
 // AMDGCN:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR3:%.+]] syncscope("wavefront-one-as") monotonic, align 4
 // AMDGCN:    [[TMP4:%.*]] = load atomic i32, ptr [[PTR4:%.+]] syncscope("singlethread-one-as") monotonic, align 4
 // SPIRV-LABEL: define hidden spir_func i32 @fi1b(
-// SPIRV:    [[TMP0:%.*]] = load atomic i32, ptr [[PTR0:%.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    [[TMP0:%.*]] = load atomic i32, ptr [[PTR0:%.+]] monotonic, align 4
 // SPIRV:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR1:%.+]] syncscope("device") monotonic, align 4
 // SPIRV:    [[TMP2:%.*]] = load atomic i32, ptr [[PTR2:%.+]] syncscope("workgroup") monotonic, align 4
 // SPIRV:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR3:%.+]] syncscope("subgroup") monotonic, align 4
@@ -54,7 +54,7 @@ int fi1b(int *i) {
 // AMDGCN:    store atomic i32 [[TMP3:%.+]], ptr [[PTR3:%.+]] syncscope("wavefront-one-as") monotonic, align 4
 // AMDGCN:    store atomic i32 [[TMP4:%.+]], ptr [[PTR4:%.+]] syncscope("singlethread-one-as") monotonic, align 4
 // SPIRV-LABEL: define hidden spir_func void @fi2a(
-// SPIRV:    store atomic i32 [[TMP0:%.+]], ptr [[PTR0:%.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    store atomic i32 [[TMP0:%.+]], ptr [[PTR0:%.+]] monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP1:%.+]], ptr [[PTR1:%.+]] syncscope("device") monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP2:%.+]], ptr [[PTR2:%.+]] syncscope("workgroup") monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP3:%.+]], ptr [[PTR3:%.+]] syncscope("subgroup") monotonic, align 4
@@ -75,7 +75,7 @@ void fi2a(int *i) {
 // AMDGCN:    store atomic i32 [[TMP3:%.+]], ptr [[PTR3:%.+]] syncscope("wavefront-one-as") monotonic, align 4
 // AMDGCN:    store atomic i32 [[TMP4:%.+]], ptr [[PTR4:%.+]] syncscope("singlethread-one-as") monotonic, align 4
 // SPIRV-LABEL: define hidden spir_func void @fi2b(
-// SPIRV:    store atomic i32 [[TMP0:%.+]], ptr [[PTR0:%.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    store atomic i32 [[TMP0:%.+]], ptr [[PTR0:%.+]] monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP1:%.+]], ptr [[PTR1:%.+]] syncscope("device") monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP2:%.+]], ptr [[PTR2:%.+]] syncscope("workgroup") monotonic, align 4
 // SPIRV:    store atomic i32 [[TMP3:%.+]], ptr [[PTR3:%.+]] syncscope("subgroup") monotonic, align 4
@@ -98,14 +98,14 @@ void fi2b(int *i) {
 // AMDGCN:    [[TMP6:%.*]] = atomicrmw min ptr [[PTR6:%.+]], i32 [[VAL6:.+]] syncscope("one-as") monotonic, align 4
 // AMDGCN:    [[TMP7:%.*]] = atomicrmw max ptr [[PTR7:%.+]], i32 [[VAL7:.+]] syncscope("one-as") monotonic, align 4
 // SPIRV-LABEL: define hidden spir_func void @fi3a(
-// SPIRV:    [[TMP0:%.*]] = atomicrmw add ptr [[PTR0:%.+]], i32 [[VAL0:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP1:%.*]] = atomicrmw sub ptr [[PTR1:%.+]], i32 [[VAL1:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP2:%.*]] = atomicrmw and ptr [[PTR2:%.+]], i32 [[VAL2:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP3:%.*]] = atomicrmw or ptr [[PTR3:%.+]], i32 [[VAL3:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP4:%.*]] = atomicrmw xor ptr [[PTR4:%.+]], i32 [[VAL4:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP5:%.*]] = atomicrmw nand ptr [[PTR5:%.+]], i32 [[VAL5:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP6:%.*]] = atomicrmw min ptr [[PTR6:%.+]], i32 [[VAL6:.+]] syncscope("all_svm_devices") monotonic, align 4
-// SPIRV:    [[TMP7:%.*]] = atomicrmw max ptr [[PTR7:%.+]], i32 [[VAL7:.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    [[TMP0:%.*]] = atomicrmw add ptr [[PTR0:%.+]], i32 [[VAL0:.+]] monotonic, align 4
+// SPIRV:    [[TMP1:%.*]] = atomicrmw sub ptr [[PTR1:%.+]], i32 [[VAL1:.+]] monotonic, align 4
+// SPIRV:    [[TMP2:%.*]] = atomicrmw and ptr [[PTR2:%.+]], i32 [[VAL2:.+]] monotonic, align 4
+// SPIRV:    [[TMP3:%.*]] = atomicrmw or ptr [[PTR3:%.+]], i32 [[VAL3:.+]] monotonic, align 4
+// SPIRV:    [[TMP4:%.*]] = atomicrmw xor ptr [[PTR4:%.+]], i32 [[VAL4:.+]] monotonic, align 4
+// SPIRV:    [[TMP5:%.*]] = atomicrmw nand ptr [[PTR5:%.+]], i32 [[VAL5:.+]] monotonic, align 4
+// SPIRV:    [[TMP6:%.*]] = atomicrmw min ptr [[PTR6:%.+]], i32 [[VAL6:.+]] monotonic, align 4
+// SPIRV:    [[TMP7:%.*]] = atomicrmw max ptr [[PTR7:%.+]], i32 [[VAL7:.+]] monotonic, align 4
 void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
   *a = __scoped_atomic_fetch_add(a, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   *b = __scoped_atomic_fetch_sub(b, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
@@ -236,7 +236,7 @@ void fi3e(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN-LABEL: define hidden zeroext i1 @fi4a(
 // AMDGCN-DAG:    [[TMP0:%.*]] = cmpxchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] syncscope("one-as") acquire acquire, align 4
 // SPIRV-LABEL: define hidden spir_func zeroext i1 @fi4a(
-// SPIRV-DAG:    [[TMP0:%.*]] = cmpxchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] syncscope("all_svm_devices") acquire acquire, align 4
+// SPIRV-DAG:    [[TMP0:%.*]] = cmpxchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] acquire acquire, align 4
 _Bool fi4a(int *i) {
   int cmp = 0;
   int desired = 1;
@@ -296,7 +296,7 @@ _Bool fi4e(int *i) {
 // AMDGCN-LABEL: define hidden zeroext i1 @fi5a(
 // AMDGCN:    [[TMP0:%.*]] = cmpxchg weak ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] syncscope("one-as") acquire acquire, align 4
 // SPIRV-LABEL: define hidden spir_func zeroext i1 @fi5a(
-// SPIRV:    [[TMP0:%.*]] = cmpxchg weak ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] syncscope("all_svm_devices") acquire acquire, align 4
+// SPIRV:    [[TMP0:%.*]] = cmpxchg weak ptr [[PTR0:%.+]], i32 [[VAL0:.+]], i32 [[VAL1:.+]] acquire acquire, align 4
 _Bool fi5a(int *i) {
   int cmp = 0;
   return __scoped_atomic_compare_exchange_n(i, &cmp, 1, 1, __ATOMIC_ACQUIRE,
@@ -348,7 +348,7 @@ _Bool fi5e(int *i) {
 // AMDGCN-LABEL: define hidden i32 @fi6a(
 // AMDGCN:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]] syncscope("one-as") monotonic, align 4
 // SPIRV-LABEL: define hidden spir_func i32 @fi6a(
-// SPIRV:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]] syncscope("all_svm_devices") monotonic, align 4
+// SPIRV:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i32 [[VAL0:.+]] monotonic, align 4
 int fi6a(int *c, int *d) {
   int ret;
   __scoped_atomic_exchange(c, d, &ret, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
@@ -398,7 +398,7 @@ int fi6e(int *c, int *d) {
 // AMDGCN-LABEL: define hidden zeroext i1 @fi7a(
 // AMDGCN:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i8 [[VAL0:.+]] syncscope("one-as") monotonic, align 1
 // SPIRV-LABEL: define hidden spir_func zeroext i1 @fi7a(
-// SPIRV:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i8 [[VAL0:.+]] syncscope("all_svm_devices") monotonic, align 1
+// SPIRV:    [[TMP0:%.*]] = atomicrmw xchg ptr [[PTR0:%.+]], i8 [[VAL0:.+]] monotonic, align 1
 _Bool fi7a(_Bool *c) {
   return __scoped_atomic_exchange_n(c, 1, __ATOMIC_RELAXED,
                                     __MEMORY_SCOPE_SYSTEM);

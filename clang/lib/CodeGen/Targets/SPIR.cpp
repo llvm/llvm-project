@@ -84,7 +84,7 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
-    return "all_svm_devices";
+    return "";
   }
 }
 } // End anonymous namespace.
