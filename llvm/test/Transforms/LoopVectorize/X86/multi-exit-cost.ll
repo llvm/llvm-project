@@ -5,18 +5,18 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-LABEL: define i64 @test_value_in_exit_compare_chain_used_outside(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[X:%.*]], i64 range(i64 1, 32) [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
-; CHECK-NEXT:    [[UMIN2:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[UMIN2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[X]])
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMIN]] to i1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[UMIN]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP32:%.*]] = add nsw i64 [[N]], -1
+; CHECK-NEXT:    [[TMP33:%.*]] = freeze i64 [[TMP32]]
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP33]], i64 [[X]])
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMIN1]] to i1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[UMIN1]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

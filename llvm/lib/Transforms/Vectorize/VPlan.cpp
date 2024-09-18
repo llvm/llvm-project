@@ -474,6 +474,14 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     // backedges. A backward successor is set when the branch is created.
     const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+    if (TermBr->getSuccessor(idx) &&
+        PredVPBlock == getPlan()->getVectorLoopRegion() &&
+        PredVPBlock->getNumSuccessors()) {
+      // Update PRedBB and TermBr for BranchOnMultiCond in predecessor.
+      PredBB = TermBr->getSuccessor(1);
+      TermBr = cast<BranchInst>(PredBB->getTerminator());
+      idx = 0;
+    }
     assert(!TermBr->getSuccessor(idx) &&
            "Trying to reset an existing successor block.");
     TermBr->setSuccessor(idx, IRBB);
@@ -908,8 +916,8 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
-  VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
   if (!RequiresScalarEpilogueCheck) {
+    VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
     return Plan;
   }
@@ -923,10 +931,14 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
-  // The connection order corresponds to the operands of the conditional branch.
-  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
-  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  if (IRExitBlock) {
+    auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
+    // The connection order corresponds to the operands of the conditional
+    // branch.
+    VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+    VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
+    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  }
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
   // Here we use the same DebugLoc as the scalar loop latch terminator instead
@@ -1031,7 +1043,9 @@ void VPlan::execute(VPTransformState *State) {
   // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+      getVectorLoopRegion()->getNumSuccessors() == 1
+          ? cast<VPBasicBlock>(getVectorLoopRegion()->getSuccessors()[0])
+          : cast<VPBasicBlock>(getVectorLoopRegion()->getSuccessors()[1]);
   // Find the VPBB for the scalar preheader, relying on the current structure
   // when creating the middle block and its successrs: if there's a single
   // predecessor, it must be the scalar preheader. Otherwise, the second
@@ -1044,6 +1058,10 @@ void VPlan::execute(VPTransformState *State) {
       MiddleSuccs.size() == 1 ? MiddleSuccs[0] : MiddleSuccs[1]);
   assert(!isa<VPIRBasicBlock>(ScalarPhVPBB) &&
          "scalar preheader cannot be wrapped already");
+  if (ScalarPhVPBB->getNumSuccessors() != 0) {
+    ScalarPhVPBB = cast<VPBasicBlock>(ScalarPhVPBB->getSuccessors()[1]);
+    MiddleVPBB = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[1]);
+  }
   replaceVPBBWithIRVPBB(ScalarPhVPBB, ScalarPh);
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
@@ -1064,6 +1082,10 @@ void VPlan::execute(VPTransformState *State) {
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
+
+  if (!getVectorLoopRegion()->getSingleSuccessor())
+    VectorLatchBB =
+        cast<BranchInst>(VectorLatchBB->getTerminator())->getSuccessor(1);
 
   // Fix the latch value of canonical, reduction and first-order recurrences
   // phis in the vector loop.
@@ -1091,7 +1113,10 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      if (VectorLatchBB->getTerminator() == &*VectorLatchBB->getFirstNonPHI())
+        Inc->moveBefore(VectorLatchBB->getTerminator());
+      else
+        Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))

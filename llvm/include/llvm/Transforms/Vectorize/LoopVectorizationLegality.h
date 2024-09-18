@@ -287,6 +287,9 @@ public:
   /// we can use in-order reductions.
   bool canVectorizeFPMath(bool EnableStrictReductions);
 
+  /// Returns true if the loop has an early exit that we can vectorize.
+  bool canVectorizeEarlyExit() const;
+
   /// Return true if we can vectorize this loop while folding its tail by
   /// masking.
   bool canFoldTailByMasking() const;

@@ -515,6 +515,12 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
+  for (VPRecipeBase &R : make_early_inc_range(
+           reverse(*cast<VPBasicBlock>(Plan.getPreheader())))) {
+    if (isDeadRecipe(R))
+      R.eraseFromParent();
+  }
+
   for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
@@ -1695,4 +1701,80 @@ void VPlanTransforms::createInterleaveGroups(
         MemberR->eraseFromParent();
       }
   }
+}
+
+void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         VPRecipeBuilder &RecipeBuilder) {
+  auto *LatchVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+
+  const SCEV *BackedgeTakenCount =
+      SE.getExitCount(OrigLoop, OrigLoop->getLoopLatch());
+  const SCEV *TripCount = SE.getTripCountFromExitCount(
+      BackedgeTakenCount, Plan.getCanonicalIV()->getScalarType(), OrigLoop);
+  VPValue *NewTC = vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE);
+  Plan.getTripCount()->replaceAllUsesWith(NewTC);
+  Plan.resetTripCount(NewTC);
+
+  VPValue *EarlyExitTaken = nullptr;
+  SmallVector<BasicBlock *> ExitingBBs;
+  OrigLoop->getExitingBlocks(ExitingBBs);
+  for (BasicBlock *Exiting : ExitingBBs) {
+    auto *ExitingTerm = cast<BranchInst>(Exiting->getTerminator());
+    BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
+    BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
+    VPIRBasicBlock *VPExitBlock;
+    if (OrigLoop->getUniqueExitBlock())
+      VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+    else
+      VPExitBlock = VPIRBasicBlock::fromBasicBlock(
+          !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+
+    for (VPRecipeBase &R : *VPExitBlock) {
+      auto *ExitIRI = cast<VPIRInstruction>(&R);
+      auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
+      if (!ExitPhi)
+        break;
+      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(Exiting);
+      VPValue *V = RecipeBuilder.getVPValueOrAddLiveIn(IncomingValue);
+      ExitIRI->addOperand(V);
+    }
+
+    if (Exiting == OrigLoop->getLoopLatch()) {
+      if (MiddleVPBB->getNumSuccessors() == 0) {
+        VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
+        VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
+        VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+      }
+      continue;
+    }
+
+    VPValue *M = RecipeBuilder.getBlockInMask(
+        OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+    auto *N = Builder.createNot(M);
+    EarlyExitTaken = Builder.createNaryOp(VPInstruction::AnyOf, {N});
+
+    VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
+    VPBlockUtils::disconnectBlocks(LoopRegion, MiddleVPBB);
+    VPBlockUtils::insertBlockAfter(NewMiddle, LoopRegion);
+    VPBlockUtils::connectBlocks(NewMiddle, VPExitBlock);
+    VPBlockUtils::connectBlocks(NewMiddle, MiddleVPBB);
+
+    VPBuilder MiddleBuilder(NewMiddle);
+    MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
+    // MiddleVPBB = NewMiddle;
+  }
+  auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
+  auto *IsLatchExiting = Builder.createICmp(
+      CmpInst::ICMP_EQ, Term->getOperand(0), Term->getOperand(1));
+  auto *AnyExiting =
+      Builder.createNaryOp(Instruction::Or, {EarlyExitTaken, IsLatchExiting});
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExiting);
+  Term->eraseFromParent();
 }
