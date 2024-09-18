@@ -855,8 +855,8 @@ static bool ContainsResourceForRegisterType(Sema &S, const RecordType *RT,
 
 static void CheckContainsResourceForRegisterType(Sema &S,
                                                  SourceLocation &ArgLoc,
-                                                 Decl *D,
-                                                 RegisterType RegType, bool SpecifiedSpace) {
+                                                 Decl *D, RegisterType RegType,
+                                                 bool SpecifiedSpace) {
   int RegTypeNum = static_cast<int>(RegType);
 
   // check if the decl type is groupshared
@@ -898,7 +898,8 @@ static void CheckContainsResourceForRegisterType(Sema &S,
     if (SpecifiedSpace && !DeclaredInCOrTBuffer)
       S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
 
-    if (!DeclaredInCOrTBuffer && (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
+    if (!DeclaredInCOrTBuffer &&
+        (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
       // Default Globals
       if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
@@ -955,7 +956,8 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
-                                          Decl *D, RegisterType RegType, bool SpecifiedSpace) {
+                                          Decl *D, RegisterType RegType,
+                                          bool SpecifiedSpace) {
 
   // exactly one of these two types should be set
   assert(((isa<VarDecl>(D) && !isa<HLSLBufferDecl>(D)) ||
