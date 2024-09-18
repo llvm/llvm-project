@@ -4413,31 +4413,29 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen == &Left && Line.Children.empty()) {
     return Style.SpaceInEmptyBlock;
   }
-  if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
-      (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
-       Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
-    return Style.SpacesInParensOptions.InEmptyParentheses;
-  }
-  if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
-      Style.SpacesInParensOptions.ExceptDoubleParentheses &&
-      Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
-    auto *InnerLParen = Left.MatchingParen;
-    if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
-      InnerLParen->SpacesRequiredBefore = 0;
-      return false;
+  if (Style.SpacesInParens == FormatStyle::SIPO_Custom) {
+    if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
+        (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
+         Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
+      return Style.SpacesInParensOptions.InEmptyParentheses;
     }
-  }
-  if (Style.SpacesInParensOptions.InConditionalStatements) {
+    if (Style.SpacesInParensOptions.ExceptDoubleParentheses &&
+        Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
+      auto *InnerLParen = Left.MatchingParen;
+      if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
+        InnerLParen->SpacesRequiredBefore = 0;
+        return false;
+      }
+    }
     const FormatToken *LeftParen = nullptr;
     if (Left.is(tok::l_paren))
       LeftParen = &Left;
     else if (Right.is(tok::r_paren) && Right.MatchingParen)
       LeftParen = Right.MatchingParen;
-    if (LeftParen) {
-      if (LeftParen->is(TT_ConditionLParen))
-        return true;
-      if (LeftParen->Previous && isKeywordWithCondition(*LeftParen->Previous))
-        return true;
+    if (LeftParen && (LeftParen->is(TT_ConditionLParen) ||
+                      (LeftParen->Previous &&
+                       isKeywordWithCondition(*LeftParen->Previous)))) {
+      return Style.SpacesInParensOptions.InConditionalStatements;
     }
   }
 
