@@ -2243,8 +2243,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
-                               SINGLETONID)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3378,7 +3377,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-    case BuiltinType::AMDGPUBufferRsrc:
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
