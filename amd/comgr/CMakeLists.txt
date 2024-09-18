@@ -405,6 +405,7 @@ else()
     Support
     Symbolize
     TargetParser
+    SPIRVAMDLib
     )
 endif()
 

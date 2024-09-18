@@ -82,9 +82,11 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
 #include "time-stat/ts-interface.h"
 
 #include <csignal>
+#include <sstream>
 
 LLD_HAS_DRIVER(elf)
 
@@ -1849,6 +1851,63 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
   }
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
+}
+
+amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  LLVMContext Context;
+  Context.setDiagnosticHandler(
+    std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+
+  for (auto *Input : InSet->DataObjects) {
+
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_SPIRV) {
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // TODO: With C++23, we should investigate replacing with spanstream
+    // to avoid memory copies:
+    //  https://en.cppreference.com/w/cpp/io/basic_ispanstream
+    std::istringstream ISS(std::string(Input->Data, Input->Size));
+
+    llvm::Module *M;
+    std::string Err;
+
+    if (!llvm::readSpirv(Context, ISS, M, Err)) {
+      LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    SmallString<0> OutBuf;
+    BitcodeWriter Writer(OutBuf);
+    Writer.writeModule(*M, false, nullptr, false, nullptr);
+    Writer.writeSymtab();
+    Writer.writeStrtab();
+
+    amd_comgr_data_t OutputT;
+    if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT)) {
+      return Status;
+    }
+
+    // OutputT can be released after addition to the data_set
+    ScopedDataObjectReleaser SDOR(OutputT);
+
+    DataObject *Output = DataObject::convert(OutputT);
+    Output->setName(std::string(Input->Name) + std::string(".bc"));
+    Output->setData(OutBuf);
+
+    if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT)) {
+      return Status;
+    }
+
+    LogS << "SPIR-V Translation: amd-llvm-spirv -r " << Input->Name << " " <<
+      Output->Name << "\n";
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
 }
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
