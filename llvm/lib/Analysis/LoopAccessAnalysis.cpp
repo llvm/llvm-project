@@ -2449,11 +2449,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         continue;
 
       // If this is a load, save it. If this instruction can read from memory
-      // but is not a load, then we quit. Notice that we don't handle function
-      // calls that read or write.
+      // but is not a load, we only allow it if it's a call to a function with a
+      // vector mapping and no pointer arguments.
       if (I.mayReadFromMemory()) {
         auto hasPointerArgs = [](CallBase *CB) {
-          return llvm::any_of(CB->args(), [](Value const *Arg) {
+          return any_of(CB->args(), [](Value const *Arg) {
             return Arg->getType()->isPointerTy();
           });
         };
