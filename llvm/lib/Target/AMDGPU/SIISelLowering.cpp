@@ -10230,8 +10230,6 @@ SDValue SITargetLowering::bufferRsrcPtrToVector(SDValue MaybePointer,
   if (!MaybePointer.getValueType().isScalarInteger())
     return MaybePointer;
 
-  SDLoc DL(MaybePointer);
-
   SDValue Rsrc = DAG.getBitcast(MVT::v4i32, MaybePointer);
   return Rsrc;
 }

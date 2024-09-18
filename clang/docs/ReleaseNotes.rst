@@ -116,6 +116,7 @@ C++ Language Changes
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
+- Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
