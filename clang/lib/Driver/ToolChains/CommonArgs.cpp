@@ -510,22 +510,6 @@ void tools::addLinkerCompressDebugSectionsOption(
   }
 }
 
-void tools::addGPULibraries(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_nostdlib, options::OPT_r,
-                  options::OPT_nodefaultlibs, options::OPT_nolibc,
-                  options::OPT_nogpulibc))
-    return;
-
-  // If the user's toolchain has the 'include/<triple>/` path, we assume it
-  // supports the standard C libraries for the GPU and include them.
-  bool HasLibC = TC.getStdlibIncludePath().has_value();
-  if (HasLibC) {
-    CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lm");
-  }
-}
-
 void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
