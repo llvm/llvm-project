@@ -497,16 +497,22 @@ Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
   }
 
   if (isa<IntRecTy>(Ty)) {
-    int64_t Result = 0;
-    for (unsigned i = 0, e = getNumBits(); i != e; ++i)
-      if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
-        Result |= static_cast<int64_t>(Bit->getValue()) << i;
-      else
-        return nullptr;
-    return IntInit::get(getRecordKeeper(), Result);
+    std::optional<int64_t> Result = convertInitializerToInt();
+    if (Result)
+      return IntInit::get(getRecordKeeper(), *Result);
   }
 
   return nullptr;
+}
+
+std::optional<int64_t> BitsInit::convertInitializerToInt() const {
+  int64_t Result = 0;
+  for (unsigned i = 0, e = getNumBits(); i != e; ++i)
+    if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
+      Result |= static_cast<int64_t>(Bit->getValue()) << i;
+    else
+      return std::nullopt;
+  return Result;
 }
 
 Init *

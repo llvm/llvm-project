@@ -603,6 +603,7 @@ public:
 
   Init *convertInitializerTo(RecTy *Ty) const override;
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
+  std::optional<int64_t> convertInitializerToInt() const;
 
   bool isComplete() const override {
     for (unsigned i = 0; i != getNumBits(); ++i)
