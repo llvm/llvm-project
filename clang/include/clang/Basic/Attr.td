@@ -1073,6 +1073,36 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
+static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Platform) {
+    return llvm::StringSwitch<std::vector<llvm::StringRef>>(Platform)
+             .Case("ios", {"ios", "iOS"})
+             .Case("iOS", {"ios", "iOS"})
+             .Case("macos", {"macos", "macOS"})
+             .Case("macOS", {"macos", "macOS"})
+             .Case("tvos", {"tvos", "tvOS"})
+             .Case("tvOS", {"tvos", "tvOS"})
+             .Case("watchos", {"watchos", "watchOS"})
+             .Case("watchOS", {"watchos", "watchOS"})
+             .Case("ios_app_extension", {"iOSApplicationExtension", "ios_app_extension"})
+             .Case("iOSApplicationExtension", {"iOSApplicationExtension", "ios_app_extension"})
+             .Case("macos_app_extension", {"macOSApplicationExtension", "macos_app_extension"})
+             .Case("macOSApplicationExtension", {"macOSApplicationExtension", "macos_app_extension"})
+             .Case("tvos_app_extension", {"tvOSApplicationExtension", "tvos_app_extension"})
+             .Case("tvOSApplicationExtension", {"tvOSApplicationExtension", "tvos_app_extension"})
+             .Case("watchos_app_extension", {"watchOSApplicationExtension", "watchos_app_extension"})
+             .Case("watchOSApplicationExtension", {"watchOSApplicationExtension", "watchos_app_extension"})
+             .Case("maccatalyst", {"macCatalyst", "maccatalyst"})
+             .Case("macCatalyst", {"macCatalyst", "maccatalyst"})
+             .Case("maccatalyst_app_extension", {"macCatalystApplicationExtension", "maccatalyst_app_extension"})
+             .Case("macCatalystApplicationExtension", {"macCatalystApplicationExtension", "maccatalyst_app_extension"})
+             .Case("xros", {"visionos", "visionOS", "xros"})
+             .Case("visionOS", {"visionos", "visionOS", "xros"})
+             .Case("visionos", {"visionos", "visionOS", "xros"})
+             .Case("xros_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("visionOSApplicationExtension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("visionos_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Default({Platform});
+}
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -1217,6 +1247,22 @@ def CoroDisableLifetimeBound : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroLifetimeBoundDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroAwaitElidable : InheritableAttr {
+  let Spellings = [Clang<"coro_await_elidable">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitElidableDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroAwaitElidableArgument : InheritableAttr {
+  let Spellings = [Clang<"coro_await_elidable_argument">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitElidableArgumentDoc];
   let SimpleHandler = 1;
 }
 
@@ -3320,18 +3366,16 @@ def DiagnoseIf : InheritableAttr {
   let Spellings = [GNU<"diagnose_if">];
   let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">,
-              EnumArgument<"DiagnosticType", "DiagnosticType",
+              EnumArgument<"DefaultSeverity",
+                           "DefaultSeverity",
                            /*is_string=*/true,
-                           ["error", "warning"],
-                           ["DT_Error", "DT_Warning"]>,
+                           ["error",    "warning"],
+                           ["DS_error", "DS_warning"]>,
+              StringArgument<"WarningGroup", /*optional*/ 1>,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               DeclArgument<Named, "Parent", 0, /*fake*/ 1>];
   let InheritEvenIfAlreadyPresent = 1;
   let LateParsed = LateAttrParseStandard;
-  let AdditionalMembers = [{
-    bool isError() const { return diagnosticType == DT_Error; }
-    bool isWarning() const { return diagnosticType == DT_Warning; }
-  }];
   let TemplateDependent = 1;
   let Documentation = [DiagnoseIfDocs];
 }
@@ -4613,16 +4657,14 @@ def HLSLResource : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLROV : InheritableAttr {
+def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 
-def HLSLResourceClass : InheritableAttr {
+def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let Subjects = SubjectList<[Field]>;
   let LangOpts = [HLSL];
   let Args = [
 	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
@@ -4630,6 +4672,19 @@ def HLSLResourceClass : InheritableAttr {
 				 ["SRV", "UAV", "CBuffer", "Sampler"],
 				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLContainedType : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "contained_type">];
+  let LangOpts = [HLSL];
+  let Args = [TypeArgument<"Type", /*opt=*/0>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLRawBuffer : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 

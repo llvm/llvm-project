@@ -8239,11 +8239,11 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 // AdvSIMD LUT
 //----------------------------------------------------------------------------
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-class BaseSIMDTableLookupIndexed<bit Q, bits<5> opc, RegisterOperand vectype,
+class BaseSIMDTableLookupIndexed<bit Q, bits<5> opc,
                             RegisterOperand listtype, Operand idx_type,
                             string asm, string kind>
-  : I<(outs vectype:$Rd),
-      (ins listtype:$Rn, vectype:$Rm, idx_type:$idx),
+  : I<(outs V128:$Rd),
+      (ins listtype:$Rn, V128:$Rm, idx_type:$idx),
       asm, "\t$Rd" # kind # ", $Rn, $Rm$idx", "", []>,
     Sched<[]> {
   bits<5> Rd;
@@ -8263,22 +8263,22 @@ class BaseSIMDTableLookupIndexed<bit Q, bits<5> opc, RegisterOperand vectype,
 }
 
 multiclass BaseSIMDTableLookupIndexed2<string asm> {
-  def v16f8 : BaseSIMDTableLookupIndexed<0b1, {0b10,?,?,0b1}, V128, VecListOne16b, VectorIndexS, asm, ".16b"> {
+  def _B : BaseSIMDTableLookupIndexed<0b1, {0b10,?,?,0b1}, VecListOne16b, VectorIndexS32b_timm, asm, ".16b"> {
     bits<2> idx;
     let Inst{14-13} = idx;
   }
-  def v8f16 : BaseSIMDTableLookupIndexed<0b1, {0b11,?,?,?}, V128, VecListOne8h, VectorIndexH, asm, ".8h" > {
+  def _H : BaseSIMDTableLookupIndexed<0b1, {0b11,?,?,?}, VecListOne8h, VectorIndexH32b_timm, asm, ".8h" > {
     bits<3> idx;
     let Inst{14-12} = idx;
   }
 }
 
 multiclass BaseSIMDTableLookupIndexed4<string asm> {
-  def v16f8 : BaseSIMDTableLookupIndexed<0b1, {0b01,?,0b10}, V128, VecListOne16b, VectorIndexD, asm, ".16b"> {
+  def _B : BaseSIMDTableLookupIndexed<0b1, {0b01,?,0b10}, VecListOne16b, VectorIndexD32b_timm, asm, ".16b"> {
     bit idx;
     let Inst{14} = idx;
   }
-  def v8f16 : BaseSIMDTableLookupIndexed<0b1, {0b01,?,?,0b1}, V128, VecListTwo8h, VectorIndexS, asm, ".8h" > {
+  def _H : BaseSIMDTableLookupIndexed<0b1, {0b01,?,?,0b1}, VecListTwo8h, VectorIndexS32b_timm, asm, ".8h" > {
     bits<2> idx;
     let Inst{14-13} = idx;
   }

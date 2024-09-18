@@ -895,8 +895,8 @@ void SelectionDAGISel::ComputeLiveOutVRegInfo() {
     if (N->getOpcode() != ISD::CopyToReg)
       continue;
 
-    unsigned DestReg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
-    if (!Register::isVirtualRegister(DestReg))
+    Register DestReg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+    if (!DestReg.isVirtual())
       continue;
 
     // Ignore non-integer values.
@@ -1476,6 +1476,10 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
     if (BB->getFirstMayFaultInst()) {
       // Report IP range only for blocks with Faulty inst
       auto MBBb = MBB.getFirstNonPHI();
+
+      if (MBBb == MBB.end())
+        continue;
+
       MachineInstr *MIb = &*MBBb;
       if (MIb->isTerminator())
         continue;

@@ -111,6 +111,12 @@ if(COMPILER_RT_TARGET_HAS_UNAME)
      -DCOMPILER_RT_HAS_UNAME=1)
 endif()
 
+if(MSVC)
+  # profile historically has only been supported with the static runtime
+  # on windows
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+endif()
+
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 # XRay uses C++ standard library headers.

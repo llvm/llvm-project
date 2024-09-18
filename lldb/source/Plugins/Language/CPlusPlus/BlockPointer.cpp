@@ -114,7 +114,7 @@ public:
     if (!child_type_or_err)
       return ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(),
-          Status(child_type_or_err.takeError()));
+          Status::FromError(child_type_or_err.takeError()));
     CompilerType child_type = *child_type_or_err;
 
     ValueObjectSP struct_pointer_sp =

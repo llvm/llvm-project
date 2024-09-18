@@ -7123,19 +7123,6 @@ static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
       ImmMask <<= 1;
     }
 
-    if (DAG.getDataLayout().isBigEndian()) {
-      // Reverse the order of elements within the vector.
-      unsigned BytesPerElem = VectorVT.getScalarSizeInBits() / 8;
-      unsigned Mask = (1 << BytesPerElem) - 1;
-      unsigned NumElems = 8 / BytesPerElem;
-      unsigned NewImm = 0;
-      for (unsigned ElemNum = 0; ElemNum < NumElems; ++ElemNum) {
-        unsigned Elem = ((Imm >> ElemNum * BytesPerElem) & Mask);
-        NewImm |= Elem << (NumElems - ElemNum - 1) * BytesPerElem;
-      }
-      Imm = NewImm;
-    }
-
     // Op=1, Cmode=1110.
     OpCmode = 0x1e;
     VT = is128Bits ? MVT::v2i64 : MVT::v1i64;
@@ -7968,7 +7955,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMOVIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Try an immediate VMVN.
@@ -7978,7 +7965,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           VT, ST->hasMVEIntegerOps() ? MVEVMVNModImm : VMVNModImm);
       if (Val.getNode()) {
         SDValue Vmov = DAG.getNode(ARMISD::VMVNIMM, dl, VmovVT, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vmov);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vmov);
       }
 
       // Use vmov.f32 to materialize other v2f32 and v4f32 splats.
@@ -8030,7 +8017,6 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (!isa<ConstantFPSDNode>(V) && !isa<ConstantSDNode>(V))
       isConstant = false;
 
-    ValueCounts.insert(std::make_pair(V, 0));
     unsigned &Count = ValueCounts[V];
 
     // Is this value dominant? (takes up more than half of the lanes)
@@ -14456,9 +14442,9 @@ static SDValue PerformANDCombine(SDNode *N,
                                       DAG, dl, VbicVT, VT, OtherModImm);
       if (Val.getNode()) {
         SDValue Input =
-          DAG.getNode(ISD::BITCAST, dl, VbicVT, N->getOperand(0));
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VbicVT, N->getOperand(0));
         SDValue Vbic = DAG.getNode(ARMISD::VBICIMM, dl, VbicVT, Input, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vbic);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vbic);
       }
     }
   }
@@ -14752,9 +14738,9 @@ static SDValue PerformORCombine(SDNode *N,
                             SplatBitSize, DAG, dl, VorrVT, VT, OtherModImm);
       if (Val.getNode()) {
         SDValue Input =
-          DAG.getNode(ISD::BITCAST, dl, VorrVT, N->getOperand(0));
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VorrVT, N->getOperand(0));
         SDValue Vorr = DAG.getNode(ARMISD::VORRIMM, dl, VorrVT, Input, Val);
-        return DAG.getNode(ISD::BITCAST, dl, VT, Vorr);
+        return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Vorr);
       }
     }
   }
@@ -18606,7 +18592,9 @@ static SDValue PerformBITCASTCombine(SDNode *N,
 
   // We may have a bitcast of something that has already had this bitcast
   // combine performed on it, so skip past any VECTOR_REG_CASTs.
-  while (Src.getOpcode() == ARMISD::VECTOR_REG_CAST)
+  if (Src.getOpcode() == ARMISD::VECTOR_REG_CAST &&
+      Src.getOperand(0).getValueType().getScalarSizeInBits() <=
+          Src.getValueType().getScalarSizeInBits())
     Src = Src.getOperand(0);
 
   // Bitcast from element-wise VMOV or VMVN doesn't need VREV if the VREV that
@@ -21073,7 +21061,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(I.arg_size() - 1);
     Info.offset = 0;
-    Info.align.reset();
+    Info.align = I.getParamAlign(I.arg_size() - 1).valueOrOne();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
     return true;
@@ -21120,7 +21108,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align.reset();
+    Info.align = I.getParamAlign(0).valueOrOne();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
     return true;

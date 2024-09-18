@@ -19,9 +19,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @c = global i32 0, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @_Z3fn1v() #0 {
+define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nocapture writeonly [[R:%.*]], ptr nocapture readonly [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TOBOOL20:%.*]] = icmp eq i32 [[TMP]], 0
@@ -40,8 +40,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_END6]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[T12]] = phi i32 [ [[T1]], %[[FOR_COND_LOOPEXIT]] ], [ [[TMP]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[R_022]] = phi ptr [ [[R_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ undef, %[[ENTRY]] ]
-; CHECK-NEXT:    [[A_021]] = phi ptr [ [[A_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ undef, %[[ENTRY]] ]
+; CHECK-NEXT:    [[R_022]] = phi ptr [ [[R_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[R]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[A_021]] = phi ptr [ [[A_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[A]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[TOBOOL215:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL215]], label %[[FOR_COND_LOOPEXIT]], label %[[FOR_BODY3_PREHEADER:.*]]
@@ -131,8 +131,8 @@ for.cond.loopexit:                                ; preds = %for.body, %for.cond
   br i1 %tobool, label %for.cond.for.end6_crit_edge, label %for.body
 
 for.body:                                         ; preds = %for.cond.loopexit, %for.body.lr.ph
-  %r.022 = phi ptr [ undef, %for.body.lr.ph ], [ %r.1.lcssa, %for.cond.loopexit ]
-  %a.021 = phi ptr [ undef, %for.body.lr.ph ], [ %a.1.lcssa, %for.cond.loopexit ]
+  %r.022 = phi ptr [ %r, %for.body.lr.ph ], [ %r.1.lcssa, %for.cond.loopexit ]
+  %a.021 = phi ptr [ %a, %for.body.lr.ph ], [ %a.1.lcssa, %for.cond.loopexit ]
   %t2 = load i32, ptr @c, align 4
   %tobool215 = icmp eq i32 %t2, 0
   br i1 %tobool215, label %for.cond.loopexit, label %for.body3.lr.ph

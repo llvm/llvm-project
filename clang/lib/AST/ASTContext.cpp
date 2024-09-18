@@ -881,8 +881,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
-      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
-      SourceMgr(SM), LangOpts(LOpts),
+      DeducedTemplates(this_()), ArrayParameterTypes(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -2203,13 +2203,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // Because the length is only known at runtime, we use a dummy value
     // of 0 for the static length.  The alignment values are those defined
     // by the Procedure Call Standard for the Arm Architecture.
-#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP, IsBF)                                  \
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 128;                                                               \
     break;
-#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 16;                                                                \
@@ -2244,8 +2243,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
-                               SINGLETONID)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3379,7 +3377,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-    case BuiltinType::AMDGPUBufferRsrc:
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
@@ -4284,108 +4283,27 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   switch (Ty->getKind()) {
   default:
     llvm_unreachable("Unsupported builtin vector type");
-  case BuiltinType::SveInt8:
-    return SVE_INT_ELTTY(8, 16, true, 1);
-  case BuiltinType::SveUint8:
-    return SVE_INT_ELTTY(8, 16, false, 1);
-  case BuiltinType::SveInt8x2:
-    return SVE_INT_ELTTY(8, 16, true, 2);
-  case BuiltinType::SveUint8x2:
-    return SVE_INT_ELTTY(8, 16, false, 2);
-  case BuiltinType::SveInt8x3:
-    return SVE_INT_ELTTY(8, 16, true, 3);
-  case BuiltinType::SveUint8x3:
-    return SVE_INT_ELTTY(8, 16, false, 3);
-  case BuiltinType::SveInt8x4:
-    return SVE_INT_ELTTY(8, 16, true, 4);
-  case BuiltinType::SveUint8x4:
-    return SVE_INT_ELTTY(8, 16, false, 4);
-  case BuiltinType::SveInt16:
-    return SVE_INT_ELTTY(16, 8, true, 1);
-  case BuiltinType::SveUint16:
-    return SVE_INT_ELTTY(16, 8, false, 1);
-  case BuiltinType::SveInt16x2:
-    return SVE_INT_ELTTY(16, 8, true, 2);
-  case BuiltinType::SveUint16x2:
-    return SVE_INT_ELTTY(16, 8, false, 2);
-  case BuiltinType::SveInt16x3:
-    return SVE_INT_ELTTY(16, 8, true, 3);
-  case BuiltinType::SveUint16x3:
-    return SVE_INT_ELTTY(16, 8, false, 3);
-  case BuiltinType::SveInt16x4:
-    return SVE_INT_ELTTY(16, 8, true, 4);
-  case BuiltinType::SveUint16x4:
-    return SVE_INT_ELTTY(16, 8, false, 4);
-  case BuiltinType::SveInt32:
-    return SVE_INT_ELTTY(32, 4, true, 1);
-  case BuiltinType::SveUint32:
-    return SVE_INT_ELTTY(32, 4, false, 1);
-  case BuiltinType::SveInt32x2:
-    return SVE_INT_ELTTY(32, 4, true, 2);
-  case BuiltinType::SveUint32x2:
-    return SVE_INT_ELTTY(32, 4, false, 2);
-  case BuiltinType::SveInt32x3:
-    return SVE_INT_ELTTY(32, 4, true, 3);
-  case BuiltinType::SveUint32x3:
-    return SVE_INT_ELTTY(32, 4, false, 3);
-  case BuiltinType::SveInt32x4:
-    return SVE_INT_ELTTY(32, 4, true, 4);
-  case BuiltinType::SveUint32x4:
-    return SVE_INT_ELTTY(32, 4, false, 4);
-  case BuiltinType::SveInt64:
-    return SVE_INT_ELTTY(64, 2, true, 1);
-  case BuiltinType::SveUint64:
-    return SVE_INT_ELTTY(64, 2, false, 1);
-  case BuiltinType::SveInt64x2:
-    return SVE_INT_ELTTY(64, 2, true, 2);
-  case BuiltinType::SveUint64x2:
-    return SVE_INT_ELTTY(64, 2, false, 2);
-  case BuiltinType::SveInt64x3:
-    return SVE_INT_ELTTY(64, 2, true, 3);
-  case BuiltinType::SveUint64x3:
-    return SVE_INT_ELTTY(64, 2, false, 3);
-  case BuiltinType::SveInt64x4:
-    return SVE_INT_ELTTY(64, 2, true, 4);
-  case BuiltinType::SveUint64x4:
-    return SVE_INT_ELTTY(64, 2, false, 4);
-  case BuiltinType::SveBool:
-    return SVE_ELTTY(BoolTy, 16, 1);
-  case BuiltinType::SveBoolx2:
-    return SVE_ELTTY(BoolTy, 16, 2);
-  case BuiltinType::SveBoolx4:
-    return SVE_ELTTY(BoolTy, 16, 4);
-  case BuiltinType::SveFloat16:
-    return SVE_ELTTY(HalfTy, 8, 1);
-  case BuiltinType::SveFloat16x2:
-    return SVE_ELTTY(HalfTy, 8, 2);
-  case BuiltinType::SveFloat16x3:
-    return SVE_ELTTY(HalfTy, 8, 3);
-  case BuiltinType::SveFloat16x4:
-    return SVE_ELTTY(HalfTy, 8, 4);
-  case BuiltinType::SveFloat32:
-    return SVE_ELTTY(FloatTy, 4, 1);
-  case BuiltinType::SveFloat32x2:
-    return SVE_ELTTY(FloatTy, 4, 2);
-  case BuiltinType::SveFloat32x3:
-    return SVE_ELTTY(FloatTy, 4, 3);
-  case BuiltinType::SveFloat32x4:
-    return SVE_ELTTY(FloatTy, 4, 4);
-  case BuiltinType::SveFloat64:
-    return SVE_ELTTY(DoubleTy, 2, 1);
-  case BuiltinType::SveFloat64x2:
-    return SVE_ELTTY(DoubleTy, 2, 2);
-  case BuiltinType::SveFloat64x3:
-    return SVE_ELTTY(DoubleTy, 2, 3);
-  case BuiltinType::SveFloat64x4:
-    return SVE_ELTTY(DoubleTy, 2, 4);
-  case BuiltinType::SveBFloat16:
-    return SVE_ELTTY(BFloat16Ty, 8, 1);
-  case BuiltinType::SveBFloat16x2:
-    return SVE_ELTTY(BFloat16Ty, 8, 2);
-  case BuiltinType::SveBFloat16x3:
-    return SVE_ELTTY(BFloat16Ty, 8, 3);
-  case BuiltinType::SveBFloat16x4:
-    return SVE_ELTTY(BFloat16Ty, 8, 4);
+
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, IsSigned),                           \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
+                              ElBits, NF)                                      \
+  case BuiltinType::Id:                                                        \
+    return {ElBits == 16 ? HalfTy : (ElBits == 32 ? FloatTy : DoubleTy),       \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  case BuiltinType::Id:                                                        \
+    return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
+  case BuiltinType::Id:                                                        \
+    return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
   case BuiltinType::Id:                                                        \
@@ -4425,22 +4343,30 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
   if (Target->hasAArch64SVETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
-#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP, IsBF)                                  \
-  if (!EltTy->isBooleanType() &&                                               \
-      ((EltTy->hasIntegerRepresentation() &&                                   \
-        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
-        IsFP && !IsBF) ||                                                      \
-       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
-        IsBF && !IsFP)) &&                                                     \
-      EltTySize == ElBits && NumElts == NumEls) {                              \
+
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
+      EltTy->hasSignedIntegerRepresentation() == IsSigned &&                   \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return SingletonId;                                                        \
   }
-#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
-  if (EltTy->isBooleanType() && NumElts == NumEls)                             \
+#define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
+                              ElBits, NF)                                      \
+  if (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&        \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
+    return SingletonId;                                                        \
+  }
+#define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  if (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&         \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
+    return SingletonId;                                                        \
+  }
+#define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
+  if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingleTonId)
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -5411,7 +5337,7 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
 
-  const auto *TD = Template.getAsTemplateDecl();
+  const auto *TD = Template.getAsTemplateDecl(/*IgnoreDeduced=*/true);
   bool IsTypeAlias = TD && TD->isTypeAlias();
   QualType CanonType;
   if (!Underlying.isNull())
@@ -5446,7 +5372,12 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
          "No dependent template names here!");
 
   // Build the canonical template specialization type.
-  TemplateName CanonTemplate = getCanonicalTemplateName(Template);
+  // Any DeducedTemplateNames are ignored, because the effective name of a TST
+  // accounts for the TST arguments laid over any default arguments contained in
+  // its name.
+  TemplateName CanonTemplate =
+      getCanonicalTemplateName(Template, /*IgnoreDeduced=*/true);
+
   bool AnyNonCanonArgs = false;
   auto CanonArgs =
       ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
@@ -6188,11 +6119,13 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          ArrayRef<QualType> Expansions,
                                          int Index) const {
   QualType Canonical;
+  bool ExpandsToEmptyPack = FullySubstituted && Expansions.empty();
   if (FullySubstituted && Index != -1) {
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr);
+    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr,
+                              ExpandsToEmptyPack);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6200,8 +6133,8 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       void *Mem = Allocate(
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
-      Canon = new (Mem)
-          PackIndexingType(*this, QualType(), Pattern, IndexExpr, Expansions);
+      Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
+                                         ExpandsToEmptyPack, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6210,8 +6143,8 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
   void *Mem =
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
-  auto *T = new (Mem)
-      PackIndexingType(*this, Canonical, Pattern, IndexExpr, Expansions);
+  auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
+                                       ExpandsToEmptyPack, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
 }
@@ -6751,16 +6684,41 @@ ASTContext::getNameForTemplate(TemplateName Name,
   case TemplateName::UsingTemplate:
     return DeclarationNameInfo(Name.getAsUsingShadowDecl()->getDeclName(),
                                NameLoc);
+  case TemplateName::DeducedTemplate: {
+    DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
+    return getNameForTemplate(DTS->getUnderlying(), NameLoc);
+  }
   }
 
   llvm_unreachable("bad template name kind!");
 }
 
-TemplateName
-ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
+static const TemplateArgument *
+getDefaultTemplateArgumentOrNone(const NamedDecl *P) {
+  auto handleParam = [](auto *TP) -> const TemplateArgument * {
+    if (!TP->hasDefaultArgument())
+      return nullptr;
+    return &TP->getDefaultArgument().getArgument();
+  };
+  switch (P->getKind()) {
+  case NamedDecl::TemplateTypeParm:
+    return handleParam(cast<TemplateTypeParmDecl>(P));
+  case NamedDecl::NonTypeTemplateParm:
+    return handleParam(cast<NonTypeTemplateParmDecl>(P));
+  case NamedDecl::TemplateTemplateParm:
+    return handleParam(cast<TemplateTemplateParmDecl>(P));
+  default:
+    llvm_unreachable("Unexpected template parameter kind");
+  }
+}
+
+TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
+                                                  bool IgnoreDeduced) const {
+  while (std::optional<TemplateName> UnderlyingOrNone =
+             Name.desugar(IgnoreDeduced))
+    Name = *UnderlyingOrNone;
+
   switch (Name.getKind()) {
-  case TemplateName::UsingTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::Template: {
     TemplateDecl *Template = Name.getAsTemplateDecl();
     if (auto *TTP  = dyn_cast<TemplateTemplateParmDecl>(Template))
@@ -6780,12 +6738,6 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
     return DTN->CanonicalTemplateName;
   }
 
-  case TemplateName::SubstTemplateTemplateParm: {
-    SubstTemplateTemplateParmStorage *subst
-      = Name.getAsSubstTemplateTemplateParm();
-    return getCanonicalTemplateName(subst->getReplacement());
-  }
-
   case TemplateName::SubstTemplateTemplateParmPack: {
     SubstTemplateTemplateParmPackStorage *subst =
         Name.getAsSubstTemplateTemplateParmPack();
@@ -6795,15 +6747,58 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
         subst->getFinal(), subst->getIndex());
   }
+  case TemplateName::DeducedTemplate: {
+    assert(IgnoreDeduced == false);
+    DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
+    DefaultArguments DefArgs = DTS->getDefaultArguments();
+    TemplateName Underlying = DTS->getUnderlying();
+
+    TemplateName CanonUnderlying =
+        getCanonicalTemplateName(Underlying, /*IgnoreDeduced=*/true);
+    bool NonCanonical = CanonUnderlying != Underlying;
+    auto CanonArgs =
+        getCanonicalTemplateArguments(*this, DefArgs.Args, NonCanonical);
+
+    ArrayRef<NamedDecl *> Params =
+        CanonUnderlying.getAsTemplateDecl()->getTemplateParameters()->asArray();
+    assert(CanonArgs.size() <= Params.size());
+    // A deduced template name which deduces the same default arguments already
+    // declared in the underlying template is the same template as the
+    // underlying template. We need need to note any arguments which differ from
+    // the corresponding declaration. If any argument differs, we must build a
+    // deduced template name.
+    for (int I = CanonArgs.size() - 1; I >= 0; --I) {
+      const TemplateArgument *A = getDefaultTemplateArgumentOrNone(Params[I]);
+      if (!A)
+        break;
+      auto CanonParamDefArg = getCanonicalTemplateArgument(*A);
+      TemplateArgument &CanonDefArg = CanonArgs[I];
+      if (CanonDefArg.structurallyEquals(CanonParamDefArg))
+        continue;
+      // Keep popping from the back any deault arguments which are the same.
+      if (I == int(CanonArgs.size() - 1))
+        CanonArgs.pop_back();
+      NonCanonical = true;
+    }
+    return NonCanonical ? getDeducedTemplateName(
+                              CanonUnderlying,
+                              /*DefaultArgs=*/{DefArgs.StartPos, CanonArgs})
+                        : Name;
+  }
+  case TemplateName::UsingTemplate:
+  case TemplateName::QualifiedTemplate:
+  case TemplateName::SubstTemplateTemplateParm:
+    llvm_unreachable("always sugar node");
   }
 
   llvm_unreachable("bad template name!");
 }
 
 bool ASTContext::hasSameTemplateName(const TemplateName &X,
-                                     const TemplateName &Y) const {
-  return getCanonicalTemplateName(X).getAsVoidPointer() ==
-         getCanonicalTemplateName(Y).getAsVoidPointer();
+                                     const TemplateName &Y,
+                                     bool IgnoreDeduced) const {
+  return getCanonicalTemplateName(X, IgnoreDeduced) ==
+         getCanonicalTemplateName(Y, IgnoreDeduced);
 }
 
 bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
@@ -7292,7 +7287,7 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::StructuralValue:
       return TemplateArgument(*this,
                               getCanonicalType(Arg.getStructuralValueType()),
-                              Arg.getAsStructuralValue());
+                              Arg.getAsStructuralValue(), Arg.getIsDefaulted());
 
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
@@ -7304,8 +7299,10 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
           *this, Arg.pack_elements(), AnyNonCanonArgs);
       if (!AnyNonCanonArgs)
         return Arg;
-      return TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this),
-                                              CanonArgs);
+      auto NewArg = TemplateArgument::CreatePackCopy(
+          const_cast<ASTContext &>(*this), CanonArgs);
+      NewArg.setIsDefaulted(Arg.getIsDefaulted());
+      return NewArg;
     }
   }
 
@@ -9860,6 +9857,30 @@ ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
   }
 
   return TemplateName(Subst);
+}
+
+/// Retrieve the template name that represents a template name
+/// deduced from a specialization.
+TemplateName
+ASTContext::getDeducedTemplateName(TemplateName Underlying,
+                                   DefaultArguments DefaultArgs) const {
+  if (!DefaultArgs)
+    return Underlying;
+
+  llvm::FoldingSetNodeID ID;
+  DeducedTemplateStorage::Profile(ID, *this, Underlying, DefaultArgs);
+
+  void *InsertPos = nullptr;
+  DeducedTemplateStorage *DTS =
+      DeducedTemplates.FindNodeOrInsertPos(ID, InsertPos);
+  if (!DTS) {
+    void *Mem = Allocate(sizeof(DeducedTemplateStorage) +
+                             sizeof(TemplateArgument) * DefaultArgs.Args.size(),
+                         alignof(DeducedTemplateStorage));
+    DTS = new (Mem) DeducedTemplateStorage(Underlying, DefaultArgs);
+    DeducedTemplates.InsertNode(DTS, InsertPos);
+  }
+  return TemplateName(DTS);
 }
 
 /// getFromTargetType - Given one of the integer types provided by
@@ -13018,22 +13039,24 @@ static T *getCommonDeclChecked(T *X, T *Y) {
 }
 
 static TemplateName getCommonTemplateName(ASTContext &Ctx, TemplateName X,
-                                          TemplateName Y) {
+                                          TemplateName Y,
+                                          bool IgnoreDeduced = false) {
   if (X.getAsVoidPointer() == Y.getAsVoidPointer())
     return X;
   // FIXME: There are cases here where we could find a common template name
   //        with more sugar. For example one could be a SubstTemplateTemplate*
   //        replacing the other.
-  TemplateName CX = Ctx.getCanonicalTemplateName(X);
+  TemplateName CX = Ctx.getCanonicalTemplateName(X, IgnoreDeduced);
   if (CX.getAsVoidPointer() !=
       Ctx.getCanonicalTemplateName(Y).getAsVoidPointer())
     return TemplateName();
   return CX;
 }
 
-static TemplateName
-getCommonTemplateNameChecked(ASTContext &Ctx, TemplateName X, TemplateName Y) {
-  TemplateName R = getCommonTemplateName(Ctx, X, Y);
+static TemplateName getCommonTemplateNameChecked(ASTContext &Ctx,
+                                                 TemplateName X, TemplateName Y,
+                                                 bool IgnoreDeduced) {
+  TemplateName R = getCommonTemplateName(Ctx, X, Y, IgnoreDeduced);
   assert(R.getAsVoidPointer() != nullptr);
   return R;
 }
@@ -13520,7 +13543,8 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                          TY->template_arguments());
     return Ctx.getTemplateSpecializationType(
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
-                                       TY->getTemplateName()),
+                                       TY->getTemplateName(),
+                                       /*IgnoreDeduced=*/true),
         As, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
@@ -13749,8 +13773,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::TemplateSpecialization: {
     const auto *TX = cast<TemplateSpecializationType>(X),
                *TY = cast<TemplateSpecializationType>(Y);
-    TemplateName CTN = ::getCommonTemplateName(Ctx, TX->getTemplateName(),
-                                               TY->getTemplateName());
+    TemplateName CTN =
+        ::getCommonTemplateName(Ctx, TX->getTemplateName(),
+                                TY->getTemplateName(), /*IgnoreDeduced=*/true);
     if (!CTN.getAsVoidPointer())
       return QualType();
     SmallVector<TemplateArgument, 8> Args;
@@ -14219,6 +14244,18 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
       std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+      Features.insert(Features.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+    } else if (Target->getTriple().isRISCV()) {
+      StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+      std::vector<std::string> Features;
+      if (VersionStr != "default") {
+        ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(VersionStr);
+        Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                        ParsedAttr.Features.end());
+      }
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());

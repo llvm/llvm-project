@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_ALLOCATOR_H
 #define OMPTARGET_ALLOCATOR_H
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 // Forward declaration.
 struct KernelEnvironmentTy;

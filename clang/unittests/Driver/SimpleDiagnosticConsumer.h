@@ -13,6 +13,7 @@
 #ifndef CLANG_UNITTESTS_SIMPLEDIAGNOSTICCONSUMER_H
 #define CLANG_UNITTESTS_SIMPLEDIAGNOSTICCONSUMER_H
 
+#include "clang/Driver/Driver.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"

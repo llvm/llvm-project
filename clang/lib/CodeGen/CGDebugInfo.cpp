@@ -900,13 +900,12 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId)        \
   case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
-          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
-                                     MangledName, TheCU, TheCU->getFile(), 0); \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
+                                     TheCU, TheCU->getFile(), 0);              \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -2384,7 +2383,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str(), defaultParameter));
+          TheCU, Name, nullptr, QualName, defaultParameter));
       break;
     }
     case TemplateArgument::Pack:
@@ -5653,7 +5652,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
       std::string CanonicalOriginalName;
       llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
       ND->getNameForDiagnostic(OriginalOS, PP, Qualified);
-      assert(EncodedOriginalNameOS.str() == OriginalOS.str());
+      assert(EncodedOriginalName == CanonicalOriginalName);
 #endif
     }
   }

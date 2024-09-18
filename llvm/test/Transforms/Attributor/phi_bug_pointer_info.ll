@@ -17,7 +17,30 @@
 ; CHECK:      - c:   %1 = load i32, ptr %val2, align 4
 ; CHECK:    - 6 -   %ret = load i32, ptr %x, align 4
 ; CHECK:      - c: <unknown>
+;.
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+;.
 define dso_local i32 @phi_different_offsets(ptr nocapture %val, ptr nocapture %val2, i1 %cmp) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define dso_local i32 @phi_different_offsets
+; CHECK-SAME: (ptr nocapture nofree readonly [[VAL:%.*]], ptr nocapture nofree readonly [[VAL2:%.*]], i1 noundef [[CMP:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[FIELD2:%.*]] = getelementptr i32, ptr @globalBytes, i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[FIELD2]], align 8
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[FIELD8:%.*]] = getelementptr i32, ptr @globalBytes, i32 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VAL2]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[FIELD8]], align 16
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[X:%.*]] = phi ptr [ [[FIELD2]], [[THEN]] ], [ [[FIELD8]], [[ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[X]], align 8
+; CHECK-NEXT:    ret i32 [[RET]]
+;
 entry:
   br i1 %cmp, label %then, label %else
 
@@ -39,3 +62,6 @@ end:
   ret i32 %ret
 
 }
+;.
+; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn }
+;.

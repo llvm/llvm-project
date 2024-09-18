@@ -153,8 +153,8 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
      HostGlobal.getPtr());
 
   assert(Image.getStart() <= ImageGlobal.getPtr() &&
-         advanceVoidPtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
-             advanceVoidPtr(Image.getStart(), Image.getSize()) &&
+         utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
+             utils::advancePtr(Image.getStart(), Image.getSize()) &&
          "Attempting to read outside the image!");
 
   // Perform the copy from the image to the host memory.

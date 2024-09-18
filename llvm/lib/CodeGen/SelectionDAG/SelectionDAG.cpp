@@ -760,7 +760,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddPointer(cast<BasicBlockSDNode>(N)->getBasicBlock());
     break;
   case ISD::Register:
-    ID.AddInteger(cast<RegisterSDNode>(N)->getReg());
+    ID.AddInteger(cast<RegisterSDNode>(N)->getReg().id());
     break;
   case ISD::RegisterMask:
     ID.AddPointer(cast<RegisterMaskSDNode>(N)->getRegMask());
@@ -2292,16 +2292,16 @@ SDValue SelectionDAG::getCommutedVectorShuffle(const ShuffleVectorSDNode &SV) {
   return getVectorShuffle(VT, SDLoc(&SV), Op1, Op0, MaskVec);
 }
 
-SDValue SelectionDAG::getRegister(unsigned RegNo, EVT VT) {
+SDValue SelectionDAG::getRegister(Register Reg, EVT VT) {
   SDVTList VTs = getVTList(VT);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::Register, VTs, std::nullopt);
-  ID.AddInteger(RegNo);
+  ID.AddInteger(Reg.id());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<RegisterSDNode>(RegNo, VTs);
+  auto *N = newSDNode<RegisterSDNode>(Reg, VTs);
   N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -6799,14 +6799,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     // Constant fold the scalar operands.
     SDValue ScalarResult = getNode(Opcode, DL, SVT, ScalarOps, Flags);
 
-    // Legalize the (integer) scalar constant if necessary.
-    if (LegalSVT != SVT)
-      ScalarResult = getNode(ExtendCode, DL, LegalSVT, ScalarResult);
-
     // Scalar folding only succeeded if the result is a constant or UNDEF.
     if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
         ScalarResult.getOpcode() != ISD::ConstantFP)
       return SDValue();
+
+    // Legalize the (integer) scalar constant if necessary. We only do
+    // this once we know the folding succeeded, since otherwise we would
+    // get a node with illegal type which has a user.
+    if (LegalSVT != SVT)
+      ScalarResult = getNode(ExtendCode, DL, LegalSVT, ScalarResult);
+
     ScalarResults.push_back(ScalarResult);
   }
 
@@ -8755,24 +8758,18 @@ SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDValue Chain, SDValue Ptr, SDValue Val,
                                 MachineMemOperand *MMO) {
-  assert((Opcode == ISD::ATOMIC_LOAD_ADD ||
-          Opcode == ISD::ATOMIC_LOAD_SUB ||
-          Opcode == ISD::ATOMIC_LOAD_AND ||
-          Opcode == ISD::ATOMIC_LOAD_CLR ||
-          Opcode == ISD::ATOMIC_LOAD_OR ||
-          Opcode == ISD::ATOMIC_LOAD_XOR ||
-          Opcode == ISD::ATOMIC_LOAD_NAND ||
-          Opcode == ISD::ATOMIC_LOAD_MIN ||
-          Opcode == ISD::ATOMIC_LOAD_MAX ||
-          Opcode == ISD::ATOMIC_LOAD_UMIN ||
-          Opcode == ISD::ATOMIC_LOAD_UMAX ||
-          Opcode == ISD::ATOMIC_LOAD_FADD ||
-          Opcode == ISD::ATOMIC_LOAD_FSUB ||
-          Opcode == ISD::ATOMIC_LOAD_FMAX ||
+  assert((Opcode == ISD::ATOMIC_LOAD_ADD || Opcode == ISD::ATOMIC_LOAD_SUB ||
+          Opcode == ISD::ATOMIC_LOAD_AND || Opcode == ISD::ATOMIC_LOAD_CLR ||
+          Opcode == ISD::ATOMIC_LOAD_OR || Opcode == ISD::ATOMIC_LOAD_XOR ||
+          Opcode == ISD::ATOMIC_LOAD_NAND || Opcode == ISD::ATOMIC_LOAD_MIN ||
+          Opcode == ISD::ATOMIC_LOAD_MAX || Opcode == ISD::ATOMIC_LOAD_UMIN ||
+          Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
+          Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-          Opcode == ISD::ATOMIC_SWAP ||
+          Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
+          Opcode == ISD::ATOMIC_LOAD_USUB_SAT || Opcode == ISD::ATOMIC_SWAP ||
           Opcode == ISD::ATOMIC_STORE) &&
          "Invalid Atomic Op");
 
@@ -13297,7 +13294,7 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
   case ISD::SMIN:
     return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
   case ISD::FADD:
-    // If flags allow, prefer positive zero single it's generally cheaper
+    // If flags allow, prefer positive zero since it's generally cheaper
     // to materialize on most targets.
     return getConstantFP(Flags.hasNoSignedZeros() ? 0.0 : -0.0, DL, VT);
   case ISD::FMUL:

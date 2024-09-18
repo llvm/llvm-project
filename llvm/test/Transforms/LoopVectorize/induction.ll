@@ -907,7 +907,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP21:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[TMP19]])
+; CHECK-NEXT:    [[TMP21:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP19]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -967,7 +967,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; IND-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; IND:       middle.block:
-; IND-NEXT:    [[TMP20:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[TMP18]])
+; IND-NEXT:    [[TMP20:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP18]])
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
@@ -1046,7 +1046,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x float> [[TMP35]], [[TMP34]]
-; UNROLL-NEXT:    [[TMP37:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[BIN_RDX]])
+; UNROLL-NEXT:    [[TMP37:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[BIN_RDX]])
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
@@ -1127,7 +1127,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x float> [[TMP36]], [[TMP35]]
-; UNROLL-NO-IC-NEXT:    [[TMP38:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float -0.000000e+00, <2 x float> [[BIN_RDX]])
+; UNROLL-NO-IC-NEXT:    [[TMP38:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
@@ -1194,7 +1194,7 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; INTERLEAVE-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP14]]
-; INTERLEAVE-NEXT:    [[TMP17:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
+; INTERLEAVE-NEXT:    [[TMP17:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[BIN_RDX]])
 ; INTERLEAVE-NEXT:    br label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
