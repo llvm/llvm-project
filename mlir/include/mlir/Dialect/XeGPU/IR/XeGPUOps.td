@@ -412,24 +412,28 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
       implying each element in the array corresponds to a work-item (SIMT lane)
       in the subgroup.
 
+    The first dimension of the result TensorDesc corresponds to work-items, so it should
+    match the dimension of offsets. It may also has a second dimension corresponding to
+    the chunk_size if the chunk size is larger than 1.
+
     Example 1. It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
     ```mlir
     %a = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32, chunk_size_per_lane = 1>
+    %1 = xegpu.create_tdesc %a[0, 16, 32, 64]: memref<1024xf32> -> TensorDesc<4xf32>
     ```
 
     Example 2. It assumes subgroup size is 4, and each workitem access 8 elements.
                It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 16, 32, 64] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size_per_lane = 8>
+    %1 = xegpu.create_tdesc %0[0, 16, 32, 64] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size = 8>
     ```
 
     Example 3. It is similar to Example 2, but there is some overlaps among workitems.
                It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
-    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size_per_lane = 8>>
+    %1 = xegpu.create_tdesc %0[0, 4, 8, 12] : memref<1024xf32> -> TensorDesc<4x8xf32, chunk_size = 8>>
     ```
   }];
 
@@ -511,28 +515,31 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
 
   let description = [{ It (aka. load) load data per each work-item. The output
     describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of work-items in a subgroup. When `chunk_size_per_lane`
-    attribute is larger than 1 in TensorDesc, the output vector will be 2D vector,
-    with dim-1 correspoding to the chunk size.
+    consistent with the number of work-items in a subgroup. When the chunk size
+    is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
+    to work-items, and dim-0 corresponding to the chunk_size loaded by each work-item.
+    Specially, there is a transpose effect on the result (as compared to the TensorDesc)
+    due to the hardware implementation. Therefore, a transpose attribute is introduced
+    on purpose, making sure users are aware of this implicit transformation.
 
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
   Example:
   ```mlir
-    %2 = xegpu.load %1, %0 {transpose = [1, 0],
+    %2 = xegpu.load %1, %0 {transpose,
                             l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
-          : !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered=true>>, vector<16xi1>
-            -> vector<16xf32>
+          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_scope=global>>,
+            vector<16xi1> -> vector<16xf32>
   ```
 
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        XeGPU_MaskType: $mask,
-                       OptionalAttr<DenseI64ArrayAttr>: $transpose,
+                       OptionalAttr<UnitAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -564,11 +571,15 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllShapesMatch<["value", "TensorDesc"]>,
-                                        AllElementTypesMatch<["value", "TensorDesc"]>]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllElementCountsMatch<["value", "TensorDesc"]>,
+                                              AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "store data to scattered memory locations.";
-  let description = [{ It (aka. store) stores data to scattered memory locations.
-  It has similar semantic to `load_gather`.
+  let description = [{ It (aka. store) stores data to scattered memory locations. The value is
+  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
+  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
+  and the dim-0 of the value corresponds to the chunk_size stored per lane. So `store_scatter`
+  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
+  introduced on purpose, making sure users are aware of this implicit transformation.
 
   Example:
   ```mlir
@@ -583,6 +594,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllShapesMatch<["value", "TensorDe
     XeGPU_ValueType: $value,
     XeGPU_TensorDesc: $TensorDesc,
     XeGPU_MaskType: $mask,
+    OptionalAttr<UnitAttr>: $transpose,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
