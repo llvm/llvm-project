@@ -7467,45 +7467,23 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
-  if (VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16) {
-    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
-                                     VT.getVectorNumElements() / 4);
-    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
+  if (VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16 ||
+      VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v32bf16) {
 
-    SmallVector<SDValue, 4> Parts[4];
-    for (unsigned I = 0, E = VT.getVectorNumElements() / 4; I != E; ++I) {
-      for (unsigned P = 0; P < 4; ++P)
-        Parts[P].push_back(Op.getOperand(I + P * E));
-    }
-    SDValue Casts[4];
-    for (unsigned P = 0; P < 4; ++P) {
-      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
-      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
-    }
+    // Split into 2-element chunks.
+    const unsigned NumParts = VT.getVectorNumElements() / 2;
+    EVT PartVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(), 2);
+    MVT PartIntVT = MVT::getIntegerVT(PartVT.getSizeInBits());
 
-    SDValue Blend =
-        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 4), SL, Casts);
-    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
-  }
-
-  if (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v32bf16) {
-    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
-                                     VT.getVectorNumElements() / 8);
-    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
-
-    SmallVector<SDValue, 8> Parts[8];
-    for (unsigned I = 0, E = VT.getVectorNumElements() / 8; I != E; ++I) {
-      for (unsigned P = 0; P < 8; ++P)
-        Parts[P].push_back(Op.getOperand(I + P * E));
-    }
-    SDValue Casts[8];
-    for (unsigned P = 0; P < 8; ++P) {
-      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
-      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
+    SmallVector<SDValue> Casts;
+    for (unsigned P = 0; P < NumParts; ++P) {
+      SDValue Vec = DAG.getBuildVector(
+          PartVT, SL, {Op.getOperand(P * 2), Op.getOperand(P * 2 + 1)});
+      Casts.push_back(DAG.getNode(ISD::BITCAST, SL, PartIntVT, Vec));
     }
 
     SDValue Blend =
-        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 8), SL, Casts);
+        DAG.getBuildVector(MVT::getVectorVT(PartIntVT, NumParts), SL, Casts);
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
