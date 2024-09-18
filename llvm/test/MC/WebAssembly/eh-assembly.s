@@ -1,4 +1,6 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling --no-type-check < %s | FileCheck %s
+# Check that it converts to .o without errors, but don't check any output:
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+exception-handling --no-type-check -o %t.o < %s
 
   .tagtype  __cpp_exception i32
   .tagtype  __c_longjmp i32
