@@ -20,8 +20,42 @@
 using namespace llvm;
 using namespace offload::tblgen;
 
-static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
+static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << CommentsHeader;
+  // Emit preamble
+  OS << formatv("{0}_result_t {1}_val(\n  ", PrefixLower, F.getName());
+  // Emit arguments
+  std::string ParamNameList = "";
+  for (auto &Param : F.getParams()) {
+    OS << Param.getType() << " " << Param.getName();
+    if (Param != F.getParams().back()) {
+      OS << ", ";
+    }
+    ParamNameList += Param.getName().str() + ", ";
+  }
+  OS << ") {\n";
+
+  OS << TAB_1 "if (true /*enableParameterValidation*/) {\n";
+  // Emit validation checks
+  for (const auto &Return : F.getReturns()) {
+    for (auto &Condition : Return.getConditions()) {
+      if (Condition.starts_with("`") && Condition.ends_with("`")) {
+        auto ConditionString = Condition.substr(1, Condition.size() - 2);
+        OS << formatv(TAB_2 "if ({0}) {{\n", ConditionString);
+        OS << formatv(TAB_3 "return {0};\n", Return.getValue());
+        OS << TAB_2 "}\n\n";
+      }
+    }
+  }
+  OS << TAB_1 "}\n\n";
+
+  // Perform actual function call to the implementation
+  ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
+  OS << formatv(TAB_1 "return {0}_impl({1});\n\n", F.getName(), ParamNameList);
+  OS << "}\n";
+}
+
+static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   // Emit preamble
   OS << formatv("{1}_APIEXPORT {0}_result_t {1}_APICALL {2}(\n  ", PrefixLower,
                 PrefixUpper, F.getName());
@@ -36,29 +70,14 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   }
   OS << ") {\n";
 
-  OS << TAB_1 "if (true /*enableParameterValidation*/) {\n";
-
-  // Emit validation checks
-  for (const auto &Return : F.getReturns()) {
-    for (auto &Condition : Return.getConditions()) {
-      if (Condition.starts_with("`") && Condition.ends_with("`")) {
-        auto ConditionString = Condition.substr(1, Condition.size() - 2);
-        OS << formatv(TAB_2 "if ({0}) {{\n", ConditionString);
-        OS << formatv(TAB_3 "return {0};\n", Return.getValue());
-        OS << TAB_2 "}\n\n";
-      }
-    }
-  }
-  OS << "  }\n\n";
-
   // Emit pre-call prints
   OS << TAB_1 "if (std::getenv(\"OFFLOAD_TRACE\")) {\n";
   OS << formatv(TAB_2 "std::cout << \"---> {0}\";\n", F.getName());
   OS << TAB_1 "}\n\n";
 
-  //   Perform actual function call
+  // Perform actual function call to the validation wrapper
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
-  OS << formatv(TAB_1 "{0}_result_t result = {1}_impl({2});\n\n", PrefixLower,
+  OS << formatv(TAB_1 "{0}_result_t result = {1}_val({2});\n\n", PrefixLower,
                 F.getName(), ParamNameList);
 
   // Emit post-call prints
@@ -81,6 +100,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
 void EmitOffloadEntryPoints(RecordKeeper &Records, raw_ostream &OS) {
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    EmitValidationFunc(FunctionRec{R}, OS);
     EmitEntryPointFunc(FunctionRec{R}, OS);
   }
 }
