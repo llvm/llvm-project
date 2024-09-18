@@ -2796,6 +2796,35 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
   return copyFlags(*CI, FabsCall);
 }
 
+Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
+
+  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
+  // case. If we know those do not happen, then we can convert the fmod into
+  // frem.
+  bool IsNoNan = CI->hasNoNaNs();
+  if (!IsNoNan) {
+    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
+                                              /*Depth=*/0, SQ);
+    if (Known0.isKnownNeverInfinity()) {
+      KnownFPClass Known1 =
+          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
+                              /*Depth=*/0, SQ);
+      Function *F = CI->getParent()->getParent();
+      if (Known1.isKnownNeverLogicalZero(*F, CI->getType()))
+        IsNoNan = true;
+    }
+  }
+
+  if (IsNoNan) {
+    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
+    if (auto *FRemI = dyn_cast<Instruction>(FRem))
+      FRemI->setHasNoNaNs(true);
+    substituteInParent(CI, FRem);
+  }
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
                                                      IRBuilderBase &B) {
   Module *M = CI->getModule();
@@ -3945,6 +3974,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sqrt:
   case LibFunc_sqrtl:
     return optimizeSqrt(CI, Builder);
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_fmodl:
+    return optimizeFMod(CI, Builder);
   case LibFunc_logf:
   case LibFunc_log:
   case LibFunc_logl:
