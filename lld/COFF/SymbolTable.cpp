@@ -823,13 +823,13 @@ DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
   return nullptr;
 }
 
-Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
-                                    ImportThunkChunk *chunk) {
+Defined *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
+                                     ImportThunkChunk *chunk) {
   auto [s, wasInserted] = insert(name, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportThunk>(s, ctx, name, id, chunk);
-    return s;
+    return cast<Defined>(s);
   }
 
   reportDuplicate(s, id->file);
