@@ -123,7 +123,7 @@ public:
 
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
-  using OpConversionPattern<gpu::PrintfOp>::OpConversionPattern;
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
@@ -606,106 +606,118 @@ public:
   }
 };
 
+/// Pattern to convert a gpu.printf op into a SPIR-V CLPrintf op.
+
 LogicalResult GPUPrintfConversion::matchAndRewrite(
     gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
 
-  auto loc = gpuPrintfOp.getLoc();
+  Location loc = gpuPrintfOp.getLoc();
 
-  auto funcOp =
-      rewriter.getBlock()->getParent()->getParentOfType<mlir::spirv::FuncOp>();
+  auto moduleOp = gpuPrintfOp->getParentOfType<spirv::ModuleOp>();
 
-  auto moduleOp = funcOp->getParentOfType<mlir::spirv::ModuleOp>();
+  if (!moduleOp) {
+    return success();
+  }
 
   const char formatStringPrefix[] = "printfMsg";
   unsigned stringNumber = 0;
-  mlir::SmallString<16> globalVarName;
-  mlir::spirv::GlobalVariableOp globalVar;
+  SmallString<16> globalVarName;
+  spirv::GlobalVariableOp globalVar;
 
-  // formulate spirv global variable name
+  // SPIR-V global variable is used to initialize printf
+  // format string value, if there are multiple printf messages,
+  // each global var needs to be created with a unique name.
+  // like printfMsg0, printfMsg1, ...
+  // Formulate unique global variable name after
+  // searching in the module for existing global variable names.
+  // This is to avoid name collision with existing global variables.
   do {
     globalVarName.clear();
     (formatStringPrefix + llvm::Twine(stringNumber++))
         .toStringRef(globalVarName);
   } while (moduleOp.lookupSymbol(globalVarName));
 
-  auto i8Type = rewriter.getI8Type();
-  auto i32Type = rewriter.getI32Type();
+  IntegerType i8Type = rewriter.getI8Type();
+  IntegerType i32Type = rewriter.getI32Type();
 
-  unsigned scNum = 0;
+  // Each character of printf format string is
+  // stored as a spec constant. We need to create
+  // unique name for this spec constant like
+  // @printfMsg0_sc0, @printfMsg0_sc1, ... by searching in the module
+  // for existing spec constant names.
+  unsigned specConstantNum = 0;
   auto createSpecConstant = [&](unsigned value) {
     auto attr = rewriter.getI8IntegerAttr(value);
-    mlir::SmallString<16> specCstName;
-    (llvm::Twine(globalVarName) + "_sc" + llvm::Twine(scNum++))
+    SmallString<16> specCstName;
+    (llvm::Twine(globalVarName) + "_sc" + llvm::Twine(specConstantNum++))
         .toStringRef(specCstName);
 
-    return rewriter.create<mlir::spirv::SpecConstantOp>(
+    return rewriter.create<spirv::SpecConstantOp>(
         loc, rewriter.getStringAttr(specCstName), attr);
   };
-
-  // define GlobalVarOp with printf format string using SpecConstants
-  // and make composite of SpecConstants
   {
-    mlir::Operation *parent =
-        mlir::SymbolTable::getNearestSymbolTable(gpuPrintfOp->getParentOp());
+    Operation *parent =
+        SymbolTable::getNearestSymbolTable(gpuPrintfOp->getParentOp());
 
-    mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
 
-    mlir::Block &entryBlock = *parent->getRegion(0).begin();
+    Block &entryBlock = *parent->getRegion(0).begin();
     rewriter.setInsertionPointToStart(
         &entryBlock); // insertion point at module level
 
-    // Create Constituents with SpecConstant to construct
+    // Create Constituents with SpecConstant by scanning format string
+    // Each character of format string is stored as a spec constant
+    // and then these spec constants are used to create a
     // SpecConstantCompositeOp
-    llvm::SmallString<20> formatString(gpuPrintfOp.getFormat());
+    llvm::SmallString<20> formatString(adaptor.getFormat());
     formatString.push_back('\0'); // Null terminate for C
-    mlir::SmallVector<mlir::Attribute, 4> constituents;
+    SmallVector<Attribute, 4> constituents;
     for (auto c : formatString) {
       auto cSpecConstantOp = createSpecConstant(c);
-      constituents.push_back(mlir::SymbolRefAttr::get(cSpecConstantOp));
+      constituents.push_back(SymbolRefAttr::get(cSpecConstantOp));
     }
 
-    // Create specialization constant composite defined via spirv.SpecConstant
+    // Create SpecConstantCompositeOp to initialize the global variable
     size_t contentSize = constituents.size();
-    auto globalType = mlir::spirv::ArrayType::get(i8Type, contentSize);
-    mlir::spirv::SpecConstantCompositeOp specCstComposite;
-    mlir::SmallString<16> specCstCompositeName;
+    auto globalType = spirv::ArrayType::get(i8Type, contentSize);
+    spirv::SpecConstantCompositeOp specCstComposite;
+    SmallString<16> specCstCompositeName;
     (llvm::Twine(globalVarName) + "_scc").toStringRef(specCstCompositeName);
-    specCstComposite = rewriter.create<mlir::spirv::SpecConstantCompositeOp>(
-        loc, mlir::TypeAttr::get(globalType),
+    specCstComposite = rewriter.create<spirv::SpecConstantCompositeOp>(
+        loc, TypeAttr::get(globalType),
         rewriter.getStringAttr(specCstCompositeName),
         rewriter.getArrayAttr(constituents));
 
-    // Define GlobalVariable initialized from Constant Composite
-    globalVar = rewriter.create<mlir::spirv::GlobalVariableOp>(
-        loc,
-        mlir::spirv::PointerType::get(
-            globalType, mlir::spirv::StorageClass::UniformConstant),
-        globalVarName, mlir::FlatSymbolRefAttr::get(specCstComposite));
+    auto ptrType = spirv::PointerType::get(
+        globalType, spirv::StorageClass::UniformConstant);
+
+    // Define a GlobalVarOp initialized using specialized constants
+    // that is used to specify the printf format string
+    // to be passed to the SPIRV CLPrintfOp.
+    globalVar = rewriter.create<spirv::GlobalVariableOp>(
+        loc, ptrType, globalVarName, FlatSymbolRefAttr::get(specCstComposite));
 
     globalVar->setAttr("Constant", rewriter.getUnitAttr());
   }
-
   // Get SSA value of Global variable
-  mlir::Value globalPtr =
-      rewriter.create<mlir::spirv::AddressOfOp>(loc, globalVar);
-  mlir::Value fmtStr = rewriter.create<mlir::spirv::BitcastOp>(
+  Value globalPtr = rewriter.create<spirv::AddressOfOp>(loc, globalVar);
+  Value fmtStr = rewriter.create<spirv::BitcastOp>(
       loc,
-      mlir::spirv::PointerType::get(i8Type,
-                                    mlir::spirv::StorageClass::UniformConstant),
+      spirv::PointerType::get(i8Type, spirv::StorageClass::UniformConstant),
       globalPtr);
 
   // Get printf arguments
   auto argsRange = adaptor.getArgs();
-  mlir::SmallVector<mlir::Value, 4> printfArgs;
+  SmallVector<Value, 4> printfArgs;
   printfArgs.reserve(argsRange.size() + 1);
   printfArgs.append(argsRange.begin(), argsRange.end());
 
-  rewriter.create<mlir::spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
+  rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
 
   rewriter.eraseOp(gpuPrintfOp);
 
-  return mlir::success();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
