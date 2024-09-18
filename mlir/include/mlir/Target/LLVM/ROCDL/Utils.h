@@ -81,7 +81,7 @@ public:
 
 protected:
   /// Adds `oclc` control variables to the LLVM Module if needed and sets
-  /// `amdhsa_code_object_version` module flag
+  /// `amdhsa_code_object_version` module flag.
   void addControlVariables(llvm::Module &module, AMDGCNLibraries libs,
                            bool wave64, bool daz, bool finiteOnly,
                            bool unsafeMath, bool fastMath, bool correctSqrt,
