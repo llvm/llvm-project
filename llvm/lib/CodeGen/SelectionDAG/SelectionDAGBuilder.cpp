@@ -2183,7 +2183,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
   }
 
   if (!FuncInfo.CanLowerReturn) {
-    unsigned DemoteReg = FuncInfo.DemoteRegister;
+    Register DemoteReg = FuncInfo.DemoteRegister;
     const Function *F = I.getParent()->getParent();
 
     // Emit a store of the return value through the virtual register.
@@ -3013,7 +3013,7 @@ void SelectionDAGBuilder::visitJumpTableHeader(SwitchCG::JumpTable &JT,
   SwitchOp =
       DAG.getZExtOrTrunc(Sub, dl, TLI.getJumpTableRegTy(DAG.getDataLayout()));
 
-  unsigned JumpTableReg =
+  Register JumpTableReg =
       FuncInfo.CreateReg(TLI.getJumpTableRegTy(DAG.getDataLayout()));
   SDValue CopyTo =
       DAG.getCopyToReg(getControlRoot(), dl, JumpTableReg, SwitchOp);
@@ -7748,7 +7748,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const auto *CPI = cast<CatchPadInst>(I.getArgOperand(0));
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
     const TargetRegisterClass *PtrRC = TLI.getRegClassFor(PtrVT);
-    unsigned VReg = FuncInfo.getCatchPadExceptionPointerVReg(CPI, PtrRC);
+    Register VReg = FuncInfo.getCatchPadExceptionPointerVReg(CPI, PtrRC);
     SDValue N = DAG.getCopyFromReg(DAG.getEntryNode(), sdl, VReg, PtrVT);
     if (Intrinsic == Intrinsic::eh_exceptioncode)
       N = DAG.getZExtOrTrunc(N, sdl, MVT::i32);
@@ -11817,8 +11817,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     // Update the SwiftErrorVRegDefMap.
     if (Res.getOpcode() == ISD::CopyFromReg && isSwiftErrorArg) {
-      unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg))
+      Register Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
+      if (Reg.isVirtual())
         SwiftError->setCurrentVReg(FuncInfo->MBB, SwiftError->getFunctionArg(),
                                    Reg);
     }
@@ -11829,8 +11829,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // If we can, though, try to skip creating an unnecessary vreg.
       // FIXME: This isn't very clean... it would be nice to make this more
       // general.
-      unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      Register Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
+      if (Reg.isVirtual()) {
         FuncInfo->ValueMap[&Arg] = Reg;
         continue;
       }

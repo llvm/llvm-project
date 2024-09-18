@@ -760,7 +760,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddPointer(cast<BasicBlockSDNode>(N)->getBasicBlock());
     break;
   case ISD::Register:
-    ID.AddInteger(cast<RegisterSDNode>(N)->getReg());
+    ID.AddInteger(cast<RegisterSDNode>(N)->getReg().id());
     break;
   case ISD::RegisterMask:
     ID.AddPointer(cast<RegisterMaskSDNode>(N)->getRegMask());
@@ -2292,16 +2292,16 @@ SDValue SelectionDAG::getCommutedVectorShuffle(const ShuffleVectorSDNode &SV) {
   return getVectorShuffle(VT, SDLoc(&SV), Op1, Op0, MaskVec);
 }
 
-SDValue SelectionDAG::getRegister(unsigned RegNo, EVT VT) {
+SDValue SelectionDAG::getRegister(Register Reg, EVT VT) {
   SDVTList VTs = getVTList(VT);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::Register, VTs, std::nullopt);
-  ID.AddInteger(RegNo);
+  ID.AddInteger(Reg.id());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<RegisterSDNode>(RegNo, VTs);
+  auto *N = newSDNode<RegisterSDNode>(Reg, VTs);
   N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
