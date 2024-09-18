@@ -635,8 +635,8 @@ public:
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
 
   /// If the phi is within a phi web, which is formed by the def-use chain
-  // of phis and all the phis in the web are only used in the other phis.
-  // In this case, these phis are dead and we will remove all of them.
+  /// of phis and all the phis in the web are only used in the other phis.
+  /// In this case, these phis are dead and we will remove all of them.
   bool foldDeadPhiWeb(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
