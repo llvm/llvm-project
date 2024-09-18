@@ -96,6 +96,8 @@ def note_constexpr_pointer_constant_comparison : Note<
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
   "comparison of addresses of literals has unspecified value">;
+def note_constexpr_opaque_call_comparison : Note<
+  "comparison against opaque constant has unspecified value">;
 def note_constexpr_pointer_weak_comparison : Note<
   "comparison against address of weak declaration '%0' can only be performed "
   "at runtime">;
