@@ -1098,7 +1098,7 @@ void Prescanner::FortranInclude(const char *firstQuote) {
   const SourceFile *included{
       allSources_.Open(path, error, std::move(prependPath))};
   if (!included) {
-    Say(provenance, "INCLUDE: %s"_err_en_US, error.str());
+    Say(provenance, "INCLUDE: %s"_err_en_US, buf);
   } else if (included->bytes() > 0) {
     ProvenanceRange includeLineRange{
         provenance, static_cast<std::size_t>(p - nextLine_)};

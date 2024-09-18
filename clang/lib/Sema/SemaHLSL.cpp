@@ -615,11 +615,11 @@ bool clang::CreateHLSLAttributedResourceType(
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
-  TypeSourceInfo *ContainedTyInfo;
+  TypeSourceInfo *ContainedTyInfo = nullptr;
   SourceLocation LocBegin = AttrList[0]->getRange().getBegin();
   SourceLocation LocEnd = AttrList[0]->getRange().getEnd();
 
-  HLSLAttributedResourceType::Attributes ResAttrs = {};
+  HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
   for (const Attr *A : AttrList) {
@@ -646,6 +646,13 @@ bool clang::CreateHLSLAttributedResourceType(
         return false;
       }
       ResAttrs.IsROV = true;
+      break;
+    case attr::HLSLRawBuffer:
+      if (ResAttrs.RawBuffer) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.RawBuffer = true;
       break;
     case attr::HLSLContainedType: {
       const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
@@ -675,7 +682,7 @@ bool clang::CreateHLSLAttributedResourceType(
   ResType = S.getASTContext().getHLSLAttributedResourceType(
       Wrapped, ContainedTy, ResAttrs);
 
-  if (LocInfo) {
+  if (LocInfo && ContainedTyInfo) {
     LocInfo->Range = SourceRange(LocBegin, LocEnd);
     LocInfo->ContainedTyInfo = ContainedTyInfo;
   }
@@ -718,6 +725,10 @@ bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    break;
+
+  case ParsedAttr::AT_HLSLRawBuffer:
+    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -845,7 +856,7 @@ static bool ContainsResourceForRegisterType(Sema &S, const RecordType *RT,
 static void CheckContainsResourceForRegisterType(Sema &S,
                                                  SourceLocation &ArgLoc,
                                                  Decl *D,
-                                                 RegisterType RegType) {
+                                                 RegisterType RegType, bool SpecifiedSpace) {
   int RegTypeNum = static_cast<int>(RegType);
 
   // check if the decl type is groupshared
@@ -883,8 +894,11 @@ static void CheckContainsResourceForRegisterType(Sema &S,
 
   // Basic types
   if (Ty->isArithmeticType()) {
-    if (!isa<HLSLBufferDecl>(D->getDeclContext()) &&
-        (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
+    bool DeclaredInCOrTBuffer = isa<HLSLBufferDecl>(D->getDeclContext());
+    if (SpecifiedSpace && !DeclaredInCOrTBuffer)
+      S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
+
+    if (!DeclaredInCOrTBuffer && (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
       // Default Globals
       if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
@@ -941,7 +955,7 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
 }
 
 static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
-                                          Decl *D, RegisterType RegType) {
+                                          Decl *D, RegisterType RegType, bool SpecifiedSpace) {
 
   // exactly one of these two types should be set
   assert(((isa<VarDecl>(D) && !isa<HLSLBufferDecl>(D)) ||
@@ -949,7 +963,7 @@ static void DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
          "expecting VarDecl or HLSLBufferDecl");
 
   // check if the declaration contains resource matching the register type
-  CheckContainsResourceForRegisterType(S, ArgLoc, D, RegType);
+  CheckContainsResourceForRegisterType(S, ArgLoc, D, RegType, SpecifiedSpace);
 
   // next, if multiple register annotations exist, check that none conflict.
   ValidateMultipleRegisterAnnotations(S, D, RegType);
@@ -976,7 +990,9 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   SourceLocation ArgLoc = Loc->Loc;
 
   SourceLocation SpaceArgLoc;
+  bool SpecifiedSpace = false;
   if (AL.getNumArgs() == 2) {
+    SpecifiedSpace = true;
     Slot = Str;
     if (!AL.isArgIdent(1)) {
       Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -1024,7 +1040,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     return;
   }
 
-  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType);
+  DiagnoseHLSLRegisterAttribute(SemaRef, ArgLoc, TheDecl, regType,
+                                SpecifiedSpace);
 
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(getASTContext(), Slot, Space, AL);
