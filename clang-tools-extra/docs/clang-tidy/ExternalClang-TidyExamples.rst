@@ -17,7 +17,7 @@ pull-request on `LLVM Github`_ to have it added here. Since the primary purpose 
 this page is to provide examples that can help developers, the listed projects should
 have code available.
 
-As :program:`clang-tidy` shares C++ AST Matchers with Clang diagnostics, 
+As :program:`clang-tidy` is using, for example, the AST Matchers and diagnostics of Clang,
 `External Clang Examples`_ may also be useful to look at for such examples.
 
 .. _LLVM Github: https://github.com/llvm/llvm-project
