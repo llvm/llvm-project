@@ -53,8 +53,7 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  void checkUsers(std::optional<Register> &CommonVL, bool &CanReduceVL,
-                  MachineInstr &MI);
+  bool checkUsers(std::optional<Register> &CommonVL, MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -1462,12 +1461,13 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-void RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
-                                  bool &CanReduceVL, MachineInstr &MI) {
+bool RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
+                                  MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
   // pass.
+  bool CanReduceVL = true;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
@@ -1541,6 +1541,7 @@ void RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
       break;
     }
   }
+  return CanReduceVL;
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
@@ -1552,19 +1553,10 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-    // A MI may not produce a vector register when it is at the root of the
-    // traversal. For example:
-    // vec_reg_a = ..., vl_op, sew_op
-    // vec_reg_a = ..., vl_op, sew_op
-    // scalar_reg = vector_instr vec_reg_a, vec_reg_b, vl_op, sew_op
-    // We'd like to reduce the vl_op on vector_instr, despite it producing
-    // a scalar register. If the produced Dest is not a vector register (such as
-    // vcpop or vfirst), then it has no EEW or EMUL, so there is no need to
-    // check that producer and consumer LMUL and SEW of usres match.
     std::optional<Register> CommonVL;
     bool CanReduceVL = true;
     if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
-      checkUsers(CommonVL, CanReduceVL, MI);
+      CanReduceVL = checkUsers(CommonVL, MI);
 
     if (!CanReduceVL || !CommonVL)
       continue;
