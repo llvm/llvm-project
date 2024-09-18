@@ -17,13 +17,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  bind
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.bind
-)
-
-add_entrypoint_object(
   send
   ALIAS
   DEPENDS
@@ -63,25 +56,4 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.recvmsg
-)
-
-add_entrypoint_object(
-  connect
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.connect
-)
-
-add_entrypoint_object(
-  accept
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.accept
-)
-
-add_entrypoint_object(
-  listen
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.listen
 )
