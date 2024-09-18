@@ -245,7 +245,7 @@ void saveModuleForTwoRounds(const Module &TheModule, unsigned Task) {
   if (EC)
     report_fatal_error(Twine("Failed to open ") + Path +
                        " to save optimized bitcode: " + EC.message());
-  WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
+  WriteBitcodeToFile(TheModule, OS, /*ShouldPreserveUseListOrder=*/true);
 }
 
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
@@ -259,7 +259,7 @@ std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
                        " to load optimized bitcode: " + EC.message());
 
   std::unique_ptr<MemoryBuffer> FileBuffer = std::move(*FileOrError);
-  auto RestoredModule = llvm::parseBitcodeFile(*FileBuffer, Context);
+  auto RestoredModule = parseBitcodeFile(*FileBuffer, Context);
   if (!RestoredModule)
     report_fatal_error(Twine("Failed to parse optimized bitcode loaded from ") +
                        Path + "\n");
