@@ -1575,7 +1575,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(
       dbgs()
       << "LV: Found an early exit. Retrying with speculative exit count.\n");
-  const SCEV *SpecExitCount = PSE.getSymbolicMaxBackedgeTakenCount();
+  [[maybe_unused]] const SCEV *SpecExitCount =
+      PSE.getSymbolicMaxBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(SpecExitCount) &&
          "Failed to get symbolic expression for backedge taken count");
 
