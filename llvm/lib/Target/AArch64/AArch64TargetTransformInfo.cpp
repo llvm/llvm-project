@@ -1978,7 +1978,7 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   if (DivisorValue == -1)
     return std::nullopt;
   if (DivisorValue == 1)
-    IC.replaceInstUsesWith(II, II.getOperand(1));
+    IC.replaceInstUsesWith(II, Vec);
 
   if (Divisor.isPowerOf2()) {
     Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
