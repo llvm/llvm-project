@@ -13983,7 +13983,8 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
         return DiagComparison(diag::note_constexpr_literal_comparison);
       if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
-        return DiagComparison(diag::note_constexpr_opaque_call_comparison);
+        return DiagComparison(diag::note_constexpr_opaque_call_comparison,
+                              !IsOpaqueConstantCall(LHSValue));
       // We can't tell whether weak symbols will end up pointing to the same
       // object.
       if (IsWeakLValue(LHSValue) || IsWeakLValue(RHSValue))
