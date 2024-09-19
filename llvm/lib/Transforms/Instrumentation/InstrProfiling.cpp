@@ -1265,19 +1265,14 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     Value *IncStep = Inc->getStep();
     auto *CtrTy = IncStep->getType();
     Value *Load = Builder.CreateLoad(CtrTy, Addr, "pgocount");
-    Value *Count;
-
     if (ConditionalCounterUpdate) {
       Instruction *SplitBefore = Inc->getNextNode();
       Value *Cmp = Builder.CreateIsNull(Load, "pgocount.ifzero");
       Instruction *ThenBranch =
           SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
       Builder.SetInsertPoint(ThenBranch);
-      Count = ConstantInt::get(CtrTy, 1);
-    } else {
-      Count = Builder.CreateAdd(Load, Inc->getStep());
     }
-
+    auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
