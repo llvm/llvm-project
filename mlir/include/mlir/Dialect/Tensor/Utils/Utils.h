@@ -19,7 +19,8 @@ namespace tensor {
 // dimensions the padding width is set to zero. The op performs "high" padding
 // (i.e. it adds trailing padding values until the desired size is met).
 PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
-                      bool nofold, Location loc, OpBuilder &builder);
+                      bool nofold, Location loc, OpBuilder &builder,
+                      std::optional<Value> dynOutDim = {});
 
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.

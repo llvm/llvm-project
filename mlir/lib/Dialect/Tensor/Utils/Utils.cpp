@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR//VectorOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -23,19 +24,39 @@ using namespace mlir::tensor;
 
 PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
                                     Value pad, bool nofold, Location loc,
-                                    OpBuilder &b) {
+                                    OpBuilder &b,
+                                    std::optional<Value> dynOutDim) {
+  assert(llvm::count_if(
+             type.getShape(),
+             [](int64_t dim) { return ShapedType::isDynamic(dim); }) <= 1 &&
+         "At most one output dim can be dynamic!");
+
+  // Init "low" and "high" padding values ("low" is kept as is, "high" is
+  // computed below).
   SmallVector<OpFoldResult> low(type.getRank(), b.getIndexAttr(0));
   SmallVector<OpFoldResult> high(type.getRank(), b.getIndexAttr(0));
   for (const auto &en : enumerate(type.getShape())) {
-    // Pad only the static dimensions of the result tensor type.
-    if (ShapedType::isDynamic(en.value()))
-      continue;
-    // Compute the padding width.
-    AffineExpr d0;
-    bindDims(b.getContext(), d0);
-    OpFoldResult sz = tensor::getMixedSize(b, loc, source, en.index());
-    high[en.index()] =
-        affine::makeComposedFoldedAffineApply(b, loc, en.value() - d0, {sz});
+    if (!ShapedType::isDynamic(en.value())) {
+      // Static sizes - the "high" value is computed based on the input and
+      // output dims. Compute the padding width.
+      AffineExpr d0;
+      bindDims(b.getContext(), d0);
+      OpFoldResult sz = tensor::getMixedSize(b, loc, source, en.index());
+      high[en.index()] =
+          affine::makeComposedFoldedAffineApply(b, loc, en.value() - d0, {sz});
+    } else {
+      // Dynamic sizes - the "high" value is computed based on the input dim
+      // and `dynOutDim`.
+      assert(dynOutDim.has_value() &&
+             "dynamic output dim requires dynOutDim to be set");
+
+      // Compute the padding width.
+      AffineExpr d0, d1;
+      auto dimVal = b.create<tensor::DimOp>(loc, source, en.index());
+      bindDims(b.getContext(), d0, d1);
+      high[en.index()] = affine::makeComposedFoldedAffineApply(
+          b, loc, d0 - d1, {dynOutDim.value(), dimVal.getResult()});
+    }
   }
   return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
 }
