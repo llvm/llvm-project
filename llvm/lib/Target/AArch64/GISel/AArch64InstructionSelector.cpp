@@ -1995,8 +1995,8 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
 
-  if (STI.isCallingConvWin64(
-          MF.getFunction().getCallingConv(), MF.getFunction().isVarArg()))
+  if (STI.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                             MF.getFunction().isVarArg()))
     return false;
 
   // The layout of the va_list struct is specified in the AArch64 Procedure Call
@@ -2044,8 +2044,7 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
               .addImm(OffsetBytes / PtrSize)
               .addMemOperand(MF.getMachineMemOperand(
                   MMO->getPointerInfo().getWithOffset(OffsetBytes),
-                  MachineMemOperand::MOStore, PtrSize,
-                  MMO->getBaseAlign()));
+                  MachineMemOperand::MOStore, PtrSize, MMO->getBaseAlign()));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 
     OffsetBytes += PtrSize;
@@ -2080,8 +2079,7 @@ bool AArch64InstructionSelector::selectVaStartAAPCS(
               .addImm(OffsetBytes / IntSize)
               .addMemOperand(MF.getMachineMemOperand(
                   MMO->getPointerInfo().getWithOffset(OffsetBytes),
-                  MachineMemOperand::MOStore, IntSize,
-                  MMO->getBaseAlign()));
+                  MachineMemOperand::MOStore, IntSize, MMO->getBaseAlign()));
     constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
     OffsetBytes += IntSize;
   };
