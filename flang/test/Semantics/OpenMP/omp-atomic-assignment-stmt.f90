@@ -102,19 +102,19 @@ program sample
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable x expected to be assigned in statement 2 of atomic capture construct
+    !ERROR: Captured variable x expected to be assigned in the second statement of atomic capture construct
         v = x
         b = b + 1
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable x expected to be assigned in statement 2 of atomic capture construct
+    !ERROR: Captured variable x expected to be assigned in the second statement of atomic capture construct
         v = x
         b = 10
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Updated variable x expected to be captured in statement 2 of atomic capture construct
+    !ERROR: Updated variable x expected to be captured in the second statement of atomic capture construct
         x = x + 10
         v = b
     !$omp end atomic

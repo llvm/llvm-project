@@ -2014,7 +2014,7 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
             "Captured variable %s "
             "expected to be assigned in the second statement of "
             "atomic capture construct"_err_en_US,
-            stmt1ExprSymbol.name().ToString());
+            stmt1ExprSymbol.name());
       }
     }
   } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
@@ -2033,7 +2033,7 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
             "Updated variable %s "
             "expected to be captured in the second statement of "
             "atomic capture construct"_err_en_US,
-            stmt1Var.GetSource().ToString());
+            stmt1Var.GetSource());
     }
   } else {
     context_.Say(stmt1Expr.source,
