@@ -449,6 +449,7 @@ class SPIRVStructurizer : public FunctionPass {
     createAliasBlocksForComplexEdges(std::vector<Edge> Edges) {
       std::unordered_map<BasicBlock *, BasicBlock *> Seen;
       std::vector<Edge> Output;
+      Output.reserve(Edges.size());
 
       for (auto &[Src, Dst] : Edges) {
         auto [iterator, inserted] = Seen.insert({Src, Dst});
@@ -613,6 +614,8 @@ class SPIRVStructurizer : public FunctionPass {
       // adding an unreachable merge block.
       if (Merge == nullptr) {
         BranchInst *Br = cast<BranchInst>(BB.getTerminator());
+        assert(Br &&
+               "This assumes the branch is not a switch. Maybe that's wrong?");
         assert(cast<BranchInst>(BB.getTerminator())->isUnconditional());
 
         Merge = CreateUnreachable(F);
@@ -864,20 +867,21 @@ class SPIRVStructurizer : public FunctionPass {
 
   // Fixup the construct |Node| to respect a set of rules defined by the SPIR-V
   // spec.
-  void fixupConstruct(Splitter &S, DivergentConstruct *Node) {
+  bool fixupConstruct(Splitter &S, DivergentConstruct *Node) {
+    bool Modified = false;
     for (auto &Child : Node->Children)
-      fixupConstruct(S, Child.get());
+      Modified |= fixupConstruct(S, Child.get());
 
     // This construct is the root construct. Does not represent any real
     // construct, just a way to access the first level of the forest.
     if (Node->Parent == nullptr)
-      return;
+      return Modified;
 
     // This node's parent is the root. Meaning this is a top-level construct.
     // There can be multiple exists, but all are guaranteed to exit at most 1
     // construct since we are at first level.
     if (Node->Parent->Header == nullptr)
-      return;
+      return Modified;
 
     // Health check for the structure.
     assert(Node->Header && Node->Merge);
@@ -888,7 +892,7 @@ class SPIRVStructurizer : public FunctionPass {
 
     //  No edges exiting the construct.
     if (Edges.size() < 1)
-      return;
+      return Modified;
 
     bool HasBadEdge = Node->Merge == Node->Parent->Merge ||
                       Node->Merge == Node->Parent->Continue;
@@ -914,7 +918,7 @@ class SPIRVStructurizer : public FunctionPass {
     }
 
     if (!HasBadEdge)
-      return;
+      return Modified;
 
     // Create a single exit node gathering all exit edges.
     BasicBlock *NewExit = S.createSingleExitNode(Node->Header, Edges);
@@ -940,6 +944,7 @@ class SPIRVStructurizer : public FunctionPass {
     Node->Merge = NewExit;
     // Regenerate the dom trees.
     S.invalidate();
+    return true;
   }
 
   bool splitCriticalEdges(Function &F) {
@@ -949,9 +954,7 @@ class SPIRVStructurizer : public FunctionPass {
     DivergentConstruct Root;
     BlockSet Visited;
     constructDivergentConstruct(Visited, S, &*F.begin(), &Root);
-    fixupConstruct(S, &Root);
-
-    return true;
+    return fixupConstruct(S, &Root);
   }
 
   // Simplify branches when possible:
@@ -1170,7 +1173,7 @@ public:
 
     // STEP 3:
     // Sort selection merge, the largest construct goes first.
-    // This simpligies the next step.
+    // This simplifies the next step.
     Modified |= sortSelectionMergeHeaders(F);
 
     // STEP 4: As this stage, we can have a single basic block with multiple
