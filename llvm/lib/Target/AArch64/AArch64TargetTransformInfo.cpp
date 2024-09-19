@@ -521,8 +521,7 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
 
   unsigned EltSize = EltTy->getScalarSizeInBits();
   // Only allow (up to 64b) integers or pointers
-  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      EltSize > 64)
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) || EltSize > 64)
     return InstructionCost::getInvalid();
 
   // FIXME: We should be able to generate histcnt for fixed-length vectors
