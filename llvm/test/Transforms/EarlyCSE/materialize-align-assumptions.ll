@@ -3,6 +3,24 @@
 
 declare void @foo(ptr)
 
+define ptr @align_replacement_does_not_have_align_metadata_missing_noundef(ptr noalias %p) {
+; CHECK-LABEL: define ptr @align_replacement_does_not_have_align_metadata_missing_noundef(
+; CHECK-SAME: ptr noalias [[P:%.*]]) {
+; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    call void @foo(ptr [[L_1]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[L_1]], i64 4
+; CHECK-NEXT:    store ptr [[GEP]], ptr [[P]], align 8
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %l.1 = load ptr, ptr %p, align 8
+  call void @foo(ptr %l.1)
+  %l.2 = load ptr, ptr %p, align 8
+  %gep = getelementptr i8, ptr %l.2, i64 4
+  store ptr %gep, ptr %p, align 8
+  %l.3 = load ptr, ptr %p, align 8, !align !0
+  ret ptr %l.3
+}
+
 define ptr @align_replacement_does_not_have_align_metadata(ptr noalias %p) {
 ; CHECK-LABEL: define ptr @align_replacement_does_not_have_align_metadata(
 ; CHECK-SAME: ptr noalias [[P:%.*]]) {
@@ -18,7 +36,7 @@ define ptr @align_replacement_does_not_have_align_metadata(ptr noalias %p) {
   %l.2 = load ptr, ptr %p, align 8
   %gep = getelementptr i8, ptr %l.2, i64 4
   store ptr %gep, ptr %p, align 8
-  %l.3 = load ptr, ptr %p, align 8, !align !0
+  %l.3 = load ptr, ptr %p, align 8, !align !0, !noundef !{}
   ret ptr %l.3
 }
 
@@ -34,7 +52,7 @@ define ptr @align_replacement_does_not_have_align_metadata2(ptr noalias %p) {
   %l.1 = load ptr, ptr %p, align 8
   %gep = getelementptr i8, ptr %l.1, i64 4
   store ptr %gep, ptr %p, align 8
-  %l.2 = load ptr, ptr %p, align 8, !align !0
+  %l.2 = load ptr, ptr %p, align 8, !align !0, !noundef !{}
   ret ptr %l.2
 }
 
@@ -61,7 +79,7 @@ define ptr @align_replacement_has_smaller_alignment(ptr noalias %p) {
 ;
   %l.1 = load ptr, ptr %p, align 8, !align !0
   call void @foo(ptr %l.1)
-  %l.2 = load ptr, ptr %p, align 8, !align !1
+  %l.2 = load ptr, ptr %p, align 8, !align !1, !noundef !{}
   ret ptr %l.2
 }
 
@@ -70,12 +88,12 @@ define ptr @align_replacement_has_larger_alignment(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[P]], align 8, !align [[META1:![0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr [[L_1]])
-; CHECK-NEXT:    [[L_2:%.*]] = load ptr, ptr [[P]], align 8, !align [[META0]]
+; CHECK-NEXT:    [[L_2:%.*]] = load ptr, ptr [[P]], align 8, !align [[META0]], !noundef [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[L_2]]
 ;
   %l.1 = load ptr, ptr %p, align 8, !align !1
   call void @foo(ptr %l.1)
-  %l.2 = load ptr, ptr %p, align 8, !align !0
+  %l.2 = load ptr, ptr %p, align 8, !align !0, !noundef !{}
   ret ptr %l.2
 }
 
@@ -84,12 +102,12 @@ define ptr @align_1(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[L_1:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @foo(ptr [[L_1]])
-; CHECK-NEXT:    [[L_2:%.*]] = load ptr, ptr [[P]], align 8, !align [[META2:![0-9]+]]
+; CHECK-NEXT:    [[L_2:%.*]] = load ptr, ptr [[P]], align 8, !align [[META3:![0-9]+]], !noundef [[META2]]
 ; CHECK-NEXT:    ret ptr [[L_2]]
 ;
   %l.1 = load ptr, ptr %p, align 8
   call void @foo(ptr %l.1)
-  %l.2 = load ptr, ptr %p, align 8, !align !2
+  %l.2 = load ptr, ptr %p, align 8, !align !2, !noundef !{}
   ret ptr %l.2
 }
 
@@ -99,5 +117,6 @@ define ptr @align_1(ptr %p) {
 ;.
 ; CHECK: [[META0]] = !{i64 4}
 ; CHECK: [[META1]] = !{i64 8}
-; CHECK: [[META2]] = !{i64 1}
+; CHECK: [[META2]] = !{}
+; CHECK: [[META3]] = !{i64 1}
 ;.
