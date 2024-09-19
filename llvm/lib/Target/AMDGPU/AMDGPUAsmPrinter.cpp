@@ -1084,6 +1084,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       MCBinaryExpr::createGT(ProgInfo.ScratchBlocks,
                              MCConstantExpr::create(0, Ctx), Ctx),
       ProgInfo.DynamicCallStack, Ctx);
+  ProgInfo.ScratchEnable = MCBinaryExpr::createLOr(
+      MCBinaryExpr::createGT(ProgInfo.LaneSharedSegmentSize,
+                             MCConstantExpr::create(0, Ctx), Ctx),
+      ProgInfo.ScratchEnable, Ctx);
 
   ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
   // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.

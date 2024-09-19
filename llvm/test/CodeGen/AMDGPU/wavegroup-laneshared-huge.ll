@@ -45,7 +45,7 @@ entry:
 ; KERNEL-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; KERNEL-NEXT:         .amdhsa_enable_wavegroup 1
 ; KERNEL-NEXT:         .amdhsa_laneshared_segment_fixed_size 8192
-; KERNEL-NEXT:         .amdhsa_enable_private_segment 0
+; KERNEL-NEXT:         .amdhsa_enable_private_segment 1
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_x 1
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_y 0
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_z 0
