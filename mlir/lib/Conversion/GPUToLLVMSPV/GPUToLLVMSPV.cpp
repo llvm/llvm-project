@@ -312,16 +312,15 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
 class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
 public:
-  MemorySpaceToOpenCLMemorySpaceConverter() {
+  MemorySpaceToOpenCLMemorySpaceConverter(MLIRContext *ctx) {
     addConversion([](Type t) { return t; });
-    addConversion([](BaseMemRefType memRefType) -> std::optional<Type> {
+    addConversion([ctx](BaseMemRefType memRefType) -> std::optional<Type> {
       // Attach global addr space attribute to memrefs with no addr space attr
       Attribute memSpaceAttr = memRefType.getMemorySpace();
       if (memSpaceAttr)
         return std::nullopt;
 
-      auto addrSpaceAttr = gpu::AddressSpaceAttr::get(
-          memRefType.getContext(), gpu::AddressSpace::Global);
+      Attribute addrSpaceAttr = IntegerAttr::get(IntegerType::get(ctx, 64), 1);
       if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
         return MemRefType::get(memRefType.getShape(),
                                memRefType.getElementType(),
@@ -361,7 +360,7 @@ struct GPUToLLVMSPVConversionPass final
 
     // Force OpenCL address spaces when they are not present
     {
-      MemorySpaceToOpenCLMemorySpaceConverter converter;
+      MemorySpaceToOpenCLMemorySpaceConverter converter(context);
       AttrTypeReplacer replacer;
       replacer.addReplacement([&converter](BaseMemRefType origType)
                                   -> std::optional<BaseMemRefType> {
@@ -379,8 +378,6 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ReturnOp, gpu::ShuffleOp, gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
-    populateFuncToLLVMConversionPatterns(converter, patterns);
-    populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
     populateGpuMemorySpaceAttributeConversions(converter);
 
     if (failed(applyPartialConversion(getOperation(), target,

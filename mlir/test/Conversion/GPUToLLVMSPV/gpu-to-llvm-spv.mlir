@@ -531,18 +531,20 @@ gpu.module @kernels {
 // CHECK-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
 // CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK:         llvm.call @no_address_spaces_callee
+// CHECK:         func.call @no_address_spaces_callee(%{{[0-9]+}}, %{{[0-9]+}})
+// CHECK-SAME:                                        : (memref<2x2xf32, 1>, memref<4xf32, 1>)
   gpu.func @no_address_spaces_complex(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) kernel {
     func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
     gpu.return
   }
-// CHECK-LABEL:   llvm.func @no_address_spaces_callee(
-// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-LABEL:   func.func @no_address_spaces_callee(
+// CHECK-SAME:                                             [[ARG0:%.*]]: memref<2x2xf32, 1> 
+// CHECK-SAME:                                             [[ARG1:%.*]]: memref<4xf32, 1>
 // CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:         llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
-// CHECK:         [[LD:%.*]] = llvm.load
-// CHECK:         llvm.store [[LD]]
+// CHECK:         [[I0:%.*]] = llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
+// CHECK:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i64 to index
+// CHECK:         [[LD:%.*]] = memref.load [[ARG0]]{{\[}}[[I1]], [[I1]]{{\]}} : memref<2x2xf32, 1>
+// CHECK:         memref.store [[LD]], [[ARG1]]{{\[}}[[I1]]{{\]}} : memref<4xf32, 1>
   func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
     %block_id = gpu.block_id x
     %0 = memref.load %arg0[%block_id, %block_id] : memref<2x2xf32>
