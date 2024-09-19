@@ -39,7 +39,7 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, bool hasStat,
   if (stat == StatOk) {
     void *deviceAddr{
         RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
-    RTDECL(CUFDescriptorSync)(
+    RTNAME(CUFDescriptorSync)(
         (Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
 #endif
@@ -57,7 +57,7 @@ int RTDEF(CUFAllocatableDeallocate)(Descriptor &desc, bool hasStat,
   if (stat == StatOk) {
     void *deviceAddr{
         RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
-    RTDECL(CUFDescriptorSync)(
+    RTNAME(CUFDescriptorSync)(
         (Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
 #endif
