@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_IOVEC_H__
-#define __LLVM_LIBC_TYPES_STRUCT_IOVEC_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_IOVEC_H
+#define LLVM_LIBC_TYPES_STRUCT_IOVEC_H
 
-#include "llvm-libc-types/size_t.h"
+#include "size_t.h"
 
 struct iovec {
   void *iov_base;
   size_t iov_len;
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_IOVEC_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_IOVEC_H
