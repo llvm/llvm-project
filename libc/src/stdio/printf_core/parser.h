@@ -24,6 +24,9 @@
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+#include "src/errno/libc_errno.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
@@ -258,9 +261,16 @@ public:
         }
         break;
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+      case ('m'):
+        // %m is an odd conversion in that it doesn't consume an argument, it
+        // just takes the current value of errno as its argument.
+        section.conv_val_raw = libc_errno;
+        break;
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
-      case ('n'):
-#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
+      case ('n'): // Intentional fallthrough
+#endif            // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('p'):
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
