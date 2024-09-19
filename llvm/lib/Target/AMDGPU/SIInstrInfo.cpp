@@ -4623,13 +4623,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   // FIXME: At this point the COPY verify is done only for non-ssa forms.
   // Find a better property to recognize the point where instruction selection
   // is just done.
-  // We can only enforce this check after SIFixSGPRCopies pass.
+  // We can only enforce this check after SIFixSGPRCopies pass so that the
+  // illegal copies are legalized and thereafter we don't expect a pass
+  // inserting similar copies.
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(MI.getOpcode())) {
+  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
     return true;
-  }
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
