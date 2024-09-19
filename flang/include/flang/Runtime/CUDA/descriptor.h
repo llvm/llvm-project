@@ -25,7 +25,7 @@ Descriptor *RTDECL(CUFAllocDesciptor)(
 void RTDECL(CUFFreeDesciptor)(
     Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
-/// Retrieve the device descriptor's pointer from the host one.
+/// Retrieve the device pointer from the host one.
 void *RTDECL(CUFGetDeviceAddress)(
     void *hostPtr, const char *sourceFile = nullptr, int sourceLine = 0);
 
