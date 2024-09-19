@@ -107,7 +107,6 @@ Additional Resources
 
 .. _llvm_cmake_build_insights:
 
-===============================
 CMake and LLVM Build Insights
 ===============================
 
