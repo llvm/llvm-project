@@ -2542,6 +2542,10 @@ protected:
   /// type and indicate what to do about it. Note that VT may refer to either
   /// the type of a result or that of an operand of Op.
   void setOperationAction(unsigned Op, MVT VT, LegalizeAction Action) {
+    // if(Op == ISD::VECREDUCE_FADD && VT == MVT::nxv1f16)
+    //   asm("int $3");
+    // if(Op == ISD::VECREDUCE_FADD && VT == MVT::nxv1f32)
+    //   asm("int $3");
     assert(Op < std::size(OpActions[0]) && "Table isn't big enough!");
     OpActions[(unsigned)VT.SimpleTy][Op] = Action;
   }

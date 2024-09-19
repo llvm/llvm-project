@@ -538,6 +538,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   }
 
   LLVM_DEBUG(dbgs() << "\nLegalizing vector op: "; Node->dump(&DAG));
+  if (Node->getOpcode() == ISD::VECREDUCE_FADD)
+      Action = TargetLowering::Legal;
 
   SmallVector<SDValue, 8> ResultVals;
   switch (Action) {
@@ -1151,23 +1153,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
     ExpandStrictFPOp(Node, Results);
-    return;
-  case ISD::VECREDUCE_ADD:
-  case ISD::VECREDUCE_MUL:
-  case ISD::VECREDUCE_AND:
-  case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_XOR:
-  case ISD::VECREDUCE_SMAX:
-  case ISD::VECREDUCE_SMIN:
-  case ISD::VECREDUCE_UMAX:
-  case ISD::VECREDUCE_UMIN:
-  case ISD::VECREDUCE_FADD:
-  case ISD::VECREDUCE_FMUL:
-  case ISD::VECREDUCE_FMAX:
-  case ISD::VECREDUCE_FMIN:
-  case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:
-    Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:

@@ -1003,6 +1003,11 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Soften float operand " << OpNo << ": "; N->dump(&DAG));
   SDValue Res = SDValue();
 
+  // if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
+  //   LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
+  //   return false;
+  // }
+
   switch (N->getOpcode()) {
   default:
 #ifndef NDEBUG
