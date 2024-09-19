@@ -103,14 +103,13 @@ GDBRemoteCommunicationServer::SendErrorResponse(uint8_t err) {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendErrorResponse(const Status &error) {
-  uint8_t code = error.GetType() == eErrorTypePOSIX ? error.GetError() : 0xff;
   if (m_send_error_strings) {
     lldb_private::StreamString packet;
-    packet.Printf("E%2.2x;", code);
+    packet.Printf("E%2.2x;", static_cast<uint8_t>(error.GetError()));
     packet.PutStringAsRawHex8(error.AsCString());
     return SendPacketNoLock(packet.GetString());
-  }
-  return SendErrorResponse(code);
+  } else
+    return SendErrorResponse(error.GetError());
 }
 
 GDBRemoteCommunication::PacketResult
