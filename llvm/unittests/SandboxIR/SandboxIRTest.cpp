@@ -956,29 +956,60 @@ define float @foo(float %v, ptr %ptr) {
   store float %v, ptr %ptr
   ret float %v
 }
+define void @bar(float %v, ptr %ptr) {
+  ret void
+}
 )IR");
-  llvm::Function &LLVMF = *M->getFunction("foo");
+  llvm::Function &Foo = *M->getFunction("foo");
   sandboxir::Context Ctx(C);
-  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
 
-  Ctx.createFunction(&LLVMF);
-  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
-  auto It = BB->begin();
-  auto Add = cast<sandboxir::Instruction>(&*It++);
-  auto *S0 = cast<sandboxir::Instruction>(&*It++);
-  auto *Ret = cast<sandboxir::Instruction>(&*It++);
-  // Instruction.getExpectedValue
-  EXPECT_EQ(Add->getExpectedValue(), Add);
-  EXPECT_EQ(S0->getExpectedValue(),
+  Ctx.createFunction(&Foo);
+  auto *FooBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Foo.begin()));
+  auto FooIt = FooBB->begin();
+  auto Add = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *S0 = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *RetF = cast<sandboxir::Instruction>(&*FooIt++);
+  // getExpectedValue
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(Add), Add);
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(S0),
             cast<sandboxir::StoreInst>(S0)->getValueOperand());
-  EXPECT_EQ(Ret->getExpectedValue(),
-            cast<sandboxir::ReturnInst>(Ret)->getReturnValue());
-  // Value.getExpectedType
-  EXPECT_EQ(Add->getExpectedType(), Add->getType());
-  EXPECT_EQ(S0->getExpectedType(),
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue());
+  // getExpectedType
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(Add), Add->getType());
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(S0),
             cast<sandboxir::StoreInst>(S0)->getValueOperand()->getType());
-  EXPECT_EQ(Ret->getExpectedType(),
-            cast<sandboxir::ReturnInst>(Ret)->getReturnValue()->getType());
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue()->getType());
+
+  // getExpectedValue for void returns
+  llvm::Function &Bar = *M->getFunction("bar");
+  Ctx.createFunction(&Bar);
+  auto *BarBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Bar.begin()));
+  auto BarIt = BarBB->begin();
+  auto *RetV = cast<sandboxir::Instruction>(&*BarIt++);
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(RetV), nullptr);
+}
+
+TEST_F(SandboxIRTest, GetNumBits) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg34) {
+bb0:
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+  const DataLayout &DL = M->getDataLayout();
+  // getNumBits for scalars
+  // float
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(0), DL),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(1), DL),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(3), DL), 64u);
 }
 
 TEST_F(SandboxIRTest, RAUW_RUWIf) {

@@ -137,18 +137,6 @@ unsigned Value::getNumUses() const { return range_size(Val->users()); }
 
 Type *Value::getType() const { return Ctx.getType(Val->getType()); }
 
-Type *Value::getExpectedType() const {
-  if (auto *I = dyn_cast<sandboxir::Instruction>(this)) {
-    // A Return's value operand can be null if it returns void.
-    if (auto *RI = dyn_cast<sandboxir::ReturnInst>(I)) {
-      if (RI->getReturnValue() == nullptr)
-        return RI->getType();
-    }
-    return I->getExpectedValue()->getType();
-  }
-  return getType();
-}
-
 void Value::replaceUsesWithIf(
     Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
   assert(getType() == OtherV->getType() && "Can't replace with different type");
@@ -581,14 +569,6 @@ void Instruction::setHasApproxFunc(bool B) {
       .emplaceIfTracking<GenericSetter<&Instruction::hasApproxFunc,
                                        &Instruction::setHasApproxFunc>>(this);
   cast<llvm::Instruction>(Val)->setHasApproxFunc(B);
-}
-
-llvm::sandboxir::Value *Instruction::getExpectedValue() const {
-  if (auto *SI = dyn_cast<StoreInst>(this))
-    return SI->getValueOperand();
-  if (auto *RI = dyn_cast<ReturnInst>(this))
-    return RI->getReturnValue();
-  return const_cast<Instruction *>(this);
 }
 
 #ifndef NDEBUG

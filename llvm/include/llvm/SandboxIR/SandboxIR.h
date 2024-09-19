@@ -411,11 +411,6 @@ public:
 
   Type *getType() const;
 
-  /// \Returns the expected type of \p V. For most Values this is equivalent
-  /// to getType, but for stores returns the stored type, rather than void,
-  /// and for ReturnInsts returns the returned type.
-  Type *getExpectedType() const;
-
   Context &getContext() const { return Ctx; }
 
   void replaceUsesWithIf(Value *OtherV,
@@ -1426,11 +1421,6 @@ public:
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
   void copyFastMathFlags(FastMathFlags FMF);
-
-  /// \Returns the expected Value for this instruction. For most instructions,
-  /// this is the instruction it self, but for stores returns the stored
-  /// operand, and for ReturnInstructions returns the returned value.
-  Value *getExpectedValue() const;
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -4029,6 +4019,42 @@ public:
 #endif
 };
 
+// Collector for SandboxIR related convenience functions that don't belong in
+// other classes.
+class SandboxIRUtils {
+public:
+  /// \Returns the expected type of \p Value V. For most Values this is
+  /// equivalent to getType, but for stores returns the stored type, rather
+  /// than void, and for ReturnInsts returns the returned type.
+  static Type *getExpectedType(const Value *V) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      // A Return's value operand can be null if it returns void.
+      if (auto *RI = dyn_cast<ReturnInst>(I)) {
+        if (RI->getReturnValue() == nullptr)
+          return RI->getType();
+      }
+      return getExpectedValue(I)->getType();
+    }
+    return V->getType();
+  }
+
+  /// \Returns the expected Value for this instruction. For most instructions,
+  /// this is the instruction it self, but for stores returns the stored
+  /// operand, and for ReturnInstructions returns the returned value.
+  static Value *getExpectedValue(const Instruction *I) {
+    if (auto *SI = dyn_cast<StoreInst>(I))
+      return SI->getValueOperand();
+    if (auto *RI = dyn_cast<ReturnInst>(I))
+      return RI->getReturnValue();
+    return const_cast<Instruction *>(I);
+  }
+
+  /// \Returns the number of bits required to represent \p SBV in \p DL.
+  static unsigned getNumBits(sandboxir::Value *SBV, const DataLayout &DL) {
+    Type *Ty = getExpectedType(SBV);
+    return DL.getTypeSizeInBits(Ty->LLVMTy);
+  }
+};
 } // namespace sandboxir
 } // namespace llvm
 
