@@ -1271,7 +1271,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
       RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideVectorRegions())
+        getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy =
         ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
@@ -1353,9 +1353,9 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-VP ";
+  O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode());
+  O << " = vp." << Instruction::getOpcodeName(getOpcode());
   printFlags(O);
   printOperands(O, SlotTracker);
 }
@@ -2093,7 +2093,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 /// TODO: Uniformity should be associated with a VPValue and there should be a
 /// generic way to check.
 static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
-  return C->isDefinedOutsideVectorRegions() ||
+  return C->isDefinedOutsideLoopRegions() ||
          isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
          isa<VPCanonicalIVPHIRecipe>(C->getOperand(0));
 }
@@ -2257,8 +2257,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     return Cost;
 
   return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                        cast<VectorType>(Ty), std::nullopt,
-                                        CostKind, 0);
+                                        cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -2941,10 +2940,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
            "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(
-            StartOffset,
-            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
-            "vector.gep"));
+        State.Builder.CreateMul(StartOffset, State.Builder.CreateVectorSplat(
+                                                 State.VF, ScalarStepValue)),
+        "vector.gep");
     State.set(this, GEP, Part);
   }
 }

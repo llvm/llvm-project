@@ -29,6 +29,8 @@ set(RTSAN_LINK_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${COMPILER_RT_CXX_LINK_LIBS})
 
+append_rtti_flag(OFF RTSAN_CFLAGS)
+
 if(APPLE)
   add_compiler_rt_object_libraries(RTRtsan
     OS ${SANITIZER_COMMON_SUPPORTED_OS}

@@ -1598,6 +1598,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (&F == HwasanCtorFunction)
     return;
 
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
+
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
 

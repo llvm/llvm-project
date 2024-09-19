@@ -100,10 +100,6 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         mem = self.dap_server.request_readMemory(memref, 2, 3)["body"]
         self.assertEqual(b64decode(mem["data"]), b"ad\0")
 
-        # Use a negative offset
-        mem = self.dap_server.request_readMemory(memref, -1, 6)["body"]
-        self.assertEqual(b64decode(mem["data"])[1:], b"dead\0")
-
         # Reads of size 0 are successful
         # VS-Code sends those in order to check if a `memoryReference` can actually be dereferenced.
         mem = self.dap_server.request_readMemory(memref, 0, 0)

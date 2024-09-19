@@ -6004,7 +6004,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Args.hasFlag(options::OPT_fms_volatile, options::OPT_fno_ms_volatile,
-                   Triple.isX86() && D.IsCLMode()))
+                   Triple.isX86() && IsWindowsMSVC))
     CmdArgs.push_back("-fms-volatile");
 
   // Non-PIC code defaults to -fdirect-access-external-data while PIC code
@@ -9221,6 +9221,25 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(A->getValue());
     A->claim();
+  }
+
+  // Pass in the C library for GPUs if present and not disabled.
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r, options::OPT_nogpulib,
+                   options::OPT_nodefaultlibs, options::OPT_nolibc,
+                   options::OPT_nogpulibc)) {
+    forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
+      // The device C library is only available for NVPTX and AMDGPU targets
+      // currently.
+      if (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU())
+        return;
+      bool HasLibC = TC.getStdlibIncludePath().has_value();
+      if (HasLibC) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC.getTripleString() + "=" + "-lc"));
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
+      }
+    });
   }
 
   // If we disable the GPU C library support it needs to be forwarded to the

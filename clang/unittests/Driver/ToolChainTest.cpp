@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -574,6 +575,26 @@ TEST(CompilerInvocation, SplitSwarfSingleCrash) {
   EXPECT_TRUE(CI); // no-crash
 }
 
+TEST(ToolChainTest, UEFICallingConventionTest) {
+  clang::CompilerInstance compiler;
+  compiler.createDiagnostics();
+
+  std::string TrStr = "x86_64-unknown-uefi";
+  llvm::Triple Tr(TrStr);
+  Tr.setOS(llvm::Triple::OSType::UEFI);
+  Tr.setVendor(llvm::Triple::VendorType::UnknownVendor);
+  Tr.setEnvironment(llvm::Triple::EnvironmentType::UnknownEnvironment);
+  Tr.setArch(llvm::Triple::ArchType::x86_64);
+
+  compiler.getTargetOpts().Triple = Tr.getTriple();
+  compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
+      compiler.getDiagnostics(),
+      std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
+
+  EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
+            TargetInfo::CallingConvKind::CCK_MicrosoftWin64);
+}
+
 TEST(GetDriverMode, PrefersLastDriverMode) {
   static constexpr const char *Args[] = {"clang-cl", "--driver-mode=foo",
                                          "--driver-mode=bar", "foo.cpp"};
@@ -662,7 +683,7 @@ struct FileSystemWithError : public llvm::vfs::FileSystem {
     return std::make_error_code(std::errc::no_such_file_or_directory);
   }
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path) override {
+  openFileForRead(const Twine &Path, bool IsText = true) override {
     return std::make_error_code(std::errc::permission_denied);
   }
   llvm::vfs::directory_iterator dir_begin(const Twine &Dir,

@@ -119,6 +119,11 @@ public:
             ensureOnMainThread([this] {
                 delete static_cast<const T*>(this);
             });
+        } else if constexpr (destructionThread == DestructionThread::MainRunLoop) {
+            auto deleteThis = [this] {
+                delete static_cast<const T*>(this);
+            };
+            ensureOnMainThread(deleteThis);
         }
     }
 
@@ -229,4 +234,17 @@ public:
 
 private:
     FancyRefCountedClass4();
+};
+
+class FancyRefCountedClass5 final : public ThreadSafeRefCounted<FancyRefCountedClass5, DestructionThread::MainRunLoop> {
+public:
+    static Ref<FancyRefCountedClass5> create()
+    {
+        return adoptRef(*new FancyRefCountedClass5());
+    }
+
+    virtual ~FancyRefCountedClass5();
+
+private:
+    FancyRefCountedClass5();
 };
