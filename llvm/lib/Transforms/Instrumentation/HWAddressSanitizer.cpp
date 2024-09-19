@@ -1901,10 +1901,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
     InGlobal = false;
     InTls = false;
-    if (ClMappingOffset.getNumOccurrences() > 0)
-      Offset = ClMappingOffset;
-    else
-      Offset = 0;
+    Offset = optOr(ClMappingOffset, (unsigned long)0);
     WithFrameRecord = false;
   } else if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
@@ -1928,3 +1925,4 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     WithFrameRecord = false;
   }
 }
+
