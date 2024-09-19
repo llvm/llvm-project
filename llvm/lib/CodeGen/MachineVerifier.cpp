@@ -1710,16 +1710,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT Src0Ty = MRI->getType(Src0Op.getReg());
     LLT Src1Ty = MRI->getType(Src1Op.getReg());
 
     if (!DstTy.isVector()) {
       report("Destination type must be a vector", MI);
-      break;
-    }
-
-    if (!Src0Ty.isVector()) {
-      report("First source must be a vector", MI);
       break;
     }
 
@@ -1728,23 +1722,39 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (DstTy != Src0Ty) {
-      report("Destination type must match the first source vector type", MI);
+    if (DstTy.getElementType() != Src1Ty.getElementType()) {
+      report("Element type of vectors must be the same", MI);
       break;
     }
 
-    if (Src0Ty.getElementType() != Src1Ty.getElementType()) {
-      report("Element type of source vectors must be the same", MI);
+    if (Src1Ty.isScalable() != DstTy.isScalable()) {
+      report("Vector types must both be fixed or both be scalable", MI);
       break;
     }
 
-    if (IndexOp.getImm() != 0 &&
-        IndexOp.getImm() % Src1Ty.getElementCount().getKnownMinValue() != 0) {
+    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+                                DstTy.getElementCount())) {
+      report("Second source must be smaller than destination vector", MI);
+      break;
+    }
+
+    uint64_t Idx = IndexOp.getImm();
+    uint64_t Src1MinLen = Src1Ty.getElementCount().getKnownMinValue();
+    if (IndexOp.getImm() % Src1MinLen != 0) {
       report("Index must be a multiple of the second source vector's "
              "minimum vector length",
              MI);
       break;
     }
+
+    uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
+    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+      report("Subvector type and index must not cause insert to overrun the "
+             "vector being inserted into",
+             MI);
+      break;
+    }
+
     break;
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
