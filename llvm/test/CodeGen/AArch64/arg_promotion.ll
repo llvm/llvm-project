@@ -38,16 +38,16 @@ define dso_local void @caller_4xi32(ptr noalias %src, ptr noalias %dst) #1 {
 ; CHECK-LABEL: define dso_local void @caller_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_VAL:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 16
-; CHECK-NEXT:    call fastcc void @callee_4xi32.argprom.argprom(<4 x i32> [[SRC_VAL]], ptr noalias [[DST:%.*]])
+; CHECK-NEXT:    call fastcc void @callee_4xi32(<4 x i32> [[SRC_VAL]], ptr noalias [[DST:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call fastcc void @callee_4xi32.argprom(ptr noalias %src, ptr noalias %dst)
+  call fastcc void @callee_4xi32(ptr noalias %src, ptr noalias %dst)
   ret void
 }
 
-define internal fastcc void @callee_4xi32.argprom(ptr noalias %src, ptr noalias %dst) #1 {
-; CHECK-LABEL: define internal fastcc void @callee_4xi32.argprom.argprom(
+define internal fastcc void @callee_4xi32(ptr noalias %src, ptr noalias %dst) #1 {
+; CHECK-LABEL: define internal fastcc void @callee_4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store <4 x i32> [[SRC_0_VAL:%.*]], ptr [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
@@ -65,7 +65,7 @@ define dso_local void @caller_i256(ptr noalias %src, ptr noalias %dst) #0 {
 ; CHECK-LABEL: define dso_local void @caller_i256(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_VAL:%.*]] = load i256, ptr [[SRC:%.*]], align 16
-; CHECK-NEXT:    call fastcc void @callee_i256.argprom(i256 [[SRC_VAL]], ptr noalias [[DST:%.*]])
+; CHECK-NEXT:    call fastcc void @callee_i256(i256 [[SRC_VAL]], ptr noalias [[DST:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -74,7 +74,7 @@ entry:
 }
 
 define internal fastcc void @callee_i256(ptr noalias %src, ptr noalias %dst) #0 {
-; CHECK-LABEL: define internal fastcc void @callee_i256.argprom(
+; CHECK-LABEL: define internal fastcc void @callee_i256(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i256 [[SRC_0_VAL:%.*]], ptr [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
@@ -159,7 +159,7 @@ define dso_local void @caller_struct4xi32(ptr noalias %src, ptr noalias %dst) #1
 ; CHECK-NEXT:    [[SRC_VAL:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[SRC]], i64 16
 ; CHECK-NEXT:    [[SRC_VAL1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 16
-; CHECK-NEXT:    call fastcc void @callee_struct4xi32.argprom(<4 x i32> [[SRC_VAL]], <4 x i32> [[SRC_VAL1]], ptr noalias [[DST:%.*]])
+; CHECK-NEXT:    call fastcc void @callee_struct4xi32(<4 x i32> [[SRC_VAL]], <4 x i32> [[SRC_VAL1]], ptr noalias [[DST:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -168,7 +168,7 @@ entry:
 }
 
 define internal fastcc void @callee_struct4xi32(ptr noalias %src, ptr noalias %dst) #1 {
-; CHECK-LABEL: define internal fastcc void @callee_struct4xi32.argprom(
+; CHECK-LABEL: define internal fastcc void @callee_struct4xi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store <4 x i32> [[SRC_0_VAL:%.*]], ptr [[DST:%.*]], align 16
 ; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds [[STRUCT_4XI32:%.*]], ptr [[DST]], i64 0, i32 1

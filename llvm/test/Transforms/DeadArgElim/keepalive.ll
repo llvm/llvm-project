@@ -10,7 +10,7 @@ declare ptr @llvm.call.preallocated.arg(token, i32)
 ; the function and then changing too much.
 
 ; This checks if the return value attributes are not removed
-; CHECK: define internal zeroext i32 @test1.argelim() #1
+; CHECK: define internal zeroext i32 @test1() #1
 define internal zeroext i32 @test1(i32 %DEADARG1) nounwind {
 ;
 ;
@@ -18,7 +18,7 @@ define internal zeroext i32 @test1(i32 %DEADARG1) nounwind {
 }
 
 ; This checks if the struct doesn't get non-packed
-; CHECK-LABEL: define internal <{ i32, i32 }> @test2.argelim(
+; CHECK-LABEL: define internal <{ i32, i32 }> @test2(
 define internal <{ i32, i32 }> @test2(i32 %DEADARG1) {
 ;
 ;

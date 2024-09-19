@@ -4,7 +4,7 @@
 ; while the used arguments should be promoted if they are pointers.
 ; The pass should not touch any unused non-pointer arguments.
 define internal i32 @callee(i1 %c, i1 %d, ptr %used, ptr %unused) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@callee.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[D:%.*]], i32 [[USED_VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label %if, label %else
@@ -28,7 +28,7 @@ else:
 ; while the used arguments should be promoted if they are pointers.
 ; The pass should not touch any unused non-pointer arguments.
 define internal i32 @callee_byval(i1 %c, i1 %d, ptr byval(i32) align 4 %used, ptr byval(i32) align 4 %unused) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@callee_byval.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_byval
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[D:%.*]], i32 [[USED_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label %if, label %else
@@ -53,9 +53,9 @@ define i32 @caller(i1 %c, i1 %d, ptr %arg) nounwind {
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[D:%.*]], ptr [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_VAL_0:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[RES_0:%.*]] = call i32 @callee_byval.argprom(i1 [[C]], i1 [[D]], i32 [[ARG_VAL_0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[RES_0:%.*]] = call i32 @callee_byval(i1 [[C]], i1 [[D]], i32 [[ARG_VAL_0]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[ARG_VAL_1:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[RES_1:%.*]] = call i32 @callee.argprom(i1 [[C]], i1 [[D]], i32 [[ARG_VAL_1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = call i32 @callee(i1 [[C]], i1 [[D]], i32 [[ARG_VAL_1]]) #[[ATTR0]]
 ; CHECK-NEXT:  ret i32 1
 ;
 entry:

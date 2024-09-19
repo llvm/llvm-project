@@ -5,7 +5,7 @@ declare void @use.i32(i32)
 declare void @use.p32(ptr)
 
 define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10) {
-; CHECK-LABEL: define {{[^@]+}}@callee.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], i32 [[P2_0_VAL:%.*]], ptr [[P3_0_VAL:%.*]], ptr [[P4_0_VAL:%.*]], ptr [[P5_0_VAL:%.*]], ptr [[P6_0_VAL:%.*]], ptr [[P7_0_VAL:%.*]], ptr [[P8_0_VAL:%.*]], ptr [[P9_0_VAL:%.*]], ptr [[P10_0_VAL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[P4_0_VAL]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
@@ -57,7 +57,7 @@ define void @caller(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p
 ; CHECK-NEXT:    [[P8_VAL:%.*]] = load ptr, ptr [[P8]], align 8, !align !3, !noundef !1
 ; CHECK-NEXT:    [[P9_VAL:%.*]] = load ptr, ptr [[P9]], align 8, !noundef !1
 ; CHECK-NEXT:    [[P10_VAL:%.*]] = load ptr, ptr [[P10]], align 8, !nontemporal !4
-; CHECK-NEXT:    call void @callee.argprom(i32 [[P1_VAL]], i32 [[P2_VAL]], ptr [[P3_VAL]], ptr [[P4_VAL]], ptr [[P5_VAL]], ptr [[P6_VAL]], ptr [[P7_VAL]], ptr [[P8_VAL]], ptr [[P9_VAL]], ptr [[P10_VAL]])
+; CHECK-NEXT:    call void @callee(i32 [[P1_VAL]], i32 [[P2_VAL]], ptr [[P3_VAL]], ptr [[P4_VAL]], ptr [[P5_VAL]], ptr [[P6_VAL]], ptr [[P7_VAL]], ptr [[P8_VAL]], ptr [[P9_VAL]], ptr [[P10_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10)
@@ -65,7 +65,7 @@ define void @caller(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p
 }
 
 define internal ptr @callee_conditional(i1 %c, ptr dereferenceable(8) align 8 %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_conditional.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -89,7 +89,7 @@ define void @caller_conditional(i1 %c, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @callee_conditional.argprom(i1 [[C]], ptr [[P_VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @callee_conditional(i1 [[C]], ptr [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call ptr @callee_conditional(i1 %c, ptr %p)

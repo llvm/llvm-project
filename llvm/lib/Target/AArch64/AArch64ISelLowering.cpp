@@ -2701,6 +2701,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SADDLV)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
+    MAKE_CASE(AArch64ISD::USDOT)
     MAKE_CASE(AArch64ISD::SMINV)
     MAKE_CASE(AArch64ISD::UMINV)
     MAKE_CASE(AArch64ISD::SMAXV)
@@ -6113,6 +6114,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           : AArch64ISD::SDOT;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
+  }
+  case Intrinsic::aarch64_neon_usdot:
+  case Intrinsic::aarch64_sve_usdot: {
+    return DAG.getNode(AArch64ISD::USDOT, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::get_active_lane_mask: {
     SDValue ID =
@@ -21849,37 +21855,50 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   auto ExtA = MulOp->getOperand(0);
   auto ExtB = MulOp->getOperand(1);
-  bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
-  bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-  if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
+
+  if (!ISD::isExtOpcode(ExtA->getOpcode()) ||
+      !ISD::isExtOpcode(ExtB->getOpcode()))
     return SDValue();
+  bool AIsSigned = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool BIsSigned = ExtB->getOpcode() == ISD::SIGN_EXTEND;
 
   auto A = ExtA->getOperand(0);
   auto B = ExtB->getOperand(0);
   if (A.getValueType() != B.getValueType())
     return SDValue();
 
-  unsigned Opcode = 0;
-
-  if (IsSExt)
-    Opcode = AArch64ISD::SDOT;
-  else if (IsZExt)
-    Opcode = AArch64ISD::UDOT;
-
-  assert(Opcode != 0 && "Unexpected dot product case encountered.");
-
   EVT ReducedType = N->getValueType(0);
   EVT MulSrcType = A.getValueType();
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if ((ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) ||
-      (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) ||
-      (ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) ||
-      (ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
-    return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
+  if (!(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
+      !(ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) &&
+      !(ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) &&
+      !(ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
+    return SDValue();
 
-  return SDValue();
+  // If the extensions are mixed, we should lower it to a usdot instead
+  unsigned Opcode = 0;
+  if (AIsSigned != BIsSigned) {
+    if (!Subtarget->hasMatMulInt8())
+      return SDValue();
+
+    bool Scalable = N->getValueType(0).isScalableVT();
+    // There's no nxv2i64 version of usdot
+    if (Scalable && ReducedType != MVT::nxv4i32)
+      return SDValue();
+
+    Opcode = AArch64ISD::USDOT;
+    // USDOT expects the signed operand to be last
+    if (!BIsSigned)
+      std::swap(A, B);
+  } else if (AIsSigned)
+    Opcode = AArch64ISD::SDOT;
+  else
+    Opcode = AArch64ISD::UDOT;
+
+  return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
