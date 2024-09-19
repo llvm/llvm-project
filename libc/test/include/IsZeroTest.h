@@ -14,8 +14,7 @@
 
 #include "include/llvm-libc-macros/math-function-macros.h"
 
-template <typename T>
-class IsZeroTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T> class IsZeroTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
