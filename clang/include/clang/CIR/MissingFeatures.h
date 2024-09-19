@@ -133,6 +133,9 @@ struct MissingFeatures {
   static bool volatileTypes() { return false; }
   static bool syncScopeID() { return false; }
 
+  // AArch64 Neon builtin related.
+  static bool buildNeonShiftVector() { return false; }
+
   // Misc
   static bool cacheRecordLayouts() { return false; }
   static bool capturedByInit() { return false; }
@@ -184,6 +187,7 @@ struct MissingFeatures {
   static bool deferredReplacements() { return false; }
   static bool shouldInstrumentFunction() { return false; }
   static bool xray() { return false; }
+  static bool buildConstrainedFPCall() { return false; }
 
   // Inline assembly
   static bool asmGoto() { return false; }
