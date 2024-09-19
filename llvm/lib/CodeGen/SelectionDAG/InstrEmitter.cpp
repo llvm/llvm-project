@@ -83,7 +83,7 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
 /// implicit physical register output.
 void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
                                    Register SrcReg,
-                                   DenseMap<SDValue, Register> &VRBaseMap) {
+                                   VRBaseMapType &VRBaseMap) {
   Register VRBase;
   if (SrcReg.isVirtual()) {
     // Just use the input register directly!
@@ -187,7 +187,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
                                        MachineInstrBuilder &MIB,
                                        const MCInstrDesc &II,
                                        bool IsClone, bool IsCloned,
-                                       DenseMap<SDValue, Register> &VRBaseMap) {
+                                       VRBaseMapType &VRBaseMap) {
   assert(Node->getMachineOpcode() != TargetOpcode::IMPLICIT_DEF &&
          "IMPLICIT_DEF should have been handled as a special case elsewhere!");
 
@@ -266,7 +266,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
 /// getVR - Return the virtual register corresponding to the specified result
 /// of the specified node.
 Register InstrEmitter::getVR(SDValue Op,
-                             DenseMap<SDValue, Register> &VRBaseMap) {
+                             VRBaseMapType &VRBaseMap) {
   if (Op.isMachineOpcode() &&
       Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF) {
     // Add an IMPLICIT_DEF instruction before every use.
@@ -280,7 +280,7 @@ Register InstrEmitter::getVR(SDValue Op,
     return VReg;
   }
 
-  DenseMap<SDValue, Register>::iterator I = VRBaseMap.find(Op);
+  VRBaseMapType::iterator I = VRBaseMap.find(Op);
   assert(I != VRBaseMap.end() && "Node emitted out of order - late");
   return I->second;
 }
@@ -318,7 +318,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
                                  SDValue Op,
                                  unsigned IIOpNum,
                                  const MCInstrDesc *II,
-                                 DenseMap<SDValue, Register> &VRBaseMap,
+                                 VRBaseMapType &VRBaseMap,
                                  bool IsDebug, bool IsClone, bool IsCloned) {
   assert(Op.getValueType() != MVT::Other &&
          Op.getValueType() != MVT::Glue &&
@@ -399,7 +399,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
                               SDValue Op,
                               unsigned IIOpNum,
                               const MCInstrDesc *II,
-                              DenseMap<SDValue, Register> &VRBaseMap,
+                              VRBaseMapType &VRBaseMap,
                               bool IsDebug, bool IsClone, bool IsCloned) {
   if (Op.isMachineOpcode()) {
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
@@ -500,7 +500,7 @@ Register InstrEmitter::ConstrainForSubReg(Register VReg, unsigned SubIdx,
 /// EmitSubregNode - Generate machine code for subreg nodes.
 ///
 void InstrEmitter::EmitSubregNode(SDNode *Node,
-                                  DenseMap<SDValue, Register> &VRBaseMap,
+                                  VRBaseMapType &VRBaseMap,
                                   bool IsClone, bool IsCloned) {
   Register VRBase;
   unsigned Opc = Node->getMachineOpcode();
@@ -634,7 +634,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
 ///
 void
 InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
-                                     DenseMap<SDValue, Register> &VRBaseMap) {
+                                     VRBaseMapType &VRBaseMap) {
   Register VReg = getVR(Node->getOperand(0), VRBaseMap);
 
   // Create the new VReg in the destination class and emit a copy.
@@ -654,7 +654,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
 /// EmitRegSequence - Generate machine code for REG_SEQUENCE nodes.
 ///
 void InstrEmitter::EmitRegSequence(SDNode *Node,
-                                  DenseMap<SDValue, Register> &VRBaseMap,
+                                  VRBaseMapType &VRBaseMap,
                                   bool IsClone, bool IsCloned) {
   unsigned DstRCIdx = Node->getConstantOperandVal(0);
   const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
@@ -703,7 +703,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
 ///
 MachineInstr *
 InstrEmitter::EmitDbgValue(SDDbgValue *SD,
-                           DenseMap<SDValue, Register> &VRBaseMap) {
+                           VRBaseMapType &VRBaseMap) {
   DebugLoc DL = SD->getDebugLoc();
   assert(cast<DILocalVariable>(SD->getVariable())
              ->isValidLocationForIntrinsic(DL) &&
@@ -755,7 +755,7 @@ MachineOperand GetMOForConstDbgOp(const SDDbgOperand &Op) {
 void InstrEmitter::AddDbgValueLocationOps(
     MachineInstrBuilder &MIB, const MCInstrDesc &DbgValDesc,
     ArrayRef<SDDbgOperand> LocationOps,
-    DenseMap<SDValue, Register> &VRBaseMap) {
+    VRBaseMapType &VRBaseMap) {
   for (const SDDbgOperand &Op : LocationOps) {
     switch (Op.getKind()) {
     case SDDbgOperand::FRAMEIX:
@@ -786,7 +786,7 @@ void InstrEmitter::AddDbgValueLocationOps(
 
 MachineInstr *
 InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
-                              DenseMap<SDValue, Register> &VRBaseMap) {
+                              VRBaseMapType &VRBaseMap) {
   MDNode *Var = SD->getVariable();
   const DIExpression *Expr = (DIExpression *)SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
@@ -862,7 +862,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
       // Look up the corresponding VReg for the given SDNode, if any.
       SDNode *Node = DbgOperand.getSDNode();
       SDValue Op = SDValue(Node, DbgOperand.getResNo());
-      DenseMap<SDValue, Register>::iterator I = VRBaseMap.find(Op);
+      VRBaseMapType::iterator I = VRBaseMap.find(Op);
       // No VReg -> produce a DBG_VALUE $noreg instead.
       if (I == VRBaseMap.end())
         break;
@@ -928,7 +928,7 @@ MachineInstr *InstrEmitter::EmitDbgNoLocation(SDDbgValue *SD) {
 
 MachineInstr *
 InstrEmitter::EmitDbgValueList(SDDbgValue *SD,
-                               DenseMap<SDValue, Register> &VRBaseMap) {
+                               VRBaseMapType &VRBaseMap) {
   MDNode *Var = SD->getVariable();
   DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
@@ -944,7 +944,7 @@ InstrEmitter::EmitDbgValueList(SDDbgValue *SD,
 
 MachineInstr *
 InstrEmitter::EmitDbgValueFromSingleOp(SDDbgValue *SD,
-                                       DenseMap<SDValue, Register> &VRBaseMap) {
+                                       VRBaseMapType &VRBaseMap) {
   MDNode *Var = SD->getVariable();
   DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
@@ -996,7 +996,7 @@ InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
 ///
 void InstrEmitter::
 EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
-                DenseMap<SDValue, Register> &VRBaseMap) {
+                VRBaseMapType &VRBaseMap) {
   unsigned Opc = Node->getMachineOpcode();
 
   // Handle subreg insert/extract specially
@@ -1238,7 +1238,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 /// needed dependencies.
 void InstrEmitter::
 EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
-                DenseMap<SDValue, Register> &VRBaseMap) {
+                VRBaseMapType &VRBaseMap) {
   switch (Node->getOpcode()) {
   default:
 #ifndef NDEBUG
