@@ -22,13 +22,25 @@ define void @test_load_store(ptr %p, ptr %q) nounwind {
 define float @test_fpextend_float(ptr %p) nounwind {
 ; LA32-LABEL: test_fpextend_float:
 ; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    ld.hu $a0, $a0, 0
-; LA32-NEXT:    b %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
+; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_fpextend_float:
 ; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    ld.hu $a0, $a0, 0
-; LA64-NEXT:    b %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
+; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
   %a = load half, ptr %p
   %r = fpext half %a to float
   ret float %r
@@ -40,6 +52,7 @@ define double @test_fpextend_double(ptr %p) nounwind {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    ld.hu $a0, $a0, 0
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA32-NEXT:    fcvt.d.s $fa0, $fa0
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -51,6 +64,7 @@ define double @test_fpextend_double(ptr %p) nounwind {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    ld.hu $a0, $a0, 0
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fcvt.d.s $fa0, $fa0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -69,6 +83,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    st.h $a0, $fp, 0
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -82,6 +97,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    st.h $a0, $fp, 0
 ; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -100,6 +116,7 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    bl %plt(__truncdfhf2)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    st.h $a0, $fp, 0
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -113,6 +130,7 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    bl %plt(__truncdfhf2)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    st.h $a0, $fp, 0
 ; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -126,40 +144,48 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 define half @test_fadd_reg(half %a, half %b) nounwind {
 ; LA32-LABEL: test_fadd_reg:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
-; LA32-NEXT:    fst.d $fs0, $sp, 0 # 8-byte Folded Spill
-; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    addi.w $sp, $sp, -32
+; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
+; LA32-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA32-NEXT:    fmov.s $fs0, $fa0
-; LA32-NEXT:    move $a0, $fp
+; LA32-NEXT:    fmov.s $fa0, $fa1
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fadd.s $fa0, $fa0, $fs0
+; LA32-NEXT:    fmov.s $fs1, $fa0
+; LA32-NEXT:    fmov.s $fa0, $fs0
+; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    fadd.s $fa0, $fa0, $fs1
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
-; LA32-NEXT:    fld.d $fs0, $sp, 0 # 8-byte Folded Reload
-; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
+; LA32-NEXT:    lu12i.w $a1, -16
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
+; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 32
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_fadd_reg:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs0, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    move $a0, $a1
-; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    fmov.s $fs0, $fa0
-; LA64-NEXT:    move $a0, $fp
+; LA64-NEXT:    fmov.s $fa0, $fa1
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA64-NEXT:    fadd.s $fa0, $fa0, $fs0
+; LA64-NEXT:    fmov.s $fs1, $fa0
+; LA64-NEXT:    fmov.s $fa0, $fs0
+; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    fadd.s $fa0, $fa0, $fs1
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
-; LA64-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
+; LA64-NEXT:    lu12i.w $a1, -16
+; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
+; LA64-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    ret
@@ -173,20 +199,23 @@ define void @test_fadd_mem(ptr %p, ptr %q) nounwind {
 ; LA32-NEXT:    addi.w $sp, $sp, -32
 ; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s0, $sp, 20 # 4-byte Folded Spill
-; LA32-NEXT:    fst.d $fs0, $sp, 8 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    ld.hu $s0, $a0, 0
-; LA32-NEXT:    ld.hu $a0, $a1, 0
+; LA32-NEXT:    ld.hu $a0, $a0, 0
+; LA32-NEXT:    ld.hu $a1, $a1, 0
+; LA32-NEXT:    movgr2fr.w $fs0, $a0
+; LA32-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fmov.s $fs0, $fa0
-; LA32-NEXT:    move $a0, $s0
+; LA32-NEXT:    fmov.s $fs1, $fa0
+; LA32-NEXT:    fmov.s $fa0, $fs0
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fadd.s $fa0, $fa0, $fs0
+; LA32-NEXT:    fadd.s $fa0, $fa0, $fs1
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    st.h $a0, $fp, 0
-; LA32-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
-; LA32-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
+; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 32
@@ -202,12 +231,14 @@ define void @test_fadd_mem(ptr %p, ptr %q) nounwind {
 ; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    ld.hu $s0, $a0, 0
 ; LA64-NEXT:    ld.hu $a0, $a1, 0
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fmov.s $fs0, $fa0
-; LA64-NEXT:    move $a0, $s0
+; LA64-NEXT:    movgr2fr.w $fa0, $s0
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fadd.s $fa0, $fa0, $fs0
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    st.h $a0, $fp, 0
 ; LA64-NEXT:    fld.d $fs0, $sp, 0 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -225,40 +256,48 @@ define void @test_fadd_mem(ptr %p, ptr %q) nounwind {
 define half @test_fmul_reg(half %a, half %b) nounwind {
 ; LA32-LABEL: test_fmul_reg:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
-; LA32-NEXT:    fst.d $fs0, $sp, 0 # 8-byte Folded Spill
-; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    move $a0, $a1
-; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    addi.w $sp, $sp, -32
+; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
+; LA32-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA32-NEXT:    fmov.s $fs0, $fa0
-; LA32-NEXT:    move $a0, $fp
+; LA32-NEXT:    fmov.s $fa0, $fa1
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fmul.s $fa0, $fa0, $fs0
+; LA32-NEXT:    fmov.s $fs1, $fa0
+; LA32-NEXT:    fmov.s $fa0, $fs0
+; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA32-NEXT:    fmul.s $fa0, $fa0, $fs1
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
-; LA32-NEXT:    fld.d $fs0, $sp, 0 # 8-byte Folded Reload
-; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
+; LA32-NEXT:    lu12i.w $a1, -16
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
+; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 32
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_fmul_reg:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    fst.d $fs0, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    move $a0, $a1
-; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA64-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    fmov.s $fs0, $fa0
-; LA64-NEXT:    move $a0, $fp
+; LA64-NEXT:    fmov.s $fa0, $fa1
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA64-NEXT:    fmul.s $fa0, $fa0, $fs0
+; LA64-NEXT:    fmov.s $fs1, $fa0
+; LA64-NEXT:    fmov.s $fa0, $fs0
+; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
+; LA64-NEXT:    fmul.s $fa0, $fa0, $fs1
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
-; LA64-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
+; LA64-NEXT:    lu12i.w $a1, -16
+; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
+; LA64-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    ret
@@ -272,20 +311,23 @@ define void @test_fmul_mem(ptr %p, ptr %q) nounwind {
 ; LA32-NEXT:    addi.w $sp, $sp, -32
 ; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s0, $sp, 20 # 4-byte Folded Spill
-; LA32-NEXT:    fst.d $fs0, $sp, 8 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs0, $sp, 16 # 8-byte Folded Spill
+; LA32-NEXT:    fst.d $fs1, $sp, 8 # 8-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    ld.hu $s0, $a0, 0
-; LA32-NEXT:    ld.hu $a0, $a1, 0
+; LA32-NEXT:    ld.hu $a0, $a0, 0
+; LA32-NEXT:    ld.hu $a1, $a1, 0
+; LA32-NEXT:    movgr2fr.w $fs0, $a0
+; LA32-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fmov.s $fs0, $fa0
-; LA32-NEXT:    move $a0, $s0
+; LA32-NEXT:    fmov.s $fs1, $fa0
+; LA32-NEXT:    fmov.s $fa0, $fs0
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
-; LA32-NEXT:    fmul.s $fa0, $fa0, $fs0
+; LA32-NEXT:    fmul.s $fa0, $fa0, $fs1
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    st.h $a0, $fp, 0
-; LA32-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
-; LA32-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
+; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 32
@@ -301,12 +343,14 @@ define void @test_fmul_mem(ptr %p, ptr %q) nounwind {
 ; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    ld.hu $s0, $a0, 0
 ; LA64-NEXT:    ld.hu $a0, $a1, 0
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fmov.s $fs0, $fa0
-; LA64-NEXT:    move $a0, $s0
+; LA64-NEXT:    movgr2fr.w $fa0, $s0
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fmul.s $fa0, $fa0, $fs0
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    st.h $a0, $fp, 0
 ; LA64-NEXT:    fld.d $fs0, $sp, 0 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -331,6 +375,10 @@ define half @freeze_half_undef() nounwind {
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA32-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
+; LA32-NEXT:    lu12i.w $a1, -16
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -344,6 +392,10 @@ define half @freeze_half_undef() nounwind {
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
+; LA64-NEXT:    lu12i.w $a1, -16
+; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -360,6 +412,10 @@ define half @freeze_half_poison(half %maybe.poison) nounwind {
 ; LA32-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA32-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA32-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
+; LA32-NEXT:    lu12i.w $a1, -16
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -371,6 +427,10 @@ define half @freeze_half_poison(half %maybe.poison) nounwind {
 ; LA64-NEXT:    bl %plt(__gnu_h2f_ieee)
 ; LA64-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA64-NEXT:    bl %plt(__gnu_f2h_ieee)
+; LA64-NEXT:    movfr2gr.s $a0, $fa0
+; LA64-NEXT:    lu12i.w $a1, -16
+; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret

@@ -181,8 +181,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
     setOperationAction(ISD::FPOW, MVT::f32, Expand);
     setOperationAction(ISD::FREM, MVT::f32, Expand);
-    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
-    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -219,7 +219,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
     setOperationAction(ISD::FREM, MVT::f64, Expand);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
-    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
@@ -427,6 +427,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::FP_TO_FP16:
+    return lowerFP_TO_FP16(Op, DAG);
+  case ISD::FP16_TO_FP:
+    return lowerFP16_TO_FP(Op, DAG);
   }
   return SDValue();
 }
@@ -1354,6 +1358,40 @@ SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return SDValue();
 }
 
+SDValue LoongArchTargetLowering::lowerFP_TO_FP16(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // Custom lower to ensure the libcall return is passed in an FPR on hard
+  // float ABIs.
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Chain = SDValue();
+  RTLIB::Libcall LC = RTLIB::getFPROUND(Op0.getValueType(), MVT::f16);
+  SDValue Res;
+  std::tie(Res, Chain) =
+      makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
+  if (Subtarget.is64Bit())
+    return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Res);
+  return DAG.getBitcast(MVT::i32, Res);
+}
+
+SDValue LoongArchTargetLowering::lowerFP16_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // Custom lower to ensure the libcall argument is passed in an FPR on hard
+  // float ABIs.
+  SDLoc DL(Op);
+  MakeLibCallOptions CallOptions;
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Chain = SDValue();
+  SDValue Arg = Subtarget.is64Bit() ? DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64,
+                                                  DL, MVT::f32, Op0)
+                                    : DAG.getBitcast(MVT::f32, Op0);
+  SDValue Res;
+  std::tie(Res, Chain) = makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg,
+                                     CallOptions, DL, Chain);
+  return Res;
+}
+
 static bool isConstantOrUndef(const SDValue Op) {
   if (Op->isUndef())
     return true;
@@ -1656,16 +1694,19 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
                                                  SelectionDAG &DAG) const {
 
   SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+
+  if (Op0.getValueType() == MVT::f16)
+    Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
   if (Op.getValueSizeInBits() > 32 && Subtarget.hasBasicF() &&
       !Subtarget.hasBasicD()) {
-    SDValue Dst =
-        DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op.getOperand(0));
+    SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op0);
     return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Dst);
   }
 
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
-  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op.getOperand(0));
+  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op0);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
 }
 
@@ -2848,6 +2889,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     EVT FVT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
     if (getTypeAction(*DAG.getContext(), Src.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
+      if (!isTypeLegal(Src.getValueType()))
+        return;
+      if (Src.getValueType() == MVT::f16)
+        Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
       SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, FVT, Src);
       Results.push_back(DAG.getNode(ISD::BITCAST, DL, VT, Dst));
       return;
@@ -4229,6 +4274,33 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performMOVGR2FR_WCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const LoongArchSubtarget &Subtarget) {
+  // If the input to MOVGR2FR_W_LA64 is just MOVFR2GR_S_LA64 the the
+  // conversion is unnecessary and can be replaced with the
+  // MOVFR2GR_S_LA64 operand.
+  SDValue Op0 = N->getOperand(0);
+  if (Op0.getOpcode() == LoongArchISD::MOVFR2GR_S_LA64)
+    return Op0.getOperand(0);
+  return SDValue();
+}
+
+static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const LoongArchSubtarget &Subtarget) {
+  // If the input to MOVFR2GR_S_LA64 is just MOVGR2FR_W_LA64 then the
+  // conversion is unnecessary and can be replaced with the MOVGR2FR_W_LA64
+  // operand.
+  SDValue Op0 = N->getOperand(0);
+  MVT VT = N->getSimpleValueType(0);
+  if (Op0->getOpcode() == LoongArchISD::MOVGR2FR_W_LA64) {
+    assert(Op0.getOperand(0).getValueType() == VT && "Unexpected value type!");
+    return Op0.getOperand(0);
+  }
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -4247,6 +4319,10 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performINTRINSIC_WO_CHAINCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::MOVGR2FR_W_LA64:
+    return performMOVGR2FR_WCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::MOVFR2GR_S_LA64:
+    return performMOVFR2GR_SCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -6259,4 +6335,62 @@ bool LoongArchTargetLowering::shouldAlignPointerArgs(CallInst *CI,
   }
 
   return true;
+}
+
+bool LoongArchTargetLowering::splitValueIntoRegisterParts(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.has_value();
+  EVT ValueVT = Val.getValueType();
+
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    // Cast the f16 to i16, extend to i32, pad with ones to make a float
+    // nan, and cast to f32.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
+                      DAG.getConstant(0xFFFF0000, DL, MVT::i32));
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Val);
+    Parts[0] = Val;
+    return true;
+  }
+
+  return false;
+}
+
+SDValue LoongArchTargetLowering::joinRegisterPartsIntoValue(
+    SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
+    MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.has_value();
+
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    SDValue Val = Parts[0];
+
+    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+    return Val;
+  }
+
+  return SDValue();
+}
+
+MVT LoongArchTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                           CallingConv::ID CC,
+                                                           EVT VT) const {
+  // Use f32 to pass f16.
+  if (VT == MVT::f16 && Subtarget.hasBasicF())
+    return MVT::f32;
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
+
+unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
+  // Use f32 to pass f16.
+  if (VT == MVT::f16 && Subtarget.hasBasicF())
+    return 1;
+
+  return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
