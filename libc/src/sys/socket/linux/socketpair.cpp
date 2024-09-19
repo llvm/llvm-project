@@ -1,4 +1,4 @@
-//===-- Linux implementation of bind --------------------------------------===//
+//===-- Linux implementation of socketpair --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/socket/bind.h"
+#include "src/sys/socket/socketpair.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -19,17 +19,16 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, bind,
-                   (int domain, const struct sockaddr *address,
-                    socklen_t address_len)) {
-#ifdef SYS_socket
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_bind, domain, address, address_len);
+LLVM_LIBC_FUNCTION(int, socketpair,
+                   (int domain, int type, int protocol, int sv[2])) {
+#ifdef SYS_socketpair
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketpair, domain, type,
+                                              protocol, sv);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(domain),
-                                    reinterpret_cast<unsigned long>(address),
-                                    static_cast<unsigned long>(address_len)};
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_BIND,
+  unsigned long sockcall_args[3] = {
+      static_cast<unsigned long>(domain), static_cast<unsigned long>(type),
+      static_cast<unsigned long>(protocol), static_cast<unsigned long>(sv)};
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_SOCKETPAIR,
                                               sockcall_args);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."

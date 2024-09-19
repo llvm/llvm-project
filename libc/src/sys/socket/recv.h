@@ -1,4 +1,4 @@
-//===-- Implementation header for bind --------------------------*- C++ -*-===//
+//===-- Implementation header for recv --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
-#define LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
+#ifndef LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
+#define LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
 
 #include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-int bind(int domain, const struct sockaddr *address, socklen_t address_len);
+ssize_t recv(int sockfd, const void *buf, size_t len, int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
+#endif // LLVM_LIBC_SRC_SYS_SOCKET_RECV_H
