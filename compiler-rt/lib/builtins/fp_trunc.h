@@ -35,6 +35,18 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
+#elif defined SRC_80
+typedef xf_float src_t;
+typedef __uint128_t src_rep_t;
+#define SRC_REP_C (__uint128_t)
+// sign bit, exponent and significand occupy the lower 80 bits.
+static const int srcBits = 80;
+static const int srcSigFracBits = 63;
+// -1 accounts for the sign bit.
+// -1 accounts for the explicitly stored integer bit.
+// srcBits - srcSigFracBits - 1 - 1
+static const int srcExpBits = 15;
+
 #elif defined SRC_QUAD
 typedef tf_float src_t;
 typedef __uint128_t src_rep_t;
