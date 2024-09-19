@@ -419,7 +419,7 @@ public:
 
     // Helper to clear the fields of this edge when we are removing it from the
     // graph.
-    void clear() {
+    inline void clear() {
       ContextIds.clear();
       AllocTypes = (uint8_t)AllocationType::None;
       Caller = nullptr;
@@ -429,7 +429,7 @@ public:
     // Check if edge was removed from the graph. This is useful while iterating
     // over a copy of edge lists when performing operations that mutate the
     // graph in ways that might remove one of the edges.
-    bool isRemoved() const {
+    inline bool isRemoved() const {
       if (Callee || Caller)
         return false;
       // Any edges that have been removed from the graph but are still in a
@@ -963,7 +963,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
   auto *Callee = Edge->Callee;
   auto *Caller = Edge->Caller;
 
-  // Make sure the edge fields are emptied/nulled out so we can properly detect
+  // Make sure the edge fields are cleared out so we can properly detect
   // removed edges if Edge is not destructed because there is still a shared_ptr
   // reference.
   Edge->clear();
