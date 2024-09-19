@@ -744,11 +744,21 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)
     set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
+    string(TOUPPER "${BOOTSTRAP_LLVM_BUILD_INSTRUMENTED}" BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    if (BOOTSTRAP_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps llvm-profgen)
+      list(APPEND PGO_OPT -DLLVM_PROFGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profgen)
+    endif()
   endif()
 
   if(LLVM_BUILD_INSTRUMENTED)
+    string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps generate-profdata)
-    set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    else()
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
       CMAKE_CXX_COMPILER
@@ -908,11 +918,13 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
 
   # Optimize original (pre-bolt) Clang using the collected profile
   set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
+  set(CLANG_ORIGINAL ${CMAKE_CURRENT_BINARY_DIR}/clang.pre-bolt)
   add_custom_target(clang-bolt
     DEPENDS ${CLANG_OPTIMIZED}
   )
-  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
+  add_custom_command(OUTPUT ${CLANG_OPTIMIZED} ${CLANG_ORIGINAL}
     DEPENDS clang-bolt-profile
+    COMMAND ${CMAKE_COMMAND} -E copy ${CLANG_PATH} ${CLANG_ORIGINAL}
     COMMAND llvm-bolt ${CLANG_PATH}
       -o ${CLANG_OPTIMIZED}
       -data ${BOLT_FDATA}
