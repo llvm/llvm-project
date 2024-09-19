@@ -2073,8 +2073,8 @@ static bool IsOpaqueConstantCall(const CallExpr *E) {
 }
 
 static bool IsOpaqueConstantCall(const LValue &LVal) {
-  auto *BaseExpr =
-      llvm::dyn_cast_or_null<CallExpr>(LVal.Base.dyn_cast<const Expr *>());
+  const auto *BaseExpr =
+      llvm::dyn_cast_if_present<CallExpr>(LVal.Base.dyn_cast<const Expr *>());
   return BaseExpr && IsOpaqueConstantCall(BaseExpr);
 }
 
