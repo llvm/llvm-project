@@ -1232,11 +1232,24 @@ public:
 #endif
 };
 
+/// Helper to access the operand that contains the unroll part for this recipe
+/// after unrolling.
+template <unsigned PartOpIdx> class VPUnrollPartAccessor {
+protected:
+  /// Return the VPValue operand containing the unroll part or null if there is
+  /// no such operand.
+  VPValue *getUnrollPartOperand(VPUser &U) const;
+
+  /// Return the unroll part.
+  unsigned getUnrollPart(VPUser &U) const;
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPRecipeWithIRFlags {
+class VPInstruction : public VPRecipeWithIRFlags,
+                      public VPUnrollPartAccessor<1> {
   friend class VPlanSlp;
 
 public:
@@ -1309,9 +1322,6 @@ private:
   /// has fast-math flags.
   bool isFPMathOp() const;
 #endif
-
-  /// Return the unroll part for this VPInstruction.
-  unsigned getUnrollPart() const;
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
@@ -1773,7 +1783,8 @@ public:
 /// A recipe to compute the pointers for widened memory accesses of IndexTy for
 /// all parts. If IsReverse is true, compute pointers for accessing the input in
 /// reverse order per part.
-class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
+class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
+                              public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
   bool IsReverse;
 
@@ -1806,9 +1817,6 @@ public:
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
                                      isInBounds(), getDebugLoc());
   }
-
-  /// Return the unroll part for this vector pointer.
-  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1994,7 +2002,8 @@ public:
   }
 };
 
-class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
+class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe,
+                                      public VPUnrollPartAccessor<3> {
   const InductionDescriptor &IndDesc;
 
   bool IsScalarAfterVectorization;
@@ -2031,14 +2040,11 @@ public:
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
-  /// Return the unroll part for this induction phi.
-  unsigned getUnrollPart() const;
-
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
-    return getUnrollPart() == 0 ? this : getOperand(2);
+    return getUnrollPart(*this) == 0 ? this : getOperand(2);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2123,7 +2129,8 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
+                             public VPUnrollPartAccessor<2> {
   /// Descriptor for the reduction.
   const RecurrenceDescriptor &RdxDesc;
 
@@ -2178,9 +2185,6 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
-
-  /// Return the unroll part for this reduction phi.
-  unsigned getUnrollPart() const;
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -3007,7 +3011,8 @@ public:
 };
 
 /// A Recipe for widening the canonical induction variable of the vector loop.
-class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
+class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe,
+                                 public VPUnrollPartAccessor<1> {
 public:
   VPWidenCanonicalIVRecipe(VPCanonicalIVPHIRecipe *CanonicalIV)
       : VPSingleDefRecipe(VPDef::VPWidenCanonicalIVSC, {CanonicalIV}) {}
@@ -3025,9 +3030,6 @@ public:
   /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
   /// step = <VF*UF, VF*UF, ..., VF*UF>.
   void execute(VPTransformState &State) override;
-
-  /// Return the unroll part for this widened IV.
-  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3096,7 +3098,8 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
-class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags {
+class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
+                              public VPUnrollPartAccessor<2> {
   Instruction::BinaryOps InductionOpcode;
 
 public:
@@ -3141,9 +3144,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-
-  /// Return the unroll part for this scalar step
-  unsigned getUnrollPart() const;
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It

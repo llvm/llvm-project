@@ -1619,8 +1619,7 @@ class UnrollState {
 
 public:
   UnrollState(VPlan &Plan, unsigned UF, LLVMContext &Ctx)
-      : Plan(Plan), UF(UF),
-        TypeInfo(Plan.getCanonicalIV()->getScalarType()) {}
+      : Plan(Plan), UF(UF), TypeInfo(Plan.getCanonicalIV()->getScalarType()) {}
 
   void unrollBlock(VPBlockBase *VPB);
 
