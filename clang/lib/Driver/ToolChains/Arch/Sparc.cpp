@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sparc.h"
+#include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -125,7 +126,9 @@ std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
     return std::string(CPUName);
   }
 
-  if (Triple.getArch() == llvm::Triple::sparc && Triple.isOSSolaris())
+  Distro Dist(D.getVFS(), Triple);
+  if (Triple.getArch() == llvm::Triple::sparc &&
+      (Triple.isOSSolaris() || Dist.IsDebian() || Dist.IsGentoo()))
     return "v9";
   return "";
 }
