@@ -632,6 +632,8 @@ static llvm::SmallVector<const Decl *, 2> collectLambdas(FunctionDecl *FD) {
   std::function<void(DeclContext *)> visitor = [&visitor,
                                                 &Lambdas](DeclContext *DC) {
     for (Decl *D : DC->decls()) {
+      if (!D)
+        continue;
       if (isa<DeclContext>(D))
         visitor(cast<DeclContext>(D));
       if (auto *RD = dyn_cast<CXXRecordDecl>(D); RD && RD->isLambda())
