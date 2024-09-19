@@ -2626,6 +2626,20 @@ void GlobalValue::setVisibility(VisibilityTypes V) {
   cast<llvm::GlobalValue>(Val)->setVisibility(V);
 }
 
+NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
+  auto *LLVMC = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(GV->Val));
+  return cast<NoCFIValue>(GV->getContext().getOrCreateConstant(LLVMC));
+}
+
+GlobalValue *NoCFIValue::getGlobalValue() const {
+  auto *LLVMC = cast<llvm::NoCFIValue>(Val)->getGlobalValue();
+  return cast<GlobalValue>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+PointerType *NoCFIValue::getType() const {
+  return cast<PointerType>(Ctx.getType(cast<llvm::NoCFIValue>(Val)->getType()));
+}
+
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::Function>(F->Val),
                                         cast<llvm::BasicBlock>(BB->Val));
@@ -2831,6 +2845,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::GlobalAliasVal:
       It->second = std::unique_ptr<GlobalAlias>(
           new GlobalAlias(cast<llvm::GlobalAlias>(C), *this));
+      break;
+    case llvm::Value::NoCFIValueVal:
+      It->second = std::unique_ptr<NoCFIValue>(
+          new NoCFIValue(cast<llvm::NoCFIValue>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
