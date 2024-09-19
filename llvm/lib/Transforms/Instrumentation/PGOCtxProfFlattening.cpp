@@ -233,28 +233,37 @@ class ProfileAnnotator final {
     std::deque<const BasicBlock *> Worklist;
     DenseSet<const BasicBlock *> Visited;
     Worklist.push_back(&F.getEntryBlock());
-    Visited.insert(&F.getEntryBlock());
+    bool HitExit = false;
     while (!Worklist.empty()) {
       const auto *BB = Worklist.front();
       Worklist.pop_front();
-      if (succ_size(BB) <= 1)
+      if (!Visited.insert(BB).second)
         continue;
+      if (succ_size(BB) == 0) {
+        if (isa<UnreachableInst>(BB->getTerminator()))
+          return false;
+        HitExit = true;
+        continue;
+      }
+      if (succ_size(BB) == 1) {
+        llvm::append_range(Worklist, successors(BB));
+        continue;
+      }
       const auto &BBInfo = getBBInfo(*BB);
-      bool Inserted = false;
+      bool HasAWayOut = false;
       for (auto I = 0U; I < BB->getTerminator()->getNumSuccessors(); ++I) {
         const auto *Succ = BB->getTerminator()->getSuccessor(I);
         if (!shouldExcludeEdge(*BB, *Succ)) {
-          if (BBInfo.getEdgeCount(I) > 0)
-            if (Visited.insert(Succ).second) {
-              Worklist.push_back(Succ);
-              Inserted = true;
-            }
+          if (BBInfo.getEdgeCount(I) > 0) {
+            HasAWayOut = true;
+            Worklist.push_back(Succ);
+          }
         }
       }
-      if (!Inserted)
+      if (!HasAWayOut)
         return false;
     }
-    return true;
+    return HitExit;
   }
 
 public:
