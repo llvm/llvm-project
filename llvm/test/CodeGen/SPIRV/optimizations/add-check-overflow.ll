@@ -41,15 +41,15 @@ define spir_func i32 @foo(i32 %a, ptr addrspace(4) %p) {
 entry:
   br label %l1
 
+body:
+  store i8 42, ptr addrspace(4) %p
+  br label %l1
+
 l1:
   %e = phi i32 [ %a, %entry ], [ %i, %body ]
   %i = add nsw i32 %e, 1
   %fl = icmp eq i32 %i, 0
   br i1 %fl, label %exit, label %body
-
-body:
-  store i8 42, ptr addrspace(4) %p
-  br label %l1
 
 exit:
   ret i32 %i
