@@ -75,7 +75,7 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   // Loop invariants are uniform.
-  if (V->isDefinedOutsideVectorRegions())
+  if (V->isDefinedOutsideLoopRegions())
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();

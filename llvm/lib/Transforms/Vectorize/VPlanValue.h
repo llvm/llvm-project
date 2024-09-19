@@ -180,8 +180,8 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any vector regions.
-  bool isDefinedOutsideVectorRegions() const;
+  /// Returns true if the VPValue is defined outside any loop region.
+  bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {

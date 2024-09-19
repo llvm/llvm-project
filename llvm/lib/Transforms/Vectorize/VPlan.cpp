@@ -271,7 +271,7 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
     return Data.PerPartOutput[Def][Part];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist = Def->isDefinedOutsideVectorRegions();
+    bool SafeToHoist = Def->isDefinedOutsideLoopRegions();
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
@@ -1472,7 +1472,7 @@ void VPlanIngredient::print(raw_ostream &O) const {
 
 #endif
 
-bool VPValue::isDefinedOutsideVectorRegions() const {
+bool VPValue::isDefinedOutsideLoopRegions() const {
   return !hasDefiningRecipe() ||
          !getDefiningRecipe()->getParent()->getEnclosingLoopRegion();
 }
