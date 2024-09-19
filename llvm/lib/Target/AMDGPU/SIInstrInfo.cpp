@@ -2887,6 +2887,14 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // s_getpc_b64. Insert pc arithmetic code before last terminator.
   MachineInstr *GetPC = BuildMI(MBB, I, DL, get(AMDGPU::S_GETPC_B64), PCReg);
   ApplyHazardWorkarounds();
+  if (ST.hasGetPCZeroExtension()) {
+    // Fix up hardware that does not sign-extend the 48-bit PC value by
+    // inserting: s_sext_i32_i16 reghi, reghi
+    BuildMI(MBB, I, DL, get(AMDGPU::S_SEXT_I32_I16))
+      .addReg(PCReg, RegState::Define, AMDGPU::sub1)
+      .addReg(PCReg, 0, AMDGPU::sub1);
+    ApplyHazardWorkarounds();
+  }
 
   auto &MCCtx = MF->getContext();
   MCSymbol *PostGetPCLabel =

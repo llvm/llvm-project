@@ -88,6 +88,8 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GFX12-NEXT:    s_getpc_b64 s[4:5]
 ; GFX12-NEXT:  .Lpost_getpc0:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s5, s5
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s4, s4, (.LBB0_2-.Lpost_getpc0)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, (.LBB0_2-.Lpost_getpc0)>>32
@@ -199,6 +201,8 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GFX12-NEXT:  ; %bb.3: ; %bb0
 ; GFX12-NEXT:    s_getpc_b64 s[4:5]
 ; GFX12-NEXT:  .Lpost_getpc1:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s5, s5
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s4, s4, (.LBB1_2-.Lpost_getpc1)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -319,6 +323,8 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX12-NEXT:  ; %bb.3: ; %bb0
 ; GFX12-NEXT:    s_getpc_b64 s[4:5]
 ; GFX12-NEXT:  .Lpost_getpc2:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s5, s5
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s4, s4, (.LBB2_2-.Lpost_getpc2)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -455,6 +461,8 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
 ; GFX12-NEXT:  .Lpost_getpc3:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s3, s3
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, (.LBB3_2-.Lpost_getpc3)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, (.LBB3_2-.Lpost_getpc3)>>32
@@ -567,6 +575,8 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; GFX12-NEXT:    s_getpc_b64 s[2:3]
 ; GFX12-NEXT:  .Lpost_getpc4:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s2, s2, (.LBB4_1-.Lpost_getpc4)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -721,6 +731,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc6:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB5_4-.Lpost_getpc6)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB5_4-.Lpost_getpc6)>>32
@@ -754,6 +766,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc7:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB5_2-.Lpost_getpc7)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB5_2-.Lpost_getpc7)>>32
@@ -762,6 +776,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GFX12-NEXT:  .LBB5_5: ; %bb3
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc5:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB5_3-.Lpost_getpc5)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -856,6 +872,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GFX12-NEXT:    ; in Loop: Header=BB6_1 Depth=1
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc8:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB6_1-.Lpost_getpc8)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -983,6 +1001,8 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc9:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB7_4-.Lpost_getpc9)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1262,6 +1282,8 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc10:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB9_5-.Lpost_getpc10)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB9_5-.Lpost_getpc10)>>32
@@ -1286,6 +1308,8 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX12-NEXT:    ; in Loop: Header=BB9_4 Depth=1
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc11:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB9_4-.Lpost_getpc11)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1471,6 +1495,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_getpc_b64 s[10:11]
 ; GFX12-NEXT:  .Lpost_getpc17:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s11, s11
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s10, s10, (.LBB10_4-.Lpost_getpc17)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s11, s11, (.LBB10_4-.Lpost_getpc17)>>32
@@ -1483,6 +1509,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
 ; GFX12-NEXT:  .Lpost_getpc13:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s9, s9
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_5-.Lpost_getpc13)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_5-.Lpost_getpc13)>>32
@@ -1494,6 +1522,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:  ; %bb.12: ; %Flow5
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc14:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB10_6-.Lpost_getpc14)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1514,6 +1544,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc12:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s0, s0, (.LBB10_7-.Lpost_getpc12)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s1, s1, (.LBB10_7-.Lpost_getpc12)>>32
@@ -1532,6 +1564,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
 ; GFX12-NEXT:  .Lpost_getpc15:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s9, s9
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_2-.Lpost_getpc15)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_2-.Lpost_getpc15)>>32
@@ -1549,6 +1583,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:  ; %bb.16: ; %bb9
 ; GFX12-NEXT:    s_getpc_b64 s[8:9]
 ; GFX12-NEXT:  .Lpost_getpc16:
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_sext_i32_i16 s9, s9
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_u32 s8, s8, (.LBB10_3-.Lpost_getpc16)&4294967295
 ; GFX12-NEXT:    s_wait_alu 0xfffe
