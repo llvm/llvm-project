@@ -21870,10 +21870,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
       std::swap(A, B);
   } else if (AIsSigned)
     Opcode = AArch64ISD::SDOT;
-  else if (!AIsSigned)
+  else
     Opcode = AArch64ISD::UDOT;
-
-  assert(Opcode != 0 && "Unexpected dot product case encountered.");
 
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }
