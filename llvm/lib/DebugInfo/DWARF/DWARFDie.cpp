@@ -777,12 +777,12 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
 namespace llvm {
 
 void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS) {
-  DWARFTypePrinter(OS).appendQualifiedName(DIE);
+  DWARFTypePrinter<DWARFDie>(OS).appendQualifiedName(DIE);
 }
 
 void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
                              std::string *OriginalFullName) {
-  DWARFTypePrinter(OS).appendUnqualifiedName(DIE, OriginalFullName);
+  DWARFTypePrinter<DWARFDie>(OS).appendUnqualifiedName(DIE, OriginalFullName);
 }
 
 } // namespace llvm
