@@ -465,16 +465,20 @@ translation units.
 Source Files Consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Clang may open the input files (*) of a BMI during the compilation. It implies that
-when we consume a BMI, all the input files need to be present with the same path
-and the same contents.
+Clang may open the input files\ :sup:`*` of a BMI during the compilation. This implies that
+when Clang consumes a BMI, all the input files need to be present in the original path
+and with the original contents.
 
-To overcome the requirements and simplify cases like distributed builds and sandboxed
-builds, users can use ``-fmodules-embed-all-files`` flag to embed all input files
-into the BMI so that clang won't ask to open the corresponding file on disk.
+To overcome these requirements and simplify cases like distributed builds and sandboxed
+builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
+into the BMI so that Clang does not need to open the corresponding file on disk.
 
-Input files (*): The source files that took part in the compilation of the BMI.
-For example,
+When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
+code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+representation to reproduce the original source file.
+
+:sup:`*`Input files: The source files which took part in the compilation of the BMI.
+For example:
 
 .. code-block:: c++
 
