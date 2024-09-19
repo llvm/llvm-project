@@ -894,6 +894,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
+                       ISD::MUL,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FDIV,
@@ -909,9 +910,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UMIN,
                        ISD::UMAX,
                        ISD::SETCC,
+                       ISD::SELECT,
+                       ISD::SMIN,
+                       ISD::SMAX,
+                       ISD::UMIN,
+                       ISD::UMAX,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
+                       ISD::SHL,
+                       ISD::SRL,
+                       ISD::SRA,
                        ISD::FSHR,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
@@ -1942,13 +1951,6 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
     switch (Op) {
     case ISD::LOAD:
     case ISD::STORE:
-
-    // These operations are done with 32-bit instructions anyway.
-    case ISD::AND:
-    case ISD::OR:
-    case ISD::XOR:
-    case ISD::SELECT:
-      // TODO: Extensions?
       return true;
     default:
       return false;
@@ -6729,6 +6731,93 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return DAG.getNode(ISD::FLDEXP, DL, VT, Op.getOperand(0), TruncExp);
+}
+
+static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
+  switch (Op->getOpcode()) {
+  case ISD::SRA:
+  case ISD::SMIN:
+  case ISD::SMAX:
+    return ISD::SIGN_EXTEND;
+  case ISD::SRL:
+  case ISD::UMIN:
+  case ISD::UMAX:
+    return ISD::ZERO_EXTEND;
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SHL:
+  case ISD::SELECT:
+  case ISD::MUL:
+    // operation result won't be influenced by garbage high bits.
+    // TODO: are all of those cases correct, and are there more?
+    return ISD::ANY_EXTEND;
+  case ISD::SETCC: {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    return ISD::isSignedIntSetCC(CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  }
+  default:
+    llvm_unreachable("unexpected opcode!");
+  }
+}
+
+SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
+                                                DAGCombinerInfo &DCI) const {
+  const unsigned Opc = Op.getOpcode();
+  assert(Opc == ISD::ADD || Opc == ISD::SUB || Opc == ISD::SHL ||
+         Opc == ISD::SRL || Opc == ISD::SRA || Opc == ISD::AND ||
+         Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
+         Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
+         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX);
+
+  EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
+                                 : Op->getOperand(0).getValueType();
+  auto ExtTy = OpTy.changeElementType(MVT::i32);
+
+  if (DCI.isBeforeLegalizeOps() ||
+      isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  auto &DAG = DCI.DAG;
+
+  SDLoc DL(Op);
+  SDValue LHS;
+  SDValue RHS;
+  if (Opc == ISD::SELECT) {
+    LHS = Op->getOperand(1);
+    RHS = Op->getOperand(2);
+  } else {
+    LHS = Op->getOperand(0);
+    RHS = Op->getOperand(1);
+  }
+
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
+
+  // Special case: for shifts, the RHS always needs a zext.
+  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
+      Op.getOpcode() == ISD::SRA)
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
+  else
+    RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
+
+  // setcc always return i1/i1 vec so no need to truncate after.
+  if (Opc == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
+  }
+
+  // For other ops, we extend the operation's return type as well so we need to
+  // truncate back to the original type.
+  SDValue NewVal;
+  if (Opc == ISD::SELECT)
+    NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
+  else
+    NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
+
+  return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
 }
 
 // Custom lowering for vector multiplications and s_mul_u64.
@@ -14623,8 +14712,32 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::MUL:
+  case ISD::SETCC:
+  case ISD::SELECT:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+    if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
+      return Res;
+    break;
+  default:
+    break;
+  }
+
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
+
   switch (N->getOpcode()) {
   case ISD::ADD:
     return performAddCombine(N, DCI);
