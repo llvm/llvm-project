@@ -1705,23 +1705,40 @@
 // CHECK-LD-RHEL7-DTS-NOT: /usr/bin/ld
 // CHECK-LD-RHEL7-DTS: [[SYSROOT]]/usr/lib/gcc/x86_64-redhat-linux/7/../../../../bin/ld
 
-// Check whether gcc7 install works fine on Amazon Linux AMI
+// Check whether gcc7 install works fine on Amazon Linux AMI targeting x86_64
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-amazon-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/ami_linux_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-LD-AMI %s
-// CHECK-LD-AMI: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-LD-AMI: "--eh-frame-hdr"
-// CHECK-LD-AMI: "-m" "elf_x86_64"
-// CHECK-LD-AMI: "-dynamic-linker"
-// CHECK-LD-AMI: "{{.*}}/usr/lib/gcc/x86_64-amazon-linux/7{{/|\\\\}}crtbegin.o"
-// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7"
-// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7/../../../../lib64"
-// CHECK-LD-AMI: "-L[[SYSROOT]]/lib"
-// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-// CHECK-LD-AMI: "-lc"
-// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// RUN:   | FileCheck --check-prefix=CHECK-LD-AMI-X86_64 %s
+// CHECK-LD-AMI-X86_64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-AMI-X86_64: "--eh-frame-hdr"
+// CHECK-LD-AMI-X86_64: "-m" "elf_x86_64"
+// CHECK-LD-AMI-X86_64: "-dynamic-linker"
+// CHECK-LD-AMI-X86_64: "{{.*}}/usr/lib/gcc/x86_64-amazon-linux/7{{/|\\\\}}crtbegin.o"
+// CHECK-LD-AMI-X86_64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7"
+// CHECK-LD-AMI-X86_64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7/../../../../lib64"
+// CHECK-LD-AMI-X86_64: "-L[[SYSROOT]]/lib"
+// CHECK-LD-AMI-X86_64: "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD-AMI-X86_64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-AMI-X86_64: "-lc"
+// CHECK-LD-AMI-X86_64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+
+// Check whether gcc7 install works fine on Amazon Linux AMI targeting aarch64
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
+// RUN:     --target=aarch64-amazon-linux -rtlib=libgcc --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/ami_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-AMI-AARCH64 %s
+// CHECK-LD-AMI-AARCH64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-AMI-AARCH64: "--eh-frame-hdr"
+// CHECK-LD-AMI-AARCH64: "-dynamic-linker"
+// CHECK-LD-AMI-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-amazon-linux/7{{/|\\\\}}crtbegin.o"
+// CHECK-LD-AMI-AARCH64: "-L[[SYSROOT]]/usr/lib/gcc/aarch64-amazon-linux/7"
+// CHECK-LD-AMI-AARCH64: "-L[[SYSROOT]]/usr/lib/gcc/aarch64-amazon-linux/7/../../../../lib64"
+// CHECK-LD-AMI-AARCH64: "-L[[SYSROOT]]/lib"
+// CHECK-LD-AMI-AARCH64: "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD-AMI-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-AMI-AARCH64: "-lc"
+// CHECK-LD-AMI-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 
 // Check whether the OpenEmbedded ARM libs are added correctly.
 // RUN: %clang -### %s -no-pie 2>&1 \
