@@ -68,8 +68,7 @@ public:
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
-                   const std::optional<StringRef> &DumpFile,
-                   std::optional<int> BenchmarkProcessCPU) const;
+                   const std::optional<StringRef> &DumpFile) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -136,8 +135,7 @@ private:
 
   Expected<std::unique_ptr<FunctionExecutor>>
   createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
-                         const BenchmarkKey &Key,
-                         std::optional<int> BenchmarkProcessCPU) const;
+                         const BenchmarkKey &Key) const;
 };
 
 } // namespace exegesis
