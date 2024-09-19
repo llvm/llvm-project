@@ -2190,6 +2190,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Initializes;
   case bitc::ATTR_KIND_CORO_ELIDE_SAFE:
     return Attribute::CoroElideSafe;
+  case bitc::ATTR_KIND_NO_EXT:
+    return Attribute::NoExt;
   }
 }
 
