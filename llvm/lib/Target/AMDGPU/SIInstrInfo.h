@@ -1218,7 +1218,8 @@ public:
   /// threads in the wave.
   /// \returns The SGPR register that \p SrcReg was copied to.
   Register readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                              MachineRegisterInfo &MRI) const;
+                              MachineRegisterInfo &MRI,
+                              const TargetRegisterClass *DstRC = nullptr) const;
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
