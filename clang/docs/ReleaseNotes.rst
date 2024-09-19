@@ -77,7 +77,9 @@ C++ Specific Potentially Breaking Changes
 - During constant evaluation, comparisons between different evaluations of the
   same string literal are now correctly treated as non-constant, and comparisons
   between string literals that cannot possibly overlap in memory are now treated
-  as constant.
+  as constant. This updates Clang to match the anticipated direction of open core
+  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
+  issue is resolved.
 
   .. code-block:: c++
 
