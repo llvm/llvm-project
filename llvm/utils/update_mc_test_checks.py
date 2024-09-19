@@ -55,6 +55,7 @@ def hasErr(err):
         return False
     return ERROR_RE.search(err) is not None
 
+
 def getErrString(err):
     if not err:
         return ""
@@ -99,15 +100,8 @@ def getStdCheckLine(prefix, output, mc_mode):
 
 
 def getErrCheckLine(prefix, output, mc_mode):
-    return (
-        COMMENT[mc_mode]
-        + " "
-        + prefix
-        + ": "
-        + ":[[@LINE-1]]"
-        + output
-        + "\n"
-    )
+    return COMMENT[mc_mode] + " " + prefix + ": " + ":[[@LINE-1]]" + output + "\n"
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
