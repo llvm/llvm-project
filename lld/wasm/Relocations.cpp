@@ -146,7 +146,8 @@ void scanRelocations(InputChunk *chunk) {
 
     if (ctx.isPic ||
         (sym->isUndefined() &&
-         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
+         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) ||
+        sym->isShared()) {
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:
