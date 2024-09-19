@@ -1963,7 +1963,7 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
       NewOps.append(Ops.begin(), Ops.end());
 
       // Ensure that the new opcodes are only appended once.
-      Ops = std::nullopt;
+      Ops = {};
     }
     Op.appendToVector(NewOps);
   }

@@ -1554,8 +1554,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   assert(OldSP->getUnit() && "Missing compile unit for subprogram");
   DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolved=*/false,
                 OldSP->getUnit());
-  auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                     DISubprogram::SPFlagOptimized |
                                     DISubprogram::SPFlagLocalToUnit;

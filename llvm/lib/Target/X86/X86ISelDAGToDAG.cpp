@@ -453,8 +453,8 @@ namespace {
 
       // Create zero.
       SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
-      SDValue Zero = SDValue(
-          CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, std::nullopt), 0);
+      SDValue Zero =
+          SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
@@ -5826,8 +5826,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       } else {
         // Zero out the high part, effectively zero extending the input.
         SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
-        SDValue ClrNode = SDValue(
-            CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, std::nullopt), 0);
+        SDValue ClrNode =
+            SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
         switch (NVT.SimpleTy) {
         case MVT::i16:
           ClrNode =

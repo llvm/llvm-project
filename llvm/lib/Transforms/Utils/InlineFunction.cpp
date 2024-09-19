@@ -1042,7 +1042,7 @@ void ScopedAliasMetadataDeepCloner::clone() {
 
   SmallVector<TempMDTuple, 16> DummyNodes;
   for (const MDNode *I : MD) {
-    DummyNodes.push_back(MDTuple::getTemporary(I->getContext(), std::nullopt));
+    DummyNodes.push_back(MDTuple::getTemporary(I->getContext(), {}));
     MDMap[I].reset(DummyNodes.back().get());
   }
 
