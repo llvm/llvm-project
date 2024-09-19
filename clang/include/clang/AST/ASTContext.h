@@ -328,7 +328,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
   ///
-  /// TODO: Ensure version numbers don't collide when deserialized.
+  /// We don't need to serialize this because evaluations in this AST file refer
+  /// to a copy of the `StringLiteral` that is local to this AST file.
   unsigned NextStringLiteralVersion = 0;
 
   /// MD5 hash of CUID. It is calculated when first used and cached by this
