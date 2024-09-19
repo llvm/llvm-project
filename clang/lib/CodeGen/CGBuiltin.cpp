@@ -18959,6 +18959,44 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.radians");
   }
+  // This should only be called when targeting DXIL
+  case Builtin::BI__builtin_hlsl_asuint_splitdouble: {
+
+    assert((E->getArg(0)->getType()->hasFloatingRepresentation() &&
+            E->getArg(1)->getType()->hasUnsignedIntegerRepresentation() &&
+            E->getArg(2)->getType()->hasUnsignedIntegerRepresentation()) &&
+           "asuint operands types mismatch");
+
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    const HLSLOutArgExpr *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
+    const HLSLOutArgExpr *OutArg2 = dyn_cast<HLSLOutArgExpr>(E->getArg(2));
+
+    CallArgList Args;
+    LValue Op1TmpLValue = EmitHLSLOutArgExpr(OutArg1, Args, OutArg1->getType());
+    LValue Op2TmpLValue = EmitHLSLOutArgExpr(OutArg2, Args, OutArg2->getType());
+
+    llvm::Type *retType = llvm::StructType::get(Int32Ty, Int32Ty);
+    if (Op0->getType()->isVectorTy()) {
+      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+
+      llvm::VectorType *i32VecTy = llvm::VectorType::get(
+          Int32Ty, ElementCount::getFixed(XVecTy->getNumElements()));
+
+      retType = llvm::StructType::get(i32VecTy, i32VecTy);
+    }
+
+    CallInst *CI =
+        Builder.CreateIntrinsic(retType, llvm::Intrinsic::dx_asuint_splitdouble,
+                                {Op0}, nullptr, "hlsl.asuint");
+
+    Value *arg0 = Builder.CreateExtractValue(CI, 0);
+    Value *arg1 = Builder.CreateExtractValue(CI, 1);
+
+    Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
+    auto *s = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+    EmitWritebacks(*this, Args);
+    return s;
+  }
   }
   return nullptr;
 }
