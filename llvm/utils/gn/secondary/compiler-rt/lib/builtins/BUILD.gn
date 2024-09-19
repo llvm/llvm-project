@@ -278,6 +278,7 @@ static_library("builtins") {
       "i386/fp_mode.c",
       "extendbfsf2.c",
       "truncdfbf2.c",
+      "truncxfbf2.c",
       "truncsfbf2.c",
     ]
     if (long_double_is_80_bits) {
