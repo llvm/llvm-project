@@ -1344,9 +1344,11 @@ private:
     LLVM_DEBUG({
       for (auto Reg : FixedRegs) {
         dbgs() << printReg(Reg, TRI, 0, &MRI) << ": [";
-        const int *Sets = TRI->getRegUnitPressureSets(Reg);
-        for (; *Sets != -1; Sets++) {
-          dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+        for (MCRegUnit Unit : TRI->regunits(Reg)) {
+          const int *Sets = TRI->getRegUnitPressureSets(Unit);
+          for (; *Sets != -1; Sets++) {
+            dbgs() << TRI->getRegPressureSetName(*Sets) << ", ";
+          }
         }
         dbgs() << "]\n";
       }
@@ -1355,15 +1357,18 @@ private:
     for (auto Reg : FixedRegs) {
       LLVM_DEBUG(dbgs() << "fixed register: " << printReg(Reg, TRI, 0, &MRI)
                         << "\n");
-      auto PSetIter = MRI.getPressureSets(Reg);
-      unsigned Weight = PSetIter.getWeight();
-      for (; PSetIter.isValid(); ++PSetIter) {
-        unsigned &Limit = PressureSetLimit[*PSetIter];
-        assert(Limit >= Weight &&
-               "register pressure limit must be greater than or equal weight");
-        Limit -= Weight;
-        LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
-                          << " (decreased by " << Weight << ")\n");
+      for (MCRegUnit Unit : TRI->regunits(Reg)) {
+        auto PSetIter = MRI.getPressureSets(Unit);
+        unsigned Weight = PSetIter.getWeight();
+        for (; PSetIter.isValid(); ++PSetIter) {
+          unsigned &Limit = PressureSetLimit[*PSetIter];
+          assert(
+              Limit >= Weight &&
+              "register pressure limit must be greater than or equal weight");
+          Limit -= Weight;
+          LLVM_DEBUG(dbgs() << "PSet=" << *PSetIter << " Limit=" << Limit
+                            << " (decreased by " << Weight << ")\n");
+        }
       }
     }
   }

@@ -246,7 +246,7 @@ class ProfileAnnotator final {
         continue;
       }
       if (succ_size(BB) == 1) {
-        llvm::append_range(Worklist, successors(BB));
+        Worklist.push_back(BB->getUniqueSuccessor());
         continue;
       }
       const auto &BBInfo = getBBInfo(*BB);
