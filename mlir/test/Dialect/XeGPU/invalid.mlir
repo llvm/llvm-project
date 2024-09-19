@@ -16,6 +16,20 @@ func.func @test_create_nd_tdesc_vc_2(%src: memref<24x32xf32>) {
 }
 
 // -----
+func.func @test_create_nd_tdesc_vc_3(%src: memref<2x24x32xf32, 3>) {
+  // expected-error@+1 {{SLM is not supported for 2D Block TensorDesc}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0, 0] : memref<2x24x32xf32, 3> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<memory_space = slm>>
+  return
+}
+
+// -----
+func.func @test_create_nd_tdesc_vc_4(%src: memref<2x24x32xf32, 3>) {
+  // expected-error@+1 {{Memory space mismatch}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0, 0] : memref<2x24x32xf32, 3> -> !xegpu.tensor_desc<16xf32>
+  return
+}
+
+// -----
 func.func @test_prefetch_nd_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<write_back>}}
@@ -103,6 +117,13 @@ func.func @test_create_tdesc_vc_2(%src: ui64) {
   // expected-error@+1 {{Incorrect TensorDesc shape}}
   %1 = xegpu.create_tdesc %src[0, 2, 4, 6, 8, 10, 12, 14] {chunk_size = 2}
         : ui64 -> !xegpu.tensor_desc<8x4xf16, #xegpu.scatter_tdesc_attr<>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_vc_1(%src: memref<?xf32>) {
+  // expected-error@+1 {{Memory space mismatch}}
+  %1 = xegpu.create_tdesc %src[0, 8, 16, 24] : memref<?xf32>  -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<memory_space = slm, chunk_size = 2>>
   return
 }
 

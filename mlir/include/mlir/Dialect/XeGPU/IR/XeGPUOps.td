@@ -218,6 +218,23 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
 
     mlir::Value getViewSource() { return getSource(); }
+
+    unsigned getSourceMemorySpace() {
+      auto srcTy = getSourceType();
+      if (auto memrefTy = llvm::dyn_cast<mlir::MemRefType>(srcTy)) {
+        auto attr = memrefTy.getMemorySpace();
+        if (attr) {
+          if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(attr)) {
+            return static_cast<unsigned>(intAttr.getInt());
+          }
+          if (auto memSpaceAttr = llvm::dyn_cast<MemorySpaceAttr>(attr))
+            return static_cast<unsigned>(memSpaceAttr.getValue());
+        }
+      }
+      // take global as default memory scope.
+      return static_cast<unsigned>(MemorySpace::Global);
+    }
+
   }];
 }
 
@@ -468,6 +485,22 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
       assert(idx < getNumOffsets() && "Invalid out of bound access.");
       return getMixedOffsets()[idx];
     }
+
+    unsigned getSourceMemorySpace() {
+      auto srcTy = getSource().getType();
+      if (auto memrefTy = llvm::dyn_cast<mlir::MemRefType>(srcTy)) {
+        auto attr = memrefTy.getMemorySpace();
+        if (attr) {
+          if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(attr))
+            return static_cast<unsigned>(intAttr.getInt());
+          if (auto memSpaceAttr = llvm::dyn_cast<MemorySpaceAttr>(attr))
+            return static_cast<unsigned>(memSpaceAttr.getValue());
+        }
+      }
+      // take global as default memory scope.
+      return static_cast<unsigned>(MemorySpace::Global);
+    }
+
   }];
 
   let hasVerifier = 1;
@@ -531,7 +564,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
                             l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
-          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_scope=global>>,
+          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
             vector<16xi1> -> vector<16xf32>
   ```
 
@@ -811,7 +844,7 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
     2. `Fence_scope` describes the scope of fence. "Workgroup" means that the scope would be
         within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
   }];
-  let arguments = (ins XeGPU_MemoryScopeAttr: $memory_kind,
+  let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
   let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;

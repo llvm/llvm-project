@@ -48,7 +48,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     Similar to the builtin tensor, it also provides an optinal attribute to encoding
     the following information via the TensorDescAttr object:
-    * memory_scope (xegpu::MemoryScope): [optional] where the data is located,
+    * memory_space (xegpu::MemorySpace): [optional] where the data is located,
                 global memory or shared memory. It is default to Global.
     * array_length (int): [optional] The number of contiguous blocks with size as `shape`,
                that will be loaded by block load at a time. It is default to 1.
@@ -63,7 +63,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
+    attr-list = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
     ```
 
     Examples:
@@ -76,7 +76,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     xegpu.tensor_desc<8x16xf32>
 
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
-    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_scope = slm>>
+    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
     ```
   }];
 
@@ -90,12 +90,12 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       "mlir::Type": $elementType,
       CArg<"int", "1">: $array_length,
       CArg<"bool", "true">: $boundary_check,
-      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope)>,
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
       CArg<"int", "1">: $chunk_size,
-      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope)>
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>
   ];
 
   let extraClassDeclaration = [{
@@ -121,17 +121,17 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
     }
 
-    xegpu::MemoryScope getMemoryScope() const {
+    xegpu::MemorySpace getMemorySpace() const {
       auto block_attr = getEncodingAsBlockTensorDescAttr();
-      if (block_attr && block_attr.getMemoryScope())
-        return block_attr.getMemoryScope().getValue();
+      if (block_attr && block_attr.getMemorySpace())
+        return block_attr.getMemorySpace().getValue();
 
       auto scatter_attr = getEncodingAsScatterTensorDescAttr();
-      if (scatter_attr && scatter_attr.getMemoryScope())
-        return scatter_attr.getMemoryScope().getValue();
+      if (scatter_attr && scatter_attr.getMemorySpace())
+        return scatter_attr.getMemorySpace().getValue();
 
       // return default value
-      return MemoryScope::Global;
+      return MemorySpace::Global;
     }
 
     int getArrayLength() {

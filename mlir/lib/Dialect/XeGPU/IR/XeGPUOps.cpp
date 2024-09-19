@@ -124,6 +124,16 @@ LogicalResult CreateNdDescOp::verify() {
   bool invalidRank = false;
   bool invalidElemTy = false;
 
+  // Memory space of created TensorDesc should match with the source.
+  // Both source and TensorDesc are considered for global memory by default,
+  // if the memory scope attr is not specified. If source is an integer,
+  // it is considered as ptr to global memory.
+  auto srcMemorySpace = getSourceMemorySpace();
+  auto tdescMemorySpace = static_cast<unsigned>(getType().getMemorySpace());
+  if (srcMemorySpace != tdescMemorySpace)
+    return emitOpError("Memory space mismatch.") << " Source: " << srcMemorySpace
+                                                << ", TensorDesc: " << tdescMemorySpace;
+
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
   auto memrefTy = dyn_cast<MemRefType>(getSourceType());
@@ -154,6 +164,9 @@ LogicalResult CreateNdDescOp::verify() {
 
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (getType().getRank() == 2 && tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
+    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
 
   return success();
 }
@@ -302,6 +315,16 @@ LogicalResult CreateDescOp::verify() {
 
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
+
+  // Memory space of created TensorDesc should match with the source.
+  // Both source and TensorDesc are considered for global memory by default,
+  // if the memory scope attr is not specified. If source is an integer,
+  // it is considered as ptr to global memory.
+  auto srcMemorySpace = getSourceMemorySpace();
+  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
+  if (srcMemorySpace != tdescMemorySpace)
+    return emitOpError("Memory space mismatch.") << " Source: " << srcMemorySpace
+                                                << ", TensorDesc: " << tdescMemorySpace;
 
   auto chunkSize = tdescTy.getChunkSize();
 
