@@ -77,6 +77,7 @@ Implemented Papers
 - P2602R2 - Poison Pills are Too Toxic
 - P1981R0 - Rename ``leap`` to ``leap_second``
 - P1982R0 - Rename ``link`` to ``time_zone_link``
+- P2602R2 - Poison Pills are Too Toxic (as DR against C++20)
 
 
 Improvements and New Features

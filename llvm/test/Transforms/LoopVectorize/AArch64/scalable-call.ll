@@ -128,6 +128,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): fadd
 ; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:40: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
@@ -148,7 +149,7 @@ if.then:
   %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
   br label %if.end
 if.else:
-  %add = fadd float %0, 12.0
+  %add = fadd float %0, 12.0, !dbg !13
   %2 = tail call fast float @llvm.sin.f32(float %add), !dbg !13
   br label %if.end
 if.end:

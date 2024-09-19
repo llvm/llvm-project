@@ -37,3 +37,9 @@ add_clang_library(clangdSupport
   ${LLVM_PTHREAD_LIB}
   ${CLANGD_ATOMIC_LIB}
   )
+
+clang_target_link_libraries(clangdSupport
+  PRIVATE
+  clangBasic
+  clangLex
+  )

@@ -38,6 +38,7 @@ DEF_CONST(GlobalVariable, GlobalVariable)
 DEF_CONST(GlobalIFunc, GlobalIFunc)
 DEF_CONST(GlobalAlias, GlobalAlias)
 DEF_CONST(BlockAddress, BlockAddress)
+DEF_CONST(NoCFIValue, NoCFIValue)
 DEF_CONST(DSOLocalEquivalent, DSOLocalEquivalent)
 DEF_CONST(ConstantTokenNone, ConstantTokenNone)
 

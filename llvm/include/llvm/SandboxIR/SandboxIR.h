@@ -133,6 +133,7 @@ class GlobalObject;
 class GlobalIFunc;
 class GlobalVariable;
 class GlobalAlias;
+class NoCFIValue;
 class Context;
 class Function;
 class Instruction;
@@ -340,6 +341,7 @@ protected:
   friend class GlobalIFunc;           // For `Val`.
   friend class GlobalVariable;        // For `Val`.
   friend class GlobalAlias;           // For `Val`.
+  friend class NoCFIValue;            // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1562,6 +1564,43 @@ public:
   static bool isValidLinkage(LinkageTypes L) {
     return llvm::GlobalAlias::isValidLinkage(L);
   }
+};
+
+class NoCFIValue final : public Constant {
+  NoCFIValue(llvm::NoCFIValue *C, Context &Ctx)
+      : Constant(ClassID::NoCFIValue, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  /// Return a NoCFIValue for the specified function.
+  static NoCFIValue *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::NoCFIValue;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::NoCFIValue>(Val) && "Expected a NoCFIValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
 };
 
 class BlockAddress final : public Constant {

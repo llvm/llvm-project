@@ -49,14 +49,21 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   for (const Record *Def : Defs)
     Intrinsics.emplace_back(CodeGenIntrinsic(Def, Ctx));
 
-  // To ensure deterministic sorted order when duplicates are present, use
-  // record ID as a tie-breaker similar to sortAndReportDuplicates in Utils.cpp.
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
+               // Order target independent intrinsics before target dependent
+               // ones.
+               bool LHSHasTarget = !LHS.TargetPrefix.empty();
+               bool RHSHasTarget = !RHS.TargetPrefix.empty();
+
+               // To ensure deterministic sorted order when duplicates are
+               // present, use record ID as a tie-breaker similar to
+               // sortAndReportDuplicates in Utils.cpp.
                unsigned LhsID = LHS.TheDef->getID();
                unsigned RhsID = RHS.TheDef->getID();
-               return std::tie(LHS.TargetPrefix, LHS.Name, LhsID) <
-                      std::tie(RHS.TargetPrefix, RHS.Name, RhsID);
+
+               return std::tie(LHSHasTarget, LHS.Name, LhsID) <
+                      std::tie(RHSHasTarget, RHS.Name, RhsID);
              });
 
   Targets.push_back({"", 0, 0});

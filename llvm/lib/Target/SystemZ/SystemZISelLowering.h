@@ -804,6 +804,10 @@ private:
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
+
+  bool isFullyInternal(const Function *Fn) const;
+  void verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               bool IsInternal) const;
 };
 
 struct SystemZVectorConstantInfo {
