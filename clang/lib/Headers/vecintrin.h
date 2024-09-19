@@ -6477,42 +6477,42 @@ vec_cnttz(__vector unsigned long long __a) {
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_popcnt(__vector signed char __a) {
-  return __builtin_s390_vpopctb((__vector unsigned char)__a);
+  return __builtin_elementwise_popcount((__vector unsigned char)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_popcnt(__vector unsigned char __a) {
-  return __builtin_s390_vpopctb(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_popcnt(__vector signed short __a) {
-  return __builtin_s390_vpopcth((__vector unsigned short)__a);
+  return __builtin_elementwise_popcount((__vector unsigned short)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_popcnt(__vector unsigned short __a) {
-  return __builtin_s390_vpopcth(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_popcnt(__vector signed int __a) {
-  return __builtin_s390_vpopctf((__vector unsigned int)__a);
+  return __builtin_elementwise_popcount((__vector unsigned int)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_popcnt(__vector unsigned int __a) {
-  return __builtin_s390_vpopctf(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_popcnt(__vector signed long long __a) {
-  return __builtin_s390_vpopctg((__vector unsigned long long)__a);
+  return __builtin_elementwise_popcount((__vector unsigned long long)__a);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_popcnt(__vector unsigned long long __a) {
-  return __builtin_s390_vpopctg(__a);
+  return __builtin_elementwise_popcount(__a);
 }
 
 /*-- vec_rl -----------------------------------------------------------------*/
