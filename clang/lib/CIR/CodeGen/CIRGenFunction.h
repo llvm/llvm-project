@@ -463,8 +463,8 @@ public:
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *CurFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
-  const clang::Decl *CurCodeDecl;
-  const CIRGenFunctionInfo *CurFnInfo;
+  const clang::Decl *CurCodeDecl = nullptr;
+  const CIRGenFunctionInfo *CurFnInfo = nullptr;
   clang::QualType FnRetTy;
 
   /// This is the current function or global initializer that is generated code
