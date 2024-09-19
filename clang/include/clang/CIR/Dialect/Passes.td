@@ -11,22 +11,33 @@
 
 include "mlir/Pass/PassBase.td"
 
-def CIRSimplify : Pass<"cir-simplify"> {
-  let summary = "Performs CIR simplification";
+def CIRCanonicalize : Pass<"cir-canonicalize"> {
+  let summary = "Performs CIR canonicalization";
   let description = [{
-    The pass rewrites CIR and removes some redundant operations.
+    Perform canonicalizations on CIR and removes some redundant operations.
 
-    For example, due to canonicalize pass is too aggressive for CIR when
-    the pipeline is used for C/C++ analysis, this pass runs some rewrites
-    for scopes, merging some blocks and eliminating unnecessary control-flow.
+    This pass performs basic cleanup and canonicalization transformations that
+    hopefully do not affect CIR-to-source fidelity and high-level code analysis
+    passes too much. Example transformations performed in this pass include
+    empty scope cleanup, trivial try cleanup, redundant branch cleanup, etc.
+    Those more "heavyweight" transformations and those transformations that
+    could significantly affect CIR-to-source fidelity are performed in the
+    `cir-simplify` pass.
+  }];
 
-    Also, the pass removes redundant and/or unneccessary cast and unary not
-    operation e.g.
-    ```mlir
-      %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
-      %2 = cir.cast(int_to_bool, %1 : !s32i), !cir.bool
-    ```
+  let constructor = "mlir::createCIRCanonicalizePass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
 
+def CIRSimplify : Pass<"cir-simplify"> {
+  let summary = "Performs CIR simplification and code optimization";
+  let description = [{
+    The pass performs code simplification and optimization on CIR.
+
+    Unlike the `cir-canonicalize` pass, this pass contains more aggresive code
+    transformations that could significantly affect CIR-to-source fidelity.
+    Example transformations performed in this pass include ternary folding,
+    code hoisting, etc.
   }];
   let constructor = "mlir::createCIRSimplifyPass()";
   let dependentDialects = ["cir::CIRDialect"];

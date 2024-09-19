@@ -26,11 +26,11 @@ mlir::LogicalResult runCIRToCIRPasses(
     llvm::StringRef lifetimeOpts, bool enableIdiomRecognizer,
     llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
     llvm::StringRef libOptOpts, std::string &passOptParsingFailure,
-    bool flattenCIR, bool emitMLIR, bool enableCallConvLowering,
-    bool enableMem2Reg) {
+    bool enableCIRSimplify, bool flattenCIR, bool emitMLIR,
+    bool enableCallConvLowering, bool enableMem2Reg) {
 
   mlir::PassManager pm(mlirCtx);
-  pm.addPass(mlir::createCIRSimplifyPass());
+  pm.addPass(mlir::createCIRCanonicalizePass());
 
   // TODO(CIR): Make this actually propagate errors correctly. This is stubbed
   // in to get rebases going.
@@ -65,6 +65,9 @@ mlir::LogicalResult runCIRToCIRPasses(
     }
     pm.addPass(std::move(libOpPass));
   }
+
+  if (enableCIRSimplify)
+    pm.addPass(mlir::createCIRSimplifyPass());
 
   pm.addPass(mlir::createLoweringPreparePass(&astCtx));
 

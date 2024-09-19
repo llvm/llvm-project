@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -cir-simplify -o - | FileCheck %s
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>

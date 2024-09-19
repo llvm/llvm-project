@@ -1,6 +1,4 @@
-// RUN: cir-opt --canonicalize -o %t.cir %s
-// RUN: FileCheck --input-file %t.cir %s
-// RUN: cir-opt -cir-simplify -o %t.cir %s
+// RUN: cir-opt -cir-canonicalize -o %t.cir %s
 // RUN: FileCheck --input-file %t.cir %s
 
 !s32i = !cir.int<s, 32>
