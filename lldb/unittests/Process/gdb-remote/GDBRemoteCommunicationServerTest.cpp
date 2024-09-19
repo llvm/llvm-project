@@ -12,7 +12,6 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/UnimplementedError.h"
-#include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -26,7 +25,7 @@ TEST(GDBRemoteCommunicationServerTest, SendErrorResponse_ErrorNumber) {
 
 TEST(GDBRemoteCommunicationServerTest, SendErrorResponse_Status) {
   MockServerWithMockConnection server;
-  Status status(0x42, lldb::eErrorTypePOSIX, "Test error message");
+  Status status(0x42, lldb::eErrorTypeGeneric, "Test error message");
   server.SendErrorResponse(status);
 
   EXPECT_THAT(
