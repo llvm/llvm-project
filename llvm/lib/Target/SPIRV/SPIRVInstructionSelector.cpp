@@ -604,19 +604,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_USUBSAT:
     return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
 
-  case TargetOpcode::G_SADDO:
-    report_fatal_error(
-        "Selection of a signed addition with overflow is not implemented",
-        false);
   case TargetOpcode::G_UADDO:
     return selectOverflowArith(ResVReg, ResType, I,
                                ResType->getOpcode() == SPIRV::OpTypeVector
                                    ? SPIRV::OpIAddCarryV
                                    : SPIRV::OpIAddCarryS);
-  case TargetOpcode::G_SSUBO:
-    report_fatal_error(
-        "Selection of a signed subtraction with overflow is not implemented",
-        false);
   case TargetOpcode::G_USUBO:
     return selectOverflowArith(ResVReg, ResType, I,
                                ResType->getOpcode() == SPIRV::OpTypeVector
