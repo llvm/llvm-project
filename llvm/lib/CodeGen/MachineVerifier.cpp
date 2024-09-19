@@ -1769,7 +1769,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (!SrcTy.isVector()) {
-      report("First source must be a vector", MI);
+      report("Source must be a vector", MI);
       break;
     }
 
@@ -1783,6 +1783,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    if (ElementCount::isKnownGT(DstTy.getElementCount(),
+                                SrcTy.getElementCount())) {
+      report("Destination vector must be smaller than source vector", MI);
+      break;
+    }
+
     uint64_t Idx = IndexOp.getImm();
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
     if (Idx % DstMinLen != 0) {
@@ -1793,10 +1799,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (SrcTy.isScalable() == DstTy.isScalable() &&
-        (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen)) {
-      report("Source type and index must not cause extract to overrun to the "
-             "destination type",
+    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+      report("Destination type and index must not cause extract to overrun the "
+             "source vector",
              MI);
       break;
     }
