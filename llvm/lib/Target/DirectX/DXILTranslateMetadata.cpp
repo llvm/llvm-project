@@ -12,6 +12,7 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/Constants.h"
@@ -32,29 +33,44 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+namespace {
 /// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
-class DiagnosticInfoModuleFormat : public DiagnosticInfo {
+/// for TranslateMetadata pass
+class DiagnosticInfoTranslateMD : public DiagnosticInfo {
 private:
-  const Twine Msg;
+  const Twine &Msg;
   const Module &Mod;
 
 public:
   /// \p M is the module for which the diagnostic is being emitted. \p Msg is
   /// the message to show. Note that this class does not copy this message, so
   /// this reference must be valid for the whole life time of the diagnostic.
-  DiagnosticInfoModuleFormat(const Module &M, const Twine &Msg,
-                             DiagnosticSeverity Severity = DS_Error)
+  DiagnosticInfoTranslateMD(const Module &M, const Twine &Msg,
+                            DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
 
   void print(DiagnosticPrinter &DP) const override {
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    OS << Mod.getName() << ": " << Msg << '\n';
-    OS.flush();
-    DP << Str;
+    DP << Mod.getName() << ": " << Msg << '\n';
   }
 };
+
+enum class EntryPropsTag {
+  ShaderFlags = 0,
+  GSState,
+  DSState,
+  HSState,
+  NumThreads,
+  AutoBindingSpace,
+  RayPayloadSize,
+  RayAttribSize,
+  ShaderKind,
+  MSState,
+  ASStateTag,
+  WaveSize,
+  EntryRootSig,
+};
+
+} // namespace
 
 static NamedMDNode *emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
                                          const dxil::Resources &MDResources) {
@@ -128,39 +144,31 @@ static uint32_t getShaderStage(Triple::EnvironmentType Env) {
   return (uint32_t)Env - (uint32_t)llvm::Triple::Pixel;
 }
 
-namespace {
-enum EntryPropsTag {
-  ShaderFlagsTag = 0,
-  GSStateTag,
-  DSStateTag,
-  HSStateTag,
-  NumThreadsTag,
-  AutoBindingSpaceTag,
-  RayPayloadSizeTag,
-  RayAttribSizeTag,
-  ShaderKindTag,
-  MSStateTag,
-  ASStateTag,
-  WaveSizeTag,
-  EntryRootSigTag,
-};
-} // namespace
-
 static SmallVector<Metadata *>
 getTagValueAsMetadata(EntryPropsTag Tag, uint64_t Value, LLVMContext &Ctx) {
   SmallVector<Metadata *> MDVals;
-  MDVals.emplace_back(
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), Tag)));
+  MDVals.emplace_back(ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt32Ty(Ctx), static_cast<int>(Tag))));
   switch (Tag) {
-  case ShaderFlagsTag:
+  case EntryPropsTag::ShaderFlags:
     MDVals.emplace_back(ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Ctx), Value)));
     break;
-  case ShaderKindTag:
+  case EntryPropsTag::ShaderKind:
     MDVals.emplace_back(ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt32Ty(Ctx), Value)));
     break;
-  default:
+  case EntryPropsTag::GSState:
+  case EntryPropsTag::DSState:
+  case EntryPropsTag::HSState:
+  case EntryPropsTag::NumThreads:
+  case EntryPropsTag::AutoBindingSpace:
+  case EntryPropsTag::RayPayloadSize:
+  case EntryPropsTag::RayAttribSize:
+  case EntryPropsTag::MSState:
+  case EntryPropsTag::ASStateTag:
+  case EntryPropsTag::WaveSize:
+  case EntryPropsTag::EntryRootSig:
     llvm_unreachable("NYI: Unhandled entry property tag");
   }
   return MDVals;
@@ -172,7 +180,8 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
   SmallVector<Metadata *> MDVals;
   LLVMContext &Ctx = EP.Entry->getContext();
   if (EntryShaderFlags != 0)
-    MDVals.append(getTagValueAsMetadata(ShaderFlagsTag, EntryShaderFlags, Ctx));
+    MDVals.append(getTagValueAsMetadata(EntryPropsTag::ShaderFlags,
+                                        EntryShaderFlags, Ctx));
 
   if (EP.Entry != nullptr) {
     // FIXME: support more props.
@@ -180,12 +189,12 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
     // Add shader kind for lib entries.
     if (ShaderProfile == Triple::EnvironmentType::Library &&
         EP.ShaderStage != Triple::EnvironmentType::Library)
-      MDVals.append(getTagValueAsMetadata(ShaderKindTag,
+      MDVals.append(getTagValueAsMetadata(EntryPropsTag::ShaderKind,
                                           getShaderStage(EP.ShaderStage), Ctx));
 
     if (EP.ShaderStage == Triple::EnvironmentType::Compute) {
-      MDVals.emplace_back(ConstantAsMetadata::get(
-          ConstantInt::get(Type::getInt32Ty(Ctx), NumThreadsTag)));
+      MDVals.emplace_back(ConstantAsMetadata::get(ConstantInt::get(
+          Type::getInt32Ty(Ctx), static_cast<int>(EntryPropsTag::NumThreads))));
       Metadata *NumThreadVals[] = {ConstantAsMetadata::get(ConstantInt::get(
                                        Type::getInt32Ty(Ctx), EP.NumThreadsX)),
                                    ConstantAsMetadata::get(ConstantInt::get(
@@ -282,7 +291,8 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
     // provided by ShaderFlagsAnalysis pass is created by walking *all* the
     // function instructions of the module. Is it is correct to use this value
     // for metadata of the empty library entry?
-    MDVals.append(getTagValueAsMetadata(ShaderFlagsTag, ShaderFlags, Ctx));
+    MDVals.append(
+        getTagValueAsMetadata(EntryPropsTag::ShaderFlags, ShaderFlags, Ctx));
     Properties = MDNode::get(Ctx, MDVals);
   }
   // Library has an entry metadata with resource table metadata and all other
@@ -312,7 +322,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
     EntryFnMDNodes.emplace_back(
         emitTopLevelLibraryNode(M, ResourceMD, ShaderFlags));
   else if (MMDI.EntryPropertyVec.size() > 1) {
-    M.getContext().diagnose(DiagnosticInfoModuleFormat(
+    M.getContext().diagnose(DiagnosticInfoTranslateMD(
         M, "Non-library shader: One and only one entry expected"));
   }
 
@@ -326,9 +336,14 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
                                                                  : ShaderFlags;
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
-        M.getContext().diagnose(DiagnosticInfoModuleFormat(
-            M, "Non-library shader: Stage of shader entry different from "
-               "shader target profile"));
+        M.getContext().diagnose(DiagnosticInfoTranslateMD(
+            M,
+            "Shader stage '" +
+                Twine(getShortShaderStage(EntryProp.ShaderStage) +
+                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
+                      "' different from specified target profile '" +
+                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
+                            "'"))));
       }
     }
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,

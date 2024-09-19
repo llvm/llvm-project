@@ -2,7 +2,7 @@
 
 target triple = "dxil-pc-shadermodel6.6-pixel"
 
-; CHECK: Non-library shader: Stage of shader entry different from shader target profile
+; CHECK: Shader stage 'cs' for entry 'entry' different from specified target profile 'pixel'
 
 define void @entry() #0 {
 entry:
