@@ -2820,7 +2820,7 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
     Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
     if (auto *FRemI = dyn_cast<Instruction>(FRem))
       FRemI->setHasNoNaNs(true);
-    substituteInParent(CI, FRem);
+    return FRem;
   }
   return nullptr;
 }
