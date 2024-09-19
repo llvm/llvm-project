@@ -1271,7 +1271,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
       RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideVectorRegions())
+        getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy =
         ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
@@ -2093,7 +2093,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 /// TODO: Uniformity should be associated with a VPValue and there should be a
 /// generic way to check.
 static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
-  return C->isDefinedOutsideVectorRegions() ||
+  return C->isDefinedOutsideLoopRegions() ||
          isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
          isa<VPCanonicalIVPHIRecipe>(C->getOperand(0));
 }
