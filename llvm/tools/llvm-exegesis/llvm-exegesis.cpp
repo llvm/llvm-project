@@ -269,6 +269,11 @@ static cl::list<ValidationEvent> ValidationCounters(
         "counter to validate benchmarking assumptions"),
     cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
+static cl::opt<int> BenchmarkProcessCPU(
+    "benchmark-process-cpu",
+    cl::desc("The CPU number that the benchmarking process should executon on"),
+    cl::cat(BenchmarkOptions), cl::init(-1));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -418,8 +423,12 @@ static void runBenchmarkConfigurations(
         std::optional<StringRef> DumpFile;
         if (DumpObjectToDisk.getNumOccurrences())
           DumpFile = DumpObjectToDisk;
+        const std::optional<int> BenchmarkCPU =
+            BenchmarkProcessCPU == -1
+                ? std::nullopt
+                : std::optional(BenchmarkProcessCPU.getValue());
         auto [Err, BenchmarkResult] =
-            Runner.runConfiguration(std::move(RC), DumpFile);
+            Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
         if (Err) {
           // Errors from executing the snippets are fine.
           // All other errors are a framework issue and should fail.
