@@ -131,8 +131,9 @@ LogicalResult CreateNdDescOp::verify() {
   auto srcMemorySpace = getSourceMemorySpace();
   auto tdescMemorySpace = static_cast<unsigned>(getType().getMemorySpace());
   if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.") << " Source: " << srcMemorySpace
-                                                << ", TensorDesc: " << tdescMemorySpace;
+    return emitOpError("Memory space mismatch.")
+           << " Source: " << srcMemorySpace
+           << ", TensorDesc: " << tdescMemorySpace;
 
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
@@ -165,7 +166,8 @@ LogicalResult CreateNdDescOp::verify() {
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
-  if (getType().getRank() == 2 && tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
+  if (getType().getRank() == 2 &&
+      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
     return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
 
   return success();
@@ -323,8 +325,9 @@ LogicalResult CreateDescOp::verify() {
   auto srcMemorySpace = getSourceMemorySpace();
   auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
   if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.") << " Source: " << srcMemorySpace
-                                                << ", TensorDesc: " << tdescMemorySpace;
+    return emitOpError("Memory space mismatch.")
+           << " Source: " << srcMemorySpace
+           << ", TensorDesc: " << tdescMemorySpace;
 
   auto chunkSize = tdescTy.getChunkSize();
 
