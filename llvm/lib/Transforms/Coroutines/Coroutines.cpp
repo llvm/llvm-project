@@ -472,8 +472,6 @@ void coro::Shape::initABI() {
     }
     break;
   }
-  default:
-    llvm_unreachable("coro.begin is not dependent on a coro.id call");
   }
 }
 
