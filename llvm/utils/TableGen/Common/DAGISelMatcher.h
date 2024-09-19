@@ -370,7 +370,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveParent; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -389,7 +389,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckSame; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckSameMatcher>(M)->getMatchNumber() == getMatchNumber();
   }
@@ -414,7 +414,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildSameMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildSameMatcher>(M)->MatchNumber == MatchNumber;
