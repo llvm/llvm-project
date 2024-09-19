@@ -22,7 +22,7 @@ define i32 @call_indirect(ptr readnone %fct_ptr, i32 %arg1, i32 %arg2, i32 %arg3
 ; CHECK-NEXT:    [[RES2:%.*]] = tail call i32 @internal_fct(i32 poison, i32 [[ARG2]], i32 poison)
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       call_other:
-; CHECK-NEXT:    [[RES3:%.*]] = tail call i32 @other_fct.argelim(i32 [[ARG2]])
+; CHECK-NEXT:    [[RES3:%.*]] = tail call i32 @other_fct(i32 [[ARG2]])
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[FINAL_RES:%.*]] = phi i32 [ [[RES1]], [[CALL_EXT]] ], [ [[RES2]], [[CALL_INT]] ], [ [[RES3]], [[CALL_OTHER]] ]

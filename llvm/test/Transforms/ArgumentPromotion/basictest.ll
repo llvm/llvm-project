@@ -3,7 +3,7 @@
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 define internal i32 @test(ptr %X, ptr %Y) {
-; CHECK-LABEL: define {{[^@]+}}@test.argprom
+; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i32 [[X_0_VAL:%.*]], i32 [[Y_0_VAL:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[X_0_VAL]], [[Y_0_VAL]]
 ; CHECK-NEXT:    ret i32 [[C]]
@@ -15,9 +15,9 @@ define internal i32 @test(ptr %X, ptr %Y) {
 }
 
 define internal i32 @caller(ptr %B) {
-; CHECK-LABEL: define {{[^@]+}}@caller.argprom
+; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = call i32 @test.argprom(i32 1, i32 [[B_0_VAL]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @test(i32 1, i32 [[B_0_VAL]])
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = alloca i32
@@ -28,7 +28,7 @@ define internal i32 @caller(ptr %B) {
 
 define i32 @callercaller() {
 ; CHECK-LABEL: define {{[^@]+}}@callercaller() {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @caller.argprom(i32 2)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @caller(i32 2)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32

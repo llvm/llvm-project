@@ -2,11 +2,11 @@
 
 ; CHECK-LABEL: define i32 @foo() #0 {
 ; CHECK-NEXT:      %.val = load <32 x half>, ptr undef, align 4
-; CHECK-NEXT:      call void @bar.argprom(<32 x half> %.val)
+; CHECK-NEXT:      call void @bar(<32 x half> %.val)
 ; CHECK-NEXT:      ret i32 0
 ; CHECK-NEXT:    }
 
-; CHECK-LABEL: define internal void @bar.argprom(<32 x half> %.0.val) #0 {
+; CHECK-LABEL: define internal void @bar(<32 x half> %.0.val) #0 {
 ; CHECK-NEXT:      ret void
 ; CHECK-NEXT:    }
 
