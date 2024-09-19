@@ -605,7 +605,7 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) const {
     return 1;
   }
@@ -1176,7 +1176,7 @@ public:
         Cost += static_cast<T *>(this)->getArithmeticInstrCost(
             Instruction::Add, GEP->getType(), CostKind,
             {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
-            std::nullopt);
+            {});
       } else {
         SmallVector<const Value *> Indices(GEP->indices());
         Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),

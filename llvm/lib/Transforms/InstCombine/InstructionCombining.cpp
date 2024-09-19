@@ -3336,8 +3336,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
       Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
-      InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(),
-                         std::nullopt, "", II->getParent());
+      InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
+                         II->getParent());
     }
 
     // Remove debug intrinsics which describe the value contained within the
