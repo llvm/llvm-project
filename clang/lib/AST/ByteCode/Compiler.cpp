@@ -1268,7 +1268,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   assert(E->getRHS()->getType()->isVectorType());
 
   // Prepare storage for result.
-  if (!Initializing || E->isCompoundAssignmentOp()) {
+  if (!Initializing && !E->isCompoundAssignmentOp()) {
     unsigned LocalIndex = allocateTemporary(E);
     if (!this->emitGetPtrLocal(LocalIndex, E))
       return false;
@@ -1286,48 +1286,21 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
-  // Allocate a local pointer for LHS and RHS.
-  unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
-  unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
-
-  // C++17 onwards require that we evaluate the RHS of the compound
-  // assignment op first.
-  if (E->isCompoundAssignmentOp()) {
-    // Evaluate RHS and save value to RHSOffset.
-    if (!this->visit(RHS))
-      return false;
-    if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
-      return false;
-
-    // Evaluate LHS and save value to LHSOffset.
-    if (!this->visit(LHS))
-      return false;
-    if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
-      return false;
-  } else {
-    // Evaluate LHS and save value to LHSOffset.
-    if (!this->visit(LHS))
-      return false;
-    if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
-      return false;
-
-    // Evaluate RHS and save value to RHSOffset.
-    if (!this->visit(RHS))
-      return false;
-    if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
-      return false;
-  }
-
   // Evaluate LHS and save value to LHSOffset.
+  unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
   if (!this->visit(LHS))
     return false;
   if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
     return false;
 
   // Evaluate RHS and save value to RHSOffset.
+  unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
   if (!this->visit(RHS))
     return false;
   if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
+    return false;
+
+  if (E->isCompoundAssignmentOp() && !this->emitGetLocal(PT_Ptr, LHSOffset, E))
     return false;
 
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
@@ -1466,16 +1439,8 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       return false;
   }
 
-  if (E->isCompoundAssignmentOp()) {
-    if (!this->emitGetLocal(PT_Ptr, LHSOffset, E))
-      return false;
-    if (!this->emitFlip(PT_Ptr, PT_Ptr, E))
-      return false;
-    if (!this->emitMemcpy(E))
-      return false;
-    if (!this->emitPopPtr(E))
-      return false;
-  }
+  if (E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
+    return false;
   return true;
 }
 
