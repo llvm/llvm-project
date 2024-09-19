@@ -121,8 +121,18 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Start with the assumption that the buffer is invalid to simplify early
   // return paths.
   IsBufferInvalid = true;
+  bool IsText = false;
 
-  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile);
+#ifdef __MVS__
+  // If the file is tagged with a text ccsid, it may require autoconversion.
+  llvm::ErrorOr<bool> IsFileText =
+      llvm::iszOSTextFile(ContentsEntry->getName().data());
+  if (IsFileText)
+    IsText = *IsFileText;
+#endif
+
+  auto BufferOrError = FM.getBufferForFile(
+      *ContentsEntry, IsFileVolatile, /*RequiresNullTerminator=*/true, IsText);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
