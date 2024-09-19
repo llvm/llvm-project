@@ -810,12 +810,12 @@ static Value calculateGatherOffset(RewriterBase &rewriter,
 
 enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 
-/// Checks whether /p val can be used for calculating a loop invariant index.
-static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val) {
+/// Checks whether `val` can be used for calculating a loop invariant index.
+static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
+                               VectorType resType) {
 
-  auto targetShape = linalgOp.getStaticLoopRanges();
-  assert(llvm::count_if(targetShape,
-                        [](int64_t dimSize) { return dimSize > 1; }) == 1 &&
+  assert(((llvm::count_if(resType.getShape(),
+                          [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
 
   // Blocks outside _this_ linalg.generic are effectively loop invariant.
@@ -849,7 +849,7 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val) {
 
   bool result = true;
   for (auto op : ancestor->getOperands())
-    result &= isLoopInvariantIdx(linalgOp, op);
+    result &= isLoopInvariantIdx(linalgOp, op, resType);
 
   return result;
 }
@@ -871,10 +871,9 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val) {
 /// where <dim> is the trailing dim of the iteration space. \p foundIndexOp is
 /// updated to `true` when such an op is found.
 static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
-                                bool &foundIndexOp) {
+                                bool &foundIndexOp, VectorType resType) {
 
-  auto targetShape = linalgOp.getStaticLoopRanges();
-  assert(((llvm::count_if(targetShape,
+  assert(((llvm::count_if(resType.getShape(),
                           [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
 
@@ -910,44 +909,38 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
 
   bool result = false;
   for (auto op : ancestor->getOperands())
-    result |= isContiguousLoadIdx(linalgOp, op, foundIndexOp);
+    result |= isContiguousLoadIdx(linalgOp, op, foundIndexOp, resType);
 
   return result;
 }
 
 /// Infer the memory access pattern for the input ExtractOp
 ///
-/// Based on the operation shapes and indices (usually based on the iteration
-/// space of the parent `linalgOp` operation), decides whether the input
-/// ExtractOp is a contiguous load (including a broadcast of a scalar) or a
-/// gather load.
+/// Based on the ExtratOp result shape and the access indices, decides whether
+/// this Op corresponds to a contiguous load (including a broadcast of a scalar)
+/// or a gather load. When analysing the ExtractOp indices (to identify
+/// contiguous laods), this method looks for "loop" invariant indices (e.g.
+/// block arguments) and indices that change linearly (e.g. via `linalg.index`
+/// Op).
 ///
 /// Note that it is always safe to use gather load operations for contiguous
 /// loads (albeit slow), but not vice-versa. When in doubt, bail out and assume
 /// that `extractOp` is a gather load.
 static VectorMemoryAccessKind
 getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
-                                    LinalgOp &linalgOp) {
+                                    LinalgOp &linalgOp, VectorType resType) {
 
-  auto targetShape = linalgOp.getStaticLoopRanges();
   auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
 
-  // 0.1 Is this a 0-D vector? If yes then this is a scalar broadcast.
+  // 0. Is this a 0-D vector? If yes then this is a scalar broadcast.
   if (inputShape.getShape().empty())
     return VectorMemoryAccessKind::ScalarBroadcast;
 
-  // 0.2 In the case of dynamic shapes just bail-out and assume that it's a
-  // gather load.
-  // TODO: Relax this condition.
-  if (linalgOp.hasDynamicShape())
-    return VectorMemoryAccessKind::Gather;
-
   // True for vectors that are effectively 1D, e.g. `vector<1x4x1xi32>`, false
   // otherwise.
-  bool isOutput1DVector = (llvm::count_if(targetShape, [](int64_t dimSize) {
-                             return dimSize > 1;
-                           }) == 1);
-
+  bool isOutput1DVector =
+      (llvm::count_if(resType.getShape(),
+                      [](int64_t dimSize) { return dimSize > 1; }) == 1);
   // 1. Assume that it's a gather load when reading non-1D vector.
   if (!isOutput1DVector)
     return VectorMemoryAccessKind::Gather;
@@ -965,7 +958,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     if (inputShape.getShape()[i] == 1)
       continue;
 
-    leadingIdxsLoopInvariant &= isLoopInvariantIdx(linalgOp, indexVal);
+    leadingIdxsLoopInvariant &= isLoopInvariantIdx(linalgOp, indexVal, resType);
   }
 
   if (!leadingIdxsLoopInvariant) {
@@ -982,7 +975,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   // 3a. Scalar broadcast load
   // If the trailing index is loop invariant then this is a scalar load.
   if (leadingIdxsLoopInvariant &&
-      isLoopInvariantIdx(linalgOp, extractOpTrailingIdx)) {
+      isLoopInvariantIdx(linalgOp, extractOpTrailingIdx, resType)) {
     LDBG("Found scalar broadcast load: " << extractOp);
 
     return VectorMemoryAccessKind::ScalarBroadcast;
@@ -993,8 +986,8 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   // This effectively means that it must be based on the trailing loop index.
   // This is what the following bool captures.
   bool foundIndexOp = false;
-  bool isContiguousLoad =
-      isContiguousLoadIdx(linalgOp, extractOpTrailingIdx, foundIndexOp);
+  bool isContiguousLoad = isContiguousLoadIdx(linalgOp, extractOpTrailingIdx,
+                                              foundIndexOp, resType);
   isContiguousLoad &= foundIndexOp;
 
   if (isContiguousLoad) {
@@ -1035,7 +1028,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
   VectorMemoryAccessKind memAccessKind =
-      getTensorExtractMemoryAccessPattern(extractOp, linalgOp);
+      getTensorExtractMemoryAccessPattern(extractOp, linalgOp, resultType);
 
   // 1. Handle gather access
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
