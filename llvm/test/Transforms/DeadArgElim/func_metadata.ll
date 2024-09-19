@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @s = common dso_local local_unnamed_addr global i32 0, align 4
 
 define internal i32 @va_func(i32 %num, ...) !prof !28 !PGOFuncName !29{
-; CHECK: define internal void @va_func(i32 %num) !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME1:[0-9]+]] {
+; CHECK: define internal void @va_func.retelim(i32 %num) !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME1:[0-9]+]] {
 entry:
   %0 = load i32, ptr @s, align 4, !tbaa !31
   %add = add nsw i32 %0, %num
@@ -17,7 +17,7 @@ entry:
 }
 
 define internal fastcc i32 @foo() unnamed_addr !prof !28 !PGOFuncName !30 {
-; CHECK: define internal fastcc void @foo() unnamed_addr !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME2:[0-9]+]] {
+; CHECK: define internal fastcc void @foo.retelim() unnamed_addr !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME2:[0-9]+]] {
 entry:
   %0 = load i32, ptr @s, align 4, !tbaa !31
   %add = add nsw i32 %0, 8
