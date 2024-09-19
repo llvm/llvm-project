@@ -77,7 +77,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-offload-bundler
   clang-refactor-test
   clang-import-test
-  clang-rename
   clang-refactor
   clang-diff
   clang-installapi
