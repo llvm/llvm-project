@@ -25,6 +25,7 @@
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 
+#include "CIRGenTBAA.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -890,22 +891,25 @@ void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
 
 /// Given a value of type T* that may not be to a complete object, construct
 /// an l-vlaue withi the natural pointee alignment of T.
-LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Value V,
-                                                         QualType T) {
+LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Value val,
+                                                         QualType ty) {
   // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
   // assert on the result type first.
-  LValueBaseInfo BaseInfo;
-  CharUnits Align = CGM.getNaturalTypeAlignment(T, &BaseInfo,
+  LValueBaseInfo baseInfo;
+  TBAAAccessInfo tbaaInfo;
+  CharUnits align = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo,
                                                 /* for PointeeType= */ true);
-  return makeAddrLValue(Address(V, Align), T, BaseInfo);
+  return makeAddrLValue(Address(val, align), ty, baseInfo);
 }
 
-LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value V, QualType T) {
-  LValueBaseInfo BaseInfo;
+LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value val,
+                                                  QualType ty) {
+  LValueBaseInfo baseInfo;
+  TBAAAccessInfo tbaaInfo;
   assert(!MissingFeatures::tbaa());
-  CharUnits Alignment = CGM.getNaturalTypeAlignment(T, &BaseInfo);
-  Address Addr(V, getTypes().convertTypeForMem(T), Alignment);
-  return LValue::makeAddr(Addr, T, getContext(), BaseInfo);
+  CharUnits alignment = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo);
+  Address addr(val, getTypes().convertTypeForMem(ty), alignment);
+  return LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);
 }
 
 // Map the LangOption for exception behavior into the corresponding enum in

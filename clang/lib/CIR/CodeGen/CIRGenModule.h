@@ -17,6 +17,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenOpenCLRuntime.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -94,6 +95,8 @@ private:
   const clang::TargetInfo &target;
 
   std::unique_ptr<CIRGenCXXABI> ABI;
+
+  std::unique_ptr<CIRGenTBAA> tbaa;
 
   /// Used for `UniqueInternalLinkageNames` option
   std::string ModuleNameHash = "";
@@ -442,15 +445,16 @@ public:
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
-  /// TODO: Add TBAAAccessInfo
-  clang::CharUnits getNaturalPointeeTypeAlignment(clang::QualType T,
-                                                  LValueBaseInfo *BaseInfo);
+  clang::CharUnits
+  getNaturalPointeeTypeAlignment(clang::QualType ty,
+                                 LValueBaseInfo *baseInfo = nullptr,
+                                 TBAAAccessInfo *tbaaInfo = nullptr);
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
-  /// TODO: Add TBAAAccessInfo
   clang::CharUnits getNaturalTypeAlignment(clang::QualType T,
                                            LValueBaseInfo *BaseInfo = nullptr,
+                                           TBAAAccessInfo *tbaaInfo = nullptr,
                                            bool forPointeeType = false);
 
   /// TODO: Add TBAAAccessInfo
@@ -481,6 +485,10 @@ public:
   const ItaniumVTableContext &getItaniumVTableContext() const {
     return VTables.getItaniumVTableContext();
   }
+
+  /// getTBAAAccessInfo - Gte TBAA information that describes an access to an
+  /// object of the given type.
+  TBAAAccessInfo getTBAAAccessInfo(QualType accessType);
 
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually

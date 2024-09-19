@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenModule.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
 #include "EHScopeStack.h"
@@ -816,12 +817,15 @@ public:
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
   RValue buildLoadOfLValue(LValue LV, SourceLocation Loc);
-  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
-                                clang::SourceLocation Loc,
-                                LValueBaseInfo BaseInfo,
+  mlir::Value buildLoadOfScalar(Address addr, bool isVolatile,
+                                clang::QualType ty, clang::SourceLocation loc,
+                                LValueBaseInfo baseInfo,
+                                TBAAAccessInfo tbaaInfo,
                                 bool isNontemporal = false);
-  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
-                                mlir::Location Loc, LValueBaseInfo BaseInfo,
+  mlir::Value buildLoadOfScalar(Address addr, bool isVolatile,
+                                clang::QualType ty, mlir::Location loc,
+                                LValueBaseInfo baseInfo,
+                                TBAAAccessInfo tbaaInfo,
                                 bool isNontemporal = false);
 
   int64_t getAccessedFieldNo(unsigned idx, const mlir::ArrayAttr elts);
@@ -834,12 +838,12 @@ public:
 
   /// Load a scalar value from an address, taking care to appropriately convert
   /// from the memory representation to CIR value representation.
-  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
-                                clang::SourceLocation Loc,
-                                AlignmentSource Source = AlignmentSource::Type,
+  mlir::Value buildLoadOfScalar(Address addr, bool isVolatile,
+                                clang::QualType ty, clang::SourceLocation loc,
+                                AlignmentSource source = AlignmentSource::Type,
                                 bool isNontemporal = false) {
-    return buildLoadOfScalar(Addr, Volatile, Ty, Loc, LValueBaseInfo(Source),
-                             isNontemporal);
+    return buildLoadOfScalar(addr, isVolatile, ty, loc, LValueBaseInfo(source),
+                             CGM.getTBAAAccessInfo(ty), isNontemporal);
   }
 
   /// Load a scalar value from an address, taking care to appropriately convert
@@ -851,8 +855,9 @@ public:
   /// Load a complex number from the specified l-value.
   mlir::Value buildLoadOfComplex(LValue src, SourceLocation loc);
 
-  Address buildLoadOfReference(LValue RefLVal, mlir::Location Loc,
-                               LValueBaseInfo *PointeeBaseInfo = nullptr);
+  Address buildLoadOfReference(LValue refLVal, mlir::Location loc,
+                               LValueBaseInfo *pointeeBaseInfo = nullptr,
+                               TBAAAccessInfo *pointeeTBAAInfo = nullptr);
   LValue buildLoadOfReferenceLValue(LValue RefLVal, mlir::Location Loc);
   LValue
   buildLoadOfReferenceLValue(Address RefAddr, mlir::Location Loc,
@@ -1275,9 +1280,17 @@ public:
                                clang::QualType::DestructionKind dtorKind);
 
   void buildStoreOfScalar(mlir::Value value, LValue lvalue);
-  void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
-                          clang::QualType Ty, LValueBaseInfo BaseInfo,
-                          bool isInit = false, bool isNontemporal = false);
+  void buildStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
+                          clang::QualType ty, LValueBaseInfo baseInfo,
+                          TBAAAccessInfo tbaaInfo, bool isInit = false,
+                          bool isNontemporal = false);
+  void buildStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
+                          QualType ty,
+                          AlignmentSource source = AlignmentSource::Type,
+                          bool isInit = false, bool isNontemporal = false) {
+    buildStoreOfScalar(value, addr, isVolatile, ty, LValueBaseInfo(source),
+                       CGM.getTBAAAccessInfo(ty), isInit, isNontemporal);
+  }
   void buildStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   mlir::Value buildToMemory(mlir::Value Value, clang::QualType Ty);
@@ -1352,9 +1365,10 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address
-  buildPointerWithAlignment(const clang::Expr *E,
-                            LValueBaseInfo *BaseInfo = nullptr,
-                            KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
+  buildPointerWithAlignment(const clang::Expr *expr,
+                            LValueBaseInfo *baseInfo = nullptr,
+                            TBAAAccessInfo *tbaaInfo = nullptr,
+                            KnownNonNull_t isKnownNonNull = NotKnownNonNull);
 
   LValue
   buildConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -1534,19 +1548,21 @@ public:
   };
 
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Value V, clang::QualType T);
-  LValue MakeNaturalAlignAddrLValue(mlir::Value V, QualType T);
+  LValue MakeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
   Address makeNaturalAddressForPointer(
-      mlir::Value Ptr, QualType T, CharUnits Alignment = CharUnits::Zero(),
-      bool ForPointeeType = false, LValueBaseInfo *BaseInfo = nullptr,
-      KnownNonNull_t IsKnownNonNull = NotKnownNonNull) {
-    if (Alignment.isZero())
-      Alignment = CGM.getNaturalTypeAlignment(T, BaseInfo, ForPointeeType);
-    return Address(Ptr, convertTypeForMem(T), Alignment, IsKnownNonNull);
+      mlir::Value ptr, QualType t, CharUnits alignment = CharUnits::Zero(),
+      bool forPointeeType = false, LValueBaseInfo *baseInfo = nullptr,
+      TBAAAccessInfo *tbaaInfo = nullptr,
+      KnownNonNull_t isKnownNonNull = NotKnownNonNull) {
+    if (alignment.isZero())
+      alignment =
+          CGM.getNaturalTypeAlignment(t, baseInfo, tbaaInfo, forPointeeType);
+    return Address(ptr, convertTypeForMem(t), alignment, isKnownNonNull);
   }
 
   /// Load the value for 'this'. This function is only valid while generating
@@ -1590,14 +1606,16 @@ public:
                                              QualType DstTy,
                                              SourceLocation Loc);
 
-  LValue makeAddrLValue(Address Addr, clang::QualType T,
-                        LValueBaseInfo BaseInfo) {
-    return LValue::makeAddr(Addr, T, getContext(), BaseInfo);
+  LValue makeAddrLValue(Address addr, clang::QualType ty,
+                        LValueBaseInfo baseInfo) {
+    return LValue::makeAddr(addr, ty, getContext(), baseInfo,
+                            CGM.getTBAAAccessInfo(ty));
   }
 
-  LValue makeAddrLValue(Address Addr, clang::QualType T,
-                        AlignmentSource Source = AlignmentSource::Type) {
-    return LValue::makeAddr(Addr, T, getContext(), LValueBaseInfo(Source));
+  LValue makeAddrLValue(Address addr, clang::QualType ty,
+                        AlignmentSource source = AlignmentSource::Type) {
+    return LValue::makeAddr(addr, ty, getContext(), LValueBaseInfo(source),
+                            CGM.getTBAAAccessInfo(ty));
   }
 
   void initializeVTablePointers(mlir::Location loc,
