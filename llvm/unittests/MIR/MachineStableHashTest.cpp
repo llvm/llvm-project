@@ -199,7 +199,10 @@ body:             |
   RET undef $lr
 ...
 )MIR";
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF1 = MMI.getMachineFunction(*M->getFunction("f1"));
