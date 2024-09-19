@@ -26,8 +26,8 @@ void RTDECL(CUFFreeDesciptor)(
     Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Retrieve the device descriptor's pointer from the host one.
-Descriptor *RTDECL(CUFGetDeviceDescAddress)(
-    Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+void *RTDECL(CUFGetDeviceAddress)(
+    void *hostPtr, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Sync the \p src descriptor to the \p dst descriptor.
 void RTDECL(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,

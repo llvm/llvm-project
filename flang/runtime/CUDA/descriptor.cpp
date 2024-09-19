@@ -27,15 +27,15 @@ void RTDEF(CUFFreeDesciptor)(
   CUFFreeManaged(reinterpret_cast<void *>(desc));
 }
 
-Descriptor *RTDEF(CUFGetDeviceDescAddress)(
-    Descriptor &desc, const char *sourceFile, int sourceLine) {
+void *RTDEF(CUFGetDeviceAddress)(
+    void *hostPtr, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   void *p;
-  CUDA_REPORT_IF_ERROR(cudaGetSymbolAddress((void **)&p, &desc));
+  CUDA_REPORT_IF_ERROR(cudaGetSymbolAddress((void **)&p, hostPtr));
   if (!p) {
     terminator.Crash("Could not retrieve symbol's address");
   }
-  return (Descriptor *)p;
+  return p;
 }
 
 void RTDEF(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,

@@ -37,9 +37,10 @@ int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, bool hasStat,
   // Descriptor synchronization is only done when the allocation is done
   // from the host.
   if (stat == StatOk) {
-    Descriptor *deviceAddr{
-        RTNAME(CUFGetDeviceDescAddress)(desc, sourceFile, sourceLine)};
-    RTDECL(CUFDescriptorSync)(deviceAddr, &desc, sourceFile, sourceLine);
+    void *deviceAddr{
+        RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
+    RTDECL(CUFDescriptorSync)(
+        (Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
 #endif
   return stat;
@@ -54,9 +55,10 @@ int RTDEF(CUFAllocatableDeallocate)(Descriptor &desc, bool hasStat,
   // Descriptor synchronization is only done when the deallocation is done
   // from the host.
   if (stat == StatOk) {
-    Descriptor *deviceAddr{
-        RTNAME(CUFGetDeviceDescAddress)(desc, sourceFile, sourceLine)};
-    RTDECL(CUFDescriptorSync)(deviceAddr, &desc, sourceFile, sourceLine);
+    void *deviceAddr{
+        RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
+    RTDECL(CUFDescriptorSync)(
+        (Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
   }
 #endif
   return stat;
