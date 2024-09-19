@@ -45,7 +45,7 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer list",
             substrs=[
-                "1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)",
+                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regexp bar",
                 "0: recognizer.MyFrameRecognizer, module a.out, symbol foo",
             ],
         )
@@ -56,7 +56,7 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer list",
             substrs=[
-                "1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)"
+                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regexp bar"
             ],
         )
         self.expect(
@@ -79,7 +79,7 @@ class FrameRecognizerTestCase(TestBase):
         self.expect(
             "frame recognizer list",
             substrs=[
-                "1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)"
+                "1: recognizer.MyOtherFrameRecognizer, module a.out, demangled symbol regexp bar"
             ],
         )
         self.expect(
@@ -161,6 +161,46 @@ class FrameRecognizerTestCase(TestBase):
         self.expect("frame variable -t *a",
                     substrs=['*a = 78'])
         """
+
+    @skipUnlessDarwin
+    def test_frame_recognizer_hiding(self):
+        self.build()
+
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "nested")
+        frame = thread.GetSelectedFrame()
+
+        # Sanity check.
+        self.expect(
+            "thread backtrace", patterns=["frame.*nested", "frame.*baz", "frame.*main"]
+        )
+
+        self.expect("frame recognizer clear")
+        self.expect(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "recognizer.py")
+        )
+
+        self.expect(
+            "frame recognizer add -l recognizer.BazFrameRecognizer -f false -s a.out -n baz"
+        )
+
+        self.expect(
+            "frame recognizer list",
+            substrs=["0: recognizer.BazFrameRecognizer"],
+        )
+
+        # Now main should be hidden.
+        self.expect("thread backtrace", matching=False, patterns=["frame.*baz"])
+        self.assertFalse(frame.IsHidden())
+        frame = thread.SetSelectedFrame(1)
+        self.assertIn("baz", frame.name)
+        self.assertTrue(frame.IsHidden())
+
+        # Test StepOut.
+        frame = thread.SetSelectedFrame(0)
+        thread.StepOut()
+        frame = thread.GetSelectedFrame()
+        self.assertIn("main", frame.name)
 
     @skipUnlessDarwin
     def test_frame_recognizer_multi_symbol(self):

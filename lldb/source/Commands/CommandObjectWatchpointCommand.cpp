@@ -355,7 +355,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
@@ -450,7 +450,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
@@ -505,7 +505,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();

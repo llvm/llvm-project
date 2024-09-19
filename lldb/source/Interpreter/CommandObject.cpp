@@ -758,17 +758,23 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target &CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object.
+  if (Target *target = m_exe_ctx.GetTargetPtr())
+    return *target;
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // Fallback to the command interpreter's execution context in case we get
+  // called after DoExecute has finished. For example, when doing multi-line
+  // expression that uses an input reader or breakpoint callbacks.
+  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
+    return *target;
+
+  // Finally, if we have no other target, get the selected target.
+  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
+    return *target_sp;
+
+  // We only have the dummy target.
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {

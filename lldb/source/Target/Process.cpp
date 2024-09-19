@@ -5697,7 +5697,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       // Print a backtrace into the log so we can figure out where we are:
       StreamString s;
       s.PutCString("Thread state after unsuccessful completion: \n");
-      thread->GetStackFrameStatus(s, 0, UINT32_MAX, true, UINT32_MAX);
+      thread->GetStackFrameStatus(s, 0, UINT32_MAX, true, UINT32_MAX,
+                                  /*show_hidden*/ true);
       log->PutString(s.GetString());
     }
     // Restore the thread state if we are going to discard the plan execution.
@@ -5971,8 +5972,8 @@ size_t Process::GetThreadStatus(Stream &strm,
           continue;
       }
       thread_sp->GetStatus(strm, start_frame, num_frames,
-                           num_frames_with_source,
-                           stop_format);
+                           num_frames_with_source, stop_format,
+                           /*show_hidden*/ num_frames <= 1);
       ++num_thread_infos_dumped;
     } else {
       Log *log = GetLog(LLDBLog::Process);
