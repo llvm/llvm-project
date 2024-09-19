@@ -25,8 +25,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_TOKEN_H
-#define CLANG_PSEUDO_TOKEN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TOKEN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TOKEN_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangStandard.h"
@@ -41,7 +41,7 @@
 
 namespace clang {
 class LangOptions;
-namespace pseudo {
+namespace clangd {
 
 /// A single C++ or preprocessor token.
 ///
@@ -249,7 +249,7 @@ TokenStream cook(const TokenStream &, const clang::LangOptions &);
 /// Drops comment tokens.
 TokenStream stripComments(const TokenStream &);
 
-} // namespace pseudo
+} // namespace clangd
 } // namespace clang
 
-#endif // CLANG_PSEUDO_TOKEN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_TOKEN_H

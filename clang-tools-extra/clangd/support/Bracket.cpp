@@ -62,10 +62,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Bracket.h"
+#include "Bracket.h"
 
 namespace clang {
-namespace pseudo {
+namespace clangd {
 namespace {
 
 struct Bracket {
@@ -83,7 +83,7 @@ struct Bracket {
 // Find brackets in the stream and convert to Bracket struct.
 std::vector<Bracket> findBrackets(const TokenStream &Stream) {
   std::vector<Bracket> Brackets;
-  auto Add = [&](const pseudo::Token &Tok, Bracket::BracketKind K,
+  auto Add = [&](const Token &Tok, Bracket::BracketKind K,
                  Bracket::Direction D) {
     Brackets.push_back(
         {K, D, Tok.Line, Tok.Indent, Stream.index(Tok), Bracket::None});
@@ -151,5 +151,5 @@ void pairBrackets(TokenStream &Stream) {
   applyPairings(Brackets, Stream);
 }
 
-} // namespace pseudo
+} // namespace clangd
 } // namespace clang

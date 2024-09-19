@@ -23,19 +23,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_BRACKET_H
-#define CLANG_PSEUDO_BRACKET_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_BRACKET_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_BRACKET_H
 
-#include "clang-pseudo/Token.h"
+#include "Token.h"
 
 namespace clang {
-namespace pseudo {
+namespace clangd {
 
 /// Identifies bracket token in the stream which should be paired.
 /// Sets Token::Pair accordingly.
 void pairBrackets(TokenStream &);
 
-} // namespace pseudo
+} // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_BRACKET_H
