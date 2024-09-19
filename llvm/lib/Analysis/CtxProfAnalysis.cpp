@@ -234,16 +234,23 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
 }
 
 InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
-  for (auto *Prev = CB.getPrevNode(); Prev; Prev = Prev->getPrevNode())
+  if (!InstrProfCallsite::canInstrumentCallsite(CB))
+    return nullptr;
+  for (auto *Prev = CB.getPrevNode(); Prev; Prev = Prev->getPrevNode()) {
     if (auto *IPC = dyn_cast<InstrProfCallsite>(Prev))
       return IPC;
+    assert(!isa<CallBase>(Prev) &&
+           "didn't expect to find another call, that's not the callsite "
+           "instrumentation, before an instrumentable callsite");
+  }
   return nullptr;
 }
 
 InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   for (auto &I : BB)
     if (auto *Incr = dyn_cast<InstrProfIncrementInst>(&I))
-      return Incr;
+      if (!isa<InstrProfIncrementInstStep>(&I))
+        return Incr;
   return nullptr;
 }
 

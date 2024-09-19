@@ -224,11 +224,9 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 
 VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan,
-                                   LLVMContext &Ctx)
+                                   InnerLoopVectorizer *ILV, VPlan *Plan)
     : VF(VF), UF(UF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr),
-      TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
+      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (Def->isLiveIn())
@@ -880,14 +878,23 @@ static VPIRBasicBlock *createVPIRBasicBlockFor(BasicBlock *BB) {
   return VPIRBB;
 }
 
-VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
+VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
+                                   PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
   VPIRBasicBlock *Entry = createVPIRBasicBlockFor(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
+
+  // Create SCEV and VPValue for the trip count.
+  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *TripCount =
+      SE.getTripCountFromExitCount(BackedgeTakenCount, InductionTy, TheLoop);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
+
   // Create VPRegionBlock, with empty header and latch blocks, to be filled
   // during processing later.
   VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
@@ -992,16 +999,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
-  VPIRBasicBlock *IRMiddleVPBB = createVPIRBasicBlockFor(IRBB);
+  VPIRBasicBlock *IRVPBB = createVPIRBasicBlockFor(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
-    R.moveBefore(*IRMiddleVPBB, IRMiddleVPBB->end());
+    R.moveBefore(*IRVPBB, IRVPBB->end());
   }
   VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
   VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-  VPBlockUtils::connectBlocks(PredVPBB, IRMiddleVPBB);
+  VPBlockUtils::connectBlocks(PredVPBB, IRVPBB);
   for (auto *Succ : to_vector(VPBB->getSuccessors())) {
-    VPBlockUtils::connectBlocks(IRMiddleVPBB, Succ);
+    VPBlockUtils::connectBlocks(IRVPBB, Succ);
     VPBlockUtils::disconnectBlocks(VPBB, Succ);
   }
   delete VPBB;

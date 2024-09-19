@@ -62,6 +62,17 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
          IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
 }
 
+const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
+  if (V->isLiveIn())
+    return SE.getSCEV(V->getLiveInIRValue());
+
+  // TODO: Support constructing SCEVs for more recipes as needed.
+  return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
+      .Case<VPExpandSCEVRecipe>(
+          [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+}
+
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   // Loop invariants are uniform.
   if (V->isDefinedOutsideVectorRegions())

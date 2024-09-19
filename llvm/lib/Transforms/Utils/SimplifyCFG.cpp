@@ -398,9 +398,6 @@ static void addPredecessorToBlock(BasicBlock *Succ, BasicBlock *NewPred,
 /// expensive.
 static InstructionCost computeSpeculationCost(const User *I,
                                               const TargetTransformInfo &TTI) {
-  assert((!isa<Instruction>(I) ||
-          isSafeToSpeculativelyExecute(cast<Instruction>(I))) &&
-         "Instruction is not safe to speculatively execute!");
   return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 }
 
@@ -421,12 +418,11 @@ static InstructionCost computeSpeculationCost(const User *I,
 /// After this function returns, Cost is increased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// Budget, false is returned and Cost is undefined.
-static bool dominatesMergePoint(Value *V, BasicBlock *BB,
+static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
                                 SmallPtrSetImpl<Instruction *> &AggressiveInsts,
-                                InstructionCost &Cost,
-                                InstructionCost Budget,
+                                InstructionCost &Cost, InstructionCost Budget,
                                 const TargetTransformInfo &TTI,
-                                unsigned Depth = 0) {
+                                AssumptionCache *AC, unsigned Depth = 0) {
   // It is possible to hit a zero-cost cycle (phi/gep instructions for example),
   // so limit the recursion depth.
   // TODO: While this recursion limit does prevent pathological behavior, it
@@ -461,7 +457,7 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, it looks like the instruction IS in the "condition".  Check to
   // see if it's a cheap instruction to unconditionally compute, and if it
   // only uses stuff defined outside of the condition.  If so, hoist it out.
-  if (!isSafeToSpeculativelyExecute(I))
+  if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
   Cost += computeSpeculationCost(I, TTI);
@@ -480,8 +476,8 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, we can only really hoist these out if their operands do
   // not take us over the cost threshold.
   for (Use &Op : I->operands())
-    if (!dominatesMergePoint(Op, BB, AggressiveInsts, Cost, Budget, TTI,
-                             Depth + 1))
+    if (!dominatesMergePoint(Op, BB, InsertPt, AggressiveInsts, Cost, Budget,
+                             TTI, AC, Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts.insert(I);
@@ -1954,6 +1950,9 @@ static bool isLifeTimeMarker(const Instruction *I) {
 // into variables.
 static bool replacingOperandWithVariableIsCheap(const Instruction *I,
                                                 int OpIdx) {
+  // Divide/Remainder by constant is typically much cheaper than by variable.
+  if (I->isIntDivRem())
+    return OpIdx != 1;
   return !isa<IntrinsicInst>(I);
 }
 
@@ -3040,7 +3039,7 @@ static bool isSafeCheapLoadStore(const Instruction *I,
 ///     %sub = sub %x, %y
 ///     br label BB2
 ///   EndBB:
-///     %phi = phi [ %sub, %ThenBB ], [ 0, %EndBB ]
+///     %phi = phi [ %sub, %ThenBB ], [ 0, %BB ]
 ///     ...
 /// \endcode
 ///
@@ -3137,7 +3136,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!IsSafeCheapLoadStore && !isSafeToSpeculativelyExecute(&I) &&
+    if (!IsSafeCheapLoadStore &&
+        !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
         !(HoistCondStores && !SpeculatedStoreValue &&
           (SpeculatedStoreValue =
                isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
@@ -3334,13 +3334,24 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // extended for vector types in the future.
     assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
     auto *Op0 = I->getOperand(0);
-    Instruction *MaskedLoadStore = nullptr;
+    CallInst *MaskedLoadStore = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Handle Load.
       auto *Ty = I->getType();
-      MaskedLoadStore = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1),
-                                                 Op0, LI->getAlign(), Mask);
-      I->replaceAllUsesWith(Builder.CreateBitCast(MaskedLoadStore, Ty));
+      PHINode *PN = nullptr;
+      Value *PassThru = nullptr;
+      for (User *U : I->users())
+        if ((PN = dyn_cast<PHINode>(U))) {
+          PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
+                                           FixedVectorType::get(Ty, 1));
+          break;
+        }
+      MaskedLoadStore = Builder.CreateMaskedLoad(
+          FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
+      if (PN)
+        PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
+      I->replaceAllUsesWith(NewLoadStore);
     } else {
       // Handle Store.
       auto *StoredVal =
@@ -3356,8 +3367,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //         vector specifies a per-element range, so the semantics stay the
     //         same. Keep it.
     // !annotation: Not impact semantics. Keep it.
-    I->dropUBImplyingAttrsAndUnknownMetadata(
-        {LLVMContext::MD_range, LLVMContext::MD_annotation});
+    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
+      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
     at::deleteAssignmentMarkers(I);
@@ -3636,7 +3648,8 @@ static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                DomTreeUpdater *DTU, AssumptionCache *AC,
+                                const DataLayout &DL,
                                 bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
@@ -3726,10 +3739,10 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       continue;
     }
 
-    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
-                             Cost, Budget, TTI) ||
-        !dominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
-                             Cost, Budget, TTI))
+    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
+                             AggressiveInsts, Cost, Budget, TTI, AC) ||
+        !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
+                             AggressiveInsts, Cost, Budget, TTI, AC))
       return Changed;
   }
 
@@ -7870,6 +7883,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       case Instruction::Call:
       case Instruction::CallBr:
       case Instruction::Invoke:
+      case Instruction::UDiv:
+      case Instruction::URem:
+        // Note: signed div/rem of INT_MIN / -1 is also immediate UB, not
+        // implemented to avoid code complexity as it is unclear how useful such
+        // logic is.
+      case Instruction::SDiv:
+      case Instruction::SRem:
         return true;
       }
     });
@@ -7971,6 +7991,9 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
           }
       }
     }
+    // Div/Rem by zero is immediate UB
+    if (match(Use, m_BinOp(m_Value(), m_Specific(I))) && Use->isIntDivRem())
+      return true;
   }
   return false;
 }
@@ -8091,7 +8114,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (foldTwoEntryPHINode(PN, TTI, DTU, DL,
+        if (foldTwoEntryPHINode(PN, TTI, DTU, Options.AC, DL,
                                 Options.SpeculateUnpredictables))
           return true;
   }

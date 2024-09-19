@@ -781,6 +781,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[10], tok::minus, TT_BinaryOperator);
 
+  Tokens = annotate("return (::Type)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("return (Namespace::Class)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
@@ -3276,6 +3284,14 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
   EXPECT_TOKEN(Tokens[8], tok::r_brace, TT_ClassRBrace);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
+  Tokens = annotate("a = class Foo extends goog.a {};",
+                    getGoogleStyle(FormatStyle::LK_JavaScript));
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_ClassLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_ClassRBrace);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
 
   Tokens = annotate("#define FOO(X) \\\n"
                     "  struct X##_tag_ {};");

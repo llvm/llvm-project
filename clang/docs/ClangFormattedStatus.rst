@@ -809,11 +809,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `4`
      - `0`
      - :good:`100%`
-   * - clang/tools/clang-rename
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - clang/tools/clang-repl
      - `1`
      - `1`

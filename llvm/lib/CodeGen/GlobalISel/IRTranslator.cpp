@@ -838,7 +838,7 @@ void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
                                  MachineBasicBlock *MBB) {
   // Emit the code for the jump table
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   MachineIRBuilder MIB(*MBB->getParent());
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
@@ -2340,6 +2340,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::fptosi_sat:
+    MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::fptoui_sat:
+    MIRBuilder.buildFPTOUI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::memcpy_inline:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY_INLINE);
   case Intrinsic::memcpy:
