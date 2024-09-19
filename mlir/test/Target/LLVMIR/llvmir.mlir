@@ -2275,8 +2275,8 @@ llvm.func @qux(f32)
 
 // CHECK: %struct.va_list = type { ptr }
 
-// CHECK: define void @vararg_function(i32 %{{.*}}, ...)
-llvm.func @vararg_function(%arg0: i32, ...) {
+// CHECK: define i32 @vararg_function(i32 %{{.*}}, ...)
+llvm.func @vararg_function(%arg0: i32, ...) -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
@@ -2287,12 +2287,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
   // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
+  // CHECK: %[[RET:.+]] = va_arg ptr %[[ALLOCA1]], i32
+  %ret = llvm.va_arg %4 : (!llvm.ptr) -> i32
   // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
   // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
-  // CHECK: ret void
-  llvm.return
+  // CHECK: ret i32 %[[RET]]
+  llvm.return %ret : i32
 }
 
 // -----
