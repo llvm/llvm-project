@@ -100,7 +100,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })
-      .Default([](const VPRecipeBase *) { // A values is considered non-uniform
+      .Default([](const VPRecipeBase *) { // A value is considered non-uniform
                                           // unless proven otherwise.
         return false;
       });

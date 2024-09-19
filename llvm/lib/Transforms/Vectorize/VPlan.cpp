@@ -1097,7 +1097,7 @@ void VPlan::execute(VPTransformState *State) {
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPart(), 0));
+        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand(), 0));
       continue;
     }
 

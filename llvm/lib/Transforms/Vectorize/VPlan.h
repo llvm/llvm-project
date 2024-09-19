@@ -1311,7 +1311,7 @@ private:
 #endif
 
   /// Return the unroll part for this VPInstruction.
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
@@ -1808,7 +1808,7 @@ public:
   }
 
   /// Return the unroll part for this vector pointer.
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1960,6 +1960,12 @@ public:
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
+  VPValue *getSplatVFValue() {
+    // If the recipe has been unrolled (4 operands), return the VPValue for the
+    // induction increment.
+    return getNumOperands() == 5 ? getOperand(3) : nullptr;
+  }
+
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
   TruncInst *getTruncInst() { return Trunc; }
@@ -1983,8 +1989,8 @@ public:
   /// Returns the VPValue representing the value of this induction at
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
-  VPValue *getLastUnrolledPart() {
-    return getNumOperands() == 4 ? getOperand(3) : this;
+  VPValue *getLastUnrolledPartOperand() {
+    return getNumOperands() == 5 ? getOperand(4) : this;
   }
 };
 
@@ -2026,13 +2032,13 @@ public:
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Return the unroll part for this induction phi.
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
-  VPValue *getFirstUnrolledPart() {
-    return getNumOperands() == 3 ? getOperand(2) : this;
+  VPValue *getFirstUnrolledPartOperand() {
+    return getUnrollPart() == 0 ? this : getOperand(2);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2174,7 +2180,7 @@ public:
   bool isInLoop() const { return IsInLoop; }
 
   /// Return the unroll part for this reduction phi.
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -3021,7 +3027,7 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Return the unroll part for this widened IV.
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3137,7 +3143,7 @@ public:
   }
 
   /// Return the unroll part for this scalar step
-  unsigned getUnrollPartOperand() const;
+  unsigned getUnrollPart() const;
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It

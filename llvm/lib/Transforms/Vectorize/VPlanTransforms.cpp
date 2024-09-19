@@ -1816,20 +1816,11 @@ void UnrollState::unrollRecipe(VPRecipeBase &R) {
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    if (vputils::onlyFirstPartUsed(VPI)) {
-      addUniformForAllParts(cast<VPInstruction>(&R));
-      return;
-    }
-    if (match(VPI, m_VPInstruction<VPInstruction::CalculateTripCountMinusVF>(
-                       m_VPValue()))) {
-      addUniformForAllParts(VPI);
-      return;
-    }
-
     VPValue *Op0;
     VPValue *Op1;
     if (match(VPI, m_VPInstruction<VPInstruction::ExtractFromEnd>(
                        m_VPValue(Op0), m_VPValue(Op1)))) {
+      VPI->setOperand(1, getValueForPart(Op1, UF - 1));
       addUniformForAllParts(VPI);
       if (Plan.hasScalarVFOnly()) {
         // Extracting from end with VF = 1 implies retrieving the scalar part UF
@@ -1841,6 +1832,16 @@ void UnrollState::unrollRecipe(VPRecipeBase &R) {
         // Otherwise we extract from the last part.
         remapOperands(VPI, UF - 1);
       }
+      return;
+    }
+
+    if (vputils::onlyFirstPartUsed(VPI)) {
+      addUniformForAllParts(cast<VPInstruction>(&R));
+      return;
+    }
+    if (match(VPI, m_VPInstruction<VPInstruction::CalculateTripCountMinusVF>(
+                       m_VPValue()))) {
+      addUniformForAllParts(VPI);
       return;
     }
   }
@@ -1934,6 +1935,23 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
+    VPValue *Op0;
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                      m_VPValue(Op0), m_VPValue(Op1)))) {
+      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+      if (Plan.hasScalarVFOnly()) {
+        // Extracting from end with VF = 1 implies retrieving the scalar part UF
+        // - Op1.
+        unsigned Offset =
+            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
+        R.getVPSingleValue()->replaceAllUsesWith(
+            getValueForPart(Op0, UF - Offset));
+      } else {
+        // Otherwise we extract from the last part.
+        remapOperands(&R, UF - 1);
+      }
+      continue;
+    }
 
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
@@ -1950,26 +1968,24 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
   }
 }
 
-/// Remove recipes that are redundant after unrolling.
-static void cleanupRedundantRecipesAfterUnroll(VPlan &Plan) {
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (VPI &&
-          VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-          VPI->getNumOperands() == 1) {
-        VPI->replaceAllUsesWith(VPI->getOperand(0));
-        VPI->eraseFromParent();
-      }
-    }
-  }
-}
 void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
-  auto Cleanup =
-      make_scope_exit([&Plan]() { cleanupRedundantRecipesAfterUnroll(Plan); });
+  auto Cleanup = make_scope_exit([&Plan]() {
+    auto Iter = vp_depth_first_deep(Plan.getEntry());
+    // Remove recipes that are redundant after unrolling.
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+      for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+        auto *VPI = dyn_cast<VPInstruction>(&R);
+        if (VPI &&
+            VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+            VPI->getNumOperands() == 1) {
+          VPI->replaceAllUsesWith(VPI->getOperand(0));
+          VPI->eraseFromParent();
+        }
+      }
+    }
+  });
   if (UF == 1) {
     return;
   }

@@ -332,7 +332,7 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
-unsigned VPInstruction::getUnrollPartOperand() const {
+unsigned VPInstruction::getUnrollPart() const {
   assert(getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
          getNumOperands() == 2 && "Called for unsupported recipe");
   return cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
@@ -498,9 +498,9 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
-    unsigned Part = getUnrollPartOperand();
+    unsigned Part = getUnrollPart();
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
-    assert(Part != 0 && "Must have  a part");
+    assert(Part != 0 && "Must have a positive part");
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
     Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
@@ -1512,10 +1512,10 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   Value *SplatVF;
-  if (getNumOperands() == 4) {
+  if (VPValue *SplatVFOperand = getSplatVFValue()) {
     // The recipe has been unrolled. In that case, fetch the splat value for the
     // induction increment.
-    SplatVF = State.get(getOperand(2), 0);
+    SplatVF = State.get(SplatVFOperand, 0);
   } else {
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
@@ -1671,7 +1671,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // TODO: Remove loop after VPlan-based unroller lands.
   for (unsigned Part = StartPart; Part < EndPart; ++Part) {
     Value *StartIdx0 =
-        createStepForVF(Builder, IntStepTy, State.VF, getUnrollPartOperand());
+        createStepForVF(Builder, IntStepTy, State.VF, getUnrollPart());
 
     if (!FirstLaneOnly && State.VF.isScalable()) {
       auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
@@ -1704,7 +1704,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   }
 }
 
-unsigned VPScalarIVStepsRecipe::getUnrollPartOperand() const {
+unsigned VPScalarIVStepsRecipe::getUnrollPart() const {
   return getNumOperands() == 2
              ? 0
              : cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
@@ -1812,7 +1812,7 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
-  unsigned CurrentPart = getUnrollPartOperand();
+  unsigned CurrentPart = getUnrollPart();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     // Calculate the pointer for the specific unroll-part.
     Value *PartPtr = nullptr;
@@ -1849,7 +1849,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   }
 }
 
-unsigned VPVectorPointerRecipe::getUnrollPartOperand() const {
+unsigned VPVectorPointerRecipe::getUnrollPart() const {
   return getNumOperands() == 1
              ? 0
              : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
@@ -2925,7 +2925,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0, /*IsScalar*/ true));
-  unsigned CurrentPart = getUnrollPartOperand();
+  unsigned CurrentPart = getUnrollPart();
 
   // Build a pointer phi
   Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
@@ -2940,7 +2940,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
-    auto *GEP = cast<GetElementPtrInst>(State.get(getFirstUnrolledPart(), 0));
+    auto *GEP =
+        cast<GetElementPtrInst>(State.get(getFirstUnrolledPartOperand(), 0));
     NewPointerPhi = cast<PHINode>(GEP->getPointerOperand());
   }
 
@@ -2993,7 +2994,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   }
 }
 
-unsigned VPWidenPointerInductionRecipe::getUnrollPartOperand() const {
+unsigned VPWidenPointerInductionRecipe::getUnrollPart() const {
   return getNumOperands() == 4
              ? cast<ConstantInt>(getOperand(3)->getLiveInIRValue())
                    ->getZExtValue()
@@ -3003,20 +3004,18 @@ unsigned VPWidenPointerInductionRecipe::getUnrollPartOperand() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  assert((getNumOperands() == 2 || getNumOperands() == 5) &&
+  assert((getNumOperands() == 2 || getNumOperands() == 4) &&
          "unexpected number of operands");
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << ", " << *IndDesc.getStep();
-  if (getNumOperands() == 5) {
+  if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);
     O << ", ";
     getOperand(3)->printAsOperand(O, SlotTracker);
-    O << ", ";
-    getOperand(4)->printAsOperand(O, SlotTracker);
   }
 }
 #endif
@@ -3053,7 +3052,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
                       ? CanonicalIV
                       : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
-    Value *VStep = createStepForVF(Builder, STy, VF, getUnrollPartOperand());
+    Value *VStep = createStepForVF(Builder, STy, VF, getUnrollPart());
     if (VF.isVector()) {
       VStep = Builder.CreateVectorSplat(VF, VStep);
       VStep =
@@ -3064,7 +3063,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   }
 }
 
-unsigned VPWidenCanonicalIVRecipe::getUnrollPartOperand() const {
+unsigned VPWidenCanonicalIVRecipe::getUnrollPart() const {
   return getNumOperands() == 1
              ? 0
              : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
@@ -3149,7 +3148,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  unsigned CurrentPart = getUnrollPartOperand();
+  unsigned CurrentPart = getUnrollPart();
 
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
@@ -3191,7 +3190,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 }
 
-unsigned VPReductionPHIRecipe::getUnrollPartOperand() const {
+unsigned VPReductionPHIRecipe::getUnrollPart() const {
   return getNumOperands() == 2
              ? 0
              : cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
