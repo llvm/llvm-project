@@ -126,6 +126,14 @@ static void getSymbols(const COFFLinkerContext &ctx,
       syms.push_back(file->impSym);
     if (file->thunkSym && file->thunkSym->isLive())
       syms.push_back(file->thunkSym);
+    if (file->auxThunkSym && file->auxThunkSym->isLive())
+      syms.push_back(file->auxThunkSym);
+    if (file->impchkThunk)
+      syms.push_back(file->impchkThunk->sym);
+    if (file->impECSym)
+      syms.push_back(file->impECSym);
+    if (file->auxImpCopySym)
+      syms.push_back(file->auxImpCopySym);
   }
 
   sortUniqueSymbols(syms, ctx.config.imageBase);
