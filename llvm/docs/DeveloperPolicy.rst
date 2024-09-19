@@ -87,7 +87,7 @@ Making and Submitting a Patch
 -----------------------------
 
 The LLVM community requires contributors to have a public email address
-associated with their GitHub account. Please ensure that "Keep my email
+associated with their GitHub commits, so please ensure that "Keep my email
 addresses private" is disabled in your
 `account settings <https://github.com/settings/emails>`_.
 
