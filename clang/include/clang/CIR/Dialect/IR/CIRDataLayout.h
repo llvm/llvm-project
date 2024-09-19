@@ -12,6 +12,7 @@
 #ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
 #define LLVM_CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
 
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/IR/DataLayout.h"
@@ -41,7 +42,7 @@ public:
   CIRDataLayout(mlir::ModuleOp modOp);
 
   /// Parse a data layout string (with fallback to default values).
-  void reset();
+  void reset(mlir::DataLayoutSpecInterface spec);
 
   // Free all internal data structures.
   void clear();

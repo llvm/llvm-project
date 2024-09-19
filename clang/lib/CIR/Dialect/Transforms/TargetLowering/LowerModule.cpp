@@ -62,6 +62,7 @@ createTargetLoweringInfo(LowerModule &LM) {
   const llvm::Triple &Triple = Target.getTriple();
 
   switch (Triple.getArch()) {
+  case llvm::Triple::aarch64_be:
   case llvm::Triple::aarch64: {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
