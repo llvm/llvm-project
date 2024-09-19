@@ -108,7 +108,7 @@ template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
 static void testBesselJn() {
   testBesselJn<4>(RTNAME(BesselJn_4));
   testBesselJn<8>(RTNAME(BesselJn_8));
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   testBesselJn<10>(RTNAME(BesselJn_10));
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -117,7 +117,7 @@ static void testBesselJn() {
 
   testBesselJnX0<4>(RTNAME(BesselJnX0_4));
   testBesselJnX0<8>(RTNAME(BesselJnX0_8));
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   testBesselJnX0<10>(RTNAME(BesselJnX0_10));
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -201,7 +201,7 @@ template <int KIND> static void testBesselYnX0(BesselX0FuncType<KIND> rtFunc) {
 static void testBesselYn() {
   testBesselYn<4>(RTNAME(BesselYn_4));
   testBesselYn<8>(RTNAME(BesselYn_8));
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   testBesselYn<10>(RTNAME(BesselYn_10));
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -210,7 +210,7 @@ static void testBesselYn() {
 
   testBesselYnX0<4>(RTNAME(BesselYnX0_4));
   testBesselYnX0<8>(RTNAME(BesselYnX0_8));
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
   testBesselYnX0<10>(RTNAME(BesselYnX0_10));
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -523,7 +523,7 @@ TEST(Transformational, Unpack) {
   result.Destroy();
 }
 
-#if HAS_FLOAT80
+#if LDBL_MANT_DIG == 64
 // Make sure the destination descriptor is created by the runtime
 // with proper element size, when REAL*10 maps to 'long double'.
 #define Real10CppType long double
