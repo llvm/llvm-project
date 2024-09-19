@@ -534,7 +534,7 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
     // HistCnt only supports 32b and 64b element types
     unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
 
-    if (EC == 2 || (!LegalEltSize == 32 && EC == 4))
+    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
       return InstructionCost(BaseHistCntCost);
 
     unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
