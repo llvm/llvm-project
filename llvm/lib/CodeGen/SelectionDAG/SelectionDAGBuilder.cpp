@@ -2981,7 +2981,7 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
 void SelectionDAGBuilder::visitJumpTable(SwitchCG::JumpTable &JT) {
   // Emit the code for the jump table
   assert(JT.SL && "Should set SDLoc for SelectionDAG!");
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   EVT PTy = DAG.getTargetLoweringInfo().getJumpTableRegTy(DAG.getDataLayout());
   SDValue Index = DAG.getCopyFromReg(getControlRoot(), *JT.SL, JT.Reg, PTy);
   SDValue Table = DAG.getJumpTable(JT.JTI, PTy);
@@ -3261,10 +3261,9 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
 /// visitBitTestCase - this function produces one "bit test"
 void SelectionDAGBuilder::visitBitTestCase(BitTestBlock &BB,
-                                           MachineBasicBlock* NextMBB,
+                                           MachineBasicBlock *NextMBB,
                                            BranchProbability BranchProbToNext,
-                                           unsigned Reg,
-                                           BitTestCase &B,
+                                           Register Reg, BitTestCase &B,
                                            MachineBasicBlock *SwitchBB) {
   SDLoc dl = getCurSDLoc();
   MVT VT = BB.RegVT;

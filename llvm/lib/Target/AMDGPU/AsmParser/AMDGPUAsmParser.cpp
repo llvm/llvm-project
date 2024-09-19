@@ -1272,7 +1272,7 @@ class KernelScopeInfo {
   }
 
   void usesAgprAt(int i) {
-    // Instruction will error in AMDGPUAsmParser::MatchAndEmitInstruction
+    // Instruction will error in AMDGPUAsmParser::matchAndEmitInstruction
     if (!hasMAIInsts(*MSTI))
       return;
 
@@ -1613,7 +1613,7 @@ public:
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -1621,7 +1621,7 @@ public:
   ParseStatus parseOperand(OperandVector &Operands, StringRef Mnemonic,
                            OperandMode Mode = OperandMode_Default);
   StringRef parseMnemonicSuffix(StringRef Name);
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   //bool ProcessInstruction(MCInst &Inst);
 
@@ -5362,7 +5362,7 @@ static bool isInvalidVOPDY(const OperandVector &Operands,
   return false;
 }
 
-bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
                                               uint64_t &ErrorInfo,
@@ -6467,9 +6467,9 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  const FeatureBitset &Features,
                                  unsigned VariantID);
 
-bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
-                                       StringRef Name,
-                                       SMLoc NameLoc, OperandVector &Operands) {
+bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
+                                       StringRef Name, SMLoc NameLoc,
+                                       OperandVector &Operands) {
   // Add the instruction mnemonic
   Name = parseMnemonicSuffix(Name);
 
