@@ -39,7 +39,7 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
   // A value defined outside the vector region must be uniform after
   // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideVectorRegions())
+  if (VPV->isDefinedOutsideLoopRegions())
     return true;
   const VPRecipeBase *Def = VPV->getDefiningRecipe();
   assert(Def && "Must have definition for value defined inside vector region");
