@@ -626,30 +626,19 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
                                            : QualType());
 }
 
-static llvm::SmallVector<const Decl *, 2> collectLambdas(FunctionDecl *D) {
-  struct LambdaCollector : public ConstStmtVisitor<LambdaCollector> {
-    llvm::SmallVectorImpl<const Decl *> &Lambdas;
-
-    LambdaCollector(llvm::SmallVectorImpl<const Decl *> &Lambdas)
-        : Lambdas(Lambdas) {}
-
-    void VisitLambdaExpr(const LambdaExpr *E) {
-      VisitStmt(E);
-      Lambdas.push_back(E->getLambdaClass());
-    }
-
-    void VisitStmt(const Stmt *S) {
-      if (!S)
-        return;
-      for (const Stmt *Child : S->children())
-        if (Child)
-          Visit(Child);
+// Recursively collects all lambda declarations within the function declaration.
+static llvm::SmallVector<const Decl *, 2> collectLambdas(FunctionDecl *FD) {
+  llvm::SmallVector<const Decl *, 2> Lambdas;
+  std::function<void(DeclContext *)> visitor = [&visitor,
+                                                &Lambdas](DeclContext *DC) {
+    for (Decl *D : DC->decls()) {
+      if (isa<DeclContext>(D))
+        visitor(cast<DeclContext>(D));
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D); RD && RD->isLambda())
+        Lambdas.push_back(RD);
     }
   };
-
-  llvm::SmallVector<const Decl *, 2> Lambdas;
-  if (D->hasBody())
-    LambdaCollector(Lambdas).VisitStmt(D->getBody());
+  visitor(FD);
   return Lambdas;
 }
 
