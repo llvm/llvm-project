@@ -426,7 +426,7 @@ define i8 @caller16_not_intersecting_ranges() {
 define ptr @caller_bad_ret_prop(ptr %p1, ptr %p2, i64 %x, ptr %other) {
 ; CHECK-LABEL: define ptr @caller_bad_ret_prop
 ; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]], ptr [[OTHER:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call noundef nonnull ptr [[P1]](i64 [[X]], ptr [[P2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call noundef ptr [[P1]](i64 [[X]], ptr [[P2]])
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[TMP1]], null
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[T_I:%.*]], label [[F_I:%.*]]
 ; CHECK:       T.i:

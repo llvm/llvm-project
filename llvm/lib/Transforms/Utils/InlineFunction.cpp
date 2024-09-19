@@ -1383,6 +1383,12 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       auto *NewInnerCB = dyn_cast_or_null<CallBase>(VMap.lookup(InnerCB));
       if (!NewInnerCB)
         continue;
+      // The InnerCB might have be simplified during the inlining
+      // process. Only propagate return attributes if we are in fact calling the
+      // same function.
+      if (InnerCB->getCalledFunction() != NewInnerCB->getCalledFunction())
+        continue;
+
       AttributeList AL = NewInnerCB->getAttributes();
       for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
         // Check if the underlying value for the parameter is an argument.
@@ -1476,6 +1482,12 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // could have transformed the cloned instruction.
     auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
     if (!NewRetVal)
+      continue;
+
+    // The RetVal might have be simplified during the inlining
+    // process. Only propagate return attributes if we are in fact calling the
+    // same function.
+    if (RetVal->getCalledFunction() != NewRetVal->getCalledFunction())
       continue;
     // Backward propagation of attributes to the returned value may be incorrect
     // if it is control flow dependent.
