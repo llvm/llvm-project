@@ -860,10 +860,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // TODO: Implement a real typed stack, and store the genericness of the value
   // there.
   auto to_generic = [&](auto v) {
+    // TODO: Avoid implicit trunc?
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(
-        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
-        !is_signed));
+    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
+                                           is_signed, /*implicitTrunc=*/true),
+                               !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any

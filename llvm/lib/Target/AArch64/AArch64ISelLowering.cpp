@@ -2400,10 +2400,11 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
   }
   case AArch64ISD::BICi: {
     // Compute the bit cleared value.
-    uint64_t Mask =
-        ~(Op->getConstantOperandVal(1) << Op->getConstantOperandVal(2));
+    APInt Mask =
+        ~(Op->getConstantOperandAPInt(1) << Op->getConstantOperandAPInt(2))
+             .trunc(Known.getBitWidth());
     Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
-    Known &= KnownBits::makeConstant(APInt(Known.getBitWidth(), Mask));
+    Known &= KnownBits::makeConstant(Mask);
     break;
   }
   case AArch64ISD::VLSHR: {
@@ -12839,7 +12840,8 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
   // Benefit form APInt to handle overflow when calculating expected element.
   unsigned NumElts = VT.getVectorNumElements();
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
-  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1);
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, /*isSigned=*/false,
+                            /*implicitTrunc=*/true);
   // The following shuffle indices must be the successive elements after the
   // first real element.
   bool FoundWrongElt = std::any_of(FirstRealElt + 1, M.end(), [&](int Elt) {
@@ -14306,9 +14308,9 @@ static SDValue NormalizeBuildVector(SDValue Op,
     // (with operands cast to integers), then the only possibilities
     // are constants and UNDEFs.
     if (auto *CstLane = dyn_cast<ConstantSDNode>(Lane)) {
-      APInt LowBits(EltTy.getSizeInBits(),
-                    CstLane->getZExtValue());
-      Lane = DAG.getConstant(LowBits.getZExtValue(), dl, MVT::i32);
+      Lane = DAG.getConstant(
+          CstLane->getAPIntValue().trunc(EltTy.getSizeInBits()).getZExtValue(),
+          dl, MVT::i32);
     } else if (Lane.getNode()->isUndef()) {
       Lane = DAG.getUNDEF(MVT::i32);
     } else {
@@ -23713,7 +23715,7 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
   EVT NewIndexVT = IndexVT.changeVectorElementType(MVT::i32);
   // Stride does not scale explicitly by 'Scale', because it happens in
   // the gather/scatter addressing mode.
-  Index = DAG.getStepVector(SDLoc(N), NewIndexVT, APInt(32, Stride));
+  Index = DAG.getStepVector(SDLoc(N), NewIndexVT, APInt(32, Stride, true));
   return true;
 }
 
@@ -28729,7 +28731,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
-  uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
+  uint64_t MaxOffset = APInt(BitsPerElt, -1, true).getZExtValue();
   EVT MaskEltType = VTOp1.getVectorElementType().changeTypeToInteger();
   EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
   bool MinMaxEqual = (MinSVESize == MaxSVESize);
@@ -29087,16 +29089,14 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     KnownBits KnownOp0 =
         TLO.DAG.computeKnownBits(Op0, OriginalDemandedElts, Depth + 1);
     // Op0 &= ~(ConstantOperandVal(1) << ConstantOperandVal(2))
-    uint64_t BitsToClear = Op->getConstantOperandVal(1)
-                           << Op->getConstantOperandVal(2);
+    APInt BitsToClear =
+        (Op->getConstantOperandAPInt(1) << Op->getConstantOperandAPInt(2))
+            .trunc(KnownOp0.getBitWidth());
     APInt AlreadyZeroedBitsToClear = BitsToClear & KnownOp0.Zero;
-    if (APInt(Known.getBitWidth(), BitsToClear)
-            .isSubsetOf(AlreadyZeroedBitsToClear))
+    if (BitsToClear.isSubsetOf(AlreadyZeroedBitsToClear))
       return TLO.CombineTo(Op, Op0);
 
-    Known = KnownOp0 &
-            KnownBits::makeConstant(APInt(Known.getBitWidth(), ~BitsToClear));
-
+    Known = KnownOp0 & KnownBits::makeConstant(~BitsToClear);
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

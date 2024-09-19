@@ -437,7 +437,9 @@ ExprResult Parser::createEmbedExpr() {
   SourceLocation StartLoc = ConsumeAnnotationToken();
   if (Data->BinaryData.size() == 1) {
     Res = IntegerLiteral::Create(Context,
-                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back(),
+                                             /*isSigned=*/false,
+                                             /*implicitTrunc=*/true),
                                  Context.UnsignedCharTy, StartLoc);
   } else {
     auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {

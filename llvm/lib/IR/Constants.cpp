@@ -932,7 +932,9 @@ Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
 }
 
 ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
-  return get(Ty->getContext(), APInt(Ty->getBitWidth(), V, isSigned));
+  // TODO: Avoid implicit trunc?
+  return get(Ty->getContext(),
+             APInt(Ty->getBitWidth(), V, isSigned, /*implicitTrunc=*/true));
 }
 
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {

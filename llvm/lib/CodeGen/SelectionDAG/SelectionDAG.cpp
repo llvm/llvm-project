@@ -1641,7 +1641,10 @@ SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
   assert((EltVT.getSizeInBits() >= 64 ||
           (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
          "getConstant with a uint64_t value that doesn't fit in the type!");
-  return getConstant(APInt(EltVT.getSizeInBits(), Val), DL, VT, isT, isO);
+  // TODO: Avoid implicit trunc?
+  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
+                           /*implicitTrunc=*/true),
+                     DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getConstant(const APInt &Val, const SDLoc &DL, EVT VT,

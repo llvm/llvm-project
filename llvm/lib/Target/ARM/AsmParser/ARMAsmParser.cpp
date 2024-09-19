@@ -1159,7 +1159,9 @@ public:
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
-    int Val = ARM_AM::getFP32Imm(APInt(32, CE->getValue()));
+    // TODO: Is implicitTrunc correct here?
+    int Val = ARM_AM::getFP32Imm(
+        APInt(32, CE->getValue(), /*isSigned=*/true, /*implicitTrunc=*/true));
     return Val != -1;
   }
 

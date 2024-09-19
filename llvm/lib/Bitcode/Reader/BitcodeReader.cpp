@@ -876,7 +876,8 @@ private:
     } else {
       int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
-      return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
+      return ConstantRange(APInt(BitWidth, Start, true),
+                           APInt(BitWidth, End, true));
     }
   }
 

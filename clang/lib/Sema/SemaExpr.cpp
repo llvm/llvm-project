@@ -3600,8 +3600,11 @@ ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {
 
 ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, uint64_t Val) {
   unsigned IntSize = Context.getTargetInfo().getIntWidth();
-  return IntegerLiteral::Create(Context, llvm::APInt(IntSize, Val),
-                                Context.IntTy, Loc);
+  // TODO: Avoid implicit trunc?
+  return IntegerLiteral::Create(
+      Context,
+      llvm::APInt(IntSize, Val, /*isSigned=*/false, /*implicitTrunc=*/true),
+      Context.IntTy, Loc);
 }
 
 static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
