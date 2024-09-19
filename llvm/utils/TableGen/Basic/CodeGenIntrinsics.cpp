@@ -47,13 +47,18 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Intrinsics.reserve(Defs.size());
 
   for (const Record *Def : Defs)
-    Intrinsics.push_back(CodeGenIntrinsic(Def, Ctx));
+    Intrinsics.emplace_back(CodeGenIntrinsic(Def, Ctx));
 
+  // To ensure deterministic sorted order when duplicates are present, use
+  // record ID as a tie-breaker similar to sortAndReportDuplicates in Utils.cpp.
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
-               return std::tie(LHS.TargetPrefix, LHS.Name) <
-                      std::tie(RHS.TargetPrefix, RHS.Name);
+               unsigned LhsID = LHS.TheDef->getID();
+               unsigned RhsID = RHS.TheDef->getID();
+               return std::tie(LHS.TargetPrefix, LHS.Name, LhsID) <
+                      std::tie(RHS.TargetPrefix, RHS.Name, RhsID);
              });
+
   Targets.push_back({"", 0, 0});
   for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
     if (Intrinsics[I].TargetPrefix != Targets.back().Name) {
@@ -61,6 +66,32 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
       Targets.push_back({Intrinsics[I].TargetPrefix, I, 0});
     }
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
+
+  CheckDuplicateIntrinsics();
+}
+
+// Check for duplicate intrinsic names.
+void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
+  // Since the Intrinsics vector is already sorted by name, if there are 2 or
+  // more intrinsics with duplicate names, they will appear adjacent in sorted
+  // order. Note that if the intrinsic name was derived from the record name
+  // there cannot be be duplicate as TableGen parser would have flagged that.
+  // However, if the name was specified in the intrinsic definition, then its
+  // possible to have duplicate names.
+  auto I = std::adjacent_find(
+      Intrinsics.begin(), Intrinsics.end(),
+      [](const CodeGenIntrinsic &Int1, const CodeGenIntrinsic &Int2) {
+        return Int1.Name == Int2.Name;
+      });
+  if (I == Intrinsics.end())
+    return;
+
+  // Found a duplicate intrinsics.
+  const CodeGenIntrinsic &First = *I;
+  const CodeGenIntrinsic &Second = *(I + 1);
+  PrintError(Second.TheDef,
+             Twine("Intrinsic `") + First.Name + "` is already defined");
+  PrintFatalNote(First.TheDef, "Previous definition here");
 }
 
 CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
