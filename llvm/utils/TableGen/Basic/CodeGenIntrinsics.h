@@ -192,6 +192,7 @@ public:
 
 private:
   void CheckDuplicateIntrinsics() const;
+  void CheckOverloadConflicts() const;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.

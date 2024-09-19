@@ -1834,6 +1834,10 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 [IntrNoMem, IntrWillReturn, IntrConvergent],
                                 "llvm.is.constant">;
 
+def int_is_constant0 : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
+                                [IntrNoMem, IntrWillReturn, IntrConvergent],
+                                "llvm.is.constant.my">;
+
 // Introduce a use of the argument without generating any code.
 def int_fake_use : Intrinsic<[], [llvm_vararg_ty]>;
 

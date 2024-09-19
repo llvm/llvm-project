@@ -68,6 +68,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 
   CheckDuplicateIntrinsics();
+  CheckOverloadConflicts();
 }
 
 // Check for duplicate intrinsic names.
@@ -92,6 +93,168 @@ void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
   PrintError(Second.TheDef,
              Twine("Intrinsic `") + First.Name + "` is already defined");
   PrintFatalNote(First.TheDef, "Previous definition here");
+}
+
+// Note: This is a modified version of `Intrinsic::lookupLLVMIntrinsicByName`
+// in IntrinsicInst.cpp file.
+template <typename T>
+int lookupLLVMIntrinsicByName(ArrayRef<const T *> NameTable, StringRef Name,
+                              function_ref<const char *(const T *)> ToString) {
+  using ToStringTy = function_ref<const char *(const T *)>;
+  assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
+
+  // Do successive binary searches of the dotted name components. For
+  // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
+  // intrinsics starting with "llvm.gc", then "llvm.gc.experimental", then
+  // "llvm.gc.experimental.statepoint", and then we will stop as the range is
+  // size 1. During the search, we can skip the prefix that we already know is
+  // identical. By using strncmp we consider names with differing suffixes to
+  // be part of the equal range.
+  size_t CmpEnd = 4; // Skip the "llvm" component.
+
+  struct Compare {
+    Compare(size_t CmpStart, size_t CmpEnd, ToStringTy ToString)
+        : CmpStart(CmpStart), CmpEnd(CmpEnd), ToString(ToString) {}
+    bool operator()(const T *LHS, const char *RHS) {
+      return strncmp(ToString(LHS) + CmpStart, RHS + CmpStart,
+                     CmpEnd - CmpStart) < 0;
+    }
+    bool operator()(const char *LHS, const CodeGenIntrinsic *RHS) {
+      return strncmp(LHS + CmpStart, ToString(RHS) + CmpStart,
+                     CmpEnd - CmpStart) < 0;
+    }
+    const size_t CmpStart, CmpEnd;
+    ToStringTy ToString;
+  };
+
+  auto Low = NameTable.begin();
+  auto High = NameTable.end();
+  auto LastLow = Low;
+  while (CmpEnd < Name.size() && High - Low > 0) {
+    size_t CmpStart = CmpEnd;
+    CmpEnd = Name.find('.', CmpStart + 1);
+    CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
+    LastLow = Low;
+    Compare Cmp(CmpStart, CmpEnd, ToString);
+    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
+  }
+  if (High - Low > 0)
+    LastLow = Low;
+
+  if (LastLow == NameTable.end())
+    return -1;
+  StringRef NameFound = (*LastLow)->Name;
+  if (Name == NameFound ||
+      (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
+    return LastLow - NameTable.begin();
+  return -1;
+}
+
+// Check for conflicts with overloaded intrinsics. If an intrinsic's name has
+// the name of an overloaded intrinsic as a prefix, then it may be ambiguious
+// and confusing as to which of the two a specific call refers to. Hence
+// disallow such cases.
+//
+// As an example, if `llvm.foo` is overloaded, it will appear as
+// `llvm.foo.<mangling_suffix>` in the IR. Now, if another intrinsic is called
+// `llvm.foo.bar`, it may be ambiguious as to whether `.bar` is a mangling
+// suffix for the overloaded `llvm.foo` or if its the `llvm.foo.bar` intrinsic.
+// Note though that `llvm.foobar` is OK. So the prefix check will check if
+// there name of the overloaded intrinsic is a prefix of another one and the
+// next letter after the prefix is a `.`.
+//
+// Also note that the `.bar` suffix in the example above may not be a valid
+// mangling suffix for `llvm.foo`, so we could check that and allow
+// `llvm.foo.bar` as there is no ambiguity. But LLVM's intrinsic name matching
+// does not support this (in llvm::Intrinsic::lookupLLVMIntrinsicByName).
+// However the ambiguity is still there, so we do not allow this case (i.e.,
+// the check is overly strict).
+void CodeGenIntrinsicTable::CheckOverloadConflicts() const {
+  // Collect all overloaded intrinsic names in a vector. `Intrinsics` are
+  // already mostly sorted by name (all target independent ones first, sorted by
+  // their name, followed by target specific ones, sorted by their name).
+  // However we would like to detect cases where an overloaded target
+  // independent one shares a prefix with a target depndent one. So we need to
+  // collect and resort all of them by name.
+  std::vector<const CodeGenIntrinsic *> OverloadedIntrinsics;
+  for (const CodeGenIntrinsic &Int : Intrinsics)
+    if (Int.isOverloaded)
+      OverloadedIntrinsics.push_back(&Int);
+
+  sort(OverloadedIntrinsics,
+       [](const CodeGenIntrinsic *Int1, const CodeGenIntrinsic *Int2) {
+         return Int1->Name < Int2->Name;
+       });
+
+  ArrayRef<const CodeGenIntrinsic *> AR = OverloadedIntrinsics;
+  auto ToString = [](const CodeGenIntrinsic *Int) -> const char * {
+    return Int->Name.c_str();
+  };
+
+  for (const CodeGenIntrinsic &Int : Intrinsics) {
+    int index =
+        lookupLLVMIntrinsicByName<CodeGenIntrinsic>(AR, Int.Name, ToString);
+    if (index == -1 || AR[index] == &Int)
+      continue;
+    const CodeGenIntrinsic &Overloaded = *AR[index];
+
+    // Allow only a single ".xxx" suffix after the matched name, if we know that
+    // the it likely won't match a mangling suffix.
+    StringRef Suffix =
+        StringRef(Int.Name).drop_front(Overloaded.Name.size() + 1);
+    bool IsSuffixOk = [&]() {
+      // Allow only a single "." separated token.
+      if (Suffix.find('.') != StringRef::npos)
+        return false;
+      // Do not allow if suffix can potentially match a mangling suffix.
+      // See getMangledTypeStr() for the mangling suffixes possible. It includes
+      //  pointer       : p[0-9]+
+      //  array         : a[0-9]+[.+]
+      //  struct:       : s_/sl_[.+]
+      //  function      : f_[.+]
+      //  vector        : v/nxv[0-9]+[.+]
+      //  target type   : t[.*]
+      //  integer       : i[0-9]+
+      //  named types   : See `NamedTypes` below.
+
+      // 1. Do not allow anything with characters other that [0-9A-Za-z]. That
+      // means really no _, so that eliminates functions and structs.
+      if (Suffix.find('_') != StringRef::npos)
+        return false;
+
+      // [a|v][0-9|$][.*] // $ is end of string.
+      if (is_contained("av", Suffix[0]) &&
+          (Suffix.size() == 1 || isDigit(Suffix[1])))
+        return false;
+      // nxv[0-9|$][.*]
+      if (Suffix.starts_with("nxv") &&
+          (Suffix.size() == 3 || isDigit(Suffix[3])))
+        return false;
+      // t[.*]
+      if (Suffix.starts_with('t'))
+        return false;
+      // [p|i][0-9]+
+      if ((Suffix[0] == 'i' || Suffix[0] == 'p') &&
+          all_of(Suffix.drop_front(), isDigit))
+        return false;
+      // Match one of the named types.
+      StringLiteral NamedTypes[] = {"isVoid",  "Metadata", "f16",  "f32",
+                                    "f64",     "f80",      "f128", "bf16",
+                                    "ppcf128", "x86amx"};
+      if (is_contained(NamedTypes, Suffix))
+        return false;
+      return true;
+    }();
+    if (IsSuffixOk)
+      continue;
+
+    PrintError(Int.TheDef->getLoc(),
+               Twine("Intrinsic `") + Int.Name + "` cannot share prefix `" +
+                   Overloaded.Name + "` with an overloaded intrinsic");
+    PrintFatalError(Overloaded.TheDef->getLoc(), "Overloaded intrinsic `" +
+                                                     Overloaded.Name +
+                                                     "` defined here");
+  }
 }
 
 CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {

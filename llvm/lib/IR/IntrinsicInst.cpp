@@ -236,6 +236,8 @@ void DbgAssignIntrinsic::setValue(Value *V) {
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
+// Note: a modified version of this fuction exists in CodeGenIntrinsics.cpp.
+// Any changes here likely need to be reflected there as well.
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
                                                StringRef Name) {
   assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
