@@ -10,8 +10,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  bind
+  socketpair
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.bind
+    .${LIBC_TARGET_OS}.socketpair
+)
+
+add_entrypoint_object(
+  send
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.send
+)
+
+add_entrypoint_object(
+  sendto
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendto
+)
+
+add_entrypoint_object(
+  sendmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendmsg
+)
+
+add_entrypoint_object(
+  recv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recv
+)
+
+add_entrypoint_object(
+  recvfrom
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvfrom
+)
+
+add_entrypoint_object(
+  recvmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvmsg
 )
