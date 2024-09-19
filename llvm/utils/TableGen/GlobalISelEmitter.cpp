@@ -2368,7 +2368,7 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
-  SmallPtrSet<Record *, 16> UsedRegs;
+  SmallPtrSet<const Record *, 16> UsedRegs;
 
   // TODO: deal with subregs?
   for (auto &A : M.actions()) {
