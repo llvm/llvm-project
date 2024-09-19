@@ -1473,13 +1473,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
-  for (BasicBlock *BB1 : ExitingBlocks) {
+  for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
-        PSE.getSE()->getPredicatedExitCount(TheLoop, BB1, &Predicates);
+        PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
     if (isa<SCEVCouldNotCompute>(EC)) {
-      UncountableExitingBlocks.push_back(BB1);
+      UncountableExitingBlocks.push_back(BB);
 
-      SmallVector<BasicBlock *, 2> Succs(successors(BB1));
+      SmallVector<BasicBlock *, 2> Succs(successors(BB));
       if (Succs.size() != 2) {
         reportVectorizationFailure(
             "Early exiting block does not have exactly two successors",
@@ -1488,17 +1488,21 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         return false;
       }
 
-      BasicBlock *BB2;
+      BasicBlock *ExitBlock;
       if (!TheLoop->contains(Succs[0]))
-        BB2 = Succs[0];
+        ExitBlock = Succs[0];
       else {
         assert(!TheLoop->contains(Succs[1]));
-        BB2 = Succs[1];
+        ExitBlock = Succs[1];
       }
-      UncountableExitBlocks.push_back(BB2);
+      UncountableExitBlocks.push_back(ExitBlock);
     } else
-      CountableExitingBlocks.push_back(BB1);
+      CountableExitingBlocks.push_back(BB);
   }
+  // We can safely ignore the predicates here because when vectorizing the loop
+  // the PredicatatedScalarEvolution class will keep track of all predicates
+  // for each exiting block anyway. This happens when calling
+  // PSE.getSymbolicMaxBackedgeTakenCount() below.
   Predicates.clear();
 
   // We only support one uncountable early exit.
@@ -1513,12 +1517,24 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // The only supported early exit loops so far are ones where the early
   // exiting block is a unique predecessor of the latch block.
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != getSpeculativeEarlyExitingBlock()) {
+  if (LatchPredBB != getUncountableEarlyExitingBlock()) {
     reportVectorizationFailure("Early exit is not the latch predecessor",
                                "Cannot vectorize early exit loop",
                                "EarlyExitNotLatchPredecessor", ORE, TheLoop);
     return false;
   }
+
+  // The latch block must have a countable exit.
+  if (isa<SCEVCouldNotCompute>(
+          PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
+    reportVectorizationFailure(
+        "Cannot determine exact exit count for latch block",
+        "Cannot vectorize early exit loop",
+        "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
+    return false;
+  }
+  assert(llvm::is_contained(CountableExitingBlocks, LatchBB) &&
+         "Latch block not found in list of countable exits!");
 
   // Check to see if there are instructions that could potentially generate
   // exceptions or have side-effects.
@@ -1555,18 +1571,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       }
     }
 
-  // The latch block must have a countable exit.
-  if (isa<SCEVCouldNotCompute>(
-          PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
-    reportVectorizationFailure(
-        "Cannot determine exact exit count for latch block",
-        "Cannot vectorize early exit loop",
-        "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
-    return false;
-  }
-
   // The vectoriser cannot handle loads that occur after the early exit block.
-  assert(LatchBB->getUniquePredecessor() == getSpeculativeEarlyExitingBlock() &&
+  assert(LatchBB->getUniquePredecessor() == getUncountableEarlyExitingBlock() &&
          "Expected latch predecessor to be the early exiting block");
 
   // TODO: Handle loops that may fault.
@@ -1580,16 +1586,15 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  LLVM_DEBUG(
-      dbgs()
-      << "LV: Found an early exit. Retrying with speculative exit count.\n");
-  [[maybe_unused]] const SCEV *SpecExitCount =
+  [[maybe_unused]] const SCEV *SymbolicMaxBTC =
       PSE.getSymbolicMaxBackedgeTakenCount();
-  assert(!isa<SCEVCouldNotCompute>(SpecExitCount) &&
+  // Since we have an exact exit count for the latch and the early exit
+  // dominates the latch, then this should guarantee a computed SCEV value.
+  assert(!isa<SCEVCouldNotCompute>(SymbolicMaxBTC) &&
          "Failed to get symbolic expression for backedge taken count");
-
-  LLVM_DEBUG(dbgs() << "LV: Found speculative backedge taken count: "
-                    << *SpecExitCount << '\n');
+  LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
+                       "backedge taken count: "
+                    << *SymbolicMaxBTC << '\n');
   return true;
 }
 
@@ -1653,7 +1658,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  HasSpeculativeEarlyExit = false;
+  HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (!isVectorizableEarlyExitLoop()) {
       if (DoExtraAnalysis)
@@ -1661,7 +1666,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else
-      HasSpeculativeEarlyExit = true;
+      HasUncountableEarlyExit = true;
   }
 
   // Go over each instruction and look at memory deps.
