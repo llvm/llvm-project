@@ -11,7 +11,7 @@ typedef float t3 __attribute__ ((vector_size (16)));
 typedef __typeof__(sizeof(int)) size_t;
 typedef unsigned long ulong2 __attribute__ ((ext_vector_type(2)));
 typedef size_t stride4 __attribute__((ext_vector_type(4)));
-typedef float bool4 __attribute__(( ext_vector_type(4) ));
+typedef _Bool bool4 __attribute__(( ext_vector_type(4) ));
 
 static void test(void) {
     float2 vec2;
