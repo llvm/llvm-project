@@ -538,11 +538,11 @@ gpu.module @kernels {
     func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
     gpu.return
   }
-// CHECK-OPENCL-LABEL:   llvm.func spir_funccc @no_address_spaces_callee(
+// CHECK-OPENCL-LABEL:   llvm.func @no_address_spaces_callee(
 // CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
 // CHECK-OPENCL:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-OPENCL:         llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
+// CHECK-OPENCL:         llvm.call @_Z12get_group_idj([[C0]]) {
 // CHECK-OPENCL:         [[LD:%.*]] = llvm.load
 // CHECK-OPENCL:         llvm.store [[LD]]
   func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
