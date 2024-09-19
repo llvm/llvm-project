@@ -314,7 +314,7 @@ class MemorySpaceToOpenCLMemorySpaceConverter final : public TypeConverter {
 public:
   MemorySpaceToOpenCLMemorySpaceConverter() {
     addConversion([](Type t) { return t; });
-    addConversion([this](BaseMemRefType memRefType) -> std::optional<Type> {
+    addConversion([](BaseMemRefType memRefType) -> std::optional<Type> {
       // Attach global addr space attribute to memrefs with no addr space attr
       Attribute memSpaceAttr = memRefType.getMemorySpace();
       if (memSpaceAttr)
