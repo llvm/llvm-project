@@ -24,6 +24,7 @@
 // For soft float targets, allow changing rounding mode by overriding the weak
 // __aarch64_fe_default_rmode symbol.
 #if defined(_MSC_VER)
+extern CRT_FE_ROUND_MODE __default_rmode;
 CRT_FE_ROUND_MODE __default_rmode = CRT_FE_TONEAREST;
 #pragma comment(linker, "/alternatename:__aarch64_fe_default_rmode=__default_rmode")
 #else

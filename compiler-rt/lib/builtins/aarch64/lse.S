@@ -28,11 +28,7 @@
 .arch armv8-a
 #endif
 
-#if !defined(__APPLE__)
-HIDDEN(__aarch64_have_lse_atomics)
-#else
-HIDDEN(___aarch64_have_lse_atomics)
-#endif
+HIDDEN(SYMBOL_NAME(__aarch64_have_lse_atomics))
 
 // Generate mnemonics for
 // L_cas:                                 SIZE: 1,2,4,8,16 MODEL: 1,2,3,4,5
@@ -131,13 +127,8 @@ HIDDEN(___aarch64_have_lse_atomics)
 
 // Macro for branch to label if no LSE available
 .macro JUMP_IF_NOT_LSE label
-#if !defined(__APPLE__)
-        adrp    x(tmp0), __aarch64_have_lse_atomics
-        ldrb    w(tmp0), [x(tmp0), :lo12:__aarch64_have_lse_atomics]
-#else
-        adrp    x(tmp0), ___aarch64_have_lse_atomics@page
-        ldrb    w(tmp0), [x(tmp0), ___aarch64_have_lse_atomics@pageoff]
-#endif
+        adrp    x(tmp0), SYMBOL_NAME(__aarch64_have_lse_atomics)
+        ldrb    w(tmp0), [x(tmp0), :lo12:SYMBOL_NAME(__aarch64_have_lse_atomics)]
         cbz     w(tmp0), \label
 .endm
 
