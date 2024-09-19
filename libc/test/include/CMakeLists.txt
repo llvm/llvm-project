@@ -82,6 +82,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  iszero_test
+  SUITE
+    libc_include_tests
+  SRCS
+    iszero_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
   signbit_test
   SUITE
     libc_include_tests
