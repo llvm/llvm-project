@@ -9192,18 +9192,16 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   auto FindBuiltinCountedByRefExpr = [](Expr *E) {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
-      CallExpr *TheCall = nullptr;
-      bool VisitCallExpr(CallExpr *E) {
-        if (FunctionDecl *FD = E->getDirectCallee())
-          if (FD->getBuiltinID() == Builtin::BI__builtin_counted_by_ref) {
-            TheCall = E;
-            return true;
-          }
-        return false;
+      MemberExpr *ME = nullptr;
+      bool VisitMemberExpr(MemberExpr *E) {
+        if (auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
+            FD && FD->isBoundsSafetyCounter())
+          ME = E;
+        return true;
       }
     } V;
     V.TraverseStmt(E);
-    return V.TheCall;
+    return V.ME;
   };
   if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
     Diag(CE->getExprLoc(),
@@ -13761,38 +13759,38 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // __builtin_counted_by_ref can't be used in a binary expression or array
   // subscript on the LHS.
   int DiagOption = -1;
-  auto FindBuiltinCountedByRefExpr = [&](Expr *E) {
+  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
-      CallExpr *TheCall = nullptr;
+      MemberExpr *ME = nullptr;
       bool InvalidUse = false;
       int Option = -1;
 
-      bool VisitCallExpr(CallExpr *E) {
-        if (FunctionDecl *FD = E->getDirectCallee();
-            FD && FD->getBuiltinID() == Builtin::BI__builtin_counted_by_ref)
-          TheCall = E;
-        return false;
+      bool VisitMemberExpr(MemberExpr *E) {
+        if (auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
+            FD && FD->isBoundsSafetyCounter())
+          ME = E;
+        return true;
       }
 
       bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
         InvalidUse = true;
         Option = 0; // report 'array expression' in diagnostic.
-        return VisitStmt(E->getBase()) || VisitStmt(E->getIdx());
+        return VisitStmt(E->getBase()) && VisitStmt(E->getIdx());
       }
       bool VisitBinaryOperator(BinaryOperator *E) {
         InvalidUse = true;
         Option = 1; // report 'binary expression' in diagnostic.
-        return VisitStmt(E->getLHS()) || VisitStmt(E->getRHS());
+        return VisitStmt(E->getLHS()) && VisitStmt(E->getRHS());
       }
     } V;
     V.TraverseStmt(E);
     DiagOption = V.Option;
-    return V.InvalidUse ? V.TheCall : nullptr;
+    return V.InvalidUse ? V.ME : nullptr;
   };
-  if (auto *CE = FindBuiltinCountedByRefExpr(LHSExpr))
-    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
-        << DiagOption << CE->getSourceRange();
+  if (auto *E = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
+    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
+        << DiagOption << E->getSourceRange();
 
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))
