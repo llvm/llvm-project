@@ -338,6 +338,9 @@ protected:
   friend class GlobalIFunc;           // For `Val`.
   friend class GlobalVariable;        // For `Val`.
   friend class GlobalAlias;           // For `Val`.
+  // Region needs to manipulate metadata in the underlying LLVM Value, we don't
+  // expose metadata in sandboxir.
+  friend class Region;
 
   /// All values point to the context.
   Context &Ctx;
@@ -4337,6 +4340,7 @@ protected:
   friend class IntegerType;   // For LLVMCtx.
   friend class StructType;    // For LLVMCtx.
   friend class TargetExtType; // For LLVMCtx.
+  friend class Region;        // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all

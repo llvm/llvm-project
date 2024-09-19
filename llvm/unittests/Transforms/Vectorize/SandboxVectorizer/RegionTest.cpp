@@ -45,9 +45,8 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
   sandboxir::Region Rgn(Ctx);
 
-  // Check getters
+  // Check getContext.
   EXPECT_EQ(&Ctx, &Rgn.getContext());
-  EXPECT_EQ(0U, Rgn.getID());
 
   // Check add / remove / empty.
   EXPECT_TRUE(Rgn.empty());
@@ -77,5 +76,33 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_NE(Rgn, Other);
   Other.add(T1);
   EXPECT_EQ(Rgn, Other);
+#endif
+}
+
+TEST_F(RegionTest, MetadataRoundTrip) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1
+  ret i8 %t1
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  auto *T1 = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::Region Rgn(Ctx);
+  Rgn.add(T0);
+  Rgn.add(T1);
+
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  ASSERT_EQ(1U, Regions.size());
+#ifndef NDEBUG
+  EXPECT_EQ(Rgn, *Regions[0].get());
 #endif
 }
