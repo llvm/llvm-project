@@ -26,8 +26,8 @@
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       if.end2:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 42784196460019712
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 42784196460019712
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 171136785840078848
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 171136785840078848
 // CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
 // CHECK-NEXT:    br i1 [[TMP11]], label [[IF_THEN3:%.*]], label [[IF_END4:%.*]]
 // CHECK:       if.then3:
