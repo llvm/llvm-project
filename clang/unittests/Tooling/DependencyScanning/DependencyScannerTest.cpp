@@ -277,9 +277,9 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
     }
 
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-    openFileForRead(const Twine &Path) override {
+    openFileForRead(const Twine &Path, bool IsText = true) override {
       ReadFiles.push_back(Path.str());
-      return ProxyFileSystem::openFileForRead(Path);
+      return ProxyFileSystem::openFileForRead(Path, IsText);
     }
   };
 
