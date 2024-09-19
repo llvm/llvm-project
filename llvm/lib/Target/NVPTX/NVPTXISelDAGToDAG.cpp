@@ -957,6 +957,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
     // If operation is volatile, then its scope is system.
     return N->isVolatile() ? NVPTX::Scope::System : S;
   }
+  llvm_unreachable("unhandled ordering");
 }
 
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
@@ -1054,6 +1055,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
         formatv("Unsupported \"{}\" ordering and \"{}\" scope for fence.",
                 OrderingToString(O), ScopeToString(S)));
   }
+  llvm_unreachable("unhandled ordering");
 }
 
 // Returns Memory Order and Scope of a memory instruction, and
