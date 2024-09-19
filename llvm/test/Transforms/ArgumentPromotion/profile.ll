@@ -6,7 +6,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 define void @caller() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@caller() {
-; CHECK-NEXT:    call void @promote_i32_ptr.argprom(i32 42), !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    call void @promote_i32_ptr(i32 42), !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32
@@ -16,7 +16,7 @@ define void @caller() #0 {
 }
 
 define internal void @promote_i32_ptr(ptr %xp) !prof !1 {
-; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr.argprom
+; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr
 ; CHECK-SAME: (i32 [[XP_0_VAL:%.*]]) !prof [[PROF1:![0-9]+]] {
 ; CHECK-NEXT:    call void @use_i32(i32 [[XP_0_VAL]])
 ; CHECK-NEXT:    ret void

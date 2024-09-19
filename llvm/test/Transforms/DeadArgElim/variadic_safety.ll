@@ -34,5 +34,5 @@ define void @call_deadret(i32 %in) {
   store i32 42, ptr %stacked
   call i32 (i32, i32, ...) @va_deadret_func(i32 poison, i32 %in, [6 x i32] poison, ptr byval(i32) %stacked)
   ret void
-; CHECK: call void (i32, i32, ...) @va_deadret_func.retelim(i32 poison, i32 poison, [6 x i32] poison, ptr byval(i32) %stacked)
+; CHECK: call void (i32, i32, ...) @va_deadret_func(i32 poison, i32 poison, [6 x i32] poison, ptr byval(i32) %stacked)
 }

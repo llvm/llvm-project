@@ -10,7 +10,7 @@
 ; ALL: gvar_used
 @gvar_used = addrspace(1) global i32 undef, align 4
 
-; OPT: define internal fastcc void @func_used_noinline.argelim(
+; OPT: define internal fastcc void @func_used_noinline(
 ; OPT-NONE: define fastcc void @func_used_noinline(
 define fastcc void @func_used_noinline(ptr addrspace(1) %out, i32 %tid) #1 {
 entry:
