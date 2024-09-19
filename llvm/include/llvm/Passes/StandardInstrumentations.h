@@ -602,8 +602,8 @@ public:
   StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
                            PrintPassOptions PrintPassOpts = PrintPassOptions(),
-                           std::optional<bool> TimePasses = std::nullopt,
-                           std::optional<bool> TimePassesPerRun = std::nullopt);
+                           bool EnableTimePasses = false,
+                           bool EnableTimePassesPerRun = false);
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
