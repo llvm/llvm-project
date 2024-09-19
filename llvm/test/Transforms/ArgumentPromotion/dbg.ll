@@ -4,7 +4,7 @@
 declare void @sink(i32)
 
 define internal void @test(ptr %X) !dbg !2 {
-; CHECK-LABEL: define {{[^@]+}}@test
+; CHECK-LABEL: define {{[^@]+}}@test.argprom.argprom
 ; CHECK-SAME: (i32 [[X_0_VAL_0_VAL:%.*]]) !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:    call void @sink(i32 [[X_0_VAL_0_VAL]])
 ; CHECK-NEXT:    ret void
@@ -37,7 +37,7 @@ define void @caller(ptr %Y, ptr %P) {
 ; CHECK-SAME: (ptr [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[Y_VAL:%.*]] = load ptr, ptr [[Y]], align 8, !dbg [[DBG4:![0-9]+]]
 ; CHECK-NEXT:    [[Y_VAL_VAL:%.*]] = load i32, ptr [[Y_VAL]], align 8, !dbg [[DBG4]]
-; CHECK-NEXT:    call void @test(i32 [[Y_VAL_VAL]]), !dbg [[DBG4]]
+; CHECK-NEXT:    call void @test.argprom.argprom(i32 [[Y_VAL_VAL]]), !dbg [[DBG4]]
 ; CHECK-NEXT:    call void @test_byval(ptr byval([[STRUCT_PAIR:%.*]]) align 4 [[P]]), !dbg [[DBG5:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;

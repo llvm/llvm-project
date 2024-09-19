@@ -4,7 +4,7 @@
 %struct.ss = type { i32, i64 }
 
 define internal void @f(ptr byval(%struct.ss) align 4 %b, ptr byval(i32) align 4 %X, i32 %i) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@f
+; CHECK-LABEL: define {{[^@]+}}@f.argprom
 ; CHECK-SAME: (i32 [[B_0:%.*]], i32 [[X:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP:%.*]] = add i32 [[B_0]], 1
@@ -30,7 +30,7 @@ define i32 @test(ptr %X) {
 ; CHECK-NEXT:    store i64 2, ptr [[TEMP4]], align 4
 ; CHECK-NEXT:    [[S_0_VAL:%.*]] = load i32, ptr [[S]], align 4
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load i32, ptr [[X]], align 4
-; CHECK-NEXT:    call void @f(i32 [[S_0_VAL]], i32 [[X_VAL]], i32 zeroext 0)
+; CHECK-NEXT:    call void @f.argprom(i32 [[S_0_VAL]], i32 [[X_VAL]], i32 zeroext 0)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

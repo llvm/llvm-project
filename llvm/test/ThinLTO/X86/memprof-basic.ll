@@ -53,7 +53,7 @@
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRNODIST
 
 
 ;; Try again but with distributed ThinLTO
@@ -303,6 +303,23 @@ attributes #0 = { noinline optnone }
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
+; IRNODIST: define {{.*}} @main
+; IRNODIST:   call {{.*}} @_Z3foov.retelim()
+; IRNODIST:   call {{.*}} @_Z3foov.memprof.1.retelim()
+; IRNODIST: define internal {{.*}} @_Z3barv.retelim()
+; IRNODIST:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
+; IRNODIST: define internal {{.*}} @_Z3bazv.retelim()
+; IRNODIST:   call {{.*}} @_Z3barv.retelim()
+; IRNODIST: define internal {{.*}} @_Z3foov.retelim()
+; IRNODIST:   call {{.*}} @_Z3bazv.retelim()
+; IRNODIST: define internal {{.*}} @_Z3barv.memprof.1.retelim()
+; IRNODIST:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
+; IRNODIST: define internal {{.*}} @_Z3bazv.memprof.1.retelim()
+; IRNODIST:   call {{.*}} @_Z3barv.memprof.1.retelim()
+; IRNODIST: define internal {{.*}} @_Z3foov.memprof.1.retelim()
+; IRNODIST:   call {{.*}} @_Z3bazv.memprof.1.retelim()
+; IRNODIST: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IRNODIST: attributes #[[COLD]] = { "memprof"="cold" }
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
