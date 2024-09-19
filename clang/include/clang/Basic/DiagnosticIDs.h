@@ -245,6 +245,7 @@ public:
     Class GetClass() const { return static_cast<Class>(DiagClass); }
     std::string_view GetDescription() const { return Description; }
     bool ShouldShowInSystemHeader() const { return ShowInSystemHeader; }
+    bool ShouldShowInSystemMacro() const { return ShowInSystemMacro; }
 
     friend bool operator==(const CustomDiagDesc &lhs,
                            const CustomDiagDesc &rhs) {
@@ -317,6 +318,9 @@ public:
       llvm_unreachable("Fully covered switch above!");
     }());
   }
+
+  std::optional<unsigned> getMaxCustomDiagID() const;
+  const CustomDiagDesc &getCustomDiagDesc(unsigned DiagID) const;
 
   //===--------------------------------------------------------------------===//
   // Diagnostic classification and reporting interfaces.
