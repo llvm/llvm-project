@@ -1844,7 +1844,6 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
-  // FIXME: We shouldn't restrict this to scalable vectors.
   if (VT != Node->getOperand(1).getValueType() ||
       !TLI.isOperationLegalOrCustom(ISD::AND, IntVT) ||
       !TLI.isOperationLegalOrCustom(ISD::OR, IntVT))
