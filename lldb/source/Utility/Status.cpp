@@ -144,13 +144,19 @@ static llvm::Error CloneError(const llvm::Error &error) {
     return llvm::make_error<llvm::StringError>(e.message(),
                                                e.convertToErrorCode(), true);
   };
-  visitErrors(error, [&](const llvm::ErrorInfoBase &e) {
+  llvm::visitErrors(error, [&](const llvm::ErrorInfoBase &e) {
     result = joinErrors(std::move(result), clone(e));
   });
   return result;
 }
 
-Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
+Status Status::FromError(llvm::Error error) {
+  if (error.isA<llvm::ECError>()) {
+    std::error_code ec = llvm::errorToErrorCode(std::move(error));
+    return Status::FromError(llvm::make_error<CloneableECError>(ec));
+  }
+  return Status(std::move(error));
+}
 
 llvm::Error Status::ToError() const { return CloneError(m_error); }
 
