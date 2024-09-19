@@ -412,11 +412,22 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   return false;
 }
 
+static bool mayApplyGenericSelection(unsigned Opcode) {
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+    return false;
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SSUBO:
+    return true;
+  }
+  return isTypeFoldingSupported(Opcode);
+}
+
 bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I) const {
   const unsigned Opcode = I.getOpcode();
-  if (isTypeFoldingSupported(Opcode) && Opcode != TargetOpcode::G_CONSTANT)
+  if (mayApplyGenericSelection(Opcode))
     return selectImpl(I, *CoverageInfo);
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
@@ -1157,7 +1168,7 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // A new virtual register to store the result struct.
   Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
-  // Build the result name of needed.
+  // Build the result name if needed.
   if (ResName.size() > 0)
     buildOpName(StructVReg, ResName, MIRBuilder);
   // Build the arithmetic with overflow instruction.
