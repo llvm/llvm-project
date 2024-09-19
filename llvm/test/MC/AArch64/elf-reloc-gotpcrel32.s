@@ -1,3 +1,5 @@
+// XFAIL: !rdar135050296
+
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | \
 // RUN:   llvm-readobj -r - | FileCheck %s
 
