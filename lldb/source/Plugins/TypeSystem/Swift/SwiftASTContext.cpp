@@ -5057,7 +5057,6 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::Decl *decl) {
     case swift::DeclKind::AssociatedType:
     case swift::DeclKind::EnumElement:
     case swift::DeclKind::EnumCase:
-    case swift::DeclKind::IfConfig:
     case swift::DeclKind::Param:
     case swift::DeclKind::Macro:
     case swift::DeclKind::MacroExpansion:     
