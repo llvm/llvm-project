@@ -467,7 +467,6 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
   const auto &details =
       symbol.GetUltimate().get<Fortran::semantics::NamelistDetails>();
   mlir::MLIRContext *context = builder.getContext();
-  mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type sizeTy =
       fir::runtime::getModel<std::size_t>()(builder.getContext());
@@ -487,37 +486,10 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
 
   // Define variable names, and static descriptors for global variables.
   DefinedIoProcMap definedIoProcMap = getDefinedIoProcMap(converter);
-  bool groupIsLocal = hasLocalDefinedIoProc(definedIoProcMap);
   stringAddress(symbol);
-  for (const Fortran::semantics::Symbol &s : details.objects()) {
-    stringAddress(s);
-    if (!Fortran::lower::symbolIsGlobal(s)) {
-      groupIsLocal = true;
-      continue;
-    }
-    // A global pointer or allocatable variable has a descriptor for typical
-    // accesses. Variables in multiple namelist groups may already have one.
-    // Create descriptors for other cases.
-    if (!IsAllocatableOrObjectPointer(&s)) {
-      std::string mangleName =
-          Fortran::lower::mangle::globalNamelistDescriptorName(s);
-      if (builder.getNamedGlobal(mangleName))
-        continue;
-      const auto expr = Fortran::evaluate::AsGenericExpr(s);
-      fir::BoxType boxTy =
-          fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
-      auto descFunc = [&](fir::FirOpBuilder &b) {
-        auto box = Fortran::lower::genInitialDataTarget(
-            converter, loc, boxTy, *expr, /*couldBeInEquivalence=*/true);
-        b.create<fir::HasValueOp>(loc, box);
-      };
-      builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);
-    }
-  }
 
   // Define the list of Items.
-  mlir::Value listAddr =
-      groupIsLocal ? builder.create<fir::AllocaOp>(loc, listTy) : mlir::Value{};
+  mlir::Value listAddr = builder.create<fir::AllocaOp>(loc, listTy);
   std::string listMangleName = groupMangleName + ".list";
   auto listFunc = [&](fir::FirOpBuilder &builder) {
     mlir::Value list = builder.create<fir::UndefOp>(loc, listTy);
@@ -575,21 +547,12 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       list = builder.create<fir::InsertValueOp>(loc, listTy, list, descAddr,
                                                 builder.getArrayAttr(idx));
     }
-    if (groupIsLocal)
-      builder.create<fir::StoreOp>(loc, list, listAddr);
-    else
-      builder.create<fir::HasValueOp>(loc, list);
+    builder.create<fir::StoreOp>(loc, list, listAddr);
   };
-  if (groupIsLocal)
-    listFunc(builder);
-  else
-    builder.createGlobalConstant(loc, listTy, listMangleName, listFunc,
-                                 linkOnce);
+  listFunc(builder);
 
   // Define the group.
-  mlir::Value groupAddr = groupIsLocal
-                              ? builder.create<fir::AllocaOp>(loc, groupTy)
-                              : mlir::Value{};
+  mlir::Value groupAddr = builder.create<fir::AllocaOp>(loc, groupTy);
   auto groupFunc = [&](fir::FirOpBuilder &builder) {
     mlir::Value group = builder.create<fir::UndefOp>(loc, groupTy);
     // group name [const char *groupName]
@@ -617,20 +580,9 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         loc, groupTy, group,
         getNonTbpDefinedIoTableAddr(converter, definedIoProcMap),
         builder.getArrayAttr(builder.getIntegerAttr(idxTy, 3)));
-    if (groupIsLocal)
-      builder.create<fir::StoreOp>(loc, group, groupAddr);
-    else
-      builder.create<fir::HasValueOp>(loc, group);
+    builder.create<fir::StoreOp>(loc, group, groupAddr);
   };
-  if (groupIsLocal) {
-    groupFunc(builder);
-  } else {
-    fir::GlobalOp group = builder.createGlobal(
-        loc, groupTy, groupMangleName,
-        /*isConst=*/true, /*isTarget=*/false, groupFunc, linkOnce);
-    groupAddr = builder.create<fir::AddrOfOp>(loc, group.resultType(),
-                                              group.getSymbol());
-  }
+  groupFunc(builder);
   assert(groupAddr && "missing namelist group result");
   return groupAddr;
 }
