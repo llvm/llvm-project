@@ -17,14 +17,12 @@
 #include "CIRGenOpenMPRuntime.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -179,7 +177,7 @@ public:
       llvm_unreachable("NYI");
 
     return LValue::makeAddr(addr, getValueType(), CGF.getContext(),
-                            LVal.getBaseInfo());
+                            LVal.getBaseInfo(), LVal.getTBAAInfo());
   }
 
   /// Emits atomic load.

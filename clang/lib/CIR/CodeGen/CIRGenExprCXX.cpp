@@ -119,7 +119,7 @@ CIRGenFunction::buildCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // Emit the 'this' pointer.
   Address This = Address::invalid();
   if (BO->getOpcode() == BO_PtrMemI)
-    This = buildPointerWithAlignment(BaseExpr, nullptr, KnownNonNull);
+    This = buildPointerWithAlignment(BaseExpr, nullptr, nullptr, KnownNonNull);
   else
     This = buildLValue(BaseExpr).getAddress();
 

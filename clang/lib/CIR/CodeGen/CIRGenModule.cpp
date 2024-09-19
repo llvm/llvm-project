@@ -16,6 +16,7 @@
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenOpenMPRuntime.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
 #include "TargetInfo.h"
@@ -244,11 +245,9 @@ CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *RD) {
 
 /// FIXME: this could likely be a common helper and not necessarily related
 /// with codegen.
-/// TODO: Add TBAAAccessInfo
-CharUnits
-CIRGenModule::getNaturalPointeeTypeAlignment(QualType T,
-                                             LValueBaseInfo *BaseInfo) {
-  return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo,
+CharUnits CIRGenModule::getNaturalPointeeTypeAlignment(
+    QualType ty, LValueBaseInfo *baseInfo, TBAAAccessInfo *tbaaInfo) {
+  return getNaturalTypeAlignment(ty->getPointeeType(), baseInfo, tbaaInfo,
                                  /* forPointeeType= */ true);
 }
 
@@ -257,6 +256,7 @@ CIRGenModule::getNaturalPointeeTypeAlignment(QualType T,
 /// TODO: Add TBAAAccessInfo
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
                                                 LValueBaseInfo *BaseInfo,
+                                                TBAAAccessInfo *tbaaInfo,
                                                 bool forPointeeType) {
   // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
   // that doesn't return the information we need to compute BaseInfo.
@@ -3377,4 +3377,10 @@ void CIRGenModule::buildGlobalAnnotations() {
       addGlobalAnnotations(vd, gv);
   }
   deferredAnnotations.clear();
+}
+
+TBAAAccessInfo CIRGenModule::getTBAAAccessInfo(QualType accessType) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  llvm_unreachable("NYI");
 }

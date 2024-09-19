@@ -16,6 +16,7 @@
 
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
+#include "CIRGenTBAA.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
@@ -175,9 +176,12 @@ class LValue {
   // this lvalue.
   bool Nontemporal : 1;
 
+  TBAAAccessInfo tbaaInfo;
+
 private:
   void Initialize(clang::QualType Type, clang::Qualifiers Quals,
-                  clang::CharUnits Alignment, LValueBaseInfo BaseInfo) {
+                  clang::CharUnits Alignment, LValueBaseInfo BaseInfo,
+                  TBAAAccessInfo tbaaInfo) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     if (isGlobalReg())
@@ -194,6 +198,7 @@ private:
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;
+    this->tbaaInfo = tbaaInfo;
 
     // TODO: ObjC flags
     // Initialize Objective-C flags.
@@ -270,7 +275,7 @@ public:
     R.V = address.getPointer();
     R.ElementType = address.getElementType();
     R.Initialize(T, T.getQualifiers(), address.getAlignment(),
-                 LValueBaseInfo(Source));
+                 LValueBaseInfo(Source), TBAAAccessInfo());
     return R;
   }
 
@@ -281,24 +286,27 @@ public:
     R.LVType = Simple;
     R.V = address.getPointer();
     R.ElementType = address.getElementType();
-    R.Initialize(T, T.getQualifiers(), address.getAlignment(), LBI);
+    R.Initialize(T, T.getQualifiers(), address.getAlignment(), LBI,
+                 TBAAAccessInfo());
     return R;
   }
 
   static LValue makeAddr(Address address, clang::QualType type,
-                         clang::ASTContext &Context, LValueBaseInfo BaseInfo) {
+                         clang::ASTContext &context, LValueBaseInfo baseInfo,
+                         TBAAAccessInfo tbaaInfo) {
     clang::Qualifiers qs = type.getQualifiers();
-    qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
+    qs.setObjCGCAttr(context.getObjCGCAttrKind(type));
 
     LValue R;
     R.LVType = Simple;
     assert(mlir::cast<mlir::cir::PointerType>(address.getPointer().getType()));
     R.V = address.getPointer();
     R.ElementType = address.getElementType();
-    R.Initialize(type, qs, address.getAlignment(),
-                 BaseInfo); // TODO: TBAAInfo);
+    R.Initialize(type, qs, address.getAlignment(), baseInfo, tbaaInfo);
     return R;
   }
+
+  TBAAAccessInfo getTBAAInfo() const { return tbaaInfo; }
 
   const clang::Qualifiers &getQuals() const { return Quals; }
   clang::Qualifiers &getQuals() { return Quals; }
@@ -330,28 +338,29 @@ public:
     return mlir::cast<mlir::ArrayAttr>(VectorElts);
   }
 
-  static LValue MakeVectorElt(Address vecAddress, mlir::Value Index,
-                              clang::QualType type, LValueBaseInfo BaseInfo) {
+  static LValue MakeVectorElt(Address vecAddress, mlir::Value index,
+                              clang::QualType type, LValueBaseInfo baseInfo,
+                              TBAAAccessInfo tbaaInfo) {
     LValue R;
     R.LVType = VectorElt;
     R.V = vecAddress.getPointer();
     R.ElementType = vecAddress.getElementType();
-    R.VectorIdx = Index;
+    R.VectorIdx = index;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 BaseInfo);
+                 baseInfo, tbaaInfo);
     return R;
   }
 
   static LValue MakeExtVectorElt(Address vecAddress, mlir::ArrayAttr elts,
-                                 clang::QualType type,
-                                 LValueBaseInfo baseInfo) {
+                                 clang::QualType type, LValueBaseInfo baseInfo,
+                                 TBAAAccessInfo tbaaInfo) {
     LValue R;
     R.LVType = ExtVectorElt;
     R.V = vecAddress.getPointer();
     R.ElementType = vecAddress.getElementType();
     R.VectorElts = elts;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 baseInfo);
+                 baseInfo, tbaaInfo);
     return R;
   }
 
@@ -376,14 +385,16 @@ public:
   /// bit-field refers to.
   /// \param Info - The information describing how to perform the bit-field
   /// access.
-  static LValue MakeBitfield(Address Addr, const CIRGenBitFieldInfo &Info,
-                             clang::QualType type, LValueBaseInfo BaseInfo) {
+  static LValue MakeBitfield(Address addr, const CIRGenBitFieldInfo &info,
+                             clang::QualType type, LValueBaseInfo baseInfo,
+                             TBAAAccessInfo tbaaInfo) {
     LValue R;
     R.LVType = BitField;
-    R.V = Addr.getPointer();
-    R.ElementType = Addr.getElementType();
-    R.BitFieldInfo = &Info;
-    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo);
+    R.V = addr.getPointer();
+    R.ElementType = addr.getElementType();
+    R.BitFieldInfo = &info;
+    R.Initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo,
+                 tbaaInfo);
     return R;
   }
 };
