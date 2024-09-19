@@ -25,6 +25,9 @@ class FrameStatCommand(ParsedCommand):
             '--help" for detailed help.'.format(cls.program)
         )
 
+    def get_flags(self):
+        return lldb.eCommandRequiresFrame | lldb.eCommandProcessMustBePaused
+
     def setup_command_definition(self):
 
         self.ov_parser.add_option(

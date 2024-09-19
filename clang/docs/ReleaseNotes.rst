@@ -39,6 +39,8 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- The ``clang-rename`` tool has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -114,6 +116,7 @@ C++ Language Changes
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
+- Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -395,8 +398,9 @@ Bug Fixes to C++ Support
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. #GH63819, #GH107560
+  pack. (#GH63819), (#GH107560)
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 
@@ -422,6 +426,8 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when function has more than 65536 parameters.
   Now a diagnostic is emitted. (#GH35741)
+
+- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
 
 OpenACC Specific Changes
 ------------------------
