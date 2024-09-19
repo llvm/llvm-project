@@ -164,6 +164,23 @@ publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
   CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
 }
 
+void initializeTwoCodegenRounds();
+
+/// Save \p TheModule before the first codegen round.
+/// \p Task represents the partition number in the parallel code generation
+/// process.
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task);
+
+/// Load the optimized module before the second codegen round.
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context);
+
+/// Merge the codegen data from the input files in scratch vector in ThinLTO
+/// two-codegen rounds.
+Error mergeCodeGenData(
+    const std::unique_ptr<std::vector<llvm::SmallString<0>>> InputFiles);
+
 void warn(Error E, StringRef Whence = "");
 void warn(Twine Message, std::string Whence = "", std::string Hint = "");
 
