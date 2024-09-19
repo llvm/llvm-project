@@ -4571,7 +4571,7 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
       // If the bp is clobbered by a call, we should save and restore outside of
       // the frame setup instructions.
       // When IPRA is enabled, we could skip this step.
-      if (KillMI->isCall() && DefMI != ME && !MF.hasInlineAsm() &&
+      if (KillMI->isCall() && DefMI != ME &&
           !MF.getTarget().Options.EnableIPRA) {
         auto FrameSetup = std::next(DefMI);
         // Look for frame setup instruction toward the start of the BB.
