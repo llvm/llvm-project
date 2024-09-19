@@ -92,6 +92,7 @@ public:
     assert(S.hasAssociatedStmt() &&
            "Expected associated statement for inlined directive.");
     const CapturedStmt *CS = S.getCapturedStmt(*CapturedRegion);
+
     for (const auto &C : CS->captures()) {
       if (C.capturesVariable() || C.capturesVariableByCopy()) {
         auto *VD = C.getCapturedVar();
@@ -1605,6 +1606,9 @@ static void emitCommonOMPParallelDirective(
       CGF.CGM.getOpenMPRuntime().emitParallelOutlinedFunction(
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
+  // The codegen for the clauses below may require variables created by their
+  // pre-inits.
+  OMPParallelScope Scope(CGF, S);
   if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
     NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
@@ -1625,8 +1629,6 @@ static void emitCommonOMPParallelDirective(
       break;
     }
   }
-
-  OMPParallelScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   // Combining 'distribute' with 'for' requires sharing each 'distribute' chunk
   // lower and upper bounds with the pragma 'for' chunking mechanism.
