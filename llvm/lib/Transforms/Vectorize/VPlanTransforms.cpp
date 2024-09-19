@@ -971,6 +971,40 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
+/// Move loop-invariant recipes out of the vector loop region in \p Plan.
+static void licm(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Preheader =
+      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
+
+  // Return true if-and-only-if we know how to (mechanically) both hoist a given
+  // recipe out of a loop region.  Does not address legality concerns such as
+  // aliasing or speculation safety.
+  auto CanHoistRecipe = [](VPRecipeBase &R) {
+    // Allocas cannot be hoisted.
+    auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+    return !RepR || RepR->getOpcode() != Instruction::Alloca;
+  };
+
+  // Hoist any loop invariant recipes from the vector loop region to the
+  // preheader.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (!CanHoistRecipe(R))
+        continue;
+      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
+      // their memory location is not modified in the vector loop.
+      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
+          any_of(R.operands(), [](VPValue *Op) {
+            return !Op->isDefinedOutsideLoopRegions();
+          }))
+        continue;
+      R.moveBefore(*Preheader, Preheader->end());
+    }
+  }
+}
+
 /// Try to simplify the recipes in \p Plan.
 static void simplifyRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
@@ -1581,26 +1615,5 @@ void VPlanTransforms::createInterleaveGroups(
         }
         MemberR->eraseFromParent();
       }
-  }
-}
-
-void VPlanTransforms::licm(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *Preheader =
-      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
-  // Hoist any loop invariant recipes from the vector loop region to the
-  // preheader.
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(LoopRegion->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
-      // their memory location is not modified in the vector loop.
-      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
-          any_of(R.operands(), [](VPValue *Op) {
-            return !Op->isDefinedOutsideLoopRegions();
-          }))
-        continue;
-      R.moveBefore(*Preheader, Preheader->end());
-    }
   }
 }

@@ -113,9 +113,6 @@ struct VPlanTransforms {
   static void createInterleaveGroups(
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
-
-  /// Move loop-invariant recipes out of vector loop regions.
-  static void licm(VPlan &Plan);
 };
 
 } // namespace llvm

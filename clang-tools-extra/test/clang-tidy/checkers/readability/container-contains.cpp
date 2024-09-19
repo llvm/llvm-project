@@ -426,3 +426,30 @@ void testBox() {
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (Set.contains(0)) {};
 }
+
+void testOperandPermutations(std::map<int, int>& Map) {
+  if (Map.count(0) != 0) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (0 != Map.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.count(0) == 0) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (0 == Map.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (Map.find(0) != Map.end()) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.end() != Map.find(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.find(0) == Map.end()) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (Map.end() == Map.find(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+}
