@@ -2,8 +2,6 @@
 // RUN: | FileCheck --check-prefixes=CHECK-64,CHECK %s
 // RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{index-bitwidth=32}))" -split-input-file -verify-diagnostics %s \
 // RUN: | FileCheck --check-prefixes=CHECK-32,CHECK %s
-// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(convert-gpu-to-llvm-spv{force-opencl-address-spaces}))" -split-input-file -verify-diagnostics %s \
-// RUN: | FileCheck --check-prefixes=CHECK-OPENCL %s
 
 gpu.module @builtins {
   // CHECK-64:        llvm.func spir_funccc @_Z14get_num_groupsj(i32) -> i64 attributes {
@@ -398,20 +396,20 @@ gpu.module @kernels {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i64, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i32, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i64, %{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_conv_args(%{{.*}}: i32, %{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_conv_args(%arg0: index, %arg1: memref<index>) kernel {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_sized_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_sized_memref(%arg0: memref<1xindex>) kernel {
     gpu.return
   }
 
-  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
-  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
+  // CHECK-64:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64) attributes {gpu.kernel} {
+  // CHECK-32:   llvm.func spir_kernelcc @kernel_with_ND_memref(%{{.*}}: !llvm.ptr<1>, %{{.*}}: !llvm.ptr<1>, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32) attributes {gpu.kernel} {
   gpu.func @kernel_with_ND_memref(%arg0: memref<128x128x128xindex>) kernel {
     gpu.return
   }
@@ -521,30 +519,30 @@ gpu.module @kernels {
 // -----
 
 gpu.module @kernels {
-// CHECK-OPENCL:        llvm.func spir_funccc @_Z12get_group_idj(i32)
-// CHECK-OPENCL-LABEL:   llvm.func spir_funccc @no_address_spaces(
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK:         llvm.func spir_funccc @_Z12get_group_idj(i32)
+// CHECK-LABEL:   llvm.func spir_funccc @no_address_spaces(
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
   gpu.func @no_address_spaces(%arg0: memref<f32>, %arg1: memref<f32, #gpu.address_space<global>>, %arg2: memref<f32>) {
     gpu.return
   }
 
-// CHECK-OPENCL-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL:         llvm.call spir_funccc @no_address_spaces_callee
+// CHECK-LABEL:   llvm.func spir_kernelcc @no_address_spaces_complex(
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK:         llvm.call @no_address_spaces_callee
   gpu.func @no_address_spaces_complex(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) kernel {
     func.call @no_address_spaces_callee(%arg0, %arg1) : (memref<2x2xf32>, memref<4xf32>) -> ()
     gpu.return
   }
-// CHECK-OPENCL-LABEL:   llvm.func @no_address_spaces_callee(
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
-// CHECK-OPENCL:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-OPENCL:         llvm.call @_Z12get_group_idj([[C0]]) {
-// CHECK-OPENCL:         [[LD:%.*]] = llvm.load
-// CHECK-OPENCL:         llvm.store [[LD]]
+// CHECK-LABEL:   llvm.func @no_address_spaces_callee(
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK-SAME:                                             %{{[a-zA-Z_][a-zA-Z0-9_]*}}: !llvm.ptr<1>
+// CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
+// CHECK:         [[LD:%.*]] = llvm.load
+// CHECK:         llvm.store [[LD]]
   func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
     %block_id = gpu.block_id x
     %0 = memref.load %arg0[%block_id, %block_id] : memref<2x2xf32>

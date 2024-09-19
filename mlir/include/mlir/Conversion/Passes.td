@@ -541,10 +541,7 @@ def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleO
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"forceOpenclAddressSpaces", "force-opencl-address-spaces",
-           "bool", /*default=*/"false",
-           "Force kernel argument pointers to have address space global.">,
+           "Bitwidth of the index type, 0 to use size of machine word">
   ];
 }
 

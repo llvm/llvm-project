@@ -359,7 +359,8 @@ struct GPUToLLVMSPVConversionPass final
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
 
-    if (forceOpenclAddressSpaces) {
+    // Force OpenCL address spaces when they are not present
+    {
       MemorySpaceToOpenCLMemorySpaceConverter converter;
       AttrTypeReplacer replacer;
       replacer.addReplacement([&converter](BaseMemRefType origType)
