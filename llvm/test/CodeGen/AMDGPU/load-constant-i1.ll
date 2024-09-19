@@ -8969,7 +8969,6 @@ define amdgpu_kernel void @constant_sextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v13, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v12, s2
 ; GFX8-NEXT:    buffer_store_dword v12, off, s[88:91], 0 ; 4-byte Folded Spill
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_store_dword v13, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
 ; GFX8-NEXT:    flat_store_dwordx4 v[42:43], v[4:7]
 ; GFX8-NEXT:    flat_store_dwordx4 v[45:46], v[8:11]
