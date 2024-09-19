@@ -982,12 +982,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_add(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_add_sat(v128_t __a,
                                                                v128_t __b) {
-  return (v128_t)__builtin_wasm_add_sat_s_i8x16((__i8x16)__a, (__i8x16)__b);
+  return (v128_t)__builtin_elementwise_add_sat((__i8x16)__a, (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_add_sat(v128_t __a,
                                                                v128_t __b) {
-  return (v128_t)__builtin_wasm_add_sat_u_i8x16((__u8x16)__a, (__u8x16)__b);
+  return (v128_t)__builtin_elementwise_add_sat((__u8x16)__a, (__u8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_sub(v128_t __a,
@@ -1068,12 +1068,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_add(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_add_sat(v128_t __a,
                                                                v128_t __b) {
-  return (v128_t)__builtin_wasm_add_sat_s_i16x8((__i16x8)__a, (__i16x8)__b);
+  return (v128_t)__builtin_elementwise_add_sat((__i16x8)__a, (__i16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u16x8_add_sat(v128_t __a,
                                                                v128_t __b) {
-  return (v128_t)__builtin_wasm_add_sat_u_i16x8((__u16x8)__a, (__u16x8)__b);
+  return (v128_t)__builtin_elementwise_add_sat((__u16x8)__a, (__u16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_sub(v128_t __a,

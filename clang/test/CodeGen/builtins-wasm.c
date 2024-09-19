@@ -190,37 +190,9 @@ double max_f64(double x, double y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 add_sat_s_i8x16(i8x16 x, i8x16 y) {
-  return __builtin_wasm_add_sat_s_i8x16(x, y);
-  // MISSING-SIMD: error: '__builtin_wasm_add_sat_s_i8x16' needs target feature simd128
-  // WEBASSEMBLY: call <16 x i8> @llvm.sadd.sat.v16i8(
-  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-u8x16 add_sat_u_i8x16(u8x16 x, u8x16 y) {
-  return __builtin_wasm_add_sat_u_i8x16(x, y);
-  // WEBASSEMBLY: call <16 x i8> @llvm.uadd.sat.v16i8(
-  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-i16x8 add_sat_s_i16x8(i16x8 x, i16x8 y) {
-  return __builtin_wasm_add_sat_s_i16x8(x, y);
-  // WEBASSEMBLY: call <8 x i16> @llvm.sadd.sat.v8i16(
-  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-u16x8 add_sat_u_i16x8(u16x8 x, u16x8 y) {
-  return __builtin_wasm_add_sat_u_i16x8(x, y);
-  // WEBASSEMBLY: call <8 x i16> @llvm.uadd.sat.v8i16(
-  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 i8x16 sub_sat_s_i8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_sub_sat_s_i8x16(x, y);
+  // MISSING-SIMD: error: '__builtin_wasm_sub_sat_s_i8x16' needs target feature simd128
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(
   // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
   // WEBASSEMBLY-NEXT: ret
