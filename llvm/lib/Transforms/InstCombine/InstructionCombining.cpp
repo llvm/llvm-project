@@ -155,7 +155,7 @@ std::optional<Instruction *>
 InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.instCombineIntrinsic(*this, II);
+    return TTIForTargetIntrinsicsOnly.instCombineIntrinsic(*this, II);
   }
   return std::nullopt;
 }
@@ -165,8 +165,8 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
     bool &KnownBitsComputed) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.simplifyDemandedUseBitsIntrinsic(*this, II, DemandedMask, Known,
-                                                KnownBitsComputed);
+    return TTIForTargetIntrinsicsOnly.simplifyDemandedUseBitsIntrinsic(
+        *this, II, DemandedMask, Known, KnownBitsComputed);
   }
   return std::nullopt;
 }
@@ -178,7 +178,7 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
         SimplifyAndSetOp) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
-    return TTI.simplifyDemandedVectorEltsIntrinsic(
+    return TTIForTargetIntrinsicsOnly.simplifyDemandedVectorEltsIntrinsic(
         *this, II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
         SimplifyAndSetOp);
   }
@@ -186,7 +186,10 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
 }
 
 bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
-  return TTI.isValidAddrSpaceCast(FromAS, ToAS);
+  // Approved exception for TTI use: This queries a legality property of the
+  // target, not an profitability heuristic. Ideally this should be part of
+  // DataLayout instead.
+  return TTIForTargetIntrinsicsOnly.isValidAddrSpaceCast(FromAS, ToAS);
 }
 
 Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
@@ -2105,7 +2108,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // It may not be safe to reorder shuffles and things like div, urem, etc.
   // because we may trap when executing those ops on unknown vector elements.
   // See PR20059.
-  if (!isSafeToSpeculativelyExecute(&Inst))
+  if (!isSafeToSpeculativelyExecuteWithVariableReplaced(&Inst))
     return nullptr;
 
   auto createBinOpShuffle = [&](Value *X, Value *Y, ArrayRef<int> M) {
