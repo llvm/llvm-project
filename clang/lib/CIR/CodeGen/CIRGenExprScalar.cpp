@@ -1245,7 +1245,7 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
   //
   if (BinaryOperator::isNullPointerArithmeticExtension(
           CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS()))
-    llvm_unreachable("null pointer arithmetic extension is NYI");
+    return CGF.getBuilder().createIntToPtr(index, pointer.getType());
 
   // Differently from LLVM codegen, ABI bits for index sizes is handled during
   // LLVM lowering.
