@@ -1662,7 +1662,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *expr,
   } else {
     // No initializer, the initialization will be provided when we initialize
     // the declaration which performed lifetime extension.
-    llvm_unreachable("else value");
+    type = getTypes().convertTypeForMem(materializedType);
   }
 
   // Create a global variable for this lifetime-extended temporary.

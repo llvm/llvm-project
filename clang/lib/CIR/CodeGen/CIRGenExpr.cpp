@@ -20,6 +20,7 @@
 #include "EHScopeStack.h"
 #include "TargetInfo.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
@@ -1949,6 +1950,9 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
     // CK_NoOp can model a qualification conversion, which can remove an array
     // bound and change the IR type.
     LValue LV = buildLValue(E->getSubExpr());
+    // Propagate the volatile qualifier to LValue, if exists in E.
+    if (E->changesVolatileQualification())
+      llvm_unreachable("NYI");
     if (LV.isSimple()) {
       Address V = LV.getAddress();
       if (V.isValid()) {
@@ -2192,8 +2196,14 @@ static Address createReferenceTemporary(CIRGenFunction &CGF,
                              CGF.getCounterRefTmpAsString(), Alloca, ip);
   }
   case SD_Thread:
-  case SD_Static:
-    assert(0 && "NYI");
+  case SD_Static: {
+    auto a = mlir::cast<mlir::cir::GlobalOp>(
+        CGF.CGM.getAddrOfGlobalTemporary(M, Inner));
+    auto f = CGF.CGM.getBuilder().createGetGlobal(a);
+    assert(a.getAlignment().has_value() &&
+           "This should always have an alignment");
+    return Address(f, clang::CharUnits::fromQuantity(a.getAlignment().value()));
+  }
 
   case SD_Dynamic:
     llvm_unreachable("temporary can't have dynamic storage duration");
@@ -2229,12 +2239,20 @@ static void pushTemporaryCleanup(CIRGenFunction &CGF,
   switch (M->getStorageDuration()) {
   case SD_Static:
   case SD_Thread: {
+    mlir::cir::FuncOp cleanupFn;
+    mlir::Value cleanupArg;
     if (E->getType()->isArrayType()) {
       llvm_unreachable("SD_Static|SD_Thread + array types not implemented");
     } else {
-      llvm_unreachable("SD_Static|SD_Thread for general types not implemented");
+      cleanupFn = CGF.CGM
+                      .getAddrAndTypeOfCXXStructor(
+                          GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete))
+                      .second;
+      cleanupArg = ReferenceTemporary.emitRawPointer();
     }
-    llvm_unreachable("SD_Static|SD_Thread not implemented");
+    CGF.CGM.getCXXABI().registerGlobalDtor(
+        CGF, cast<VarDecl>(M->getExtendingDecl()), cleanupFn, cleanupArg);
+    break;
   }
 
   case SD_FullExpression:

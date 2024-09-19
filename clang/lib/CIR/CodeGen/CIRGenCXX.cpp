@@ -306,51 +306,120 @@ void CIRGenFunction::buildInvariantStart([[maybe_unused]] CharUnits Size) {
   assert(!MissingFeatures::createInvariantIntrinsic());
 }
 
-void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
-                                                mlir::cir::GlobalOp Addr,
-                                                bool NeedsCtor, bool NeedsDtor,
-                                                bool isCstStorage) {
-  assert(D && " Expected a global declaration!");
-  CIRGenFunction CGF{*this, builder, true};
-  CurCGF = &CGF;
-  CurCGF->CurFn = Addr;
-  Addr.setAstAttr(mlir::cir::ASTVarDeclAttr::get(builder.getContext(), D));
+void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
+                                             mlir::cir::GlobalOp addr,
+                                             bool performInit) {
+  const Expr *init = varDecl->getInit();
+  QualType ty = varDecl->getType();
 
-  if (NeedsCtor) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    auto block = builder.createBlock(&Addr.getCtorRegion());
-    CIRGenFunction::LexicalScope lexScope{*CurCGF, Addr.getLoc(),
-                                          builder.getInsertionBlock()};
-    lexScope.setAsGlobalInit();
+  // TODO: handle address space
+  // The address space of a static local variable (DeclPtr) may be different
+  // from the address space of the "this" argument of the constructor. In that
+  // case, we need an addrspacecast before calling the constructor.
+  //
+  // struct StructWithCtor {
+  //   __device__ StructWithCtor() {...}
+  // };
+  // __device__ void foo() {
+  //   __shared__ StructWithCtor s;
+  //   ...
+  // }
+  //
+  // For example, in the above CUDA code, the static local variable s has a
+  // "shared" address space qualifier, but the constructor of StructWithCtor
+  // expects "this" in the "generic" address space.
+  assert(!MissingFeatures::addressSpace());
 
-    builder.setInsertionPointToStart(block);
-    Address DeclAddr(getAddrOfGlobalVar(D), getASTContext().getDeclAlign(D));
-    buildDeclInit(CGF, D, DeclAddr);
-    builder.setInsertionPointToEnd(block);
-    builder.create<mlir::cir::YieldOp>(Addr->getLoc());
+  if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
+      varDecl->hasAttr<OMPThreadPrivateDeclAttr>()) {
+    llvm_unreachable("NYI");
   }
 
-  if (isCstStorage) {
-    // TODO: this leads to a missing feature in the moment, probably also need a
-    // LexicalScope to be inserted here.
-    buildDeclInvariant(CGF, D);
-  } else {
-    // If not constant storage we'll emit this regardless of NeedsDtor value.
+  assert(varDecl && " Expected a global declaration!");
+  CIRGenFunction cgf{*this, builder, true};
+  CurCGF = &cgf;
+  CurCGF->CurFn = addr;
+
+  CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
+                                            getLoc(varDecl->getLocation())};
+
+  addr.setAstAttr(
+      mlir::cir::ASTVarDeclAttr::get(builder.getContext(), varDecl));
+
+  if (ty->isReferenceType()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    auto block = builder.createBlock(&Addr.getDtorRegion());
-    CIRGenFunction::LexicalScope lexScope{*CurCGF, Addr.getLoc(),
+    auto *block = builder.createBlock(&addr.getCtorRegion());
+    CIRGenFunction::LexicalScope lexScope{*CurCGF, addr.getLoc(),
                                           builder.getInsertionBlock()};
     lexScope.setAsGlobalInit();
-
     builder.setInsertionPointToStart(block);
-    buildDeclDestroy(CGF, D);
+    auto getGlobal = builder.createGetGlobal(addr);
+
+    Address declAddr(getGlobal, getGlobal.getType(),
+                     getASTContext().getDeclAlign(varDecl));
+    assert(performInit && "cannot have constant initializer which needs "
+                          "destruction for reference");
+    RValue rv = cgf.buildReferenceBindingToExpr(init);
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Operation *rvalueDefOp = rv.getScalarVal().getDefiningOp();
+      if (rvalueDefOp && rvalueDefOp->getBlock()) {
+        mlir::Block *rvalSrcBlock = rvalueDefOp->getBlock();
+        if (!rvalSrcBlock->empty() &&
+            isa<mlir::cir::YieldOp>(rvalSrcBlock->back())) {
+          auto &front = rvalSrcBlock->front();
+          getGlobal.getDefiningOp()->moveBefore(&front);
+          auto yield = cast<mlir::cir::YieldOp>(rvalSrcBlock->back());
+          builder.setInsertionPoint(yield);
+        }
+      }
+      cgf.buildStoreOfScalar(rv.getScalarVal(), declAddr, false, ty);
+    }
     builder.setInsertionPointToEnd(block);
-    if (block->empty()) {
-      block->erase();
-      // Don't confuse lexical cleanup.
-      builder.clearInsertionPoint();
-    } else
-      builder.create<mlir::cir::YieldOp>(Addr->getLoc());
+    builder.create<mlir::cir::YieldOp>(addr->getLoc());
+  } else {
+    bool needsDtor = varDecl->needsDestruction(getASTContext()) ==
+                     QualType::DK_cxx_destructor;
+    // PerformInit, constant store invariant / destroy handled below.
+    bool isConstantStorage =
+        varDecl->getType().isConstantStorage(getASTContext(), true, !needsDtor);
+    if (performInit) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      auto *block = builder.createBlock(&addr.getCtorRegion());
+      CIRGenFunction::LexicalScope lexScope{*CurCGF, addr.getLoc(),
+                                            builder.getInsertionBlock()};
+      lexScope.setAsGlobalInit();
+
+      builder.setInsertionPointToStart(block);
+      Address declAddr(getAddrOfGlobalVar(varDecl),
+                       getASTContext().getDeclAlign(varDecl));
+      buildDeclInit(cgf, varDecl, declAddr);
+      builder.setInsertionPointToEnd(block);
+      builder.create<mlir::cir::YieldOp>(addr->getLoc());
+    }
+
+    if (isConstantStorage) {
+      // TODO: this leads to a missing feature in the moment, probably also need
+      // a LexicalScope to be inserted here.
+      buildDeclInvariant(cgf, varDecl);
+    } else {
+      // If not constant storage we'll emit this regardless of NeedsDtor value.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      auto *block = builder.createBlock(&addr.getDtorRegion());
+      CIRGenFunction::LexicalScope lexScope{*CurCGF, addr.getLoc(),
+                                            builder.getInsertionBlock()};
+      lexScope.setAsGlobalInit();
+
+      builder.setInsertionPointToStart(block);
+      buildDeclDestroy(cgf, varDecl);
+      builder.setInsertionPointToEnd(block);
+      if (block->empty()) {
+        block->erase();
+        // Don't confuse lexical cleanup.
+        builder.clearInsertionPoint();
+      } else
+        builder.create<mlir::cir::YieldOp>(addr->getLoc());
+    }
   }
 
   CurCGF = nullptr;

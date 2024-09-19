@@ -630,8 +630,8 @@ public:
                                 bool IsTentative = false);
 
   /// Emit the function that initializes the specified global
-  void buildCXXGlobalVarDeclInit(const VarDecl *D, mlir::cir::GlobalOp Addr,
-                                 bool PerformInit);
+  void buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
+                                 mlir::cir::GlobalOp addr, bool performInit);
 
   void buildCXXGlobalVarDeclInitFunc(const VarDecl *D, mlir::cir::GlobalOp Addr,
                                      bool PerformInit);
@@ -672,11 +672,6 @@ public:
   // apply any ABI rules about which other constructors/destructors are needed
   // or if they are alias to each other.
   mlir::cir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
-
-  // Produce code for this constructor/destructor for global initialzation.
-  void codegenGlobalInitCxxStructor(const clang::VarDecl *D,
-                                    mlir::cir::GlobalOp Addr, bool NeedsCtor,
-                                    bool NeedsDtor, bool isCstStorage);
 
   bool lookupRepresentativeDecl(llvm::StringRef MangledName,
                                 clang::GlobalDecl &Result) const;
