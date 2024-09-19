@@ -158,3 +158,4 @@ return:                                           ; preds = %if.end, %if.then
   %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
+

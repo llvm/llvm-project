@@ -1277,6 +1277,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     } else {
       Count = Builder.CreateAdd(Load, Inc->getStep());
     }
+
     auto *Store = Builder.CreateStore(Count, Addr);
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
