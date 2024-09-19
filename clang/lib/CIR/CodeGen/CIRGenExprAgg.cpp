@@ -980,6 +980,22 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
+  case CK_ToUnion: {
+    // Evaluate even if the destination is ignored.
+    if (Dest.isIgnored()) {
+      CGF.buildAnyExpr(E->getSubExpr(), AggValueSlot::ignored(),
+                       /*ignoreResult=*/true);
+      break;
+    }
+
+    // GCC union extension
+    QualType Ty = E->getSubExpr()->getType();
+    Address CastPtr = Dest.getAddress().withElementType(CGF.ConvertType(Ty));
+    buildInitializationToLValue(E->getSubExpr(),
+                                CGF.makeAddrLValue(CastPtr, Ty));
+    break;
+  }
+
   case CK_LValueToRValue:
     // If we're loading from a volatile type, force the destination
     // into existence.
