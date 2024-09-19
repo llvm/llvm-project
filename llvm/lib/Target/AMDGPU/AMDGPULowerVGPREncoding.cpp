@@ -51,10 +51,8 @@
 #include "AMDGPU.h"
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/PackedVector.h"
 
 using namespace llvm;
 
@@ -63,27 +61,71 @@ using namespace llvm;
 namespace {
 
 class AMDGPULowerVGPREncoding : public MachineFunctionPass {
+  static constexpr unsigned VSrc0 = 0, VDst = 3;
   static constexpr unsigned OpNum = 4;
-  static constexpr unsigned BitsPerField = 2;
-  static constexpr unsigned NumFields = 8;
-  static constexpr unsigned FieldMask = (1 << BitsPerField) - 1;
-  using ModeType = PackedVector<unsigned, BitsPerField,
-                                std::bitset<BitsPerField * NumFields>>;
 
-  /// GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
-  /// GFX13   layout: [src0 idx_sel, src1 idx_sel, src2 idx_sel, dst idx_sel,
-  ///                  src0 msb, src1 msb, src2 msb, dst msb]
-  class ModeTy : public ModeType {
-  public:
-    // bitset constructor will set all bits to zero
-    ModeTy() : ModeType(0) {}
+  struct OpMode {
+    // No MSBs or index register set means they are not required to be
+    // of a particular value.
+    std::optional<unsigned> MSBits;
+    std::optional<MCRegister> IdxReg;
 
-    operator int64_t() const { return raw_bits().to_ulong(); }
+    bool update(const OpMode &New, bool &Rewritten) {
+      bool Updated = false;
+      if (New.MSBits) {
+        if (*New.MSBits != MSBits.value_or(0)) {
+          Updated = true;
+          Rewritten |= MSBits.has_value();
+        }
+        MSBits = New.MSBits;
+      }
+      if (New.IdxReg) {
+        if (*New.IdxReg != IdxReg.value_or(AMDGPU::IDX0)) {
+          Updated = true;
+          Rewritten |= IdxReg.has_value();
+        }
+        IdxReg = New.IdxReg;
+      }
+      return Updated;
+    }
+  };
 
-    static ModeTy fullMask() {
-      ModeTy M;
-      M.raw_bits().flip();
-      return M;
+  struct ModeTy {
+    OpMode Ops[OpNum];
+
+    bool update(const ModeTy &New, bool &Rewritten) {
+      bool Updated = false;
+      for (unsigned I : seq(OpNum))
+        Updated |= Ops[I].update(New.Ops[I], Rewritten);
+      return Updated;
+    }
+
+    bool isSet() const {
+      return any_of(Ops, [](const OpMode &Op) {
+        return Op.MSBits.value_or(0) != 0 ||
+               Op.IdxReg.value_or(AMDGPU::IDX0) != AMDGPU::IDX0;
+      });
+    }
+
+    unsigned encode(bool forSetVGPRFrames) const {
+      unsigned V = 0;
+      if (forSetVGPRFrames) {
+        // GFX13 layout:
+        // [src0 idx_sel, src1 idx_sel, src2 idx_sel, dst idx_sel,
+        //  src0 msb, src1 msb, src2 msb, dst msb]
+        for (const auto &[I, Op] : enumerate(Ops)) {
+          MCRegister R = Op.IdxReg.value_or(AMDGPU::IDX0);
+          assert(AMDGPU::IDX0 <= R && R <= AMDGPU::IDX3);
+          V |= (R - AMDGPU::IDX0) << (I * 2);
+          V |= Op.MSBits.value_or(0) << (I * 2 + 8);
+        }
+        return V;
+      }
+
+      // GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
+      for (const auto &[I, Op] : enumerate(Ops))
+        V |= Op.MSBits.value_or(0) << (I * 2);
+      return V;
     }
   };
 
@@ -119,10 +161,6 @@ private:
   /// Current mode bits.
   ModeTy CurrentMode;
 
-  /// Current mask of mode bits that instructions since MostRecentModeSet care
-  /// about.
-  ModeTy CurrentMask;
-
   /// Number of current hard clause instructions.
   unsigned ClauseLen;
 
@@ -136,10 +174,16 @@ private:
   MachineInstr *Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(ModeTy NewMode, ModeTy Mask, MachineInstr *I);
+  bool setMode(ModeTy NewMode, MachineInstr *I);
 
   /// Reset mode to default.
-  void resetMode(MachineInstr *I) { setMode(ModeTy(), ModeTy::fullMask(), I); }
+  void resetMode(MachineInstr *I) {
+    setMode(ModeTy{{{0, AMDGPU::IDX0},
+                    {0, AMDGPU::IDX0},
+                    {0, AMDGPU::IDX0},
+                    {0, AMDGPU::IDX0}}},
+            I);
+  }
 
   /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
   std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
@@ -150,7 +194,7 @@ private:
   /// MII is the correct value to process next.
   bool runOnMachineInstr(MachineBasicBlock::instr_iterator &MII);
 
-  /// Compute and set the mode and mode mask for a single \p MI given \p Ops
+  /// Compute and set the mode for a single \p MI given \p Ops
   /// operands bit mapping. If MI is BUNDLE, lowers the bundle by replacing the
   /// operands of CoreMI with the dynamic indices from the bundle. Optionally
   /// takes second array \p Ops2 for VOPD. If provided and an operand from \p
@@ -160,11 +204,11 @@ private:
                           const unsigned *Ops2 = nullptr);
 
   /// Lower V_LOAD/STORE_IDX to one or several V_MOV_B32 instructions and update
-  /// the mode and mask. MII is updated to point to the last V_MOV inserted.
+  /// the mode. MII is updated to point to the last V_MOV inserted.
   void lowerIDX(MachineBasicBlock::instr_iterator &MII);
 
   /// Lower bundles which only contain V_LOAD/STORE_IDX, as would be used
-  /// to move data, and update the mode and mask. MII is updated to point to the
+  /// to move data, and update the mode. MII is updated to point to the
   /// last V_MOV inserted.
   void lowerMovBundle(MachineInstr &MI, MachineInstr *CoreMI,
                       MachineBasicBlock::instr_iterator &MII);
@@ -175,35 +219,28 @@ private:
   MachineInstr *handleClause(MachineInstr *I);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
-                                      MachineInstr *I) {
-  assert((NewMode.raw_bits() & ~Mask.raw_bits()).none());
-
+bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, MachineInstr *I) {
   if (CurrentModeKnown) {
-    auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
-
-    if ((Delta & Mask.raw_bits()).none()) {
-      CurrentMask |= Mask;
+    bool Rewritten = false;
+    if (!CurrentMode.update(NewMode, Rewritten))
       return false;
-    }
 
-    if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
-      CurrentMode |= NewMode;
-      CurrentMask |= Mask;
-
-      MostRecentModeSet->getOperand(0).setImm(CurrentMode);
+    if (MostRecentModeSet && !Rewritten) {
+      MostRecentModeSet->getOperand(0).setImm(
+          CurrentMode.encode(ST->hasVGPRIndexingRegisters()));
       return true;
     }
   }
 
   I = handleClause(I);
   MostRecentModeSet =
-      BuildMI(*I->getParent(), I, {}, TII->get(ST->hasVGPRIndexingRegisters() ? AMDGPU::S_SET_VGPR_FRAMES
-                                                  : AMDGPU::S_SET_VGPR_MSB))
-          .addImm(NewMode);
+      BuildMI(*I->getParent(), I, {},
+              TII->get(ST->hasVGPRIndexingRegisters()
+                           ? AMDGPU::S_SET_VGPR_FRAMES
+                           : AMDGPU::S_SET_VGPR_MSB))
+          .addImm(NewMode.encode(ST->hasVGPRIndexingRegisters()));
 
   CurrentMode = NewMode;
-  CurrentMask = Mask;
   CurrentModeKnown = true;
   return true;
 }
@@ -260,7 +297,6 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
                              ->getOperand(AMDGPU::getNamedOperandIdx(
                                  AMDGPU::V_STORE_IDX, AMDGPU::OpName::idx))
                              .getReg();
-  unsigned StoreIdxRegVal = StoreIdxReg - AMDGPU::IDX0;
   int StoreOffsetIdx =
       AMDGPU::getNamedOperandIdx(AMDGPU::V_STORE_IDX, AMDGPU::OpName::offset);
   unsigned StoreOffset = CoreMI->getOperand(StoreOffsetIdx).getImm();
@@ -269,19 +305,13 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
                             ->getOperand(AMDGPU::getNamedOperandIdx(
                                 AMDGPU::V_LOAD_IDX, AMDGPU::OpName::idx))
                             .getReg();
-  unsigned LoadIdxRegVal = LoadIdxReg - AMDGPU::IDX0;
   int LoadOffsetIdx =
       AMDGPU::getNamedOperandIdx(AMDGPU::V_LOAD_IDX, AMDGPU::OpName::offset);
   unsigned LoadOffset = LoadMI->getOperand(LoadOffsetIdx).getImm();
 
-  ModeTy NewMode, Mask;
-  using namespace llvm::AMDGPU::VGPRIndexMode;
-  NewMode[ID_SRC0] = LoadIdxRegVal;
-  NewMode[ID_DST] = StoreIdxRegVal;
-  Mask[ID_SRC0] = FieldMask;
-  Mask[ID_DST] = FieldMask;
-  Mask[ID_SRC0 + OpNum] = FieldMask;
-  Mask[ID_DST + OpNum] = FieldMask;
+  ModeTy NewMode;
+  NewMode.Ops[VSrc0] = {0, LoadIdxReg};
+  NewMode.Ops[VDst] = {0, StoreIdxReg};
 
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
@@ -292,10 +322,10 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
     auto MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), OpDesc);
     MIB.addDef(AMDGPU::VGPR0 + CurStoreOffset)
         .addUse(AMDGPU::VGPR0 + CurLoadOffset, RegState::Undef);
-    NewMode[ID_SRC0 + OpNum] = CurLoadOffset >> 8;
-    NewMode[ID_DST + OpNum] = CurStoreOffset >> 8;
+    NewMode.Ops[VSrc0].MSBits = CurLoadOffset >> 8;
+    NewMode.Ops[VDst].MSBits = CurStoreOffset >> 8;
 
-    setMode(NewMode, Mask, &*MIB);
+    setMode(NewMode, &*MIB);
     MII = MachineBasicBlock::instr_iterator(MIB);
   }
   LoadMI->removeFromBundle();
@@ -323,22 +353,18 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   Register IdxReg =
       MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
           .getReg();
-  unsigned IdxRegVal = IdxReg - AMDGPU::IDX0;
 
   int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
   assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
   unsigned Offset = MI.getOperand(OffsetIdx).getImm();
 
-  ModeTy NewMode, Mask;
-  using namespace llvm::AMDGPU::VGPRIndexMode;
+  ModeTy NewMode;
+  NewMode.Ops[VSrc0] = {0, AMDGPU::IDX0};
+  NewMode.Ops[VDst] = {0, AMDGPU::IDX0};
   if (IsLoad)
-    NewMode[ID_SRC0] = IdxRegVal;
+    NewMode.Ops[VSrc0].IdxReg = IdxReg;
   else
-    NewMode[ID_DST] = IdxRegVal;
-  Mask[ID_SRC0] = FieldMask;
-  Mask[ID_DST] = FieldMask;
-  Mask[ID_SRC0 + OpNum] = FieldMask;
-  Mask[ID_DST + OpNum] = FieldMask;
+    NewMode.Ops[VDst].IdxReg = IdxReg;
 
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
@@ -351,16 +377,16 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
       MIB.addDef(AMDGPU::VGPR0 + CurData)
           .addUse(AMDGPU::VGPR0 + CurOffset, RegState::Undef);
 
-      NewMode[ID_SRC0 + OpNum] = CurOffset >> 8;
-      NewMode[ID_DST + OpNum] = CurData >> 8;
+      NewMode.Ops[VSrc0].MSBits = CurOffset >> 8;
+      NewMode.Ops[VDst].MSBits = CurData >> 8;
     } else {
       MIB.addDef(AMDGPU::VGPR0 + CurOffset)
           .addUse(AMDGPU::VGPR0 + CurData, DataOp.isUndef() ? RegState::Undef : 0);
-      NewMode[ID_SRC0 + OpNum] = CurData >> 8;
-      NewMode[ID_DST + OpNum] = CurOffset >> 8;
+      NewMode.Ops[VSrc0].MSBits = CurData >> 8;
+      NewMode.Ops[VDst].MSBits = CurOffset >> 8;
     }
 
-    setMode(NewMode, Mask, &*MIB);
+    setMode(NewMode, &*MIB);
     MII = MachineBasicBlock::instr_iterator(MIB);
   }
 
@@ -374,7 +400,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
   bool IsBundleWithGPRIndexing = CoreMI != nullptr;
   if (!CoreMI)
     CoreMI = &MI;
-  ModeTy NewMode, Mask;
+  ModeTy NewMode;
 
   for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
@@ -407,11 +433,9 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
         CoreOp->setIsUndef();
         CoreOp->setIsInternalRead(false);
 
-        Register IdxReg =
+        NewMode.Ops[I].IdxReg =
             II->getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
                 .getReg();
-        unsigned IdxRegVal = IdxReg - AMDGPU::IDX0;
-        NewMode[I] = IdxRegVal;
 
         --II;
         II->getNextNode()->removeFromBundle();
@@ -453,12 +477,12 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
           TII->hasVALU32BitEncoding(CoreMI->getOpcode()))))
       continue;
 
-    unsigned IdxOffset = ST->hasVGPRIndexingRegisters() ? 4 : 0;
-    NewMode[I + IdxOffset] = MSBits.value();
-    Mask[I + IdxOffset] = FieldMask;
+    NewMode.Ops[I].MSBits = MSBits.value();
 
-    if (ST->hasVGPRIndexingRegisters())
-      Mask[I] = FieldMask;
+    if (ST->hasVGPRIndexingRegisters()) {
+      if (!NewMode.Ops[I].IdxReg)
+        NewMode.Ops[I].IdxReg = AMDGPU::IDX0;
+    }
   }
 
   if (IsBundleWithGPRIndexing) {
@@ -473,7 +497,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
     }
     MI.eraseFromParent();
   }
-  setMode(NewMode, Mask, CoreMI);
+  setMode(NewMode, CoreMI);
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(
@@ -546,8 +570,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
-  CurrentMode.reset();
-  CurrentMask.reset();
+  CurrentMode = {};
   CurrentModeKnown = true;
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
@@ -561,7 +584,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
       if (I->isTerminator() || I->isCall()) {
         if (I->getOpcode() == AMDGPU::S_ENDPGM ||
             I->getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-          CurrentMode.reset();
+          CurrentMode = {};
           CurrentModeKnown = true;
         } else
           resetMode(&*I);
@@ -594,7 +617,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *Next = MBB.getNextNode();
     if (Next && Next->pred_size() >= 2 &&
         llvm::is_contained(Next->predecessors(), &MBB)) {
-      if (CurrentMode.raw_bits().any())
+      if (CurrentMode.isSet())
         CurrentModeKnown = false;
     }
   }
