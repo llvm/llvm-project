@@ -9807,6 +9807,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  if (LVL.hasSpeculativeEarlyExit()) {
+    reportVectorizationFailure(
+        "Auto-vectorization of early exit loops is not yet supported.",
+        "Auto-vectorization of early exit loops is not yet supported.",
+        "EarlyExitLoopsUnsupported", ORE, L);
+    return false;
+  }
+
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify
