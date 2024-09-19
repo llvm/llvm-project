@@ -3321,63 +3321,6 @@ defm LDRSW  : Load32RO<0b10, 0, 0b10, GPR64, "ldrsw", i64, sextloadi32>;
 // Pre-fetch.
 defm PRFM : PrefetchRO<0b11, 0, 0b10, "prfm">;
 
-def vec_ins_or_scal_vec : PatFrags<(ops node:$src),
-                          [(vector_insert undef, node:$src, (i64 0)),
-                           (scalar_to_vector node:$src)]>;
-
-// For regular load, we do not have any alignment requirement.
-// Thus, it is safe to directly map the vector loads with interesting
-// addressing modes.
-// FIXME: We could do the same for bitconvert to floating point vectors.
-multiclass ScalToVecROLoadPat<ROAddrMode ro, SDPatternOperator loadop,
-                              ValueType ScalTy, ValueType VecTy,
-                              Instruction LOADW, Instruction LOADX,
-                              SubRegIndex sub> {
-  def : Pat<(VecTy (vec_ins_or_scal_vec (ScalTy
-              (loadop (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$offset))))),
-            (INSERT_SUBREG (VecTy (IMPLICIT_DEF)),
-                           (LOADW GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$offset),
-                           sub)>;
-
-  def : Pat<(VecTy (vec_ins_or_scal_vec (ScalTy
-              (loadop (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$offset))))),
-            (INSERT_SUBREG (VecTy (IMPLICIT_DEF)),
-                           (LOADX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$offset),
-                           sub)>;
-}
-
-let AddedComplexity = 10 in {
-defm : ScalToVecROLoadPat<ro8,  extloadi8,  i32, v8i8,  LDRBroW, LDRBroX, bsub>;
-defm : ScalToVecROLoadPat<ro8,  extloadi8,  i32, v16i8, LDRBroW, LDRBroX, bsub>;
-
-defm : ScalToVecROLoadPat<ro16, extloadi16, i32, v4i16, LDRHroW, LDRHroX, hsub>;
-defm : ScalToVecROLoadPat<ro16, extloadi16, i32, v8i16, LDRHroW, LDRHroX, hsub>;
-
-defm : ScalToVecROLoadPat<ro16, load,       i32, v4f16, LDRHroW, LDRHroX, hsub>;
-defm : ScalToVecROLoadPat<ro16, load,       i32, v8f16, LDRHroW, LDRHroX, hsub>;
-
-defm : ScalToVecROLoadPat<ro32, load,       i32, v2i32, LDRSroW, LDRSroX, ssub>;
-defm : ScalToVecROLoadPat<ro32, load,       i32, v4i32, LDRSroW, LDRSroX, ssub>;
-
-defm : ScalToVecROLoadPat<ro32, load,       f32, v2f32, LDRSroW, LDRSroX, ssub>;
-defm : ScalToVecROLoadPat<ro32, load,       f32, v4f32, LDRSroW, LDRSroX, ssub>;
-
-defm : ScalToVecROLoadPat<ro64, load,       i64, v2i64, LDRDroW, LDRDroX, dsub>;
-
-defm : ScalToVecROLoadPat<ro64, load,       f64, v2f64, LDRDroW, LDRDroX, dsub>;
-
-
-def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
-                      (load (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
-                                           ro_Wextend64:$extend))))),
-           (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
-
-def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
-                      (load (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
-                                           ro_Xextend64:$extend))))),
-           (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
-}
-
 // Match all load 64 bits width whose type is compatible with FPR64
 multiclass VecROLoadPat<ROAddrMode ro, ValueType VecTy,
                         Instruction LOADW, Instruction LOADX> {
@@ -3500,42 +3443,6 @@ defm LDRQ : LoadUI<0b00, 1, 0b11, FPR128Op, uimm12s16, "ldr",
 // bf16 load pattern
 def : Pat <(bf16 (load (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))),
            (LDRHui GPR64sp:$Rn, uimm12s2:$offset)>;
-
-// For regular load, we do not have any alignment requirement.
-// Thus, it is safe to directly map the vector loads with interesting
-// addressing modes.
-// FIXME: We could do the same for bitconvert to floating point vectors.
-def : Pat <(v8i8 (vec_ins_or_scal_vec (i32
-               (extloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
-           (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
-                          (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-def : Pat <(v16i8 (vec_ins_or_scal_vec (i32
-               (extloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
-           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-                          (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-def : Pat <(v4i16 (vec_ins_or_scal_vec (i32
-               (extloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
-           (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-                          (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-def : Pat <(v8i16 (vec_ins_or_scal_vec (i32
-               (extloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
-           (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-                          (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-def : Pat <(v2i32 (vec_ins_or_scal_vec (i32
-               (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
-           (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
-                          (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
-def : Pat <(v4i32 (vec_ins_or_scal_vec (i32
-               (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
-           (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                          (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
-def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
-               (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
-           (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat <(v2i64 (vec_ins_or_scal_vec (i64
-               (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
-           (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
-                          (LDRDui GPR64sp:$Rn, uimm12s8:$offset), dsub)>;
 
 // Match all load 64 bits width whose type is compatible with FPR64
 let Predicates = [IsLE] in {
@@ -3902,12 +3809,13 @@ def : InstAlias<"ldrsh $Rt, [$Rn, $offset]",
 def : InstAlias<"ldrsw $Rt, [$Rn, $offset]",
                 (LDURSWi GPR64:$Rt, GPR64sp:$Rn, simm9_offset_fb32:$offset), 0>;
 
-// A LDR will implicitly zero the rest of the vector, so vector_insert(zeros,
-// load, 0) can use a single load.
-multiclass LoadInsertZeroPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType HVT, ValueType SVT,
-                                  ValueType ScalarVT, Instruction LoadInst, Instruction UnscaledLoadInst,
-                                  ComplexPattern Addr, ComplexPattern UnscaledAddr, Operand AddrImm,
-                                  SubRegIndex SubReg> {
+// A LDR will implicitly zero the rest of the vector, so vector_insert(zeros, load, 0)
+// can use a single load. Same for scalar_to_vector(load) or insert(undef, load, 0).
+multiclass LoadInsertVTPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType ScalarVT,
+                                Instruction LoadInst, Instruction UnscaledLoadInst,
+                                Instruction ROWLoadInst, Instruction ROXLoadInst,
+                                ROAddrMode ro, ComplexPattern Addr, ComplexPattern UnscaledAddr,
+                                Operand AddrImm, SubRegIndex SubReg> {
   // Scaled
   def : Pat <(vector_insert (VT immAllZerosV),
                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
@@ -3916,42 +3824,82 @@ multiclass LoadInsertZeroPatterns<SDPatternOperator LoadOp, ValueType VT, ValueT
   def : Pat <(vector_insert (VT immAllZerosV),
                  (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))), (i64 0)),
              (SUBREG_TO_REG (i64 0), (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
+  // roW
+  def : Pat <(vector_insert (VT immAllZerosV),
+                 (ScalarVT (LoadOp (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))), (i64 0)),
+             (SUBREG_TO_REG (i64 0), (ROWLoadInst GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend), SubReg)>;
+  // roX
+  def : Pat <(vector_insert (VT immAllZerosV),
+                 (ScalarVT (LoadOp (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))), (i64 0)),
+             (SUBREG_TO_REG (i64 0), (ROXLoadInst GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend), SubReg)>;
 
-  // Half-vector patterns
-  def : Pat <(vector_insert (HVT immAllZerosV),
-                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
-             (SUBREG_TO_REG (i64 0), (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
-  // Unscaled
-  def : Pat <(vector_insert (HVT immAllZerosV),
-                 (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))), (i64 0)),
+  // Undef equivalents of the patterns above.
+  def : Pat <(VT (vec_ins_or_scal_vec
+                (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
+  def : Pat <(VT (vec_ins_or_scal_vec
+                 (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))))),
              (SUBREG_TO_REG (i64 0), (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
-
-  // SVE patterns
-  def : Pat <(vector_insert (SVT immAllZerosV),
-                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
-             (SUBREG_TO_REG (i64 0), (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
-  // Unscaled
-  def : Pat <(vector_insert (SVT immAllZerosV),
-                 (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))), (i64 0)),
-             (SUBREG_TO_REG (i64 0), (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
+  def : Pat <(VT (vec_ins_or_scal_vec
+                 (ScalarVT (LoadOp (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))))),
+             (SUBREG_TO_REG (i64 0), (ROWLoadInst GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend), SubReg)>;
+  def : Pat <(VT (vec_ins_or_scal_vec
+                 (ScalarVT (LoadOp (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))))),
+             (SUBREG_TO_REG (i64 0), (ROXLoadInst GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend), SubReg)>;
 }
 
-defm : LoadInsertZeroPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,  LDRBui, LDURBi,
-                              am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
-defm : LoadInsertZeroPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,  LDRHui, LDURHi,
-                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
-defm : LoadInsertZeroPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,  LDRSui, LDURSi,
-                              am_indexed32, am_unscaled32, uimm12s4, ssub>;
-defm : LoadInsertZeroPatterns<load,       v2i64,  v1i64,  nxv2i64,  i64,  LDRDui, LDURDi,
-                              am_indexed64, am_unscaled64, uimm12s8, dsub>;
-defm : LoadInsertZeroPatterns<load,       v8f16,  v4f16,  nxv8f16,  f16,  LDRHui, LDURHi,
-                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
-defm : LoadInsertZeroPatterns<load,       v8bf16, v4bf16, nxv8bf16, bf16, LDRHui, LDURHi,
-                              am_indexed16, am_unscaled16, uimm12s2, hsub>;
-defm : LoadInsertZeroPatterns<load,       v4f32,  v2f32,  nxv4f32,  f32,  LDRSui, LDURSi,
-                              am_indexed32, am_unscaled32, uimm12s4, ssub>;
-defm : LoadInsertZeroPatterns<load,       v2f64,  v1f64,  nxv2f64,  f64,  LDRDui, LDURDi,
-                              am_indexed64, am_unscaled64, uimm12s8, dsub>;
+multiclass LoadInsertPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType HVT, ValueType SVT,
+                              ValueType ScalarVT, Instruction LoadInst, Instruction UnscaledLoadInst,
+                              Instruction ROWLoadInst, Instruction ROXLoadInst,
+                              ROAddrMode ro, ComplexPattern Addr, ComplexPattern UnscaledAddr,
+                              Operand AddrImm, SubRegIndex SubReg> {
+  defm : LoadInsertVTPatterns<LoadOp, VT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+  defm : LoadInsertVTPatterns<LoadOp, HVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+  defm : LoadInsertVTPatterns<LoadOp, SVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+}
+
+defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
+                          LDRBui, LDURBi, LDRBroW, LDRBroX,
+                          ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
+defm : LoadInsertPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,
+                          LDRHui, LDURHi, LDRHroW, LDRHroX,
+                          ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,
+                          LDRSui, LDURSi, LDRSroW, LDRSroX,
+                          ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
+defm : LoadInsertPatterns<load,       v2i64,  isVoid, nxv2i64,  i64,
+                          LDRDui, LDURDi, LDRDroW, LDRDroX,
+                          ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
+defm : LoadInsertPatterns<load,       v8f16,  v4f16,  nxv8f16,  f16,
+                          LDRHui, LDURHi, LDRHroW, LDRHroX,
+                          ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertPatterns<load,       v8bf16, v4bf16, nxv8bf16, bf16,
+                          LDRHui, LDURHi, LDRHroW, LDRHroX,
+                          ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
+defm : LoadInsertPatterns<load,       v4f32,  v2f32,  nxv4f32,  f32,
+                          LDRSui, LDURSi, LDRSroW, LDRSroX,
+                          ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
+defm : LoadInsertPatterns<load,       v2f64,  isVoid, nxv2f64,  f64,
+                          LDRDui, LDURDi, LDRDroW, LDRDroX,
+                          ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
+
+// Extra patterns for v1f64 scalar_to_vector(load), which need to avoid the
+// SUBREG_TO_REG used above.
+def : Pat <(v1i64 (scalar_to_vector (i64
+               (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
+           (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+def : Pat <(v1i64 (scalar_to_vector (i64
+               (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))))),
+           (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+def : Pat <(v1i64 (scalar_to_vector (i64
+               (load (ro64.Wpat GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend))))),
+           (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend)>;
+def : Pat <(v1i64 (scalar_to_vector (i64
+               (load (ro64.Xpat GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend))))),
+           (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend)>;
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
