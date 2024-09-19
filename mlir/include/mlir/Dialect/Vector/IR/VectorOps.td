@@ -1655,6 +1655,7 @@ def Vector_LoadOp : Vector_Op<"load"> {
     strides. Only unit strides are allowed along the most minor memref
     dimension. These constraints guarantee that elements read along the first
     dimension of the slice are contiguous in memory.
+    Non-unit strides are allowed when doing 0-rank or 1-element vector load.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the result
@@ -1739,6 +1740,7 @@ def Vector_StoreOp : Vector_Op<"store"> {
     strided by the memref strides. Only unit strides are allowed along the most
     minor memref dimension. These constraints guarantee that elements written
     along the first dimension of the slice are contiguous in memory.
+    Non-unit strides are allowed when doing 0-rank or 1-element vector store.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the value
