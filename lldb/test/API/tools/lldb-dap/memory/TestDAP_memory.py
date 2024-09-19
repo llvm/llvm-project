@@ -74,10 +74,6 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             ].keys(),
         )
 
-    # lldb-dap assumes that all reads will be within the same region. On Windows
-    # the target string is at the very start of a region so the -1 offset causes
-    # the read to only read from the previous region and only return 1 byte.
-    @skipIfWindows
     def test_readMemory(self):
         """
         Tests the 'readMemory' request
@@ -103,10 +99,6 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Use an offset
         mem = self.dap_server.request_readMemory(memref, 2, 3)["body"]
         self.assertEqual(b64decode(mem["data"]), b"ad\0")
-
-        # Use a negative offset
-        mem = self.dap_server.request_readMemory(memref, -1, 6)["body"]
-        self.assertEqual(b64decode(mem["data"])[1:], b"dead\0")
 
         # Reads of size 0 are successful
         # VS-Code sends those in order to check if a `memoryReference` can actually be dereferenced.

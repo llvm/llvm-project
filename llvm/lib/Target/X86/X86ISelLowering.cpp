@@ -12348,7 +12348,7 @@ static SDValue lowerShuffleAsElementInsertion(
     }
     V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);
   } else if (Mask[V2Index] != (int)Mask.size() || EltVT == MVT::i8 ||
-             EltVT == MVT::i16) {
+             (EltVT == MVT::i16 && !Subtarget.hasAVX10_2())) {
     // Either not inserting from the low element of the input or the input
     // element size is too small to use VZEXT_MOVL to clear the high bits.
     return SDValue();
@@ -26159,22 +26159,43 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (CC == ISD::SETLT || CC == ISD::SETLE)
         std::swap(LHS, RHS);
 
-      SDValue Comi = DAG.getNode(IntrData->Opc0, dl, MVT::i32, LHS, RHS);
+      // For AVX10.2, Support EQ and NE.
+      bool HasAVX10_2_COMX =
+          Subtarget.hasAVX10_2() && (CC == ISD::SETEQ || CC == ISD::SETNE);
+
+      // AVX10.2 COMPARE supports only v2f64, v4f32 or v8f16.
+      // For BF type we need to fall back.
+      bool HasAVX10_2_COMX_Ty = (LHS.getSimpleValueType() != MVT::v8bf16);
+
+      auto ComiOpCode = IntrData->Opc0;
+      auto isUnordered = (ComiOpCode == X86ISD::UCOMI);
+
+      if (HasAVX10_2_COMX && HasAVX10_2_COMX_Ty)
+        ComiOpCode = isUnordered ? X86ISD::UCOMX : X86ISD::COMX;
+
+      SDValue Comi = DAG.getNode(ComiOpCode, dl, MVT::i32, LHS, RHS);
+
       SDValue SetCC;
       switch (CC) {
-      case ISD::SETEQ: { // (ZF = 0 and PF = 0)
+      case ISD::SETEQ: {
         SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
+        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 1
+          break;
+        // (ZF = 1 and PF = 0)
         SDValue SetNP = getSETCC(X86::COND_NP, Comi, dl, DAG);
         SetCC = DAG.getNode(ISD::AND, dl, MVT::i8, SetCC, SetNP);
         break;
       }
-      case ISD::SETNE: { // (ZF = 1 or PF = 1)
+      case ISD::SETNE: {
         SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
+        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 0
+          break;
+        // (ZF = 0 or PF = 1)
         SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
         SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
         break;
       }
-      case ISD::SETGT: // (CF = 0 and ZF = 0)
+      case ISD::SETGT:   // (CF = 0 and ZF = 0)
       case ISD::SETLT: { // Condition opposite to GT. Operands swapped above.
         SetCC = getSETCC(X86::COND_A, Comi, dl, DAG);
         break;
@@ -34083,6 +34104,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCMPS)
   NODE_NAME_CASE(COMI)
   NODE_NAME_CASE(UCOMI)
+  NODE_NAME_CASE(COMX)
+  NODE_NAME_CASE(UCOMX)
   NODE_NAME_CASE(CMPM)
   NODE_NAME_CASE(CMPMM)
   NODE_NAME_CASE(STRICT_CMPM)
@@ -57766,6 +57789,19 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                              extractSubVector(InVec.getOperand(1), IdxVal, DAG,
                                               DL, SizeInBits),
                              DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
+      case X86ISD::VPERMV3:
+        if (IdxVal != 0) {
+          SDValue Src0 = InVec.getOperand(0);
+          SDValue Mask = InVec.getOperand(1);
+          SDValue Src1 = InVec.getOperand(2);
+          Mask = extractSubVector(Mask, IdxVal, DAG, DL, SizeInBits);
+          Mask = widenSubVector(Mask, /*ZeroNewElements=*/false, Subtarget, DAG,
+                                DL, InSizeInBits);
+          SDValue Shuffle =
+              DAG.getNode(InOpcode, DL, InVecVT, Src0, Mask, Src1);
+          return extractSubVector(Shuffle, 0, DAG, DL, SizeInBits);
         }
         break;
       }

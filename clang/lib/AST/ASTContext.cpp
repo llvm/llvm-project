@@ -3377,7 +3377,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-    case BuiltinType::AMDGPUBufferRsrc:
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"

@@ -23,11 +23,11 @@ namespace parallel {
 #if LLVM_ENABLE_THREADS
 
 #ifdef _WIN32
-static thread_local unsigned threadIndex = UINT_MAX;
+static thread_local unsigned threadIndex;
 
-unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+unsigned getThreadIndex() { return threadIndex; }
 #else
-thread_local unsigned threadIndex = UINT_MAX;
+thread_local unsigned threadIndex;
 #endif
 
 namespace detail {
@@ -191,16 +191,9 @@ TaskGroup::~TaskGroup() {
   L.sync();
 }
 
-void TaskGroup::spawn(std::function<void()> F, bool Sequential) {
+void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
-    if (Sequential) {
-      // Act as worker thread 0.
-      threadIndex = 0;
-      F();
-      threadIndex = UINT_MAX;
-      return;
-    }
     L.inc();
     detail::Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
       F();

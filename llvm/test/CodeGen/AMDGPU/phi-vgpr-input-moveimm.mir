@@ -73,13 +73,13 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[COPY]], [[COPY1]], implicit-def $scc
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_ADD_U]].sub0, implicit $exec
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[S_ADD_U]], implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B64_e32_]].sub0, %bb.3, [[COPY2]], %bb.1
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B64_e32_]].sub0, %bb.3, [[COPY2]].sub0, %bb.1
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:

@@ -1657,10 +1657,13 @@ template <class ELFT> void elf::scanRelocations() {
           scanner.template scanSection<ELFT>(*s);
       }
     };
-    tg.spawn(fn, serial);
+    if (serial)
+      fn();
+    else
+      tg.spawn(fn);
   }
 
-  tg.spawn([] {
+  auto scanEH = [] {
     RelocationScanner scanner;
     for (Partition &part : ctx.partitions) {
       for (EhInputSection *sec : part.ehFrame->sections)
@@ -1670,7 +1673,11 @@ template <class ELFT> void elf::scanRelocations() {
           if (sec->isLive())
             scanner.template scanSection<ELFT>(*sec);
     }
-  });
+  };
+  if (serial)
+    scanEH();
+  else
+    tg.spawn(scanEH);
 }
 
 static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {

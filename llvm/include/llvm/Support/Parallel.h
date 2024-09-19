@@ -30,14 +30,6 @@ namespace parallel {
 extern ThreadPoolStrategy strategy;
 
 #if LLVM_ENABLE_THREADS
-#define GET_THREAD_INDEX_IMPL                                                  \
-  if (parallel::strategy.ThreadsRequested == 1)                                \
-    return 0;                                                                  \
-  assert((threadIndex != UINT_MAX) &&                                          \
-         "getThreadIndex() must be called from a thread created by "           \
-         "ThreadPoolExecutor");                                                \
-  return threadIndex;
-
 #ifdef _WIN32
 // Direct access to thread_local variables from a different DLL isn't
 // possible with Windows Native TLS.
@@ -46,7 +38,7 @@ unsigned getThreadIndex();
 // Don't access this directly, use the getThreadIndex wrapper.
 extern thread_local unsigned threadIndex;
 
-inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+inline unsigned getThreadIndex() { return threadIndex; }
 #endif
 
 size_t getThreadCount();
@@ -97,9 +89,7 @@ public:
   // Spawn a task, but does not wait for it to finish.
   // Tasks marked with \p Sequential will be executed
   // exactly in the order which they were spawned.
-  // Note: Sequential tasks may be executed on different
-  // threads, but strictly in sequential order.
-  void spawn(std::function<void()> f, bool Sequential = false);
+  void spawn(std::function<void()> f);
 
   void sync() const { L.sync(); }
 
