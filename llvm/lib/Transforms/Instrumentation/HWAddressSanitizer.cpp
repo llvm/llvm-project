@@ -1340,7 +1340,8 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
-  if (!Mapping.InTls || (Mapping.Offset != 0 && Mapping.Offset != kDynamicShadowSentinel))
+  if (!Mapping.InTls ||
+      (Mapping.Offset != 0 && Mapping.Offset != kDynamicShadowSentinel))
     ShadowBase = getShadowNonTls(IRB);
   else if (!WithFrameRecord && TargetTriple.isAndroid())
     ShadowBase = getDynamicShadowIfunc(IRB);
