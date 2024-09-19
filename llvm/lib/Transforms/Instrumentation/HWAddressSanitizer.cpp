@@ -1340,7 +1340,7 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
-  if (!Mapping.InTls)
+  if (!Mapping.InTls || (Mapping.Offset != 0 && Mapping.Offset != kDynamicShadowSentinel))
     ShadowBase = getShadowNonTls(IRB);
   else if (!WithFrameRecord && TargetTriple.isAndroid())
     ShadowBase = getDynamicShadowIfunc(IRB);
@@ -1897,16 +1897,19 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     InTls = false;
     Offset = 0;
     WithFrameRecord = true;
-  } else if (ClMappingOffset.getNumOccurrences() > 0) {
-    InGlobal = false;
-    InTls = false;
-    Offset = ClMappingOffset;
-    WithFrameRecord = false;
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
     InGlobal = false;
     InTls = false;
-    Offset = 0;
+    if (ClMappingOffset.getNumOccurrences() > 0)
+      Offset = ClMappingOffset;
+    else
+      Offset = 0;
     WithFrameRecord = false;
+  } else if (ClMappingOffset.getNumOccurrences() > 0) {
+    InGlobal = false;
+    InTls = true;
+    Offset = ClMappingOffset;
+    WithFrameRecord = true;
   } else if (ClWithIfunc) {
     InGlobal = true;
     InTls = false;
