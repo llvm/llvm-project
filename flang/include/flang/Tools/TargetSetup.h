@@ -36,7 +36,7 @@ namespace Fortran::tools {
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   // we can use libquadmath wrappers
   constexpr bool f128Support = true;
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
   // we can use libm wrappers
   constexpr bool f128Support = true;
 #else
