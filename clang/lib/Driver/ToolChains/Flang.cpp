@@ -887,8 +887,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool FRecordCmdLine = false;
   bool GRecordCmdLine = false;
-  if (ShouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
-    const char *CmdLine = RenderEscapedCommandLine(TC, Args);
+  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
+    const char *CmdLine = renderEscapedCommandLine(TC, Args);
     if (FRecordCmdLine) {
       CmdArgs.push_back("-record-command-line");
       CmdArgs.push_back(CmdLine);

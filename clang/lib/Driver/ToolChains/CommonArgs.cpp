@@ -2961,7 +2961,7 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
   }
 }
 
-void tools::EscapeSpacesAndBackslashes(const char *Arg,
+void tools::escapeSpacesAndBackslashes(const char *Arg,
                                        llvm::SmallVectorImpl<char> &Res) {
   for (; *Arg; ++Arg) {
     switch (*Arg) {
@@ -2976,7 +2976,7 @@ void tools::EscapeSpacesAndBackslashes(const char *Arg,
   }
 }
 
-const char *tools::RenderEscapedCommandLine(const ToolChain &TC,
+const char *tools::renderEscapedCommandLine(const ToolChain &TC,
                                             const llvm::opt::ArgList &Args) {
   const Driver &D = TC.getDriver();
   const char *Exec = D.getClangProgramPath();
@@ -2986,10 +2986,10 @@ const char *tools::RenderEscapedCommandLine(const ToolChain &TC,
     Arg->render(Args, OriginalArgs);
 
   llvm::SmallString<256> Flags;
-  EscapeSpacesAndBackslashes(Exec, Flags);
+  escapeSpacesAndBackslashes(Exec, Flags);
   for (const char *OriginalArg : OriginalArgs) {
     llvm::SmallString<128> EscapedArg;
-    EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
+    escapeSpacesAndBackslashes(OriginalArg, EscapedArg);
     Flags += " ";
     Flags += EscapedArg;
   }
@@ -2997,7 +2997,7 @@ const char *tools::RenderEscapedCommandLine(const ToolChain &TC,
   return Args.MakeArgString(Flags);
 }
 
-bool tools::ShouldRecordCommandLine(const ToolChain &TC,
+bool tools::shouldRecordCommandLine(const ToolChain &TC,
                                     const llvm::opt::ArgList &Args,
                                     bool &FRecordCommandLine,
                                     bool &GRecordCommandLine) {

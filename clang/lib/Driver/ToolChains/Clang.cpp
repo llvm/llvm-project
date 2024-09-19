@@ -7686,8 +7686,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // By default, -gno-record-gcc-switches is set on and no recording.
   auto GRecordSwitches = false;
   auto FRecordSwitches = false;
-  if (ShouldRecordCommandLine(TC, Args, FRecordSwitches, GRecordSwitches)) {
-    auto FlagsArgString = RenderEscapedCommandLine(TC, Args);
+  if (shouldRecordCommandLine(TC, Args, FRecordSwitches, GRecordSwitches)) {
+    auto FlagsArgString = renderEscapedCommandLine(TC, Args);
     if (TC.UseDwarfDebugFlags() || GRecordSwitches) {
       CmdArgs.push_back("-dwarf-debug-flags");
       CmdArgs.push_back(FlagsArgString);
@@ -8687,10 +8687,10 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<256> Flags;
     const char *Exec = getToolChain().getDriver().getClangProgramPath();
-    EscapeSpacesAndBackslashes(Exec, Flags);
+    escapeSpacesAndBackslashes(Exec, Flags);
     for (const char *OriginalArg : OriginalArgs) {
       SmallString<128> EscapedArg;
-      EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
+      escapeSpacesAndBackslashes(OriginalArg, EscapedArg);
       Flags += " ";
       Flags += EscapedArg;
     }

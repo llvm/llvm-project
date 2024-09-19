@@ -236,7 +236,7 @@ void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
 /// Add backslashes to escape spaces and other backslashes.
 /// This is used for the space-separated argument list specified with
 /// the -dwarf-debug-flags option.
-void EscapeSpacesAndBackslashes(const char *Arg,
+void escapeSpacesAndBackslashes(const char *Arg,
                                 llvm::SmallVectorImpl<char> &Res);
 
 /// Join the args in the given ArgList, escape spaces and backslashes and
@@ -244,7 +244,7 @@ void EscapeSpacesAndBackslashes(const char *Arg,
 /// result of using either the -frecord-command-line or -grecord-command-line
 /// options. The lifetime of the returned c-string will match that of the Args
 /// argument.
-const char *RenderEscapedCommandLine(const ToolChain &TC,
+const char *renderEscapedCommandLine(const ToolChain &TC,
                                      const llvm::opt::ArgList &Args);
 
 /// Check if the command line should be recorded in the object file. This is
@@ -253,7 +253,7 @@ const char *RenderEscapedCommandLine(const ToolChain &TC,
 /// is currently only supported on ELF platforms. The last two boolean
 /// arguments are out parameters and will be set depending on the command
 /// line options that were passed.
-bool ShouldRecordCommandLine(const ToolChain &TC,
+bool shouldRecordCommandLine(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
