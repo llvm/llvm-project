@@ -625,6 +625,7 @@ public:
   void writeTo(uint8_t *buf) const override;
 
   Defined *exitThunk;
+  Defined *sym = nullptr;
 
 private:
   ImportFile *file;
