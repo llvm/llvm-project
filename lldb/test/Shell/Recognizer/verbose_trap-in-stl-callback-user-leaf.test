@@ -1,0 +1,22 @@
+# Tests that we show the first non-STL frame when
+# a verbose_trap triggers from within the STL.
+#
+# Specifically tests that we correctly handle backtraces
+# of the form:
+# #0 __builtin_verbose_trap
+# #1 user-code
+# #2 STL
+# #3 user-code
+# #4 STL
+# #5 user-code
+
+# UNSUPPORTED: system-windows
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap-in-stl-callback-user-leaf.cpp -o %t.out
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK
+
+run
+# CHECK: thread #{{.*}}stop reason = User: Invariant violated
+frame info
+# CHECK: frame #{{.*}}`definitely_aborts() at verbose_trap-in-stl-callback-user-leaf.cpp
+q
