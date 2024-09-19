@@ -113,9 +113,13 @@ class TreeTransform {
   class ForgetPartiallySubstitutedPackRAII {
     Derived &Self;
     TemplateArgument Old;
+    // Set the pack expansion index to -1 to avoid pack substitution and
+    // indicate that parameter packs should be instantiated as themselves.
+    Sema::ArgumentPackSubstitutionIndexRAII ResetPackSubstIndex;
 
   public:
-    ForgetPartiallySubstitutedPackRAII(Derived &Self) : Self(Self) {
+    ForgetPartiallySubstitutedPackRAII(Derived &Self)
+        : Self(Self), ResetPackSubstIndex(Self.getSema(), -1) {
       Old = Self.ForgetPartiallySubstitutedPack();
     }
 
@@ -4254,7 +4258,10 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
       getSema(), EnterExpressionEvaluationContext::InitList,
       Construct->isListInitialization());
 
-  getSema().keepInLifetimeExtendingContext();
+  getSema().currentEvaluationContext().InLifetimeExtendingContext =
+      getSema().parentEvaluationContext().InLifetimeExtendingContext;
+  getSema().currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      getSema().parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -7470,8 +7477,17 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     return QualType();
 
   QualType ContainedTy = QualType();
-  if (!oldType->getContainedType().isNull())
-    ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
+  QualType OldContainedTy = oldType->getContainedType();
+  if (!OldContainedTy.isNull()) {
+    TypeSourceInfo *oldContainedTSI = TL.getContainedTypeSourceInfo();
+    if (!oldContainedTSI)
+      oldContainedTSI = getSema().getASTContext().getTrivialTypeSourceInfo(
+          OldContainedTy, SourceLocation());
+    TypeSourceInfo *ContainedTSI = getDerived().TransformType(oldContainedTSI);
+    if (!ContainedTSI)
+      return QualType();
+    ContainedTy = ContainedTSI->getType();
+  }
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
@@ -8924,8 +8940,9 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
 
   // P2718R0 - Lifetime extension in range-based for loops.
   if (getSema().getLangOpts().CPlusPlus23) {
-    auto &LastRecord = getSema().ExprEvalContexts.back();
+    auto &LastRecord = getSema().currentEvaluationContext();
     LastRecord.InLifetimeExtendingContext = true;
+    LastRecord.RebuildDefaultArgOrDefaultInit = true;
   }
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
@@ -14443,6 +14460,13 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
                        &ArgumentChanged))
       return ExprError();
+
+    if (E->isListInitialization() && !E->isStdInitListInitialization()) {
+      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
+      if (Res.isInvalid())
+        return ExprError();
+      Args = {Res.get()};
+    }
   }
 
   if (!getDerived().AlwaysRebuild() &&
@@ -14454,12 +14478,9 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  // FIXME: We should just pass E->isListInitialization(), but we're not
-  // prepared to handle list-initialization without a child InitListExpr.
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();
   return getDerived().RebuildCXXTemporaryObjectExpr(
-      T, LParenLoc, Args, E->getEndLoc(),
-      /*ListInitialization=*/LParenLoc.isInvalid());
+      T, LParenLoc, Args, E->getEndLoc(), E->isListInitialization());
 }
 
 template<typename Derived>
@@ -16583,14 +16604,10 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   } else if (Op == OO_Arrow) {
     // It is possible that the type refers to a RecoveryExpr created earlier
     // in the tree transformation.
-    if (First->containsErrors())
+    if (First->getType()->isDependentType())
       return ExprError();
-    bool IsDependent;
     // -> is never a builtin operation.
-    ExprResult Result = SemaRef.BuildOverloadedArrowExpr(
-        First, OpLoc, /*NoArrowOperatorFound=*/nullptr, IsDependent);
-    assert(!IsDependent);
-    return Result;
+    return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {

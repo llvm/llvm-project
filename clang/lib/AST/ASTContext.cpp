@@ -2203,13 +2203,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // Because the length is only known at runtime, we use a dummy value
     // of 0 for the static length.  The alignment values are those defined
     // by the Procedure Call Standard for the Arm Architecture.
-#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP, IsBF)                                  \
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 128;                                                               \
     break;
-#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 16;                                                                \
@@ -2244,8 +2243,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
-                               SINGLETONID)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3379,7 +3377,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-    case BuiltinType::AMDGPUBufferRsrc:
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
@@ -4284,108 +4283,27 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   switch (Ty->getKind()) {
   default:
     llvm_unreachable("Unsupported builtin vector type");
-  case BuiltinType::SveInt8:
-    return SVE_INT_ELTTY(8, 16, true, 1);
-  case BuiltinType::SveUint8:
-    return SVE_INT_ELTTY(8, 16, false, 1);
-  case BuiltinType::SveInt8x2:
-    return SVE_INT_ELTTY(8, 16, true, 2);
-  case BuiltinType::SveUint8x2:
-    return SVE_INT_ELTTY(8, 16, false, 2);
-  case BuiltinType::SveInt8x3:
-    return SVE_INT_ELTTY(8, 16, true, 3);
-  case BuiltinType::SveUint8x3:
-    return SVE_INT_ELTTY(8, 16, false, 3);
-  case BuiltinType::SveInt8x4:
-    return SVE_INT_ELTTY(8, 16, true, 4);
-  case BuiltinType::SveUint8x4:
-    return SVE_INT_ELTTY(8, 16, false, 4);
-  case BuiltinType::SveInt16:
-    return SVE_INT_ELTTY(16, 8, true, 1);
-  case BuiltinType::SveUint16:
-    return SVE_INT_ELTTY(16, 8, false, 1);
-  case BuiltinType::SveInt16x2:
-    return SVE_INT_ELTTY(16, 8, true, 2);
-  case BuiltinType::SveUint16x2:
-    return SVE_INT_ELTTY(16, 8, false, 2);
-  case BuiltinType::SveInt16x3:
-    return SVE_INT_ELTTY(16, 8, true, 3);
-  case BuiltinType::SveUint16x3:
-    return SVE_INT_ELTTY(16, 8, false, 3);
-  case BuiltinType::SveInt16x4:
-    return SVE_INT_ELTTY(16, 8, true, 4);
-  case BuiltinType::SveUint16x4:
-    return SVE_INT_ELTTY(16, 8, false, 4);
-  case BuiltinType::SveInt32:
-    return SVE_INT_ELTTY(32, 4, true, 1);
-  case BuiltinType::SveUint32:
-    return SVE_INT_ELTTY(32, 4, false, 1);
-  case BuiltinType::SveInt32x2:
-    return SVE_INT_ELTTY(32, 4, true, 2);
-  case BuiltinType::SveUint32x2:
-    return SVE_INT_ELTTY(32, 4, false, 2);
-  case BuiltinType::SveInt32x3:
-    return SVE_INT_ELTTY(32, 4, true, 3);
-  case BuiltinType::SveUint32x3:
-    return SVE_INT_ELTTY(32, 4, false, 3);
-  case BuiltinType::SveInt32x4:
-    return SVE_INT_ELTTY(32, 4, true, 4);
-  case BuiltinType::SveUint32x4:
-    return SVE_INT_ELTTY(32, 4, false, 4);
-  case BuiltinType::SveInt64:
-    return SVE_INT_ELTTY(64, 2, true, 1);
-  case BuiltinType::SveUint64:
-    return SVE_INT_ELTTY(64, 2, false, 1);
-  case BuiltinType::SveInt64x2:
-    return SVE_INT_ELTTY(64, 2, true, 2);
-  case BuiltinType::SveUint64x2:
-    return SVE_INT_ELTTY(64, 2, false, 2);
-  case BuiltinType::SveInt64x3:
-    return SVE_INT_ELTTY(64, 2, true, 3);
-  case BuiltinType::SveUint64x3:
-    return SVE_INT_ELTTY(64, 2, false, 3);
-  case BuiltinType::SveInt64x4:
-    return SVE_INT_ELTTY(64, 2, true, 4);
-  case BuiltinType::SveUint64x4:
-    return SVE_INT_ELTTY(64, 2, false, 4);
-  case BuiltinType::SveBool:
-    return SVE_ELTTY(BoolTy, 16, 1);
-  case BuiltinType::SveBoolx2:
-    return SVE_ELTTY(BoolTy, 16, 2);
-  case BuiltinType::SveBoolx4:
-    return SVE_ELTTY(BoolTy, 16, 4);
-  case BuiltinType::SveFloat16:
-    return SVE_ELTTY(HalfTy, 8, 1);
-  case BuiltinType::SveFloat16x2:
-    return SVE_ELTTY(HalfTy, 8, 2);
-  case BuiltinType::SveFloat16x3:
-    return SVE_ELTTY(HalfTy, 8, 3);
-  case BuiltinType::SveFloat16x4:
-    return SVE_ELTTY(HalfTy, 8, 4);
-  case BuiltinType::SveFloat32:
-    return SVE_ELTTY(FloatTy, 4, 1);
-  case BuiltinType::SveFloat32x2:
-    return SVE_ELTTY(FloatTy, 4, 2);
-  case BuiltinType::SveFloat32x3:
-    return SVE_ELTTY(FloatTy, 4, 3);
-  case BuiltinType::SveFloat32x4:
-    return SVE_ELTTY(FloatTy, 4, 4);
-  case BuiltinType::SveFloat64:
-    return SVE_ELTTY(DoubleTy, 2, 1);
-  case BuiltinType::SveFloat64x2:
-    return SVE_ELTTY(DoubleTy, 2, 2);
-  case BuiltinType::SveFloat64x3:
-    return SVE_ELTTY(DoubleTy, 2, 3);
-  case BuiltinType::SveFloat64x4:
-    return SVE_ELTTY(DoubleTy, 2, 4);
-  case BuiltinType::SveBFloat16:
-    return SVE_ELTTY(BFloat16Ty, 8, 1);
-  case BuiltinType::SveBFloat16x2:
-    return SVE_ELTTY(BFloat16Ty, 8, 2);
-  case BuiltinType::SveBFloat16x3:
-    return SVE_ELTTY(BFloat16Ty, 8, 3);
-  case BuiltinType::SveBFloat16x4:
-    return SVE_ELTTY(BFloat16Ty, 8, 4);
+
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, IsSigned),                           \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
+                              ElBits, NF)                                      \
+  case BuiltinType::Id:                                                        \
+    return {ElBits == 16 ? HalfTy : (ElBits == 32 ? FloatTy : DoubleTy),       \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  case BuiltinType::Id:                                                        \
+    return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
+  case BuiltinType::Id:                                                        \
+    return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
+
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
   case BuiltinType::Id:                                                        \
@@ -4425,22 +4343,30 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
   if (Target->hasAArch64SVETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
-#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP, IsBF)                                  \
-  if (!EltTy->isBooleanType() &&                                               \
-      ((EltTy->hasIntegerRepresentation() &&                                   \
-        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
-        IsFP && !IsBF) ||                                                      \
-       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
-        IsBF && !IsFP)) &&                                                     \
-      EltTySize == ElBits && NumElts == NumEls) {                              \
+
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
+      EltTy->hasSignedIntegerRepresentation() == IsSigned &&                   \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return SingletonId;                                                        \
   }
-#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
-  if (EltTy->isBooleanType() && NumElts == NumEls)                             \
+#define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
+                              ElBits, NF)                                      \
+  if (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&        \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
+    return SingletonId;                                                        \
+  }
+#define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
+                               ElBits, NF)                                     \
+  if (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&         \
+      EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
+    return SingletonId;                                                        \
+  }
+#define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
+  if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingleTonId)
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -14318,6 +14244,18 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
       std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+      Features.insert(Features.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+    } else if (Target->getTriple().isRISCV()) {
+      StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+      std::vector<std::string> Features;
+      if (VersionStr != "default") {
+        ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(VersionStr);
+        Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                        ParsedAttr.Features.end());
+      }
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());

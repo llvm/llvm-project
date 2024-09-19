@@ -30,13 +30,13 @@ registers:
   - { id: 2, class: vecr }
 # AVX:               %0:vr256 = COPY $ymm0
 # AVX-NEXT:          %1:vr128 = COPY $xmm1
-# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 0
+# AVX-NEXT:          %2:vr256 = VINSERTF128rri %0, %1, 0
 # AVX-NEXT:          $ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit $ymm0
 #
 # AVX512VL:          %0:vr256x = COPY $ymm0
 # AVX512VL-NEXT:     %1:vr128x = COPY $xmm1
-# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 0
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rri %0, %1, 0
 # AVX512VL-NEXT:     $ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit $ymm0
 body:             |
@@ -92,13 +92,13 @@ registers:
   - { id: 2, class: vecr }
 # AVX:               %0:vr256 = COPY $ymm0
 # AVX-NEXT:          %1:vr128 = COPY $xmm1
-# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 1
+# AVX-NEXT:          %2:vr256 = VINSERTF128rri %0, %1, 1
 # AVX-NEXT:          $ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit $ymm0
 #
 # AVX512VL:          %0:vr256x = COPY $ymm0
 # AVX512VL-NEXT:     %1:vr128x = COPY $xmm1
-# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 1
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rri %0, %1, 1
 # AVX512VL-NEXT:     $ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit $ymm0
 body:             |
@@ -123,13 +123,13 @@ registers:
   - { id: 2, class: vecr }
 # AVX:               %0:vr256 = IMPLICIT_DEF
 # AVX-NEXT:          %1:vr128 = COPY $xmm1
-# AVX-NEXT:          %2:vr256 = VINSERTF128rr %0, %1, 1
+# AVX-NEXT:          %2:vr256 = VINSERTF128rri %0, %1, 1
 # AVX-NEXT:          $ymm0 = COPY %2
 # AVX-NEXT:          RET 0, implicit $ymm0
 #
 # AVX512VL:          %0:vr256x = IMPLICIT_DEF
 # AVX512VL-NEXT:     %1:vr128x = COPY $xmm1
-# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rr %0, %1, 1
+# AVX512VL-NEXT:     %2:vr256x = VINSERTF32x4Z256rri %0, %1, 1
 # AVX512VL-NEXT:     $ymm0 = COPY %2
 # AVX512VL-NEXT:     RET 0, implicit $ymm0
 body:             |

@@ -838,7 +838,7 @@ void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
                                  MachineBasicBlock *MBB) {
   // Emit the code for the jump table
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   MachineIRBuilder MIB(*MBB->getParent());
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
@@ -2340,6 +2340,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::fptosi_sat:
+    MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::fptoui_sat:
+    MIRBuilder.buildFPTOUI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::memcpy_inline:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY_INLINE);
   case Intrinsic::memcpy:
@@ -3528,18 +3536,17 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
     EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
   } else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
-    if (!isa<FixedVectorType>(CAZ->getType()))
-      return false;
+    Constant &Elt = *CAZ->getElementValue(0u);
+    if (isa<ScalableVectorType>(CAZ->getType())) {
+      EntryBuilder->buildSplatVector(Reg, getOrCreateVReg(Elt));
+      return true;
+    }
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
     if (NumElts == 1)
-      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder);
-    SmallVector<Register, 4> Ops;
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant &Elt = *CAZ->getElementValue(I);
-      Ops.push_back(getOrCreateVReg(Elt));
-    }
-    EntryBuilder->buildBuildVector(Reg, Ops);
+      return translateCopy(C, Elt, *EntryBuilder);
+    // All elements are zero so we can just use the first one.
+    EntryBuilder->buildSplatBuildVector(Reg, getOrCreateVReg(Elt));
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)

@@ -4628,7 +4628,6 @@ public:
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
-                                    llvm::Type *ReturnType,
                                     ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
                                   llvm::Type *ReturnType,
@@ -4704,7 +4703,8 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                   ReturnValueSlot ReturnValue);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5338,6 +5338,9 @@ public:
   void
   EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
                                   ArrayRef<MultiVersionResolverOption> Options);
+  void
+  EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
+                                ArrayRef<MultiVersionResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);

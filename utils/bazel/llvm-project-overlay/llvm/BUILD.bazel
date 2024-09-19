@@ -1408,7 +1408,7 @@ cc_library(
         "lib/Transforms/Instrumentation/*.inc",
     ]),
     hdrs = glob(["include/llvm/Transforms/Instrumentation/*.h"]) + [
-        "include/llvm/Transforms/Instrumentation.h",
+        "include/llvm/Transforms/Utils/Instrumentation.h",
     ],
     copts = llvm_copts,
     deps = [
@@ -1485,13 +1485,11 @@ cc_library(
 cc_library(
     name = "Vectorize",
     srcs = glob([
-        "lib/Transforms/Vectorize/*.cpp",
-        "lib/Transforms/Vectorize/*.h",
-        "lib/Transforms/Vectorize/SandboxVectorizer/*.cpp",
+        "lib/Transforms/Vectorize/**/*.cpp",
+        "lib/Transforms/Vectorize/**/*.h",
     ]),
     hdrs = glob([
-        "include/llvm/Transforms/Vectorize/*.h",
-        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
+        "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -1872,6 +1870,25 @@ cc_library(
 )
 
 cc_library(
+    name = "CGData",
+    srcs = glob(["lib/CGData/**/*.cpp"]),
+    hdrs = glob([
+        "include/llvm/CGData/**/*.h",
+        "include/llvm/CGData/**/*.inc",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":Object",
+        ":ObjectYAML",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1900,6 +1917,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CFGuard",
+        ":CGData",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2344,6 +2362,7 @@ gentbl(
         ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
         ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerLowering", "lib/Target/RISCV/RISCVGenPostLegalizeGILowering.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -3488,6 +3507,39 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "CGDataOptsTableGen",
+    strip_include_prefix = "tools/llvm-cgdata",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-cgdata/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cgdata/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-cgdata-lib",
+    srcs = glob(["tools/llvm-cgdata/*.cpp"]),
+    copts = llvm_copts,
+    deps = [
+        ":CGData",
+        ":CGDataOptsTableGen",
+        ":CodeGen",
+        ":Core",
+        ":Object",
+        ":Option",
+        ":Support",
+    ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-cgdata",
+    stamp = 0,
+    deps = [":llvm-cgdata-lib"],
+)
+
 cc_binary(
     name = "llvm-cfi-verify",
     srcs = glob([
@@ -3637,20 +3689,39 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "llvm-debuginfod-find",
+gentbl(
+    name = "DebugInfodFindOptsTableGen",
+    strip_include_prefix = "tools/llvm-debuginfod-find",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-debuginfod-find/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-debuginfod-find/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+cc_library(
+    name = "llvm-debuginfod-find-lib",
     srcs = glob([
         "tools/llvm-debuginfod-find/*.cpp",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BitReader",
         ":Core",
+        ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":Option",
         ":Support",
         ":Symbolize",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-debuginfod-find",
+    stamp = 0,
+    deps = [":llvm-debuginfod-find-lib"],
 )
 
 cc_binary(

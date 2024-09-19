@@ -120,7 +120,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
     if (P.isTruncStore())
       Explanation += " truncstore";
 
-    if (Record *VT = P.getMemoryVT())
+    if (const Record *VT = P.getMemoryVT())
       Explanation += (" MemVT=" + VT->getName()).str();
     if (Record *VT = P.getScalarMemoryVT())
       Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
@@ -168,7 +168,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
   return Explanation;
 }
 
-std::string explainOperator(Record *Operator) {
+std::string explainOperator(const Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
     return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
@@ -346,7 +346,7 @@ private:
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
   /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
-  DenseMap<Record *, Record *> NodeEquivs;
+  DenseMap<const Record *, Record *> NodeEquivs;
 
   /// Keep track of the equivalence between ComplexPattern's and
   /// GIComplexOperandMatcher. Map entries are specified by subclassing
@@ -379,7 +379,7 @@ private:
   void gatherTypeIDValues();
   void gatherNodeEquivs();
 
-  Record *findNodeEquiv(Record *N) const;
+  Record *findNodeEquiv(const Record *N) const;
   const CodeGenInstruction *getEquivNode(Record &Equiv,
                                          const TreePatternNode &N) const;
 
@@ -388,7 +388,7 @@ private:
   createAndImportSelDAGMatcher(RuleMatcher &Rule,
                                InstructionMatcher &InsnMatcher,
                                const TreePatternNode &Src, unsigned &TempOpIdx);
-  Error importComplexPatternOperandMatcher(OperandMatcher &OM, Record *R,
+  Error importComplexPatternOperandMatcher(OperandMatcher &OM, const Record *R,
                                            unsigned &TempOpIdx) const;
   Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode &SrcChild,
@@ -504,7 +504,7 @@ void GlobalISelEmitter::gatherNodeEquivs() {
   }
 }
 
-Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
+Record *GlobalISelEmitter::findNodeEquiv(const Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
@@ -928,7 +928,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 }
 
 Error GlobalISelEmitter::importComplexPatternOperandMatcher(
-    OperandMatcher &OM, Record *R, unsigned &TempOpIdx) const {
+    OperandMatcher &OM, const Record *R, unsigned &TempOpIdx) const {
   const auto &ComplexPattern = ComplexPatternEquivs.find(R);
   if (ComplexPattern == ComplexPatternEquivs.end())
     return failedImport("SelectionDAG ComplexPattern (" + R->getName() +
@@ -1508,7 +1508,7 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
 
 Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode &Dst) {
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
       return failedImport(
@@ -1704,7 +1704,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     unsigned InstOpNo = DstI->Operands.NumDefs + I;
 
     // Determine what to emit for this operand.
-    Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+    const Record *OperandNode = DstI->Operands[InstOpNo].Rec;
 
     // If the operand has default values, introduce them now.
     if (CGP.operandHasDefault(OperandNode) &&
@@ -1713,7 +1713,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
 
-      Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+      const Record *OperandNode = DstI->Operands[InstOpNo].Rec;
       if (auto Error = importDefaultOperandRenderers(
               InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
         return std::move(Error);
@@ -1813,7 +1813,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // just take the first one).
   if (N.getNumTypes() < 1)
     return std::nullopt;
-  Record *OpRec = N.getOperator();
+  const Record *OpRec = N.getOperator();
 
   // We only want instructions.
   if (!OpRec->isSubClassOf("Instruction"))
@@ -1850,7 +1850,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   // Handle destination record types that we can safely infer a register class
   // from.
   const auto &DstIOperand = Inst.Operands[0];
-  Record *DstIOpRec = DstIOperand.Rec;
+  const Record *DstIOpRec = DstIOperand.Rec;
   if (DstIOpRec->isSubClassOf("RegisterOperand")) {
     DstIOpRec = DstIOpRec->getValueAsDef("RegClass");
     const CodeGenRegisterClass &RC = Target.getRegisterClass(DstIOpRec);
@@ -2011,7 +2011,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   }
 
   // Start with the defined operands (i.e., the results of the root operator).
-  Record *DstOp = Dst.getOperator();
+  const Record *DstOp = Dst.getOperator();
   if (!DstOp->isSubClassOf("Instruction"))
     return failedImport("Pattern operator isn't an instruction");
 
@@ -2045,7 +2045,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     const TypeSetByHwMode &VTy = Src.getExtType(I);
 
     const auto &DstIOperand = DstI.Operands[OpIdx];
-    PointerUnion<Record *, const CodeGenRegisterClass *> MatchedRC =
+    PointerUnion<const Record *, const CodeGenRegisterClass *> MatchedRC =
         DstIOperand.Rec;
     if (DstIName == "COPY_TO_REGCLASS") {
       MatchedRC = getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
@@ -2082,9 +2082,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
       MatchedRC = *MaybeRegClass;
-    } else if (MatchedRC.get<Record *>()->isSubClassOf("RegisterOperand"))
-      MatchedRC = MatchedRC.get<Record *>()->getValueAsDef("RegClass");
-    else if (!MatchedRC.get<Record *>()->isSubClassOf("RegisterClass"))
+    } else if (MatchedRC.get<const Record *>()->isSubClassOf("RegisterOperand"))
+      MatchedRC = MatchedRC.get<const Record *>()->getValueAsDef("RegClass");
+    else if (!MatchedRC.get<const Record *>()->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" + to_string(Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
@@ -2094,8 +2094,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // GIM_CheckIsSameOperand predicates by the defineOperand method.
     OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
-    if (MatchedRC.is<Record *>())
-      MatchedRC = &Target.getRegisterClass(MatchedRC.get<Record *>());
+    if (MatchedRC.is<const Record *>())
+      MatchedRC = &Target.getRegisterClass(MatchedRC.get<const Record *>());
     OM.addPredicate<RegisterBankOperandMatcher>(
         *MatchedRC.get<const CodeGenRegisterClass *>());
     ++OpIdx;
@@ -2368,7 +2368,7 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
-  SmallPtrSet<Record *, 16> UsedRegs;
+  SmallPtrSet<const Record *, 16> UsedRegs;
 
   // TODO: deal with subregs?
   for (auto &A : M.actions()) {

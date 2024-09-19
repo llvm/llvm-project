@@ -34,15 +34,19 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 }
 
 enum class IR {
-  LLVM,
-  SBox,
+  LLVM,           ///> LLVM IR
+  SBoxNoTracking, ///> Sandbox IR with tracking disabled
+  SBoxTracking,   ///> Sandbox IR with tracking enabled
 };
 // Traits to get llvm::BasicBlock/sandboxir::BasicBlock from IR::LLVM/IR::SBox.
 template <IR IRTy> struct TypeSelect {};
 template <> struct TypeSelect<IR::LLVM> {
   using BasicBlock = llvm::BasicBlock;
 };
-template <> struct TypeSelect<IR::SBox> {
+template <> struct TypeSelect<IR::SBoxNoTracking> {
+  using BasicBlock = sandboxir::BasicBlock;
+};
+template <> struct TypeSelect<IR::SBoxTracking> {
   using BasicBlock = sandboxir::BasicBlock;
 };
 
@@ -59,10 +63,20 @@ genIR(std::unique_ptr<llvm::Module> &LLVMM, LLVMContext &LLVMCtx,
 
   sandboxir::Function *F = Ctx.createFunction(LLVMF);
   sandboxir::BasicBlock *BB = &*F->begin();
+  // Start tracking if we are testing with tracking enabled.
+  if constexpr (IRTy == IR::SBoxTracking)
+    Ctx.save();
+
   if constexpr (IRTy == IR::LLVM)
     return LLVMBB;
   else
     return BB;
+}
+
+template <IR IRTy> static void finalize(sandboxir::Context &Ctx) {
+  // Accept changes if we are tracking.
+  if constexpr (IRTy == IR::SBoxTracking)
+    Ctx.accept();
 }
 
 static std::string generateBBWalkIR(unsigned Size) {
@@ -73,6 +87,31 @@ static std::string generateBBWalkIR(unsigned Size) {
   SS << "ret void";
   SS << "}";
   return SS.str();
+}
+
+template <IR IRTy> static void SBoxIRCreation(benchmark::State &State) {
+  static_assert(IRTy != IR::LLVM, "Expected SBoxTracking or SBoxNoTracking");
+  LLVMContext LLVMCtx;
+  unsigned NumInstrs = State.range(0);
+  std::unique_ptr<llvm::Module> LLVMM;
+  std::string IRStr = generateBBWalkIR(NumInstrs);
+  LLVMM = parseIR(LLVMCtx, IRStr.c_str());
+  llvm::Function *LLVMF = &*LLVMM->getFunction("foo");
+
+  for (auto _ : State) {
+    State.PauseTiming();
+    sandboxir::Context Ctx(LLVMCtx);
+    if constexpr (IRTy == IR::SBoxTracking)
+      Ctx.save();
+    State.ResumeTiming();
+
+    sandboxir::Function *F = Ctx.createFunction(LLVMF);
+    benchmark::DoNotOptimize(F);
+    State.PauseTiming();
+    if constexpr (IRTy == IR::SBoxTracking)
+      Ctx.accept();
+    State.ResumeTiming();
+  }
 }
 
 template <IR IRTy> static void BBWalk(benchmark::State &State) {
@@ -132,15 +171,71 @@ template <IR IRTy> static void RAUW(benchmark::State &State) {
     Def1->replaceAllUsesWith(Def2);
     Def2->replaceAllUsesWith(Def1);
   }
+  finalize<IRTy>(Ctx);
 }
 
+static std::string generateRUOWIR(unsigned NumOperands) {
+  std::stringstream SS;
+  auto GenOps = [&SS, NumOperands]() {
+    for (auto Cnt : seq<unsigned>(0, NumOperands)) {
+      SS << "i8 %arg" << Cnt;
+      bool IsLast = Cnt + 1 == NumOperands;
+      if (!IsLast)
+        SS << ", ";
+    }
+  };
+
+  SS << "define void @foo(";
+  GenOps();
+  SS << ") {\n";
+
+  SS << "   call void @foo(";
+  GenOps();
+  SS << ")\n";
+  SS << "ret void";
+  SS << "}";
+  return SS.str();
+}
+
+template <IR IRTy> static void RUOW(benchmark::State &State) {
+  LLVMContext LLVMCtx;
+  sandboxir::Context Ctx(LLVMCtx);
+  std::unique_ptr<llvm::Module> LLVMM;
+  unsigned NumOperands = State.range(0);
+  auto *BB = genIR<IRTy>(LLVMM, LLVMCtx, Ctx, generateRUOWIR, NumOperands);
+
+  auto It = BB->begin();
+  auto *F = BB->getParent();
+  auto *Arg0 = F->getArg(0);
+  auto *Arg1 = F->getArg(1);
+  auto *Call = &*It++;
+  for (auto _ : State)
+    Call->replaceUsesOfWith(Arg0, Arg1);
+  finalize<IRTy>(Ctx);
+}
+
+// Measure the time it takes to create Sandbox IR without/with tracking.
+BENCHMARK(SBoxIRCreation<IR::SBoxNoTracking>)
+    ->Args({10})
+    ->Args({100})
+    ->Args({1000});
+BENCHMARK(SBoxIRCreation<IR::SBoxTracking>)
+    ->Args({10})
+    ->Args({100})
+    ->Args({1000});
+
 BENCHMARK(GetType<IR::LLVM>);
-BENCHMARK(GetType<IR::SBox>);
+BENCHMARK(GetType<IR::SBoxNoTracking>);
 
 BENCHMARK(BBWalk<IR::LLVM>)->Args({1024});
-BENCHMARK(BBWalk<IR::SBox>)->Args({1024});
+BENCHMARK(BBWalk<IR::SBoxTracking>)->Args({1024});
 
 BENCHMARK(RAUW<IR::LLVM>)->Args({512});
-BENCHMARK(RAUW<IR::SBox>)->Args({512});
+BENCHMARK(RAUW<IR::SBoxNoTracking>)->Args({512});
+BENCHMARK(RAUW<IR::SBoxTracking>)->Args({512});
+
+BENCHMARK(RUOW<IR::LLVM>)->Args({4096});
+BENCHMARK(RUOW<IR::SBoxNoTracking>)->Args({4096});
+BENCHMARK(RUOW<IR::SBoxTracking>)->Args({4096});
 
 BENCHMARK_MAIN();

@@ -141,3 +141,73 @@ body:             |
   // Do not ignore `.invalid.{number}`.
   EXPECT_NE(stableHashValue(*MF1), stableHashValue(*MF4));
 }
+
+TEST_F(MachineStableHashTest, ContentName) {
+  auto TM = createTargetMachine(("aarch64--"), "", "");
+  if (!TM)
+    GTEST_SKIP();
+  StringRef MIRString = R"MIR(
+--- |
+  define void @f1() { ret void }
+  define void @f2() { ret void }
+  define void @f3() { ret void }
+  define void @f4() { ret void }
+  declare void @goo()
+  declare void @goo.content.123()
+  declare void @zoo.content.123()
+  declare void @goo.content.456()
+...
+---
+name:            f1
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+  liveins: $lr
+    BL @goo
+  RET undef $lr
+...
+---
+name:            f2
+body:             |
+  bb.0:
+  liveins: $lr
+    BL @goo.content.123
+  RET undef $lr
+...
+---
+name:            f3
+body:             |
+  bb.0:
+  liveins: $lr
+    BL @zoo.content.123
+  RET undef $lr
+...
+---
+name:            f4
+body:             |
+  bb.0:
+  liveins: $lr
+    BL @goo.content.456
+  RET undef $lr
+...
+)MIR";
+  MachineModuleInfo MMI(TM.get());
+  M = parseMIR(*TM, MIRString, MMI);
+  ASSERT_TRUE(M);
+  auto *MF1 = MMI.getMachineFunction(*M->getFunction("f1"));
+  auto *MF2 = MMI.getMachineFunction(*M->getFunction("f2"));
+  auto *MF3 = MMI.getMachineFunction(*M->getFunction("f3"));
+  auto *MF4 = MMI.getMachineFunction(*M->getFunction("f4"));
+
+  // Do not ignore `.content.{number}`.
+  EXPECT_NE(stableHashValue(*MF1), stableHashValue(*MF2));
+  EXPECT_EQ(stableHashValue(*MF2), stableHashValue(*MF3))
+      << "Expect the same hash for the same suffix, `.content.{number}`";
+  // Different suffixes should result in different hashes.
+  EXPECT_NE(stableHashValue(*MF2), stableHashValue(*MF4));
+  EXPECT_NE(stableHashValue(*MF3), stableHashValue(*MF4));
+}

@@ -9,9 +9,9 @@
 /// \file
 /// This file implements a CFG stacking pass.
 ///
-/// This pass inserts BLOCK, LOOP, and TRY markers to mark the start of scopes,
-/// since scope boundaries serve as the labels for WebAssembly's control
-/// transfers.
+/// This pass inserts BLOCK, LOOP, TRY, and TRY_TABLE markers to mark the start
+/// of scopes, since scope boundaries serve as the labels for WebAssembly's
+/// control transfers.
 ///
 /// This is sufficient to convert arbitrary CFGs into a form that works on
 /// WebAssembly, provided that all loops are single-entry.
@@ -21,6 +21,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
@@ -29,6 +30,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -74,6 +76,7 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   void placeBlockMarker(MachineBasicBlock &MBB);
   void placeLoopMarker(MachineBasicBlock &MBB);
   void placeTryMarker(MachineBasicBlock &MBB);
+  void placeTryTableMarker(MachineBasicBlock &MBB);
 
   // Exception handling related functions
   bool fixCallUnwindMismatches(MachineFunction &MF);
@@ -97,11 +100,11 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   void fixEndsAtEndOfFunction(MachineFunction &MF);
   void cleanupFunctionData(MachineFunction &MF);
 
-  // For each BLOCK|LOOP|TRY, the corresponding END_(BLOCK|LOOP|TRY) or DELEGATE
-  // (in case of TRY).
+  // For each BLOCK|LOOP|TRY|TRY_TABLE, the corresponding
+  // END_(BLOCK|LOOP|TRY|TRY_TABLE) or DELEGATE (in case of TRY).
   DenseMap<const MachineInstr *, MachineInstr *> BeginToEnd;
-  // For each END_(BLOCK|LOOP|TRY) or DELEGATE, the corresponding
-  // BLOCK|LOOP|TRY.
+  // For each END_(BLOCK|LOOP|TRY|TRY_TABLE) or DELEGATE, the corresponding
+  // BLOCK|LOOP|TRY|TRY_TABLE.
   DenseMap<const MachineInstr *, MachineInstr *> EndToBegin;
   // <TRY marker, EH pad> map
   DenseMap<const MachineInstr *, MachineBasicBlock *> TryToEHPad;
@@ -150,9 +153,10 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyCFGStackify::ID = 0;
-INITIALIZE_PASS(WebAssemblyCFGStackify, DEBUG_TYPE,
-                "Insert BLOCK/LOOP/TRY markers for WebAssembly scopes", false,
-                false)
+INITIALIZE_PASS(
+    WebAssemblyCFGStackify, DEBUG_TYPE,
+    "Insert BLOCK/LOOP/TRY/TRY_TABLE markers for WebAssembly scopes", false,
+    false)
 
 FunctionPass *llvm::createWebAssemblyCFGStackify() {
   return new WebAssemblyCFGStackify();
@@ -314,12 +318,13 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 #endif
     }
 
-    // If there is a previously placed BLOCK/TRY marker and its corresponding
-    // END marker is before the current BLOCK's END marker, that should be
-    // placed after this BLOCK. Otherwise it should be placed before this BLOCK
-    // marker.
+    // If there is a previously placed BLOCK/TRY/TRY_TABLE marker and its
+    // corresponding END marker is before the current BLOCK's END marker, that
+    // should be placed after this BLOCK. Otherwise it should be placed before
+    // this BLOCK marker.
     if (MI.getOpcode() == WebAssembly::BLOCK ||
-        MI.getOpcode() == WebAssembly::TRY) {
+        MI.getOpcode() == WebAssembly::TRY ||
+        MI.getOpcode() == WebAssembly::TRY_TABLE) {
       if (BeginToEnd[&MI]->getParent()->getNumber() <= MBB.getNumber())
         AfterSet.insert(&MI);
 #ifndef NDEBUG
@@ -329,10 +334,11 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     }
 
 #ifndef NDEBUG
-    // All END_(BLOCK|LOOP|TRY) markers should be before the BLOCK.
+    // All END_(BLOCK|LOOP|TRY|TRY_TABLE) markers should be before the BLOCK.
     if (MI.getOpcode() == WebAssembly::END_BLOCK ||
         MI.getOpcode() == WebAssembly::END_LOOP ||
-        MI.getOpcode() == WebAssembly::END_TRY)
+        MI.getOpcode() == WebAssembly::END_TRY ||
+        MI.getOpcode() == WebAssembly::END_TRY_TABLE)
       BeforeSet.insert(&MI);
 #endif
 
@@ -374,6 +380,11 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     // loop is above this block's header, the END_LOOP should be placed after
     // the END_BLOCK, because the loop contains this block. Otherwise the
     // END_LOOP should be placed before the END_BLOCK. The same for END_TRY.
+    //
+    // Note that while there can be existing END_TRYs, there can't be
+    // END_TRY_TABLEs; END_TRYs are placed when its corresponding EH pad is
+    // processed, so they are placed below MBB (EH pad) in placeTryMarker. But
+    // END_TRY_TABLE is placed like a END_BLOCK, so they can't be here already.
     if (MI.getOpcode() == WebAssembly::END_LOOP ||
         MI.getOpcode() == WebAssembly::END_TRY) {
       if (EndToBegin[&MI]->getParent()->getNumber() >= Header->getNumber())
@@ -657,7 +668,251 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
     updateScopeTops(Header, End);
 }
 
+void WebAssemblyCFGStackify::placeTryTableMarker(MachineBasicBlock &MBB) {
+  assert(MBB.isEHPad());
+  MachineFunction &MF = *MBB.getParent();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
+  SortRegionInfo SRI(MLI, WEI);
+  const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+
+  // Compute the nearest common dominator of all unwind predecessors
+  MachineBasicBlock *Header = nullptr;
+  int MBBNumber = MBB.getNumber();
+  for (auto *Pred : MBB.predecessors()) {
+    if (Pred->getNumber() < MBBNumber) {
+      Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
+      assert(!explicitlyBranchesTo(Pred, &MBB) &&
+             "Explicit branch to an EH pad!");
+    }
+  }
+  if (!Header)
+    return;
+
+  assert(&MBB != &MF.front() && "Header blocks shouldn't have predecessors");
+  MachineBasicBlock *LayoutPred = MBB.getPrevNode();
+
+  // If the nearest common dominator is inside a more deeply nested context,
+  // walk out to the nearest scope which isn't more deeply nested.
+  for (MachineFunction::iterator I(LayoutPred), E(Header); I != E; --I) {
+    if (MachineBasicBlock *ScopeTop = ScopeTops[I->getNumber()]) {
+      if (ScopeTop->getNumber() > Header->getNumber()) {
+        // Skip over an intervening scope.
+        I = std::next(ScopeTop->getIterator());
+      } else {
+        // We found a scope level at an appropriate depth.
+        Header = ScopeTop;
+        break;
+      }
+    }
+  }
+
+  // Decide where in Header to put the TRY_TABLE.
+
+  // Instructions that should go before the TRY_TABLE.
+  SmallPtrSet<const MachineInstr *, 4> BeforeSet;
+  // Instructions that should go after the TRY_TABLE.
+  SmallPtrSet<const MachineInstr *, 4> AfterSet;
+  for (const auto &MI : *Header) {
+    // If there is a previously placed LOOP marker and the bottom block of the
+    // loop is above MBB, it should be after the TRY_TABLE, because the loop is
+    // nested in this TRY_TABLE. Otherwise it should be before the TRY_TABLE.
+    if (MI.getOpcode() == WebAssembly::LOOP) {
+      auto *LoopBottom = BeginToEnd[&MI]->getParent()->getPrevNode();
+      if (MBB.getNumber() > LoopBottom->getNumber())
+        AfterSet.insert(&MI);
+#ifndef NDEBUG
+      else
+        BeforeSet.insert(&MI);
+#endif
+    }
+
+    // All previously inserted BLOCK/TRY_TABLE markers should be after the
+    // TRY_TABLE because they are all nested blocks/try_tables.
+    if (MI.getOpcode() == WebAssembly::BLOCK ||
+        MI.getOpcode() == WebAssembly::TRY_TABLE)
+      AfterSet.insert(&MI);
+
+#ifndef NDEBUG
+    // All END_(BLOCK/LOOP/TRY_TABLE) markers should be before the TRY_TABLE.
+    if (MI.getOpcode() == WebAssembly::END_BLOCK ||
+        MI.getOpcode() == WebAssembly::END_LOOP ||
+        MI.getOpcode() == WebAssembly::END_TRY_TABLE)
+      BeforeSet.insert(&MI);
+#endif
+
+    // Terminators should go after the TRY_TABLE.
+    if (MI.isTerminator())
+      AfterSet.insert(&MI);
+  }
+
+  // If Header unwinds to MBB (= Header contains 'invoke'), the try_table block
+  // should contain the call within it. So the call should go after the
+  // TRY_TABLE. The exception is when the header's terminator is a rethrow
+  // instruction, in which case that instruction, not a call instruction before
+  // it, is gonna throw.
+  MachineInstr *ThrowingCall = nullptr;
+  if (MBB.isPredecessor(Header)) {
+    auto TermPos = Header->getFirstTerminator();
+    if (TermPos == Header->end() ||
+        TermPos->getOpcode() != WebAssembly::RETHROW) {
+      for (auto &MI : reverse(*Header)) {
+        if (MI.isCall()) {
+          AfterSet.insert(&MI);
+          ThrowingCall = &MI;
+          // Possibly throwing calls are usually wrapped by EH_LABEL
+          // instructions. We don't want to split them and the call.
+          if (MI.getIterator() != Header->begin() &&
+              std::prev(MI.getIterator())->isEHLabel()) {
+            AfterSet.insert(&*std::prev(MI.getIterator()));
+            ThrowingCall = &*std::prev(MI.getIterator());
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Local expression tree should go after the TRY_TABLE.
+  // For BLOCK placement, we start the search from the previous instruction of a
+  // BB's terminator, but in TRY_TABLE's case, we should start from the previous
+  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
+  // because the return values of the call's previous instructions can be
+  // stackified and consumed by the throwing call.
+  auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
+                                    : Header->getFirstTerminator();
+  for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
+    if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
+      continue;
+    if (WebAssembly::isChild(*std::prev(I), MFI))
+      AfterSet.insert(&*std::prev(I));
+    else
+      break;
+  }
+
+  // Add the TRY_TABLE and a BLOCK for the catch destination. We currently
+  // generate only one CATCH clause for a TRY_TABLE, so we need one BLOCK for
+  // its destination.
+  //
+  // Header:
+  //   block
+  //     try_table (catch ... $MBB)
+  //       ...
+  //
+  // MBB:
+  //     end_try_table
+  //   end_block                 ;; destination of (catch ...)
+  //   ... catch handler body ...
+  auto InsertPos = getLatestInsertPos(Header, BeforeSet, AfterSet);
+  MachineInstrBuilder BlockMIB =
+      BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
+              TII.get(WebAssembly::BLOCK));
+  auto *Block = BlockMIB.getInstr();
+  MachineInstrBuilder TryTableMIB =
+      BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
+              TII.get(WebAssembly::TRY_TABLE))
+          .addImm(int64_t(WebAssembly::BlockType::Void))
+          .addImm(1); // # of catch clauses
+  auto *TryTable = TryTableMIB.getInstr();
+
+  // Add a CATCH_*** clause to the TRY_TABLE. These are pseudo instructions
+  // following the destination END_BLOCK to simulate block return values,
+  // because we currently don't support them.
+  auto *Catch = WebAssembly::findCatch(&MBB);
+  switch (Catch->getOpcode()) {
+  case WebAssembly::CATCH:
+    // CATCH's destination block's return type is the extracted value type,
+    // which is currently i32 for all supported tags.
+    BlockMIB.addImm(int64_t(WebAssembly::BlockType::I32));
+    TryTableMIB.addImm(wasm::WASM_OPCODE_CATCH);
+    for (const auto &Use : Catch->uses()) {
+      // The only use operand a CATCH can have is the tag symbol.
+      TryTableMIB.addExternalSymbol(Use.getSymbolName());
+      break;
+    }
+    TryTableMIB.addMBB(&MBB);
+    break;
+  case WebAssembly::CATCH_REF:
+    // CATCH_REF's destination block's return type is the extracted value type
+    // followed by an exnref, which is (i32, exnref) in our case. We assign the
+    // actual multiavlue signature in MCInstLower. MO_CATCH_BLOCK_SIG signals
+    // that this operand is used for catch_ref's multivalue destination.
+    BlockMIB.addImm(int64_t(WebAssembly::BlockType::Multivalue));
+    Block->getOperand(0).setTargetFlags(WebAssemblyII::MO_CATCH_BLOCK_SIG);
+    TryTableMIB.addImm(wasm::WASM_OPCODE_CATCH_REF);
+    for (const auto &Use : Catch->uses()) {
+      TryTableMIB.addExternalSymbol(Use.getSymbolName());
+      break;
+    }
+    TryTableMIB.addMBB(&MBB);
+    break;
+  case WebAssembly::CATCH_ALL:
+    // CATCH_ALL's destination block's return type is void.
+    BlockMIB.addImm(int64_t(WebAssembly::BlockType::Void));
+    TryTableMIB.addImm(wasm::WASM_OPCODE_CATCH_ALL);
+    TryTableMIB.addMBB(&MBB);
+    break;
+  case WebAssembly::CATCH_ALL_REF:
+    // CATCH_ALL_REF's destination block's return type is exnref.
+    BlockMIB.addImm(int64_t(WebAssembly::BlockType::Exnref));
+    TryTableMIB.addImm(wasm::WASM_OPCODE_CATCH_ALL_REF);
+    TryTableMIB.addMBB(&MBB);
+    break;
+  }
+
+  // Decide where in MBB to put the END_TRY_TABLE, and the END_BLOCK for the
+  // CATCH destination.
+  BeforeSet.clear();
+  AfterSet.clear();
+  for (const auto &MI : MBB) {
+#ifndef NDEBUG
+    // END_TRY_TABLE should precede existing LOOP markers.
+    if (MI.getOpcode() == WebAssembly::LOOP)
+      AfterSet.insert(&MI);
+#endif
+
+    // If there is a previously placed END_LOOP marker and the header of the
+    // loop is above this try_table's header, the END_LOOP should be placed
+    // after the END_TRY_TABLE, because the loop contains this block. Otherwise
+    // the END_LOOP should be placed before the END_TRY_TABLE.
+    if (MI.getOpcode() == WebAssembly::END_LOOP) {
+      if (EndToBegin[&MI]->getParent()->getNumber() >= Header->getNumber())
+        BeforeSet.insert(&MI);
+#ifndef NDEBUG
+      else
+        AfterSet.insert(&MI);
+#endif
+    }
+
+#ifndef NDEBUG
+    // CATCH, CATCH_REF, CATCH_ALL, and CATCH_ALL_REF are pseudo-instructions
+    // that simulate the block return value, so they should be placed after the
+    // END_TRY_TABLE.
+    if (WebAssembly::isCatch(MI.getOpcode()))
+      AfterSet.insert(&MI);
+#endif
+  }
+
+  // Mark the end of the TRY_TABLE and the BLOCK.
+  InsertPos = getEarliestInsertPos(&MBB, BeforeSet, AfterSet);
+  MachineInstr *EndTryTable =
+      BuildMI(MBB, InsertPos, MBB.findPrevDebugLoc(InsertPos),
+              TII.get(WebAssembly::END_TRY_TABLE));
+  registerTryScope(TryTable, EndTryTable, &MBB);
+  MachineInstr *EndBlock =
+      BuildMI(MBB, InsertPos, MBB.findPrevDebugLoc(InsertPos),
+              TII.get(WebAssembly::END_BLOCK));
+  registerScope(Block, EndBlock);
+  // Track the farthest-spanning scope that ends at this point.
+  updateScopeTops(Header, &MBB);
+}
+
 void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
+  if (WebAssembly::WasmEnableExnref)
+    return;
+
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   // When there is an unconditional branch right before a catch instruction and
@@ -1445,6 +1700,7 @@ void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
       case WebAssembly::END_TRY:
+      case WebAssembly::END_TRY_TABLE:
       case WebAssembly::DELEGATE:
         updateScopeTops(EndToBegin[&MI]->getParent(), &MBB);
         break;
@@ -1502,6 +1758,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
+      case WebAssembly::END_TRY_TABLE:
       case WebAssembly::DELEGATE:
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
@@ -1528,7 +1785,7 @@ static void appendEndToFunction(MachineFunction &MF,
           TII.get(WebAssembly::END_FUNCTION));
 }
 
-/// Insert BLOCK/LOOP/TRY markers at appropriate places.
+/// Insert BLOCK/LOOP/TRY/TRY_TABLE markers at appropriate places.
 void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // We allocate one more than the number of blocks in the function to
   // accommodate for the possible fake block we may insert at the end.
@@ -1540,15 +1797,25 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
   for (auto &MBB : MF) {
     if (MBB.isEHPad()) {
-      // Place the TRY for MBB if MBB is the EH pad of an exception.
+      // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
       if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
-          MF.getFunction().hasPersonalityFn())
-        placeTryMarker(MBB);
+          MF.getFunction().hasPersonalityFn()) {
+        if (WebAssembly::WasmEnableExnref)
+          placeTryTableMarker(MBB);
+        else
+          placeTryMarker(MBB);
+      }
     } else {
       // Place the BLOCK for MBB if MBB is branched to from above.
       placeBlockMarker(MBB);
     }
   }
+
+  // FIXME We return here temporarily until we implement fixing unwind
+  // mismatches for the new exnref proposal.
+  if (WebAssembly::WasmEnableExnref)
+    return;
+
   // Fix mismatches in unwind destinations induced by linearizing the code.
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn()) {
@@ -1668,11 +1935,14 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   for (auto &MBB : reverse(MF)) {
     for (MachineInstr &MI : llvm::reverse(MBB)) {
       switch (MI.getOpcode()) {
+      case WebAssembly::TRY_TABLE:
+        RewriteOperands(MI);
+        [[fallthrough]];
       case WebAssembly::BLOCK:
       case WebAssembly::TRY:
         assert(ScopeTops[Stack.back().first->getNumber()]->getNumber() <=
                    MBB.getNumber() &&
-               "Block/try marker should be balanced");
+               "Block/try/try_table marker should be balanced");
         Stack.pop_back();
         break;
 
@@ -1687,6 +1957,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         [[fallthrough]];
       }
       case WebAssembly::END_BLOCK:
+      case WebAssembly::END_TRY_TABLE:
         Stack.push_back(std::make_pair(&MBB, &MI));
         break;
 
@@ -1744,7 +2015,8 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
 
-  // Place the BLOCK/LOOP/TRY markers to indicate the beginnings of scopes.
+  // Place the BLOCK/LOOP/TRY/TRY_TABLE markers to indicate the beginnings of
+  // scopes.
   placeMarkers(MF);
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
@@ -1755,8 +2027,8 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   // Convert MBB operands in terminators to relative depth immediates.
   rewriteDepthImmediates(MF);
 
-  // Fix up block/loop/try signatures at the end of the function to conform to
-  // WebAssembly's rules.
+  // Fix up block/loop/try/try_table signatures at the end of the function to
+  // conform to WebAssembly's rules.
   fixEndsAtEndOfFunction(MF);
 
   // Add an end instruction at the end of the function body.

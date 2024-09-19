@@ -3764,6 +3764,79 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL) {
   return SDValue();
 }
 
+// Refinement of DAG/Type Legalisation (promotion) when CTLZ is used for
+// counting leading ones. Broadly, it replaces the substraction with a left
+// shift.
+//
+// * DAG Legalisation Pattern:
+//
+//     (sub (ctlz (zeroextend (not Src)))
+//          BitWidthDiff)
+//
+//       if BitWidthDiff == BitWidth(Node) - BitWidth(Src)
+//       -->
+//
+//     (ctlz_zero_undef (not (shl (anyextend Src)
+//                                BitWidthDiff)))
+//
+// * Type Legalisation Pattern:
+//
+//     (sub (ctlz (and (xor Src XorMask)
+//                     AndMask))
+//          BitWidthDiff)
+//
+//       if AndMask has only trailing ones
+//       and MaskBitWidth(AndMask) == BitWidth(Node) - BitWidthDiff
+//       and XorMask has more trailing ones than AndMask
+//       -->
+//
+//     (ctlz_zero_undef (not (shl Src BitWidthDiff)))
+template <class MatchContextClass>
+static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
+  const SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
+  MatchContextClass Matcher(DAG, DAG.getTargetLoweringInfo(), N);
+
+  APInt AndMask;
+  APInt XorMask;
+  APInt BitWidthDiff;
+
+  SDValue CtlzOp;
+  SDValue Src;
+
+  if (!sd_context_match(
+          N, Matcher, m_Sub(m_Ctlz(m_Value(CtlzOp)), m_ConstInt(BitWidthDiff))))
+    return SDValue();
+
+  if (sd_context_match(CtlzOp, Matcher, m_ZExt(m_Not(m_Value(Src))))) {
+    // DAG Legalisation Pattern:
+    // (sub (ctlz (zero_extend (not Op)) BitWidthDiff))
+    if ((BitWidth - Src.getValueType().getScalarSizeInBits()) != BitWidthDiff)
+      return SDValue();
+
+    Src = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Src);
+  } else if (sd_context_match(CtlzOp, Matcher,
+                              m_And(m_Xor(m_Value(Src), m_ConstInt(XorMask)),
+                                    m_ConstInt(AndMask)))) {
+    // Type Legalisation Pattern:
+    // (sub (ctlz (and (xor Op XorMask) AndMask)) BitWidthDiff)
+    unsigned AndMaskWidth = BitWidth - BitWidthDiff.getZExtValue();
+    if (!(AndMask.isMask(AndMaskWidth) && XorMask.countr_one() >= AndMaskWidth))
+      return SDValue();
+  } else
+    return SDValue();
+
+  SDValue ShiftConst = DAG.getShiftAmountConstant(BitWidthDiff, VT, DL);
+  SDValue LShift = Matcher.getNode(ISD::SHL, DL, VT, Src, ShiftConst);
+  SDValue Not =
+      Matcher.getNode(ISD::XOR, DL, VT, LShift, DAG.getAllOnesConstant(DL, VT));
+
+  return Matcher.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, Not);
+}
+
 // Since it may not be valid to emit a fold to zero for vector initializers
 // check if we can before folding.
 static SDValue tryFoldToZero(const SDLoc &DL, const TargetLowering &TLI, EVT VT,
@@ -3787,6 +3860,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       return N->getOperand(0);
     return N;
   };
+
+  if (SDValue V = foldSubCtlzNot<EmptyMatchContext>(N, DAG))
+    return V;
 
   // fold (sub x, x) -> 0
   // FIXME: Refactor this and xor and other similar operations together.
@@ -4896,6 +4972,12 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
   if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
+
+  // Simplify the operands using demanded-bits information.
+  // We don't have demanded bits support for UDIV so this just enables constant
+  // folding based on known bits.
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   return SDValue();
 }
@@ -7050,7 +7132,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
-        TLI.isNarrowingProfitable(VT, SrcVT))
+        TLI.isNarrowingProfitable(N, VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                          DAG.getNode(ISD::AND, DL, SrcVT, N0Op0,
                                      DAG.getZExtOrTrunc(N1, DL, SrcVT)));
@@ -14622,7 +14704,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // ShLeftAmt will indicate how much a narrowed load should be shifted left.
   unsigned ShLeftAmt = 0;
   if (ShAmt == 0 && N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
-      ExtVT == VT && TLI.isNarrowingProfitable(N0.getValueType(), VT)) {
+      ExtVT == VT && TLI.isNarrowingProfitable(N, N0.getValueType(), VT)) {
     if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       ShLeftAmt = N01->getZExtValue();
       N0 = N0.getOperand(0);
@@ -15142,33 +15224,51 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Note: We only run this optimization after type legalization (which often
   // creates this pattern) and before operation legalization after which
   // we need to be more careful about the vector instructions that we generate.
-  if (N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      LegalTypes && !LegalOperations && N0->hasOneUse() && VT != MVT::i1) {
-    EVT VecTy = N0.getOperand(0).getValueType();
-    EVT ExTy = N0.getValueType();
+  if (LegalTypes && !LegalOperations && VT.isScalarInteger() && VT != MVT::i1 &&
+      N0->hasOneUse()) {
     EVT TrTy = N->getValueType(0);
+    SDValue Src = N0;
 
-    auto EltCnt = VecTy.getVectorElementCount();
-    unsigned SizeRatio = ExTy.getSizeInBits()/TrTy.getSizeInBits();
-    auto NewEltCnt = EltCnt * SizeRatio;
+    // Check for cases where we shift down an upper element before truncation.
+    int EltOffset = 0;
+    if (Src.getOpcode() == ISD::SRL && Src.getOperand(0)->hasOneUse()) {
+      if (auto ShAmt = DAG.getValidShiftAmount(Src)) {
+        if ((*ShAmt % TrTy.getSizeInBits()) == 0) {
+          Src = Src.getOperand(0);
+          EltOffset = *ShAmt / TrTy.getSizeInBits();
+        }
+      }
+    }
 
-    EVT NVT = EVT::getVectorVT(*DAG.getContext(), TrTy, NewEltCnt);
-    assert(NVT.getSizeInBits() == VecTy.getSizeInBits() && "Invalid Size");
+    if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      EVT VecTy = Src.getOperand(0).getValueType();
+      EVT ExTy = Src.getValueType();
 
-    SDValue EltNo = N0->getOperand(1);
-    if (isa<ConstantSDNode>(EltNo) && isTypeLegal(NVT)) {
-      int Elt = EltNo->getAsZExtVal();
-      int Index = isLE ? (Elt*SizeRatio) : (Elt*SizeRatio + (SizeRatio-1));
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, TrTy,
-                         DAG.getBitcast(NVT, N0.getOperand(0)),
-                         DAG.getVectorIdxConstant(Index, DL));
+      auto EltCnt = VecTy.getVectorElementCount();
+      unsigned SizeRatio = ExTy.getSizeInBits() / TrTy.getSizeInBits();
+      auto NewEltCnt = EltCnt * SizeRatio;
+
+      EVT NVT = EVT::getVectorVT(*DAG.getContext(), TrTy, NewEltCnt);
+      assert(NVT.getSizeInBits() == VecTy.getSizeInBits() && "Invalid Size");
+
+      SDValue EltNo = Src->getOperand(1);
+      if (isa<ConstantSDNode>(EltNo) && isTypeLegal(NVT)) {
+        int Elt = EltNo->getAsZExtVal();
+        int Index = isLE ? (Elt * SizeRatio + EltOffset)
+                         : (Elt * SizeRatio + (SizeRatio - 1) - EltOffset);
+        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, TrTy,
+                           DAG.getBitcast(NVT, Src.getOperand(0)),
+                           DAG.getVectorIdxConstant(Index, DL));
+      }
     }
   }
 
   // trunc (select c, a, b) -> select c, (trunc a), (trunc b)
-  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse()) {
-    if ((!LegalOperations || TLI.isOperationLegal(ISD::SELECT, SrcVT)) &&
-        TLI.isTruncateFree(SrcVT, VT)) {
+  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse() &&
+      TLI.isTruncateFree(SrcVT, VT)) {
+    if (!LegalOperations ||
+        (TLI.isOperationLegal(ISD::SELECT, SrcVT) &&
+         TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))) {
       SDLoc SL(N0);
       SDValue Cond = N0.getOperand(0);
       SDValue TruncOp0 = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
@@ -16036,8 +16136,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT) &&
-      (!LegalOperations || matcher.isOperationLegalOrCustom(ISD::FMA, VT));
+      (!LegalOperations || matcher.isOperationLegalOrCustom(ISD::FMA, VT)) &&
+      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
@@ -16273,8 +16373,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT) &&
-      (!LegalOperations || matcher.isOperationLegalOrCustom(ISD::FMA, VT));
+      (!LegalOperations || matcher.isOperationLegalOrCustom(ISD::FMA, VT)) &&
+      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
@@ -16604,8 +16704,8 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
       isContractableFMUL(Options, SDValue(N, 0)) &&
-      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT) &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT)) &&
+      TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 
   // Floating-point multiply-add with intermediate rounding. This can result
   // in a less precise result due to the changed rounding order.
@@ -20109,10 +20209,9 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
-    while (NewBW < BitWidth &&
-           (NewVT.getStoreSizeInBits() != NewBW ||
-            !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
-            !TLI.isNarrowingProfitable(VT, NewVT))) {
+    while (NewBW < BitWidth && (NewVT.getStoreSizeInBits() != NewBW ||
+                                !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
+                                !TLI.isNarrowingProfitable(N, VT, NewVT))) {
       NewBW = NextPowerOf2(NewBW);
       NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     }
@@ -26912,6 +27011,19 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
       return DAG.getNode(Opcode, SDLoc(N), N->getValueType(0), Subvec);
   }
 
+  // vecreduce_or(sext(x)) -> sext(vecreduce_or(x))
+  // Same for zext and anyext, and for and/or/xor reductions.
+  if ((Opcode == ISD::VECREDUCE_OR || Opcode == ISD::VECREDUCE_AND ||
+       Opcode == ISD::VECREDUCE_XOR) &&
+      (N0.getOpcode() == ISD::SIGN_EXTEND ||
+       N0.getOpcode() == ISD::ZERO_EXTEND ||
+       N0.getOpcode() == ISD::ANY_EXTEND) &&
+      TLI.isOperationLegalOrCustom(Opcode, N0.getOperand(0).getValueType())) {
+    SDValue Red = DAG.getNode(Opcode, SDLoc(N),
+                              N0.getOperand(0).getValueType().getScalarType(),
+                              N0.getOperand(0));
+    return DAG.getNode(N0.getOpcode(), SDLoc(N), N->getValueType(0), Red);
+  }
   return SDValue();
 }
 
@@ -26967,6 +27079,8 @@ SDValue DAGCombiner::visitVPOp(SDNode *N) {
       return visitVP_SELECT(N);
     case ISD::VP_MUL:
       return visitMUL<VPMatchContext>(N);
+    case ISD::VP_SUB:
+      return foldSubCtlzNot<VPMatchContext>(N, DAG);
     default:
       break;
     }

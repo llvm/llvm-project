@@ -523,7 +523,7 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<Record *, unsigned, unsigned>
+  typedef std::tuple<const Record *, unsigned, unsigned>
       DefinedComplexPatternSubOperand;
   typedef StringMap<DefinedComplexPatternSubOperand>
       DefinedComplexPatternSubOperandMap;
@@ -649,7 +649,8 @@ public:
 
   void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
 
-  Error defineComplexSubOperand(StringRef SymbolicName, Record *ComplexPattern,
+  Error defineComplexSubOperand(StringRef SymbolicName,
+                                const Record *ComplexPattern,
                                 unsigned RendererID, unsigned SubOperandID,
                                 StringRef ParentSymbolicName);
 
@@ -2336,7 +2337,7 @@ private:
   const CodeGenInstruction *I;
   InstructionMatcher *Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
-  SmallPtrSet<Record *, 4> DeadImplicitDefs;
+  SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
   std::vector<const InstructionMatcher *> CopiedFlags;
   std::vector<StringRef> SetFlags;
@@ -2364,7 +2365,7 @@ public:
 
   void chooseInsnToMutate(RuleMatcher &Rule);
 
-  void setDeadImplicitDef(Record *R) { DeadImplicitDefs.insert(R); }
+  void setDeadImplicitDef(const Record *R) { DeadImplicitDefs.insert(R); }
 
   template <class Kind, class... Args> Kind &addRenderer(Args &&...args) {
     OperandRenderers.emplace_back(

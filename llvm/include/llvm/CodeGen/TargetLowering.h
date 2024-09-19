@@ -3306,7 +3306,7 @@ public:
   /// Return true if it's profitable to narrow operations of type SrcVT to
   /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
-  virtual bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
+  virtual bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const {
     return false;
   }
 
@@ -3409,7 +3409,7 @@ public:
 
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }

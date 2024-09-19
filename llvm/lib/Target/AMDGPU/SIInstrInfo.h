@@ -178,6 +178,9 @@ private:
 
   Register findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
+  bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  StringRef &ErrInfo) const;
+
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
@@ -1437,8 +1440,6 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
-
-  static Register findSetInactiveMask(const MachineInstr &MI);
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
