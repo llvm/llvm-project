@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCDYNAMICLIBRARYSEARCHGENERATOR_H
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
 namespace llvm {
@@ -68,6 +69,47 @@ private:
   ExecutorProcessControl &EPC;
   tpctypes::DylibHandle H;
   SymbolPredicate Allow;
+  AddAbsoluteSymbolsFn AddAbsoluteSymbols;
+};
+
+class AutoLoadDynamicLibrarySearchGenerator : public DefinitionGenerator {
+public:
+  using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;
+
+  /// Creates an AutoLoadDynamicLibrarySearchGenerator that searches for symbols
+  /// across all currently loaded libraries. If a symbol is not found, it scans
+  /// all potential dynamic libraries (dylibs), and if the symbol is located,
+  /// the corresponding library is loaded, and the symbol's definition is
+  /// returned.
+  ///
+  /// If \p AddAbsoluteSymbols is provided, it is used to add the symbols to the
+  /// \c JITDylib; otherwise it uses JD.define(absoluteSymbols(...)).
+  AutoLoadDynamicLibrarySearchGenerator(
+      ExecutionSession &ES, AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
+      : EPC(ES.getExecutorProcessControl()),
+        AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
+
+  /// Creates a AutoLoadDynamicLibrarySearchGenerator that searches for symbols
+  /// in the target process.
+  static Expected<std::unique_ptr<AutoLoadDynamicLibrarySearchGenerator>>
+  GetForTargetProcess(ExecutionSession &ES,
+                      AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr) {
+    return std::make_unique<AutoLoadDynamicLibrarySearchGenerator>(
+        ES, std::move(AddAbsoluteSymbols));
+  }
+
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Symbols) override;
+
+  Error
+  tryToResolve(SymbolNameSet CandidateSyms,
+               ExecutorProcessControl::ResolveSymbolsCompleteFn OnCompleteFn);
+
+private:
+  ExecutorProcessControl &EPC;
+  BloomFilter GlobalFilter;
+  StringSet<> ExcludedSymbols;
   AddAbsoluteSymbolsFn AddAbsoluteSymbols;
 };
 

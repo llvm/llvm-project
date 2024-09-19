@@ -13,6 +13,8 @@ if( LLVM_USE_INTEL_JITEVENTS )
 endif()
 
 add_llvm_component_library(LLVMOrcTargetProcess
+  AutoLoadDylibLookup.cpp
+  AutoLoadDyLoader.cpp
   ExecutorSharedMemoryMapperService.cpp
   JITLoaderGDB.cpp
   JITLoaderPerf.cpp
@@ -33,6 +35,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
 
   LINK_COMPONENTS
   ${intel_jit_profiling}
+  Object
   OrcShared
   Support
   TargetParser
