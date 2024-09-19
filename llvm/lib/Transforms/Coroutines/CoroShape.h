@@ -58,10 +58,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
 
-  // Values invalidated by invalidateCoroutine() and cleanCoroutine()
-  SmallVector<CoroFrameInst *, 8> CoroFrames;
-  SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-
   // Values invalidated by replaceSwiftErrorOps()
   SmallVector<CallInst *, 2> SwiftErrorOps;
 
@@ -74,9 +70,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     CoroAwaitSuspends.clear();
     SymmetricTransfers.clear();
 
-    CoroFrames.clear();
-    UnusedCoroSaves.clear();
-
     SwiftErrorOps.clear();
 
     FrameTy = nullptr;
@@ -85,13 +78,16 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   }
 
   // Scan the function and collect the above intrinsics for later processing
-  void analyze(Function &F);
+  void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
   // If for some reason, we were not able to find coro.begin, bailout.
-  void invalidateCoroutine(Function &F);
+  void invalidateCoroutine(Function &F,
+                           SmallVectorImpl<CoroFrameInst *> &CoroFrames);
   // Perform ABI related initial transformation
   void initABI();
   // Remove orphaned and unnecessary intrinsics
-  void cleanCoroutine();
+  void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                      SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -271,13 +267,16 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   Shape() = default;
   explicit Shape(Function &F, bool OptimizeFrame = false)
       : OptimizeFrame(OptimizeFrame) {
-    analyze(F);
+    SmallVector<CoroFrameInst *, 8> CoroFrames;
+    SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
+
+    analyze(F, CoroFrames, UnusedCoroSaves);
     if (!CoroBegin) {
-      invalidateCoroutine(F);
+      invalidateCoroutine(F, CoroFrames);
       return;
     }
     initABI();
-    cleanCoroutine();
+    cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };
 

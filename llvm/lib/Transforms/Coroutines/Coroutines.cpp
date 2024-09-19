@@ -189,7 +189,9 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 }
 
 // Collect "interesting" coroutine intrinsics.
-void coro::Shape::analyze(Function &F) {
+void coro::Shape::analyze(Function &F,
+                          SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -341,7 +343,8 @@ void coro::Shape::analyze(Function &F) {
 }
 
 // If for some reason, we were not able to find coro.begin, bailout.
-void coro::Shape::invalidateCoroutine(Function &F) {
+void coro::Shape::invalidateCoroutine(
+    Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames) {
   assert(!CoroBegin);
   {
     // Replace coro.frame which are supposed to be lowered to the result of
@@ -474,7 +477,9 @@ void coro::Shape::initABI() {
   }
 }
 
-void coro::Shape::cleanCoroutine() {
+void coro::Shape::cleanCoroutine(
+    SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
