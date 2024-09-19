@@ -713,7 +713,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Additional linker set-up and flags for Fortran. This is required in order
   // to generate executables.
-  if (getToolChain().getDriver().IsFlangMode()) {
+  if (getToolChain().getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
     addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
   }

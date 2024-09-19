@@ -1048,6 +1048,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
                               UI->getPredicate(), CostKind);
   }
+  // vp load/store
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    auto *UI = dyn_cast<VPIntrinsic>(ICA.getInst());
+
+    if (!UI)
+      break;
+    assert(FOp.has_value());
+    if (ICA.getID() == Intrinsic::vp_load)
+      return getMemoryOpCost(
+          *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
+          UI->getOperand(0)->getType()->getPointerAddressSpace(), CostKind);
+    return getMemoryOpCost(
+        *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
+        UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1754,6 +1772,14 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (LT.second.isFixedLengthVector()) {
       unsigned Width = LT.second.getVectorNumElements();
       Index = Index % Width;
+    }
+
+    // If exact VLEN is known, we will insert/extract into the appropriate
+    // subvector with no additional subvector insert/extract cost.
+    if (auto VLEN = ST->getRealVLen()) {
+      unsigned EltSize = LT.second.getScalarSizeInBits();
+      unsigned M1Max = *VLEN / EltSize;
+      Index = Index % M1Max;
     }
 
     // We could extract/insert the first element without vslidedown/vslideup.

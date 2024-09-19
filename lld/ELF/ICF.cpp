@@ -324,7 +324,7 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  if (ra.areRelocsCrel())
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
     return constantEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? constantEq(a, ra.rels, b, rb.rels)
@@ -376,7 +376,7 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  if (ra.areRelocsCrel())
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
     return variableEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? variableEq(a, ra.rels, b, rb.rels)

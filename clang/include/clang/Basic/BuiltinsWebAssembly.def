@@ -99,8 +99,6 @@ TARGET_BUILTIN(__builtin_wasm_max_u_i32x4, "V4UiV4UiV4Ui", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_avgr_u_i8x16, "V16UcV16UcV16Uc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_avgr_u_i16x8, "V8UsV8UsV8Us", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_popcnt_i8x16, "V16ScV16Sc", "nc", "simd128")
-
 TARGET_BUILTIN(__builtin_wasm_q15mulr_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_extadd_pairwise_i8x16_s_i16x8, "V8sV16Sc", "nc", "simd128")

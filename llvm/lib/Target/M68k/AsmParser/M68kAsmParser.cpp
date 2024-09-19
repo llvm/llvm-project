@@ -69,9 +69,9 @@ public:
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -959,7 +959,7 @@ void M68kAsmParser::eatComma() {
   }
 }
 
-bool M68kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool M68kAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   SMLoc Start = getLexer().getLoc();
   Operands.push_back(M68kOperand::createToken(Name, Start, Start));
@@ -1024,7 +1024,7 @@ bool M68kAsmParser::emit(MCInst &Inst, SMLoc const &Loc,
   return false;
 }
 
-bool M68kAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
+bool M68kAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,

@@ -9634,6 +9634,18 @@ def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
                       (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
           (v16i8 (ADDPv16i8 $Rn, $Rm))>;
 
+def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+          (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
+def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+          (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
+def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+          (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
+
 def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
                        (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
           (v2f64 (FADDPv2f64 $Rn, $Rm))>;
