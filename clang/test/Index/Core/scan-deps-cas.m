@@ -33,6 +33,7 @@
 // CHECK-NEXT:     name: ModA
 // CHECK-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
 // CHECK-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
+// CHECK-NEXT:     casfs-root-id: [[CASFS_MODA_ROOT_ID:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     cache-key: [[CASFS_MODA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:     file-deps:
@@ -43,7 +44,7 @@
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
-// CHECK-SAME:       -fcas-fs llvmcas://{{[[:xdigit:]]+}}
+// CHECK-SAME:       -fcas-fs [[CASFS_MODA_ROOT_ID]]
 // CHECK-SAME:       -fcache-compile-job
 // CHECK-SAME:       -emit-module
 // CHECK-SAME:       -fmodule-name=ModA
@@ -52,6 +53,7 @@
 // CHECK-NEXT: dependencies:
 // CHECK-NEXT:   command 0:
 // CHECK-NEXT:     context-hash: [[HASH_TU:[A-Z0-9]+]]
+// CHECK-NEXT:     casfs-root-id: [[CASFS_TU_ROOT_ID:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     cache-key: [[CASFS_TU_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:       ModA:[[HASH_MOD_A]]
@@ -60,7 +62,7 @@
 // CHECK-NEXT:     build-args:
 // CHECK-SAME:       -cc1
 // CHECK-SAME:       -fcas-path
-// CHECK-SAME:       -fcas-fs llvmcas://{{[[:xdigit:]]+}}
+// CHECK-SAME:       -fcas-fs [[CASFS_TU_ROOT_ID]]
 // CHECK-SAME:       -fcache-compile-job
 // CHECK-SAME:       -fmodule-file-cache-key [[PCM:.*ModA_.*pcm]] llvmcas://{{[[:xdigit:]]+}}
 // CHECK-SAME:       -fmodule-file={{(ModA=)?}}[[PCM]]
