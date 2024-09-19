@@ -157,3 +157,13 @@ namespace test_flag {
 
   }
 } //namespace test_flag
+
+struct HoldsStdSpan {
+  char* Ptr;
+  unsigned Size;
+  std::span<char> Span{Ptr, Size};  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+
+  HoldsStdSpan(char* P, unsigned S)
+      : Span(P, S)  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  {}
+};
