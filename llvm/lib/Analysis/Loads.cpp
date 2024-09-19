@@ -93,20 +93,26 @@ static bool isDereferenceableAndAlignedPointer(
                                               Visited, MaxDepth);
   }
 
-  bool CheckForNonNull, CheckForFreed;
-  APInt KnownDerefBytes(Size.getBitWidth(),
-                        V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                          CheckForFreed));
-  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-      !CheckForFreed)
-    if (!CheckForNonNull ||
-        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
-      // As we recursed through GEPs to get here, we've incrementally checked
-      // that each step advanced by a multiple of the alignment. If our base is
-      // properly aligned, then the original offset accessed must also be.
-      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-      return isAligned(V, Offset, Alignment, DL);
-    }
+  auto IsKnownDeref = [&]() {
+    bool CheckForNonNull, CheckForFreed;
+    APInt KnownDerefBytes(Size.getBitWidth(),
+                          V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                            CheckForFreed));
+    if (!KnownDerefBytes.getBoolValue() || !KnownDerefBytes.uge(Size) ||
+        CheckForFreed)
+      return false;
+    if (CheckForNonNull &&
+        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+      return false;
+    return true;
+  };
+  if (IsKnownDeref()) {
+    // As we recursed through GEPs to get here, we've incrementally checked
+    // that each step advanced by a multiple of the alignment. If our base is
+    // properly aligned, then the original offset accessed must also be.
+    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
+    return isAligned(V, Offset, Alignment, DL);
+  }
 
   /// TODO refactor this function to be able to search independently for
   /// Dereferencability and Alignment requirements.

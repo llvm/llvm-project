@@ -87,6 +87,10 @@ namespace llvm {
     COMI,
     UCOMI,
 
+    // X86 compare with Intrinsics similar to COMI.
+    COMX,
+    UCOMX,
+
     /// X86 bit-test instructions.
     BT,
 
