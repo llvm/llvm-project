@@ -35,6 +35,9 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
+#if LLDB_ENABLE_POSIX
+#include "lldb/Host/posix/DomainSocket.h"
+#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -376,14 +379,23 @@ int main_platform(int argc, char *argv[]) {
     }
 
     GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
-    std::unique_ptr<Socket> socket = Socket::Create(
-        protocol, /*child_processes_inherit=*/false, error, sockfd);
-    if (error.Fail()) {
-      LLDB_LOGF(log, "lldb-platform child: %s", error.AsCString());
+    Socket *socket;
+    if (protocol == Socket::ProtocolTcp)
+      socket = new TCPSocket(sockfd, /*should_close=*/true,
+                             /*child_processes_inherit=*/false);
+    else {
+#if LLDB_ENABLE_POSIX
+      socket = new DomainSocket(sockfd, /*should_close=*/true,
+                                /*child_processes_inherit=*/false);
+#else
+      LLDB_LOGF(log,
+                "lldb-platform child: Unix domain sockets are not supported on "
+                "this platform.");
       return socket_error;
+#endif
     }
-    platform.SetConnection(std::unique_ptr<Connection>(
-        new ConnectionFileDescriptor(socket.release())));
+    platform.SetConnection(
+        std::unique_ptr<Connection>(new ConnectionFileDescriptor(socket)));
     client_handle(platform, inferior_arguments);
     return 0;
   }

@@ -215,24 +215,23 @@ void Socket::Terminate() {
 
 std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
                                        bool child_processes_inherit,
-                                       Status &error, NativeSocket sockfd) {
+                                       Status &error) {
   error.Clear();
 
   std::unique_ptr<Socket> socket_up;
   switch (protocol) {
   case ProtocolTcp:
     socket_up =
-        std::make_unique<TCPSocket>(sockfd, true, child_processes_inherit);
+        std::make_unique<TCPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUdp:
-    assert(sockfd == kInvalidSocketValue);
     socket_up =
         std::make_unique<UDPSocket>(true, child_processes_inherit);
     break;
   case ProtocolUnixDomain:
 #if LLDB_ENABLE_POSIX
     socket_up =
-        std::make_unique<DomainSocket>(sockfd, true, child_processes_inherit);
+        std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
     error = Status::FromErrorString(
         "Unix domain sockets are not supported on this platform.");
@@ -240,7 +239,6 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     break;
   case ProtocolUnixAbstract:
 #ifdef __linux__
-    assert(sockfd == kInvalidSocketValue);
     socket_up =
         std::make_unique<AbstractSocket>(child_processes_inherit);
 #else
