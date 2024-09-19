@@ -79,19 +79,15 @@ struct ARMVectorIntrinsicInfo {
 } // end anonymous namespace
 
 #define NEONMAP0(NameBase)                                                     \
-  { #NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0 }
+  {#NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0}
 
 #define NEONMAP1(NameBase, LLVMIntrinsic, TypeModifier)                        \
-  {                                                                            \
-    #NameBase, NEON::BI__builtin_neon_##NameBase, Intrinsic::LLVMIntrinsic, 0, \
-        TypeModifier                                                           \
-  }
+  {#NameBase, NEON::BI__builtin_neon_##NameBase, Intrinsic::LLVMIntrinsic, 0,  \
+   TypeModifier}
 
 #define NEONMAP2(NameBase, LLVMIntrinsic, AltLLVMIntrinsic, TypeModifier)      \
-  {                                                                            \
-    #NameBase, NEON::BI__builtin_neon_##NameBase, Intrinsic::LLVMIntrinsic,    \
-        Intrinsic::AltLLVMIntrinsic, TypeModifier                              \
-  }
+  {#NameBase, NEON::BI__builtin_neon_##NameBase, Intrinsic::LLVMIntrinsic,     \
+   Intrinsic::AltLLVMIntrinsic, TypeModifier}
 
 static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
     NEONMAP1(__a64_vcvtq_low_bf16_f32, aarch64_neon_bfcvtn, 0),
@@ -1097,13 +1093,11 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
 #undef NEONMAP2
 
 #define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {                                                                            \
-    #NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
-  }
+  {#NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,    \
+   TypeModifier}
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier }
+  {#NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier}
 static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
@@ -1115,13 +1109,11 @@ static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #undef SVEMAP2
 
 #define SMEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {                                                                            \
-    #NameBase, SME::BI__builtin_sme_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
-  }
+  {#NameBase, SME::BI__builtin_sme_##NameBase, Intrinsic::LLVMIntrinsic, 0,    \
+   TypeModifier}
 
 #define SMEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SME::BI__builtin_sme_##NameBase, 0, 0, TypeModifier }
+  {#NameBase, SME::BI__builtin_sme_##NameBase, 0, 0, TypeModifier}
 static const ARMVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
 #define GET_SME_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sme_builtin_cg.inc"
@@ -1604,6 +1596,48 @@ static mlir::Value buildArmLdrexNon128Intrinsic(unsigned int builtinID,
   } else {
     // Above cases should cover most situations and we have test coverage.
     llvm_unreachable("Unsupported return type for now");
+  }
+}
+
+mlir::Value buildNeonCall(unsigned int builtinID, CIRGenFunction &cgf,
+                          llvm::SmallVector<mlir::Type> argTypes,
+                          llvm::SmallVector<mlir::Value, 4> args,
+                          llvm::StringRef intrinsicName, mlir::Type funcResTy,
+                          mlir::Location loc,
+                          bool isConstrainedFPIntrinsic = false,
+                          unsigned shift = 0, bool rightshift = false) {
+  // TODO: Consider removing the following unreachable when we have
+  // buildConstrainedFPCall feature implemented
+  assert(!MissingFeatures::buildConstrainedFPCall());
+  if (isConstrainedFPIntrinsic)
+    llvm_unreachable("isConstrainedFPIntrinsic NYI");
+  // TODO: Remove the following unreachable and call it in the loop once
+  // there is an implementation of buildNeonShiftVector
+  if (shift > 0)
+    llvm_unreachable("Argument shift NYI");
+
+  if (builtinID != clang::NEON::BI__builtin_neon_vrndns_f32)
+    llvm_unreachable("NYT");
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  for (unsigned j = 0; j < argTypes.size(); ++j) {
+    if (isConstrainedFPIntrinsic) {
+      assert(!MissingFeatures::buildConstrainedFPCall());
+    }
+    if (shift > 0 && shift == j) {
+      assert(!MissingFeatures::buildNeonShiftVector());
+    } else {
+      args[j] = builder.createBitcast(args[j], argTypes[j]);
+    }
+  }
+  if (isConstrainedFPIntrinsic) {
+    assert(!MissingFeatures::buildConstrainedFPCall());
+    return nullptr;
+  } else {
+    return builder
+        .create<mlir::cir::IntrinsicCallOp>(
+            loc, builder.getStringAttr(intrinsicName), funcResTy, args)
+        .getResult();
   }
 }
 
@@ -2288,6 +2322,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     return V;
 
   mlir::Type VTy = Ty;
+  llvm::SmallVector<mlir::Value, 4> args;
   switch (BuiltinID) {
   default:
     return nullptr;
@@ -2394,7 +2429,11 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NYI");
   }
   case NEON::BI__builtin_neon_vrndns_f32: {
-    llvm_unreachable("NYI");
+    mlir::Value arg0 = buildScalarExpr(E->getArg(0));
+    args.push_back(arg0);
+    return buildNeonCall(NEON::BI__builtin_neon_vrndns_f32, *this,
+                         {arg0.getType()}, args, "llvm.roundeven.f32",
+                         getCIRGenModule().FloatTy, getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vrndph_f16: {
     llvm_unreachable("NYI");
