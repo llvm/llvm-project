@@ -496,7 +496,7 @@ public:
                                    unsigned PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 
-  bool allowInlineMemcpyAsLdSt() const { return hasV7Ops() && isMClass(); }
+  bool allowInlineMemcpyAsLdSt() const { return UseInlineMemcpyAsLdSt; }
 };
 
 } // end namespace llvm

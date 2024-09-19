@@ -500,6 +500,11 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
     "Don't schedule again after register allocation">;
 
+def FeatureUseInlineMemcpyAsLdSt :
+    SubtargetFeature<"use-inline-memcpy-ldst", "UseInlineMemcpyAsLdSt",
+        "true", "Use memcpy inlining as LD/ST instructions">;
+
+
 // Armv8.5-A extensions
 
 // Has speculation barrier.

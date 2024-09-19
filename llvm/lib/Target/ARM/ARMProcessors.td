@@ -96,7 +96,7 @@ def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
 def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
-                                   "Cortex-M7 ARM processors", []>;
+                                   "Cortex-M7 ARM processors", [FeatureUseInlineMemcpyAsLdSt]>;
 
 //===----------------------------------------------------------------------===//
 // ARM processors
