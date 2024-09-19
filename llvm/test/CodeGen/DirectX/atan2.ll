@@ -1,19 +1,21 @@
-; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -dxil-intrinsic-expansion -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,EXPCHECK
+; RUN: opt -S -dxil-intrinsic-expansion -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
 
 ; Make sure correct dxil expansions for atan2 are generated for float and half.
 
 define noundef float @atan2_float(float noundef %y, float noundef %x) {
 entry:
 ; CHECK: [[DIV:%.+]] = fdiv float %y, %x
-; CHECK: [[TAN:%.+]] = call float @dx.op.unary.f32(i32 17, float [[DIV]])
-; CHECK-DAG: [[ADD_PI:%.+]] = fadd float [[TAN]], 0x400921FB60000000
-; CHECK-DAG: [[SUB_PI:%.+]] = fsub float [[TAN]], 0x400921FB60000000
+; EXPCHECK: [[ATAN:%.+]] = call float @llvm.atan.f32(float [[DIV]])
+; DOPCHECK: [[ATAN:%.+]] = call float @dx.op.unary.f32(i32 17, float [[DIV]])
+; CHECK-DAG: [[ADD_PI:%.+]] = fadd float [[ATAN]], 0x400921FB60000000
+; CHECK-DAG: [[SUB_PI:%.+]] = fsub float [[ATAN]], 0x400921FB60000000
 ; CHECK-DAG: [[X_LT_0:%.+]] = fcmp olt float %x, 0.000000e+00
 ; CHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq float %x, 0.000000e+00 
 ; CHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge float %y, 0.000000e+00 
 ; CHECK-DAG: [[Y_LT_0:%.+]] = fcmp olt float %y, 0.000000e+00
 ; CHECK: [[XLT0_AND_YGE0:%.+]] = and i1 [[X_LT_0]], [[Y_GE_0]]
-; CHECK: [[SELECT_ADD_PI:%.+]] = select i1 [[XLT0_AND_YGE0]], float [[ADD_PI]], float [[TAN]]
+; CHECK: [[SELECT_ADD_PI:%.+]] = select i1 [[XLT0_AND_YGE0]], float [[ADD_PI]], float [[ATAN]]
 ; CHECK: [[XLT0_AND_YLT0:%.+]] = and i1 [[X_LT_0]], [[Y_LT_0]]
 ; CHECK: [[SELECT_SUB_PI:%.+]] = select i1 [[XLT0_AND_YLT0]], float [[SUB_PI]], float [[SELECT_ADD_PI]]
 ; CHECK: [[XEQ0_AND_YLT0:%.+]] = and i1 [[X_EQ_0]], [[Y_LT_0]]
@@ -28,15 +30,16 @@ entry:
 define noundef half @atan2_half(half noundef %y, half noundef %x) {
 entry:
 ; CHECK: [[DIV:%.+]] = fdiv half %y, %x
-; CHECK: [[TAN:%.+]] = call half @dx.op.unary.f16(i32 17, half [[DIV]])
-; CHECK-DAG: [[ADD_PI:%.+]] = fadd half [[TAN]], 0xH4248
-; CHECK-DAG: [[SUB_PI:%.+]] = fsub half [[TAN]], 0xH4248
+; EXPCHECK: [[ATAN:%.+]] = call half @llvm.atan.f16(half [[DIV]])
+; DOPCHECK: [[ATAN:%.+]] = call half @dx.op.unary.f16(i32 17, half [[DIV]])
+; CHECK-DAG: [[ADD_PI:%.+]] = fadd half [[ATAN]], 0xH4248
+; CHECK-DAG: [[SUB_PI:%.+]] = fsub half [[ATAN]], 0xH4248
 ; CHECK-DAG: [[X_LT_0:%.+]] = fcmp olt half %x, 0xH0000
 ; CHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq half %x, 0xH0000 
 ; CHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge half %y, 0xH0000 
 ; CHECK-DAG: [[Y_LT_0:%.+]] = fcmp olt half %y, 0xH0000
 ; CHECK: [[XLT0_AND_YGE0:%.+]] = and i1 [[X_LT_0]], [[Y_GE_0]]
-; CHECK: [[SELECT_ADD_PI:%.+]] = select i1 [[XLT0_AND_YGE0]], half [[ADD_PI]], half [[TAN]]
+; CHECK: [[SELECT_ADD_PI:%.+]] = select i1 [[XLT0_AND_YGE0]], half [[ADD_PI]], half [[ATAN]]
 ; CHECK: [[XLT0_AND_YLT0:%.+]] = and i1 [[X_LT_0]], [[Y_LT_0]]
 ; CHECK: [[SELECT_SUB_PI:%.+]] = select i1 [[XLT0_AND_YLT0]], half [[SUB_PI]], half [[SELECT_ADD_PI]]
 ; CHECK: [[XEQ0_AND_YLT0:%.+]] = and i1 [[X_EQ_0]], [[Y_LT_0]]
