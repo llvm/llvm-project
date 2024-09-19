@@ -2519,6 +2519,9 @@ static Value *insertInteger(const DataLayout &DL, IRBuilderTy &IRB, Value *Old,
 
   if (ShAmt || Ty->getBitWidth() < IntTy->getBitWidth()) {
     APInt Mask = ~Ty->getMask().zext(IntTy->getBitWidth()).shl(ShAmt);
+    // Freeze old value first in case it contains poison, otherwise the
+    // combination still results in poison.
+    Old = IRB.CreateFreeze(Old);
     Old = IRB.CreateAnd(Old, Mask, Name + ".mask");
     LLVM_DEBUG(dbgs() << "      masked: " << *Old << "\n");
     V = IRB.CreateOr(Old, V, Name + ".insert");

@@ -8,14 +8,16 @@ define double @test([2 x i32] %val) {
 ; CHECK-NEXT:    [[VAL_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i32] [[VAL]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double poison to i64
 ; CHECK-NEXT:    [[PTR_0_INSERT_EXT:%.*]] = zext i32 [[VAL_FCA_0_EXTRACT]] to i64
-; CHECK-NEXT:    [[PTR_0_INSERT_MASK:%.*]] = and i64 [[TMP1]], -4294967296
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze i64 [[TMP1]]
+; CHECK-NEXT:    [[PTR_0_INSERT_MASK:%.*]] = and i64 [[TMP6]], -4294967296
 ; CHECK-NEXT:    [[PTR_0_INSERT_INSERT:%.*]] = or i64 [[PTR_0_INSERT_MASK]], [[PTR_0_INSERT_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[PTR_0_INSERT_INSERT]] to double
 ; CHECK-NEXT:    [[VAL_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i32] [[VAL]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; CHECK-NEXT:    [[PTR_4_INSERT_EXT:%.*]] = zext i32 [[VAL_FCA_1_EXTRACT]] to i64
 ; CHECK-NEXT:    [[PTR_4_INSERT_SHIFT:%.*]] = shl i64 [[PTR_4_INSERT_EXT]], 32
-; CHECK-NEXT:    [[PTR_4_INSERT_MASK:%.*]] = and i64 [[TMP3]], 4294967295
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i64 [[TMP3]]
+; CHECK-NEXT:    [[PTR_4_INSERT_MASK:%.*]] = and i64 [[TMP5]], 4294967295
 ; CHECK-NEXT:    [[PTR_4_INSERT_INSERT:%.*]] = or i64 [[PTR_4_INSERT_MASK]], [[PTR_4_INSERT_SHIFT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64 [[PTR_4_INSERT_INSERT]] to double
 ; CHECK-NEXT:    ret double [[TMP4]]
