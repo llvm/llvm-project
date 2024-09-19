@@ -3059,10 +3059,10 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
             (useGeneric->derivedType() &&
                 useUltimate.name() != localSymbol->name()))) {
       // We are use-associating a generic that either shadows a procedure
-      // pointer or shadows a derived type of the same name.
+      // pointer or shadows a derived type with a distinct name.
       // Local references that might be made to the procedure pointer should
       // use a UseDetails symbol for proper data addressing, and a derived
-      // type needs to be in scope with the renamed name.  So create an
+      // type needs to be in scope with its local name.  So create an
       // empty local generic now into which the use-associated generic may
       // be copied.
       localSymbol->set_details(GenericDetails{});
@@ -3143,6 +3143,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   // scope's name map.
   auto CreateLocalUseError{[&]() {
     EraseSymbol(*localSymbol);
+    CHECK(localSymbol->has<UseDetails>());
     UseErrorDetails details{localSymbol->get<UseDetails>()};
     details.add_occurrence(location, *useModuleScope_);
     Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
@@ -3161,10 +3162,13 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     if (useDerivedType->name() == localName) {
       combinedDerivedType = useDerivedType;
     } else {
-      Symbol &combined{currScope().MakeSymbol(localName,
-          useDerivedType->attrs(), UseDetails{localName, *useDerivedType})};
-      combinedDerivedType = &combined;
+      combinedDerivedType =
+          &currScope().MakeSymbol(localSymbol->name(), useDerivedType->attrs(),
+              UseDetails{localSymbol->name(), *useDerivedType});
     }
+  } else if (&localDerivedType->GetUltimate() ==
+      &useDerivedType->GetUltimate()) {
+    combinedDerivedType = localDerivedType;
   } else {
     const Scope *localScope{localDerivedType->GetUltimate().scope()};
     const Scope *useScope{useDerivedType->GetUltimate().scope()};
