@@ -203,6 +203,7 @@ public:
               feOptions.ClangIRLifetimeCheck, lifetimeOpts,
               feOptions.ClangIRIdiomRecognizer, idiomRecognizerOpts,
               feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
+              codeGenOptions.OptimizationLevel > 0,
               action == CIRGenAction::OutputType::EmitCIRFlat,
               action == CIRGenAction::OutputType::EmitMLIR,
               feOptions.ClangIREnableCallConvLowering,

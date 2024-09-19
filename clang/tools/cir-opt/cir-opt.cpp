@@ -39,6 +39,9 @@ int main(int argc, char **argv) {
     return cir::createConvertMLIRToLLVMPass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRCanonicalizePass();
+  });
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCIRSimplifyPass();
   });
 

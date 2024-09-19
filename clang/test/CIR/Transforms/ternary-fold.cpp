@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-simplify %s -o %t1.cir 2>&1 | FileCheck -check-prefix=CIR-BEFORE %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-simplify %s -o %t2.cir 2>&1 | FileCheck -check-prefix=CIR-AFTER %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize %s -o %t1.cir 2>&1 | FileCheck -check-prefix=CIR-BEFORE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-simplify %s -o %t2.cir 2>&1 | FileCheck -check-prefix=CIR-AFTER %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-llvm %s -o %t.ll 
 // RUN: FileCheck --input-file=%t.ll --check-prefix=LLVM %s
 
 int test(bool x) {
@@ -23,7 +23,7 @@ int test(bool x) {
 // CIR-AFTER-NEXT:   %{{.+}} = cir.select if %{{.+}} then %[[#A]] else %[[#B]] : (!cir.bool, !s32i, !s32i) -> !s32i
 //      CIR-AFTER: }
 
-// LLVM: define dso_local i32 @_Z4testb
+// LLVM: @_Z4testb
 // LLVM:   %{{.+}} = select i1 %{{.+}}, i32 1, i32 2
 // LLVM: }
 
@@ -51,6 +51,6 @@ int test2(bool cond) {
 // CIR-AFTER-NEXT:   %{{.+}} = cir.select if %[[#COND]] then %[[#A]] else %[[#B]] : (!cir.bool, !s32i, !s32i) -> !s32i
 //      CIR-AFTER: }
 
-// LLVM: define dso_local i32 @_Z5test2b
+// LLVM: @_Z5test2b
 // LLVM:   %{{.+}} = select i1 %{{.+}}, i32 1, i32 2
 // LLVM: }

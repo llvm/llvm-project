@@ -11,7 +11,7 @@ int foo(void) {
 }
 
 
-// CIR:  IR Dump After CIRSimplify (cir-simplify)
+// CIR:  IR Dump After CIRCanonicalize (cir-canonicalize)
 // CIR:  cir.func @foo() -> !s32i
 // CIR:  IR Dump After LoweringPrepare (cir-lowering-prepare)
 // CIR:  cir.func @foo() -> !s32i
@@ -19,14 +19,14 @@ int foo(void) {
 // CIR-NOT: IR Dump After SCFPrepare
 // CIR:  IR Dump After DropAST (cir-drop-ast)
 // CIR:  cir.func @foo() -> !s32i
-// CIRFLAT:  IR Dump After CIRSimplify (cir-simplify)
+// CIRFLAT:  IR Dump After CIRCanonicalize (cir-canonicalize)
 // CIRFLAT:  cir.func @foo() -> !s32i
 // CIRFLAT:  IR Dump After LoweringPrepare (cir-lowering-prepare)
 // CIRFLAT:  cir.func @foo() -> !s32i
 // CIRFLAT:  IR Dump After FlattenCFG (cir-flatten-cfg)
 // CIRFLAT:  IR Dump After DropAST (cir-drop-ast)
 // CIRFLAT:  cir.func @foo() -> !s32i
-// CIRMLIR:  IR Dump After CIRSimplify (cir-simplify)
+// CIRMLIR:  IR Dump After CIRCanonicalize (cir-canonicalize)
 // CIRMLIR:  IR Dump After LoweringPrepare (cir-lowering-prepare)
 // CIRMLIR:  IR Dump After SCFPrepare (cir-mlir-scf-prepare
 // CIRMLIR:  IR Dump After DropAST (cir-drop-ast)
@@ -35,7 +35,7 @@ int foo(void) {
 // LLVM: IR Dump After
 // LLVM: define dso_local i32 @foo()
 
-// CIRPASS-NOT:  IR Dump After CIRSimplify
+// CIRPASS-NOT:  IR Dump After CIRCanonicalize
 // CIRPASS:      IR Dump After DropAST
 
 // CFGPASS: IR Dump Before FlattenCFG (cir-flatten-cfg)
