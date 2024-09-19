@@ -5,4 +5,4 @@
 # CHECK: v_nop                                   ; encoding: [0x00,0x00,0x00,0x7e]
 
 0xfd,0xb8,0x0a,0x7f
-# COM: CHECK: warning: invalid instruction encoding
+# CHECK: :[[@LINE-1]]:1: warning: invalid instruction encoding

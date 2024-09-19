@@ -17,8 +17,7 @@ mc_LIKE_TOOLS = [
     "llvm-mc",
     "not llvm-mc",
 ]
-
-ERROR_RE = re.compile(r"(warning|error): .*")
+ERROR_RE = re.compile(r":\d+: (warning|error): .*")
 ERROR_CHECK_RE = re.compile(r"# COM: .*")
 OUTPUT_SKIPPED_RE = re.compile(r"(.text)")
 COMMENT = {"asm": "//", "dasm": "#"}
@@ -41,10 +40,9 @@ def invoke_tool(exe, cmd_args, testline, verbose=False):
 # create tests line-by-line, here we just filter out the check lines and comments
 # and treat all others as tests
 def isTestLine(input_line, mc_mode):
-    # Skip comment lines
-    if input_line.strip(" \t\r").startswith(COMMENT[mc_mode]):
-        return False
-    elif input_line.strip(" \t\r") == "":
+    line = input_line.strip()
+    # Skip empty and comment lines
+    if not line or line.startswith(COMMENT[mc_mode]):
         return False
     # skip any CHECK lines.
     elif common.CHECK_RE.match(input_line):
@@ -53,20 +51,16 @@ def isTestLine(input_line, mc_mode):
 
 
 def hasErr(err):
-    if err is None or len(err) == 0:
+    if not err:
         return False
-    if ERROR_RE.search(err):
-        return True
-    return False
-
+    return ERROR_RE.search(err) is not None
 
 def getErrString(err):
-    if err is None or len(err) == 0:
+    if not err:
         return ""
 
-    lines = err.split("\n")
     # take the first match
-    for line in lines:
+    for line in err.splitlines():
         s = ERROR_RE.search(line)
         if s:
             return s.group(0)
@@ -74,12 +68,11 @@ def getErrString(err):
 
 
 def getOutputString(out):
-    if out is None or len(out) == 0:
+    if not out:
         return ""
-    lines = out.split("\n")
     output = ""
 
-    for line in lines:
+    for line in out.splitlines():
         if OUTPUT_SKIPPED_RE.search(line):
             continue
         if line.strip("\t ") == "":
@@ -99,27 +92,22 @@ def should_add_line_to_output(input_line, prefix_set, mc_mode):
 
 
 def getStdCheckLine(prefix, output, mc_mode):
-    lines = output.split("\n")
-    output = ""
-    for line in lines:
-        output += COMMENT[mc_mode] + " " + prefix + ": " + line + "\n"
-    return output
+    o = ""
+    for line in output.splitlines():
+        o += COMMENT[mc_mode] + " " + prefix + ": " + line + "\n"
+    return o
 
 
 def getErrCheckLine(prefix, output, mc_mode):
-    if mc_mode == "asm":
-        return (
-            COMMENT[mc_mode]
-            + " "
-            + prefix
-            + ": "
-            + ":[[@LINE-1]]:{{[0-9]+}}: "
-            + output
-            + "\n"
-        )
-    elif mc_mode == "dasm":
-        return COMMENT[mc_mode] + " COM: " + prefix + ": " + output + "\n"
-
+    return (
+        COMMENT[mc_mode]
+        + " "
+        + prefix
+        + ": "
+        + ":[[@LINE-1]]"
+        + output
+        + "\n"
+    )
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
