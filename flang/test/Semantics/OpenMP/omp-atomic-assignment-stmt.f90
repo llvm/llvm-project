@@ -124,4 +124,28 @@ program sample
         v = 1
         x = 4
     !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable z%y expected to be assigned in the second statement of atomic capture construct
+        x = z%y
+        z%m = z%m + 1.0
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable z%m expected to be captured in the second statement of atomic capture construct
+        z%m = z%m + 1.0
+        x = z%y
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable y(2) expected to be assigned in the second statement of atomic capture construct
+        x = y(2)
+        y(1) = y(1) + 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable y(1) expected to be captured in the second statement of atomic capture construct
+        y(1) = y(1) + 1
+        x = y(2)
+    !$omp end atomic
 end program

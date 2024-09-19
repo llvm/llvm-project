@@ -2003,19 +2003,14 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       CheckAtomicWriteStmt(stmt2);
     }
-    // Variable captured in stmt1 should be assigned in stmt2
-    const auto *e{GetExpr(context_, stmt1Expr)};
-    const auto *v{GetExpr(context_, stmt2Var)};
-    if (e && v) {
-      const Symbol &stmt2VarSymbol = evaluate::GetSymbolVector(*v).front();
-      const Symbol &stmt1ExprSymbol = evaluate::GetSymbolVector(*e).front();
-      if (stmt2VarSymbol != stmt1ExprSymbol) {
-        context_.Say(stmt1Expr.source,
-            "Captured variable %s "
-            "expected to be assigned in the second statement of "
-            "atomic capture construct"_err_en_US,
-            stmt1ExprSymbol.name());
-      }
+    auto *v{stmt2Var.typedExpr.get()};
+    auto *e{stmt1Expr.typedExpr.get()};
+    if (v && e && !(v->v == e->v)) {
+      context_.Say(stmt1Expr.source,
+          "Captured variable %s "
+          "expected to be assigned in the second statement of "
+          "atomic capture construct"_err_en_US,
+          stmt1Expr.source);
     }
   } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
       Fortran::semantics::checkForSingleVariableOnRHS(stmt2)) {
@@ -2023,17 +2018,14 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
     CheckAtomicUpdateStmt(stmt1);
     CheckAtomicCaptureStmt(stmt2);
     // Variable updated in stmt1 should be captured in stmt2
-    const auto *e{GetExpr(context_, stmt2Expr)};
-    const auto *v{GetExpr(context_, stmt1Var)};
-    if (e && v) {
-      const Symbol &stmt1VarSymbol = evaluate::GetSymbolVector(*v).front();
-      const Symbol &stmt2ExprSymbol = evaluate::GetSymbolVector(*e).front();
-      if (stmt1VarSymbol != stmt2ExprSymbol)
-        context_.Say(stmt1Var.GetSource(),
-            "Updated variable %s "
-            "expected to be captured in the second statement of "
-            "atomic capture construct"_err_en_US,
-            stmt1Var.GetSource());
+    auto *v{stmt1Var.typedExpr.get()};
+    auto *e{stmt2Expr.typedExpr.get()};
+    if (v && e && !(v->v == e->v)) {
+      context_.Say(stmt1Var.GetSource(),
+          "Updated variable %s "
+          "expected to be captured in the second statement of "
+          "atomic capture construct"_err_en_US,
+          stmt1Var.GetSource());
     }
   } else {
     context_.Say(stmt1Expr.source,
