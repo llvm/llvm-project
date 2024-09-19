@@ -1740,7 +1740,8 @@ void AsmPrinter::emitFunctionBody() {
   // Create a slot for the entry basic block section so that the section
   // order is preserved when iterating over MBBSectionRanges.
   if (!MF->empty())
-    MBBSectionRanges[MF->front().getSectionID()] = MBBSectionRange{CurrentFnBegin, nullptr};
+    MBBSectionRanges[MF->front().getSectionID()] =
+        MBBSectionRange{CurrentFnBegin, nullptr};
 
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
