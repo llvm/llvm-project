@@ -324,7 +324,7 @@ static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind{
 #elif HAS_FLOAT80
     10
 #else
-  8
+    8
 #endif
 };
 
