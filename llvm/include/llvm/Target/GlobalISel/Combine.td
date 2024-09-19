@@ -1373,110 +1373,23 @@ def extract_vector_element_different_indices : GICombineRule<
    [{ return Helper.matchExtractVectorElementWithDifferentIndices(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
-def extract_vector_element_build_vector2 : GICombineRule<
+def extract_vector_element_build_vector : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+   (match (G_CONSTANT $idx, $imm),
+          (G_BUILD_VECTOR $src, GIVariadic<>:$unused):$Build,
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx):$Extract,
+   [{ return Helper.matchExtractVectorElementWithBuildVector(*${Extract}, *${Build},
+      ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${Extract}, ${matchinfo}); }])>;
 
-def extract_vector_element_build_vector3 : GICombineRule<
+def extract_vector_element_shuffle_vector : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector4 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector5 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector6 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector7 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector8 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector9 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector10 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector11 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector12 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector13 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector14 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector15 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_build_vector16 : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_BUILD_VECTOR $src, $x, $y, $z, $a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l, $m),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithBuildVector(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+   (match (G_CONSTANT $idx, $imm),
+          (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$Shuffle,
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx):$Extract,
+   [{ return Helper.matchExtractVectorElementWithShuffleVector(*${Extract}, *${Shuffle},
+      ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${Extract}, ${matchinfo}); }])>;
 
 def extract_vector_element_build_vector_trunc2 : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1545,13 +1458,6 @@ def nneg_zext : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_ZEXT $root, $x, (MIFlags NonNeg)),
    [{ return Helper.matchNonNegZext(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
-
-def extract_vector_element_shuffle_vector : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask),
-          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
-   [{ return Helper.matchExtractVectorElementWithShuffleVector(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 // Combines concat operations
@@ -1647,20 +1553,7 @@ match_extract_of_element,
 insert_vector_elt_oob,
 extract_vector_element_not_const,
 extract_vector_element_different_indices,
-extract_vector_element_build_vector2,
-extract_vector_element_build_vector3,
-extract_vector_element_build_vector4,
-extract_vector_element_build_vector5,
-extract_vector_element_build_vector7,
-extract_vector_element_build_vector8,
-extract_vector_element_build_vector9,
-extract_vector_element_build_vector10,
-extract_vector_element_build_vector11,
-extract_vector_element_build_vector12,
-extract_vector_element_build_vector13,
-extract_vector_element_build_vector14,
-extract_vector_element_build_vector15,
-extract_vector_element_build_vector16,
+extract_vector_element_build_vector,
 extract_vector_element_build_vector_trunc2,
 extract_vector_element_build_vector_trunc3,
 extract_vector_element_build_vector_trunc4,
