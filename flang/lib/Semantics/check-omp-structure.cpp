@@ -1808,17 +1808,13 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
           auto *c{expr.typedExpr.get()};
           if (z->v == c->v) {
             context_.Say(expr.source,
-                "RHS expression "
-                "on atomic assignment statement"
-                " cannot access '%s'"_err_en_US,
-                var.GetSource().ToString());
+                "RHS expression on atomic assignment statement cannot access '%s'"_err_en_US,
+                var.GetSource());
           }
         } else {
           context_.Say(expr.source,
-              "RHS expression "
-              "on atomic assignment statement"
-              " cannot access '%s'"_err_en_US,
-              var.GetSource().ToString());
+              "RHS expression on atomic assignment statement cannot access '%s'"_err_en_US,
+              var.GetSource());
         }
       }
     }
