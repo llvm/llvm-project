@@ -27,7 +27,7 @@
 //
 // 1) Detour
 //
-//    The Detour hooking technique is assuming the presence of an header with
+//    The Detour hooking technique is assuming the presence of a header with
 //    padding and an overridable 2-bytes nop instruction (mov edi, edi). The
 //    nop instruction can safely be replaced by a 2-bytes jump without any need
 //    to save the instruction. A jump to the target is encoded in the function
@@ -47,7 +47,7 @@
 //
 //        func:  jmp <label>     -->     func:  jmp <hook>
 //
-//    On an 64-bit architecture, a trampoline is inserted.
+//    On a 64-bit architecture, a trampoline is inserted.
 //
 //        func:  jmp <label>     -->     func:  jmp <tramp>
 //                                              [...]
@@ -60,7 +60,7 @@
 //
 // 3) HotPatch
 //
-//    The HotPatch hooking is assuming the presence of an header with padding
+//    The HotPatch hooking is assuming the presence of a header with padding
 //    and a first instruction with at least 2-bytes.
 //
 //    The reason to enforce the 2-bytes limitation is to provide the minimal
@@ -80,7 +80,7 @@
 //                                       real:  <instr>
 //                                              jmp <body>
 //
-//    On an 64-bit architecture:
+//    On a 64-bit architecture:
 //
 //        head:   6 x nop                head:  jmp QWORD [addr1]
 //        func:   <instr>        -->     func:  jmp short <head>
@@ -110,7 +110,7 @@
 //                                              <instr>
 //                                              jmp <body>
 //
-//    On an 64-bit architecture:
+//    On a 64-bit architecture:
 //
 //        func:   <instr>        -->     func:  jmp QWORD [addr1]
 //                <instr>
@@ -1168,4 +1168,4 @@ bool OverrideImportedFunction(const char *module_to_patch,
 
 }  // namespace __interception
 
-#endif  // SANITIZER_APPLE
+#endif  // SANITIZER_WINDOWS
