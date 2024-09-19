@@ -9820,8 +9820,7 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
 
 // Only consider a function fully internal as long as it has local linkage
 // and is not used in any other way than acting as the called function at
-// call sites.  TODO: Remove this when/if all internal functions adhere to
-// the ABI.
+// call sites.
 bool SystemZTargetLowering::isFullyInternal(const Function *Fn) const {
   if (!Fn->hasLocalLinkage())
     return false;
@@ -9842,9 +9841,15 @@ verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
   if (IsInternal || !Subtarget.isTargetELF())
     return;
 
-  // Temporarily only do the check when explicitly requested.
-  if (/* !getTargetMachine().Options.VerifyArgABICompliance && */
-      !EnableIntArgExtCheck)
+  // Temporarily only do the check when explicitly requested, until it can be
+  // enabled by default.
+  if (!EnableIntArgExtCheck)
+    return;
+
+  if (EnableIntArgExtCheck.getNumOccurrences()) {
+    if (!EnableIntArgExtCheck)
+      return;
+  } else if (!getTargetMachine().Options.VerifyArgABICompliance)
     return;
 
   for (unsigned i = 0; i < Outs.size(); ++i) {

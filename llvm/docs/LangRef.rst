@@ -1189,9 +1189,12 @@ Currently, only the following parameter attributes are defined:
     value should be sign-extended to the extent required by the target's
     ABI (which is usually 32-bits) by the caller (for a parameter) or
     the callee (for a return value).
-``noext`` This indicates to the code generator that the parameter or return
+``noext``
+    This indicates to the code generator that the parameter or return
     value has the high bits undefined, as for a struct in register, and
-    therefore does not need to be sign or zero extended.
+    therefore does not need to be sign or zero extended. This is the same
+    as default behavior and is only actually used (by some targets) to
+    validate that one of the attributes is always present.
 ``inreg``
     This indicates that this parameter or return value should be treated
     in a special target-dependent fashion while emitting code for
