@@ -2189,6 +2189,15 @@ static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
 // Determine whether two string literals potentially overlap. This will be the
 // case if they agree on the values of all the bytes on the overlapping region
 // between them.
+//
+// The overlapping region is the portion of the two string literals that must
+// overlap in memory if the pointers actually point to the same address at
+// runtime. For example, if LHS is "abcdef" + 3 and RHS is "cdef\0gh" + 1 then
+// the overlapping region is "cdef\0", which in this case does agree, so the
+// strings are potentially overlapping. Conversely, for "foobar" + 3 versus
+// "bazbar" + 3, the overlapping region contains all of both strings, so they
+// are not potentially overlapping, even though they agree from the given
+// addresses onwards.
 static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
                                                     const LValue &LHS,
                                                     const LValue &RHS) {
@@ -2201,10 +2210,10 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // within RHS. We don't need to look at the characters of one string that
   // would appear before the start of the other string if they were merged.
   CharUnits Offset = RHS.Offset - LHS.Offset;
-  if (Offset.isPositive())
-    RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
-  else if (Offset.isNegative())
+  if (Offset.isNegative())
     LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
+  else
+    RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
 
   bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
   StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
