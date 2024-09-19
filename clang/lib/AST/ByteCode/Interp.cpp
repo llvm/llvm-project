@@ -560,13 +560,25 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isWeak())
+    return true;
+
+  const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+  assert(VD);
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_var_init_weak)
+      << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at);
+
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
-
   if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -578,6 +590,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
