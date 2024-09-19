@@ -86,11 +86,11 @@ _Complex long double pass_complex_longdouble(_Complex long double arg) { return 
 
 struct agg_1byte { char a[1]; };
 struct agg_1byte pass_agg_1byte(struct agg_1byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_1byte(ptr dead_on_unwind noalias writable sret(%struct.agg_1byte) align 1 %{{.*}}, i8 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_1byte(ptr dead_on_unwind noalias writable sret(%struct.agg_1byte) align 1 %{{.*}}, i8 noext %{{.*}})
 
 struct agg_2byte { char a[2]; };
 struct agg_2byte pass_agg_2byte(struct agg_2byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_2byte(ptr dead_on_unwind noalias writable sret(%struct.agg_2byte) align 1 %{{.*}}, i16 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_2byte(ptr dead_on_unwind noalias writable sret(%struct.agg_2byte) align 1 %{{.*}}, i16 noext %{{.*}})
 
 struct agg_3byte { char a[3]; };
 struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
@@ -98,7 +98,7 @@ struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
 
 struct agg_4byte { char a[4]; };
 struct agg_4byte pass_agg_4byte(struct agg_4byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_4byte(ptr dead_on_unwind noalias writable sret(%struct.agg_4byte) align 1 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_4byte(ptr dead_on_unwind noalias writable sret(%struct.agg_4byte) align 1 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_5byte { char a[5]; };
 struct agg_5byte pass_agg_5byte(struct agg_5byte arg) { return arg; }
@@ -126,7 +126,7 @@ struct agg_16byte pass_agg_16byte(struct agg_16byte arg) { return arg; }
 struct agg_float { float a; };
 struct agg_float pass_agg_float(struct agg_float arg) { return arg; }
 // HARD-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, float %{{.*}})
-// SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, i32 %{{.*}})
+// SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_double { double a; };
 struct agg_double pass_agg_double(struct agg_double arg) { return arg; }
@@ -159,14 +159,14 @@ struct agg_nofloat2 pass_agg_nofloat2(struct agg_nofloat2 arg) { return arg; }
 
 struct agg_nofloat3 { float a; int : 0; };
 struct agg_nofloat3 pass_agg_nofloat3(struct agg_nofloat3 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_nofloat3(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat3) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_nofloat3(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat3) align 4 %{{.*}}, i32 noext %{{.*}})
 
 
 // Union types likewise are *not* float-like aggregate types
 
 union union_float { float a; };
 union union_float pass_union_float(union union_float arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_union_float(ptr dead_on_unwind noalias writable sret(%union.union_float) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_union_float(ptr dead_on_unwind noalias writable sret(%union.union_float) align 4 %{{.*}}, i32 noext %{{.*}})
 
 union union_double { double a; };
 union union_double pass_union_double(union union_double arg) { return arg; }

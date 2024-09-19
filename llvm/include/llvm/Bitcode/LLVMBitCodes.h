@@ -763,6 +763,7 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_REALTIME = 96,
   ATTR_KIND_NO_SANITIZE_REALTIME = 97,
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
+  ATTR_KIND_NO_EXT = 99,
 };
 
 enum ComdatSelectionKindCodes {

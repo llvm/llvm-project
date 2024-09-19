@@ -1560,7 +1560,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   InstructionCost OldCost = CostC0 + CostC1;
   OldCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
-                         OldMask, CostKind, 0, nullptr, std::nullopt, &I);
+                         OldMask, CostKind, 0, nullptr, {}, &I);
 
   InstructionCost NewCost = TTI.getShuffleCost(
       TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
