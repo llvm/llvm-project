@@ -588,6 +588,8 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   switch (Triple.getArch()) {
   default:
     assert(false && "Target not yet supported!");
+
+  case llvm::Triple::aarch64_be:
   case llvm::Triple::aarch64: {
     AArch64ABIInfo::ABIKind Kind = AArch64ABIInfo::AAPCS;
     assert(getTarget().getABI() == "aapcs" ||

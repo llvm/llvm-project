@@ -112,13 +112,24 @@ public:
 
 } // namespace
 
-CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout{modOp} { reset(); }
+CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout{modOp} {
+  reset(modOp.getDataLayoutSpec());
+}
 
-void CIRDataLayout::reset() {
+void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
   clear();
 
-  LayoutMap = nullptr;
   bigEndian = false;
+  if (spec) {
+    auto key = mlir::StringAttr::get(
+        spec.getContext(), mlir::DLTIDialect::kDataLayoutEndiannessKey);
+    if (auto entry = spec.getSpecForIdentifier(key))
+      if (auto str = llvm::dyn_cast<mlir::StringAttr>(entry.getValue()))
+        bigEndian = str == mlir::DLTIDialect::kDataLayoutEndiannessBig;
+  }
+
+  LayoutMap = nullptr;
+
   // ManglingMode = MM_None;
   // NonIntegralAddressSpaces.clear();
   StructAlignment =
