@@ -23,7 +23,7 @@ define i32 @test3() {
 ; The callee function's return type shouldn't be changed if the call result is
 ; used.
 
-; CHECK-LABEL: define internal ptr @callee4.argelim()
+; CHECK-LABEL: define internal ptr @callee4()
 
 define internal ptr @callee4(ptr %a0) {
   ret ptr @g0;
@@ -32,7 +32,7 @@ define internal ptr @callee4(ptr %a0) {
 declare void @llvm.objc.clang.arc.noop.use(...)
 
 ; CHECK-LABEL: define ptr @test4(
-; CHECK: tail call ptr @callee4.argelim() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK: tail call ptr @callee4() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 
 define ptr @test4() {
   %call = tail call ptr @callee4(ptr @g0) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]

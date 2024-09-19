@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=argpromotion < %s | FileCheck %s
 
 define internal i32 @callee_must_exec(ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_must_exec.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_must_exec
 ; CHECK-SAME: (i32 [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[P_0_VAL]]
 ;
@@ -14,7 +14,7 @@ define void @caller_must_exec(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_must_exec
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_must_exec.argprom(i32 [[P_VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_must_exec(i32 [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @callee_must_exec(ptr %p)
@@ -22,7 +22,7 @@ define void @caller_must_exec(ptr %p) {
 }
 
 define internal i32 @callee_guaranteed_aligned_1(i1 %c, ptr %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_1.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_1
 ; CHECK-SAME: (i1 [[C:%.*]], i32 [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -44,7 +44,7 @@ define void @caller_guaranteed_aligned_1(i1 %c, ptr align 16 dereferenceable(4) 
 ; CHECK-LABEL: define {{[^@]+}}@caller_guaranteed_aligned_1
 ; CHECK-SAME: (i1 [[C:%.*]], ptr align 16 dereferenceable(4) [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_1.argprom(i1 [[C]], i32 [[P_VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_1(i1 [[C]], i32 [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @callee_guaranteed_aligned_1(i1 %c, ptr %p)
@@ -52,7 +52,7 @@ define void @caller_guaranteed_aligned_1(i1 %c, ptr align 16 dereferenceable(4) 
 }
 
 define internal i32 @callee_guaranteed_aligned_2(i1 %c, ptr align 16 dereferenceable(4) %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_2.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_2
 ; CHECK-SAME: (i1 [[C:%.*]], i32 [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -74,7 +74,7 @@ define void @caller_guaranteed_aligned_2(i1 %c, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_guaranteed_aligned_2
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_2.argprom(i1 [[C]], i32 [[P_VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_2(i1 [[C]], i32 [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @callee_guaranteed_aligned_2(i1 %c, ptr %p)
@@ -83,7 +83,7 @@ define void @caller_guaranteed_aligned_2(i1 %c, ptr %p) {
 
 ; We have seen the offset before but with a lower alignment
 define internal i32 @callee_guaranteed_aligned_3(i1 %c, ptr align 16 dereferenceable(4) %p) {
-; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_3.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_3
 ; CHECK-SAME: (i1 [[C:%.*]], i32 [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
@@ -106,7 +106,7 @@ define void @caller_guaranteed_aligned_3(i1 %c, ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller_guaranteed_aligned_3
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_3.argprom(i1 [[C]], i32 [[P_VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_3(i1 [[C]], i32 [[P_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @callee_guaranteed_aligned_3(i1 %c, ptr %p)

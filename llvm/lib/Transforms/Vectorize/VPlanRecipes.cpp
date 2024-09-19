@@ -2287,8 +2287,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     return Cost;
 
   return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                        cast<VectorType>(Ty), std::nullopt,
-                                        CostKind, 0);
+                                        cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {

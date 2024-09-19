@@ -2198,7 +2198,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     for (const auto &Arg : CI.args())
       for (auto VReg : getOrCreateVRegs(*Arg))
         VRegs.push_back(VReg);
-    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, std::nullopt, VRegs);
+    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
     return true;
   }
   case Intrinsic::dbg_declare: {

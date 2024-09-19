@@ -61,7 +61,7 @@
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
 ; RUN:  --check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS
 
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRNODIST
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
 
 ;; Try again but with distributed ThinLTO
@@ -283,23 +283,6 @@ attributes #0 = { noinline optnone }
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
-; IRNODIST: define internal {{.*}} @_Z1EPPcS0_.argelim(
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
-; IRNODIST: define internal {{.*}} @_Z1BPPcS0_(
-; IRNODIST:   call {{.*}} @_Z1EPPcS0_.argelim(
-; IRNODIST: define internal {{.*}} @_Z1CPPcS0_(
-; IRNODIST:   call {{.*}} @_Z1EPPcS0_.memprof.3.argelim(
-; IRNODIST: define internal {{.*}} @_Z1DPPcS0_(
-; IRNODIST:   call {{.*}} @_Z1EPPcS0_.memprof.2.argelim(
-; IRNODIST: define internal {{.*}} @_Z1EPPcS0_.memprof.2.argelim(
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
-; IRNODIST: define internal {{.*}} @_Z1EPPcS0_.memprof.3.argelim(
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
-; IRNODIST:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
-; IRNODIST: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
-; IRNODIST: attributes #[[COLD]] = { "memprof"="cold" }
 
 ; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend

@@ -692,8 +692,8 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       auto IDOperandNo = NextRecordedOperandNo++;
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
       CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
-      AddMatcher(new EmitNodeMatcher(II, ResultVT, std::nullopt, false, false,
-                                     false, false, -1, IDOperandNo));
+      AddMatcher(new EmitNodeMatcher(II, ResultVT, {}, false, false, false,
+                                     false, -1, IDOperandNo));
       ResultOps.push_back(IDOperandNo);
       return;
     }

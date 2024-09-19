@@ -620,6 +620,10 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
 
+  // Tell target that this tool is not necessarily used with argument ABI
+  // compliance (i.e. narrow integer argument extensions).
+  Target->Options.VerifyArgABICompliance = 0;
+
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
     std::error_code EC;

@@ -80,18 +80,18 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   enum class RecommendType { Array, Vector, Span };
   llvm::SmallVector<const char *> RecommendTypes{};
   if (IsVLA) {
-    RecommendTypes.push_back("std::vector<>");
+    RecommendTypes.push_back("'std::vector'");
   } else if (ArrayType->getTypePtr()->isIncompleteArrayType() && IsInParam) {
     // in function parameter, we also don't know the size of
     // IncompleteArrayType.
     if (Result.Context->getLangOpts().CPlusPlus20)
-      RecommendTypes.push_back("std::span<>");
+      RecommendTypes.push_back("'std::span'");
     else {
-      RecommendTypes.push_back("std::array<>");
-      RecommendTypes.push_back("std::vector<>");
+      RecommendTypes.push_back("'std::array'");
+      RecommendTypes.push_back("'std::vector'");
     }
   } else {
-    RecommendTypes.push_back("std::array<>");
+    RecommendTypes.push_back("'std::array'");
   }
   diag(ArrayType->getBeginLoc(),
        "do not declare %select{C-style|C VLA}0 arrays, use %1 instead")

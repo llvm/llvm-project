@@ -6,7 +6,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 %struct.ss = type { i32, i64 }
 
 define internal void @f(ptr byval(%struct.ss) align 4 %b) nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@f.argprom
+; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[B_0_VAL]], 1
@@ -20,7 +20,7 @@ entry:
 }
 
 define internal void @g(ptr byval(%struct.ss) align 32 %b) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@g.argprom
+; CHECK-LABEL: define {{[^@]+}}@g
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[B_0_VAL]], 1
@@ -56,7 +56,7 @@ entry:
 
 ; Transform even if an argument is written to and then is loaded from.
 define internal void @k(ptr byval(%struct.ss) align 4 %b) nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@k.argprom
+; CHECK-LABEL: define {{[^@]+}}@k
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[B_0_VAL]], 1
@@ -72,7 +72,7 @@ entry:
 
 ; Transform even if a store instruction is the single user.
 define internal void @l(ptr byval(%struct.ss) align 4 %b) nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@l.argprom
+; CHECK-LABEL: define {{[^@]+}}@l
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
@@ -85,7 +85,7 @@ entry:
 ; Transform all the arguments creating the required number of 'alloca's and
 ; then optimize them out.
 define internal void @m(ptr byval(%struct.ss) align 4 %b, ptr byval(%struct.ss) align 4 %c) nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@m.argprom
+; CHECK-LABEL: define {{[^@]+}}@m
 ; CHECK-SAME: (i32 [[B_0_VAL:%.*]], i32 [[C_0_VAL:%.*]], i64 [[C_4_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[B_0_VAL]], 1
@@ -116,19 +116,19 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    [[TEMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 2, ptr [[TEMP4]], align 4
 ; CHECK-NEXT:    [[S_VAL:%.*]] = load i32, ptr [[S]], align 4
-; CHECK-NEXT:    call void @f.argprom(i32 [[S_VAL]])
+; CHECK-NEXT:    call void @f(i32 [[S_VAL]])
 ; CHECK-NEXT:    [[S_VAL1:%.*]] = load i32, ptr [[S]], align 4
-; CHECK-NEXT:    call void @g.argprom(i32 [[S_VAL1]])
+; CHECK-NEXT:    call void @g(i32 [[S_VAL1]])
 ; CHECK-NEXT:    call void @h(ptr byval([[STRUCT_SS]]) [[S]])
 ; CHECK-NEXT:    [[S_VAL2:%.*]] = load i32, ptr [[S]], align 4
-; CHECK-NEXT:    call void @k.argprom(i32 [[S_VAL2]])
+; CHECK-NEXT:    call void @k(i32 [[S_VAL2]])
 ; CHECK-NEXT:    [[S_VAL3:%.*]] = load i32, ptr [[S]], align 4
-; CHECK-NEXT:    call void @l.argprom(i32 [[S_VAL3]])
+; CHECK-NEXT:    call void @l(i32 [[S_VAL3]])
 ; CHECK-NEXT:    [[S_VAL4:%.*]] = load i32, ptr [[S]], align 4
 ; CHECK-NEXT:    [[S_VAL5:%.*]] = load i32, ptr [[S]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i64 4
 ; CHECK-NEXT:    [[S_VAL6:%.*]] = load i64, ptr [[TMP0]], align 8
-; CHECK-NEXT:    call void @m.argprom(i32 [[S_VAL4]], i32 [[S_VAL5]], i64 [[S_VAL6]])
+; CHECK-NEXT:    call void @m(i32 [[S_VAL4]], i32 [[S_VAL5]], i64 [[S_VAL6]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
