@@ -2891,8 +2891,8 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     // Fix up hardware that does not sign-extend the 48-bit PC value by
     // inserting: s_sext_i32_i16 reghi, reghi
     BuildMI(MBB, I, DL, get(AMDGPU::S_SEXT_I32_I16))
-      .addReg(PCReg, RegState::Define, AMDGPU::sub1)
-      .addReg(PCReg, 0, AMDGPU::sub1);
+        .addReg(PCReg, RegState::Define, AMDGPU::sub1)
+        .addReg(PCReg, 0, AMDGPU::sub1);
     ApplyHazardWorkarounds();
   }
 
