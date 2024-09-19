@@ -2321,6 +2321,12 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
                                            : BinaryFunction::PF_LBR;
 
+  // Add probe inline tree nodes.
+  YAMLProfileWriter::InlineTreeDesc InlineTree;
+  if (PseudoProbeDecoder)
+    std::tie(BP.PseudoProbeDesc, InlineTree) =
+        YAMLProfileWriter::convertPseudoProbeDesc(*PseudoProbeDecoder);
+
   if (!opts::BasicAggregation) {
     // Convert profile for functions not covered by BAT
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -2329,8 +2335,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
-      BP.Functions.emplace_back(
-          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
+      BP.Functions.emplace_back(YAMLProfileWriter::convert(
+          Function, /*UseDFS=*/false, InlineTree, BAT));
     }
 
     for (const auto &KV : NamesToBranches) {
@@ -2403,16 +2409,22 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       if (PseudoProbeDecoder) {
-        if ((YamlBF.GUID = BF->getGUID())) {
-          const MCPseudoProbeFuncDesc *FuncDesc =
-              PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
-          YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
+        DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
+            InlineTreeNodeId;
+        if (BF->getGUID()) {
+          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
+                                                     InlineTree, BF->getGUID());
         }
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
+        DenseMap<
+            uint32_t,
+            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
+            BlockProbes;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2421,10 +2433,13 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
             const unsigned BlockIndex = getBlock(InputOffset).second;
-            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
-                                            Probe.getType()});
+            BlockProbes[BlockIndex].emplace_back(Probe);
           }
+        }
+
+        for (auto &[Block, Probes] : BlockProbes) {
+          YamlBF.Blocks[Block].PseudoProbes =
+              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
         }
       }
       // Skip printing if there's no profile data

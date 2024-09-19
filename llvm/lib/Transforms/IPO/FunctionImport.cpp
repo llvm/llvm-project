@@ -722,7 +722,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       return;
     }
     const auto &CtxMap = *Ctx;
-    DenseSet<GlobalValue::GUID> ContainedGUIDs;
+    SetVector<GlobalValue::GUID> ContainedGUIDs;
     for (const auto &[RootGuid, Root] : CtxMap) {
       // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
       // subsequent roots, but clear its contents.

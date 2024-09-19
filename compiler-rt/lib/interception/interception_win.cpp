@@ -27,7 +27,7 @@
 //
 // 1) Detour
 //
-//    The Detour hooking technique is assuming the presence of an header with
+//    The Detour hooking technique is assuming the presence of a header with
 //    padding and an overridable 2-bytes nop instruction (mov edi, edi). The
 //    nop instruction can safely be replaced by a 2-bytes jump without any need
 //    to save the instruction. A jump to the target is encoded in the function
@@ -47,7 +47,7 @@
 //
 //        func:  jmp <label>     -->     func:  jmp <hook>
 //
-//    On an 64-bit architecture, a trampoline is inserted.
+//    On a 64-bit architecture, a trampoline is inserted.
 //
 //        func:  jmp <label>     -->     func:  jmp <tramp>
 //                                              [...]
@@ -60,7 +60,7 @@
 //
 // 3) HotPatch
 //
-//    The HotPatch hooking is assuming the presence of an header with padding
+//    The HotPatch hooking is assuming the presence of a header with padding
 //    and a first instruction with at least 2-bytes.
 //
 //    The reason to enforce the 2-bytes limitation is to provide the minimal
@@ -80,7 +80,7 @@
 //                                       real:  <instr>
 //                                              jmp <body>
 //
-//    On an 64-bit architecture:
+//    On a 64-bit architecture:
 //
 //        head:   6 x nop                head:  jmp QWORD [addr1]
 //        func:   <instr>        -->     func:  jmp short <head>
@@ -110,7 +110,7 @@
 //                                              <instr>
 //                                              jmp <body>
 //
-//    On an 64-bit architecture:
+//    On a 64-bit architecture:
 //
 //        func:   <instr>        -->     func:  jmp QWORD [addr1]
 //                <instr>
@@ -130,6 +130,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <psapi.h>
 
 namespace __interception {
 
@@ -385,7 +386,30 @@ void TestOnlyReleaseTrampolineRegions() {
   }
 }
 
-static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
+static uptr AllocateMemoryForTrampoline(uptr func_address, size_t size) {
+  uptr image_address = func_address;
+
+#if SANITIZER_WINDOWS64
+  // Allocate memory after the module (DLL or EXE file), but within 2GB
+  // of the start of the module so that any address within the module can be
+  // referenced with PC-relative operands.
+  // This allows us to not just jump to the trampoline with a PC-relative
+  // offset, but to relocate any instructions that we copy to the trampoline
+  // which have references to the original module. If we can't find the base
+  // address of the module (e.g. if func_address is in mmap'ed memory), just
+  // use func_address as is.
+  HMODULE module;
+  if (::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCWSTR)func_address, &module)) {
+    MODULEINFO module_info;
+    if (::GetModuleInformation(::GetCurrentProcess(), module,
+                                &module_info, sizeof(module_info))) {
+      image_address = (uptr)module_info.lpBaseOfDll;
+    }
+  }
+#endif
+
   // Find a region within 2G with enough space to allocate |size| bytes.
   TrampolineMemoryRegion *region = nullptr;
   for (size_t bucket = 0; bucket < kMaxTrampolineRegion; ++bucket) {
@@ -1144,4 +1168,4 @@ bool OverrideImportedFunction(const char *module_to_patch,
 
 }  // namespace __interception
 
-#endif  // SANITIZER_APPLE
+#endif  // SANITIZER_WINDOWS

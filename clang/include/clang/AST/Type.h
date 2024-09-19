@@ -6168,10 +6168,18 @@ public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
-        : ResourceClass(ResourceClass), IsROV(IsROV) {}
-    Attributes() : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0) {}
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t RawBuffer : 1;
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
+               bool RawBuffer)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+
+    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
   };
 
 private:
@@ -6204,6 +6212,7 @@ public:
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
+    ID.AddBoolean(Attrs.RawBuffer);
   }
 
   static bool classof(const Type *T) {
