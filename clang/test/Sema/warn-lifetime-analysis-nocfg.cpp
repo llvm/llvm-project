@@ -655,12 +655,37 @@ std::vector<std::string_view> test2(int i) {
   return std::vector<std::string_view>(t.begin(), t.end());
 }
 
+class Foo {
+  public:
+   operator std::string_view() const { return ""; }
+};
+class [[gsl::Owner]] FooOwner {
+  public:
+   operator std::string_view() const { return ""; }
+};
+std::optional<Foo> GetFoo();
+std::optional<FooOwner> GetFooOwner();
+
+template <typename T>
+struct [[gsl::Owner]] Container1 {
+   Container1();
+};
+template <typename T>
+struct [[gsl::Owner]] Container2 {
+  template<typename U>
+  Container2(const Container1<U>& C2);
+};
+
 std::optional<std::string_view> test3(int i) {
   std::string s;
   std::string_view sv;
   if (i)
    return s; // expected-warning {{address of stack memory associated}}
   return sv; // fine
+  Container2<std::string_view> c1 = Container1<Foo>(); // no diagnostic as Foo is not an Owner.
+  Container2<std::string_view> c2 = Container1<FooOwner>(); // expected-warning {{object backing the pointer will be destroyed}}
+  return GetFoo(); // fine, we don't know Foo is owner or not, be conservative.
+  return GetFooOwner(); // expected-warning {{returning address of local temporary object}}
 }
 
 std::optional<int*> test4(int a) {
