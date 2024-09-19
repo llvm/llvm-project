@@ -1739,7 +1739,7 @@ def Vector_StoreOp : Vector_Op<"store"> {
     start memory address. The elements along each dimension of the slice are
     strided by the memref strides. When storing more than 1 element, only unit
     strides are allowed along the most minor memref dimension. These constraints
-    guarantee that elements read along the first dimension of the slice are
+    guarantee that elements written along the first dimension of the slice are
     contiguous in memory.
 
     The memref element type can be a scalar or a vector type. If the memref
