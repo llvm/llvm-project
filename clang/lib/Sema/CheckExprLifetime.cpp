@@ -1271,8 +1271,8 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
                         /*AEntity*/ nullptr, Init);
 }
 
-void checkExprLifetimeMustTailArg(Sema &SemaRef, const InitializedEntity &Entity,
-                       Expr *Init) {
+void checkExprLifetimeMustTailArg(Sema &SemaRef,
+                                  const InitializedEntity &Entity, Expr *Init) {
   checkExprLifetimeImpl(SemaRef, &Entity, nullptr, LK_MustTail,
                         /*AEntity*/ nullptr, Init);
 }
