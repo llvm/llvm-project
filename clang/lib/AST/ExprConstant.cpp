@@ -2198,6 +2198,8 @@ static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
 // "bazbar" + 3, the overlapping region contains all of both strings, so they
 // are not potentially overlapping, even though they agree from the given
 // addresses onwards.
+//
+// See open core issue CWG2765 which is discussing the desired rule here.
 static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
                                                     const LValue &LHS,
                                                     const LValue &RHS) {
