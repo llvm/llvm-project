@@ -9,98 +9,9 @@ define void @invar_cond_gep_store(ptr %dst, i32 %0) {
 ; DEFAULT-LABEL: define void @invar_cond_gep_store(
 ; DEFAULT-SAME: ptr [[DST:%.*]], i32 [[TMP0:%.*]]) {
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; DEFAULT:       vector.ph:
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
-; DEFAULT:       vector.body:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE14:%.*]] ]
-; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; DEFAULT-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; DEFAULT-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; DEFAULT-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; DEFAULT:       pred.store.if:
-; DEFAULT-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
-; DEFAULT-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
-; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP5]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP6]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; DEFAULT:       pred.store.continue:
-; DEFAULT-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
-; DEFAULT-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; DEFAULT:       pred.store.if1:
-; DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 1
-; DEFAULT-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 1
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP9]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP10]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; DEFAULT:       pred.store.continue2:
-; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
-; DEFAULT-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; DEFAULT:       pred.store.if3:
-; DEFAULT-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 2
-; DEFAULT-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], 1
-; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP13]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP14]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; DEFAULT:       pred.store.continue4:
-; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
-; DEFAULT-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; DEFAULT:       pred.store.if5:
-; DEFAULT-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 3
-; DEFAULT-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 1
-; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP17]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP18]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; DEFAULT:       pred.store.continue6:
-; DEFAULT-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
-; DEFAULT-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
-; DEFAULT:       pred.store.if7:
-; DEFAULT-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], 4
-; DEFAULT-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
-; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP21]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP22]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; DEFAULT:       pred.store.continue8:
-; DEFAULT-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
-; DEFAULT-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
-; DEFAULT:       pred.store.if9:
-; DEFAULT-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 5
-; DEFAULT-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
-; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP25]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP26]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE10]]
-; DEFAULT:       pred.store.continue10:
-; DEFAULT-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
-; DEFAULT-NEXT:    br i1 [[TMP27]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
-; DEFAULT:       pred.store.if11:
-; DEFAULT-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX]], 6
-; DEFAULT-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 1
-; DEFAULT-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP29]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP30]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE12]]
-; DEFAULT:       pred.store.continue12:
-; DEFAULT-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
-; DEFAULT-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14]]
-; DEFAULT:       pred.store.if13:
-; DEFAULT-NEXT:    [[TMP32:%.*]] = add i64 [[OFFSET_IDX]], 7
-; DEFAULT-NEXT:    [[TMP33:%.*]] = add i64 [[TMP32]], 1
-; DEFAULT-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP33]]
-; DEFAULT-NEXT:    store i32 1, ptr [[TMP34]], align 4
-; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE14]]
-; DEFAULT:       pred.store.continue14:
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; DEFAULT-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; DEFAULT-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; DEFAULT:       middle.block:
-; DEFAULT-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; DEFAULT:       scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 97, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
 ; DEFAULT-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; DEFAULT:       loop.header:
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[TMP0]], 0
 ; DEFAULT-NEXT:    br i1 [[CMP9]], label [[THEN:%.*]], label [[LOOP_LATCH]]
@@ -110,68 +21,16 @@ define void @invar_cond_gep_store(ptr %dst, i32 %0) {
 ; DEFAULT-NEXT:    br label [[LOOP_LATCH]]
 ; DEFAULT:       loop.latch:
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
 ; PRED-LABEL: define void @invar_cond_gep_store(
 ; PRED-SAME: ptr [[DST:%.*]], i32 [[TMP0:%.*]]) {
 ; PRED-NEXT:  entry:
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; PRED:       vector.ph:
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
-; PRED:       vector.body:
-; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; PRED-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; PRED-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; PRED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; PRED-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; PRED:       pred.store.if:
-; PRED-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 0
-; PRED-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 1
-; PRED-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP4]]
-; PRED-NEXT:    store i32 1, ptr [[TMP5]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; PRED:       pred.store.continue:
-; PRED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
-; PRED-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; PRED:       pred.store.if1:
-; PRED-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 1
-; PRED-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 1
-; PRED-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP8]]
-; PRED-NEXT:    store i32 1, ptr [[TMP9]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; PRED:       pred.store.continue2:
-; PRED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
-; PRED-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; PRED:       pred.store.if3:
-; PRED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 2
-; PRED-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 1
-; PRED-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP12]]
-; PRED-NEXT:    store i32 1, ptr [[TMP13]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; PRED:       pred.store.continue4:
-; PRED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
-; PRED-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; PRED:       pred.store.if5:
-; PRED-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 3
-; PRED-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 1
-; PRED-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP16]]
-; PRED-NEXT:    store i32 1, ptr [[TMP17]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; PRED:       pred.store.continue6:
-; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; PRED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; PRED-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 101, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; PRED:       loop.header:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[TMP0]], 0
 ; PRED-NEXT:    br i1 [[CMP9]], label [[THEN:%.*]], label [[LOOP_LATCH]]
@@ -181,7 +40,7 @@ define void @invar_cond_gep_store(ptr %dst, i32 %0) {
 ; PRED-NEXT:    br label [[LOOP_LATCH]]
 ; PRED:       loop.latch:
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -260,7 +119,7 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT:       pred.store.continue7:
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[FOR_END123:%.*]], label [[SCALAR_PH]]
@@ -280,7 +139,7 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT:       loop.latch:
 ; DEFAULT-NEXT:    [[IV_NEXT176]] = add i64 [[IV175]], 1
 ; DEFAULT-NEXT:    [[EXITCOND180_NOT:%.*]] = icmp eq i64 [[IV175]], [[N]]
-; DEFAULT-NEXT:    br i1 [[EXITCOND180_NOT]], label [[FOR_END123]], label [[FOR_BODY112]], !llvm.loop [[LOOP5:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND180_NOT]], label [[FOR_END123]], label [[FOR_BODY112]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -494,7 +353,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP5]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; DEFAULT-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; DEFAULT:       vec.epilog.iter.check:
@@ -510,7 +369,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP9]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 4
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
-; DEFAULT-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
 ; DEFAULT-NEXT:    br i1 true, label [[FOR_END]], label [[SCALAR_PH]]
 ; DEFAULT:       vec.epilog.scalar.ph:
@@ -522,7 +381,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1
 ; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -603,7 +462,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
-; PRED-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -615,7 +474,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; PRED-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; PRED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; PRED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -693,24 +552,24 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP11:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META9:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META7:![0-9]+]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT28:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT29:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT28]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP12:%.*]] = load i32, ptr [[B]], align 4, !alias.scope [[META12:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = load i32, ptr [[B]], align 4, !alias.scope [[META10:![0-9]+]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP12]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT29]]
-; DEFAULT-NEXT:    [[TMP14:%.*]] = load i32, ptr [[C]], align 4, !alias.scope [[META14:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = load i32, ptr [[C]], align 4, !alias.scope [[META12:![0-9]+]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT30:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP14]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT31:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT30]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = icmp ugt <vscale x 4 x i32> [[BROADCAST_SPLAT31]], [[TMP13]]
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[D]], i64 [[TMP10]]
-; DEFAULT-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP13]], <vscale x 4 x ptr> [[BROADCAST_SPLAT33]], i32 4, <vscale x 4 x i1> [[TMP15]]), !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
+; DEFAULT-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP13]], <vscale x 4 x ptr> [[BROADCAST_SPLAT33]], i32 4, <vscale x 4 x i1> [[TMP15]]), !alias.scope [[META14:![0-9]+]], !noalias [[META16:![0-9]+]]
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 0
-; DEFAULT-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr [[TMP17]], i32 4, <vscale x 4 x i1> [[TMP15]]), !alias.scope [[META20:![0-9]+]], !noalias [[META21:![0-9]+]]
+; DEFAULT-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr [[TMP17]], i32 4, <vscale x 4 x i1> [[TMP15]]), !alias.scope [[META18:![0-9]+]], !noalias [[META19:![0-9]+]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -733,7 +592,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; DEFAULT:       loop.latch:
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV]], [[N]]
-; DEFAULT-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP23:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret i32 0
 ;
@@ -800,27 +659,27 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
-; PRED-NEXT:    [[TMP16:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META6:![0-9]+]]
+; PRED-NEXT:    [[TMP16:%.*]] = load i32, ptr [[A]], align 4, !alias.scope [[META4:![0-9]+]]
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT28:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP16]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT29:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT28]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP17:%.*]] = load i32, ptr [[B]], align 4, !alias.scope [[META9:![0-9]+]]
+; PRED-NEXT:    [[TMP17:%.*]] = load i32, ptr [[B]], align 4, !alias.scope [[META7:![0-9]+]]
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP18:%.*]] = or <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT29]]
-; PRED-NEXT:    [[TMP19:%.*]] = load i32, ptr [[C]], align 4, !alias.scope [[META11:![0-9]+]]
+; PRED-NEXT:    [[TMP19:%.*]] = load i32, ptr [[C]], align 4, !alias.scope [[META9:![0-9]+]]
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT30:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP19]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT31:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT30]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP20:%.*]] = icmp ugt <vscale x 4 x i32> [[BROADCAST_SPLAT31]], [[TMP18]]
 ; PRED-NEXT:    [[TMP21:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP20]], <vscale x 4 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[D]], i64 [[TMP15]]
-; PRED-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP18]], <vscale x 4 x ptr> [[BROADCAST_SPLAT33]], i32 4, <vscale x 4 x i1> [[TMP21]]), !alias.scope [[META13:![0-9]+]], !noalias [[META15:![0-9]+]]
+; PRED-NEXT:    call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP18]], <vscale x 4 x ptr> [[BROADCAST_SPLAT33]], i32 4, <vscale x 4 x i1> [[TMP21]]), !alias.scope [[META11:![0-9]+]], !noalias [[META13:![0-9]+]]
 ; PRED-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP22]], i32 0
-; PRED-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr [[TMP23]], i32 4, <vscale x 4 x i1> [[TMP21]]), !alias.scope [[META17:![0-9]+]], !noalias [[META18:![0-9]+]]
+; PRED-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> zeroinitializer, ptr [[TMP23]], i32 4, <vscale x 4 x i1> [[TMP21]]), !alias.scope [[META15:![0-9]+]], !noalias [[META16:![0-9]+]]
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP14]])
 ; PRED-NEXT:    [[TMP24:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; PRED-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 4 x i1> [[TMP24]], i32 0
-; PRED-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -842,7 +701,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED:       loop.latch:
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV]], [[N]]
-; PRED-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP20:![0-9]+]]
+; PRED-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP18:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret i32 0
 ;
@@ -895,7 +754,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    store <8 x double> [[TMP3]], ptr [[TMP4]], align 8
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; DEFAULT-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; DEFAULT:       scalar.ph:
@@ -915,7 +774,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
 ; DEFAULT-NEXT:    [[IV_CLAMP:%.*]] = and i64 [[IV]], 4294967294
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_CLAMP]], 512
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP25:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP23:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -959,7 +818,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
 ; PRED-NEXT:    [[TMP16:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; PRED-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 2 x i1> [[TMP16]], i32 0
-; PRED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -979,7 +838,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
 ; PRED-NEXT:    [[IV_CLAMP:%.*]] = and i64 [[IV]], 4294967294
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_CLAMP]], 512
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP22:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP20:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1089,7 +948,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT:       pred.store.continue14:
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; DEFAULT-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; DEFAULT-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; DEFAULT:       scalar.ph:
@@ -1102,7 +961,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP25:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -1191,7 +1050,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED:       pred.store.continue14:
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; PRED-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; PRED-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -1204,7 +1063,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 7
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP24:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP22:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1405,7 +1264,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; DEFAULT-NEXT:    [[TMP80:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP80]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP80]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -1436,7 +1295,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT:       loop.latch:
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP27:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -1628,7 +1487,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP84:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
-; PRED-NEXT:    br i1 [[TMP85]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP85]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -1658,7 +1517,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED:       loop.latch:
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP26:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP24:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1741,7 +1600,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; DEFAULT-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; DEFAULT:       scalar.ph:
@@ -1757,7 +1616,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; DEFAULT-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; DEFAULT-NEXT:    store i32 [[T]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
-; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP31:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP29:![0-9]+]]
 ; DEFAULT:       exit:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -1804,7 +1663,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; PRED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -1820,7 +1679,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; PRED-NEXT:    store i32 [[T]], ptr [[DST]], align 4
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP28:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP26:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1857,61 +1716,57 @@ attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }
 ; DEFAULT: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; DEFAULT: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; DEFAULT: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; DEFAULT: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
-; DEFAULT: [[META9]] = !{[[META10:![0-9]+]]}
-; DEFAULT: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]]}
-; DEFAULT: [[META11]] = distinct !{[[META11]], !"LVerDomain"}
+; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; DEFAULT: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; DEFAULT: [[META7]] = !{[[META8:![0-9]+]]}
+; DEFAULT: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
+; DEFAULT: [[META9]] = distinct !{[[META9]], !"LVerDomain"}
+; DEFAULT: [[META10]] = !{[[META11:![0-9]+]]}
+; DEFAULT: [[META11]] = distinct !{[[META11]], [[META9]]}
 ; DEFAULT: [[META12]] = !{[[META13:![0-9]+]]}
-; DEFAULT: [[META13]] = distinct !{[[META13]], [[META11]]}
+; DEFAULT: [[META13]] = distinct !{[[META13]], [[META9]]}
 ; DEFAULT: [[META14]] = !{[[META15:![0-9]+]]}
-; DEFAULT: [[META15]] = distinct !{[[META15]], [[META11]]}
-; DEFAULT: [[META16]] = !{[[META17:![0-9]+]]}
-; DEFAULT: [[META17]] = distinct !{[[META17]], [[META11]]}
-; DEFAULT: [[META18]] = !{[[META19:![0-9]+]], [[META10]], [[META13]], [[META15]]}
-; DEFAULT: [[META19]] = distinct !{[[META19]], [[META11]]}
-; DEFAULT: [[META20]] = !{[[META19]]}
-; DEFAULT: [[META21]] = !{[[META10]], [[META13]], [[META15]]}
+; DEFAULT: [[META15]] = distinct !{[[META15]], [[META9]]}
+; DEFAULT: [[META16]] = !{[[META17:![0-9]+]], [[META8]], [[META11]], [[META13]]}
+; DEFAULT: [[META17]] = distinct !{[[META17]], [[META9]]}
+; DEFAULT: [[META18]] = !{[[META17]]}
+; DEFAULT: [[META19]] = !{[[META8]], [[META11]], [[META13]]}
+; DEFAULT: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]], [[META2]]}
+; DEFAULT: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]]}
 ; DEFAULT: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]]}
+; DEFAULT: [[LOOP23]] = distinct !{[[LOOP23]], [[META2]], [[META1]]}
 ; DEFAULT: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]], [[META2]]}
 ; DEFAULT: [[LOOP25]] = distinct !{[[LOOP25]], [[META2]], [[META1]]}
 ; DEFAULT: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP27]] = distinct !{[[LOOP27]], [[META2]], [[META1]]}
+; DEFAULT: [[LOOP27]] = distinct !{[[LOOP27]], [[META1]]}
 ; DEFAULT: [[LOOP28]] = distinct !{[[LOOP28]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP29]] = distinct !{[[LOOP29]], [[META1]]}
-; DEFAULT: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
-; DEFAULT: [[LOOP31]] = distinct !{[[LOOP31]], [[META2]], [[META1]]}
+; DEFAULT: [[LOOP29]] = distinct !{[[LOOP29]], [[META2]], [[META1]]}
 ;.
 ; PRED: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; PRED: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; PRED: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; PRED: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; PRED: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; PRED: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; PRED: [[META6]] = !{[[META7:![0-9]+]]}
-; PRED: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; PRED: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; PRED: [[META4]] = !{[[META5:![0-9]+]]}
+; PRED: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
+; PRED: [[META6]] = distinct !{[[META6]], !"LVerDomain"}
+; PRED: [[META7]] = !{[[META8:![0-9]+]]}
+; PRED: [[META8]] = distinct !{[[META8]], [[META6]]}
 ; PRED: [[META9]] = !{[[META10:![0-9]+]]}
-; PRED: [[META10]] = distinct !{[[META10]], [[META8]]}
+; PRED: [[META10]] = distinct !{[[META10]], [[META6]]}
 ; PRED: [[META11]] = !{[[META12:![0-9]+]]}
-; PRED: [[META12]] = distinct !{[[META12]], [[META8]]}
-; PRED: [[META13]] = !{[[META14:![0-9]+]]}
-; PRED: [[META14]] = distinct !{[[META14]], [[META8]]}
-; PRED: [[META15]] = !{[[META16:![0-9]+]], [[META7]], [[META10]], [[META12]]}
-; PRED: [[META16]] = distinct !{[[META16]], [[META8]]}
-; PRED: [[META17]] = !{[[META16]]}
-; PRED: [[META18]] = !{[[META7]], [[META10]], [[META12]]}
+; PRED: [[META12]] = distinct !{[[META12]], [[META6]]}
+; PRED: [[META13]] = !{[[META14:![0-9]+]], [[META5]], [[META8]], [[META10]]}
+; PRED: [[META14]] = distinct !{[[META14]], [[META6]]}
+; PRED: [[META15]] = !{[[META14]]}
+; PRED: [[META16]] = !{[[META5]], [[META8]], [[META10]]}
+; PRED: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META2]]}
+; PRED: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]]}
 ; PRED: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META2]]}
-; PRED: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]]}
+; PRED: [[LOOP20]] = distinct !{[[LOOP20]], [[META2]], [[META1]]}
 ; PRED: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META2]]}
 ; PRED: [[LOOP22]] = distinct !{[[LOOP22]], [[META2]], [[META1]]}
 ; PRED: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META2]]}
-; PRED: [[LOOP24]] = distinct !{[[LOOP24]], [[META2]], [[META1]]}
+; PRED: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]]}
 ; PRED: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]], [[META2]]}
-; PRED: [[LOOP26]] = distinct !{[[LOOP26]], [[META1]]}
-; PRED: [[LOOP27]] = distinct !{[[LOOP27]], [[META1]], [[META2]]}
-; PRED: [[LOOP28]] = distinct !{[[LOOP28]], [[META2]], [[META1]]}
+; PRED: [[LOOP26]] = distinct !{[[LOOP26]], [[META2]], [[META1]]}
 ;.

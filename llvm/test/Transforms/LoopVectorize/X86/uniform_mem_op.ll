@@ -114,13 +114,13 @@ define i32 @uniform_address(ptr align(4) %addr, i32 %byte_offset) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 [[BYTE_OFFSET:%.*]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[ADDR:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[ADDR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[ADDR]], i32 [[TMP2]]

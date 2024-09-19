@@ -26,6 +26,8 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    [[TMP19:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -35,8 +37,6 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i64 [[M]], [[CONV6]]
-; CHECK-NEXT:    [[TMP19:%.*]] = sdiv i64 [[M]], [[CONV6]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP18]] to i32
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP19]] to i32
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP18]], [[CONV61]]

@@ -1597,7 +1597,7 @@ void VPlanTransforms::licm(VPlan &Plan) {
       // their memory location is not modified in the vector loop.
       if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
           any_of(R.operands(), [](VPValue *Op) {
-            return !Op->isDefinedOutsideVectorRegions();
+            return !Op->isDefinedOutsideLoopRegions();
           }))
         continue;
       R.moveBefore(*Preheader, Preheader->end());

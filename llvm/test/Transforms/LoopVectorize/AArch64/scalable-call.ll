@@ -148,7 +148,8 @@ if.then:
   %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
   br label %if.end
 if.else:
-  %2 = tail call fast float @llvm.sin.f32(float 0.0), !dbg !13
+  %add = fadd float %0, 12.0
+  %2 = tail call fast float @llvm.sin.f32(float %add), !dbg !13
   br label %if.end
 if.end:
   %3 = phi float [%1, %if.then], [%2, %if.else]
