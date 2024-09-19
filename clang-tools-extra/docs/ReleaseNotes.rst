@@ -165,6 +165,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
 
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` check to let it work on
+  any class that has a ``contains`` method.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
