@@ -1751,7 +1751,6 @@ define void @foo(i8 %v1, ptr %ptr) {
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   sandboxir::Function *F = Ctx.createFunction(LLVMF);
-  auto *Arg = F->getArg(0);
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
