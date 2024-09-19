@@ -602,6 +602,8 @@ protected:
   bool setAtomicScope(const MachineBasicBlock::iterator &MI,
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
+  virtual bool isWorkGroupSharingL0() const { return ST.isCuModeEnabled(); }
+
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
 
@@ -641,6 +643,14 @@ public:
                             SIAtomicAddrSpace AddrSpace) const override {
     return setAtomicScope(MI, Scope, AddrSpace);
   }
+};
+
+class SIGfx13CacheControl : public SIGfx12CacheControl {
+protected:
+  bool isWorkGroupSharingL0() const override { return true; }
+
+public:
+  SIGfx13CacheControl(const GCNSubtarget &ST) : SIGfx12CacheControl(ST) {}
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -973,7 +983,10 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx10CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX12)
     return std::make_unique<SIGfx11CacheControl>(ST);
-  return std::make_unique<SIGfx12CacheControl>(ST);
+  if (Generation < AMDGPUSubtarget::GFX13)
+    return std::make_unique<SIGfx12CacheControl>(ST);
+  // The latest generation
+  return std::make_unique<SIGfx13CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -2341,7 +2354,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // they are visible to waves in the other CU as the L0 is per CU.
       // Otherwise in CU mode and all waves of a work-group are on the same CU
       // which shares the same L0.
-      if (!ST.isCuModeEnabled()) {
+      if (!isWorkGroupSharingL0()) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
@@ -2449,7 +2462,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     // the WGP. Therefore we need to invalidate the L0 which is per CU.
     // Otherwise in CU mode all waves of a work-group are on the same CU, and so
     // the L0 does not need to be invalidated.
-    if (ST.isCuModeEnabled())
+    if (isWorkGroupSharingL0())
       return false;
 
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
@@ -2520,7 +2533,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     // For CU mode, we need operations to reach L0, so the wait is enough -
     // there are no ways for an operation to report completion without reaching
     // at least L0.
-    if (ST.isCuModeEnabled())
+    if (isWorkGroupSharingL0())
       SkipWB = true;
     else
       ScopeImm = AMDGPU::CPol::SCOPE_SE;
@@ -2616,7 +2629,7 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
     case SIAtomicScope::WORKGROUP:
       // In workgroup mode, SCOPE_SE is needed as waves can executes on
       // different CUs that access different L0s.
-      if (!ST.isCuModeEnabled())
+      if (!isWorkGroupSharingL0())
         Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
       break;
     case SIAtomicScope::WAVEFRONT:
