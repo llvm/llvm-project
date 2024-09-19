@@ -778,21 +778,6 @@ public:
   }
 };
 
-// UEFI target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {}
-
-public:
-  UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    this->WCharType = TargetInfo::UnsignedShort;
-    this->WIntType = TargetInfo::UnsignedShort;
-  }
-};
-
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
                        MacroBuilder &Builder);
 
