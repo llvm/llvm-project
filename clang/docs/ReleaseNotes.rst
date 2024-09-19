@@ -427,6 +427,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when function has more than 65536 parameters.
   Now a diagnostic is emitted. (#GH35741)
 
+- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
+
 OpenACC Specific Changes
 ------------------------
 
