@@ -22,6 +22,14 @@
 
 #define DEBUG_TYPE "yk-stackmaps"
 
+// The first stackmap ID available for use by this pass.
+//
+// It's 1 because 0 is reserved for the control point.
+// See llvm/lib/Transforms/Yk/ControlPoint.cpp
+//
+// This will have to change when we support >1 control point.
+const int NonCPStackmapIDStart = 1;
+
 using namespace llvm;
 
 namespace llvm {
@@ -62,14 +70,19 @@ public:
             // can't tell if an indirect call is an intrinsic at compile time,
             // emit a stackmap in those cases too.
 
-            if (!CI.isIndirectCall() &&
-                (CI.getCalledFunction()->isIntrinsic() ||
-                 (CI.getCalledFunction()->isDeclaration() &&
-                  (!CI.getCalledFunction()->getName().startswith(
-                       "__yk_promote") &&
-                   CI.getCalledFunction()->getName() != YK_NEW_CONTROL_POINT))))
-              continue;
+            if (!CI.isIndirectCall()) {
+              if (CI.getCalledFunction()->isIntrinsic()) {
+                // This also skips the control point which is called via a
+                // patchpoint intrinsic, which already emits a stackmap.
+                continue;
+              }
 
+              if (CI.getCalledFunction()->isDeclaration() &&
+                  !CI.getCalledFunction()->getName().startswith(
+                      "__yk_promote")) {
+                continue;
+              }
+            }
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
           } else if ((isa<BranchInst>(I) &&
                       cast<BranchInst>(I).isConditional()) ||
@@ -83,7 +96,7 @@ public:
     Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
     assert(SMFunc != nullptr);
 
-    uint64_t Count = 0;
+    uint64_t Count = NonCPStackmapIDStart;
     Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), 0);
     for (auto It : SMCalls) {
       Instruction *I = cast<Instruction>(It.first);
@@ -100,13 +113,6 @@ public:
         // the offset of the stackmap entry will record the instruction after
         // the call, which is where we want to continue after deoptimisation.
         Bldr.SetInsertPoint(I->getNextNode());
-        CallInst &CI = cast<CallInst>(*I);
-        if (!CI.isIndirectCall() &&
-            CI.getCalledFunction()->getName() == YK_NEW_CONTROL_POINT) {
-          // Update the stackmap id passed into the control point.
-          unsigned ArgSize = CI.arg_size();
-          CI.setArgOperand(ArgSize - 1, SMID);
-        }
       }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,
                       ArrayRef<Value *>(Args));

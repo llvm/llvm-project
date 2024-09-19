@@ -24,7 +24,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -211,7 +210,7 @@ unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
 }
 
 /// Go up the super-register chain until we hit a valid dwarf register number.
-static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
+unsigned llvm::getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
   int RegNum;
   for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
     RegNum = TRI->getDwarfRegNum(SR, false);

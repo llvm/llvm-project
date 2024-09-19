@@ -96,6 +96,20 @@ struct CreateYkEmbedIRParser {
 } // namespace
 static ManagedStatic<cl::opt<bool, true>, CreateYkEmbedIRParser> YkEmbedIRParser;
 
+bool YkDontOptFuncABI;
+namespace {
+struct CreateYkDontOptFuncABIParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-dont-opt-func-abi",
+        cl::desc(
+            "Don't change the ABIs of functions during optimisation"),
+        cl::NotHidden, cl::location(YkDontOptFuncABI));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkDontOptFuncABIParser> YkDontOptFuncABIParser;
+
 void llvm::initYkOptions() {
   *YkExtendedLLVMBBAddrMapSectionParser;
   *YkStackMapOffsetFixParser;
@@ -103,4 +117,5 @@ void llvm::initYkOptions() {
   *YkStackmapsSpillFixParser;
   *YkOptNoneAfterIRPassesParser;
   *YkEmbedIRParser;
+  *YkDontOptFuncABIParser;
 }

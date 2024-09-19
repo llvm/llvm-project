@@ -89,8 +89,10 @@ INITIALIZE_PASS_BEGIN(FixStackmapsSpillReloads, DEBUG_TYPE, "Fixup Stackmap Spil
 INITIALIZE_PASS_END(FixStackmapsSpillReloads, DEBUG_TYPE, "Fixup Stackmap Spills",
                     false, false)
 
+const TargetRegisterInfo *TRI;
 
 bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
+  TRI = MF.getSubtarget().getRegisterInfo();
   bool Changed = false;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   for (MachineBasicBlock &MBB : MF) {
@@ -144,7 +146,7 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
         MOI++;
         while (MOI != MI.operands_end()) {
           if (MOI->isReg()) {
-            Register Reg = MOI->getReg();
+            unsigned int Reg = getDwarfRegNum(MOI->getReg(), TRI);
             // Check if the register operand in the stackmap is a restored
             // spill.
             // Since implicit operands are ignored by stackmaps (they are not
@@ -240,13 +242,15 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
         if (TII->isCopyInstr(MI) || TII->isLoadFromStackSlotPostFE(MI, FI)) {
           // FIXME: Can there be multiple spill reloads here? Then this would
           // need to be a loop.
-          if (TII->isCopyInstr(MI) && Spills.count(MI.getOperand(1).getReg())) {
+          unsigned int Op0 = getDwarfRegNum(MI.getOperand(0).getReg(), TRI);
+          unsigned int Op1 = getDwarfRegNum(MI.getOperand(1).getReg(), TRI);
+          if (TII->isCopyInstr(MI) && Spills.count(Op1)) {
             // The source for this copy instruction is itself a spill reload.
             // So we need to lookup the spill for the source and apply this
             // instead.
-            Spills[MI.getOperand(0).getReg()] = Spills[MI.getOperand(1).getReg()];
+            Spills[Op0] = Spills[Op1];
           } else {
-            Spills[MI.getOperand(0).getReg()] = &MI;
+            Spills[Op0] = &MI;
           }
         }
       }

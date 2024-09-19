@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
@@ -61,22 +62,6 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 
 const TargetInstrInfo *TII;
 const TargetRegisterInfo *TRI;
-
-/// Go up the super-register chain until we hit a valid dwarf register number.
-///
-/// (duplicated/adapted from StackMaps.cpp so as to not introduce extra link
-/// dependencies)
-static unsigned getDwarfRegNum(unsigned Reg) {
-  int RegNum;
-  for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
-    RegNum = TRI->getDwarfRegNum(SR, false);
-    if (RegNum >= 0)
-      break;
-  }
-
-  assert(RegNum >= 0 && "Invalid Dwarf register number.");
-  return (unsigned)RegNum;
-}
 
 /// Clear any mappings that map to the given register.
 void clearRhs(Register Reg, std::map<Register, std::set<int64_t>> &SpillMap) {
@@ -116,6 +101,13 @@ void processInstructions(
       continue;
     }
 
+    // Because a patchpoint already captures the live values at the exact
+    // moment we desire, there's no need to compute a spillmap for them nor do
+    // we have to "patch them up". We can just skip them.
+    if (Instr.getOpcode() == TargetOpcode::PATCHPOINT) {
+      continue;
+    }
+
     // Copying a value from one register B to another A, creates a mapping from
     // A to B. If A is tracked by the stackmap, then B will also be tracked and
     // assigned the same value during deoptimisation.
@@ -124,8 +116,8 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
-      auto LhsDwReg = getDwarfRegNum(Lhs.getReg());
-      auto RhsDwReg = getDwarfRegNum(Rhs.getReg());
+      auto LhsDwReg = getDwarfRegNum(Lhs.getReg(), TRI);
+      auto RhsDwReg = getDwarfRegNum(Rhs.getReg(), TRI);
       if (LhsDwReg == RhsDwReg) {
         // Moves like `mov rax, rax` are effectively a NOP for this analysis.
         continue;
@@ -149,7 +141,7 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(3);
       const MachineOperand MO = Instr.getOperand(5);
       assert(MO.isReg() && "Is register.");
-      const Register DwReg = getDwarfRegNum(MO.getReg());
+      const Register DwReg = getDwarfRegNum(MO.getReg(), TRI);
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
         // We don't need to do `clearRhs(DwReg)` and reset the `SpillMap` entry
@@ -168,7 +160,7 @@ void processInstructions(
       const MachineOperand OffsetOp = Instr.getOperand(4);
       const MachineOperand Lhs = Instr.getOperand(0);
       assert(Lhs.isReg() && "Is register.");
-      const Register DwReg = getDwarfRegNum(Lhs.getReg());
+      const Register DwReg = getDwarfRegNum(Lhs.getReg(), TRI);
       if (OffsetOp.isImm()) {
         const int64_t Offset = OffsetOp.getImm();
         clearRhs(DwReg, SpillMap);
@@ -180,7 +172,7 @@ void processInstructions(
     // Any other assignments to tracked registers removes their mapping.
     for (const MachineOperand MO : Instr.defs()) {
       assert(MO.isReg() && "Is register.");
-      auto DwReg = getDwarfRegNum(MO.getReg());
+      auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
       SpillMap.erase(DwReg);
       clearRhs(DwReg, SpillMap);
     }
@@ -190,7 +182,7 @@ void processInstructions(
     // be used.
     for (const MachineOperand MO : Instr.uses()) {
       if (MO.isReg() && MO.isKill()) {
-        auto DwReg = getDwarfRegNum(MO.getReg());
+        auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
         SpillMap.erase(DwReg);
         clearRhs(DwReg, SpillMap);
       }
