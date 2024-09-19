@@ -729,3 +729,22 @@ llvm.func @test_notail() -> i32 {
   %0 = llvm.call notail @tail_call_target() : () -> i32
   llvm.return %0 : i32
 }
+
+// CHECK-LABEL: @vector_predication_intrinsics
+// CHECK-SAME: (%[[ARG0:.*]]: vector<8xi32>, %[[ARG1:.*]]: vector<8xi32>, %[[ARG2:.*]]: vector<8xi1>, %[[ARG3:.*]]: i32)
+llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
+                                         %mask: vector<8xi1>, %evl: i32) {
+  // CHECK-NEXT: "llvm.intr.vp.smax"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.smax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.smin"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.smin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.umax"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.umax" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  // CHECK-NEXT: "llvm.intr.vp.umin"(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[ARG3]])
+  "llvm.intr.vp.umin" (%A, %B, %mask, %evl) :
+         (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  llvm.return
+}

@@ -12,17 +12,6 @@
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
 
-#define CUDA_REPORT_IF_ERROR(expr) \
-  [](cudaError_t err) { \
-    if (err == cudaSuccess) \
-      return; \
-    const char *name = cudaGetErrorName(err); \
-    if (!name) \
-      name = "<unknown>"; \
-    Terminator terminator{__FILE__, __LINE__}; \
-    terminator.Crash("'%s' failed with '%s'", #expr, name); \
-  }(expr)
-
 namespace Fortran::runtime::cuda {
 
 extern "C" {
