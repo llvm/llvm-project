@@ -405,12 +405,6 @@ i32x4 bitselect(i32x4 x, i32x4 y, i32x4 c) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 popcnt(i8x16 x) {
-  return __builtin_wasm_popcnt_i8x16(x);
-  // WEBASSEMBLY: call  range(i8 0, 9) <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 int any_true_v128(i8x16 x) {
   return __builtin_wasm_any_true_v128(x);
   // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)

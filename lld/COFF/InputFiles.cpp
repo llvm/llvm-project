@@ -1126,7 +1126,8 @@ void ImportFile::parse() {
 
       StringRef impChkName = saver().save("__impchk_" + name);
       impchkThunk = make<ImportThunkChunkARM64EC>(this);
-      ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
+      impchkThunk->sym =
+          ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
       ctx.driver.pullArm64ECIcallHelper();
     }
   }
