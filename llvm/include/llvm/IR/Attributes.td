@@ -160,6 +160,9 @@ def NoCapture : EnumAttr<"nocapture", [ParamAttr]>;
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
 
+/// No extension needed before/after call (high bits are undefined).
+def NoExt : EnumAttr<"noext", [ParamAttr, RetAttr]>;
+
 /// Function does not deallocate memory.
 def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
 
