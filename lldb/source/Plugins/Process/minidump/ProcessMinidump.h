@@ -54,11 +54,12 @@ public:
 
   Status DoLoadCore() override;
 
+  // Returns AUXV structure found in the core file
+  lldb_private::DataExtractor GetAuxvData() override;
+
   DynamicLoader *GetDynamicLoader() override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
   Status DoDestroy() override;
 

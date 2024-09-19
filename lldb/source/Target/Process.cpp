@@ -6554,7 +6554,7 @@ static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileM
     return;
 
   const uint64_t fail_value = UINT64_MAX;
-  bool readSuccess = true;
+  bool readSuccess = false;
   const lldb::addr_t reg_value_addr = reg_value.GetAsUInt64(fail_value, &readSuccess);
   if (!readSuccess || reg_value_addr == fail_value)
     return;
@@ -6573,23 +6573,29 @@ static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileM
   AddRegion(register_region, true, ranges);
 }
 
-static void AddModuleThreadLocalSections(Process &process, ThreadSP &thread_sp, CoreFileMemoryRanges &ranges, lldb::addr_t range_end) {
+static void AddModuleSections(Process &process, CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
   ModuleList &module_list = process.GetTarget().GetImages();
+  Target* target = &process.GetTarget();
   for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
     ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
     if (!module_sp)
       continue;
-    // We want the entire section, so the offset is 0.
-    const lldb::addr_t tls_storage_addr = thread_sp->GetThreadLocalData(module_sp, 0);
-    if (tls_storage_addr == LLDB_INVALID_ADDRESS)
+
+    ObjectFile *obj = module_sp->GetObjectFile();
+    if (!obj)
       continue;
+    Address addr = obj->GetImageInfoAddress(target);
+    addr_t load_addr = addr.GetLoadAddress(target);
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
     MemoryRegionInfo tls_storage_region;
-    Status err = process.GetMemoryRegionInfo(tls_storage_addr, tls_storage_region);
+    Status err = process.GetMemoryRegionInfo(load_addr, tls_storage_region);
     if (err.Fail())
       continue;
 
     // We already saved off this truncated stack range.
-    if (tls_storage_region.GetRange().GetRangeEnd() == range_end)
+    if (stack_ends.count(tls_storage_region.GetRange().GetRangeEnd()) > 0)
       continue;
 
     AddRegion(tls_storage_region, true, ranges);
@@ -6636,7 +6642,6 @@ static void SaveOffRegionsWithStackPointers(Process &process,
         // Add the register section if x86_64 and add the module tls data
         // only if the range isn't the same as this truncated stack range.
         AddRegisterSections(process, thread_sp, ranges, range_end);
-        AddModuleThreadLocalSections(process, thread_sp, ranges, range_end);
       }
     }
   }
@@ -6746,9 +6751,12 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   std::set<addr_t> stack_ends;
   // For fully custom set ups, we don't want to even look at threads if there
   // are no threads specified.
-  if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads())
+  if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
-                                    stack_ends);
+                                stack_ends);
+    AddModuleSections(*this, ranges, stack_ends);
+  }
+
 
   switch (core_style) {
   case eSaveCoreUnspecified:

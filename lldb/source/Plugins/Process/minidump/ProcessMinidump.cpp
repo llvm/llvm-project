@@ -336,16 +336,18 @@ ArchSpec ProcessMinidump::GetArchitecture() {
 }
 
 DynamicLoader* ProcessMinidump::GetDynamicLoader() {
-  if (m_dyld_up && m_dyld_up.get())
-    return m_dyld_up.get();
-
-  ArchSpec arch = GetArchitecture();
-  if (arch.GetTriple().getOS() == llvm::Triple::Linux) {
+  if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
-  }
-
   return m_dyld_up.get();
+}
+
+DataExtractor ProcessMinidump::GetAuxvData() {
+  std::optional<llvm::ArrayRef<uint8_t>> auxv = m_minidump_parser->GetStream(StreamType::LinuxAuxv);
+  if (!auxv)
+    return DataExtractor();
+
+  return DataExtractor(auxv->data(), auxv->size(), ByteOrder::eByteOrderLittle, GetAddressByteSize(), GetAddressByteSize()); 
 }
 
 void ProcessMinidump::BuildMemoryRegions() {
