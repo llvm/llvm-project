@@ -156,6 +156,8 @@ public:
   }
 };
 
+class NodeArray;
+
 // Base class of all AST nodes. The AST is built by the parser, then is
 // traversed by the printLeft/Right functions to produce a demangled string.
 class Node {
@@ -293,6 +295,13 @@ public:
   // implementation.
   virtual void printRight(OutputBuffer &) const {}
 
+  // Print an initializer list of this type. Returns true if we printed a custom
+  // representation, false if nothing has been printed and the default
+  // representation should be used.
+  virtual bool printInitListAsType(OutputBuffer &, const NodeArray &) const {
+    return false;
+  }
+
   virtual std::string_view getBaseName() const { return {}; }
 
   // Silence compiler warnings, this dtor will never be called.
@@ -339,6 +348,10 @@ public:
       FirstElement = false;
     }
   }
+
+  // Print an array of integer literals as a string literal. Returns whether we
+  // could do so.
+  bool printAsString(OutputBuffer &OB) const;
 };
 
 struct NodeArrayNode : Node {
@@ -795,6 +808,15 @@ public:
       Dimension->print(OB);
     OB += "]";
     Base->printRight(OB);
+  }
+
+  bool printInitListAsType(OutputBuffer &OB,
+                           const NodeArray &Elements) const override {
+    if (Base->getKind() == KNameType &&
+        static_cast<const NameType *>(Base)->getName() == "char") {
+      return Elements.printAsString(OB);
+    }
+    return false;
   }
 };
 
@@ -2225,8 +2247,11 @@ public:
   template<typename Fn> void match(Fn F) const { F(Ty, Inits); }
 
   void printLeft(OutputBuffer &OB) const override {
-    if (Ty)
+    if (Ty) {
+      if (Ty->printInitListAsType(OB, Inits))
+        return;
       Ty->print(OB);
+    }
     OB += '{';
     Inits.printWithComma(OB);
     OB += '}';
@@ -2433,6 +2458,8 @@ public:
     if (Type.size() <= 3)
       OB += Type;
   }
+
+  std::string_view value() const { return Value; }
 };
 
 class RequiresExpr : public Node {
@@ -2603,6 +2630,93 @@ template<typename NodeT> struct NodeKind;
     static constexpr const char *name() { return #X; }                         \
   };
 #include "ItaniumNodes.def"
+
+inline bool NodeArray::printAsString(OutputBuffer &OB) const {
+  auto Fail = [&OB, StartPos = OB.getCurrentPosition()] {
+    OB.setCurrentPosition(StartPos);
+    return false;
+  };
+
+  OB += '"';
+  bool LastWasNumericEscape = false;
+  for (const Node *Element : *this) {
+    if (Element->getKind() != Node::KIntegerLiteral)
+      return Fail();
+    int integer_value = 0;
+    for (char c : static_cast<const IntegerLiteral *>(Element)->value()) {
+      if (c < '0' || c > '9' || integer_value > 25)
+        return Fail();
+      integer_value *= 10;
+      integer_value += c - '0';
+    }
+    if (integer_value > 255)
+      return Fail();
+
+    // Insert a `""` to avoid accidentally extending a numeric escape.
+    if (LastWasNumericEscape) {
+      if ((integer_value >= '0' && integer_value <= '9') ||
+          (integer_value >= 'a' && integer_value <= 'f') ||
+          (integer_value >= 'A' && integer_value <= 'F')) {
+        OB += "\"\"";
+      }
+    }
+
+    LastWasNumericEscape = false;
+
+    // Determine how to print this character.
+    switch (integer_value) {
+    case '\a':
+      OB += "\\a";
+      break;
+    case '\b':
+      OB += "\\b";
+      break;
+    case '\f':
+      OB += "\\f";
+      break;
+    case '\n':
+      OB += "\\n";
+      break;
+    case '\r':
+      OB += "\\r";
+      break;
+    case '\t':
+      OB += "\\t";
+      break;
+    case '\v':
+      OB += "\\v";
+      break;
+
+    case '"':
+      OB += "\\\"";
+      break;
+    case '\\':
+      OB += "\\\\";
+      break;
+
+    default:
+      // We assume that the character is ASCII, and use a numeric escape for all
+      // remaining non-printable ASCII characters.
+      if (integer_value < 32 || integer_value == 127) {
+        constexpr char Hex[] = "0123456789ABCDEF";
+        OB += '\\';
+        if (integer_value > 7)
+          OB += 'x';
+        if (integer_value >= 16)
+          OB += Hex[integer_value >> 4];
+        OB += Hex[integer_value & 0xF];
+        LastWasNumericEscape = true;
+        break;
+      }
+
+      // Assume all remaining characters are directly printable.
+      OB += (char)integer_value;
+      break;
+    }
+  }
+  OB += '"';
+  return true;
+}
 
 template <typename Derived, typename Alloc> struct AbstractManglingParser {
   const char *First;
