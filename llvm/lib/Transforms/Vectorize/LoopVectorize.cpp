@@ -7286,7 +7286,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   };
 
   DenseSet<Instruction *> SeenInstrs;
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &R : *VPBB) {
       if (auto *IR = dyn_cast<VPInterleaveRecipe>(&R)) {
