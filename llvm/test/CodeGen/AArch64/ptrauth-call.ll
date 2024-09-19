@@ -167,7 +167,7 @@ define i32 @test_tailcall_ib_var(ptr %arg0, ptr %arg1) #0 {
   ret i32 %tmp1
 }
 
-define void @test_tailcall_omit_mov_x16_x16(ptr %t) {
+define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 ; CHECK-LABEL: test_tailcall_omit_mov_x16_x16:
 ; CHECK:         ldr     x16, [x0]
 ; CHECK:         mov     x17, x0
@@ -176,16 +176,15 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %t) {
 ; CHECK:         ldr     x1, [x16]
 ; CHECK:         movk    x16, #54167, lsl #48
 ; CHECK:         braa    x1, x16
-entry:
-  %vtable = load ptr, ptr %t, align 8
-  %0 = ptrtoint ptr %t to i64
-  %1 = tail call i64 @llvm.ptrauth.blend(i64 %0, i64 6503)
-  %2 = ptrtoint ptr %vtable to i64
-  %3 = tail call i64 @llvm.ptrauth.auth(i64 %2, i32 2, i64 %1)
-  %4 = inttoptr i64 %3 to ptr
-  %5 = load ptr, ptr %4, align 8
-  %6 = tail call i64 @llvm.ptrauth.blend(i64 %3, i64 54167)
-  tail call void %5(ptr %t) [ "ptrauth"(i32 0, i64 %6) ]
+  %vtable.signed = load ptr, ptr %objptr, align 8
+  %objptr.int = ptrtoint ptr %objptr to i64
+  %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
+  %vtable.signed.int = ptrtoint ptr %vtable.signed to i64
+  %vtable.unsigned.int = tail call i64 @llvm.ptrauth.auth(i64 %vtable.signed.int, i32 2, i64 %vtable.discr)
+  %vtable.unsigned = inttoptr i64 %vtable.unsigned.int to ptr
+  %virt.func.signed = load ptr, ptr %vtable.unsigned, align 8
+  %virt.func.discr = tail call i64 @llvm.ptrauth.blend(i64 %vtable.unsigned.int, i64 54167)
+  tail call void %virt.func.signed(ptr %objptr) [ "ptrauth"(i32 0, i64 %virt.func.discr) ]
   ret void
 }
 
