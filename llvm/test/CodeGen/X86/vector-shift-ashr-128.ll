@@ -1586,6 +1586,99 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
   ret <16 x i8> %shift
 }
 
+define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
+; SSE2-LABEL: constant_shift_v16i8_pairs:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
+; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: constant_shift_v16i8_pairs:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [32768,4096,512,8192,16384,u,2048,1024]
+; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5],xmm1[6,7]
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    psubb %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: constant_shift_v16i8_pairs:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [32768,4096,512,8192,16384,u,2048,1024]
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5],xmm1[6,7]
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: constant_shift_v16i8_pairs:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpshab {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512DQ-LABEL: constant_shift_v16i8_pairs:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [32768,4096,512,8192,16384,u,2048,1024]
+; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5],xmm1[6,7]
+; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; AVX512DQ-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v16i8_pairs:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} xmm1 = [1,4,7,3,2,0,5,6]
+; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQVL-LABEL: constant_shift_v16i8_pairs:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [32768,4096,512,8192,16384,u,2048,1024]
+; AVX512DQVL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5],xmm1[6,7]
+; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; AVX512DQVL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512DQVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: constant_shift_v16i8_pairs:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; AVX512BWVL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512BWVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    retq
+;
+; X86-SSE-LABEL: constant_shift_v16i8_pairs:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
+; X86-SSE-NEXT:    pandn %xmm0, %xmm1
+; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    por %xmm1, %xmm0
+; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
+; X86-SSE-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE-NEXT:    psubb %xmm1, %xmm0
+; X86-SSE-NEXT:    retl
+  %shift = ashr <16 x i8> %a, <i8 1, i8 1, i8 4, i8 4, i8 7, i8 7, i8 3, i8 3, i8 2, i8 2, i8 0, i8 0, i8 5, i8 5, i8 6, i8 6>
+  ret <16 x i8> %shift
+}
+
 ;
 ; Uniform Constant Shifts
 ;

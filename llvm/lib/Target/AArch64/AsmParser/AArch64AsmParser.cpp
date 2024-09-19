@@ -231,12 +231,12 @@ private:
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
   unsigned getNumRegsForRegKind(RegKind K);
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
-/// @name Auto-generated Match Functions
-/// {
+  /// @name Auto-generated Match Functions
+  /// {
 
 #define GET_ASSEMBLER_HEADER
 #include "AArch64GenAsmMatcher.inc"
@@ -321,7 +321,7 @@ public:
 
   bool areEqualRegs(const MCParsedAsmOperand &Op1,
                     const MCParsedAsmOperand &Op2) const override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
@@ -5086,9 +5086,8 @@ bool AArch64AsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return false;
 }
 
-/// ParseInstruction - Parse an AArch64 instruction mnemonic followed by its
-/// operands.
-bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
+/// Parse an AArch64 instruction mnemonic followed by its operands.
+bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
   Name = StringSwitch<StringRef>(Name.lower())
@@ -6205,7 +6204,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
 
 static const char *getSubtargetFeatureName(uint64_t Val);
 
-bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,
                                                MCStreamer &Out,
                                                uint64_t &ErrorInfo,
