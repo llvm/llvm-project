@@ -1973,7 +1973,7 @@ Parser::TPResult Parser::TryParseTypeofSpecifier() {
 Parser::TPResult Parser::TryParseProtocolQualifiers() {
   assert(Tok.is(tok::less) && "Expected '<' for qualifier list");
   ConsumeToken();
-  do {
+  while (true) {
     if (Tok.isNot(tok::identifier))
       return TPResult::Error;
     ConsumeToken();
@@ -1987,9 +1987,9 @@ Parser::TPResult Parser::TryParseProtocolQualifiers() {
       ConsumeToken();
       return TPResult::Ambiguous;
     }
-  } while (false);
 
-  return TPResult::Error;
+    return TPResult::Error;
+  }
 }
 
 /// isCXXFunctionDeclarator - Disambiguates between a function declarator or
