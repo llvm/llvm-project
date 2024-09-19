@@ -1570,7 +1570,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
          "Expected latch predecessor to be the early exiting block");
 
   // TODO: Handle loops that may fault.
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC)) {
+  Predicates.clear();
+  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
+                                     &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
         "Cannot vectorize potentially faulting early exit loop",
