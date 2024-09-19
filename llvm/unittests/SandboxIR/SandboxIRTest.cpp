@@ -14,6 +14,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -940,7 +941,6 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   Replaced = Ret->replaceUsesOfWith(I0, Arg0);
   EXPECT_TRUE(Replaced);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
-
   // Check RAUW on constant.
   auto *Glob0 = cast<sandboxir::Constant>(I1->getOperand(0));
   auto *Glob1 = cast<sandboxir::Constant>(I2->getOperand(0));
@@ -970,16 +970,16 @@ define void @bar(float %v, ptr %ptr) {
   auto *S0 = cast<sandboxir::Instruction>(&*FooIt++);
   auto *RetF = cast<sandboxir::Instruction>(&*FooIt++);
   // getExpectedValue
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(Add), Add);
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(S0),
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(Add), Add);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(S0),
             cast<sandboxir::StoreInst>(S0)->getValueOperand());
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(RetF),
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetF),
             cast<sandboxir::ReturnInst>(RetF)->getReturnValue());
   // getExpectedType
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(Add), Add->getType());
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(S0),
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(Add), Add->getType());
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(S0),
             cast<sandboxir::StoreInst>(S0)->getValueOperand()->getType());
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedType(RetF),
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(RetF),
             cast<sandboxir::ReturnInst>(RetF)->getReturnValue()->getType());
 
   // getExpectedValue for void returns
@@ -988,7 +988,7 @@ define void @bar(float %v, ptr %ptr) {
   auto *BarBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Bar.begin()));
   auto BarIt = BarBB->begin();
   auto *RetV = cast<sandboxir::Instruction>(&*BarIt++);
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getExpectedValue(RetV), nullptr);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetV), nullptr);
 }
 
 TEST_F(SandboxIRTest, GetNumBits) {
@@ -1004,12 +1004,12 @@ bb0:
   const DataLayout &DL = M->getDataLayout();
   // getNumBits for scalars
   // float
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(0), DL),
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
             DL.getTypeSizeInBits(Type::getFloatTy(C)));
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(1), DL),
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
             DL.getTypeSizeInBits(Type::getDoubleTy(C)));
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(2), DL), 8u);
-  EXPECT_EQ(sandboxir::SandboxIRUtils::getNumBits(F->getArg(3), DL), 64u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
 }
 
 TEST_F(SandboxIRTest, RAUW_RUWIf) {
