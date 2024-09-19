@@ -6634,6 +6634,34 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
   switch (IntrinID) {
   default:
     break;
+  case Intrinsic::aarch64_neon_abs: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register SrcReg = I.getOperand(2).getReg();
+    auto SrcRegType = MRI.getType(SrcReg);
+    unsigned Opc = 0;
+
+    if (SrcRegType == LLT::fixed_vector(8, 8)) {
+      Opc = AArch64::ABSv8i8;
+    } else if (SrcRegType == LLT::fixed_vector(16, 8)) {
+      Opc = AArch64::ABSv16i8;
+    } else if (SrcRegType == LLT::fixed_vector(4, 16)) {
+      Opc = AArch64::ABSv4i16;
+    } else if (SrcRegType == LLT::fixed_vector(8, 16)) {
+      Opc = AArch64::ABSv8i16;
+    } else if (SrcRegType == LLT::fixed_vector(2, 32)) {
+      Opc = AArch64::ABSv2i32;
+    } else if (SrcRegType == LLT::fixed_vector(4, 32)) {
+      Opc = AArch64::ABSv4i32;
+    } else {
+      LLVM_DEBUG(dbgs() << "Unhandled type for aarch64.neon.abs intrinsic");
+      return false;
+    }
+    auto ABSInst = MIB.buildInstr(Opc, {DstReg}, {SrcReg});
+    constrainSelectedInstRegOperands(*ABSInst, TII, TRI, RBI);
+
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::aarch64_crypto_sha1h: {
     Register DstReg = I.getOperand(0).getReg();
     Register SrcReg = I.getOperand(2).getReg();
