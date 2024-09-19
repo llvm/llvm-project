@@ -2800,7 +2800,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
     break;
-
+  case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
