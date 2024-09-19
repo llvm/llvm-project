@@ -4,7 +4,7 @@
 %struct.A = type { float, [12 x i8], i64, [8 x i8] }
 
 define internal float @callee(ptr byval(%struct.A) align 32 %0) {
-; CHECK-LABEL: define {{[^@]+}}@callee.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (float [[DOT0_VAL:%.*]], i64 [[DOT16_VAL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd float 0.000000e+00, [[DOT0_VAL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i64 [[DOT16_VAL]] to float
@@ -30,7 +30,7 @@ define float @caller(float %0) {
 ; CHECK-NEXT:    [[DOTVAL:%.*]] = load float, ptr [[TMP2]], align 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[DOTVAL1:%.*]] = load i64, ptr [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = call noundef float @callee.argprom(float [[DOTVAL]], i64 [[DOTVAL1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call noundef float @callee(float [[DOTVAL]], i64 [[DOTVAL1]])
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
   %2 = alloca %struct.A, align 32

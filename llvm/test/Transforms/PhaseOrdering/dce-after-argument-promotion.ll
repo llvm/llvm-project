@@ -8,7 +8,7 @@
 ; CHECK: [[DUMMY:@.*]] = local_unnamed_addr global i32 0
 
 define internal void @f(ptr byval(%struct.ss) align 8 %b, ptr byval(i32) align 4 %X) noinline nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@f.argprom.argelim
+; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[B_0:%.*]]){{[^#]*}} #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP:%.*]] = add i32 [[B_0]], 1
@@ -27,7 +27,7 @@ define i32 @test(ptr %X) {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (ptr {{[^%]*}} [[X:%.*]]){{[^#]*}} #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call {{.*}}void @f.argprom.argelim(i32 1)
+; CHECK-NEXT:    tail call {{.*}}void @f(i32 1)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
