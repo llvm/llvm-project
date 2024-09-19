@@ -13734,7 +13734,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (PBT != BTC || !Preds.empty()) {
+  if (PBT != BTC) {
+    assert(!Preds.empty() && "Different predicated BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -13753,6 +13754,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
+    assert(!Preds.empty() &&
+           "Different predicated symbolic max BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
