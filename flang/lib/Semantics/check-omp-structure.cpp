@@ -1796,13 +1796,30 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
   const auto *e{GetExpr(context_, expr)};
   const auto *v{GetExpr(context_, var)};
   if (e && v) {
-    auto vSyms{evaluate::GetSymbolVector(*v)};
-    const Symbol &varSymbol = vSyms.front();
+    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
     for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
       if (varSymbol == symbol) {
-        context_.Say(expr.source,
-            "RHS expression on atomic assignment statement cannot access '%s'"_err_en_US,
-            var.GetSource().ToString());
+        const Fortran::common::Indirection<Fortran::parser::Designator>
+            *designator = std::get_if<
+                Fortran::common::Indirection<Fortran::parser::Designator>>(
+                &expr.u);
+        if (designator) {
+          auto *z{var.typedExpr.get()};
+          auto *c{expr.typedExpr.get()};
+          if (z->v == c->v) {
+            context_.Say(expr.source,
+                "RHS expression "
+                "on atomic assignment statement"
+                " cannot access '%s'"_err_en_US,
+                var.GetSource().ToString());
+          }
+        } else {
+          context_.Say(expr.source,
+              "RHS expression "
+              "on atomic assignment statement"
+              " cannot access '%s'"_err_en_US,
+              var.GetSource().ToString());
+        }
       }
     }
   }
