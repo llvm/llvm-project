@@ -3277,12 +3277,18 @@ defm BUFFER_ATOMIC_XOR_X2       : MUBUF_Real_Atomic_vi <0x6a>;
 defm BUFFER_ATOMIC_INC_X2       : MUBUF_Real_Atomic_vi <0x6b>;
 defm BUFFER_ATOMIC_DEC_X2       : MUBUF_Real_Atomic_vi <0x6c>;
 
-defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_vi_gfx90a <0x3d>;
+let AssemblerPredicate = isGFX8GFX9NotGFX90A in {
+defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_vi <0x3d>;
+}
 
-let AssemblerPredicate = isGFX8GFX9 in {
+let AssemblerPredicate = isGFX90AOnly in {
+defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_gfx90a <0x3d>;
+}
+
+let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
 defm BUFFER_WBINVL1             : MUBUF_Real_vi <0x3e>;
 defm BUFFER_WBINVL1_VOL         : MUBUF_Real_vi <0x3f>;
-} // End AssemblerPredicate = isGFX8GFX9
+} // End AssemblerPredicate = isGFX8GFX9NotGFX940
 
 
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
