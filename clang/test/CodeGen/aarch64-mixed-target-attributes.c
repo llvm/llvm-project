@@ -66,8 +66,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 524288
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 524288
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -140,8 +140,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 524288
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 524288
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -207,8 +207,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 524288
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 524288
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:

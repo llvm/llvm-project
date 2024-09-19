@@ -8,8 +8,8 @@
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 35184372088832
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 35184372088832
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 70368744177664
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 70368744177664
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -17,8 +17,8 @@
 // CHECK-NEXT:    br label [[RETURN:%.*]]
 // CHECK:       if.end:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4535485464576
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 4535485464576
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 9070970929152
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 9070970929152
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[IF_THEN1:%.*]], label [[IF_END2:%.*]]
 // CHECK:       if.then1:
@@ -26,8 +26,8 @@
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       if.end2:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 83316593106354176
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 83316593106354176
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 166633186212708352
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 166633186212708352
 // CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
 // CHECK-NEXT:    br i1 [[TMP11]], label [[IF_THEN3:%.*]], label [[IF_END4:%.*]]
 // CHECK:       if.then3:
