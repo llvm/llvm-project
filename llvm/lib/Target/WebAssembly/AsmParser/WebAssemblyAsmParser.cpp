@@ -562,7 +562,7 @@ public:
     }
   }
 
-  bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     // Note: Name does NOT point into the sourcecode, but to a local, so
     // use NameLoc instead.
@@ -1127,7 +1127,7 @@ public:
     }
   }
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override {
