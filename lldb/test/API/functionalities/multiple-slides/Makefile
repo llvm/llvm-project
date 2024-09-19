@@ -8,5 +8,5 @@ include Makefile.rules
 # sliding the binary, the address of `first` and
 # `second` are not slid for some reason on Darwin.
 main.o: main.c
-	$(CC) $(CFLAGS_NO_DEBUG) -c $< -o $@
+	$(CC) $(CFLAGS_NO_DEBUG) -c $(call path_wrapper,$<) -o $@
 

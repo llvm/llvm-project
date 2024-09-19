@@ -8,4 +8,4 @@ OBJECTS += inline.o
 $(EXE): main.c inline.o
 
 %.o: %.ll
-	$(CC) $< -c -o $@
+	$(CC) $(call path_wrapper,$<) -c -o $@
