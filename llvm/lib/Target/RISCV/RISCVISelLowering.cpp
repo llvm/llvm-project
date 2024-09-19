@@ -2268,6 +2268,9 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (!IsLegalVT)
     return false;
 
+  if (getLegalZfaFPImm(Imm, VT) >= 0)
+    return true;
+
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
     // td can handle +0.0 or -0.0 already.
