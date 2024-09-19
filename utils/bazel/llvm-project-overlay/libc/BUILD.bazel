@@ -3900,6 +3900,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":printf_config",
         ":printf_core_structs",
+        ":errno"
     ],
 )
 
@@ -3948,6 +3949,7 @@ libc_support_library(
         "src/stdio/printf_core/float_inf_nan_converter.h",
         "src/stdio/printf_core/int_converter.h",
         "src/stdio/printf_core/ptr_converter.h",
+        "src/stdio/printf_core/strerror_converter.h",
         "src/stdio/printf_core/string_converter.h",
         "src/stdio/printf_core/write_int_converter.h",
     ],
@@ -3963,6 +3965,7 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_integer_to_string",
         ":__support_libc_assert",
+        ":__support_stringutil",
         ":__support_uint128",
         ":printf_config",
         ":printf_core_structs",
