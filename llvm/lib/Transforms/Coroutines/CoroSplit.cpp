@@ -2178,6 +2178,10 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       UR.CWorklist.insert(&C);
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
+    } else if (Shape.ABI == coro::ABI::Async) {
+      // Reprocess the function to inline the tail called return function of
+      // coro.async.end.
+      UR.CWorklist.insert(&C);
     }
   }
 
