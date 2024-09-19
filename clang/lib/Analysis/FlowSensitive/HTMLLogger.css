@@ -29,6 +29,16 @@ section h2 {
 }
 #timeline {
   min-width: max-content;
+  counter-reset: entry_counter;
+}
+#timeline .entry .counter::before {
+  counter-increment: entry_counter;
+  content: counter(entry_counter) ":";
+}
+#timeline .entry .counter {
+  display: inline-block;
+  min-width: 2em; /* Enough space for two digits and a colon */
+  text-align: right;
 }
 #timeline .entry.hover {
   background-color: #aaa;

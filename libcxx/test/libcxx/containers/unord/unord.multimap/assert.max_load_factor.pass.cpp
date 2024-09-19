@@ -18,7 +18,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <unordered_map>
 #include <string>

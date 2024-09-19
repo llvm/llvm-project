@@ -19,7 +19,7 @@ using namespace mlir::index;
 void IndexDialect::initialize() {
   registerAttributes();
   registerOperations();
-  declarePromisedInterface<IndexDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, IndexDialect>();
 }
 
 //===----------------------------------------------------------------------===//

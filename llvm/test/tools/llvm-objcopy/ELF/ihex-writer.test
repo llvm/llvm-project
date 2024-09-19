@@ -70,8 +70,8 @@
 # SIGN_EXTENDED-NEXT: :051000000001020304E1
 # SIGN_EXTENDED-NEXT: :00000001FF
 
-# BAD-ADDR: error: {{.*}}: Section '.text2' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
-# BAD-ADDR2: error: {{.*}}: Section '.text3' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+# BAD-ADDR: error: {{.*}}: section '.text2' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+# BAD-ADDR2: error: {{.*}}: section '.text3' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
 
 # There shouldn't be 'ExtendedAddr' nor 'Data' records
 # ZERO_SIZE_SEC-NOT:  :02000004
@@ -81,4 +81,4 @@
 # START1: :040000030000FFFFFB
 # START2: :0400000500100000E7
 # START3: :040000058000100067
-# BAD-START: error: {{.*}}: Entry point address 0x{{.*}} overflows 32 bits
+# BAD-START: error: {{.*}}: entry point address 0x{{.*}} overflows 32 bits

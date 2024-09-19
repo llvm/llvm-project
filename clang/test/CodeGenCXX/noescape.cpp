@@ -84,7 +84,7 @@ void noescapefunc(__attribute__((noescape)) BlockTy);
 // CHECK: define{{.*}} void @_ZN9TestByref4testEv(
 // CHECK: %[[X:.*]] = alloca ptr, align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[X]], align 8
 // CHECK: store ptr %[[V0]], ptr %[[BLOCK_CAPTURED]], align 8
 

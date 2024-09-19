@@ -55,6 +55,7 @@ class LoopPeelOp(LoopPeelOp):
         remainder_loop_type: Type,
         target: Union[Operation, Value],
         *,
+        peel_front: Union[bool, BoolAttr] = False,
         fail_if_already_divisible: Union[bool, BoolAttr] = False,
         ip=None,
         loc=None,
@@ -63,6 +64,11 @@ class LoopPeelOp(LoopPeelOp):
             main_loop_type,
             remainder_loop_type,
             _get_op_result_or_value(target),
+            peel_front=(
+                peel_front
+                if isinstance(peel_front, BoolAttr)
+                else BoolAttr.get(peel_front)
+            ),
             fail_if_already_divisible=(
                 fail_if_already_divisible
                 if isinstance(fail_if_already_divisible, BoolAttr)

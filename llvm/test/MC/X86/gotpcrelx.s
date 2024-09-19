@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck %s --check-prefixes=CHECK,COMMON
-# RUN: llvm-mc -filetype=obj -triple=x86_64 -relax-relocations=false %s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -x86-relax-relocations=false %s -o %t1.o
 # RUN: llvm-readobj -r %t1.o | FileCheck %s --check-prefixes=NORELAX,COMMON
 
 # COMMON:     Relocations [

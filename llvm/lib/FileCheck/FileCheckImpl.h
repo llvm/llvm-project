@@ -823,9 +823,19 @@ struct FileCheckString {
   /// The location in the match file that the check string was specified.
   SMLoc Loc;
 
-  /// All of the strings that are disallowed from occurring between this match
-  /// string and the previous one (or start of file).
-  std::vector<Pattern> DagNotStrings;
+  /// Hold the information about the DAG/NOT strings in the program, which are
+  /// not explicitly stored otherwise. This allows for better and more accurate
+  /// diagnostic messages.
+  struct DagNotPrefixInfo {
+    Pattern DagNotPat;
+    StringRef DagNotPrefix;
+
+    DagNotPrefixInfo(const Pattern &P, StringRef S)
+        : DagNotPat(P), DagNotPrefix(S) {}
+  };
+
+  /// Hold the DAG/NOT strings occurring in the input file.
+  std::vector<DagNotPrefixInfo> DagNotStrings;
 
   FileCheckString(const Pattern &P, StringRef S, SMLoc L)
       : Pat(P), Prefix(S), Loc(L) {}
@@ -845,12 +855,12 @@ struct FileCheckString {
   /// \p Buffer. Errors are reported against \p SM and diagnostics recorded in
   /// \p Diags according to the verbosity level set in \p Req.
   bool CheckNot(const SourceMgr &SM, StringRef Buffer,
-                const std::vector<const Pattern *> &NotStrings,
+                const std::vector<const DagNotPrefixInfo *> &NotStrings,
                 const FileCheckRequest &Req,
                 std::vector<FileCheckDiag> *Diags) const;
   /// Matches "dag strings" and their mixed "not strings".
   size_t CheckDag(const SourceMgr &SM, StringRef Buffer,
-                  std::vector<const Pattern *> &NotStrings,
+                  std::vector<const DagNotPrefixInfo *> &NotStrings,
                   const FileCheckRequest &Req,
                   std::vector<FileCheckDiag> *Diags) const;
 };

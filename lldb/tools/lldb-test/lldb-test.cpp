@@ -194,6 +194,12 @@ static cl::opt<std::string> CompilerContext(
     cl::desc("Specify a compiler context as \"kind:name,...\"."),
     cl::value_desc("context"), cl::sub(SymbolsSubcommand));
 
+static cl::opt<bool> FindInAnyModule(
+    "find-in-any-module",
+    cl::desc("If true, the type will be searched for in all modules. Otherwise "
+             "the modules must be provided in -compiler-context"),
+    cl::sub(SymbolsSubcommand));
+
 static cl::opt<std::string>
     Language("language", cl::desc("Specify a language type, like C99."),
              cl::value_desc("language"), cl::sub(SymbolsSubcommand));
@@ -306,14 +312,12 @@ llvm::SmallVector<CompilerContext, 4> parseCompilerContext() {
             .Case("TranslationUnit", CompilerContextKind::TranslationUnit)
             .Case("Module", CompilerContextKind::Module)
             .Case("Namespace", CompilerContextKind::Namespace)
-            .Case("Class", CompilerContextKind::Class)
-            .Case("Struct", CompilerContextKind::Struct)
+            .Case("ClassOrStruct", CompilerContextKind::ClassOrStruct)
             .Case("Union", CompilerContextKind::Union)
             .Case("Function", CompilerContextKind::Function)
             .Case("Variable", CompilerContextKind::Variable)
             .Case("Enum", CompilerContextKind::Enum)
             .Case("Typedef", CompilerContextKind::Typedef)
-            .Case("AnyModule", CompilerContextKind::AnyModule)
             .Case("AnyType", CompilerContextKind::AnyType)
             .Default(CompilerContextKind::Invalid);
     if (value.empty()) {
@@ -410,7 +414,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
       break;
     }
   }
-  return std::move(OS.str());
+  return Result;
 }
 
 int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
@@ -510,8 +514,8 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
         ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     List.Clear();
-    Module::LookupInfo lookup_info(ConstString(Name), getFunctionNameFlags(),
-                                   eLanguageTypeUnknown);
+    lldb_private::Module::LookupInfo lookup_info(
+        ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
     Symfile.FindFunctions(lookup_info, ContextPtr, true, List);
   }
   outs() << formatv("Found {0} functions:\n", List.GetSize());
@@ -582,11 +586,13 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   if (!ContextOr)
     return ContextOr.takeError();
 
+  TypeQueryOptions Opts = TypeQueryOptions::e_module_search;
+  if (FindInAnyModule)
+    Opts |= TypeQueryOptions::e_ignore_modules;
   TypeResults results;
   if (!Name.empty()) {
     if (ContextOr->IsValid()) {
-      TypeQuery query(*ContextOr, ConstString(Name),
-                      TypeQueryOptions::e_module_search);
+      TypeQuery query(*ContextOr, ConstString(Name), Opts);
       if (!Language.empty())
         query.AddLanguage(Language::GetLanguageTypeFromString(Language));
       Symfile.FindTypes(query, results);
@@ -597,7 +603,7 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
       Symfile.FindTypes(query, results);
     }
   } else {
-    TypeQuery query(parseCompilerContext(), TypeQueryOptions::e_module_search);
+    TypeQuery query(parseCompilerContext(), Opts);
     if (!Language.empty())
       query.AddLanguage(Language::GetLanguageTypeFromString(Language));
     Symfile.FindTypes(query, results);
@@ -816,6 +822,9 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
         "Only one of -regex, -context and -file may be used simultaneously.");
   if (Regex && Name.empty())
     return make_string_error("-regex used without a -name");
+
+  if (FindInAnyModule && (Find != FindType::Type))
+    return make_string_error("-find-in-any-module only works with -find=type");
 
   switch (Find) {
   case FindType::None:

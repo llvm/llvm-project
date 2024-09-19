@@ -12,6 +12,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -40,7 +41,7 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
   return [=](OpPassManager &pm, StringRef options,
              function_ref<LogicalResult(const Twine &)> errorHandler) {
     std::unique_ptr<Pass> pass = allocator();
-    LogicalResult result = pass->initializeOptions(options);
+    LogicalResult result = pass->initializeOptions(options, errorHandler);
 
     std::optional<StringRef> pmOpName = pm.getOpName();
     std::optional<StringRef> passOpName = pass->getOpName();
@@ -67,6 +68,32 @@ static void printOptionHelp(StringRef arg, StringRef desc, size_t indent,
 //===----------------------------------------------------------------------===//
 // PassRegistry
 //===----------------------------------------------------------------------===//
+
+/// Prints the passes that were previously registered and stored in passRegistry
+void mlir::printRegisteredPasses() {
+  size_t maxWidth = 0;
+  for (auto &entry : *passRegistry)
+    maxWidth = std::max(maxWidth, entry.second.getOptionWidth() + 4);
+
+  // Functor used to print the ordered entries of a registration map.
+  auto printOrderedEntries = [&](StringRef header, auto &map) {
+    llvm::SmallVector<PassRegistryEntry *, 32> orderedEntries;
+    for (auto &kv : map)
+      orderedEntries.push_back(&kv.second);
+    llvm::array_pod_sort(
+        orderedEntries.begin(), orderedEntries.end(),
+        [](PassRegistryEntry *const *lhs, PassRegistryEntry *const *rhs) {
+          return (*lhs)->getPassArgument().compare((*rhs)->getPassArgument());
+        });
+
+    llvm::outs().indent(0) << header << ":\n";
+    for (PassRegistryEntry *entry : orderedEntries)
+      entry->printHelpStr(/*indent=*/2, maxWidth);
+  };
+
+  // Print the available passes.
+  printOrderedEntries("Passes", *passRegistry);
+}
 
 /// Print the help information for this pass. This includes the argument,
 /// description, and any pass options. `descIndent` is the indent that the
@@ -159,6 +186,31 @@ const PassPipelineInfo *mlir::PassPipelineInfo::lookup(StringRef pipelineArg) {
 // PassOptions
 //===----------------------------------------------------------------------===//
 
+/// Extract an argument from 'options' and update it to point after the arg.
+/// Returns the cleaned argument string.
+static StringRef extractArgAndUpdateOptions(StringRef &options,
+                                            size_t argSize) {
+  StringRef str = options.take_front(argSize).trim();
+  options = options.drop_front(argSize).ltrim();
+
+  // Early exit if there's no escape sequence.
+  if (str.size() <= 2)
+    return str;
+
+  const auto escapePairs = {std::make_pair('\'', '\''),
+                            std::make_pair('"', '"'), std::make_pair('{', '}')};
+  for (const auto &escape : escapePairs) {
+    if (str.front() == escape.first && str.back() == escape.second) {
+      // Drop the escape characters and trim.
+      str = str.drop_front().drop_back().trim();
+      // Don't process additional escape sequences.
+      break;
+    }
+  }
+
+  return str;
+}
+
 LogicalResult detail::pass_options::parseCommaSeparatedList(
     llvm::cl::Option &opt, StringRef argName, StringRef optionStr,
     function_ref<LogicalResult(StringRef)> elementParseFn) {
@@ -187,13 +239,16 @@ LogicalResult detail::pass_options::parseCommaSeparatedList(
   size_t nextElePos = findChar(optionStr, 0, ',');
   while (nextElePos != StringRef::npos) {
     // Process the portion before the comma.
-    if (failed(elementParseFn(optionStr.substr(0, nextElePos))))
+    if (failed(
+            elementParseFn(extractArgAndUpdateOptions(optionStr, nextElePos))))
       return failure();
 
-    optionStr = optionStr.substr(nextElePos + 1);
+    // Drop the leading ','
+    optionStr = optionStr.drop_front();
     nextElePos = findChar(optionStr, 0, ',');
   }
-  return elementParseFn(optionStr.substr(0, nextElePos));
+  return elementParseFn(
+      extractArgAndUpdateOptions(optionStr, optionStr.size()));
 }
 
 /// Out of line virtual function to provide home for the class.
@@ -213,13 +268,6 @@ void detail::PassOptions::copyOptionValuesFrom(const PassOptions &other) {
 /// `options` string pointing after the parsed option].
 static std::tuple<StringRef, StringRef, StringRef>
 parseNextArg(StringRef options) {
-  // Functor used to extract an argument from 'options' and update it to point
-  // after the arg.
-  auto extractArgAndUpdateOptions = [&](size_t argSize) {
-    StringRef str = options.take_front(argSize).trim();
-    options = options.drop_front(argSize).ltrim();
-    return str;
-  };
   // Try to process the given punctuation, properly escaping any contained
   // characters.
   auto tryProcessPunct = [&](size_t &currentPos, char punct) {
@@ -236,13 +284,13 @@ parseNextArg(StringRef options) {
   for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
     // Check for the end of the full option.
     if (argEndIt == optionsE || options[argEndIt] == ' ') {
-      argName = extractArgAndUpdateOptions(argEndIt);
+      argName = extractArgAndUpdateOptions(options, argEndIt);
       return std::make_tuple(argName, StringRef(), options);
     }
 
     // Check for the end of the name and the start of the value.
     if (options[argEndIt] == '=') {
-      argName = extractArgAndUpdateOptions(argEndIt);
+      argName = extractArgAndUpdateOptions(options, argEndIt);
       options = options.drop_front();
       break;
     }
@@ -252,7 +300,7 @@ parseNextArg(StringRef options) {
   for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
     // Handle the end of the options string.
     if (argEndIt == optionsE || options[argEndIt] == ' ') {
-      StringRef value = extractArgAndUpdateOptions(argEndIt);
+      StringRef value = extractArgAndUpdateOptions(options, argEndIt);
       return std::make_tuple(argName, value, options);
     }
 
@@ -280,7 +328,8 @@ parseNextArg(StringRef options) {
   llvm_unreachable("unexpected control flow in pass option parsing");
 }
 
-LogicalResult detail::PassOptions::parseFromString(StringRef options) {
+LogicalResult detail::PassOptions::parseFromString(StringRef options,
+                                                   raw_ostream &errorStream) {
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
@@ -291,7 +340,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options) {
 
     auto it = OptionsMap.find(key);
     if (it == OptionsMap.end()) {
-      llvm::errs() << "<Pass-Options-Parser>: no such option " << key << "\n";
+      errorStream << "<Pass-Options-Parser>: no such option " << key << "\n";
       return failure();
     }
     if (llvm::cl::ProvidePositionalOption(it->second, value, 0))
@@ -303,7 +352,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options) {
 
 /// Print the options held by this struct in a form that can be parsed via
 /// 'parseFromString'.
-void detail::PassOptions::print(raw_ostream &os) {
+void detail::PassOptions::print(raw_ostream &os) const {
   // If there are no options, there is nothing left to do.
   if (OptionsMap.empty())
     return;

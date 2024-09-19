@@ -20,7 +20,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
-#include <functional>
 #include <type_traits>
 
 namespace mlir {

@@ -24,9 +24,9 @@ target triple = "nvptx64"
 ; Function Attrs: alwaysinline convergent norecurse nounwind
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK: @__omp_offloading_fd02_404433c2_main_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_404433c2_main_l5
@@ -160,9 +160,9 @@ attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 ; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META7:![0-9]+]] = !{!"clang version 14.0.0"}
-; CHECK: [[TBAA8]] = !{!9, !9, i64 0}
-; CHECK: [[META9:![0-9]+]] = !{!"double", !10, i64 0}
-; CHECK: [[META10:![0-9]+]] = !{!"omnipotent char", !11, i64 0}
-; CHECK: [[META11:![0-9]+]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+; CHECK: [[META9]] = !{!"double", [[META10:![0-9]+]], i64 0}
+; CHECK: [[META10]] = !{!"omnipotent char", [[META11:![0-9]+]], i64 0}
+; CHECK: [[META11]] = !{!"Simple C/C++ TBAA"}
 ;.

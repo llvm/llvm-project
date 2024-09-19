@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -Wc++11-compat %s
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -Wc++11-compat -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=c++20 %s
 //
 // Tests explicit instantiation of templates.
 template<typename T, typename U = T> class X0 { };
@@ -128,10 +129,14 @@ struct Foo<int> // expected-note{{header not required for explicitly-specialized
     {};
 };
 
-template <> // expected-warning{{extraneous template parameter list}}
+template <> // expected-error{{extraneous template parameter list}}
 template <>
 struct Foo<int>::Bar<void>
 {};
+
+#if __cplusplus >= 202002L
+template<> void f(auto); // expected-error{{extraneous template parameter list}}
+#endif
 
 namespace N1 {
 

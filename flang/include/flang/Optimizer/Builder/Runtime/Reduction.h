@@ -224,6 +224,29 @@ void genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                    mlir::Value maskBox);
 
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that does not take a dim argument and store the result in the provided
+/// result value. This is used for COMPLEX, CHARACTER and DERIVED TYPES.
+void genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value arrayBox, mlir::Value operation, mlir::Value maskBox,
+               mlir::Value identity, mlir::Value ordered, mlir::Value resultBox,
+               bool argByRef);
+
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that does not take a dim argument and return a scalare result. This is used
+/// for REAL, INTEGER and LOGICAL TYPES.
+mlir::Value genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value arrayBox, mlir::Value operation,
+                      mlir::Value maskBox, mlir::Value identity,
+                      mlir::Value ordered, bool argByRef);
+
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                  mlir::Value arrayBox, mlir::Value operation, mlir::Value dim,
+                  mlir::Value maskBox, mlir::Value identity,
+                  mlir::Value ordered, mlir::Value resultBox, bool argByRef);
+
 } // namespace fir::runtime
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_REDUCTION_H

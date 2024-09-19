@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerDeclContext.h"
 #include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -76,7 +77,15 @@ DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const DWARFDie &DIE,
                                           CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
+  uint64_t RefOffset;
+  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
+    RefOffset = RefValue.getUnit()->getOffset() + *Off;
+  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
+    RefOffset = *Off;
+  } else {
+    reportWarning("Unsupported reference type", File, &DIE);
+    return DWARFDie();
+  }
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -115,6 +124,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_string_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_template_alias:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_ptr_to_member_type:
@@ -176,20 +186,6 @@ static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
   sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
 }
 
-/// Make a best effort to guess the
-/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
-static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
-  SmallString<128> Result;
-  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-  StringRef Base = sys::path::parent_path(SysRoot);
-  if (sys::path::filename(Base) != "SDKs")
-    return Result;
-  Base = sys::path::parent_path(Base);
-  Result = Base;
-  Result += "/Toolchains";
-  return Result;
-}
-
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 static void analyzeImportedModule(
@@ -213,8 +209,10 @@ static void analyzeImportedModule(
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
@@ -231,7 +229,7 @@ static void analyzeImportedModule(
     ReportWarning(Twine("Conflicting parseable interfaces for Swift Module ") +
                       *Name + ": " + Entry + " and " + Path,
                   DIE);
-  Entry = std::string(ResolvedPath.str());
+  Entry = std::string(ResolvedPath);
 }
 
 /// The distinct types of work performed by the work loop in
@@ -478,7 +476,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
       if (std::optional<int64_t> RelocAdjustment =
               RelocMgr.getExprOpAddressRelocAdjustment(
                   *U, Op, AttrOffset + CurExprOffset,
-                  AttrOffset + Op.getEndOffset()))
+                  AttrOffset + Op.getEndOffset(), Options.Verbose))
         return std::make_pair(HasLocationAddress, *RelocAdjustment);
     } break;
     case dwarf::DW_OP_constx:
@@ -491,7 +489,8 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
         if (std::optional<int64_t> RelocAdjustment =
                 RelocMgr.getExprOpAddressRelocAdjustment(
                     *U, Op, *AddressOffset,
-                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize()))
+                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(),
+                    Options.Verbose))
           return std::make_pair(HasLocationAddress, *RelocAdjustment);
       }
     } break;
@@ -565,7 +564,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
 
   assert(LowPc && "low_pc attribute is not an address.");
   std::optional<int64_t> RelocAdjustment =
-      RelocMgr.getSubprogramRelocAdjustment(DIE);
+      RelocMgr.getSubprogramRelocAdjustment(DIE, Options.Verbose);
   if (!RelocAdjustment)
     return Flags;
 
@@ -1082,7 +1081,13 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
-  uint64_t Ref = *Val.getAsReference();
+  uint64_t Ref;
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
+    Ref = Val.getUnit()->getOffset() + *Off;
+  else if (Off = Val.getAsDebugInfoReference(); Off)
+    Ref = *Off;
+  else
+    return 0;
 
   DIE *NewRefDie = nullptr;
   CompileUnit *RefUnit = nullptr;
@@ -1406,6 +1411,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     CompileUnit &Unit, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
+
+  // We don't emit any skeleton CUs with dsymutil. So avoid emitting
+  // a redundant DW_AT_GNU_dwo_id on the non-skeleton CU.
+  if (AttrSpec.Attr == dwarf::DW_AT_GNU_dwo_id ||
+      AttrSpec.Attr == dwarf::DW_AT_dwo_id)
+    return 0;
 
   // Check for the offset to the macro table. If offset is incorrect then we
   // need to remove the attribute.
@@ -2048,13 +2059,13 @@ void DWARFLinker::DIECloner::emitDebugAddrSection(
   if (DwarfVersion < 5)
     return;
 
-  if (AddrPool.DieValues.empty())
+  if (AddrPool.getValues().empty())
     return;
 
   MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
   patchAddrBase(*Unit.getOutputUnitDIE(),
                 DIEInteger(Emitter->getDebugAddrSectionSize()));
-  Emitter->emitDwarfDebugAddrs(AddrPool.DieValues,
+  Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
 }
@@ -2253,14 +2264,23 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
     } break;
     case AccelTableKind::DebugNames: {
       for (const auto &Namespace : Unit.getNamespaces())
-        DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
-                           Namespace.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Namespace.Name, Namespace.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
+            Namespace.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubname : Unit.getPubnames())
-        DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
-                           Pubname.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubname.Name, Pubname.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
+            Pubname.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubtype : Unit.getPubtypes())
-        DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
-                           Pubtype.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubtype.Name, Pubtype.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
+            Pubtype.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
     } break;
     }
   }
@@ -2657,19 +2677,22 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getLocSection().Data,
-                                       "debug_loc");
+                                       DebugSectionKind::DebugLoc);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getRangesSection().Data, "debug_ranges");
+      Dwarf.getDWARFObj().getRangesSection().Data,
+      DebugSectionKind::DebugRange);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getFrameSection().Data, "debug_frame");
+      Dwarf.getDWARFObj().getFrameSection().Data, DebugSectionKind::DebugFrame);
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getArangesSection(),
-                                       "debug_aranges");
+                                       DebugSectionKind::DebugARanges);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getAddrSection().Data, "debug_addr");
+      Dwarf.getDWARFObj().getAddrSection().Data, DebugSectionKind::DebugAddr);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getRnglistsSection().Data, "debug_rnglists");
+      Dwarf.getDWARFObj().getRnglistsSection().Data,
+      DebugSectionKind::DebugRngLists);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getLoclistsSection().Data, "debug_loclists");
+      Dwarf.getDWARFObj().getLoclistsSection().Data,
+      DebugSectionKind::DebugLocLists);
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
@@ -2704,8 +2727,8 @@ Error DWARFLinker::link() {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool DebugStrPool(StringsTranslator, true);
-  OffsetsStringPool DebugLineStrPool(StringsTranslator, false);
+  OffsetsStringPool DebugStrPool(true);
+  OffsetsStringPool DebugLineStrPool(false);
   DebugDieValuePool StringOffsetPool;
 
   // ODR Contexts for the optimize.
@@ -2861,7 +2884,7 @@ Error DWARFLinker::link() {
       SizeByObject[OptContext.File.FileName].Input =
           getDebugInfoSize(*OptContext.File.Dwarf);
       SizeByObject[OptContext.File.FileName].Output =
-          DIECloner(*this, TheDwarfEmitter.get(), OptContext.File, DIEAlloc,
+          DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
                     OptContext.CompileUnits, Options.Update, DebugStrPool,
                     DebugLineStrPool, StringOffsetPool)
               .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
@@ -2880,7 +2903,7 @@ Error DWARFLinker::link() {
     if (TheDwarfEmitter != nullptr) {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
       TheDwarfEmitter->emitStrings(DebugStrPool);
-      TheDwarfEmitter->emitStringOffsets(StringOffsetPool.DieValues,
+      TheDwarfEmitter->emitStringOffsets(StringOffsetPool.getValues(),
                                          Options.TargetDWARFVersion);
       TheDwarfEmitter->emitLineStrings(DebugLineStrPool);
       for (AccelTableKind TableKind : Options.AccelTables) {
@@ -2938,7 +2961,7 @@ Error DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(hardware_concurrency(2));
+    DefaultThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();
@@ -3024,7 +3047,7 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
   UnitListTy CompileUnits;
   CompileUnits.emplace_back(std::move(Unit.Unit));
   assert(TheDwarfEmitter);
-  DIECloner(*this, TheDwarfEmitter.get(), Unit.File, DIEAlloc, CompileUnits,
+  DIECloner(*this, TheDwarfEmitter, Unit.File, DIEAlloc, CompileUnits,
             Options.Update, DebugStrPool, DebugLineStrPool, StringOffsetPool)
       .cloneAllCompileUnits(*Unit.File.Dwarf, Unit.File,
                             Unit.File.Dwarf->isLittleEndian());
@@ -3042,17 +3065,5 @@ void DWARFLinker::verifyInput(const DWARFFile &File) {
       Options.InputVerificationHandler(File, OS.str());
   }
 }
-
-Error DWARFLinker::createEmitter(const Triple &TheTriple,
-                                 OutputFileType FileType,
-                                 raw_pwrite_stream &OutFile) {
-
-  TheDwarfEmitter = std::make_unique<DwarfStreamer>(
-      FileType, OutFile, StringsTranslator, WarningHandler);
-
-  return TheDwarfEmitter->init(TheTriple, "__DWARF");
-}
-
-DwarfEmitter *DWARFLinker::getEmitter() { return TheDwarfEmitter.get(); }
 
 } // namespace llvm

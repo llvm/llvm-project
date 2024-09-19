@@ -1,4 +1,5 @@
 ; RUN: opt -global-merge -global-merge-max-offset=100 -S -o - %s | FileCheck %s
+; RUN: opt -passes='global-merge<max-offset=100>' -S -o - %s | FileCheck %s
 
 source_filename = "test/Transforms/GlobalMerge/debug-info.ll"
 target datalayout = "e-p:64:64"

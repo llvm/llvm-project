@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.12
-
 // <ostream>
 
 // template <class charT, class traits = char_traits<charT> >

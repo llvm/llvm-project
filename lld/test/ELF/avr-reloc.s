@@ -76,20 +76,6 @@ adiw r24, b   ; R_AVR_6_ADIW
 in    r20, b  ; R_AVR_PORT6
 sbic  b, 1    ; R_AVR_PORT5
 
-.section .PCREL,"ax",@progbits
-; CHECK-LABEL: section .PCREL
-; CHECK:       rjmp .+30
-; CHECK-NEXT:  rjmp .-36
-; CHECK-NEXT:  breq .+26
-; CHECK-NEXT:  breq .-40
-; HEX-LABEL:   section .PCREL:
-; HEX-NEXT:    0fc0eecf 69f061f3
-foo:
-rjmp foo + 32  ; R_AVR_13_PCREL
-rjmp foo - 32  ; R_AVR_13_PCREL
-breq foo + 32  ; R_AVR_7_PCREL
-breq foo - 32  ; R_AVR_7_PCREL
-
 .section .LDSSTS,"ax",@progbits
 ; CHECK-LABEL: section .LDSSTS:
 ; CHECK:       lds r20, 0x1e

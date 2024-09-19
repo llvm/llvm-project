@@ -256,15 +256,17 @@ static const Symbol &FollowHostAssoc(const Symbol &symbol) {
 }
 
 bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitOrBlockConstructContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitOrBlockConstructContaining(scope));
 }
 
 bool IsHostAssociatedIntoSubprogram(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitContaining(scope));
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
@@ -403,6 +405,18 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  for (const auto &[pointee, pointer] :
+      crayPointee.GetUltimate().owner().crayPointers()) {
+    if (pointee == crayPointee.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};
@@ -426,7 +440,7 @@ static void CheckMissingAnalysis(
     llvm::raw_string_ostream ss{buf};
     ss << "node has not been analyzed:\n";
     parser::DumpTree(ss, x);
-    common::die(ss.str().c_str());
+    common::die(buf.c_str());
   }
 }
 
@@ -465,9 +479,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            const Symbol *interface {
-              details.procInterface()
-            };
+            const Symbol *interface{details.procInterface()};
             return interface ? FindInterface(*interface) : nullptr;
           },
           [](const ProcBindingDetails &details) {
@@ -518,7 +530,9 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
       symbol.details());
 }
 
-const Symbol *FindOverriddenBinding(const Symbol &symbol) {
+const Symbol *FindOverriddenBinding(
+    const Symbol &symbol, bool &isInaccessibleDeferred) {
+  isInaccessibleDeferred = false;
   if (symbol.has<ProcBindingDetails>()) {
     if (const DeclTypeSpec * parentType{FindParentTypeSpec(symbol.owner())}) {
       if (const DerivedTypeSpec * parentDerived{parentType->AsDerived()}) {
@@ -527,8 +541,11 @@ const Symbol *FindOverriddenBinding(const Symbol &symbol) {
               overridden{parentScope->FindComponent(symbol.name())}) {
             // 7.5.7.3 p1: only accessible bindings are overridden
             if (!overridden->attrs().test(Attr::PRIVATE) ||
-                (FindModuleContaining(overridden->owner()) ==
-                    FindModuleContaining(symbol.owner()))) {
+                FindModuleContaining(overridden->owner()) ==
+                    FindModuleContaining(symbol.owner())) {
+              return overridden;
+            } else if (overridden->attrs().test(Attr::DEFERRED)) {
+              isInaccessibleDeferred = true;
               return overridden;
             }
           }
@@ -668,7 +685,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
     return true;
   } else if (IsPointer(symbol)) {
     return !ignorePointer;
-  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol)) {
+  } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
@@ -829,15 +846,18 @@ static const Symbol *HasImpureFinal(
   return IsFinalizable(derived, nullptr, /*withImpureFinalizer=*/true, rank);
 }
 
-const Symbol *HasImpureFinal(const Symbol &original) {
+const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
   const Symbol &symbol{ResolveAssociations(original)};
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-        // finalizable assumed-rank not allowed (C839)
-        return evaluate::IsAssumedRank(symbol)
-            ? nullptr
-            : HasImpureFinal(*derived, symbol.Rank());
+        if (evaluate::IsAssumedRank(symbol)) {
+          // finalizable assumed-rank not allowed (C839)
+          return nullptr;
+        } else {
+          int actualRank{rank.value_or(symbol.Rank())};
+          return HasImpureFinal(*derived, actualRank);
+        }
       }
     }
   }
@@ -846,7 +866,7 @@ const Symbol *HasImpureFinal(const Symbol &original) {
 
 bool MayRequireFinalization(const DerivedTypeSpec &derived) {
   return IsFinalizable(derived) ||
-      FindPolymorphicAllocatableUltimateComponent(derived);
+      FindPolymorphicAllocatablePotentialComponent(derived);
 }
 
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
@@ -1115,12 +1135,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
   return std::nullopt;
 }
 
-std::list<SourceName> OrderParameterNames(const Symbol &typeSymbol) {
-  std::list<SourceName> result;
+SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
+  SymbolVector result;
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterNames(spec->typeSymbol());
   }
-  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNames()};
+  const auto &paramNames{typeSymbol.get<DerivedTypeDetails>().paramNameOrder()};
   result.insert(result.end(), paramNames.begin(), paramNames.end());
   return result;
 }
@@ -1130,7 +1150,7 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
   if (const DerivedTypeSpec * spec{typeSymbol.GetParentTypeSpec()}) {
     result = OrderParameterDeclarations(spec->typeSymbol());
   }
-  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDecls()};
+  const auto &paramDecls{typeSymbol.get<DerivedTypeDetails>().paramDeclOrder()};
   result.insert(result.end(), paramDecls.begin(), paramDecls.end());
   return result;
 }
@@ -1274,6 +1294,8 @@ static bool StopAtComponentPre(const Symbol &component) {
     return !IsPointer(component);
   } else if constexpr (componentKind == ComponentKind::PotentialAndPointer) {
     return true;
+  } else {
+    DIE("unexpected ComponentKind");
   }
 }
 
@@ -1332,7 +1354,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }
@@ -1382,11 +1404,11 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
   return std::find_if(directs.begin(), directs.end(), IsAllocatableOrPointer);
 }
 
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
   return std::find_if(
-      ultimates.begin(), ultimates.end(), IsPolymorphicAllocatable);
+      potentials.begin(), potentials.end(), IsPolymorphicAllocatable);
 }
 
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,
@@ -1465,45 +1487,45 @@ const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
 }
 
 void LabelEnforce::Post(const parser::GotoStmt &gotoStmt) {
-  checkLabelUse(gotoStmt.v);
+  CheckLabelUse(gotoStmt.v);
 }
 void LabelEnforce::Post(const parser::ComputedGotoStmt &computedGotoStmt) {
   for (auto &i : std::get<std::list<parser::Label>>(computedGotoStmt.t)) {
-    checkLabelUse(i);
+    CheckLabelUse(i);
   }
 }
 
 void LabelEnforce::Post(const parser::ArithmeticIfStmt &arithmeticIfStmt) {
-  checkLabelUse(std::get<1>(arithmeticIfStmt.t));
-  checkLabelUse(std::get<2>(arithmeticIfStmt.t));
-  checkLabelUse(std::get<3>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<1>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<2>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<3>(arithmeticIfStmt.t));
 }
 
 void LabelEnforce::Post(const parser::AssignStmt &assignStmt) {
-  checkLabelUse(std::get<parser::Label>(assignStmt.t));
+  CheckLabelUse(std::get<parser::Label>(assignStmt.t));
 }
 
 void LabelEnforce::Post(const parser::AssignedGotoStmt &assignedGotoStmt) {
   for (auto &i : std::get<std::list<parser::Label>>(assignedGotoStmt.t)) {
-    checkLabelUse(i);
+    CheckLabelUse(i);
   }
 }
 
 void LabelEnforce::Post(const parser::AltReturnSpec &altReturnSpec) {
-  checkLabelUse(altReturnSpec.v);
+  CheckLabelUse(altReturnSpec.v);
 }
 
 void LabelEnforce::Post(const parser::ErrLabel &errLabel) {
-  checkLabelUse(errLabel.v);
+  CheckLabelUse(errLabel.v);
 }
 void LabelEnforce::Post(const parser::EndLabel &endLabel) {
-  checkLabelUse(endLabel.v);
+  CheckLabelUse(endLabel.v);
 }
 void LabelEnforce::Post(const parser::EorLabel &eorLabel) {
-  checkLabelUse(eorLabel.v);
+  CheckLabelUse(eorLabel.v);
 }
 
-void LabelEnforce::checkLabelUse(const parser::Label &labelUsed) {
+void LabelEnforce::CheckLabelUse(const parser::Label &labelUsed) {
   if (labels_.find(labelUsed) == labels_.end()) {
     SayWithConstruct(context_, currentStatementSourcePosition_,
         parser::MessageFormattedText{
@@ -1536,8 +1558,9 @@ bool IsAutomaticallyDestroyed(const Symbol &symbol) {
   return symbol.has<ObjectEntityDetails>() &&
       (symbol.owner().kind() == Scope::Kind::Subprogram ||
           symbol.owner().kind() == Scope::Kind::BlockConstruct) &&
-      (!IsDummy(symbol) || IsIntentOut(symbol)) && !IsPointer(symbol) &&
-      !IsSaved(symbol) && !FindCommonBlockContaining(symbol);
+      !IsNamedConstant(symbol) && (!IsDummy(symbol) || IsIntentOut(symbol)) &&
+      !IsPointer(symbol) && !IsSaved(symbol) &&
+      !FindCommonBlockContaining(symbol);
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(
@@ -1683,6 +1706,23 @@ std::string GetCommonBlockObjectName(const Symbol &common, bool underscoring) {
   }
   return underscoring ? common.name().ToString() + "_"s
                       : common.name().ToString();
+}
+
+bool HadUseError(
+    SemanticsContext &context, SourceName at, const Symbol *symbol) {
+  if (const auto *details{
+          symbol ? symbol->detailsIf<UseErrorDetails>() : nullptr}) {
+    auto &msg{context.Say(
+        at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
+    for (const auto &[location, module] : details->occurrences()) {
+      msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US, at,
+          module->GetName().value());
+    }
+    context.SetError(*symbol);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 } // namespace Fortran::semantics

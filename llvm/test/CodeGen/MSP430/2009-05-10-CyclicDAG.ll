@@ -7,9 +7,9 @@ target triple = "msp430-unknown-linux-gnu"
 
 define void @uip_arp_arpin() nounwind {
 entry:
-	%tmp = load volatile i16, i16* @uip_len		; <i16> [#uses=1]
+	%tmp = load volatile i16, ptr @uip_len		; <i16> [#uses=1]
 	%cmp = icmp ult i16 %tmp, 42		; <i1> [#uses=1]
-	store volatile i16 0, i16* @uip_len
+	store volatile i16 0, ptr @uip_len
 	br i1 %cmp, label %if.then, label %if.end
 
 if.then:		; preds = %entry

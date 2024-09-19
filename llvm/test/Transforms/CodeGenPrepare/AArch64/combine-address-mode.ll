@@ -56,8 +56,8 @@ bb9:                                              ; preds = %bb1
   br label %bb6
 
 bb10:                                             ; preds = %bb6, %bb
-  %i11 = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0), %bb ], [ %i7, %bb6 ]
-  %i12 = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0), %bb ], [ %i8, %bb6 ]
+  %i11 = phi ptr [ @_MergedGlobals, %bb ], [ %i7, %bb6 ]
+  %i12 = phi ptr [ @_MergedGlobals, %bb ], [ %i8, %bb6 ]
   br label %bb13
 
 bb13:                                             ; preds = %bb18, %bb10

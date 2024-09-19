@@ -14,7 +14,7 @@
 // returns false when there's no constant evaluation support from the compiler.
 //  as well as when called not in a constexpr context
 
-#include <type_traits>
+#include <__type_traits/is_constant_evaluated.h>
 #include <cassert>
 
 #include "test_macros.h"

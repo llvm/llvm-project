@@ -74,3 +74,20 @@ void GH48579_2(void) {
 
 int GH48579_3 = ({a();});              // both-error {{statement expression not allowed at file scope}}
 void GH48579_4(int array[({ a(); })]); // both-error {{statement expression not allowed at file scope}}
+
+void pragma_warning(void) {
+#pragma clang diagnostic warning "-Wimplicit-function-declaration"
+  bark(); // expected-warning {{call to undeclared function 'bark'; ISO C99 and later do not support implicit function declarations}} \
+             c2x-error {{use of undeclared identifier 'bark'}}
+}
+
+void pragma_error(void) {
+#pragma clang diagnostic error "-Wimplicit-function-declaration"
+  bark(); // expected-error {{call to undeclared function 'bark'; ISO C99 and later do not support implicit function declarations}} \
+             c2x-error {{use of undeclared identifier 'bark'}}
+}
+
+void pragma_ignored(void) {
+#pragma clang diagnostic ignored "-Wimplicit-function-declaration"
+  bark(); // c2x-error {{use of undeclared identifier 'bark'}}
+}

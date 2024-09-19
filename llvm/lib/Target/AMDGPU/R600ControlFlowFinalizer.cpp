@@ -89,15 +89,14 @@ bool CFStack::requiresWorkAroundForInst(unsigned Opcode) {
       // work-around when CurrentSubEntries > 3 allows us to over-allocate stack
       // resources without any problems.
       return CurrentSubEntries > 3;
-    } else {
-      assert(ST->getWavefrontSize() == 32);
-      // We are being conservative here.  We only require the work-around if
-      // CurrentSubEntries > 7 &&
-      // (CurrentSubEntries % 8 == 7 || CurrentSubEntries % 8 == 0)
-      // See the comment on the wavefront size == 64 case for why we are
-      // being conservative.
-      return CurrentSubEntries > 7;
     }
+    assert(ST->getWavefrontSize() == 32);
+    // We are being conservative here.  We only require the work-around if
+    // CurrentSubEntries > 7 &&
+    // (CurrentSubEntries % 8 == 7 || CurrentSubEntries % 8 == 0)
+    // See the comment on the wavefront size == 64 case for why we are
+    // being conservative.
+    return CurrentSubEntries > 7;
   }
 }
 
@@ -106,19 +105,18 @@ unsigned CFStack::getSubEntrySize(CFStack::StackItem Item) {
   default:
     return 0;
   case CFStack::FIRST_NON_WQM_PUSH:
-  assert(!ST->hasCaymanISA());
-  if (ST->getGeneration() <= AMDGPUSubtarget::R700) {
-    // +1 For the push operation.
-    // +2 Extra space required.
-    return 3;
-  } else {
+    assert(!ST->hasCaymanISA());
+    if (ST->getGeneration() <= AMDGPUSubtarget::R700) {
+      // +1 For the push operation.
+      // +2 Extra space required.
+      return 3;
+    }
     // Some documentation says that this is not necessary on Evergreen,
     // but experimentation has show that we need to allocate 1 extra
     // sub-entry for the first non-WQM push.
     // +1 For the push operation.
     // +1 Extra space required.
     return 2;
-  }
   case CFStack::FIRST_NON_WQM_PUSH_W_FULL_ENTRY:
     assert(ST->getGeneration() >= AMDGPUSubtarget::EVERGREEN);
     // +1 For the push operation.
@@ -294,8 +292,8 @@ private:
     if ((DstRegs.find(SrcMI) == DstRegs.end())) {
       DstRegs.insert(DstMI);
       return true;
-    } else
-      return false;
+    }
+    return false;
   }
 
   ClauseFile

@@ -59,6 +59,13 @@ export namespace std {
   using std::tan;
   using std::tanh;
 
+#if _LIBCPP_STD_VER >= 26
+  // [complex.tuple], tuple interface
+  using std::get;
+  using std::tuple_element;
+  using std::tuple_size;
+#endif
+
   // [complex.literals], complex literals
   inline namespace literals {
     inline namespace complex_literals {

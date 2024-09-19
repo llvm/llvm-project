@@ -56,7 +56,7 @@ class TargetLibraryInfo;
 class Value;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
-namespace LLVM_LIBRARY_VISIBILITY gvn {
+namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
 
 struct AvailableValue;
 struct AvailableValueInBlock;
@@ -232,13 +232,67 @@ private:
 
   /// A mapping from value numbers to lists of Value*'s that
   /// have that value number.  Use findLeader to query it.
-  struct LeaderTableEntry {
-    Value *Val;
-    const BasicBlock *BB;
-    LeaderTableEntry *Next;
+  class LeaderMap {
+  public:
+    struct LeaderTableEntry {
+      Value *Val;
+      const BasicBlock *BB;
+    };
+
+  private:
+    struct LeaderListNode {
+      LeaderTableEntry Entry;
+      LeaderListNode *Next;
+    };
+    DenseMap<uint32_t, LeaderListNode> NumToLeaders;
+    BumpPtrAllocator TableAllocator;
+
+  public:
+    class leader_iterator {
+      const LeaderListNode *Current;
+
+    public:
+      using iterator_category = std::forward_iterator_tag;
+      using value_type = const LeaderTableEntry;
+      using difference_type = std::ptrdiff_t;
+      using pointer = value_type *;
+      using reference = value_type &;
+
+      leader_iterator(const LeaderListNode *C) : Current(C) {}
+      leader_iterator &operator++() {
+        assert(Current && "Dereferenced end of leader list!");
+        Current = Current->Next;
+        return *this;
+      }
+      bool operator==(const leader_iterator &Other) const {
+        return Current == Other.Current;
+      }
+      bool operator!=(const leader_iterator &Other) const {
+        return Current != Other.Current;
+      }
+      reference operator*() const { return Current->Entry; }
+    };
+
+    iterator_range<leader_iterator> getLeaders(uint32_t N) {
+      auto I = NumToLeaders.find(N);
+      if (I == NumToLeaders.end()) {
+        return iterator_range(leader_iterator(nullptr),
+                              leader_iterator(nullptr));
+      }
+
+      return iterator_range(leader_iterator(&I->second),
+                            leader_iterator(nullptr));
+    }
+
+    void insert(uint32_t N, Value *V, const BasicBlock *BB);
+    void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
+    void verifyRemoved(const Value *Inst) const;
+    void clear() {
+      NumToLeaders.clear();
+      TableAllocator.Reset();
+    }
   };
-  DenseMap<uint32_t, LeaderTableEntry> LeaderTable;
-  BumpPtrAllocator TableAllocator;
+  LeaderMap LeaderTable;
 
   // Block-local map of equivalent values to their leader, does not
   // propagate to any successors. Entries added mid-block are applied
@@ -263,51 +317,6 @@ private:
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                MemoryDependenceResults *RunMD, LoopInfo &LI,
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
-
-  /// Push a new Value to the LeaderTable onto the list for its value number.
-  void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {
-    LeaderTableEntry &Curr = LeaderTable[N];
-    if (!Curr.Val) {
-      Curr.Val = V;
-      Curr.BB = BB;
-      return;
-    }
-
-    LeaderTableEntry *Node = TableAllocator.Allocate<LeaderTableEntry>();
-    Node->Val = V;
-    Node->BB = BB;
-    Node->Next = Curr.Next;
-    Curr.Next = Node;
-  }
-
-  /// Scan the list of values corresponding to a given
-  /// value number, and remove the given instruction if encountered.
-  void removeFromLeaderTable(uint32_t N, Instruction *I, BasicBlock *BB) {
-    LeaderTableEntry *Prev = nullptr;
-    LeaderTableEntry *Curr = &LeaderTable[N];
-
-    while (Curr && (Curr->Val != I || Curr->BB != BB)) {
-      Prev = Curr;
-      Curr = Curr->Next;
-    }
-
-    if (!Curr)
-      return;
-
-    if (Prev) {
-      Prev->Next = Curr->Next;
-    } else {
-      if (!Curr->Next) {
-        Curr->Val = nullptr;
-        Curr->BB = nullptr;
-      } else {
-        LeaderTableEntry *Next = Curr->Next;
-        Curr->Val = Next->Val;
-        Curr->BB = Next->BB;
-        Curr->Next = Next->Next;
-      }
-    }
-  }
 
   // List of critical edges to be split between iterations.
   SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;

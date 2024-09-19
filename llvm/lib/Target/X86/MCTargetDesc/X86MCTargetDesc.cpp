@@ -79,8 +79,8 @@ static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
   const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
 
-  return (Base.isReg() && Base.getReg() != 0 && RC.contains(Base.getReg())) ||
-         (Index.isReg() && Index.getReg() != 0 && RC.contains(Index.getReg()));
+  return (Base.isReg() && Base.getReg() && RC.contains(Base.getReg())) ||
+         (Index.isReg() && Index.getReg() && RC.contains(Index.getReg()));
 }
 
 bool X86_MC::is16BitMemOperand(const MCInst &MI, unsigned Op,
@@ -88,8 +88,8 @@ bool X86_MC::is16BitMemOperand(const MCInst &MI, unsigned Op,
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
 
-  if (STI.hasFeature(X86::Is16Bit) && Base.isReg() && Base.getReg() == 0 &&
-      Index.isReg() && Index.getReg() == 0)
+  if (STI.hasFeature(X86::Is16Bit) && Base.isReg() && !Base.getReg() &&
+      Index.isReg() && !Index.getReg())
     return true;
   return isMemOperand(MI, Op, X86::GR16RegClassID);
 }
@@ -98,7 +98,7 @@ bool X86_MC::is32BitMemOperand(const MCInst &MI, unsigned Op) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
   if (Base.isReg() && Base.getReg() == X86::EIP) {
-    assert(Index.isReg() && Index.getReg() == 0 && "Invalid eip-based address");
+    assert(Index.isReg() && !Index.getReg() && "Invalid eip-based address");
     return true;
   }
   if (Index.isReg() && Index.getReg() == X86::EIZ)
@@ -128,7 +128,7 @@ bool X86_MC::needsAddressSizeOverride(const MCInst &MI,
   default:
     break;
   case X86II::RawFrmDstSrc: {
-    unsigned siReg = MI.getOperand(1).getReg();
+    MCRegister siReg = MI.getOperand(1).getReg();
     assert(((siReg == X86::SI && MI.getOperand(0).getReg() == X86::DI) ||
             (siReg == X86::ESI && MI.getOperand(0).getReg() == X86::EDI) ||
             (siReg == X86::RSI && MI.getOperand(0).getReg() == X86::RDI)) &&
@@ -137,12 +137,12 @@ bool X86_MC::needsAddressSizeOverride(const MCInst &MI,
            (Is32BitMode && siReg == X86::SI);
   }
   case X86II::RawFrmSrc: {
-    unsigned siReg = MI.getOperand(0).getReg();
+    MCRegister siReg = MI.getOperand(0).getReg();
     return (!Is32BitMode && siReg == X86::ESI) ||
            (Is32BitMode && siReg == X86::SI);
   }
   case X86II::RawFrmDst: {
-    unsigned siReg = MI.getOperand(0).getReg();
+    MCRegister siReg = MI.getOperand(0).getReg();
     return (!Is32BitMode && siReg == X86::EDI) ||
            (Is32BitMode && siReg == X86::DI);
   }
@@ -666,7 +666,7 @@ std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
   const MCOperand &IndexReg = Inst.getOperand(MemOpStart + X86::AddrIndexReg);
   const MCOperand &ScaleAmt = Inst.getOperand(MemOpStart + X86::AddrScaleAmt);
   const MCOperand &Disp = Inst.getOperand(MemOpStart + X86::AddrDisp);
-  if (SegReg.getReg() != 0 || IndexReg.getReg() != 0 || ScaleAmt.getImm() != 1 ||
+  if (SegReg.getReg() || IndexReg.getReg() || ScaleAmt.getImm() != 1 ||
       !Disp.isImm())
     return std::nullopt;
 
@@ -693,8 +693,8 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   const MCOperand &ScaleAmt = Inst.getOperand(MemOpStart + X86::AddrScaleAmt);
   const MCOperand &Disp = Inst.getOperand(MemOpStart + X86::AddrDisp);
   // Must be a simple rip-relative address.
-  if (BaseReg.getReg() != X86::RIP || SegReg.getReg() != 0 ||
-      IndexReg.getReg() != 0 || ScaleAmt.getImm() != 1 || !Disp.isImm())
+  if (BaseReg.getReg() != X86::RIP || SegReg.getReg() || IndexReg.getReg() ||
+      ScaleAmt.getImm() != 1 || !Disp.isImm())
     return std::nullopt;
   // rip-relative ModR/M immediate is 32 bits.
   assert(Size > 4 && "invalid instruction size for rip-relative lea");
@@ -742,6 +742,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
     TargetRegistry::RegisterNullTargetStreamer(*T, createX86NullTargetStreamer);
 
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createX86ELFStreamer);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createX86MCInstPrinter);

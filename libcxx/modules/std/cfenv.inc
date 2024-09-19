@@ -9,22 +9,22 @@
 
 export namespace std {
   // types
-  using std::fenv_t;
-  using std::fexcept_t;
+  using std::fenv_t _LIBCPP_USING_IF_EXISTS;
+  using std::fexcept_t _LIBCPP_USING_IF_EXISTS;
 
   // functions
-  using std::feclearexcept;
-  using std::fegetexceptflag;
-  using std::feraiseexcept;
-  using std::fesetexceptflag;
-  using std::fetestexcept;
+  using std::feclearexcept _LIBCPP_USING_IF_EXISTS;
+  using std::fegetexceptflag _LIBCPP_USING_IF_EXISTS;
+  using std::feraiseexcept _LIBCPP_USING_IF_EXISTS;
+  using std::fesetexceptflag _LIBCPP_USING_IF_EXISTS;
+  using std::fetestexcept _LIBCPP_USING_IF_EXISTS;
 
-  using std::fegetround;
-  using std::fesetround;
+  using std::fegetround _LIBCPP_USING_IF_EXISTS;
+  using std::fesetround _LIBCPP_USING_IF_EXISTS;
 
-  using std::fegetenv;
-  using std::feholdexcept;
-  using std::fesetenv;
-  using std::feupdateenv;
+  using std::fegetenv _LIBCPP_USING_IF_EXISTS;
+  using std::feholdexcept _LIBCPP_USING_IF_EXISTS;
+  using std::fesetenv _LIBCPP_USING_IF_EXISTS;
+  using std::feupdateenv _LIBCPP_USING_IF_EXISTS;
 
 } // namespace std

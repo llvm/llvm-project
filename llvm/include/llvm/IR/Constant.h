@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class ConstantRange;
 class APInt;
 
 /// This is an important base class in LLVM. It provides the common facilities
@@ -40,8 +41,8 @@ class APInt;
 /// LLVM Constant Representation
 class Constant : public User {
 protected:
-  Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
-    : User(ty, vty, Ops, NumOps) {}
+  Constant(Type *ty, ValueTy vty, AllocInfo AllocInfo)
+      : User(ty, vty, AllocInfo) {}
 
   ~Constant() = default;
 
@@ -146,13 +147,17 @@ public:
   Constant *getAggregateElement(Constant *Elt) const;
 
   /// If all elements of the vector constant have the same value, return that
-  /// value. Otherwise, return nullptr. Ignore undefined elements by setting
-  /// AllowUndefs to true.
-  Constant *getSplatValue(bool AllowUndefs = false) const;
+  /// value. Otherwise, return nullptr. Ignore poison elements by setting
+  /// AllowPoison to true.
+  Constant *getSplatValue(bool AllowPoison = false) const;
 
   /// If C is a constant integer then return its value, otherwise C must be a
   /// vector of constant integers, all equal, and the common value is returned.
   const APInt &getUniqueInteger() const;
+
+  /// Convert constant to an approximate constant range. For vectors, the
+  /// range is the union over the element ranges. Poison elements are ignored.
+  ConstantRange toConstantRange() const;
 
   /// Called if some element of this constant is no longer valid.
   /// At this point only other constants may be on the use_list for this

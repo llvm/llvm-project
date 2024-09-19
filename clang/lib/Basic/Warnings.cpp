@@ -199,8 +199,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
 
       // Check to see if this warning starts with "no-", if so, this is a
       // negative form of the option.
-      bool IsPositive = !Opt.starts_with("no-");
-      if (!IsPositive) Opt = Opt.substr(3);
+      bool IsPositive = !Opt.consume_front("no-");
 
       auto Severity = IsPositive ? diag::Severity::Remark
                                  : diag::Severity::Ignored;

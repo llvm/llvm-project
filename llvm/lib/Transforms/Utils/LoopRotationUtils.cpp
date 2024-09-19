@@ -159,8 +159,8 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
     SmallVector<DbgValueInst *, 1> DbgValues;
-    SmallVector<DPValue *, 1> DPValues;
-    llvm::findDbgValues(DbgValues, OrigHeaderVal, &DPValues);
+    SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
+    llvm::findDbgValues(DbgValues, OrigHeaderVal, &DbgVariableRecords);
     for (auto &DbgValue : DbgValues) {
       // The original users in the OrigHeader are already using the original
       // definitions.
@@ -183,11 +183,11 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
     }
 
     // RemoveDIs: duplicate implementation for non-instruction debug-info
-    // storage in DPValues.
-    for (DPValue *DPV : DPValues) {
+    // storage in DbgVariableRecords.
+    for (DbgVariableRecord *DVR : DbgVariableRecords) {
       // The original users in the OrigHeader are already using the original
       // definitions.
-      BasicBlock *UserBB = DPV->getMarker()->getParent();
+      BasicBlock *UserBB = DVR->getMarker()->getParent();
       if (UserBB == OrigHeader)
         continue;
 
@@ -202,7 +202,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
         NewVal = UndefValue::get(OrigHeaderVal->getType());
-      DPV->replaceVariableLocationOp(OrigHeaderVal, NewVal);
+      DVR->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
   }
 }
@@ -287,7 +287,7 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     return;
 
   SmallVector<uint32_t, 2> Weights;
-  extractFromBranchWeightMD(WeightMD, Weights);
+  extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
@@ -347,9 +347,19 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
         // probabilities as if there are only 0-trip and 1-trip cases.
         ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
       }
+    } else {
+      // Theoretically, if the loop body must be executed at least once, the
+      // backedge count must be not less than exit count. However the branch
+      // weight collected by sampling-based PGO may be not very accurate due to
+      // sampling. Therefore this workaround is required here to avoid underflow
+      // of unsigned in following update of branch weight.
+      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+        OrigLoopBackedgeWeight = OrigLoopExitWeight;
     }
+    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
     EnterWeight = ExitWeight1;
+    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
     LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
@@ -380,13 +390,13 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights);
+  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
         SuccsSwapped ? ExitWeight0 : EnterWeight,
     };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
   }
 }
 
@@ -450,7 +460,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                    L->dump());
         return Rotated;
       }
-      if (Metrics.convergent) {
+      if (Metrics.Convergence != ConvergenceKind::None) {
         LLVM_DEBUG(dbgs() << "LoopRotation: NOT rotating - contains convergent "
                    "instructions: ";
                    L->dump());
@@ -552,20 +562,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DbgIntrinsics.insert(makeHash(DII));
-        // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
-        // to collect DPValues attached to any other debug intrinsics.
-        for (const DPValue &DPV : DII->getDbgValueRange())
-          DbgIntrinsics.insert(makeHash(&DPV));
+        // Until RemoveDIs supports dbg.declares in DbgVariableRecord format,
+        // we'll need to collect DbgVariableRecords attached to any other debug
+        // intrinsics.
+        for (const DbgVariableRecord &DVR :
+             filterDbgVars(DII->getDbgRecordRange()))
+          DbgIntrinsics.insert(makeHash(&DVR));
       } else {
         break;
       }
     }
 
-    // Build DPValue hashes for DPValues attached to the terminator, which isn't
-    // considered in the loop above.
-    for (const DPValue &DPV :
-         OrigPreheader->getTerminator()->getDbgValueRange())
-      DbgIntrinsics.insert(makeHash(&DPV));
+    // Build DbgVariableRecord hashes for DbgVariableRecords attached to the
+    // terminator, which isn't considered in the loop above.
+    for (const DbgVariableRecord &DVR :
+         filterDbgVars(OrigPreheader->getTerminator()->getDbgRecordRange()))
+      DbgIntrinsics.insert(makeHash(&DVR));
 
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
@@ -577,26 +589,29 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
     Module *M = OrigHeader->getModule();
 
-    // Track the next DPValue to clone. If we have a sequence where an
+    // Track the next DbgRecord to clone. If we have a sequence where an
     // instruction is hoisted instead of being cloned:
-    //    DPValue blah
+    //    DbgRecord blah
     //    %foo = add i32 0, 0
-    //    DPValue xyzzy
+    //    DbgRecord xyzzy
     //    %bar = call i32 @foobar()
-    // where %foo is hoisted, then the DPValue "blah" will be seen twice, once
+    // where %foo is hoisted, then the DbgRecord "blah" will be seen twice, once
     // attached to %foo, then when %foo his hoisted it will "fall down" onto the
     // function call:
-    //    DPValue blah
-    //    DPValue xyzzy
+    //    DbgRecord blah
+    //    DbgRecord xyzzy
     //    %bar = call i32 @foobar()
     // causing it to appear attached to the call too.
     //
     // To avoid this, cloneDebugInfoFrom takes an optional "start cloning from
-    // here" position to account for this behaviour. We point it at any DPValues
-    // on the next instruction, here labelled xyzzy, before we hoist %foo.
-    // Later, we only only clone DPValues from that position (xyzzy) onwards,
-    // which avoids cloning DPValue "blah" multiple times.
-    std::optional<DPValue::self_iterator> NextDbgInst = std::nullopt;
+    // here" position to account for this behaviour. We point it at any
+    // DbgRecords on the next instruction, here labelled xyzzy, before we hoist
+    // %foo. Later, we only only clone DbgRecords from that position (xyzzy)
+    // onwards, which avoids cloning DbgRecord "blah" multiple times. (Stored as
+    // a range because it gives us a natural way of testing whether
+    //  there were DbgRecords on the next instruction before we hoisted things).
+    iterator_range<DbgRecord::self_iterator> NextDbgInsts =
+        (I != E) ? I->getDbgRecordRange() : DbgMarker::getEmptyDbgRecordRange();
 
     while (I != E) {
       Instruction *Inst = &*I++;
@@ -609,20 +624,32 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // memory (without proving that the loop doesn't write).
       if (L->hasLoopInvariantOperands(Inst) && !Inst->mayReadFromMemory() &&
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
-          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
+          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst) &&
+          // It is not safe to hoist the value of these instructions in
+          // coroutines, as the addresses of otherwise eligible variables (e.g.
+          // thread-local variables and errno) may change if the coroutine is
+          // resumed in a different thread.Therefore, we disable this
+          // optimization for correctness. However, this may block other correct
+          // optimizations.
+          // FIXME: This should be reverted once we have a better model for
+          // memory access in coroutines.
+          !Inst->getFunction()->isPresplitCoroutine()) {
 
-        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
+        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
+            !NextDbgInsts.empty()) {
           auto DbgValueRange =
-              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
-          RemapDPValueRange(M, DbgValueRange, ValueMap,
-                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
+          RemapDbgRecordRange(M, DbgValueRange, ValueMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
-          for (DPValue &DPV : make_early_inc_range(DbgValueRange))
-            if (DbgIntrinsics.count(makeHash(&DPV)))
-              DPV.eraseFromParent();
+          for (DbgVariableRecord &DVR :
+               make_early_inc_range(filterDbgVars(DbgValueRange)))
+            if (DbgIntrinsics.count(makeHash(&DVR)))
+              DVR.eraseFromParent();
         }
 
-        NextDbgInst = I->getDbgValueRange().begin();
+        NextDbgInsts = I->getDbgRecordRange();
+
         Inst->moveBefore(LoopEntryBranch);
 
         ++NumInstrsHoisted;
@@ -635,15 +662,17 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       ++NumInstrsDuplicated;
 
-      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
-        auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInst);
-        RemapDPValueRange(M, Range, ValueMap,
-                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-        NextDbgInst = std::nullopt;
+      if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
+          !NextDbgInsts.empty()) {
+        auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
+        RemapDbgRecordRange(M, Range, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
-        for (DPValue &DPV : make_early_inc_range(Range))
-          if (DbgIntrinsics.count(makeHash(&DPV)))
-            DPV.eraseFromParent();
+        for (DbgVariableRecord &DVR :
+             make_early_inc_range(filterDbgVars(Range)))
+          if (DbgIntrinsics.count(makeHash(&DVR)))
+            DVR.eraseFromParent();
       }
 
       // Eagerly remap the operands of the instruction.
@@ -761,7 +790,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // OrigPreHeader's old terminator (the original branch into the loop), and
     // remove the corresponding incoming values from the PHI nodes in OrigHeader.
     LoopEntryBranch->eraseFromParent();
-    OrigPreheader->flushTerminatorDbgValues();
+    OrigPreheader->flushTerminatorDbgRecords();
 
     // Update MemorySSA before the rewrite call below changes the 1:1
     // instruction:cloned_instruction_or_value mapping.
@@ -858,7 +887,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // We can fold the conditional branch in the preheader, this makes things
       // simpler. The first step is to remove the extra edge to the Exit block.
       Exit->removePredecessor(OrigPreheader, true /*preserve LCSSA*/);
-      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI);
+      BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI->getIterator());
       NewBI->setDebugLoc(PHBI->getDebugLoc());
       PHBI->eraseFromParent();
 

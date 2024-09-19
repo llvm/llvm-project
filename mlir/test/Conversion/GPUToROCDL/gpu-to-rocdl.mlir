@@ -1,6 +1,9 @@
 // RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-rocdl='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
+// CHECK-LABEL: @test_module
+// CHECK-SAME: llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
   // CHECK32-LABEL: func @gpu_index_ops()
@@ -67,30 +70,36 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK-LABEL: func @gpu_index_ops_range()
+  // CHECK-LABEL: func @gpu_index_ops_range
   // CHECK-SAME: rocdl.flat_work_group_size = "1536,1536"
   // CHECK-SAME: rocdl.reqd_work_group_size = array<i32: 8, 12, 16>
-  func.func @gpu_index_ops_range()
-      -> (index, index, index, index, index, index) attributes
-      {gpu.known_block_size = array<i32: 8, 12, 16>,
-       gpu.known_grid_size = array<i32: 20, 24, 28>} {
+  gpu.func @gpu_index_ops_range(%place: memref<i32>)  kernel attributes
+      {known_block_size = array<i32: 8, 12, 16>,
+       known_grid_size = array<i32: 20, 24, 28>} {
 
-    // CHECK: rocdl.workitem.id.x {range = array<i32: 0, 8>} : i32
+    // CHECK: rocdl.workitem.id.x range <i32, 0, 8> : i32
     %tIdX = gpu.thread_id x
-    // CHECK: rocdl.workitem.id.y {range = array<i32: 0, 12>} : i32
+    // CHECK: rocdl.workitem.id.y range <i32, 0, 12> : i32
     %tIdY = gpu.thread_id y
-    // CHECK: rocdl.workitem.id.z {range = array<i32: 0, 16>} : i32
+    // CHECK: rocdl.workitem.id.z range <i32, 0, 16> : i32
     %tIdZ = gpu.thread_id z
 
-    // CHECK: rocdl.workgroup.id.x {range = array<i32: 0, 20>} : i32
+    // CHECK: rocdl.workgroup.id.x range <i32, 0, 20> : i32
     %bIdX = gpu.block_id x
-    // CHECK: rocdl.workgroup.id.y {range = array<i32: 0, 24>} : i32
+    // CHECK: rocdl.workgroup.id.y range <i32, 0, 24> : i32
     %bIdY = gpu.block_id y
-    // CHECK: rocdl.workgroup.id.z {range = array<i32: 0, 28>} : i32
+    // CHECK: rocdl.workgroup.id.z range <i32, 0, 28> : i32
     %bIdZ = gpu.block_id z
 
-    func.return %tIdX, %tIdY, %tIdZ, %bIdX, %bIdY, %bIdZ
-        : index, index, index, index, index, index
+    // "Usage" to make the ID calls not die
+    %0 = arith.addi %tIdX, %tIdY : index
+    %1 = arith.addi %0, %tIdZ : index
+    %2 = arith.addi %1, %bIdX : index
+    %3 = arith.addi %2, %bIdY : index
+    %4 = arith.addi %3, %bIdZ : index
+    %5 = arith.index_cast %4 : index to i32
+    memref.store %5, %place[] : memref<i32>
+    gpu.return
   }
 }
 
@@ -123,15 +132,62 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__ocml_fabs_f32(f32) -> f32
-  // CHECK: llvm.func @__ocml_fabs_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_sqrt
+  func.func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.sqrt %arg_f16 : f16
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f16) -> f16
+    %result32 = math.sqrt %arg_f32 : f32
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f32) -> f32
+    %result64 = math.sqrt %arg_f64 : f64
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_fabs
-  func.func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+  func.func @gpu_fabs(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.absf %arg_f16 : f16
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f16) -> f16
     %result32 = math.absf %arg_f32 : f32
-    // CHECK: llvm.call @__ocml_fabs_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f32) -> f32
     %result64 = math.absf %arg_f64 : f64
-    // CHECK: llvm.call @__ocml_fabs_f64(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_exp
+  func.func @gpu_exp(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.exp %arg_f16 : f16
+    // CHECK: llvm.intr.exp(%{{.*}})  : (f16) -> f16
+    %result32 = math.exp %arg_f32 : f32
+    // CHECK: llvm.intr.exp(%{{.*}})  : (f32) -> f32
+    %result64 = math.exp %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_log_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_log
+  func.func @gpu_log(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.log %arg_f16 : f16
+    // CHECK: llvm.intr.log(%{{.*}})  : (f16) -> f16
+    %result32 = math.log %arg_f32 : f32
+    // CHECK: llvm.intr.log(%{{.*}})  : (f32) -> f32
+    %result64 = math.log %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -198,17 +254,12 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__ocml_exp_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_exp
-  func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %exp_f32 = math.exp %arg_f32 : f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    %result32 = math.exp %exp_f32 : f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+  func.func @gpu_exp(%arg_f64 : f64) -> (f64) {
     %result64 = math.exp %arg_f64 : f64
     // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    func.return %result64 : f64
   }
 }
 
@@ -230,21 +281,20 @@ gpu.module @test_module {
 }
 
 // -----
-
 // Test that we handled properly operation with SymbolTable other than module op
 gpu.module @test_module {
   "test.symbol_scope"() ({
     // CHECK: test.symbol_scope
-    // CHECK: llvm.func @__ocml_exp_f32(f32) -> f32
-    // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
-    // CHECK-LABEL: func @gpu_exp
-    func.func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-      %exp_f32 = math.exp %arg_f32 : f32
-      // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-      %result32 = math.exp %exp_f32 : f32
-      // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-      %result64 = math.exp %arg_f64 : f64
-      // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
+    // CHECK: llvm.func @__ocml_sin_f32(f32) -> f32
+    // CHECK: llvm.func @__ocml_sin_f64(f64) -> f64
+    // CHECK-LABEL: func @gpu_sin
+    func.func @gpu_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+      %sin_f32 = math.sin %arg_f32 : f32
+      // CHECK: llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
+      %result32 = math.sin %sin_f32 : f32
+      // CHECK: llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
+      %result64 = math.sin %arg_f64 : f64
+      // CHECK: llvm.call @__ocml_sin_f64(%{{.*}}) : (f64) -> f64
       func.return %result32, %result64 : f32, f64
     }
     "test.finish" () : () -> ()
@@ -271,15 +321,12 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__ocml_log_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_log_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_log
-  func.func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = math.log %arg_f32 : f32
-    // CHECK: llvm.call @__ocml_log_f32(%{{.*}}) : (f32) -> f32
+  func.func @gpu_log(%arg_f64 : f64) -> (f64) {
     %result64 = math.log %arg_f64 : f64
     // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
-    func.return %result32, %result64 : f32, f64
+    func.return %result64 : f64
   }
 }
 
@@ -344,26 +391,6 @@ gpu.module @test_module {
     // CHECK: llvm.call @__ocml_rsqrt_f32(%{{.*}}) : (f32) -> f32
     %result64 = math.rsqrt %arg_f64 : f64
     // CHECK: llvm.call @__ocml_rsqrt_f64(%{{.*}}) : (f64) -> f64
-    func.return %result16, %result32, %result64 : f16, f32, f64
-  }
-}
-
-// -----
-
-gpu.module @test_module {
-  // CHECK: llvm.func @__ocml_sqrt_f32(f32) -> f32
-  // CHECK: llvm.func @__ocml_sqrt_f64(f64) -> f64
-  // CHECK-LABEL: func @gpu_sqrt
-  func.func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
-      -> (f16, f32, f64) {
-    %result16 = math.sqrt %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : f16 to f32
-    // CHECK-NEXT: llvm.call @__ocml_sqrt_f32(%{{.*}}) : (f32) -> f32
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
-    %result32 = math.sqrt %arg_f32 : f32
-    // CHECK: llvm.call @__ocml_sqrt_f32(%{{.*}}) : (f32) -> f32
-    %result64 = math.sqrt %arg_f64 : f64
-    // CHECK: llvm.call @__ocml_sqrt_f64(%{{.*}}) : (f64) -> f64
     func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -463,15 +490,15 @@ gpu.module @test_module {
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_unroll
   func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
-    %result = math.exp %arg0 : vector<4xf32>
+    %result = math.sin %arg0 : vector<4xf32>
     // CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<4xf32>
-    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V1:.+]] = llvm.insertelement %[[CL]], %[[V0]]
-    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V2:.+]] = llvm.insertelement %[[CL]], %[[V1]]
-    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V3:.+]] = llvm.insertelement %[[CL]], %[[V2]]
-    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_sin_f32(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V4:.+]] = llvm.insertelement %[[CL]], %[[V3]]
     // CHECK: return %[[V4]]
     func.return %result : vector<4xf32>
@@ -480,22 +507,22 @@ gpu.module @test_module {
 
 // -----
 
-// Test that the bf16 type is lowered away on this target.
+// Test that the bf16 type is passed through to LLVM.
 
 gpu.module @test_module {
   // CHECK-LABEL: func @bf16_id
   func.func @bf16_id(%arg0 : bf16) -> bf16 {
-    // CHECK-SAME: (%[[ARG0:.+]]: i16)
-    // CHECK-SAME: -> i16
-    // CHECK: return %[[ARG0]] : i16
+    // CHECK-SAME: (%[[ARG0:.+]]: bf16)
+    // CHECK-SAME: -> bf16
+    // CHECK: return %[[ARG0]] : bf16
     func.return %arg0 : bf16
   }
 
   // CHECK-LABEL: func @bf16x4_id
   func.func @bf16x4_id(%arg0 : vector<4xbf16>) -> vector<4xbf16> {
-    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xi16>)
-    // CHECK-SAME: -> vector<4xi16>
-    // CHECK: return %[[ARG0]] : vector<4xi16>
+    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xbf16>)
+    // CHECK-SAME: -> vector<4xbf16>
+    // CHECK: return %[[ARG0]] : vector<4xbf16>
     func.return %arg0 : vector<4xbf16>
   }
 
@@ -517,9 +544,9 @@ gpu.module @test_module {
 
 gpu.module @module {
 // CHECK-LABEL: @spirv_exp
-// CHECK: llvm.call @__ocml_exp_f32
+// CHECK: llvm.call @__ocml_sin_f32
   spirv.func @spirv_exp(%arg0: vector<4xf32>) -> vector<4xf32> "None" {
-    %0 = math.exp %arg0 : vector<4xf32>
+    %0 = math.sin %arg0 : vector<4xf32>
     spirv.ReturnValue %0 : vector<4xf32>
   }
 }
@@ -627,4 +654,12 @@ gpu.module @test_module {
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
     func.return %shfl, %shfli : f32, f32
   }
+}
+
+// -----
+
+// CHECK-LABEL: @test_custom_data_layout
+// CHECK-SAME: llvm.data_layout = "e"
+gpu.module @test_custom_data_layout attributes {llvm.data_layout = "e"} {
+
 }

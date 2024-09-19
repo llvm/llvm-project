@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -29,7 +29,7 @@
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0030 00000c60 80000000 00000000 00000000
+// OBJDUMP-NEXT: 0030 00000c60 80000000 00040000 00000000
 // complete
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
@@ -39,18 +39,21 @@
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00a0 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 00b0 00000060 80000000 00000000 00000000
+// OBJDUMP-NEXT: 00b0 00000060 80000000 00040000 00000000
 // disabled_user_sgpr
 // OBJDUMP-NEXT: 00c0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00d0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 00f0 00000c60 80000000 00000000 00000000
+// OBJDUMP-NEXT: 00f0 00000c60 80000000 00040000 00000000
 
 .text
 // ASM: .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
+
+.amdhsa_code_object_version 4
+// ASM: .amdhsa_code_object_version 4
 
 .p2align 8
 .type minimal,@function

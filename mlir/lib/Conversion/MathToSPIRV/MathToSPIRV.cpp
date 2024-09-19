@@ -291,6 +291,65 @@ struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
   }
 };
 
+/// Converts math.log2 and math.log10 to SPIR-V ops.
+///
+/// SPIR-V does not have direct operations for log2 and log10. Explicitly
+/// lower to these operations using:
+///   log2(x) = log(x) * 1/log(2)
+///   log10(x) = log(x) * 1/log(10)
+
+template <typename MathLogOp, typename SpirvLogOp>
+struct Log2Log10OpPattern final : public OpConversionPattern<MathLogOp> {
+  using OpConversionPattern<MathLogOp>::OpConversionPattern;
+  using typename OpConversionPattern<MathLogOp>::OpAdaptor;
+
+  static constexpr double log2Reciprocal =
+      1.442695040888963407359924681001892137426645954152985934135449407;
+  static constexpr double log10Reciprocal =
+      0.4342944819032518276511289189166050822943970058036665661144537832;
+
+  LogicalResult
+  matchAndRewrite(MathLogOp operation, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(adaptor.getOperands().size() == 1);
+    if (LogicalResult res = checkSourceOpTypes(rewriter, operation);
+        failed(res))
+      return res;
+
+    Location loc = operation.getLoc();
+    Type type = this->getTypeConverter()->convertType(operation.getType());
+    if (!type)
+      return rewriter.notifyMatchFailure(operation, "type conversion failed");
+
+    auto getConstantValue = [&](double value) {
+      if (auto floatType = dyn_cast<FloatType>(type)) {
+        return rewriter.create<spirv::ConstantOp>(
+            loc, type, rewriter.getFloatAttr(floatType, value));
+      }
+      if (auto vectorType = dyn_cast<VectorType>(type)) {
+        Type elemType = vectorType.getElementType();
+
+        if (isa<FloatType>(elemType)) {
+          return rewriter.create<spirv::ConstantOp>(
+              loc, type,
+              DenseFPElementsAttr::get(
+                  vectorType, FloatAttr::get(elemType, value).getValue()));
+        }
+      }
+
+      llvm_unreachable("unimplemented types for log2/log10");
+    };
+
+    Value constantValue = getConstantValue(
+        std::is_same<MathLogOp, math::Log2Op>() ? log2Reciprocal
+                                                : log10Reciprocal);
+    Value log = rewriter.create<SpirvLogOp>(loc, adaptor.getOperand());
+    rewriter.replaceOpWithNewOp<spirv::FMulOp>(operation, type, log,
+                                               constantValue);
+    return success();
+  }
+};
+
 /// Converts math.powf to SPIRV-Ops.
 struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -411,9 +470,12 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   // GLSL patterns
   patterns
       .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLLogOp>,
+           Log2Log10OpPattern<math::Log2Op, spirv::GLLogOp>,
+           Log2Log10OpPattern<math::Log10Op, spirv::GLLogOp>,
            ExpM1OpPattern<spirv::GLExpOp>, PowFOpPattern, RoundOpPattern,
            CheckedElementwiseOpPattern<math::AbsFOp, spirv::GLFAbsOp>,
            CheckedElementwiseOpPattern<math::AbsIOp, spirv::GLSAbsOp>,
+           CheckedElementwiseOpPattern<math::AtanOp, spirv::GLAtanOp>,
            CheckedElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
            CheckedElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
            CheckedElementwiseOpPattern<math::ExpOp, spirv::GLExpOp>,
@@ -429,8 +491,12 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
   // OpenCL patterns
   patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
+               Log2Log10OpPattern<math::Log2Op, spirv::CLLogOp>,
+               Log2Log10OpPattern<math::Log10Op, spirv::CLLogOp>,
                CheckedElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
                CheckedElementwiseOpPattern<math::AbsIOp, spirv::CLSAbsOp>,
+               CheckedElementwiseOpPattern<math::AtanOp, spirv::CLAtanOp>,
+               CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
                CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
                CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
                CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,

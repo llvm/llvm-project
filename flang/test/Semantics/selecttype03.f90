@@ -65,7 +65,7 @@ select type (b => array1(V,2))
     b%i  = 1 !VDC
   type is (t2)
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'z=' is not definable
-    !BECAUSE: Variable 'b' has a vector subscript
+    !BECAUSE: Construct association 'b' has a vector subscript
     call sub_with_in_and_inout_param_vector(b,b) !VDC
 end select
 select type(b =>  foo(1) )

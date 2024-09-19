@@ -71,10 +71,10 @@ constexpr bool test() {
         BufferView<forward_iterator<const Inner*>, sentinel_wrapper<forward_iterator<const Inner*>>,
                    bidirectional_iterator<Inner*>, sentinel_wrapper<bidirectional_iterator<Inner*>>>;
     using JoinView = std::ranges::join_view<ConstInconvertibleOuter>;
-    using sentinel = std::ranges::sentinel_t<JoinView>;
-    using const_sentinel = std::ranges::sentinel_t<const JoinView>;
-    static_assert(!std::constructible_from<sentinel, const_sentinel>);
-    static_assert(!std::constructible_from<const_sentinel, sentinel>);
+    using sentinel_t     = std::ranges::sentinel_t<JoinView>;
+    using const_sentinel_t = std::ranges::sentinel_t<const JoinView>;
+    static_assert(!std::constructible_from<sentinel_t, const_sentinel_t>);
+    static_assert(!std::constructible_from<const_sentinel_t, sentinel_t>);
   }
   return true;
 }

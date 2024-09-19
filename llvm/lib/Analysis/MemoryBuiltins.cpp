@@ -157,8 +157,7 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
 };
 // clang-format on
 
-static const Function *getCalledFunction(const Value *V,
-                                         bool &IsNoBuiltin) {
+static const Function *getCalledFunction(const Value *V) {
   // Don't care about intrinsics in this case.
   if (isa<IntrinsicInst>(V))
     return nullptr;
@@ -167,11 +166,10 @@ static const Function *getCalledFunction(const Value *V,
   if (!CB)
     return nullptr;
 
-  IsNoBuiltin = CB->isNoBuiltin();
+  if (CB->isNoBuiltin())
+    return nullptr;
 
-  if (const Function *Callee = CB->getCalledFunction())
-    return Callee;
-  return nullptr;
+  return CB->getCalledFunction();
 }
 
 /// Returns the allocation data for the given value if it's a call to a known
@@ -221,40 +219,31 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 static std::optional<AllocFnsTy>
 getAllocationData(const Value *V, AllocType AllocTy,
                   const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  if (const Function *Callee = getCalledFunction(V, IsNoBuiltinCall))
-    if (!IsNoBuiltinCall)
-      return getAllocationDataForFunction(Callee, AllocTy, TLI);
+  if (const Function *Callee = getCalledFunction(V))
+    return getAllocationDataForFunction(Callee, AllocTy, TLI);
   return std::nullopt;
 }
 
 static std::optional<AllocFnsTy>
 getAllocationData(const Value *V, AllocType AllocTy,
                   function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  bool IsNoBuiltinCall;
-  if (const Function *Callee = getCalledFunction(V, IsNoBuiltinCall))
-    if (!IsNoBuiltinCall)
-      return getAllocationDataForFunction(
-          Callee, AllocTy, &GetTLI(const_cast<Function &>(*Callee)));
+  if (const Function *Callee = getCalledFunction(V))
+    return getAllocationDataForFunction(
+        Callee, AllocTy, &GetTLI(const_cast<Function &>(*Callee)));
   return std::nullopt;
 }
 
 static std::optional<AllocFnsTy>
-getAllocationSize(const Value *V, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  const Function *Callee =
-      getCalledFunction(V, IsNoBuiltinCall);
-  if (!Callee)
-    return std::nullopt;
-
-  // Prefer to use existing information over allocsize. This will give us an
-  // accurate AllocTy.
-  if (!IsNoBuiltinCall)
+getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
+  if (const Function *Callee = getCalledFunction(CB)) {
+    // Prefer to use existing information over allocsize. This will give us an
+    // accurate AllocTy.
     if (std::optional<AllocFnsTy> Data =
             getAllocationDataForFunction(Callee, AnyAlloc, TLI))
       return Data;
+  }
 
-  Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);
+  Attribute Attr = CB->getFnAttr(Attribute::AllocSize);
   if (Attr == Attribute())
     return std::nullopt;
 
@@ -264,7 +253,7 @@ getAllocationSize(const Value *V, const TargetLibraryInfo *TLI) {
   // Because allocsize only tells us how many bytes are allocated, we're not
   // really allowed to assume anything, so we use MallocLike.
   Result.AllocTy = MallocLike;
-  Result.NumParams = Callee->getNumOperands();
+  Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
   // Allocsize has no way to specify an alignment argument
@@ -386,7 +375,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 
   // Get the index type for this address space, results and intermediate
   // computations are performed at that width.
-  auto &DL = CB->getModule()->getDataLayout();
+  auto &DL = CB->getDataLayout();
   const unsigned IntTyBits = DL.getIndexTypeSizeInBits(CB->getType());
 
   // Handle strdup-like functions separately.
@@ -510,21 +499,20 @@ std::optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
 
 std::optional<StringRef>
 llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltin;
-  const Function *Callee = getCalledFunction(I, IsNoBuiltin);
-  if (Callee == nullptr || IsNoBuiltin)
-    return std::nullopt;
-  LibFunc TLIFn;
-
-  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
-    // Callee is some known library function.
-    const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
-    if (AllocData)
-      return mangledNameForMallocFamily(AllocData->Family);
-    const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
-    if (FreeData)
-      return mangledNameForMallocFamily(FreeData->Family);
+  if (const Function *Callee = getCalledFunction(I)) {
+    LibFunc TLIFn;
+    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
+      // Callee is some known library function.
+      const auto AllocData =
+          getAllocationDataForFunction(Callee, AnyAlloc, TLI);
+      if (AllocData)
+        return mangledNameForMallocFamily(AllocData->Family);
+      const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
+      if (FreeData)
+        return mangledNameForMallocFamily(FreeData->Family);
+    }
   }
+
   // Callee isn't a known library function, still check attributes.
   if (checkFnAllocKind(I, AllocFnKind::Free | AllocFnKind::Alloc |
                               AllocFnKind::Realloc)) {
@@ -556,16 +544,13 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  const Function *Callee = getCalledFunction(CB, IsNoBuiltinCall);
-  if (Callee == nullptr || IsNoBuiltinCall)
-    return nullptr;
-
-  LibFunc TLIFn;
-  if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
-      isLibFreeFunction(Callee, TLIFn)) {
-    // All currently supported free functions free the first argument.
-    return CB->getArgOperand(0);
+  if (const Function *Callee = getCalledFunction(CB)) {
+    LibFunc TLIFn;
+    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+        isLibFreeFunction(Callee, TLIFn)) {
+      // All currently supported free functions free the first argument.
+      return CB->getArgOperand(0);
+    }
   }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
@@ -675,7 +660,8 @@ Value *llvm::lowerObjectSizeCall(
   if (!MustSucceed)
     return nullptr;
 
-  return ConstantInt::get(ResultType, MaxVal ? -1ULL : 0);
+  return MaxVal ? Constant::getAllOnesValue(ResultType)
+                : Constant::getNullValue(ResultType);
 }
 
 STATISTIC(ObjectVisitorArgument,
@@ -1138,8 +1124,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return ObjectSizeOffsetEvaluator::unknown();
 
-  // must be a VLA
-  assert(I.isArrayAllocation());
+  // must be a VLA or vscale.
+  assert(I.isArrayAllocation() || I.getAllocatedType()->isScalableTy());
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
@@ -1149,8 +1135,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
   assert(ArraySize->getType() == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = ConstantInt::get(ArraySize->getType(),
-                                 DL.getTypeAllocSize(I.getAllocatedType()));
+  Value *Size = Builder.CreateTypeSize(
+      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
   Size = Builder.CreateMul(Size, ArraySize);
   return SizeOffsetValue(Size, Zero);
 }

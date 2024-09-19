@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp -ast-print %s | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -ast-print %s | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -232,6 +232,8 @@ T foo(T argc) {
   { if (a < c) { a = c; } }
 #pragma omp atomic compare fail(seq_cst)
   { if (a < c) { a = c; } }
+#pragma omp atomic compare seq_cst weak
+  { if(a == b) { a = c; } }
 #endif
   return T();
 }
@@ -1111,6 +1113,8 @@ int main(int argc, char **argv) {
   if(a < b) { a = b; }
 #pragma omp atomic compare fail(seq_cst)
   if(a < b) { a = b; }
+#pragma omp atomic compare seq_cst weak
+  if(a == b) { a = c; }
 #endif
   // CHECK-NEXT: #pragma omp atomic
   // CHECK-NEXT: a++;
@@ -1452,6 +1456,10 @@ int main(int argc, char **argv) {
   // CHECK-51-NEXT: #pragma omp atomic compare fail(seq_cst)
   // CHECK-51-NEXT: if (a < b) {
   // CHECK-51-NEXT: a = b;
+  // CHECK-51-NEXT: }
+  // CHECK-51-NEXT: #pragma omp atomic compare seq_cst weak
+  // CHECK-51-NEXT: if (a == b) {
+  // CHECK-51-NEXT: a = c;
   // CHECK-51-NEXT: }
   // expect-note@+1 {{in instantiation of function template specialization 'foo<int>' requested here}}
   return foo(a);

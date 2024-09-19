@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-allow-differing-element-types -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-allow-differing-element-types -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;  void multiple_types(i8 *A) {
 ;    for (long i = 0; i < 100; i++) {

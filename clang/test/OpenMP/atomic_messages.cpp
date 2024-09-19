@@ -974,6 +974,17 @@ int mixed() {
 // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'fail' clause}}
 #pragma omp atomic compare fail(relaxed) fail(seq_cst)
   if(v < a) { v = a; }
+#pragma omp atomic compare seq_cst weak
+  if(v == a) { v = a; }
+// expected-error@+1 {{expected 'compare' clause with the 'weak' modifier}}
+#pragma omp atomic weak
+  if(v < a) { v = a; }
+#pragma omp atomic compare release weak
+// expected-error@+1 {{expected '==' operator for 'weak' clause}}
+  if(v < a) { v = a; }
+// expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'weak' clause}}
+#pragma omp atomic compare release weak fail(seq_cst) weak
+  if(v == a) { v = a; }
 
 
 #endif

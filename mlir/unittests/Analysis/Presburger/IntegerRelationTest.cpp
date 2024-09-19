@@ -171,20 +171,19 @@ TEST(IntegerRelationTest, symbolicLexmax) {
 
 TEST(IntegerRelationTest, swapVar) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 2, 0);
-  space.resetIds();
 
   int identifiers[6] = {0, 1, 2, 3, 4};
 
   // Attach identifiers to domain identifiers.
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
 
   // Attach identifiers to range identifiers.
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
 
   // Attach identifiers to symbol identifiers.
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
 
   IntegerRelation rel =
       parseRelationFromSet("(x, y, z)[N, M] : (z - x - y == 0, x >= 0, N - x "
@@ -218,34 +217,32 @@ TEST(IntegerRelationTest, mergeAndAlignSymbols) {
       ">= 0, y >= 0, M - y >= 0, 2 * P - 3 * a + 2 * b == 0)",
       3);
   PresburgerSpace space = PresburgerSpace::getRelationSpace(3, 3, 2, 0);
-  space.resetIds();
 
   PresburgerSpace otherSpace = PresburgerSpace::getRelationSpace(3, 2, 3, 0);
-  otherSpace.resetIds();
 
   // Attach identifiers.
   int identifiers[7] = {0, 1, 2, 3, 4, 5, 6};
   int otherIdentifiers[8] = {10, 11, 12, 13, 14, 15, 16, 17};
 
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
   // Note the common identifier.
-  space.getId(VarKind::Domain, 2) = Identifier(&otherIdentifiers[2]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Range, 2) = Identifier(&identifiers[4]);
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[5]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[6]);
+  space.setId(VarKind::Domain, 2, Identifier(&otherIdentifiers[2]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[3]));
+  space.setId(VarKind::Range, 2, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[5]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[6]));
 
-  otherSpace.getId(VarKind::Domain, 0) = Identifier(&otherIdentifiers[0]);
-  otherSpace.getId(VarKind::Domain, 1) = Identifier(&otherIdentifiers[1]);
-  otherSpace.getId(VarKind::Domain, 2) = Identifier(&otherIdentifiers[2]);
-  otherSpace.getId(VarKind::Range, 0) = Identifier(&otherIdentifiers[3]);
-  otherSpace.getId(VarKind::Range, 1) = Identifier(&otherIdentifiers[4]);
+  otherSpace.setId(VarKind::Domain, 0, Identifier(&otherIdentifiers[0]));
+  otherSpace.setId(VarKind::Domain, 1, Identifier(&otherIdentifiers[1]));
+  otherSpace.setId(VarKind::Domain, 2, Identifier(&otherIdentifiers[2]));
+  otherSpace.setId(VarKind::Range, 0, Identifier(&otherIdentifiers[3]));
+  otherSpace.setId(VarKind::Range, 1, Identifier(&otherIdentifiers[4]));
   // Note the common identifier.
-  otherSpace.getId(VarKind::Symbol, 0) = Identifier(&identifiers[6]);
-  otherSpace.getId(VarKind::Symbol, 1) = Identifier(&otherIdentifiers[5]);
-  otherSpace.getId(VarKind::Symbol, 2) = Identifier(&otherIdentifiers[7]);
+  otherSpace.setId(VarKind::Symbol, 0, Identifier(&identifiers[6]));
+  otherSpace.setId(VarKind::Symbol, 1, Identifier(&otherIdentifiers[5]));
+  otherSpace.setId(VarKind::Symbol, 2, Identifier(&otherIdentifiers[7]));
 
   rel.setSpace(space);
   otherRel.setSpace(otherSpace);
@@ -299,31 +296,29 @@ TEST(IntegerRelationTest, mergeAndAlignDisjointSymbols) {
   IntegerRelation otherRel = parseRelationFromSet(
       "(u, v, a, b)[E, F, G, H] : (E - u + v == 0, v - G - H >= 0)", 2);
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 4, 0);
-  space.resetIds();
 
   PresburgerSpace otherSpace = PresburgerSpace::getRelationSpace(2, 2, 4, 0);
-  otherSpace.resetIds();
 
   // Attach identifiers.
   int identifiers[7] = {'x', 'y', 'z', 'A', 'B', 'C', 'D'};
   int otherIdentifiers[8] = {'u', 'v', 'a', 'b', 'E', 'F', 'G', 'H'};
 
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
-  space.getId(VarKind::Symbol, 2) = Identifier(&identifiers[5]);
-  space.getId(VarKind::Symbol, 3) = Identifier(&identifiers[6]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
+  space.setId(VarKind::Symbol, 3, Identifier(&identifiers[6]));
 
-  otherSpace.getId(VarKind::Domain, 0) = Identifier(&otherIdentifiers[0]);
-  otherSpace.getId(VarKind::Domain, 1) = Identifier(&otherIdentifiers[1]);
-  otherSpace.getId(VarKind::Range, 0) = Identifier(&otherIdentifiers[2]);
-  otherSpace.getId(VarKind::Range, 1) = Identifier(&otherIdentifiers[3]);
-  otherSpace.getId(VarKind::Symbol, 0) = Identifier(&otherIdentifiers[4]);
-  otherSpace.getId(VarKind::Symbol, 1) = Identifier(&otherIdentifiers[5]);
-  otherSpace.getId(VarKind::Symbol, 2) = Identifier(&otherIdentifiers[6]);
-  otherSpace.getId(VarKind::Symbol, 3) = Identifier(&otherIdentifiers[7]);
+  otherSpace.setId(VarKind::Domain, 0, Identifier(&otherIdentifiers[0]));
+  otherSpace.setId(VarKind::Domain, 1, Identifier(&otherIdentifiers[1]));
+  otherSpace.setId(VarKind::Range, 0, Identifier(&otherIdentifiers[2]));
+  otherSpace.setId(VarKind::Range, 1, Identifier(&otherIdentifiers[3]));
+  otherSpace.setId(VarKind::Symbol, 0, Identifier(&otherIdentifiers[4]));
+  otherSpace.setId(VarKind::Symbol, 1, Identifier(&otherIdentifiers[5]));
+  otherSpace.setId(VarKind::Symbol, 2, Identifier(&otherIdentifiers[6]));
+  otherSpace.setId(VarKind::Symbol, 3, Identifier(&otherIdentifiers[7]));
 
   rel.setSpace(space);
   otherRel.setSpace(otherSpace);
@@ -382,32 +377,30 @@ TEST(IntegerRelationTest, mergeAndAlignCommonSuffixSymbols) {
   IntegerRelation otherRel = parseRelationFromSet(
       "(u, v, a, b)[E, F, C, D] : (E - u + v == 0, v - C - D >= 0)", 2);
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 4, 0);
-  space.resetIds();
 
   PresburgerSpace otherSpace = PresburgerSpace::getRelationSpace(2, 2, 4, 0);
-  otherSpace.resetIds();
 
   // Attach identifiers.
   int identifiers[7] = {'x', 'y', 'z', 'A', 'B', 'C', 'D'};
   int otherIdentifiers[6] = {'u', 'v', 'a', 'b', 'E', 'F'};
 
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
-  space.getId(VarKind::Symbol, 2) = Identifier(&identifiers[5]);
-  space.getId(VarKind::Symbol, 3) = Identifier(&identifiers[6]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
+  space.setId(VarKind::Symbol, 3, Identifier(&identifiers[6]));
 
-  otherSpace.getId(VarKind::Domain, 0) = Identifier(&otherIdentifiers[0]);
-  otherSpace.getId(VarKind::Domain, 1) = Identifier(&otherIdentifiers[1]);
-  otherSpace.getId(VarKind::Range, 0) = Identifier(&otherIdentifiers[2]);
-  otherSpace.getId(VarKind::Range, 1) = Identifier(&otherIdentifiers[3]);
-  otherSpace.getId(VarKind::Symbol, 0) = Identifier(&otherIdentifiers[4]);
-  otherSpace.getId(VarKind::Symbol, 1) = Identifier(&otherIdentifiers[5]);
+  otherSpace.setId(VarKind::Domain, 0, Identifier(&otherIdentifiers[0]));
+  otherSpace.setId(VarKind::Domain, 1, Identifier(&otherIdentifiers[1]));
+  otherSpace.setId(VarKind::Range, 0, Identifier(&otherIdentifiers[2]));
+  otherSpace.setId(VarKind::Range, 1, Identifier(&otherIdentifiers[3]));
+  otherSpace.setId(VarKind::Symbol, 0, Identifier(&otherIdentifiers[4]));
+  otherSpace.setId(VarKind::Symbol, 1, Identifier(&otherIdentifiers[5]));
   // Note common identifiers
-  otherSpace.getId(VarKind::Symbol, 2) = Identifier(&identifiers[5]);
-  otherSpace.getId(VarKind::Symbol, 3) = Identifier(&identifiers[6]);
+  otherSpace.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
+  otherSpace.setId(VarKind::Symbol, 3, Identifier(&identifiers[6]));
 
   rel.setSpace(space);
   otherRel.setSpace(otherSpace);
@@ -450,4 +443,168 @@ TEST(IntegerRelationTest, mergeAndAlignCommonSuffixSymbols) {
             Identifier(&otherIdentifiers[2]));
   EXPECT_EQ(otherSpace.getId(VarKind::Range, 1),
             Identifier(&otherIdentifiers[3]));
+}
+
+TEST(IntegerRelationTest, setId) {
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y, z)[A, B, C, D] : (x + A - C - y + D - z >= 0)", 2);
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 4, 0);
+
+  // Attach identifiers.
+  int identifiers[7] = {'x', 'y', 'z', 'A', 'B', 'C', 'D'};
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
+  space.setId(VarKind::Symbol, 3, Identifier(&identifiers[6]));
+  rel.setSpace(space);
+
+  int newIdentifiers[3] = {1, 2, 3};
+  rel.setId(VarKind::Domain, 1, Identifier(&newIdentifiers[0]));
+  rel.setId(VarKind::Range, 0, Identifier(&newIdentifiers[1]));
+  rel.setId(VarKind::Symbol, 2, Identifier(&newIdentifiers[2]));
+
+  space = rel.getSpace();
+  // Check that new identifiers are set correctly.
+  EXPECT_EQ(space.getId(VarKind::Domain, 1), Identifier(&newIdentifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Range, 0), Identifier(&newIdentifiers[1]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 2), Identifier(&newIdentifiers[2]));
+  // Check that old identifier are not changed.
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 3), Identifier(&identifiers[6]));
+}
+
+TEST(IntegerRelationTest, convertVarKind) {
+  PresburgerSpace space = PresburgerSpace::getSetSpace(3, 3, 0);
+
+  // Attach identifiers.
+  int identifiers[6] = {0, 1, 2, 3, 4, 5};
+  space.setId(VarKind::SetDim, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::SetDim, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::SetDim, 2, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
+
+  // Cannot call parseIntegerRelation to test convertVarKind as
+  // parseIntegerRelation uses convertVarKind.
+  IntegerRelation rel = parseIntegerPolyhedron(
+      // 0  1  2  3  4  5
+      "(x, y, a)[U, V, W] : (x - U == 0, y + a - W == 0, U - V >= 0,"
+      "y - a >= 0)");
+  rel.setSpace(space);
+
+  // Make a few kind conversions.
+  rel.convertVarKind(VarKind::Symbol, 1, 2, VarKind::Domain, 0);
+  rel.convertVarKind(VarKind::Range, 2, 3, VarKind::Domain, 0);
+  rel.convertVarKind(VarKind::Range, 0, 2, VarKind::Symbol, 1);
+  rel.convertVarKind(VarKind::Domain, 1, 2, VarKind::Range, 0);
+  rel.convertVarKind(VarKind::Domain, 0, 1, VarKind::Range, 1);
+
+  space = rel.getSpace();
+
+  // Expected rel.
+  IntegerRelation expectedRel = parseIntegerPolyhedron(
+      "(V, a)[U, x, y, W] : (x - U == 0, y + a - W == 0, U - V >= 0,"
+      "y - a >= 0)");
+  expectedRel.setSpace(space);
+
+  EXPECT_TRUE(rel.isEqual(expectedRel));
+
+  EXPECT_EQ(space.getId(VarKind::SetDim, 0), Identifier(&identifiers[4]));
+  EXPECT_EQ(space.getId(VarKind::SetDim, 1), Identifier(&identifiers[2]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 2), Identifier(&identifiers[1]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 3), Identifier(&identifiers[5]));
+}
+
+TEST(IntegerRelationTest, convertVarKindToLocal) {
+  // Convert all range variables to local variables.
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y, z)[N, M] : (x - y >= 0, y - N >= 0, 3 - z >= 0, 2 * M - 5 >= 0)",
+      1);
+  PresburgerSpace space = rel.getSpace();
+  // Attach identifiers.
+  char identifiers[5] = {'x', 'y', 'z', 'N', 'M'};
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  rel.setSpace(space);
+  rel.convertToLocal(VarKind::Range, 0, rel.getNumRangeVars());
+  IntegerRelation expectedRel =
+      parseRelationFromSet("(x)[N, M] : (x - N >= 0, 2 * M - 5 >= 0)", 1);
+  EXPECT_TRUE(rel.isEqual(expectedRel));
+  space = rel.getSpace();
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
+
+  // Convert all domain variables to local variables.
+  IntegerRelation rel2 = parseRelationFromSet(
+      "(x, y, z)[N, M] : (x - y >= 0, y - N >= 0, 3 - z >= 0, 2 * M - 5 >= 0)",
+      2);
+  space = rel2.getSpace();
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  rel2.setSpace(space);
+  rel2.convertToLocal(VarKind::Domain, 0, rel2.getNumDomainVars());
+  expectedRel =
+      parseIntegerPolyhedron("(z)[N, M] : (3 - z >= 0, 2 * M - 5 >= 0)");
+  EXPECT_TRUE(rel2.isEqual(expectedRel));
+  space = rel2.getSpace();
+  EXPECT_EQ(space.getId(VarKind::Range, 0), Identifier(&identifiers[2]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
+
+  // Convert a prefix of range variables to local variables.
+  IntegerRelation rel3 = parseRelationFromSet(
+      "(x, y, z)[N, M] : (x - y >= 0, y - N >= 0, 3 - z >= 0, 2 * M - 5 >= 0)",
+      1);
+  space = rel3.getSpace();
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  rel3.setSpace(space);
+  rel3.convertToLocal(VarKind::Range, 0, 1);
+  expectedRel = parseRelationFromSet(
+      "(x, z)[N, M] : (x - N >= 0, 3 - z >= 0, 2 * M - 5 >= 0)", 1);
+  EXPECT_TRUE(rel3.isEqual(expectedRel));
+  space = rel3.getSpace();
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Range, 0), Identifier(&identifiers[2]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
+
+  // Convert a suffix of domain variables to local variables.
+  IntegerRelation rel4 = parseRelationFromSet(
+      "(x, y, z)[N, M] : (x - y >= 0, y - N >= 0, 3 - z >= 0, 2 * M - 5 >= 0)",
+      2);
+  space = rel4.getSpace();
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  rel4.setSpace(space);
+  rel4.convertToLocal(VarKind::Domain, rel4.getNumDomainVars() - 1,
+                      rel4.getNumDomainVars());
+  // expectedRel same as before.
+  EXPECT_TRUE(rel4.isEqual(expectedRel));
+  space = rel4.getSpace();
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Range, 0), Identifier(&identifiers[2]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
 }

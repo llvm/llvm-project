@@ -1,8 +1,6 @@
 // RUN: %check_clang_tidy %s abseil-redundant-strcat-calls %t -- -- -isystem %clang_tidy_headers
 #include <string>
 
-int strlen(const char *);
-
 namespace absl {
 
 class string_view {

@@ -18,6 +18,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 
@@ -76,6 +77,50 @@ void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *D
 
 void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *Data) {
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
+}
+
+static void transformGlobalArray(StringRef ArrayName, Module &M,
+                                 const GlobalCtorTransformFn &Fn) {
+  GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
+  if (!GVCtor)
+    return;
+
+  IRBuilder<> IRB(M.getContext());
+  SmallVector<Constant *, 16> CurrentCtors;
+  bool Changed = false;
+  StructType *EltTy =
+      cast<StructType>(GVCtor->getValueType()->getArrayElementType());
+  if (Constant *Init = GVCtor->getInitializer()) {
+    CurrentCtors.reserve(Init->getNumOperands());
+    for (Value *OP : Init->operands()) {
+      Constant *C = cast<Constant>(OP);
+      Constant *NewC = Fn(C);
+      Changed |= (!NewC || NewC != C);
+      if (NewC)
+        CurrentCtors.push_back(NewC);
+    }
+  }
+  if (!Changed)
+    return;
+
+  GVCtor->eraseFromParent();
+
+  // Create a new initializer.
+  ArrayType *AT = ArrayType::get(EltTy, CurrentCtors.size());
+  Constant *NewInit = ConstantArray::get(AT, CurrentCtors);
+
+  // Create the new global variable and replace all uses of
+  // the old global variable with the new one.
+  (void)new GlobalVariable(M, NewInit->getType(), false,
+                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
+}
+
+void llvm::transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_ctors", M, Fn);
+}
+
+void llvm::transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_dtors", M, Fn);
 }
 
 static void collectUsedGlobals(GlobalVariable *GV,
@@ -160,11 +205,13 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx),
-                           static_cast<uint32_t>(xxHash64(MangledType))))));
+  std::string Type = MangledType.str();
+  if (M.getModuleFlag("cfi-normalize-integers"))
+    Type += ".normalized";
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     static_cast<uint32_t>(xxHash64(Type))))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -327,35 +374,6 @@ std::string llvm::getUniqueModuleId(Module *M) {
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
   return ("." + Str).str();
-}
-
-void VFABI::setVectorVariantNames(CallInst *CI,
-                                  ArrayRef<std::string> VariantMappings) {
-  if (VariantMappings.empty())
-    return;
-
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const std::string &VariantMapping : VariantMappings)
-    Out << VariantMapping << ",";
-  // Get rid of the trailing ','.
-  assert(!Buffer.str().empty() && "Must have at least one char.");
-  Buffer.pop_back();
-
-  Module *M = CI->getModule();
-#ifndef NDEBUG
-  for (const std::string &VariantMapping : VariantMappings) {
-    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    std::optional<VFInfo> VI =
-        VFABI::tryDemangleForVFABI(VariantMapping, CI->getFunctionType());
-    assert(VI && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI->VectorName) &&
-           "Cannot add variant to attribute: "
-           "vector function declaration is missing.");
-  }
-#endif
-  CI->addFnAttr(
-      Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
 }
 
 void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,

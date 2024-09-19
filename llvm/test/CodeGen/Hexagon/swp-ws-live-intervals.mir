@@ -1,0 +1,217 @@
+# REQUIRES: asserts
+# 
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -window-search-num=100 \
+# RUN: -window-search-ratio=100 -window-diff-limit=0 -verify-machineinstrs \
+# RUN: 2>&1 | FileCheck %s
+
+# The bug was reported at https://github.com/llvm/llvm-project/pull/99454. 
+# It is caused by the corruption of live intervals in certain scenarios.
+#
+# We check the newly generated MBBs after successful scheduling here.
+# CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+# CHECK: prolog:
+# CHECK: bb.5:
+# CHECK: New block
+# CHECK: bb.6:
+# CHECK: epilog:
+# CHECK: bb.7:
+# CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+# CHECK: prolog:
+# CHECK: bb.8:
+# CHECK: New block
+# CHECK: bb.9:
+# CHECK: epilog:
+# CHECK: bb.10:
+
+--- |
+  target triple = "hexagon"
+  
+  @_dp_ctrl_calc_tu_temp2_fp = global i64 0
+  @_dp_ctrl_calc_tu_temp1_fp = global i32 0
+  @dp_panel_update_tu_timings___trans_tmp_5 = global i64 0
+  @_dp_ctrl_calc_tu___trans_tmp_8 = global i64 0
+  
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+  declare i8 @div64_u64_rem(i32, ptr)
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+  
+  define void @dp_ctrl_calc_tu_parameters() {
+  if.end.i:
+    %rem.i11.i = alloca i64, align 8
+    %rem.i.i = alloca i64, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %rem.i11.i)
+    %call.i.i = call i8 @div64_u64_rem(i32 0, ptr nonnull %rem.i11.i)
+    %conv1.i.i = zext i8 %call.i.i to i64
+    %rem.promoted.i.i = load i64, ptr %rem.i11.i, align 8
+    br label %do.body.i.i
+  
+  do.body.i.i:
+    %lsr.iv1 = phi i32 [ %lsr.iv.next2, %do.body.i.i ], [ -32, %if.end.i ]
+    %sub9.i.i = phi i64 [ %rem.promoted.i.i, %if.end.i ], [ %sub8.i.i.7, %do.body.i.i ]
+    %res_abs.0.i.i = phi i64 [ %conv1.i.i, %if.end.i ], [ %res_abs.1.i.i.7, %do.body.i.i ]
+    %cmp.not.i.i = icmp ne i64 %sub9.i.i, 0
+    %sub.i.neg.i = sext i1 %cmp.not.i.i to i64
+    %sub8.i.i = add i64 %sub9.i.i, %sub.i.neg.i
+    %0 = shl i64 %res_abs.0.i.i, 2
+    %1 = select i1 %cmp.not.i.i, i64 2, i64 0
+    %shl.i.i.5 = or disjoint i64 %0, %1
+    %cmp.not.i.i.5 = icmp ne i64 %sub8.i.i, 0
+    %sub.i.neg.i.5 = sext i1 %cmp.not.i.i.5 to i64
+    %sub8.i.i.5 = add i64 %sub8.i.i, %sub.i.neg.i.5
+    %or.i.i.5 = zext i1 %cmp.not.i.i.5 to i64
+    %res_abs.1.i.i.5 = or disjoint i64 %shl.i.i.5, %or.i.i.5
+    %cmp.not.i.i.6 = icmp ne i64 %sub8.i.i.5, 0
+    %sub.i.neg.i.6 = sext i1 %cmp.not.i.i.6 to i64
+    %sub8.i.i.6 = add i64 %sub8.i.i.5, %sub.i.neg.i.6
+    %2 = shl i64 %res_abs.1.i.i.5, 2
+    %3 = select i1 %cmp.not.i.i.6, i64 2, i64 0
+    %shl.i.i.7 = or disjoint i64 %2, %3
+    %cmp.not.i.i.7 = icmp ne i64 %sub8.i.i.6, 0
+    %sub.i.neg.i.7 = sext i1 %cmp.not.i.i.7 to i64
+    %sub8.i.i.7 = add i64 %sub8.i.i.6, %sub.i.neg.i.7
+    %or.i.i.7 = zext i1 %cmp.not.i.i.7 to i64
+    %res_abs.1.i.i.7 = or disjoint i64 %shl.i.i.7, %or.i.i.7
+    %lsr.iv.next2 = add nsw i32 %lsr.iv1, 8
+    %tobool.not.i.i.7 = icmp eq i32 %lsr.iv.next2, 0
+    br i1 %tobool.not.i.i.7, label %fec_check.i, label %do.body.i.i
+  
+  fec_check.i:
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %rem.i11.i)
+    store i64 %res_abs.1.i.i.7, ptr @_dp_ctrl_calc_tu_temp2_fp, align 8
+    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %rem.i11.i)
+    %call.i12.i = call i8 @div64_u64_rem(i32 0, ptr nonnull %rem.i11.i)
+    %conv1.i13.i = zext i8 %call.i12.i to i64
+    %rem.promoted.i14.i = load i64, ptr %rem.i11.i, align 8
+    br label %do.body.i15.i
+  
+  do.body.i15.i:
+    %lsr.iv = phi i32 [ %lsr.iv.next, %do.body.i15.i ], [ -32, %fec_check.i ]
+    %sub9.i16.i = phi i64 [ %rem.promoted.i14.i, %fec_check.i ], [ %sub8.i22.i.7, %do.body.i15.i ]
+    %res_abs.0.i17.i = phi i64 [ %conv1.i13.i, %fec_check.i ], [ %res_abs.1.i24.i.7, %do.body.i15.i ]
+    %cmp.not.i20.i = icmp ugt i64 %sub9.i16.i, 999
+    %sub.i21.neg.i = select i1 %cmp.not.i20.i, i64 -1000, i64 0
+    %sub8.i22.i = add i64 %sub.i21.neg.i, %sub9.i16.i
+    %4 = shl i64 %res_abs.0.i17.i, 2
+    %5 = select i1 %cmp.not.i20.i, i64 2, i64 0
+    %shl.i19.i.7 = or disjoint i64 %4, %5
+    %cmp.not.i20.i.7 = icmp ugt i64 %sub8.i22.i, 999
+    %sub.i21.neg.i.7 = select i1 %cmp.not.i20.i.7, i64 -1000, i64 0
+    %sub8.i22.i.7 = add i64 %sub.i21.neg.i.7, %sub8.i22.i
+    %or.i23.i.7 = zext i1 %cmp.not.i20.i.7 to i64
+    %res_abs.1.i24.i.7 = or disjoint i64 %shl.i19.i.7, %or.i23.i.7
+    %lsr.iv.next = add nsw i32 %lsr.iv, 8
+    %tobool.not.i26.i.7 = icmp eq i32 %lsr.iv.next, 0
+    br i1 %tobool.not.i26.i.7, label %_dp_ctrl_calc_tu.exit, label %do.body.i15.i
+  
+  _dp_ctrl_calc_tu.exit:
+    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %rem.i11.i)
+    %conv.i = trunc i64 %res_abs.1.i24.i.7 to i32
+    store i32 %conv.i, ptr @_dp_ctrl_calc_tu_temp1_fp, align 4
+    %conv5.i = and i64 %res_abs.1.i24.i.7, 4294967295
+    store i64 %conv5.i, ptr @dp_panel_update_tu_timings___trans_tmp_5, align 8
+    store i64 %res_abs.1.i.i.7, ptr @_dp_ctrl_calc_tu___trans_tmp_8, align 8
+    ret void
+  }
+
+...
+---
+name:            dp_ctrl_calc_tu_parameters
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: rem.i11.i, type: default, offset: 0, size: 8, alignment: 8}
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+  
+    %0:intregs = A2_tfrsi 0
+    %1:intregs = PS_fi %stack.0.rem.i11.i, 0
+    %2:intregs = A2_tfrsi 0
+    %3:doubleregs = A4_combineir 0, %2
+    %4:doubleregs = L2_loadrd_io %stack.0.rem.i11.i, 0
+    %5:doubleregs = A2_tfrpi 0
+    J2_loop0i %bb.1, 4, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.1 (machine-block-address-taken):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %6:doubleregs = PHI %4, %bb.0, %7, %bb.1
+    %8:doubleregs = PHI %3, %bb.0, %9, %bb.1
+    %10:predregs = C2_cmpeqp %6, %5
+    %11:intregs = C2_muxii %10, 0, -1
+    %12:doubleregs = A2_addsp %11, %6
+    %13:doubleregs = S2_asl_i_p %8, 2
+    %14:intregs = S2_setbit_i %13.isub_lo, 1
+    %15:intregs = C2_mux %10, %13.isub_lo, %14
+    %16:predregs = C2_cmpeqp %12, %5
+    %17:intregs = C2_muxii %16, 0, -1
+    %18:doubleregs = A2_addsp %17, %12
+    %19:intregs = S2_setbit_i %15, 0
+    %20:intregs = C2_mux %16, %15, %19
+    %21:predregs = C2_cmpeqp %18, %5
+    %22:intregs = C2_muxii %21, 0, -1
+    %23:doubleregs = A2_addsp %22, %18
+    %24:intregs = S2_asl_i_r %20, 2
+    %25:intregs = S2_extractu %8.isub_lo, 2, 28
+    %26:intregs = S2_asl_i_r_or %25, %13.isub_hi, 2
+    %27:intregs = S2_setbit_i %24, 1
+    %28:intregs = C2_mux %21, %24, %27
+    %29:predregs = C2_cmpeqp %23, %5
+    %30:intregs = C2_muxii %29, 0, -1
+    %7:doubleregs = A2_addsp %30, %23
+    %31:intregs = S2_setbit_i %28, 0
+    %32:intregs = C2_mux %29, %28, %31
+    %9:doubleregs = REG_SEQUENCE %26, %subreg.isub_hi, %32, %subreg.isub_lo
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+  
+  bb.2:
+    successors: %bb.3(0x80000000)
+  
+    S2_storerdgp @_dp_ctrl_calc_tu_temp2_fp, %9, implicit $gp
+    %33:intregs = A2_tfrsi 0
+    %34:intregs = PS_fi %stack.0.rem.i11.i, 0
+    %35:intregs = A2_tfrsi 0
+    %36:doubleregs = L2_loadrd_io %stack.0.rem.i11.i, 0
+    %37:doubleregs = A2_tfrpi 124
+    %38:intregs = A2_tfrsi -1000
+    %39:intregs = A2_tfrsi -1
+    J2_loop0i %bb.3, 4, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.3 (machine-block-address-taken):
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %40:doubleregs = PHI %36, %bb.2, %41, %bb.3
+    %42:intregs = PHI %35, %bb.2, %43, %bb.3
+    %44:intregs = PHI %33, %bb.2, %45, %bb.3
+    %46:doubleregs = S2_lsr_i_p %40, 3
+    %47:predregs = C2_cmpgtup %46, %37
+    %48:intregs = C2_mux %47, %38, %33
+    %49:intregs = C2_mux %47, %39, %33
+    %50:doubleregs = REG_SEQUENCE %49, %subreg.isub_hi, %48, %subreg.isub_lo
+    %51:doubleregs = A2_addp %50, %40
+    %52:intregs = S2_asl_i_r %42, 2
+    %53:intregs = S2_extractu %42, 2, 30
+    %45:intregs = S2_asl_i_r_or %53, %44, 2
+    %54:intregs = S2_setbit_i %52, 1
+    %55:intregs = C2_mux %47, %54, %52
+    %56:doubleregs = S2_lsr_i_p %51, 3
+    %57:predregs = C2_cmpgtup %56, %37
+    %58:intregs = C2_mux %57, %38, %33
+    %59:intregs = C2_mux %57, %39, %33
+    %60:doubleregs = REG_SEQUENCE %59, %subreg.isub_hi, %58, %subreg.isub_lo
+    %41:doubleregs = A2_addp %60, %51
+    %61:intregs = S2_setbit_i %55, 0
+    %43:intregs = C2_mux %57, %61, %55
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.4, implicit-def dead $pc
+  
+  bb.4:
+    S2_storerigp @_dp_ctrl_calc_tu_temp1_fp, %43, implicit $gp
+    %62:intregs = A2_tfrsi 0
+    %63:doubleregs = REG_SEQUENCE %43, %subreg.isub_lo, %62, %subreg.isub_hi
+    S2_storerdgp @dp_panel_update_tu_timings___trans_tmp_5, %63, implicit $gp
+    S2_storerdgp @_dp_ctrl_calc_tu___trans_tmp_8, %9, implicit $gp
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

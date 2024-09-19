@@ -23,7 +23,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/TargetSelect.h"
@@ -184,7 +183,7 @@ static Error validateArchitectureName(StringRef ArchitectureName) {
     return createStringError(
         std::errc::invalid_argument,
         "invalid architecture '%s': valid architecture names are %s",
-        ArchitectureName.str().c_str(), OS.str().c_str());
+        ArchitectureName.str().c_str(), Buf.c_str());
   }
   return Error::success();
 }
@@ -727,7 +726,6 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
 }
 
 int llvm_libtool_darwin_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  InitLLVM X(Argc, Argv);
   Expected<Config> ConfigOrErr = parseCommandLine(Argc, Argv);
   if (!ConfigOrErr) {
     WithColor::defaultErrorHandler(ConfigOrErr.takeError());

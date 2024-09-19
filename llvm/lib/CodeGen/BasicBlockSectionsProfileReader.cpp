@@ -170,7 +170,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
           return false;
         // Return a match if debug-info-filename is not specified. Otherwise,
         // check for equality.
-        return DIFilename.empty() || It->second.equals(DIFilename);
+        return DIFilename.empty() || It->second == DIFilename;
       });
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
@@ -213,10 +213,6 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
           return createProfileParseError(
               Twine("duplicate basic block id found '") + BasicBlockIDStr +
               "'");
-
-        if (!BasicBlockID->BaseID && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster.");
 
         FI->second.ClusterInfo.emplace_back(BBClusterInfo{
             *std::move(BasicBlockID), CurrentCluster, CurrentPosition++});
@@ -288,9 +284,6 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
         if (!FuncBBIDs.insert(BBID).second)
           return createProfileParseError(
               Twine("duplicate basic block id found '") + BBIDStr + "'");
-        if (BBID == 0 && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster");
 
         FI->second.ClusterInfo.emplace_back(
             BBClusterInfo({{static_cast<unsigned>(BBID), 0},
@@ -324,7 +317,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
           return false;
         // Return a match if debug-info-filename is not specified. Otherwise,
         // check for equality.
-        return DIFilename.empty() || It->second.equals(DIFilename);
+        return DIFilename.empty() || It->second == DIFilename;
       });
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to

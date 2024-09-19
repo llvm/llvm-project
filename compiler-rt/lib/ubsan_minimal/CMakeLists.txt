@@ -24,32 +24,30 @@ add_compiler_rt_object_libraries(RTUbsan_minimal
   SOURCES ${UBSAN_MINIMAL_SOURCES} CFLAGS ${UBSAN_CFLAGS})
 
 
-if(COMPILER_RT_HAS_UBSAN_MINIMAL)
-  # Standalone minimal UBSan runtimes.
-  add_compiler_rt_runtime(clang_rt.ubsan_minimal
-    STATIC
-    OS ${UBSAN_SUPPORTED_OS}
-    ARCHS ${UBSAN_SUPPORTED_ARCH}
-    OBJECT_LIBS RTUbsan_minimal
-    CFLAGS ${UBSAN_CFLAGS}
-    PARENT_TARGET ubsan-minimal)
+# Standalone minimal UBSan runtimes.
+add_compiler_rt_runtime(clang_rt.ubsan_minimal
+  STATIC
+  OS ${UBSAN_SUPPORTED_OS}
+  ARCHS ${UBSAN_SUPPORTED_ARCH}
+  OBJECT_LIBS RTUbsan_minimal
+  CFLAGS ${UBSAN_CFLAGS}
+  PARENT_TARGET ubsan-minimal)
 
-  add_compiler_rt_runtime(clang_rt.ubsan_minimal
-    SHARED
-    OS ${UBSAN_SUPPORTED_OS}
-    ARCHS ${UBSAN_SUPPORTED_ARCH}
-    OBJECT_LIBS RTUbsan_minimal
-    CFLAGS ${UBSAN_CFLAGS}
-    LINK_FLAGS ${UBSAN_LINK_FLAGS}
-    LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
-    PARENT_TARGET ubsan-minimal)
+add_compiler_rt_runtime(clang_rt.ubsan_minimal
+  SHARED
+  OS ${UBSAN_SUPPORTED_OS}
+  ARCHS ${UBSAN_SUPPORTED_ARCH}
+  OBJECT_LIBS RTUbsan_minimal
+  CFLAGS ${UBSAN_CFLAGS}
+  LINK_FLAGS ${UBSAN_LINK_FLAGS}
+  LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
+  PARENT_TARGET ubsan-minimal)
 
-  if (SANITIZER_USE_SYMBOLS AND NOT APPLE)
-    set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
-    list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386 i686)
-    add_sanitizer_rt_symbols(clang_rt.ubsan_minimal
-      ARCHS ${ARCHS_FOR_SYMBOLS}
-      PARENT_TARGET ubsan-minimal
-      EXTRA ubsan.syms.extra)
-  endif()
+if (SANITIZER_USE_SYMBOLS AND NOT APPLE)
+  set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
+  list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386 i686)
+  add_sanitizer_rt_symbols(clang_rt.ubsan_minimal
+    ARCHS ${ARCHS_FOR_SYMBOLS}
+    PARENT_TARGET ubsan-minimal
+    EXTRA ubsan.syms.extra)
 endif()

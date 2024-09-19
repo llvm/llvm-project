@@ -36,10 +36,17 @@ struct NoThrowT {
   NoThrowT(int) noexcept(true) {}
 };
 
-struct AnyConstructible { template <typename T> AnyConstructible(T&&) {} };
-struct NoConstructible { NoConstructible() = delete; };
+struct AnyConstructible {
+  template <typename T>
+  AnyConstructible(T&&) {}
+};
+struct NoConstructible {
+  NoConstructible() = delete;
+};
 template <class T>
-struct RValueConvertibleFrom { RValueConvertibleFrom(T&&) {} };
+struct RValueConvertibleFrom {
+  RValueConvertibleFrom(T&&) {}
+};
 
 void test_T_ctor_noexcept() {
   {
@@ -59,31 +66,24 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::string, std::string>;
-    static_assert(!std::is_constructible<V, const char *>::value, "ambiguous");
+    static_assert(!std::is_constructible<V, const char*>::value, "ambiguous");
   }
   {
-    using V = std::variant<std::string, void *>;
-    static_assert(!std::is_constructible<V, int>::value,
-                  "no matching constructor");
+    using V = std::variant<std::string, void*>;
+    static_assert(!std::is_constructible<V, int>::value, "no matching constructor");
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(std::is_constructible<V, int>::value == VariantAllowsNarrowingConversions,
-                  "no matching constructor");
+    static_assert(!std::is_constructible<V, int>::value, "no matching constructor");
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
-    static_assert(!std::is_constructible<V, std::unique_ptr<char>>::value,
-                  "no explicit bool in constructor");
+    static_assert(!std::is_constructible<V, std::unique_ptr<char>>::value, "no explicit bool in constructor");
     struct X {
       operator void*();
     };
-    static_assert(!std::is_constructible<V, X>::value,
-                  "no boolean conversion in constructor");
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
-    static_assert(std::is_constructible<V, std::false_type>::value,
-                  "converted to bool in constructor");
-#endif
+    static_assert(!std::is_constructible<V, X>::value, "no boolean conversion in constructor");
+    static_assert(std::is_constructible<V, std::false_type>::value, "converted to bool in constructor");
   }
   {
     struct X {};
@@ -91,30 +91,13 @@ void test_T_ctor_sfinae() {
       operator X();
     };
     using V = std::variant<X>;
-    static_assert(std::is_constructible<V, Y>::value,
-                  "regression on user-defined conversions in constructor");
+    static_assert(std::is_constructible<V, Y>::value, "regression on user-defined conversions in constructor");
   }
   {
     using V = std::variant<AnyConstructible, NoConstructible>;
-    static_assert(
-        !std::is_constructible<V, std::in_place_type_t<NoConstructible>>::value,
-        "no matching constructor");
-    static_assert(!std::is_constructible<V, std::in_place_index_t<1>>::value,
-                  "no matching constructor");
+    static_assert(!std::is_constructible<V, std::in_place_type_t<NoConstructible>>::value, "no matching constructor");
+    static_assert(!std::is_constructible<V, std::in_place_index_t<1>>::value, "no matching constructor");
   }
-
-
-
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, int &&>;
-    static_assert(!std::is_constructible<V, int>::value, "ambiguous");
-  }
-  {
-    using V = std::variant<int, const int &>;
-    static_assert(!std::is_constructible<V, int>::value, "ambiguous");
-  }
-#endif
 }
 
 void test_T_ctor_basic() {
@@ -128,13 +111,11 @@ void test_T_ctor_basic() {
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
-#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     constexpr std::variant<unsigned, long> v(42);
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
-#endif
   {
     std::variant<std::string, bool const> v = "foo";
     assert(v.index() == 0);
@@ -154,33 +135,17 @@ void test_T_ctor_basic() {
     std::variant<RValueConvertibleFrom<int>> v1 = 42;
     assert(v1.index() == 0);
 
-    int x = 42;
+    int x                                                         = 42;
     std::variant<RValueConvertibleFrom<int>, AnyConstructible> v2 = x;
     assert(v2.index() == 1);
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<const int &, int &&, long>;
-    static_assert(std::is_convertible<int &, V>::value, "must be implicit");
-    int x = 42;
-    V v(x);
-    assert(v.index() == 0);
-    assert(&std::get<0>(v) == &x);
-  }
-  {
-    using V = std::variant<const int &, int &&, long>;
-    static_assert(std::is_convertible<int, V>::value, "must be implicit");
-    int x = 42;
-    V v(std::move(x));
-    assert(v.index() == 1);
-    assert(&std::get<1>(v) == &x);
-  }
-#endif
 }
 
 struct BoomOnAnything {
   template <class T>
-  constexpr BoomOnAnything(T) { static_assert(!std::is_same<T, T>::value, ""); }
+  constexpr BoomOnAnything(T) {
+    static_assert(!std::is_same<T, T>::value, "");
+  }
 };
 
 void test_no_narrowing_check_for_class_types() {
@@ -202,12 +167,10 @@ void test_construction_with_repeated_types() {
 }
 
 void test_vector_bool() {
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   std::vector<bool> vec = {true};
   std::variant<bool, int> v = vec[0];
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
-#endif
 }
 
 int main(int, char**) {

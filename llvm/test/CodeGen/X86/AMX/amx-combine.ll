@@ -133,7 +133,7 @@ entry:
   ret void
 }
 
-define void @combine_v256i8amcast_with_store(i8* %src_ptr, <256 x i8>* %dst_ptr) {
+define void @combine_v256i8amcast_with_store(ptr %src_ptr, ptr %dst_ptr) {
 ; CHECK-LABEL: @combine_v256i8amcast_with_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TILE:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, ptr [[SRC_PTR:%.*]], i64 64)
@@ -141,13 +141,13 @@ define void @combine_v256i8amcast_with_store(i8* %src_ptr, <256 x i8>* %dst_ptr)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tile = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, i8* %src_ptr, i64 64)
+  %tile = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, ptr %src_ptr, i64 64)
   %vec = call <256 x i8> @llvm.x86.cast.tile.to.vector.v256i8(x86_amx %tile)
-  store <256 x i8> %vec, <256 x i8>* %dst_ptr, align 256
+  store <256 x i8> %vec, ptr %dst_ptr, align 256
   ret void
 }
 
-define void @combine_v256i8amcast_with_load(i8* %src_ptr, <256 x i8>* %dst_ptr) {
+define void @combine_v256i8amcast_with_load(ptr %src_ptr, ptr %dst_ptr) {
 ; CHECK-LABEL: @combine_v256i8amcast_with_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, ptr [[SRC_PTR:%.*]], i64 32)
@@ -157,7 +157,7 @@ define void @combine_v256i8amcast_with_load(i8* %src_ptr, <256 x i8>* %dst_ptr) 
 entry:
   %vec = load <256 x i8>, ptr %src_ptr, align 256
   %tile = call x86_amx @llvm.x86.cast.vector.to.tile.v256i8(<256 x i8> %vec)
-  call void @llvm.x86.tilestored64.internal(i16 8, i16 32, <256 x i8>* %dst_ptr, i64 32, x86_amx %tile)
+  call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr %dst_ptr, i64 32, x86_amx %tile)
   ret void
 }
 

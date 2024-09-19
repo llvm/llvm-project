@@ -16,7 +16,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
@@ -45,7 +44,8 @@ static cl::TokenizerCallback getDefaultQuotingStyle() {
 }
 
 static bool isPETargetName(StringRef s) {
-  return s == "i386pe" || s == "i386pep" || s == "thumb2pe" || s == "arm64pe";
+  return s == "i386pe" || s == "i386pep" || s == "thumb2pe" || s == "arm64pe" ||
+         s == "arm64ecpe";
 }
 
 static std::optional<bool> isPETarget(llvm::ArrayRef<const char *> args) {

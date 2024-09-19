@@ -123,13 +123,12 @@ define <2 x i16> @test_add_imm_1(<2 x i16> %a) #0 {
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_sub_param_0];
 ;
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_sub_param_1];
-; I16x2:   sub.s16x2   [[R:%r[0-9]+]], [[A]], [[B]];
 ;
-;	NO-I16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
-;	NO-I16x2-DAG: mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
-;	NO-I16x2-DAG: sub.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
-;	NO-I16x2-DAG: sub.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
-;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
+; COMMON-DAG:  mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
+; COMMON-DAG:  mov.b32 	{[[RS2:%rs[0-9]+]], [[RS3:%rs[0-9]+]]}, [[B]];
+; COMMON-DAG:  sub.s16 	[[RS4:%rs[0-9]+]], [[RS0]], [[RS2]];
+; COMMON-DAG:  sub.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
+; COMMON-DAG:  mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
 ; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; COMMON-NEXT: ret;

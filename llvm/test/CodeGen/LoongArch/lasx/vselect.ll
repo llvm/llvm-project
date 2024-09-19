@@ -34,11 +34,11 @@ define void @select_v32i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @select_v16i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lu12i.w $a3, -16
-; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a3
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvld $xr2, $a2, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    lu12i.w $a1, -16
+; CHECK-NEXT:    xvreplgr2vr.w $xr2, $a1
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -69,12 +69,11 @@ define void @select_v8i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @select_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a3, $a3, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvld $xr0, $a3, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvld $xr2, $a2, 0
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0

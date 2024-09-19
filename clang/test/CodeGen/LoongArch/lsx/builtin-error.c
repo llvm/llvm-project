@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +lsx -verify %s
+// RUN: not %clang_cc1 -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s
 
 typedef signed char v16i8 __attribute__((vector_size(16), aligned(16)));
 typedef signed char v16i8_b __attribute__((vector_size(16), aligned(1)));
@@ -24,6 +26,13 @@ typedef double v2f64_d __attribute__((vector_size(16), aligned(8)));
 typedef long long __m128i __attribute__((__vector_size__(16), __may_alias__));
 typedef float __m128 __attribute__((__vector_size__(16), __may_alias__));
 typedef double __m128d __attribute__((__vector_size__(16), __may_alias__));
+
+#ifdef FEATURE_CHECK
+void test_feature(v16i8 _1) {
+// CHECK: error: '__builtin_lsx_vslli_b' needs target feature lsx
+  (void)__builtin_lsx_vslli_b(_1, 1);
+}
+#endif
 
 v16i8 vslli_b(v16i8 _1, int var) {
   v16i8 res = __builtin_lsx_vslli_b(_1, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 7]}}

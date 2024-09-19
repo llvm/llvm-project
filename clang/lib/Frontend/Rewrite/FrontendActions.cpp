@@ -77,7 +77,7 @@ public:
     SmallString<128> Path(Filename);
     llvm::sys::path::replace_extension(Path,
       NewSuffix + llvm::sys::path::extension(Path));
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 
@@ -88,7 +88,7 @@ public:
     llvm::sys::fs::createTemporaryFile(llvm::sys::path::filename(Filename),
                                        llvm::sys::path::extension(Filename).drop_front(), fd,
                                        Path);
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 } // end anonymous namespace

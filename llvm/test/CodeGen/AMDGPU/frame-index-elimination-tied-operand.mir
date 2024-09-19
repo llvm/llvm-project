@@ -22,7 +22,7 @@ body:             |
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: renamable $vgpr0 = V_MOV_B32_e32 123, implicit $exec
-    ; GFX11-NEXT: renamable $vgpr0 = SCRATCH_LOAD_SHORT_D16_HI_ST 4, 0, killed renamable $vgpr0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: renamable $vgpr0 = SCRATCH_LOAD_SHORT_D16_HI_ST 0, 0, killed renamable $vgpr0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr0_sgpr1, 4, 0
     ; GFX11-NEXT: renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr0, 1, implicit-def dead $scc
     ; GFX11-NEXT: renamable $vgpr1 = COPY killed renamable $sgpr0, implicit $exec

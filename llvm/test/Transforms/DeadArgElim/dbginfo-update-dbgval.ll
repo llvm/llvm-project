@@ -24,7 +24,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @f2(i32 %k) local_unnamed_addr !dbg !11 {
 entry:
-; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata !15, metadata !DIExpression()), !dbg !16
+; CHECK: #dbg_value(i32 poison, !15, !DIExpression(), !16
   call void @llvm.dbg.value(metadata i32 %k, metadata !15, metadata !DIExpression()), !dbg !16
   %0 = load i32, ptr @s, align 4, !dbg !17
   %inc = add nsw i32 %0, 1, !dbg !17

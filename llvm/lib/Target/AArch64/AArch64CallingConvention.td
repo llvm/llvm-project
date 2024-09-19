@@ -17,6 +17,11 @@ class CCIfBigEndian<CCAction A> :
 class CCIfILP32<CCAction A> :
   CCIf<"State.getMachineFunction().getDataLayout().getPointerSize() == 4", A>;
 
+/// CCIfSubtarget - Match if the current subtarget has a feature F.
+class CCIfSubtarget<string F, CCAction A>
+    : CCIf<!strconcat("State.getMachineFunction()"
+                      ".getSubtarget<AArch64Subtarget>().", F),
+           A>;
 
 //===----------------------------------------------------------------------===//
 // ARM AAPCS64 Calling Convention
@@ -208,11 +213,137 @@ def CC_AArch64_Arm64EC_VarArg : CallingConv<[
   CCIfType<[i32, i64], CCAssignToStack<8, 8>>,
 ]>;
 
+// Arm64EC thunks use a calling convention that's precisely the x64 calling
+// convention, except that the registers have different names, and the callee
+// address is passed in X9.
+let Entry = 1 in
+def CC_AArch64_Arm64EC_Thunk : CallingConv<[
+  // ARM64EC-specific: the InReg attribute can be used to access the x64 sp passed into entry thunks in x4 from the IR.
+  CCIfInReg<CCIfType<[i64], CCAssignToReg<[X4]>>>,
+
+  // Byval aggregates are passed by pointer
+  CCIfByVal<CCPassIndirect<i64>>,
+
+  // ARM64EC-specific: promote small integers to i32. (x86 only promotes i1,
+  // but that would confuse ARM64 lowering code.)
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // The 'nest' parameter, if any, is passed in R10 (X4).
+  CCIfNest<CCAssignToReg<[X4]>>,
+
+  // A SwiftError is passed in R12 (X19).
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X19]>>>,
+
+  // Pass SwiftSelf in R13 (X20).
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[X20]>>>,
+
+  // Pass SwiftAsync in an otherwise callee saved register so that calls to
+  // normal functions don't need to save it somewhere.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X21]>>>,
+
+  // The 'CFGuardTarget' parameter, if any, is passed in RAX (R8).
+  CCIfCFGuardTarget<CCAssignToReg<[X8]>>,
+
+  // 128 bit vectors are passed by pointer
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64], CCPassIndirect<i64>>,
+
+  // 256 bit vectors are passed by pointer
+  CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v8f32, v4f64], CCPassIndirect<i64>>,
+
+  // 512 bit vectors are passed by pointer
+  CCIfType<[v64i8, v32i16, v16i32, v32f16, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
+
+  // Long doubles are passed by pointer
+  CCIfType<[f80], CCPassIndirect<i64>>,
+
+  // The first 4 MMX vector arguments are passed in GPRs.
+  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
+
+  // The first 4 FP/Vector arguments are passed in XMM registers.
+  CCIfType<[f16],
+           CCAssignToRegWithShadow<[H0, H1, H2, H3],
+                                   [X0, X1, X2, X3]>>,
+  CCIfType<[f32],
+           CCAssignToRegWithShadow<[S0, S1, S2, S3],
+                                   [X0, X1, X2, X3]>>,
+  CCIfType<[f64],
+           CCAssignToRegWithShadow<[D0, D1, D2, D3],
+                                   [X0, X1, X2, X3]>>,
+
+  // The first 4 integer arguments are passed in integer registers.
+  CCIfType<[i32], CCAssignToRegWithShadow<[W0, W1, W2, W3],
+                                          [Q0, Q1, Q2, Q3]>>,
+
+  // Arm64EC thunks: the first argument is always a pointer to the destination
+  // address, stored in x9.
+  CCIfType<[i64], CCAssignToReg<[X9]>>,
+
+  CCIfType<[i64], CCAssignToRegWithShadow<[X0, X1, X2, X3],
+                                          [Q0, Q1, Q2, Q3]>>,
+
+  // Integer/FP values get stored in stack slots that are 8 bytes in size and
+  // 8-byte aligned if there are no more registers to hold them.
+  CCIfType<[i8, i16, i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
+]>;
+
+// The native side of ARM64EC thunks
+let Entry = 1 in
+def CC_AArch64_Arm64EC_Thunk_Native : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X9]>>,
+  CCDelegateTo<CC_AArch64_AAPCS>
+]>;
+
+let Entry = 1 in
+def RetCC_AArch64_Arm64EC_Thunk : CallingConv<[
+  // The X86-Win64 calling convention always returns __m64 values in RAX.
+  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
+
+  // Otherwise, everything is the same as 'normal' X86-64 C CC.
+
+  // The X86-64 calling convention always returns FP values in XMM0.
+  CCIfType<[f16], CCAssignToReg<[H0, H1]>>,
+  CCIfType<[f32], CCAssignToReg<[S0, S1]>>,
+  CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
+  CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[X19]>>>,
+
+  // Scalar values are returned in AX first, then DX.  For i8, the ABI
+  // requires the values to be in AL and AH, however this code uses AL and DL
+  // instead. This is because using AH for the second register conflicts with
+  // the way LLVM does multiple return values -- a return of {i16,i8} would end
+  // up in AX and AH, which overlap. Front-ends wishing to conform to the ABI
+  // for functions that return two i8 values are currently expected to pack the
+  // values into an i16 (which uses AX, and thus AL:AH).
+  //
+  // For code that doesn't care about the ABI, we allow returning more than two
+  // integer values in registers.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  CCIfType<[i32], CCAssignToReg<[W8, W1, W0]>>,
+  CCIfType<[i64], CCAssignToReg<[X8, X1, X0]>>,
+
+  // Vector types are returned in XMM0 and XMM1, when they fit.  XMM2 and XMM3
+  // can only be used by ABI non-compliant code. If the target doesn't have XMM
+  // registers, it won't have vector types.
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64],
+            CCAssignToReg<[Q0, Q1, Q2, Q3]>>
+]>;
+
 // Windows Control Flow Guard checks take a single argument (the target function
 // address) and have no return value.
 let Entry = 1 in
 def CC_AArch64_Win64_CFGuard_Check : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X15]>>
+]>;
+
+let Entry = 1 in
+def CC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X11, X10, X9]>>
+]>;
+
+let Entry = 1 in
+def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[X11]>>
 ]>;
 
 
@@ -244,6 +375,18 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X22]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
+
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCPassIndirect<i64>>,
+
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
+           CCAssignToReg<[P0, P1, P2, P3]>>,
+  CCIfType<[nxv1i1, nxv2i1, nxv4i1, nxv8i1, nxv16i1, aarch64svcount],
+           CCPassIndirect<i64>>,
 
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
@@ -368,6 +511,48 @@ def CC_AArch64_GHC : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[X19, X20, X21, X22, X23, X24, X25, X26, X27, X28]>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_Preserve_None : CallingConv<[
+  // VarArgs are only supported using the C calling convention.
+  // This handles the non-variadic parameter case. Variadic parameters
+  // are handled in CCAssignFnForCall.
+  CCIfVarArg<CCIfSubtarget<"isTargetDarwin()", CCDelegateTo<CC_AArch64_DarwinPCS>>>,
+  CCIfVarArg<CCIfSubtarget<"isTargetWindows()", CCDelegateTo<CC_AArch64_Win64PCS>>>,
+  CCIfVarArg<CCDelegateTo<CC_AArch64_AAPCS>>,
+
+  // We can pass arguments in all general registers, except:
+  // - X8, used for sret
+  // - X16/X17, used by the linker as IP0/IP1
+  // - X18, the platform register
+  // - X19, the base pointer
+  // - X29, the frame pointer
+  // - X30, the link register
+  // General registers are not preserved with the exception of
+  // FP, LR, and X18
+  // Non-volatile registers are used first, so functions may call
+  // normal functions without saving and reloading arguments.
+  // X9 is assigned last as it is used in FrameLowering as the first
+  // choice for a scratch register.
+  CCIfType<[i32], CCAssignToReg<[W20, W21, W22, W23,
+                                 W24, W25, W26, W27, W28,
+                                 W0, W1, W2, W3, W4, W5,
+                                 W6, W7, W10, W11,
+                                 W12, W13, W14, W9]>>,
+  CCIfType<[i64], CCAssignToReg<[X20, X21, X22, X23,
+                                 X24, X25, X26, X27, X28,
+                                 X0, X1, X2, X3, X4, X5,
+                                 X6, X7, X10, X11,
+                                 X12, X13, X14, X9]>>,
+
+  // Windows uses X15 for stack allocation
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+    CCIfType<[i32], CCAssignToReg<[W15]>>>,
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+    CCIfType<[i64], CCAssignToReg<[X15]>>>,
+
+  CCDelegateTo<CC_AArch64_AAPCS>
+]>;
+
 // The order of the callee-saves in this file is important, because the
 // FrameLowering code will use this order to determine the layout the
 // callee-save area in the stack frame. As can be observed below, Darwin
@@ -411,6 +596,11 @@ def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
                                                (sequence "X%u", 0, 8),
                                                (sequence "Q%u", 0, 7))>;
 
+// To match the x64 calling convention, Arm64EC thunks preserve q6-q15.
+def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15),
+                                                         X19, X20, X21, X22, X23, X24,
+                                                         X25, X26, X27, X28, FP, LR)>;
+
 // AArch64 PCS for vector functions (VPCS)
 // must (additionally) preserve full Q8-Q23 registers
 def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
@@ -424,11 +614,24 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                  X19, X20, X21, X22, X23, X24,
                                                  X25, X26, X27, X28, LR, FP)>;
 
+def CSR_Darwin_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
+                                                        (sequence "P%u", 4, 15),
+                                                        LR, FP, X19, X20, X21, X22,
+                                                        X23, X24, X25, X26, X27, X28)>;
+
 // SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
 def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0
                           : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
                                                  (sequence "P%u", 0, 15),
                                                  (sequence "X%u", 0, 13),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
+// SME ABI support routines such as __arm_get_current_vg preserve most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 1, 15),
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
@@ -474,6 +677,8 @@ def CSR_AArch64_AllRegs
                            (sequence "Q%u", 0, 31))>;
 
 def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_AArch64_NoneRegs : CalleeSavedRegs<(add LR, FP)>;
 
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
                                                 (sequence "X%u", 9, 15))>;
@@ -550,6 +755,8 @@ def CSR_Darwin_AArch64_RT_AllRegs
 // These all preserve x18 in addition to any other registers.
 def CSR_AArch64_NoRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_NoRegs, X18)>;
+def CSR_AArch64_NoneRegs_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_NoneRegs, X18)>;
 def CSR_AArch64_AllRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AllRegs, X18)>;
 def CSR_AArch64_AAPCS_SwiftError_SCS

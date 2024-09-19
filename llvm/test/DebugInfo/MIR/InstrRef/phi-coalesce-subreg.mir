@@ -19,7 +19,7 @@
   source_filename = "test.c"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   ; Function Attrs: noinline nounwind uwtable
   define dso_local i32 @foo(i16 signext %bar, i16 signext %baz) !dbg !7 {
   entry:
@@ -34,14 +34,14 @@
     %call = call signext i16 @getlong(), !dbg !13
     %tobool = icmp ne i16 %call, 0, !dbg !13
     br i1 %tobool, label %if.then, label %if.end, !dbg !13
-  
+
   if.then:                                          ; preds = %entry
     %conv2 = sext i16 %conv1 to i32, !dbg !13
     %add3 = add nsw i32 %conv2, 1, !dbg !13
     %conv4 = trunc i32 %add3 to i16, !dbg !13
     call void @llvm.dbg.value(metadata i16 %conv4, metadata !12, metadata !DIExpression()), !dbg !13
     br label %if.end, !dbg !13
-  
+
   if.end:                                           ; preds = %if.then, %entry
     %bar.addr.0 = phi i16 [ %conv4, %if.then ], [ %conv1, %entry ], !dbg !13
     call void @llvm.dbg.value(metadata i16 %bar.addr.0, metadata !12, metadata !DIExpression()), !dbg !13
@@ -54,21 +54,21 @@
     %conv9 = sext i16 %conv8 to i32, !dbg !13
     ret i32 %conv9, !dbg !13
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata)
-  
+
   declare dso_local void @ext(i16 signext)
-  
+
   declare dso_local signext i16 @getlong()
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0 (git@github.com:llvm/llvm-project 79a35789efdf2378f97642ae4a5f3099b9087a11)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/fast/fs/llvm3/llvm/test/DebugInfo/MIR/InstrRef")
   !2 = !{}
@@ -97,12 +97,13 @@ liveins:
   - { reg: '$esi', virtual-reg: '%4' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $edi, $esi
-  
+
     %4:gr32 = COPY $esi
     %3:gr32 = COPY $edi
     %6:gr16 = COPY %4.sub_16bit
@@ -126,7 +127,7 @@ body:             |
     %8:gr16 = COPY $ax, debug-location !13
     CMP16ri8 %8, 0, implicit-def $eflags, debug-location !13
     JCC_1 %bb.2, 4, implicit $eflags, debug-location !13
-  
+
   ; DOESCOALESCE-LABEL: bb.1.if.then:
   ; CHECK-LABEL:        bb.1.if.then:
   bb.1.if.then:

@@ -16,9 +16,9 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DOTBB1:%.*]], label [[DOTBB2:%.*]]
 ; CHECK:       .bb1:
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i8, ptr [[CALLA]], i64 1024
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 256
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[CALLB]], i64 1024
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    br label [[DOTBB2]]
 ; CHECK:       .bb2:
@@ -350,7 +350,7 @@ define i32 @zext_in_loop_and_exit_block(i8 %step, i32 %end) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = zext i8 [[IV]] to i32
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[IV_EXT]], [[END:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[END:%.*]], [[IV_EXT]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], [[STEP:%.*]]

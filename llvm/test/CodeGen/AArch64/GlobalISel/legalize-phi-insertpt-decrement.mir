@@ -8,17 +8,17 @@
     br label %bb1
 
   bb1:                                              ; preds = %bb3, %bb
-    %lsr.iv = phi i16* [ %scevgep, %bb3 ], [ undef, %bb ]
+    %lsr.iv = phi ptr [ %scevgep, %bb3 ], [ undef, %bb ]
     %tmp = phi i1 [ %tmp9, %bb3 ], [ undef, %bb ]
     br i1 %tmp, label %bb10, label %bb3
 
   bb3:                                              ; preds = %bb1
-    %tmp5 = getelementptr i16, i16* null, i64 2
-    %tmp6 = load i16, i16* %lsr.iv, align 2, !tbaa !0
+    %tmp5 = getelementptr i16, ptr null, i64 2
+    %tmp6 = load i16, ptr %lsr.iv, align 2, !tbaa !0
     %tmp7 = icmp eq i16 %tmp6, -1
-    %tmp8 = load i16, i16* %tmp5, align 2, !tbaa !0
+    %tmp8 = load i16, ptr %tmp5, align 2, !tbaa !0
     %tmp9 = icmp eq i16 %tmp8, -1
-    %scevgep = getelementptr i16, i16* %lsr.iv, i64 2
+    %scevgep = getelementptr i16, ptr %lsr.iv, i64 2
     br i1 %tmp7, label %bb10, label %bb1
 
   bb10:                                             ; preds = %bb3, %bb1

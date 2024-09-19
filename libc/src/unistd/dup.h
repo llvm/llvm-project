@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_DUP_H
 #define LLVM_LIBC_SRC_UNISTD_DUP_H
 
+#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int dup(int fd);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_DUP_H

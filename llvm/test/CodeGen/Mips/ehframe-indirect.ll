@@ -17,9 +17,9 @@ define i32 @main() personality ptr @__gxx_personality_v0 {
 ; ALL: .cfi_startproc
 
 ; Linux must rely on the assembler/linker converting the encodings.
-; LINUX: .cfi_personality 128, DW.ref.__gxx_personality_v0
-; LINUX-O32: .cfi_lsda 0, $exception0
-; LINUX-NEW: .cfi_lsda 0, .Lexception0
+; LINUX: .cfi_personality 155, DW.ref.__gxx_personality_v0
+; LINUX-O32: .cfi_lsda 27, $exception0
+; LINUX-NEW: .cfi_lsda 27, .Lexception0
 
 ; FreeBSD can (and must) be more direct about the encodings it wants.
 ; FREEBSD: .cfi_personality 155, DW.ref.__gxx_personality_v0

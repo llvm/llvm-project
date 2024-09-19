@@ -18,7 +18,10 @@ unittest("StaticAnalysisTests") {
     "CallDescriptionTest.cpp",
     "CallEventTest.cpp",
     "ConflictingEvalCallsTest.cpp",
+    "ExprEngineVisitTest.cpp",
     "FalsePositiveRefutationBRVisitorTest.cpp",
+    "IsCLibraryFunctionTest.cpp",
+    "MemRegionDescriptiveNameTest.cpp",
     "NoStateChangeFuncVisitorTest.cpp",
     "ParamRegionTest.cpp",
     "RangeSetTest.cpp",
@@ -27,5 +30,6 @@ unittest("StaticAnalysisTests") {
     "StoreTest.cpp",
     "SymbolReaperTest.cpp",
     "TestReturnValueUnderConstruction.cpp",
+    "Z3CrosscheckOracleTest.cpp",
   ]
 }

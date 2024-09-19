@@ -16,6 +16,7 @@
 #include "llvm/Support/CommandLine.h" // for expandResponseFiles
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/OptionStrCmp.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -30,42 +31,26 @@
 using namespace llvm;
 using namespace llvm::opt;
 
-namespace llvm {
-namespace opt {
-
-// Ordering on Info. The ordering is *almost* case-insensitive lexicographic,
-// with an exception. '\0' comes at the end of the alphabet instead of the
-// beginning (thus options precede any other options which prefix them).
-static int StrCmpOptionNameIgnoreCase(StringRef A, StringRef B) {
-  size_t MinSize = std::min(A.size(), B.size());
-  if (int Res = A.substr(0, MinSize).compare_insensitive(B.substr(0, MinSize)))
-    return Res;
-
-  if (A.size() == B.size())
-    return 0;
-
-  return (A.size() == MinSize) ? 1 /* A is a prefix of B. */
-                               : -1 /* B is a prefix of A */;
-}
-
+namespace llvm::opt {
 #ifndef NDEBUG
-static int StrCmpOptionName(StringRef A, StringRef B) {
-  if (int N = StrCmpOptionNameIgnoreCase(A, B))
-    return N;
-  return A.compare(B);
-}
-
 static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
   if (&A == &B)
     return false;
 
-  if (int N = StrCmpOptionName(A.getName(), B.getName()))
-    return N < 0;
+  if (int Cmp = StrCmpOptionName(A.getName(), B.getName()))
+    return Cmp < 0;
 
-  for (size_t I = 0, K = std::min(A.Prefixes.size(), B.Prefixes.size()); I != K;
-       ++I)
-    if (int N = StrCmpOptionName(A.Prefixes[I], B.Prefixes[I]))
-      return N < 0;
+  // Note: we are converting ArrayRef<StringLiteral> to ArrayRef<StringRef>.
+  // In general, ArrayRef<SubClass> cannot be safely viewed as ArrayRef<Base>
+  // since sizeof(SubClass) may not be same as sizeof(Base). However in this
+  // case, sizeof(StringLiteral) is same as sizeof(StringRef), so this
+  // conversion is safe.
+  static_assert(sizeof(StringRef) == sizeof(StringLiteral));
+  ArrayRef<StringRef> APrefixes(A.Prefixes.data(), A.Prefixes.size());
+  ArrayRef<StringRef> BPrefixes(B.Prefixes.data(), B.Prefixes.size());
+
+  if (int Cmp = StrCmpOptionPrefixes(APrefixes, BPrefixes))
+    return Cmp < 0;
 
   // Names are the same, check that classes are in order; exactly one
   // should be joined, and it should succeed the other.
@@ -77,11 +62,10 @@ static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
 
 // Support lower_bound between info and an option name.
 static inline bool operator<(const OptTable::Info &I, StringRef Name) {
-  return StrCmpOptionNameIgnoreCase(I.getName(), Name) < 0;
+  // Do not fallback to case sensitive comparison.
+  return StrCmpOptionName(I.getName(), Name, false) < 0;
 }
-
-} // end namespace opt
-} // end namespace llvm
+} // namespace llvm::opt
 
 OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
@@ -197,7 +181,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
-      if (Val.starts_with(Arg) && Arg.compare(Val))
+      if (Val.starts_with(Arg) && Arg != Val)
         Result.push_back(std::string(Val));
     return Result;
   }
@@ -710,7 +694,8 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
       OS, Usage, Title, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
-      });
+      },
+      VisibilityMask);
 }
 
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
@@ -726,13 +711,14 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
         if (CandidateInfo.Flags & FlagsToExclude)
           return true;
         return false;
-      });
+      },
+      Visibility(0));
 }
 
 void OptTable::internalPrintHelp(
     raw_ostream &OS, const char *Usage, const char *Title, bool ShowHidden,
-    bool ShowAllAliases,
-    std::function<bool(const Info &)> ExcludeOption) const {
+    bool ShowAllAliases, std::function<bool(const Info &)> ExcludeOption,
+    Visibility VisibilityMask) const {
   OS << "OVERVIEW: " << Title << "\n\n";
   OS << "USAGE: " << Usage << "\n\n";
 
@@ -754,11 +740,11 @@ void OptTable::internalPrintHelp(
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
-    const char *HelpText = getOptionHelpText(Id);
+    const char *HelpText = getOptionHelpText(Id, VisibilityMask);
     if (!HelpText && ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID());
+        HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
     }
 
     if (HelpText && (strlen(HelpText) != 0)) {

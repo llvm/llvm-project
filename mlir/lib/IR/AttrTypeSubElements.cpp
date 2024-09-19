@@ -27,10 +27,10 @@ WalkResult AttrTypeWalker::walkImpl(T element, WalkFns &walkFns,
                                     WalkOrder order) {
   // Check if we've already walk this element before.
   auto key = std::make_pair(element.getAsOpaquePointer(), (int)order);
-  auto it = visitedAttrTypes.find(key);
-  if (it != visitedAttrTypes.end())
+  auto [it, inserted] =
+      visitedAttrTypes.try_emplace(key, WalkResult::advance());
+  if (!inserted)
     return it->second;
-  visitedAttrTypes.try_emplace(key, WalkResult::advance());
 
   // If we are walking in post order, walk the sub elements first.
   if (order == WalkOrder::PostOrder) {
@@ -67,22 +67,28 @@ WalkResult AttrTypeWalker::walkSubElements(T interface, WalkOrder order) {
 }
 
 //===----------------------------------------------------------------------===//
-/// AttrTypeReplacer
+/// AttrTypeReplacerBase
 //===----------------------------------------------------------------------===//
 
-void AttrTypeReplacer::addReplacement(ReplaceFn<Attribute> fn) {
+template <typename Concrete>
+void detail::AttrTypeReplacerBase<Concrete>::addReplacement(
+    ReplaceFn<Attribute> fn) {
   attrReplacementFns.emplace_back(std::move(fn));
 }
-void AttrTypeReplacer::addReplacement(ReplaceFn<Type> fn) {
+
+template <typename Concrete>
+void detail::AttrTypeReplacerBase<Concrete>::addReplacement(
+    ReplaceFn<Type> fn) {
   typeReplacementFns.push_back(std::move(fn));
 }
 
-void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceAttrs,
-                                         bool replaceLocs, bool replaceTypes) {
+template <typename Concrete>
+void detail::AttrTypeReplacerBase<Concrete>::replaceElementsIn(
+    Operation *op, bool replaceAttrs, bool replaceLocs, bool replaceTypes) {
   // Functor that replaces the given element if the new value is different,
   // otherwise returns nullptr.
   auto replaceIfDifferent = [&](auto element) {
-    auto replacement = replace(element);
+    auto replacement = static_cast<Concrete *>(this)->replace(element);
     return (replacement && replacement != element) ? replacement : nullptr;
   };
 
@@ -127,17 +133,16 @@ void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceAttrs,
   }
 }
 
-void AttrTypeReplacer::recursivelyReplaceElementsIn(Operation *op,
-                                                    bool replaceAttrs,
-                                                    bool replaceLocs,
-                                                    bool replaceTypes) {
+template <typename Concrete>
+void detail::AttrTypeReplacerBase<Concrete>::recursivelyReplaceElementsIn(
+    Operation *op, bool replaceAttrs, bool replaceLocs, bool replaceTypes) {
   op->walk([&](Operation *nestedOp) {
     replaceElementsIn(nestedOp, replaceAttrs, replaceLocs, replaceTypes);
   });
 }
 
-template <typename T>
-static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
+template <typename T, typename Replacer>
+static void updateSubElementImpl(T element, Replacer &replacer,
                                  SmallVectorImpl<T> &newElements,
                                  FailureOr<bool> &changed) {
   // Bail early if we failed at any point.
@@ -160,18 +165,18 @@ static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
   }
 }
 
-template <typename T>
-T AttrTypeReplacer::replaceSubElements(T interface) {
+template <typename T, typename Replacer>
+static T replaceSubElements(T interface, Replacer &replacer) {
   // Walk the current sub-elements, replacing them as necessary.
   SmallVector<Attribute, 16> newAttrs;
   SmallVector<Type, 16> newTypes;
   FailureOr<bool> changed = false;
   interface.walkImmediateSubElements(
       [&](Attribute element) {
-        updateSubElementImpl(element, *this, newAttrs, changed);
+        updateSubElementImpl(element, replacer, newAttrs, changed);
       },
       [&](Type element) {
-        updateSubElementImpl(element, *this, newTypes, changed);
+        updateSubElementImpl(element, replacer, newTypes, changed);
       });
   if (failed(changed))
     return nullptr;
@@ -184,13 +189,9 @@ T AttrTypeReplacer::replaceSubElements(T interface) {
 }
 
 /// Shared implementation of replacing a given attribute or type element.
-template <typename T, typename ReplaceFns>
-T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns) {
-  const void *opaqueElement = element.getAsOpaquePointer();
-  auto [it, inserted] = attrTypeMap.try_emplace(opaqueElement, opaqueElement);
-  if (!inserted)
-    return T::getFromOpaquePointer(it->second);
-
+template <typename T, typename ReplaceFns, typename Replacer>
+static T replaceElementImpl(T element, ReplaceFns &replaceFns,
+                            Replacer &replacer) {
   T result = element;
   WalkResult walkResult = WalkResult::advance();
   for (auto &replaceFn : llvm::reverse(replaceFns)) {
@@ -202,29 +203,114 @@ T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns) {
 
   // If an error occurred, return nullptr to indicate failure.
   if (walkResult.wasInterrupted() || !result) {
-    attrTypeMap[opaqueElement] = nullptr;
     return nullptr;
   }
 
   // Handle replacing sub-elements if this element is also a container.
   if (!walkResult.wasSkipped()) {
     // Replace the sub elements of this element, bailing if we fail.
-    if (!(result = replaceSubElements(result))) {
-      attrTypeMap[opaqueElement] = nullptr;
+    if (!(result = replaceSubElements(result, replacer))) {
       return nullptr;
     }
   }
 
-  attrTypeMap[opaqueElement] = result.getAsOpaquePointer();
+  return result;
+}
+
+template <typename Concrete>
+Attribute detail::AttrTypeReplacerBase<Concrete>::replaceBase(Attribute attr) {
+  return replaceElementImpl(attr, attrReplacementFns,
+                            *static_cast<Concrete *>(this));
+}
+
+template <typename Concrete>
+Type detail::AttrTypeReplacerBase<Concrete>::replaceBase(Type type) {
+  return replaceElementImpl(type, typeReplacementFns,
+                            *static_cast<Concrete *>(this));
+}
+
+//===----------------------------------------------------------------------===//
+/// AttrTypeReplacer
+//===----------------------------------------------------------------------===//
+
+template class detail::AttrTypeReplacerBase<AttrTypeReplacer>;
+
+template <typename T>
+T AttrTypeReplacer::cachedReplaceImpl(T element) {
+  const void *opaqueElement = element.getAsOpaquePointer();
+  auto [it, inserted] = cache.try_emplace(opaqueElement, opaqueElement);
+  if (!inserted)
+    return T::getFromOpaquePointer(it->second);
+
+  T result = replaceBase(element);
+
+  cache[opaqueElement] = result.getAsOpaquePointer();
   return result;
 }
 
 Attribute AttrTypeReplacer::replace(Attribute attr) {
-  return replaceImpl(attr, attrReplacementFns);
+  return cachedReplaceImpl(attr);
 }
 
-Type AttrTypeReplacer::replace(Type type) {
-  return replaceImpl(type, typeReplacementFns);
+Type AttrTypeReplacer::replace(Type type) { return cachedReplaceImpl(type); }
+
+//===----------------------------------------------------------------------===//
+/// CyclicAttrTypeReplacer
+//===----------------------------------------------------------------------===//
+
+template class detail::AttrTypeReplacerBase<CyclicAttrTypeReplacer>;
+
+CyclicAttrTypeReplacer::CyclicAttrTypeReplacer()
+    : cache([&](void *attr) { return breakCycleImpl(attr); }) {}
+
+void CyclicAttrTypeReplacer::addCycleBreaker(CycleBreakerFn<Attribute> fn) {
+  attrCycleBreakerFns.emplace_back(std::move(fn));
+}
+
+void CyclicAttrTypeReplacer::addCycleBreaker(CycleBreakerFn<Type> fn) {
+  typeCycleBreakerFns.emplace_back(std::move(fn));
+}
+
+template <typename T>
+T CyclicAttrTypeReplacer::cachedReplaceImpl(T element) {
+  void *opaqueTaggedElement = AttrOrType(element).getOpaqueValue();
+  CyclicReplacerCache<void *, const void *>::CacheEntry cacheEntry =
+      cache.lookupOrInit(opaqueTaggedElement);
+  if (auto resultOpt = cacheEntry.get())
+    return T::getFromOpaquePointer(*resultOpt);
+
+  T result = replaceBase(element);
+
+  cacheEntry.resolve(result.getAsOpaquePointer());
+  return result;
+}
+
+Attribute CyclicAttrTypeReplacer::replace(Attribute attr) {
+  return cachedReplaceImpl(attr);
+}
+
+Type CyclicAttrTypeReplacer::replace(Type type) {
+  return cachedReplaceImpl(type);
+}
+
+std::optional<const void *>
+CyclicAttrTypeReplacer::breakCycleImpl(void *element) {
+  AttrOrType attrType = AttrOrType::getFromOpaqueValue(element);
+  if (auto attr = dyn_cast<Attribute>(attrType)) {
+    for (auto &cyclicReplaceFn : llvm::reverse(attrCycleBreakerFns)) {
+      if (std::optional<Attribute> newRes = cyclicReplaceFn(attr)) {
+        return newRes->getAsOpaquePointer();
+      }
+    }
+  } else {
+    auto type = dyn_cast<Type>(attrType);
+    for (auto &cyclicReplaceFn : llvm::reverse(typeCycleBreakerFns)) {
+      if (std::optional<Type> newRes = cyclicReplaceFn(type)) {
+        return newRes->getAsOpaquePointer();
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

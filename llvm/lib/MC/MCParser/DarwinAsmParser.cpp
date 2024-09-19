@@ -705,7 +705,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
                                    .Case("__datacoal_nt", "__data")
                                    .Default(Section);
 
-    if (!Section.equals(NonCoalSection)) {
+    if (Section != NonCoalSection) {
       StringRef SectionVal(Loc.getPointer());
       size_t B = SectionVal.find(',') + 1, E = SectionVal.find(',', B);
       SMLoc BLoc = SMLoc::getFromPointer(SectionVal.data() + B);
@@ -1147,6 +1147,7 @@ static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   case MachO::PLATFORM_IOS:     return Triple::IOS;
   case MachO::PLATFORM_TVOS:    return Triple::TvOS;
   case MachO::PLATFORM_WATCHOS: return Triple::WatchOS;
+  case MachO::PLATFORM_XROS:    return Triple::XROS;
   case MachO::PLATFORM_BRIDGEOS:         /* silence warning */ break;
   case MachO::PLATFORM_DRIVERKIT:
     return Triple::DriverKit;
@@ -1154,6 +1155,7 @@ static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   case MachO::PLATFORM_IOSSIMULATOR:     /* silence warning */ break;
   case MachO::PLATFORM_TVOSSIMULATOR:    /* silence warning */ break;
   case MachO::PLATFORM_WATCHOSSIMULATOR: /* silence warning */ break;
+  case MachO::PLATFORM_XROS_SIMULATOR:   /* silence warning */ break;
   }
   llvm_unreachable("Invalid mach-o platform type");
 }

@@ -3,13 +3,13 @@
 ; RUN:    -verify-machineinstrs | FileCheck %s
 ; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v < %s \
 ; RUN:    -verify-machineinstrs | FileCheck %s
-; RUN: llc -mtriple riscv32 -mattr=+d,+zfh,+zvfh,+v,+fast-unaligned-access < %s \
+; RUN: llc -mtriple riscv32 -mattr=+d,+zfh,+zvfh,+v,+unaligned-vector-mem < %s \
 ; RUN:    -verify-machineinstrs | FileCheck --check-prefix=FAST %s
-; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v,+fast-unaligned-access < %s \
+; RUN: llc -mtriple riscv64 -mattr=+d,+zfh,+zvfh,+v,+unaligned-vector-mem < %s \
 ; RUN:    -verify-machineinstrs | FileCheck --check-prefix=FAST %s
 
 
-define <vscale x 1 x i32> @unaligned_load_nxv1i32_a1(<vscale x 1 x i32>* %ptr) {
+define <vscale x 1 x i32> @unaligned_load_nxv1i32_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i32_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
@@ -21,11 +21,11 @@ define <vscale x 1 x i32> @unaligned_load_nxv1i32_a1(<vscale x 1 x i32>* %ptr) {
 ; FAST-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; FAST-NEXT:    vle32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i32>, <vscale x 1 x i32>* %ptr, align 1
+  %v = load <vscale x 1 x i32>, ptr %ptr, align 1
   ret <vscale x 1 x i32> %v
 }
 
-define <vscale x 1 x i32> @unaligned_load_nxv1i32_a2(<vscale x 1 x i32>* %ptr) {
+define <vscale x 1 x i32> @unaligned_load_nxv1i32_a2(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i32_a2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
@@ -37,11 +37,11 @@ define <vscale x 1 x i32> @unaligned_load_nxv1i32_a2(<vscale x 1 x i32>* %ptr) {
 ; FAST-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; FAST-NEXT:    vle32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i32>, <vscale x 1 x i32>* %ptr, align 2
+  %v = load <vscale x 1 x i32>, ptr %ptr, align 2
   ret <vscale x 1 x i32> %v
 }
 
-define <vscale x 1 x i32> @aligned_load_nxv1i32_a4(<vscale x 1 x i32>* %ptr) {
+define <vscale x 1 x i32> @aligned_load_nxv1i32_a4(ptr %ptr) {
 ; CHECK-LABEL: aligned_load_nxv1i32_a4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
@@ -53,11 +53,11 @@ define <vscale x 1 x i32> @aligned_load_nxv1i32_a4(<vscale x 1 x i32>* %ptr) {
 ; FAST-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; FAST-NEXT:    vle32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i32>, <vscale x 1 x i32>* %ptr, align 4
+  %v = load <vscale x 1 x i32>, ptr %ptr, align 4
   ret <vscale x 1 x i32> %v
 }
 
-define <vscale x 1 x i64> @unaligned_load_nxv1i64_a1(<vscale x 1 x i64>* %ptr) {
+define <vscale x 1 x i64> @unaligned_load_nxv1i64_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i64_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a0)
@@ -67,11 +67,11 @@ define <vscale x 1 x i64> @unaligned_load_nxv1i64_a1(<vscale x 1 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl1re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i64>, <vscale x 1 x i64>* %ptr, align 1
+  %v = load <vscale x 1 x i64>, ptr %ptr, align 1
   ret <vscale x 1 x i64> %v
 }
 
-define <vscale x 1 x i64> @unaligned_load_nxv1i64_a4(<vscale x 1 x i64>* %ptr) {
+define <vscale x 1 x i64> @unaligned_load_nxv1i64_a4(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i64_a4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a0)
@@ -81,11 +81,11 @@ define <vscale x 1 x i64> @unaligned_load_nxv1i64_a4(<vscale x 1 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl1re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i64>, <vscale x 1 x i64>* %ptr, align 4
+  %v = load <vscale x 1 x i64>, ptr %ptr, align 4
   ret <vscale x 1 x i64> %v
 }
 
-define <vscale x 1 x i64> @aligned_load_nxv1i64_a8(<vscale x 1 x i64>* %ptr) {
+define <vscale x 1 x i64> @aligned_load_nxv1i64_a8(ptr %ptr) {
 ; CHECK-LABEL: aligned_load_nxv1i64_a8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1re64.v v8, (a0)
@@ -95,11 +95,11 @@ define <vscale x 1 x i64> @aligned_load_nxv1i64_a8(<vscale x 1 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl1re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i64>, <vscale x 1 x i64>* %ptr, align 8
+  %v = load <vscale x 1 x i64>, ptr %ptr, align 8
   ret <vscale x 1 x i64> %v
 }
 
-define <vscale x 2 x i64> @unaligned_load_nxv2i64_a1(<vscale x 2 x i64>* %ptr) {
+define <vscale x 2 x i64> @unaligned_load_nxv2i64_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv2i64_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -109,11 +109,11 @@ define <vscale x 2 x i64> @unaligned_load_nxv2i64_a1(<vscale x 2 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 2 x i64>, <vscale x 2 x i64>* %ptr, align 1
+  %v = load <vscale x 2 x i64>, ptr %ptr, align 1
   ret <vscale x 2 x i64> %v
 }
 
-define <vscale x 2 x i64> @unaligned_load_nxv2i64_a4(<vscale x 2 x i64>* %ptr) {
+define <vscale x 2 x i64> @unaligned_load_nxv2i64_a4(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv2i64_a4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -123,11 +123,11 @@ define <vscale x 2 x i64> @unaligned_load_nxv2i64_a4(<vscale x 2 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 2 x i64>, <vscale x 2 x i64>* %ptr, align 4
+  %v = load <vscale x 2 x i64>, ptr %ptr, align 4
   ret <vscale x 2 x i64> %v
 }
 
-define <vscale x 2 x i64> @aligned_load_nxv2i64_a8(<vscale x 2 x i64>* %ptr) {
+define <vscale x 2 x i64> @aligned_load_nxv2i64_a8(ptr %ptr) {
 ; CHECK-LABEL: aligned_load_nxv2i64_a8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re64.v v8, (a0)
@@ -137,12 +137,12 @@ define <vscale x 2 x i64> @aligned_load_nxv2i64_a8(<vscale x 2 x i64>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re64.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 2 x i64>, <vscale x 2 x i64>* %ptr, align 8
+  %v = load <vscale x 2 x i64>, ptr %ptr, align 8
   ret <vscale x 2 x i64> %v
 }
 
 ; Masks should always be aligned
-define <vscale x 1 x i1> @unaligned_load_nxv1i1_a1(<vscale x 1 x i1>* %ptr) {
+define <vscale x 1 x i1> @unaligned_load_nxv1i1_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv1i1_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -154,11 +154,11 @@ define <vscale x 1 x i1> @unaligned_load_nxv1i1_a1(<vscale x 1 x i1>* %ptr) {
 ; FAST-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; FAST-NEXT:    vlm.v v0, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 1 x i1>, <vscale x 1 x i1>* %ptr, align 1
+  %v = load <vscale x 1 x i1>, ptr %ptr, align 1
   ret <vscale x 1 x i1> %v
 }
 
-define <vscale x 4 x float> @unaligned_load_nxv4f32_a1(<vscale x 4 x float>* %ptr) {
+define <vscale x 4 x float> @unaligned_load_nxv4f32_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv4f32_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -168,11 +168,11 @@ define <vscale x 4 x float> @unaligned_load_nxv4f32_a1(<vscale x 4 x float>* %pt
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 4 x float>, <vscale x 4 x float>* %ptr, align 1
+  %v = load <vscale x 4 x float>, ptr %ptr, align 1
   ret <vscale x 4 x float> %v
 }
 
-define <vscale x 4 x float> @unaligned_load_nxv4f32_a2(<vscale x 4 x float>* %ptr) {
+define <vscale x 4 x float> @unaligned_load_nxv4f32_a2(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv4f32_a2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -182,11 +182,11 @@ define <vscale x 4 x float> @unaligned_load_nxv4f32_a2(<vscale x 4 x float>* %pt
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 4 x float>, <vscale x 4 x float>* %ptr, align 2
+  %v = load <vscale x 4 x float>, ptr %ptr, align 2
   ret <vscale x 4 x float> %v
 }
 
-define <vscale x 4 x float> @aligned_load_nxv4f32_a4(<vscale x 4 x float>* %ptr) {
+define <vscale x 4 x float> @aligned_load_nxv4f32_a4(ptr %ptr) {
 ; CHECK-LABEL: aligned_load_nxv4f32_a4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re32.v v8, (a0)
@@ -196,11 +196,11 @@ define <vscale x 4 x float> @aligned_load_nxv4f32_a4(<vscale x 4 x float>* %ptr)
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re32.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 4 x float>, <vscale x 4 x float>* %ptr, align 4
+  %v = load <vscale x 4 x float>, ptr %ptr, align 4
   ret <vscale x 4 x float> %v
 }
 
-define <vscale x 8 x half> @unaligned_load_nxv8f16_a1(<vscale x 8 x half>* %ptr) {
+define <vscale x 8 x half> @unaligned_load_nxv8f16_a1(ptr %ptr) {
 ; CHECK-LABEL: unaligned_load_nxv8f16_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -210,11 +210,11 @@ define <vscale x 8 x half> @unaligned_load_nxv8f16_a1(<vscale x 8 x half>* %ptr)
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re16.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 8 x half>, <vscale x 8 x half>* %ptr, align 1
+  %v = load <vscale x 8 x half>, ptr %ptr, align 1
   ret <vscale x 8 x half> %v
 }
 
-define <vscale x 8 x half> @aligned_load_nxv8f16_a2(<vscale x 8 x half>* %ptr) {
+define <vscale x 8 x half> @aligned_load_nxv8f16_a2(ptr %ptr) {
 ; CHECK-LABEL: aligned_load_nxv8f16_a2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re16.v v8, (a0)
@@ -224,11 +224,11 @@ define <vscale x 8 x half> @aligned_load_nxv8f16_a2(<vscale x 8 x half>* %ptr) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vl2re16.v v8, (a0)
 ; FAST-NEXT:    ret
-  %v = load <vscale x 8 x half>, <vscale x 8 x half>* %ptr, align 2
+  %v = load <vscale x 8 x half>, ptr %ptr, align 2
   ret <vscale x 8 x half> %v
 }
 
-define void @unaligned_store_nxv4i32_a1(<vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr) {
+define void @unaligned_store_nxv4i32_a1(<vscale x 4 x i32> %x, ptr %ptr) {
 ; CHECK-LABEL: unaligned_store_nxv4i32_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vs2r.v v8, (a0)
@@ -238,11 +238,11 @@ define void @unaligned_store_nxv4i32_a1(<vscale x 4 x i32> %x, <vscale x 4 x i32
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vs2r.v v8, (a0)
 ; FAST-NEXT:    ret
-  store <vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr, align 1
+  store <vscale x 4 x i32> %x, ptr %ptr, align 1
   ret void
 }
 
-define void @unaligned_store_nxv4i32_a2(<vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr) {
+define void @unaligned_store_nxv4i32_a2(<vscale x 4 x i32> %x, ptr %ptr) {
 ; CHECK-LABEL: unaligned_store_nxv4i32_a2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vs2r.v v8, (a0)
@@ -252,11 +252,11 @@ define void @unaligned_store_nxv4i32_a2(<vscale x 4 x i32> %x, <vscale x 4 x i32
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vs2r.v v8, (a0)
 ; FAST-NEXT:    ret
-  store <vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr, align 2
+  store <vscale x 4 x i32> %x, ptr %ptr, align 2
   ret void
 }
 
-define void @aligned_store_nxv4i32_a4(<vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr) {
+define void @aligned_store_nxv4i32_a4(<vscale x 4 x i32> %x, ptr %ptr) {
 ; CHECK-LABEL: aligned_store_nxv4i32_a4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vs2r.v v8, (a0)
@@ -266,11 +266,11 @@ define void @aligned_store_nxv4i32_a4(<vscale x 4 x i32> %x, <vscale x 4 x i32>*
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    vs2r.v v8, (a0)
 ; FAST-NEXT:    ret
-  store <vscale x 4 x i32> %x, <vscale x 4 x i32>* %ptr, align 4
+  store <vscale x 4 x i32> %x, ptr %ptr, align 4
   ret void
 }
 
-define void @unaligned_store_nxv1i16_a1(<vscale x 1 x i16> %x, <vscale x 1 x i16>* %ptr) {
+define void @unaligned_store_nxv1i16_a1(<vscale x 1 x i16> %x, ptr %ptr) {
 ; CHECK-LABEL: unaligned_store_nxv1i16_a1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
@@ -282,11 +282,11 @@ define void @unaligned_store_nxv1i16_a1(<vscale x 1 x i16> %x, <vscale x 1 x i16
 ; FAST-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; FAST-NEXT:    vse16.v v8, (a0)
 ; FAST-NEXT:    ret
-  store <vscale x 1 x i16> %x, <vscale x 1 x i16>* %ptr, align 1
+  store <vscale x 1 x i16> %x, ptr %ptr, align 1
   ret void
 }
 
-define void @aligned_store_nxv1i16_a2(<vscale x 1 x i16> %x, <vscale x 1 x i16>* %ptr) {
+define void @aligned_store_nxv1i16_a2(<vscale x 1 x i16> %x, ptr %ptr) {
 ; CHECK-LABEL: aligned_store_nxv1i16_a2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
@@ -298,6 +298,6 @@ define void @aligned_store_nxv1i16_a2(<vscale x 1 x i16> %x, <vscale x 1 x i16>*
 ; FAST-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; FAST-NEXT:    vse16.v v8, (a0)
 ; FAST-NEXT:    ret
-  store <vscale x 1 x i16> %x, <vscale x 1 x i16>* %ptr, align 2
+  store <vscale x 1 x i16> %x, ptr %ptr, align 2
   ret void
 }

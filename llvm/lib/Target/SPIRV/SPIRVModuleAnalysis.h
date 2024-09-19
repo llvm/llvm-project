@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 class SPIRVSubtarget;
@@ -34,9 +33,11 @@ enum ModuleSectionType {
   MB_EntryPoints, // All OpEntryPoint instructions (if any).
   //  MB_ExecutionModes, MB_DebugSourceAndStrings,
   MB_DebugNames,           // All OpName and OpMemberName intrs.
+  MB_DebugStrings,         // All OpString intrs.
   MB_DebugModuleProcessed, // All OpModuleProcessed instructions.
   MB_Annotations,          // OpDecorate, OpMemberDecorate etc.
   MB_TypeConstVars,        // OpTypeXXX, OpConstantXXX, and global OpVariables.
+  MB_NonSemanticGlobalDI,  // OpExtInst with e.g. DebugSource, DebugTypeBasic.
   MB_ExtFuncDecls,         // OpFunction etc. to declare for external funcs.
   NUM_MODULE_SECTIONS      // Total number of sections requiring basic blocks.
 };
@@ -45,13 +46,13 @@ struct Requirements {
   const bool IsSatisfiable;
   const std::optional<Capability::Capability> Cap;
   const ExtensionList Exts;
-  const unsigned MinVer; // 0 if no min version is required.
-  const unsigned MaxVer; // 0 if no max version is required.
+  const VersionTuple MinVer; // 0 if no min version is required.
+  const VersionTuple MaxVer; // 0 if no max version is required.
 
   Requirements(bool IsSatisfiable = false,
                std::optional<Capability::Capability> Cap = {},
-               ExtensionList Exts = {}, unsigned MinVer = 0,
-               unsigned MaxVer = 0)
+               ExtensionList Exts = {}, VersionTuple MinVer = VersionTuple(),
+               VersionTuple MaxVer = VersionTuple())
       : IsSatisfiable(IsSatisfiable), Cap(Cap), Exts(Exts), MinVer(MinVer),
         MaxVer(MaxVer) {}
   Requirements(Capability::Capability Cap) : Requirements(true, {Cap}) {}
@@ -69,27 +70,25 @@ private:
   DenseSet<unsigned> AvailableCaps;
 
   SmallSet<Extension::Extension, 4> AllExtensions;
-  unsigned MinVersion; // 0 if no min version is defined.
-  unsigned MaxVersion; // 0 if no max version is defined.
-  // Remove a list of capabilities from dedupedCaps and add them to AllCaps,
-  // recursing through their implicitly declared capabilities too.
-  void pruneCapabilities(const CapabilityList &ToPrune);
+  VersionTuple MinVersion; // 0 if no min version is defined.
+  VersionTuple MaxVersion; // 0 if no max version is defined.
+  // Add capabilities to AllCaps, recursing through their implicitly declared
+  // capabilities too.
+  void recursiveAddCapabilities(const CapabilityList &ToPrune);
 
   void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
 
 public:
-  RequirementHandler() : MinVersion(0), MaxVersion(0) {}
+  RequirementHandler() {}
   void clear() {
     MinimalCaps.clear();
     AllCaps.clear();
     AvailableCaps.clear();
     AllExtensions.clear();
-    MinVersion = 0;
-    MaxVersion = 0;
+    MinVersion = VersionTuple();
+    MaxVersion = VersionTuple();
   }
-  unsigned getMinVersion() const { return MinVersion; }
-  unsigned getMaxVersion() const { return MaxVersion; }
   const CapabilityList &getMinimalCapabilities() const { return MinimalCaps; }
   const SmallSet<Extension::Extension, 4> &getExtensions() const {
     return AllExtensions;
@@ -163,8 +162,8 @@ struct ModuleAnalysisInfo {
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
     auto FuncPtrRegPair = FuncMap.find(F);
-    assert(FuncPtrRegPair != FuncMap.end() && "Cannot find function ID");
-    return FuncPtrRegPair->second;
+    return FuncPtrRegPair == FuncMap.end() ? Register(0)
+                                           : FuncPtrRegPair->second;
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
@@ -224,6 +223,8 @@ private:
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
+  void collectFuncPtrs();
+  void collectFuncPtrs(MachineInstr *MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;

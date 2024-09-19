@@ -1,4 +1,4 @@
-//===--- AtomicChange.cpp - AtomicChange implementation -----------------*- C++ -*-===//
+//===--- AtomicChange.cpp - AtomicChange implementation ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -104,9 +104,9 @@ bool violatesColumnLimit(llvm::StringRef Code, unsigned ColumnLimit,
 }
 
 std::vector<Range>
-getRangesForFormating(llvm::StringRef Code, unsigned ColumnLimit,
-                      ApplyChangesSpec::FormatOption Format,
-                      const clang::tooling::Replacements &Replaces) {
+getRangesForFormatting(llvm::StringRef Code, unsigned ColumnLimit,
+                       ApplyChangesSpec::FormatOption Format,
+                       const clang::tooling::Replacements &Replaces) {
   // kNone suppresses formatting entirely.
   if (Format == ApplyChangesSpec::kNone)
     return {};
@@ -352,7 +352,7 @@ applyAtomicChanges(llvm::StringRef FilePath, llvm::StringRef Code,
 
   AllReplaces = AllReplaces.merge(HeaderSortingReplacements);
 
-  std::vector<Range> FormatRanges = getRangesForFormating(
+  std::vector<Range> FormatRanges = getRangesForFormatting(
       *ChangedCode, Spec.Style.ColumnLimit, Spec.Format, AllReplaces);
   if (!FormatRanges.empty()) {
     Replacements FormatReplacements =

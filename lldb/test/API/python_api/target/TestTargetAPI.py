@@ -112,7 +112,7 @@ class TargetAPITestCase(TestBase):
         target = self.create_simple_target("b.out")
 
         abi_pre_launch = target.GetABIName()
-        self.assertTrue(len(abi_pre_launch) != 0, "Got an ABI string")
+        self.assertNotEqual(len(abi_pre_launch), 0, "Got an ABI string")
 
         breakpoint = target.BreakpointCreateByLocation("main.c", self.line_main)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
@@ -526,3 +526,9 @@ class TargetAPITestCase(TestBase):
                 target.IsLoaded(module),
                 "Running the target should " "have loaded its modules.",
             )
+
+    @no_debug_info_test
+    def test_setting_selected_target_with_invalid_target(self):
+        """Make sure we don't crash when trying to select invalid target."""
+        target = lldb.SBTarget()
+        self.dbg.SetSelectedTarget(target)

@@ -12,12 +12,12 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i1_0 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i1_0 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i1_0 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 0
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
@@ -61,17 +61,17 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i64_0 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i64_0 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i64_0 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 0
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_0 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i64_0 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 0
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v4i1_1 = insertelement <4 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8i1_1 = insertelement <8 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv2i1_1 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv4i1_1 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv8i1_1 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_1 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_1 = insertelement <4 x i8> undef, i8 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_1 = insertelement <8 x i8> undef, i8 undef, i32 1
@@ -85,7 +85,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i8_1 = insertelement <vscale x 16 x i8> undef, i8 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i8_1 = insertelement <vscale x 32 x i8> undef, i8 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i8_1 = insertelement <vscale x 64 x i8> undef, i8 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_1 = insertelement <2 x i16> undef, i16 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_1 = insertelement <4 x i16> undef, i16 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_1 = insertelement <8 x i16> undef, i16 undef, i32 1
@@ -97,7 +97,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16_1 = insertelement <vscale x 8 x i16> undef, i16 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i16_1 = insertelement <vscale x 16 x i16> undef, i16 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i16_1 = insertelement <vscale x 32 x i16> undef, i16 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_1 = insertelement <2 x i32> undef, i32 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_1 = insertelement <4 x i32> undef, i32 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_1 = insertelement <8 x i32> undef, i32 undef, i32 1
@@ -107,7 +107,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32_1 = insertelement <vscale x 4 x i32> undef, i32 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i32_1 = insertelement <vscale x 8 x i32> undef, i32 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i32_1 = insertelement <vscale x 16 x i32> undef, i32 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64_1 = insertelement <2 x i64> undef, i64 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i64_1 = insertelement <4 x i64> undef, i64 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i64_1 = insertelement <8 x i64> undef, i64 undef, i32 1
@@ -115,17 +115,17 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv2i64_1 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv4i64_1 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv8i64_1 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i1_x = insertelement <2 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4i1_x = insertelement <4 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v8i1_x = insertelement <8 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv2i1_x = insertelement <vscale x 2 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv4i1_x = insertelement <vscale x 4 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv8i1_x = insertelement <vscale x 8 x i1> undef, i1 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_x = insertelement <2 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_x = insertelement <4 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_x = insertelement <8 x i8> undef, i8 undef, i32 %x
@@ -139,7 +139,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i8_x = insertelement <vscale x 16 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i8_x = insertelement <vscale x 32 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i8_x = insertelement <vscale x 64 x i8> undef, i8 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16_x = insertelement <2 x i16> undef, i16 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i16_x = insertelement <4 x i16> undef, i16 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i16_x = insertelement <8 x i16> undef, i16 undef, i32 %x
@@ -151,7 +151,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i16_x = insertelement <vscale x 8 x i16> undef, i16 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i16_x = insertelement <vscale x 16 x i16> undef, i16 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i16_x = insertelement <vscale x 32 x i16> undef, i16 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_x = insertelement <2 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_x = insertelement <4 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_x = insertelement <8 x i32> undef, i32 undef, i32 %x
@@ -161,7 +161,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i32_x = insertelement <vscale x 4 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i32_x = insertelement <vscale x 8 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i32_x = insertelement <vscale x 16 x i32> undef, i32 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i64_x = insertelement <2 x i64> undef, i64 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i64_x = insertelement <4 x i64> undef, i64 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i64_x = insertelement <8 x i64> undef, i64 undef, i32 %x
@@ -169,7 +169,7 @@ define void @insertelement_int(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i64_x = insertelement <vscale x 2 x i64> undef, i64 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i64_x = insertelement <vscale x 4 x i64> undef, i64 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i64_x = insertelement <vscale x 8 x i64> undef, i64 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64V-LABEL: 'insertelement_int'
@@ -177,12 +177,12 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i1_0 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i1_0 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i1_0 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 0
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
@@ -231,12 +231,12 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v4i1_1 = insertelement <4 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8i1_1 = insertelement <8 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv2i1_1 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv4i1_1 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv8i1_1 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_1 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_1 = insertelement <4 x i8> undef, i8 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_1 = insertelement <8 x i8> undef, i8 undef, i32 1
@@ -250,7 +250,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i8_1 = insertelement <vscale x 16 x i8> undef, i8 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i8_1 = insertelement <vscale x 32 x i8> undef, i8 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i8_1 = insertelement <vscale x 64 x i8> undef, i8 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_1 = insertelement <2 x i16> undef, i16 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_1 = insertelement <4 x i16> undef, i16 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_1 = insertelement <8 x i16> undef, i16 undef, i32 1
@@ -262,7 +262,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16_1 = insertelement <vscale x 8 x i16> undef, i16 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i16_1 = insertelement <vscale x 16 x i16> undef, i16 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i16_1 = insertelement <vscale x 32 x i16> undef, i16 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_1 = insertelement <2 x i32> undef, i32 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_1 = insertelement <4 x i32> undef, i32 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_1 = insertelement <8 x i32> undef, i32 undef, i32 1
@@ -272,7 +272,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32_1 = insertelement <vscale x 4 x i32> undef, i32 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i32_1 = insertelement <vscale x 8 x i32> undef, i32 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i32_1 = insertelement <vscale x 16 x i32> undef, i32 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i64_1 = insertelement <2 x i64> undef, i64 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64_1 = insertelement <4 x i64> undef, i64 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i64_1 = insertelement <8 x i64> undef, i64 undef, i32 1
@@ -280,17 +280,17 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i64_1 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i64_1 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i64_1 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i1_x = insertelement <2 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4i1_x = insertelement <4 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v8i1_x = insertelement <8 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv2i1_x = insertelement <vscale x 2 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv4i1_x = insertelement <vscale x 4 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv8i1_x = insertelement <vscale x 8 x i1> undef, i1 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_x = insertelement <2 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_x = insertelement <4 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_x = insertelement <8 x i8> undef, i8 undef, i32 %x
@@ -304,7 +304,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i8_x = insertelement <vscale x 16 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i8_x = insertelement <vscale x 32 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i8_x = insertelement <vscale x 64 x i8> undef, i8 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16_x = insertelement <2 x i16> undef, i16 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i16_x = insertelement <4 x i16> undef, i16 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i16_x = insertelement <8 x i16> undef, i16 undef, i32 %x
@@ -316,7 +316,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i16_x = insertelement <vscale x 8 x i16> undef, i16 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i16_x = insertelement <vscale x 16 x i16> undef, i16 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i16_x = insertelement <vscale x 32 x i16> undef, i16 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_x = insertelement <2 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_x = insertelement <4 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_x = insertelement <8 x i32> undef, i32 undef, i32 %x
@@ -326,7 +326,7 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i32_x = insertelement <vscale x 4 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i32_x = insertelement <vscale x 8 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i32_x = insertelement <vscale x 16 x i32> undef, i32 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_x = insertelement <2 x i64> undef, i64 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i64_x = insertelement <4 x i64> undef, i64 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i64_x = insertelement <8 x i64> undef, i64 undef, i32 %x
@@ -334,20 +334,20 @@ define void @insertelement_int(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i64_x = insertelement <vscale x 2 x i64> undef, i64 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i64_x = insertelement <vscale x 4 x i64> undef, i64 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i64_x = insertelement <vscale x 8 x i64> undef, i64 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV32ZVE64X-LABEL: 'insertelement_int'
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i1_0 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i1_0 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i1_0 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
@@ -387,132 +387,132 @@ define void @insertelement_int(i32 %x) {
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_0 = insertelement <2 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i64_0 = insertelement <4 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i64_0 = insertelement <8 x i64> undef, i64 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64_0 = insertelement <16 x i64> undef, i64 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i64_0 = insertelement <16 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i64_0 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i64_0 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i64_0 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 0
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_0 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i64_0 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 0
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v4i1_1 = insertelement <4 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8i1_1 = insertelement <8 x i1> undef, i1 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv2i1_1 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv4i1_1 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv8i1_1 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_1 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_1 = insertelement <4 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_1 = insertelement <8 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_1 = insertelement <16 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_1 = insertelement <32 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_1 = insertelement <64 x i8> undef, i8 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_1 = insertelement <128 x i8> undef, i8 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_1 = insertelement <128 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i8_1 = insertelement <vscale x 2 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i8_1 = insertelement <vscale x 4 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i8_1 = insertelement <vscale x 8 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i8_1 = insertelement <vscale x 16 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i8_1 = insertelement <vscale x 32 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i8_1 = insertelement <vscale x 64 x i8> undef, i8 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_1 = insertelement <2 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_1 = insertelement <4 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_1 = insertelement <8 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_1 = insertelement <16 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_1 = insertelement <32 x i16> undef, i16 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i16_1 = insertelement <64 x i16> undef, i16 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i16_1 = insertelement <64 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i16_1 = insertelement <vscale x 2 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i16_1 = insertelement <vscale x 4 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16_1 = insertelement <vscale x 8 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i16_1 = insertelement <vscale x 16 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i16_1 = insertelement <vscale x 32 x i16> undef, i16 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_1 = insertelement <2 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_1 = insertelement <4 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_1 = insertelement <8 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_1 = insertelement <16 x i32> undef, i32 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_1 = insertelement <32 x i32> undef, i32 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_1 = insertelement <32 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i32_1 = insertelement <vscale x 2 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32_1 = insertelement <vscale x 4 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i32_1 = insertelement <vscale x 8 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i32_1 = insertelement <vscale x 16 x i32> undef, i32 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64_1 = insertelement <2 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i64_1 = insertelement <4 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i64_1 = insertelement <8 x i64> undef, i64 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64_1 = insertelement <16 x i64> undef, i64 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i64_1 = insertelement <16 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv2i64_1 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv4i64_1 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv8i64_1 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 1
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i1_x = insertelement <2 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4i1_x = insertelement <4 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v8i1_x = insertelement <8 x i1> undef, i1 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv2i1_x = insertelement <vscale x 2 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv4i1_x = insertelement <vscale x 4 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv8i1_x = insertelement <vscale x 8 x i1> undef, i1 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_x = insertelement <2 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_x = insertelement <4 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_x = insertelement <8 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i8_x = insertelement <16 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i8_x = insertelement <32 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i8_x = insertelement <64 x i8> undef, i8 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_x = insertelement <128 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8_x = insertelement <128 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i8_x = insertelement <vscale x 2 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i8_x = insertelement <vscale x 4 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i8_x = insertelement <vscale x 8 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i8_x = insertelement <vscale x 16 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i8_x = insertelement <vscale x 32 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i8_x = insertelement <vscale x 64 x i8> undef, i8 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16_x = insertelement <2 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i16_x = insertelement <4 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i16_x = insertelement <8 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i16_x = insertelement <16 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i16_x = insertelement <32 x i16> undef, i16 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i16_x = insertelement <64 x i16> undef, i16 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i16_x = insertelement <64 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i16_x = insertelement <vscale x 2 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i16_x = insertelement <vscale x 4 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i16_x = insertelement <vscale x 8 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i16_x = insertelement <vscale x 16 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i16_x = insertelement <vscale x 32 x i16> undef, i16 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_x = insertelement <2 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_x = insertelement <4 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_x = insertelement <8 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_x = insertelement <16 x i32> undef, i32 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_x = insertelement <32 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32_x = insertelement <32 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i32_x = insertelement <vscale x 2 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i32_x = insertelement <vscale x 4 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i32_x = insertelement <vscale x 8 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i32_x = insertelement <vscale x 16 x i32> undef, i32 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i64_x = insertelement <2 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i64_x = insertelement <4 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i64_x = insertelement <8 x i64> undef, i64 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64_x = insertelement <16 x i64> undef, i64 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i64_x = insertelement <16 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i64_x = insertelement <vscale x 2 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i64_x = insertelement <vscale x 4 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i64_x = insertelement <vscale x 8 x i64> undef, i64 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64ZVE64X-LABEL: 'insertelement_int'
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv2i1_0 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv4i1_0 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv8i1_0 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 0
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %nxv16i1_0 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %nxv32i1_0 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8_0 = insertelement <4 x i8> undef, i8 undef, i32 0
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8_0 = insertelement <8 x i8> undef, i8 undef, i32 0
@@ -560,111 +560,111 @@ define void @insertelement_int(i32 %x) {
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v4i1_1 = insertelement <4 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8i1_1 = insertelement <8 x i1> undef, i1 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v16i1_1 = insertelement <16 x i1> undef, i1 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v32i1_1 = insertelement <32 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv2i1_1 = insertelement <vscale x 2 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv4i1_1 = insertelement <vscale x 4 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv8i1_1 = insertelement <vscale x 8 x i1> undef, i1 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %nxv16i1_1 = insertelement <vscale x 16 x i1> undef, i1 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %nxv32i1_1 = insertelement <vscale x 32 x i1> undef, i1 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_1 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_1 = insertelement <4 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_1 = insertelement <8 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_1 = insertelement <16 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_1 = insertelement <32 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_1 = insertelement <64 x i8> undef, i8 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_1 = insertelement <128 x i8> undef, i8 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_1 = insertelement <128 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i8_1 = insertelement <vscale x 2 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i8_1 = insertelement <vscale x 4 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i8_1 = insertelement <vscale x 8 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i8_1 = insertelement <vscale x 16 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i8_1 = insertelement <vscale x 32 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i8_1 = insertelement <vscale x 64 x i8> undef, i8 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv128i8_1 = insertelement <vscale x 128 x i8> undef, i8 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16_1 = insertelement <2 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16_1 = insertelement <4 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16_1 = insertelement <8 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16_1 = insertelement <16 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i16_1 = insertelement <32 x i16> undef, i16 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i16_1 = insertelement <64 x i16> undef, i16 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i16_1 = insertelement <64 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i16_1 = insertelement <vscale x 2 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i16_1 = insertelement <vscale x 4 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i16_1 = insertelement <vscale x 8 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i16_1 = insertelement <vscale x 16 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i16_1 = insertelement <vscale x 32 x i16> undef, i16 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64i16_1 = insertelement <vscale x 64 x i16> undef, i16 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_1 = insertelement <2 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_1 = insertelement <4 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_1 = insertelement <8 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_1 = insertelement <16 x i32> undef, i32 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_1 = insertelement <32 x i32> undef, i32 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_1 = insertelement <32 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i32_1 = insertelement <vscale x 2 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i32_1 = insertelement <vscale x 4 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i32_1 = insertelement <vscale x 8 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i32_1 = insertelement <vscale x 16 x i32> undef, i32 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32i32_1 = insertelement <vscale x 32 x i32> undef, i32 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i64_1 = insertelement <2 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64_1 = insertelement <4 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i64_1 = insertelement <8 x i64> undef, i64 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64_1 = insertelement <16 x i64> undef, i64 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i64_1 = insertelement <16 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2i64_1 = insertelement <vscale x 2 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4i64_1 = insertelement <vscale x 4 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8i64_1 = insertelement <vscale x 8 x i64> undef, i64 undef, i32 1
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16i64_1 = insertelement <vscale x 16 x i64> undef, i64 undef, i32 1
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v2i1_x = insertelement <2 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4i1_x = insertelement <4 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v8i1_x = insertelement <8 x i1> undef, i1 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16i1_x = insertelement <16 x i1> undef, i1 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %v32i1_x = insertelement <32 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv2i1_x = insertelement <vscale x 2 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv4i1_x = insertelement <vscale x 4 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv8i1_x = insertelement <vscale x 8 x i1> undef, i1 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %nxv16i1_x = insertelement <vscale x 16 x i1> undef, i1 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %nxv32i1_x = insertelement <vscale x 32 x i1> undef, i1 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_x = insertelement <2 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_x = insertelement <4 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_x = insertelement <8 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i8_x = insertelement <16 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i8_x = insertelement <32 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i8_x = insertelement <64 x i8> undef, i8 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_x = insertelement <128 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8_x = insertelement <128 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i8_x = insertelement <vscale x 2 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i8_x = insertelement <vscale x 4 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i8_x = insertelement <vscale x 8 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i8_x = insertelement <vscale x 16 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i8_x = insertelement <vscale x 32 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i8_x = insertelement <vscale x 64 x i8> undef, i8 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv128i8_x = insertelement <vscale x 128 x i8> undef, i8 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16_x = insertelement <2 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i16_x = insertelement <4 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i16_x = insertelement <8 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i16_x = insertelement <16 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i16_x = insertelement <32 x i16> undef, i16 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i16_x = insertelement <64 x i16> undef, i16 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i16_x = insertelement <64 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i16_x = insertelement <vscale x 2 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i16_x = insertelement <vscale x 4 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i16_x = insertelement <vscale x 8 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i16_x = insertelement <vscale x 16 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i16_x = insertelement <vscale x 32 x i16> undef, i16 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64i16_x = insertelement <vscale x 64 x i16> undef, i16 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_x = insertelement <2 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_x = insertelement <4 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_x = insertelement <8 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_x = insertelement <16 x i32> undef, i32 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_x = insertelement <32 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32_x = insertelement <32 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i32_x = insertelement <vscale x 2 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i32_x = insertelement <vscale x 4 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i32_x = insertelement <vscale x 8 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i32_x = insertelement <vscale x 16 x i32> undef, i32 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32i32_x = insertelement <vscale x 32 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_x = insertelement <2 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i64_x = insertelement <4 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i64_x = insertelement <8 x i64> undef, i64 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i64_x = insertelement <16 x i64> undef, i64 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i64_x = insertelement <16 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2i64_x = insertelement <vscale x 2 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4i64_x = insertelement <vscale x 4 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8i64_x = insertelement <vscale x 8 x i64> undef, i64 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16i64_x = insertelement <vscale x 16 x i64> undef, i64 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
@@ -868,68 +868,68 @@ define void @insertelement_int_lmul(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64V-LABEL: 'insertelement_int_lmul'
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV32ZVE64X-LABEL: 'insertelement_int_lmul'
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
-; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
 ; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64ZVE64X-LABEL: 'insertelement_int_lmul'
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
-; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_63 = insertelement <128 x i8> undef, i8 undef, i32 63
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v128i8_127 = insertelement <128 x i8> undef, i8 undef, i32 127
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_127 = insertelement <256 x i8> undef, i8 undef, i32 127
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i8_255 = insertelement <256 x i8> undef, i8 undef, i32 255
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_3 = insertelement <32 x i32> undef, i32 undef, i32 3
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_7 = insertelement <32 x i32> undef, i32 undef, i32 7
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_15 = insertelement <32 x i32> undef, i32 undef, i32 15
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_31 = insertelement <32 x i32> undef, i32 undef, i32 31
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i32_63 = insertelement <64 x i32> undef, i32 undef, i32 63
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i8 = insertelement <128 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v256i8 = insertelement <256 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i32 = insertelement <32 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i32 = insertelement <64 x i32> undef, i32 undef, i32 %x
 ; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v128i8_31 = insertelement <128 x i8> undef, i8 undef, i32 31
@@ -997,7 +997,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f16_1 = insertelement <vscale x 8 x half> undef, half undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f16_1 = insertelement <vscale x 16 x half> undef, half undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32f16_1 = insertelement <vscale x 32 x half> undef, half undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64f16_1 = insertelement <vscale x 64 x half> undef, half undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64f16_1 = insertelement <vscale x 64 x half> undef, half undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_1 = insertelement <2 x float> undef, float undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_1 = insertelement <4 x float> undef, float undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_1 = insertelement <8 x float> undef, float undef, i32 1
@@ -1007,7 +1007,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4f32_1 = insertelement <vscale x 4 x float> undef, float undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f32_1 = insertelement <vscale x 8 x float> undef, float undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f32_1 = insertelement <vscale x 16 x float> undef, float undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32f32_1 = insertelement <vscale x 32 x float> undef, float undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32f32_1 = insertelement <vscale x 32 x float> undef, float undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64_1 = insertelement <2 x double> undef, double undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f64_1 = insertelement <4 x double> undef, double undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f64_1 = insertelement <8 x double> undef, double undef, i32 1
@@ -1015,7 +1015,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2f64_1 = insertelement <vscale x 2 x double> undef, double undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4f64_1 = insertelement <vscale x 4 x double> undef, double undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f64_1 = insertelement <vscale x 8 x double> undef, double undef, i32 1
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f64_1 = insertelement <vscale x 16 x double> undef, double undef, i32 1
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f64_1 = insertelement <vscale x 16 x double> undef, double undef, i32 1
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16_x = insertelement <2 x half> undef, half undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f16_x = insertelement <4 x half> undef, half undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f16_x = insertelement <8 x half> undef, half undef, i32 %x
@@ -1027,7 +1027,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f16_x = insertelement <vscale x 8 x half> undef, half undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f16_x = insertelement <vscale x 16 x half> undef, half undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32f16_x = insertelement <vscale x 32 x half> undef, half undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64f16_x = insertelement <vscale x 64 x half> undef, half undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64f16_x = insertelement <vscale x 64 x half> undef, half undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32_x = insertelement <2 x float> undef, float undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f32_x = insertelement <4 x float> undef, float undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f32_x = insertelement <8 x float> undef, float undef, i32 %x
@@ -1037,7 +1037,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4f32_x = insertelement <vscale x 4 x float> undef, float undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f32_x = insertelement <vscale x 8 x float> undef, float undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f32_x = insertelement <vscale x 16 x float> undef, float undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32f32_x = insertelement <vscale x 32 x float> undef, float undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32f32_x = insertelement <vscale x 32 x float> undef, float undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f64_x = insertelement <2 x double> undef, double undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f64_x = insertelement <4 x double> undef, double undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f64_x = insertelement <8 x double> undef, double undef, i32 %x
@@ -1045,7 +1045,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2f64_x = insertelement <vscale x 2 x double> undef, double undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4f64_x = insertelement <vscale x 4 x double> undef, double undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f64_x = insertelement <vscale x 8 x double> undef, double undef, i32 %x
-; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f64_x = insertelement <vscale x 16 x double> undef, double undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f64_x = insertelement <vscale x 16 x double> undef, double undef, i32 %x
 ; RV32V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64V-LABEL: 'insertelement_fp'
@@ -1090,7 +1090,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f16_1 = insertelement <vscale x 8 x half> undef, half undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f16_1 = insertelement <vscale x 16 x half> undef, half undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32f16_1 = insertelement <vscale x 32 x half> undef, half undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64f16_1 = insertelement <vscale x 64 x half> undef, half undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv64f16_1 = insertelement <vscale x 64 x half> undef, half undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32_1 = insertelement <2 x float> undef, float undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32_1 = insertelement <4 x float> undef, float undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f32_1 = insertelement <8 x float> undef, float undef, i32 1
@@ -1100,7 +1100,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4f32_1 = insertelement <vscale x 4 x float> undef, float undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f32_1 = insertelement <vscale x 8 x float> undef, float undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f32_1 = insertelement <vscale x 16 x float> undef, float undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32f32_1 = insertelement <vscale x 32 x float> undef, float undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv32f32_1 = insertelement <vscale x 32 x float> undef, float undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64_1 = insertelement <2 x double> undef, double undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f64_1 = insertelement <4 x double> undef, double undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f64_1 = insertelement <8 x double> undef, double undef, i32 1
@@ -1108,7 +1108,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2f64_1 = insertelement <vscale x 2 x double> undef, double undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4f64_1 = insertelement <vscale x 4 x double> undef, double undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv8f64_1 = insertelement <vscale x 8 x double> undef, double undef, i32 1
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f64_1 = insertelement <vscale x 16 x double> undef, double undef, i32 1
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv16f64_1 = insertelement <vscale x 16 x double> undef, double undef, i32 1
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16_x = insertelement <2 x half> undef, half undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f16_x = insertelement <4 x half> undef, half undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f16_x = insertelement <8 x half> undef, half undef, i32 %x
@@ -1120,7 +1120,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f16_x = insertelement <vscale x 8 x half> undef, half undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f16_x = insertelement <vscale x 16 x half> undef, half undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32f16_x = insertelement <vscale x 32 x half> undef, half undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv64f16_x = insertelement <vscale x 64 x half> undef, half undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv64f16_x = insertelement <vscale x 64 x half> undef, half undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32_x = insertelement <2 x float> undef, float undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f32_x = insertelement <4 x float> undef, float undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f32_x = insertelement <8 x float> undef, float undef, i32 %x
@@ -1130,7 +1130,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4f32_x = insertelement <vscale x 4 x float> undef, float undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f32_x = insertelement <vscale x 8 x float> undef, float undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f32_x = insertelement <vscale x 16 x float> undef, float undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv32f32_x = insertelement <vscale x 32 x float> undef, float undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv32f32_x = insertelement <vscale x 32 x float> undef, float undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f64_x = insertelement <2 x double> undef, double undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4f64_x = insertelement <4 x double> undef, double undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8f64_x = insertelement <8 x double> undef, double undef, i32 %x
@@ -1138,7 +1138,7 @@ define void @insertelement_fp(i32 %x) {
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv2f64_x = insertelement <vscale x 2 x double> undef, double undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv4f64_x = insertelement <vscale x 4 x double> undef, double undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv8f64_x = insertelement <vscale x 8 x double> undef, double undef, i32 %x
-; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f64_x = insertelement <vscale x 16 x double> undef, double undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv16f64_x = insertelement <vscale x 16 x double> undef, double undef, i32 %x
 ; RV64V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV32ZVE64X-LABEL: 'insertelement_fp'
@@ -1434,6 +1434,112 @@ define void @insertelement_fp(i32 %x) {
   %nxv4f64_x = insertelement <vscale x 4 x double> undef, double undef, i32 %x
   %nxv8f64_x = insertelement <vscale x 8 x double> undef, double undef, i32 %x
   %nxv16f64_x = insertelement <vscale x 16 x double> undef, double undef, i32 %x
+
+  ret void
+}
+
+
+define void @insertelement_int_nonpoweroftwo(i32 %x) {
+; RV32V-LABEL: 'insertelement_int_nonpoweroftwo'
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i8 = insertelement <3 x i8> undef, i8 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i8 = insertelement <7 x i8> undef, i8 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i8 = insertelement <15 x i8> undef, i8 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32_0 = insertelement <3 x i32> undef, i32 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i32 = insertelement <3 x i32> undef, i32 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i32 = insertelement <7 x i32> undef, i32 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i32 = insertelement <15 x i32> undef, i32 undef, i32 %x
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV64V-LABEL: 'insertelement_int_nonpoweroftwo'
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i8 = insertelement <3 x i8> undef, i8 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i8 = insertelement <7 x i8> undef, i8 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i8 = insertelement <15 x i8> undef, i8 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32_0 = insertelement <3 x i32> undef, i32 undef, i32 0
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i32 = insertelement <3 x i32> undef, i32 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i32 = insertelement <7 x i32> undef, i32 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i32 = insertelement <15 x i32> undef, i32 undef, i32 %x
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV32ZVE64X-LABEL: 'insertelement_int_nonpoweroftwo'
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i8 = insertelement <3 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i8 = insertelement <7 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i8 = insertelement <15 x i8> undef, i8 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32_0 = insertelement <3 x i32> undef, i32 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i32 = insertelement <3 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i32 = insertelement <7 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i32 = insertelement <15 x i32> undef, i32 undef, i32 %x
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV64ZVE64X-LABEL: 'insertelement_int_nonpoweroftwo'
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i8 = insertelement <3 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i8 = insertelement <7 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i8 = insertelement <15 x i8> undef, i8 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32_0 = insertelement <3 x i32> undef, i32 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3i32 = insertelement <3 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v7i32 = insertelement <7 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v15i32 = insertelement <15 x i32> undef, i32 undef, i32 %x
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %v3i8 = insertelement <3 x i8> undef, i8 undef, i32 %x
+  %v7i8 = insertelement <7 x i8> undef, i8 undef, i32 %x
+  %v15i8 = insertelement <15 x i8> undef, i8 undef, i32 %x
+
+  %v3i32_0 = insertelement <3 x i32> undef, i32 undef, i32 0
+  %v3i32 = insertelement <3 x i32> undef, i32 undef, i32 %x
+  %v7i32 = insertelement <7 x i32> undef, i32 undef, i32 %x
+  %v15i32 = insertelement <15 x i32> undef, i32 undef, i32 %x
+
+  ret void
+}
+
+define void @insertelement_vls(i32 %x) vscale_range(2,2) {
+; RV32V-LABEL: 'insertelement_vls'
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_0 = insertelement <32 x i32> undef, i32 undef, i32 0
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_4 = insertelement <32 x i32> undef, i32 undef, i32 4
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_5 = insertelement <32 x i32> undef, i32 undef, i32 5
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_8 = insertelement <32 x i32> undef, i32 undef, i32 8
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_9 = insertelement <32 x i32> undef, i32 undef, i32 9
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_11 = insertelement <32 x i32> undef, i32 undef, i32 11
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_12 = insertelement <32 x i32> undef, i32 undef, i32 12
+; RV32V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV64V-LABEL: 'insertelement_vls'
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_0 = insertelement <32 x i32> undef, i32 undef, i32 0
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_4 = insertelement <32 x i32> undef, i32 undef, i32 4
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_5 = insertelement <32 x i32> undef, i32 undef, i32 5
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_8 = insertelement <32 x i32> undef, i32 undef, i32 8
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_9 = insertelement <32 x i32> undef, i32 undef, i32 9
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_11 = insertelement <32 x i32> undef, i32 undef, i32 11
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_12 = insertelement <32 x i32> undef, i32 undef, i32 12
+; RV64V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV32ZVE64X-LABEL: 'insertelement_vls'
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_0 = insertelement <32 x i32> undef, i32 undef, i32 0
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_4 = insertelement <32 x i32> undef, i32 undef, i32 4
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_5 = insertelement <32 x i32> undef, i32 undef, i32 5
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_8 = insertelement <32 x i32> undef, i32 undef, i32 8
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_9 = insertelement <32 x i32> undef, i32 undef, i32 9
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_11 = insertelement <32 x i32> undef, i32 undef, i32 11
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_12 = insertelement <32 x i32> undef, i32 undef, i32 12
+; RV32ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; RV64ZVE64X-LABEL: 'insertelement_vls'
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_0 = insertelement <32 x i32> undef, i32 undef, i32 0
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_4 = insertelement <32 x i32> undef, i32 undef, i32 4
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_5 = insertelement <32 x i32> undef, i32 undef, i32 5
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_8 = insertelement <32 x i32> undef, i32 undef, i32 8
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_9 = insertelement <32 x i32> undef, i32 undef, i32 9
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i32_11 = insertelement <32 x i32> undef, i32 undef, i32 11
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i32_12 = insertelement <32 x i32> undef, i32 undef, i32 12
+; RV64ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %v32i32_0 = insertelement <32 x i32> undef, i32 undef, i32 0
+  %v32i32_4 = insertelement <32 x i32> undef, i32 undef, i32 4
+  %v32i32_5 = insertelement <32 x i32> undef, i32 undef, i32 5
+  %v32i32_8 = insertelement <32 x i32> undef, i32 undef, i32 8
+  %v32i32_9 = insertelement <32 x i32> undef, i32 undef, i32 9
+  %v32i32_11 = insertelement <32 x i32> undef, i32 undef, i32 11
+  %v32i32_12 = insertelement <32 x i32> undef, i32 undef, i32 12
 
   ret void
 }

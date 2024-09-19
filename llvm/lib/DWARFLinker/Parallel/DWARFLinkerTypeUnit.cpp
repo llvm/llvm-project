@@ -337,11 +337,11 @@ uint8_t TypeUnit::getSizeByAttrForm(dwarf::Form Form) const {
   llvm_unreachable("Unsupported Attr Form");
 }
 
-Error TypeUnit::finishCloningAndEmit(std::optional<Triple> TargetTriple) {
+Error TypeUnit::finishCloningAndEmit(const Triple &TargetTriple) {
   BumpPtrAllocator Allocator;
   createDIETree(Allocator);
 
-  if (getGlobalData().getOptions().NoOutput || (getOutUnitDIE() == nullptr))
+  if (getOutUnitDIE() == nullptr)
     return Error::success();
 
   // Create sections ahead so that they should not be created asynchronously
@@ -360,14 +360,12 @@ Error TypeUnit::finishCloningAndEmit(std::optional<Triple> TargetTriple) {
 
   // Add task for emitting .debug_line section.
   if (!LineTable.Prologue.FileNames.empty()) {
-    Tasks.push_back([&]() -> Error {
-      assert(TargetTriple.has_value());
-      return emitDebugLine(*TargetTriple, LineTable);
-    });
+    Tasks.push_back(
+        [&]() -> Error { return emitDebugLine(TargetTriple, LineTable); });
   }
 
   // Add task for emitting .debug_info section.
-  Tasks.push_back([&]() -> Error { return emitDebugInfo(*TargetTriple); });
+  Tasks.push_back([&]() -> Error { return emitDebugInfo(TargetTriple); });
 
   // Add task for emitting Pub accelerator sections.
   if (llvm::is_contained(GlobalData.getOptions().AccelTables,

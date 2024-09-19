@@ -115,6 +115,30 @@ func.func @test_const(%arg0 : tensor<1x1xi32>) -> tensor<1x1x1x1x1x1x1xi32> {
 
 // -----
 
+func.func @test_const_i2(%arg0 : tensor<1xi2>) {
+  // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'i2' is not legal}}
+  %0 = "tosa.const"() {value = dense<0> : tensor<1xi2>} : () -> tensor<1xi2>
+  return
+}
+
+// -----
+
+func.func @test_const_ui32(%arg0 : tensor<1xui32>) {
+  // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'ui32' is not legal}}
+  %0 = "tosa.const"() {value = dense<0> : tensor<1xui32>} : () -> tensor<1xui32>
+  return
+}
+
+// -----
+
+func.func @test_const_f64(%arg0 : tensor<1xf64>) {
+  // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'f64' is not legal}}
+  %0 = "tosa.const"() {value = dense<0.0> : tensor<1xf64>} : () -> tensor<1xf64>
+  return
+}
+
+// -----
+
 func.func @test_avgpool2d_kernel_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
   // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: kernel <= MAX_KERNEL}}
   %0 = "tosa.avg_pool2d"(%arg0) {kernel = array<i64: 8193, 1>, pad = array<i64: 4, 4, 4, 4>, stride = array<i64: 1, 1>, acc_type = f32} :

@@ -65,20 +65,20 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subroutineTypeAttr =
       LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
 
-  StringAttr funcNameAttr = llvmFunc.getNameAttr();
   // Only definitions need a distinct identifier and a compilation unit.
-  mlir::DistinctAttr id;
-  if (!llvmFunc.isExternal())
+  DistinctAttr id;
+  auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
+  if (!llvmFunc.isExternal()) {
     id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-  else
+    subprogramFlags = subprogramFlags | LLVM::DISubprogramFlags::Definition;
+  } else {
     compileUnitAttr = {};
-  mlir::LLVM::DISubprogramAttr subprogramAttr = LLVM::DISubprogramAttr::get(
-      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
-      fileAttr,
-      /*line=*/line,
-      /*scopeline=*/col,
-      LLVM::DISubprogramFlags::Definition | LLVM::DISubprogramFlags::Optimized,
-      subroutineTypeAttr);
+  }
+  auto funcName = StringAttr::get(context, llvmFunc.getName());
+  auto subprogramAttr = LLVM::DISubprogramAttr::get(
+      context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
+      /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
+      /*retainedNodes=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 
@@ -114,9 +114,9 @@ struct DIScopeForLLVMFuncOp
       }
 
       compileUnitAttr = LLVM::DICompileUnitAttr::get(
-          context, DistinctAttr::create(UnitAttr::get(context)),
-          llvm::dwarf::DW_LANG_C, fileAttr, StringAttr::get(context, "MLIR"),
-          /*isOptimized=*/true, LLVM::DIEmissionKind::LineTablesOnly);
+          DistinctAttr::create(UnitAttr::get(context)), llvm::dwarf::DW_LANG_C,
+          fileAttr, StringAttr::get(context, "MLIR"),
+          /*isOptimized=*/true, emissionKind);
     }
 
     // Create subprograms for each function with the same distinct compile unit.

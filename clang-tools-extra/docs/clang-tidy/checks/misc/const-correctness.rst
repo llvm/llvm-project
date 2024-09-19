@@ -7,8 +7,7 @@ This check implements detection of local variables which could be declared as
 ``const`` but are not. Declaring variables as ``const`` is required or recommended by many
 coding guidelines, such as:
 `ES.25 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es25-declare-an-object-const-or-constexpr-unless-you-want-to-modify-its-value-later-on>`_
-from the C++ Core Guidelines and `AUTOSAR C++14 Rule A7-1-1 (6.7.1 Specifiers)
-<https://www.autosar.org/fileadmin/user_upload/standards/adaptive/17-03/AUTOSAR_RS_CPP14Guidelines.pdf>`_.
+from the C++ Core Guidelines.
 
 Please note that this check's analysis is type-based only. Variables that are not modified
 but used to create a non-const handle that might escape the scope are not diagnosed

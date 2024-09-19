@@ -1047,25 +1047,25 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -8
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 28
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 2
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -4
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 30
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 1
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -2
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    srai a1, a1, 31
 ; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    srli a1, a1, 31
 ; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:  .LBB18_4: # %cleanup
 ; CHECK-NEXT:    ret
@@ -1087,28 +1087,27 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 28
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 2
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 30
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 1
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
 ; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    srai a1, a1, 31
 ; NOREMOVAL-NEXT:    not a1, a1
-; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    srli a1, a1, 31
+; NOREMOVAL-NEXT:    addw a0, a0, a1
 ; NOREMOVAL-NEXT:  .LBB18_4: # %cleanup
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0
@@ -1445,7 +1444,7 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:  .LBB24_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1467,7 +1466,7 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    mv s0, a0
-; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; NOREMOVAL-NEXT:    vmv.x.s s1, v8
 ; NOREMOVAL-NEXT:  .LBB24_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1

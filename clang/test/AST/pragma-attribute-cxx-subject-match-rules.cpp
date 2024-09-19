@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=namespace" %s | FileCheck --check-prefix=CHECK-NAMESPACE %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=type_alias" %s | FileCheck --check-prefix=CHECK-TYPE_ALIAS %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=enum" %s | FileCheck --check-prefix=CHECK-ENUM %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=enum_constant" %s | FileCheck --check-prefix=CHECK-ENUM_CONSTANT %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=record" %s | FileCheck --check-prefix=CHECK-RECORD %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=record(unless(is_union))" %s | FileCheck --check-prefix=CHECK-RECORD_UNLESS_IS_UNION %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=field" %s | FileCheck --check-prefix=CHECK-FIELD %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=function" %s | FileCheck --check-prefix=CHECK-FUNCTION %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=hasType(functionType)" %s | FileCheck --check-prefix=CHECK-HAS_TYPE_FUNCTION_TYPE %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=function(is_member)" %s | FileCheck --check-prefix=CHECK-FUNCTION_IS_MEMBER %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=variable" %s | FileCheck --check-prefix=CHECK-VARIABLE %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=variable(is_global)" %s | FileCheck --check-prefix=CHECK-VARIABLE_IS_GLOBAL %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=variable(is_parameter)" %s | FileCheck --check-prefix=CHECK-VARIABLE_IS_PARAMETER %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -ast-dump -ast-dump-filter test "-DSUBJECT=variable(unless(is_parameter))" %s | FileCheck --check-prefix=CHECK-VARIABLE_UNLESS_IS_PARAMETER %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=namespace" %s | FileCheck --check-prefix=CHECK-NAMESPACE %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=type_alias" %s | FileCheck --check-prefix=CHECK-TYPE_ALIAS %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=enum" %s | FileCheck --check-prefix=CHECK-ENUM %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=enum_constant" %s | FileCheck --check-prefix=CHECK-ENUM_CONSTANT %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=record" %s | FileCheck --check-prefix=CHECK-RECORD %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=record(unless(is_union))" %s | FileCheck --check-prefix=CHECK-RECORD_UNLESS_IS_UNION %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=field" %s | FileCheck --check-prefix=CHECK-FIELD %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=function" %s | FileCheck --check-prefix=CHECK-FUNCTION %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=hasType(functionType)" %s | FileCheck --check-prefix=CHECK-HAS_TYPE_FUNCTION_TYPE %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=function(is_member)" %s | FileCheck --check-prefix=CHECK-FUNCTION_IS_MEMBER %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=variable" %s | FileCheck --check-prefix=CHECK-VARIABLE %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=variable(is_global)" %s | FileCheck --check-prefix=CHECK-VARIABLE_IS_GLOBAL %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=variable(is_parameter)" %s | FileCheck --check-prefix=CHECK-VARIABLE_IS_PARAMETER %s
+// RUN: %clang_cc1 -std=c++11 -ast-dump -ast-dump-filter test "-DSUBJECT=variable(unless(is_parameter))" %s | FileCheck --check-prefix=CHECK-VARIABLE_UNLESS_IS_PARAMETER %s
 
 #pragma clang attribute push (__attribute__((annotate("test"))), apply_to = any(SUBJECT))
 

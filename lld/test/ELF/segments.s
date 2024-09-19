@@ -1,157 +1,93 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 
-# RUN: ld.lld %t -o %t1
-# RUN: llvm-readobj --program-headers %t1 | FileCheck --check-prefix=ROSEGMENT %s
-# RUN: ld.lld --no-rosegment --rosegment %t -o - | cmp - %t1
-# RUN: ld.lld --omagic --no-omagic %t -o - | cmp - %t1
+# RUN: ld.lld a.o -o a
+# RUN: llvm-readelf -l a | FileCheck --check-prefix=ROSEGMENT %s
+# RUN: ld.lld --no-rosegment --rosegment a.o -o - | cmp - a
+# RUN: ld.lld --omagic --no-omagic a.o -o - | cmp - a
 
-# ROSEGMENT:      ProgramHeader {
-# ROSEGMENT:        Type: PT_LOAD
-# ROSEGMENT-NEXT:    Offset: 0x0
-# ROSEGMENT-NEXT:    VirtualAddress:
-# ROSEGMENT-NEXT:    PhysicalAddress:
-# ROSEGMENT-NEXT:    FileSize:
-# ROSEGMENT-NEXT:    MemSize:
-# ROSEGMENT-NEXT:    Flags [
-# ROSEGMENT-NEXT:      PF_R
-# ROSEGMENT-NEXT:    ]
-# ROSEGMENT-NEXT:    Alignment: 4096
-# ROSEGMENT-NEXT:  }
-# ROSEGMENT-NEXT:  ProgramHeader {
-# ROSEGMENT-NEXT:    Type: PT_LOAD
-# ROSEGMENT-NEXT:    Offset: 0x15C
-# ROSEGMENT-NEXT:    VirtualAddress:
-# ROSEGMENT-NEXT:    PhysicalAddress:
-# ROSEGMENT-NEXT:    FileSize:
-# ROSEGMENT-NEXT:    MemSize:
-# ROSEGMENT-NEXT:    Flags [
-# ROSEGMENT-NEXT:      PF_R
-# ROSEGMENT-NEXT:      PF_X
-# ROSEGMENT-NEXT:    ]
-# ROSEGMENT-NEXT:    Alignment: 4096
-# ROSEGMENT-NEXT:  }
-# ROSEGMENT-NEXT:  ProgramHeader {
-# ROSEGMENT-NEXT:    Type: PT_LOAD
-# ROSEGMENT-NEXT:    Offset: 0x15E
-# ROSEGMENT-NEXT:    VirtualAddress:
-# ROSEGMENT-NEXT:    PhysicalAddress:
-# ROSEGMENT-NEXT:    FileSize: 1
-# ROSEGMENT-NEXT:    MemSize: 1
-# ROSEGMENT-NEXT:    Flags [
-# ROSEGMENT-NEXT:      PF_R
-# ROSEGMENT-NEXT:      PF_W
-# ROSEGMENT-NEXT:    ]
-# ROSEGMENT-NEXT:    Alignment: 4096
-# ROSEGMENT-NEXT:  }
+# ROSEGMENT:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# ROSEGMENT-NEXT:  PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x000118 0x000118 R   0x8
+# ROSEGMENT-NEXT:  LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x00015b 0x00015b R   0x1000
+# ROSEGMENT-NEXT:  LOAD           0x00015c 0x000000000020115c 0x000000000020115c 0x000003 0x000003 R E 0x1000
+# ROSEGMENT-NEXT:  LOAD           0x00015f 0x000000000020215f 0x000000000020215f 0x000002 0x000002 RW  0x1000
+# ROSEGMENT-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
 
-# RUN: ld.lld --no-rosegment %t -o %t2
-# RUN: llvm-readobj --program-headers %t2 | FileCheck --check-prefix=NOROSEGMENT %s
+# RUN: ld.lld --rosegment a.o -T a.lds -o ro1
+# RUN: llvm-readelf -l ro1 | FileCheck --check-prefix=ROSEGMENT1 %s
 
-# NOROSEGMENT:     ProgramHeader {
-# NOROSEGMENT:       Type: PT_LOAD
-# NOROSEGMENT-NEXT:   Offset: 0x0
-# NOROSEGMENT-NEXT:   VirtualAddress:
-# NOROSEGMENT-NEXT:   PhysicalAddress:
-# NOROSEGMENT-NEXT:   FileSize:
-# NOROSEGMENT-NEXT:   MemSize:
-# NOROSEGMENT-NEXT:   Flags [
-# NOROSEGMENT-NEXT:     PF_R
-# NOROSEGMENT-NEXT:     PF_X
-# NOROSEGMENT-NEXT:   ]
-# NOROSEGMENT-NEXT:   Alignment: 4096
-# NOROSEGMENT-NEXT: }
-# NOROSEGMENT-NEXT: ProgramHeader {
-# NOROSEGMENT-NEXT:   Type: PT_LOAD
-# NOROSEGMENT-NEXT:   Offset: 0x126
-# NOROSEGMENT-NEXT:   VirtualAddress:
-# NOROSEGMENT-NEXT:   PhysicalAddress:
-# NOROSEGMENT-NEXT:   FileSize:
-# NOROSEGMENT-NEXT:   MemSize:
-# NOROSEGMENT-NEXT:   Flags [
-# NOROSEGMENT-NEXT:     PF_R
-# NOROSEGMENT-NEXT:     PF_W
-# NOROSEGMENT-NEXT:   ]
-# NOROSEGMENT-NEXT:   Alignment: 4096
-# NOROSEGMENT-NEXT: }
-# NOROSEGMENT-NEXT: ProgramHeader {
-# NOROSEGMENT-NEXT:   Type: PT_GNU_STACK
+# ROSEGMENT1:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# ROSEGMENT1-NEXT:  LOAD           0x001000 0x0000000000000000 0x0000000000000000 0x000001 0x000001 R   0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x001004 0x0000000000000004 0x0000000000000004 0x000002 0x000002 R E 0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x001006 0x0000000000000006 0x0000000000000006 0x000001 0x000001 RW  0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x001007 0x0000000000000007 0x0000000000000007 0x000001 0x000001 R E 0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x001008 0x0000000000000008 0x0000000000000008 0x000001 0x000001 R   0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x001009 0x0000000000000009 0x0000000000000009 0x000001 0x000001 RW  0x1000
+# ROSEGMENT1-NEXT:  LOAD           0x00100a 0x000000000000000a 0x000000000000000a 0x000001 0x000001 R   0x1000
+# ROSEGMENT1-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
 
-# RUN: ld.lld -N %t -o %t3
-# RUN: llvm-readobj --program-headers %t3 | FileCheck --check-prefix=OMAGIC %s
-# RUN: ld.lld --omagic %t -o %t3
-# RUN: llvm-readobj --program-headers %t3 | FileCheck --check-prefix=OMAGIC %s
+# RUN: ld.lld --no-rosegment a.o -o noro
+# RUN: llvm-readelf -l noro | FileCheck --check-prefix=NOROSEGMENT %s
 
-# OMAGIC:     ProgramHeader {
-# OMAGIC:      Type: PT_LOAD
-# OMAGIC-NEXT:   Offset: 0xB0
-# OMAGIC-NEXT:   VirtualAddress:
-# OMAGIC-NEXT:   PhysicalAddress:
-# OMAGIC-NEXT:   FileSize:
-# OMAGIC-NEXT:   MemSize:
-# OMAGIC-NEXT:   Flags [
-# OMAGIC-NEXT:     PF_R
-# OMAGIC-NEXT:     PF_W
-# OMAGIC-NEXT:     PF_X
-# OMAGIC-NEXT:   ]
-# OMAGIC-NEXT:   Alignment: 4
-# OMAGIC-NEXT: }
-# OMAGIC-NEXT: ProgramHeader {
-# OMAGIC-NEXT:   Type: PT_GNU_STACK
+# NOROSEGMENT:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOROSEGMENT-NEXT:  PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x0000e0 0x0000e0 R   0x8
+# NOROSEGMENT-NEXT:  LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x000127 0x000127 R E 0x1000
+# NOROSEGMENT-NEXT:  LOAD           0x000127 0x0000000000201127 0x0000000000201127 0x000002 0x000002 RW  0x1000
+# NOROSEGMENT-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
 
-# RUN: ld.lld -n %t -o %t4
-# RUN: llvm-readobj --program-headers %t4 | FileCheck --check-prefix=NMAGIC %s
-# RUN: ld.lld --nmagic %t -o %t4
-# RUN: llvm-readobj --program-headers %t4 | FileCheck --check-prefix=NMAGIC %s
+# RUN: ld.lld --no-rosegment a.o -T a.lds -o noro1
+# RUN: llvm-readelf -l noro1 | FileCheck --check-prefix=NOROSEGMENT1 %s
 
-# NMAGIC:   ProgramHeader {
-# NMAGIC-NEXT:     Type: PT_LOAD
-# NMAGIC-NEXT:     Offset: 0x120
-# NMAGIC-NEXT:     VirtualAddress:
-# NMAGIC-NEXT:     PhysicalAddress:
-# NMAGIC-NEXT:     FileSize: 1
-# NMAGIC-NEXT:     MemSize: 1
-# NMAGIC-NEXT:     Flags [
-# NMAGIC-NEXT:       PF_R
-# NMAGIC-NEXT:     ]
-# NMAGIC-NEXT:     Alignment: 1
-# NMAGIC-NEXT:   }
-# NMAGIC-NEXT:   ProgramHeader {
-# NMAGIC-NEXT:     Type: PT_LOAD
-# NMAGIC-NEXT:     Offset: 0x124
-# NMAGIC-NEXT:     VirtualAddress:
-# NMAGIC-NEXT:     PhysicalAddress:
-# NMAGIC-NEXT:     FileSize: 2
-# NMAGIC-NEXT:     MemSize: 2
-# NMAGIC-NEXT:     Flags [
-# NMAGIC-NEXT:       PF_R
-# NMAGIC-NEXT:       PF_X
-# NMAGIC-NEXT:     ]
-# NMAGIC-NEXT:     Alignment: 4
-# NMAGIC-NEXT:   }
-# NMAGIC-NEXT:   ProgramHeader {
-# NMAGIC-NEXT:     Type: PT_LOAD (0x1)
-# NMAGIC-NEXT:     Offset: 0x126
-# NMAGIC-NEXT:     VirtualAddress:
-# NMAGIC-NEXT:     PhysicalAddress:
-# NMAGIC-NEXT:     FileSize: 1
-# NMAGIC-NEXT:     MemSize: 1
-# NMAGIC-NEXT:     Flags [
-# NMAGIC-NEXT:       PF_R
-# NMAGIC-NEXT:       PF_W
-# NMAGIC-NEXT:     ]
-# NMAGIC-NEXT:     Alignment: 1
-# NMAGIC-NEXT:   }
+# NOROSEGMENT1:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOROSEGMENT1-NEXT:  LOAD           0x001000 0x0000000000000000 0x0000000000000000 0x000006 0x000006 R E 0x1000
+# NOROSEGMENT1-NEXT:  LOAD           0x001006 0x0000000000000006 0x0000000000000006 0x000001 0x000001 RW  0x1000
+# NOROSEGMENT1-NEXT:  LOAD           0x001007 0x0000000000000007 0x0000000000000007 0x000002 0x000002 R E 0x1000
+# NOROSEGMENT1-NEXT:  LOAD           0x001009 0x0000000000000009 0x0000000000000009 0x000001 0x000001 RW  0x1000
+# NOROSEGMENT1-NEXT:  LOAD           0x00100a 0x000000000000000a 0x000000000000000a 0x000001 0x000001 R   0x1000
+# NOROSEGMENT1-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
 
+# RUN: ld.lld -N a.o -o omagic
+# RUN: llvm-readelf -l omagic | FileCheck --check-prefix=OMAGIC %s
+# RUN: ld.lld --omagic a.o -o - | cmp - omagic
+
+# OMAGIC:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# OMAGIC-NEXT:  LOAD           0x0000b0 0x00000000002000b0 0x00000000002000b0 0x000009 0x000009 RWE 0x4
+# OMAGIC-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
+
+# RUN: ld.lld -n a.o -o nmagic
+# RUN: llvm-readelf -l nmagic | FileCheck --check-prefix=NMAGIC %s
+# RUN: ld.lld --nmagic a.o -o - | cmp nmagic -
+
+# NMAGIC:       Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NMAGIC-NEXT:  LOAD           0x000120 0x0000000000200120 0x0000000000200120 0x000003 0x000003 R   0x1
+# NMAGIC-NEXT:  LOAD           0x000124 0x0000000000200124 0x0000000000200124 0x000003 0x000003 R E 0x4
+# NMAGIC-NEXT:  LOAD           0x000127 0x0000000000200127 0x0000000000200127 0x000002 0x000002 RW  0x1
+# NMAGIC-NEXT:  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
+
+#--- a.s
 .global _start
 _start:
  nop
 
-.section .ro,"a"
-nop
+.section .ro1,"a"; .byte 1
+.section .rw1,"aw"; .byte 3
+.section .rx1,"ax"; .byte 2
 
-.section .rw,"aw"
-nop
+.section .ro2,"a"; .byte 1
+.section .rw2,"aw"; .byte 3
+.section .rx2,"ax"; .byte 2
 
-.section .rx,"ax"
-nop
+.section .ro3,"a"; .byte 1
+
+#--- a.lds
+SECTIONS {
+  .ro1 : {}
+  .text : {}
+  .rx1 : {}
+  .rw1 : {}
+  .rx2 : {}
+  .ro2 : {}
+  .rw2 : {}
+  .ro3 : {}
+}

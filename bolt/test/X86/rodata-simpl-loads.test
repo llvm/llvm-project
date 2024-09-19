@@ -1,4 +1,4 @@
-# Check for the simplification of .rodata loads.
+## Check for the simplification of .rodata loads.
 
 RUN: %clang %cflags %p/Inputs/rodata_simpl_loads.s -o %t.exe
 RUN: llvm-bolt %t.exe -o %t --simplify-rodata-loads
@@ -7,8 +7,8 @@ RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=main | FileCheck %
 
 CHECK:   Disassembly of section .text:
 CHECK:   <main>:
-# check that the following rip-relative operands have been
-# replaced with immediates
+## check that the following rip-relative operands have been
+## replaced with immediates
 
 ORIGINAL: movzbl  s1(%rip), %eax
 CHECK:    movl    $0x41, %eax

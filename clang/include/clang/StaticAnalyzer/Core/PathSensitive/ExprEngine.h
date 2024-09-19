@@ -85,7 +85,7 @@ class ExplodedNodeSet;
 class ExplodedNode;
 class IndirectGotoNodeBuilder;
 class MemRegion;
-struct NodeBuilderContext;
+class NodeBuilderContext;
 class NodeBuilderWithSinks;
 class ProgramState;
 class ProgramStateManager;
@@ -187,17 +187,9 @@ public:
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {
+    assert(L->inTopFrame());
+    BR.setAnalysisEntryPoint(L->getDecl());
     return Engine.ExecuteWorkList(L, Steps, nullptr);
-  }
-
-  /// Execute the work list with an initial state. Nodes that reaches the exit
-  /// of the function are added into the Dst set, which represent the exit
-  /// state of the function call. Returns true if there is still simulation
-  /// state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L, unsigned Steps,
-                                       ProgramStateRef InitState,
-                                       ExplodedNodeSet &Dst) {
-    return Engine.ExecuteWorkListWithInitialState(L, Steps, InitState, Dst);
   }
 
   /// getContext - Return the ASTContext associated with this analysis.
@@ -293,6 +285,10 @@ public:
             const Stmt *ReferenceStmt, const LocationContext *LC,
             const Stmt *DiagnosticStmt = nullptr,
             ProgramPoint::Kind K = ProgramPoint::PreStmtPurgeDeadSymbolsKind);
+
+  /// A tag to track convenience transitions, which can be removed at cleanup.
+  /// This tag applies to a node created after removeDead.
+  static const ProgramPointTag *cleanupNodeTag();
 
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.

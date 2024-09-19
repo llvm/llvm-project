@@ -16,7 +16,6 @@ program main
   !ERROR: 'inner' cannot have the POINTER attribute
   pointer inner
   real obj
-  !ERROR: 'ip' is a pointer but is not initialized like one
   !ERROR: 'ip' may not have both the POINTER and PARAMETER attributes
   integer, parameter :: ip = 123
   pointer ip

@@ -12,12 +12,16 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 namespace llvm {
@@ -69,14 +73,12 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
       ++NumCoveredExits;
     }
   }
-  // If there's a mix of covered and non-covered exits, just put the untag
-  // on exits, so we avoid the redundancy of untagging twice.
   if (NumCoveredExits == ReachableRetVec.size()) {
-    for (auto *End : Ends)
-      Callback(End);
+    for_each(Ends, Callback);
   } else {
-    for (auto *RI : ReachableRetVec)
-      Callback(RI);
+    // If there's a mix of covered and non-covered exits, just put the untag
+    // on exits, so we avoid the redundancy of untagging twice.
+    for_each(ReachableRetVec, Callback);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.
     return false;
@@ -109,15 +111,46 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
   return nullptr;
 }
 
-void StackInfoBuilder::visit(Instruction &Inst) {
+void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
+                             Instruction &Inst) {
+  // Visit non-intrinsic debug-info records attached to Inst.
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst.getDbgRecordRange())) {
+    auto AddIfInteresting = [&](Value *V) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (getAllocaInterestingness(*AI) !=
+            AllocaInterestingness::kInteresting)
+          return;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DVRVec = AInfo.DbgVariableRecords;
+        if (DVRVec.empty() || DVRVec.back() != &DVR)
+          DVRVec.push_back(&DVR);
+      }
+    };
+
+    for_each(DVR.location_ops(), AddIfInteresting);
+    if (DVR.isDbgAssign())
+      AddIfInteresting(DVR.getAddress());
+  }
+
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
     }
   }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (isInterestingAlloca(*AI)) {
+    switch (getAllocaInterestingness(*AI)) {
+    case AllocaInterestingness::kInteresting:
       Info.AllocasToInstrument[AI].AI = AI;
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DebugType, "safeAlloca", &Inst);
+      });
+      break;
+    case AllocaInterestingness::kSafe:
+      ORE.emit(
+          [&]() { return OptimizationRemark(DebugType, "safeAlloca", &Inst); });
+      break;
+    case AllocaInterestingness::kUninteresting:
+      break;
     }
     return;
   }
@@ -129,7 +162,7 @@ void StackInfoBuilder::visit(Instruction &Inst) {
       Info.UnrecognizedLifetimes.push_back(&Inst);
       return;
     }
-    if (!isInterestingAlloca(*AI))
+    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
@@ -138,42 +171,55 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    for (Value *V : DVI->location_ops()) {
+    auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (!isInterestingAlloca(*AI))
-          continue;
+        if (getAllocaInterestingness(*AI) !=
+            AllocaInterestingness::kInteresting)
+          return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    }
+    };
+    for_each(DVI->location_ops(), AddIfInteresting);
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      AddIfInteresting(DAI->getAddress());
   }
+
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)
     Info.RetVec.push_back(ExitUntag);
 }
 
-bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
-  return (AI.getAllocatedType()->isSized() &&
-          // FIXME: instrument dynamic allocas, too
-          AI.isStaticAlloca() &&
-          // alloca() may be called with 0 size, ignore it.
-          memtag::getAllocaSizeInBytes(AI) > 0 &&
-          // We are only interested in allocas not promotable to registers.
-          // Promotable allocas are common under -O0.
-          !isAllocaPromotable(&AI) &&
-          // inalloca allocas are not treated as static, and we don't want
-          // dynamic alloca instrumentation for them as well.
-          !AI.isUsedWithInAlloca() &&
-          // swifterror allocas are register promoted by ISel
-          !AI.isSwiftError()) &&
-         // safe allocas are not interesting
-         !(SSI && SSI->isSafe(AI));
+AllocaInterestingness
+StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
+  if (AI.getAllocatedType()->isSized() &&
+      // FIXME: support vscale.
+      !AI.getAllocatedType()->isScalableTy() &&
+      // FIXME: instrument dynamic allocas, too
+      AI.isStaticAlloca() &&
+      // alloca() may be called with 0 size, ignore it.
+      memtag::getAllocaSizeInBytes(AI) > 0 &&
+      // We are only interested in allocas not promotable to registers.
+      // Promotable allocas are common under -O0.
+      !isAllocaPromotable(&AI) &&
+      // inalloca allocas are not treated as static, and we don't want
+      // dynamic alloca instrumentation for them as well.
+      !AI.isUsedWithInAlloca() &&
+      // swifterror allocas are register promoted by ISel
+      !AI.isSwiftError()) {
+    if (!(SSI && SSI->isSafe(AI))) {
+      return AllocaInterestingness::kInteresting;
+    }
+    // safe allocas are not interesting
+    return AllocaInterestingness::kSafe;
+  }
+  return AllocaInterestingness::kUninteresting;
 }
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
-  auto DL = AI.getModule()->getDataLayout();
+  auto DL = AI.getDataLayout();
   return *AI.getAllocationSize(DL);
 }
 
@@ -197,7 +243,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
   Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
   auto *NewAI = new AllocaInst(TypeWithPadding, Info.AI->getAddressSpace(),
-                               nullptr, "", Info.AI);
+                               nullptr, "", Info.AI->getIterator());
   NewAI->takeName(Info.AI);
   NewAI->setAlignment(Info.AI->getAlign());
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
@@ -208,11 +254,88 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   // TODO: Remove when typed pointers dropped
   if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
 
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
+}
+
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
+}
+
+Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Function *ReadRegister = Intrinsic::getDeclaration(
+      M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
+  MDNode *MD =
+      MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateCall(ReadRegister, Args);
+}
+
+Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  if (TargetTriple.getArch() == Triple::aarch64)
+    return memtag::readRegister(IRB, "pc");
+  return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(),
+                            IRB.getIntPtrTy(M->getDataLayout()));
+}
+
+Value *getFP(IRBuilder<> &IRB) {
+  Function *F = IRB.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+  auto *GetStackPointerFn = Intrinsic::getDeclaration(
+      M, Intrinsic::frameaddress,
+      IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
+  return IRB.CreatePtrToInt(
+      IRB.CreateCall(GetStackPointerFn,
+                     {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.getIntPtrTy(M->getDataLayout()));
+}
+
+Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/private/bionic_tls.h.
+  Function *ThreadPointerFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+  return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                                IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
+}
+
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
+  return DVR->isDbgAssign() ? DVR : nullptr;
+}
+
+void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
+  // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
+  // abstracted over whether they're intrinsic-stored or DbgVariableRecord
+  // stored.
+  auto AnnotateDbgRecord = [&](auto *DPtr) {
+    // Prepend "tag_offset, N" to the dwarf expression.
+    // Tag offset logically applies to the alloca pointer, and it makes sense
+    // to put it at the beginning of the expression.
+    SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset, Tag};
+    for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
+      if (DPtr->getVariableLocationOp(LocNo) == Info.AI)
+        DPtr->setExpression(
+            DIExpression::appendOpsToArg(DPtr->getExpression(), NewOps, LocNo));
+    if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+      if (DAI->getAddress() == Info.AI)
+        DAI->setAddressExpression(
+            DIExpression::prependOpcodes(DAI->getAddressExpression(), NewOps));
+    }
+  };
+
+  llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
+  llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 }
 
 } // namespace memtag

@@ -316,8 +316,9 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   // least 4 tasks.
   ThreadPoolStrategy S = optimal_concurrency(
       std::max(Filenames.size() / 4, static_cast<size_t>(1)));
-  ThreadPool Pool(S);
-  DenseMap<llvm::thread::id, ProfileTy> ParsedProfiles(Pool.getThreadCount());
+  DefaultThreadPool Pool(S);
+  DenseMap<llvm::thread::id, ProfileTy> ParsedProfiles(
+      Pool.getMaxConcurrency());
   for (const auto &Filename : Filenames)
     Pool.async(ParseProfile, std::cref(Filename), std::ref(ParsedProfiles));
   Pool.wait();
@@ -329,7 +330,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       MergedProfile.insert_or_assign(Key, Count);
     }
 
-  if (BoltedCollection)
+  if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   for (const auto &[Key, Value] : MergedProfile)
     output() << Key << " " << Value << "\n";
@@ -391,6 +392,7 @@ int main(int argc, char **argv) {
     if (std::error_code EC = MB.getError())
       report_error(InputDataFilename, EC);
     yaml::Input YamlInput(MB.get()->getBuffer());
+    YamlInput.setAllowUnknownKeys(true);
 
     errs() << "Merging data from " << InputDataFilename << "...\n";
 

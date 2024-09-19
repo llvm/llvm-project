@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
 
 --- |
-  define i32 @swp(i32* %addr) #0 {
+  define i32 @swp(ptr %addr) #0 {
   entry:
-    %0 = atomicrmw xchg i32* %addr, i32 1 monotonic
+    %0 = atomicrmw xchg ptr %addr, i32 1 monotonic
     ret i32 %0
   }
 

@@ -211,7 +211,13 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      // This could be enabled for all versions, except for the fact that the
+      // implementation of `objc_retain` and friends prior to 2.2 call [object
+      // retain] in their fall-back paths, which leads to infinite recursion if
+      // the runtime is built with this enabled.  Since distributions typically
+      // build all Objective-C things with the same compiler version and flags,
+      // it's better to be conservative here.
+      return (getVersion() >= VersionTuple(2, 2));
     case ObjFW:
       return false;
     }
@@ -248,7 +254,7 @@ public:
     case GCC:
       return false;
     case GNUstep:
-      return false;
+      return getVersion() >= VersionTuple(2, 2);
     case ObjFW:
       return false;
     }
@@ -266,6 +272,8 @@ public:
       return getVersion() >= VersionTuple(12, 2);
     case WatchOS:
       return getVersion() >= VersionTuple(5, 2);
+    case GNUstep:
+      return getVersion() >= VersionTuple(2, 2);
     default:
       return false;
     }
@@ -463,7 +471,8 @@ public:
     case iOS: return true;
     case WatchOS: return true;
     case GCC: return false;
-    case GNUstep: return false;
+    case GNUstep:
+      return (getVersion() >= VersionTuple(2, 2));
     case ObjFW: return false;
     }
     llvm_unreachable("bad kind");

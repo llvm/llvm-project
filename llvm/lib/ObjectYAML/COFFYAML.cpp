@@ -557,9 +557,9 @@ void MappingTraits<object::coff_load_config_code_integrity>::mapping(
 template <typename T, typename M>
 void mapLoadConfigMember(IO &IO, T &LoadConfig, const char *Name, M &Member) {
   // Map only members that match a specified size.
-  if (reinterpret_cast<char *>(&Member) -
-          reinterpret_cast<char *>(&LoadConfig) <
-      LoadConfig.Size)
+  ptrdiff_t dist =
+      reinterpret_cast<char *>(&Member) - reinterpret_cast<char *>(&LoadConfig);
+  if (dist < (ptrdiff_t)LoadConfig.Size)
     IO.mapOptional(Name, Member);
 }
 

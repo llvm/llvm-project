@@ -12,6 +12,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Object/ELFTypes.h"
 #include <vector>
 
 namespace lld::elf {
@@ -40,11 +41,14 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
+  R_GOTPLT_GOTREL,
+  R_GOTPLT_PC,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
   R_PLT_GOTPLT,
+  R_PLT_GOTREL,
   R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
@@ -84,6 +88,7 @@ enum RelExpr {
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
+  R_AARCH64_AUTH,
   R_ARM_PCA,
   R_ARM_SBREL,
   R_MIPS_GOTREL,
@@ -112,6 +117,7 @@ enum RelExpr {
   R_LOONGARCH_GOT,
   R_LOONGARCH_GOT_PAGE_PC,
   R_LOONGARCH_TLSGD_PAGE_PC,
+  R_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -136,6 +142,7 @@ struct JumpInstrMod {
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations();
+template <class ELFT> void checkNoCrossRefs();
 void reportUndefinedSymbols();
 void postScanRelocations();
 void addGotEntry(Symbol &sym);
@@ -199,6 +206,91 @@ private:
   uint32_t pass = 0;
 };
 
+// Decode LEB128 without error checking. Only used by performance critical code
+// like RelocsCrel.
+inline uint64_t readLEB128(const uint8_t *&p, uint64_t leb) {
+  uint64_t acc = 0, shift = 0, byte;
+  do {
+    byte = *p++;
+    acc |= (byte - 128 * (byte >= leb)) << shift;
+    shift += 7;
+  } while (byte >= 128);
+  return acc;
+}
+inline uint64_t readULEB128(const uint8_t *&p) { return readLEB128(p, 128); }
+inline int64_t readSLEB128(const uint8_t *&p) { return readLEB128(p, 64); }
+
+// This class implements a CREL iterator that does not allocate extra memory.
+template <bool is64> struct RelocsCrel {
+  using uint = std::conditional_t<is64, uint64_t, uint32_t>;
+  struct const_iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = llvm::object::Elf_Crel_Impl<is64>;
+    using difference_type = ptrdiff_t;
+    using pointer = value_type *;
+    using reference = const value_type &;
+    uint32_t count;
+    uint8_t flagBits, shift;
+    const uint8_t *p;
+    llvm::object::Elf_Crel_Impl<is64> crel{};
+    const_iterator(size_t hdr, const uint8_t *p)
+        : count(hdr / 8), flagBits(hdr & 4 ? 3 : 2), shift(hdr % 4), p(p) {
+      if (count)
+        step();
+    }
+    void step() {
+      // See object::decodeCrel.
+      const uint8_t b = *p++;
+      crel.r_offset += b >> flagBits << shift;
+      if (b >= 0x80)
+        crel.r_offset +=
+            ((readULEB128(p) << (7 - flagBits)) - (0x80 >> flagBits)) << shift;
+      if (b & 1)
+        crel.r_symidx += readSLEB128(p);
+      if (b & 2)
+        crel.r_type += readSLEB128(p);
+      if (b & 4 && flagBits == 3)
+        crel.r_addend += static_cast<uint>(readSLEB128(p));
+    }
+    llvm::object::Elf_Crel_Impl<is64> operator*() const { return crel; };
+    const llvm::object::Elf_Crel_Impl<is64> *operator->() const {
+      return &crel;
+    }
+    // For llvm::enumerate.
+    bool operator==(const const_iterator &r) const { return count == r.count; }
+    bool operator!=(const const_iterator &r) const { return count != r.count; }
+    const_iterator &operator++() {
+      if (--count)
+        step();
+      return *this;
+    }
+    // For RelocationScanner::scanOne.
+    void operator+=(size_t n) {
+      for (; n; --n)
+        operator++();
+    }
+  };
+
+  size_t hdr = 0;
+  const uint8_t *p = nullptr;
+
+  constexpr RelocsCrel() = default;
+  RelocsCrel(const uint8_t *p) : hdr(readULEB128(p)) { this->p = p; }
+  size_t size() const { return hdr / 8; }
+  const_iterator begin() const { return {hdr, p}; }
+  const_iterator end() const { return {0, nullptr}; }
+};
+
+template <class RelTy> struct Relocs : ArrayRef<RelTy> {
+  Relocs() = default;
+  Relocs(ArrayRef<RelTy> a) : ArrayRef<RelTy>(a) {}
+};
+
+template <bool is64>
+struct Relocs<llvm::object::Elf_Crel_Impl<is64>> : RelocsCrel<is64> {
+  using RelocsCrel<is64>::RelocsCrel;
+};
+
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.
 template <class ELFT>
@@ -209,18 +301,30 @@ template <class ELFT>
 static inline int64_t getAddend(const typename ELFT::Rela &rel) {
   return rel.r_addend;
 }
+template <class ELFT>
+static inline int64_t getAddend(const typename ELFT::Crel &rel) {
+  return rel.r_addend;
+}
 
 template <typename RelTy>
-ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
+inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
+                              SmallVector<RelTy, 0> &storage) {
   auto cmp = [](const RelTy &a, const RelTy &b) {
     return a.r_offset < b.r_offset;
   };
   if (!llvm::is_sorted(rels, cmp)) {
     storage.assign(rels.begin(), rels.end());
     llvm::stable_sort(storage, cmp);
-    rels = storage;
+    rels = Relocs<RelTy>(storage);
   }
   return rels;
+}
+
+template <bool is64>
+inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
+sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
+         SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
+  return {};
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function returns

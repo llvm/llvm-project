@@ -33,7 +33,8 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
 
     MangledSymbol(const std::string &ParentName, uint8_t Type, uint8_t Binding,
                   std::vector<std::string> Names)
-        : ParentName(ParentName), Type(Type), Binding(Binding), Names(Names) {}
+        : ParentName(ParentName), Type(Type), Binding(Binding),
+          Names(std::move(Names)) {}
   };
   using MangledSymbols = std::map<const NamedDecl *, MangledSymbol>;
 
@@ -295,7 +296,7 @@ public:
       OS << "Symbols:\n";
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;
-        for (auto Name : Symbol.Names) {
+        for (const auto &Name : Symbol.Names) {
           OS << "  - { Name: \""
              << (Symbol.ParentName.empty() || Instance.getLangOpts().CPlusPlus
                      ? ""

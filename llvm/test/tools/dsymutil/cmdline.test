@@ -23,12 +23,12 @@ CHECK: -object-prefix-map <prefix=remapped>
 CHECK: -oso-prepend-path <path>
 CHECK: -out <filename>
 CHECK: {{-o <filename>}}
+CHECK: -quiet
 CHECK: -remarks-drop-without-debug
 CHECK: -remarks-output-format <format>
 CHECK: -remarks-prepend-path <path>
 CHECK: -reproducer <mode>
 CHECK: -statistics
-CHECK: -symbol-map
 CHECK: -symtab
 CHECK: {{-S}}
 CHECK: -toolchain
@@ -47,3 +47,6 @@ NOINPUT: error: no input files specified
 
 RUN: dsymutil -bogus -help 2>&1 | FileCheck --check-prefix=BOGUS %s
 BOGUS: warning: ignoring unknown option: -bogus
+
+RUN: not dsymutil --quiet --verbose 2>&1 | FileCheck --check-prefix=CONFLICT %s
+CONFLICT: error: --quiet and --verbose cannot be specified together

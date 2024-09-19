@@ -13,6 +13,7 @@
 #include "SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
+#include "SPIRVInstrInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -50,6 +51,7 @@ void SPIRVInstPrinter::printRemainingVariableOps(const MCInst *MI,
 void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              unsigned StartIndex,
                                              raw_ostream &O) {
+  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::ASM_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
   assert((NumVarOps == 1 || NumVarOps == 2) &&
@@ -65,7 +67,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   }
 
   // Format and print float values.
-  if (MI->getOpcode() == SPIRV::OpConstantF) {
+  if (MI->getOpcode() == SPIRV::OpConstantF && IsBitwidth16 == 0) {
     APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
                                 : APFloat(APInt(64, Imm).bitsToDouble());
 
@@ -270,6 +272,13 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
     case Decoration::UserSemantic:
       printStringImm(MI, NumFixedOps, O);
       break;
+    case Decoration::HostAccessINTEL:
+      printOperand(MI, NumFixedOps, O);
+      if (NumFixedOps + 1 < MI->getNumOperands()) {
+        O << ' ';
+        printStringImm(MI, NumFixedOps + 1, O);
+      }
+      break;
     default:
       printRemainingVariableOps(MI, NumFixedOps, O, true);
       break;
@@ -319,14 +328,19 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     if (MI->getOperand(StrStartIndex).isReg())
       break;
 
-    std::string Str = getSPIRVStringOperand(*MI, OpNo);
+    std::string Str = getSPIRVStringOperand(*MI, StrStartIndex);
     if (StrStartIndex != OpNo)
       O << ' '; // Add a space if we're starting a new string/argument.
     O << '"';
     for (char c : Str) {
-      if (c == '"')
-        O.write('\\'); // Escape " characters (might break for complex UTF-8).
-      O.write(c);
+      // Escape ", \n characters (might break for complex UTF-8).
+      if (c == '\n') {
+        O.write("\\n", 2);
+      } else {
+        if (c == '"')
+          O.write('\\');
+        O.write(c);
+      }
     }
     O << '"';
 

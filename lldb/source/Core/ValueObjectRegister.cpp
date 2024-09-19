@@ -74,7 +74,8 @@ ConstString ValueObjectRegisterSet::GetQualifiedTypeName() {
   return ConstString();
 }
 
-size_t ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
   const RegisterSet *reg_set = m_reg_ctx_sp->GetRegisterSet(m_reg_set_idx);
   if (reg_set) {
     auto reg_count = reg_set->num_registers;
@@ -108,23 +109,19 @@ bool ValueObjectRegisterSet::UpdateValue() {
     SetValueIsValid(true);
   } else {
     SetValueIsValid(false);
-    m_error.SetErrorToGenericError();
+    m_error = Status::FromErrorString("no register context");
     m_children.Clear();
   }
   return m_error.Success();
 }
 
-ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  ValueObject *valobj = nullptr;
+ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   if (m_reg_ctx_sp && m_reg_set) {
-    const size_t num_children = GetNumChildren();
-    if (idx < num_children)
-      valobj = new ValueObjectRegister(
-          *this, m_reg_ctx_sp,
-          m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
+    return new ValueObjectRegister(
+        *this, m_reg_ctx_sp,
+        m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[idx]));
   }
-  return valobj;
+  return nullptr;
 }
 
 lldb::ValueObjectSP
@@ -220,10 +217,13 @@ ConstString ValueObjectRegister::GetTypeName() {
   return m_type_name;
 }
 
-size_t ValueObjectRegister::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectRegister::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 std::optional<uint64_t> ValueObjectRegister::GetByteSize() {
@@ -258,7 +258,7 @@ bool ValueObjectRegister::UpdateValue() {
   }
 
   SetValueIsValid(false);
-  m_error.SetErrorToGenericError();
+  m_error = Status::FromErrorString("no register context");
   return false;
 }
 
@@ -271,7 +271,7 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 
@@ -285,7 +285,7 @@ bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
     return false;
 
   if (!m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {
-    error.SetErrorString("unable to write back to register");
+    error = Status::FromErrorString("unable to write back to register");
     return false;
   }
 

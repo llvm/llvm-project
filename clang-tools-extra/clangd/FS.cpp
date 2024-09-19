@@ -20,7 +20,7 @@ PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath){
   assert(llvm::sys::path::is_absolute(MainFilePath));
   llvm::SmallString<256> MainFileCanonical(MainFilePath);
   llvm::sys::path::remove_dots(MainFileCanonical, /*remove_dot_dot=*/true);
-  this->MainFilePath = std::string(MainFileCanonical.str());
+  this->MainFilePath = std::string(MainFileCanonical);
 }
 
 void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
@@ -64,8 +64,8 @@ PreambleFileStatusCache::getProducingFS(
         : ProxyFileSystem(std::move(FS)), StatCache(StatCache) {}
 
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-    openFileForRead(const llvm::Twine &Path) override {
-      auto File = getUnderlyingFS().openFileForRead(Path);
+    openFileForRead(const llvm::Twine &Path, bool IsText = true) override {
+      auto File = getUnderlyingFS().openFileForRead(Path, IsText);
       if (!File || !*File)
         return File;
       // Eagerly stat opened file, as the followup `status` call on the file

@@ -51,3 +51,8 @@ TARGET_BUILTIN(__builtin_loongarch_iocsrwr_d, "vUWiUi", "nc", "64bit")
 
 TARGET_BUILTIN(__builtin_loongarch_lddir_d, "WiWiIUWi", "nc", "64bit")
 TARGET_BUILTIN(__builtin_loongarch_ldpte_d, "vWiIUWi", "nc", "64bit")
+
+TARGET_BUILTIN(__builtin_loongarch_frecipe_s, "ff", "nc", "f,frecipe")
+TARGET_BUILTIN(__builtin_loongarch_frecipe_d, "dd", "nc", "d,frecipe")
+TARGET_BUILTIN(__builtin_loongarch_frsqrte_s, "ff", "nc", "f,frecipe")
+TARGET_BUILTIN(__builtin_loongarch_frsqrte_d, "dd", "nc", "d,frecipe")

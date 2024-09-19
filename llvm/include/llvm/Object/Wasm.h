@@ -39,9 +39,13 @@ public:
              const wasm::WasmTableType *TableType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        Signature(Signature) {}
+        Signature(Signature) {
+    assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
+  }
 
-  const wasm::WasmSymbolInfo &Info;
+  // Symbol info as represented in the symbol's 'syminfo' entry of an object
+  // file's symbol table.
+  wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;
@@ -175,6 +179,7 @@ public:
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   uint32_t getSymbolSectionId(SymbolRef Sym) const;
+  uint32_t getSymbolSize(SymbolRef Sym) const;
 
   // Overrides from SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
@@ -209,6 +214,7 @@ public:
   Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
+  bool hasUnmodeledTypes() const { return HasUnmodeledTypes; }
 
   struct ReadContext {
     const uint8_t *Start;
@@ -233,7 +239,7 @@ private:
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
-  wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
+  const wasm::WasmGlobal &getDefinedGlobal(uint32_t Index) const;
   wasm::WasmTag &getDefinedTag(uint32_t Index);
 
   const WasmSection &getWasmSection(DataRefImpl Ref) const;
@@ -291,6 +297,7 @@ private:
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
   bool HasMemory64 = false;
+  bool HasUnmodeledTypes = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedTables = 0;

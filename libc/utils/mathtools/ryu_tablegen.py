@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 
-This file is used to generate the tables of values in 
+This file is used to generate the tables of values in
 src/__support/ryu_constants.h and ryu_long_double constants.h. To use it, set
 the constants at the top of the file to the values you want to use for the Ryu
 algorithm, then run this file. It will output the appropriate tables to stdout,

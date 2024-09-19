@@ -44,6 +44,12 @@ class StrBoolAttr<string S> : Attr<S, []>;
 /// Arbitrary string attribute.
 class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
+/// ConstantRange attribute.
+class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
+/// ConstantRangeList attribute.
+class ConstantRangeListAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
@@ -106,8 +112,14 @@ def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 /// symbol.
 def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 
+/// Function has a hybrid patchable thunk.
+def HybridPatchable : EnumAttr<"hybrid_patchable", [FnAttr]>;
+
 /// Pass structure in an alloca.
 def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
+
+/// Pointer argument memory is initialized.
+def Initializes : ConstantRangeListAttr<"initializes", [ParamAttr]>;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;
@@ -147,6 +159,9 @@ def NoCapture : EnumAttr<"nocapture", [ParamAttr]>;
 
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
+
+/// No extension needed before/after call (high bits are undefined).
+def NoExt : EnumAttr<"noext", [ParamAttr, RetAttr]>;
 
 /// Function does not deallocate memory.
 def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
@@ -218,6 +233,9 @@ def OptimizeNone : EnumAttr<"optnone", [FnAttr]>;
 /// Similar to byval but without a copy.
 def Preallocated : TypeAttr<"preallocated", [FnAttr, ParamAttr]>;
 
+/// Parameter or return value is within the specified range.
+def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr]>;
+
 /// Function does not access memory.
 def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
 
@@ -279,6 +297,12 @@ def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", [FnAttr]>;
 /// MemTagSanitizer is on.
 def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 
+/// NumericalStabilitySanitizer is on.
+def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
+
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -324,6 +348,10 @@ def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
 /// The coroutine would only be destroyed when it is complete.
 def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
 
+/// The coroutine call meets the elide requirement. Hint the optimization
+/// pipeline to perform elide on the call or invoke instruction.
+def CoroElideSafe : EnumAttr<"coro_elide_safe", [FnAttr]>;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
@@ -339,14 +367,26 @@ def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
 def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 
+// Attribute compatiblity rules are generated to check the attribute of the
+// caller and callee and decide whether inlining should be allowed. CompatRule
+// and child classes are used for the rule generation. CompatRule takes only a
+// compare function which could be templated with the attribute type.
+// CompatRuleStrAttr takes the compare function and the string attribute for
+// checking compatibility for inline substitution.
 class CompatRule<string F> {
-  // The name of the function called to check the attribute of the caller and
-  // callee and decide whether inlining should be allowed. The function's
-  // signature must match "bool(const Function&, const Function &)", where the
-  // first parameter is the reference to the caller and the second parameter is
-  // the reference to the callee. It must return false if the attributes of the
-  // caller and callee are incompatible, and true otherwise.
+  // The function's signature must match "bool(const Function&, const
+  // Function&)", where the first parameter is the reference to the caller and
+  // the second parameter is the reference to the callee. It must return false
+  // if the attributes of the caller and callee are incompatible, and true
+  // otherwise.
   string CompatFunc = F;
+  string AttrName = "";
+}
+
+class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
+  // The checker function is extended with an third argument as the function
+  // attribute string "bool(const Function&, const Function&, const StringRef&)".
+  string AttrName = Attr;
 }
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
@@ -354,12 +394,17 @@ def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
+def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;
 def : CompatRule<"isEqual<NoProfileAttr>">;
 def : CompatRule<"checkDenormMode">;
-
+def : CompatRule<"checkStrictFP">;
+def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
+def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
+def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;
 
 class MergeRule<string F> {
   // The name of the function called to merge the attributes of the caller and

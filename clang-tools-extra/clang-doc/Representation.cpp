@@ -221,7 +221,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
-      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+    : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
@@ -368,23 +368,28 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
-                                 std::vector<std::string> UserStylesheets,
-                                 std::vector<std::string> JsScripts)
+                                 std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets),
-      JsScripts(JsScripts) {
+      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
     llvm::sys::fs::current_path(SourceRootDir);
-  this->SourceRoot = std::string(SourceRootDir.str());
+  this->SourceRoot = std::string(SourceRootDir);
   if (!RepositoryUrl.empty()) {
     this->RepositoryUrl = std::string(RepositoryUrl);
-    if (!RepositoryUrl.empty() && RepositoryUrl.find("http://") != 0 &&
-        RepositoryUrl.find("https://") != 0)
+    if (!RepositoryUrl.empty() && !RepositoryUrl.starts_with("http://") &&
+        !RepositoryUrl.starts_with("https://"))
       this->RepositoryUrl->insert(0, "https://");
   }
 }
 
+void ScopeChildren::sort() {
+  llvm::sort(Namespaces.begin(), Namespaces.end());
+  llvm::sort(Records.begin(), Records.end());
+  llvm::sort(Functions.begin(), Functions.end());
+  llvm::sort(Enums.begin(), Enums.end());
+  llvm::sort(Typedefs.begin(), Typedefs.end());
+}
 } // namespace doc
 } // namespace clang

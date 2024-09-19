@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
 #include <sstream>
@@ -53,7 +54,7 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
   ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
 }
 
-void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
+void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
   if (RPath.empty())
     return;
   using RPathEntryT = const std::pair<Target, std::string>;
@@ -86,6 +87,9 @@ void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
                                   const std::shared_ptr<InterfaceFile> &RHS) {
                                  return LHS->InstallName < RHS->InstallName;
                                });
+  assert((Pos == Documents.end() ||
+          (*Pos)->InstallName != Document->InstallName) &&
+         "Unexpected duplicate document added");
   Document->Parent = this;
   Documents.insert(Pos, Document);
 }
@@ -197,9 +201,9 @@ InterfaceFile::merge(const InterfaceFile *O) const {
       IF->addReexportedLibrary(Lib.getInstallName(), Target);
 
   for (const auto &[Target, Path] : rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
   for (const auto &[Target, Path] : O->rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
 
   for (const auto *Sym : symbols()) {
     IF->addSymbol(Sym->getKind(), Sym->getName(), Sym->targets(),
@@ -318,7 +322,7 @@ InterfaceFile::extract(Architecture Arch) const {
 
   for (const auto &It : rpaths())
     if (It.first.Arch == Arch)
-      IF->addRPath(It.first, It.second);
+      IF->addRPath(It.second, It.first);
 
   for (const auto &Lib : allowableClients())
     for (const auto &Target : Lib.targets())
@@ -349,6 +353,34 @@ InterfaceFile::extract(Architecture Arch) const {
   }
 
   return std::move(IF);
+}
+
+void InterfaceFile::setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                                       const Target &Targ) {
+  if (getFileType() != BA.File)
+    setFileType(BA.File);
+  if (getInstallName().empty())
+    setInstallName(BA.InstallName);
+  if (BA.AppExtensionSafe && !isApplicationExtensionSafe())
+    setApplicationExtensionSafe();
+  if (BA.TwoLevelNamespace && !isTwoLevelNamespace())
+    setTwoLevelNamespace();
+  if (BA.OSLibNotForSharedCache && !isOSLibNotForSharedCache())
+    setOSLibNotForSharedCache();
+  if (getCurrentVersion().empty())
+    setCurrentVersion(BA.CurrentVersion);
+  if (getCompatibilityVersion().empty())
+    setCompatibilityVersion(BA.CompatVersion);
+  if (getSwiftABIVersion() == 0)
+    setSwiftABIVersion(BA.SwiftABI);
+  if (getPath().empty())
+    setPath(BA.Path);
+  if (!BA.ParentUmbrella.empty())
+    addParentUmbrella(Targ, BA.ParentUmbrella);
+  for (const auto &Client : BA.AllowableClients)
+    addAllowableClient(Client, Targ);
+  for (const auto &Lib : BA.RexportedLibraries)
+    addReexportedLibrary(Lib, Targ);
 }
 
 static bool isYAMLTextStub(const FileType &Kind) {

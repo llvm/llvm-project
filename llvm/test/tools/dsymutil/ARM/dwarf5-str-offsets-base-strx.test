@@ -57,26 +57,26 @@ RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../I
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s --check-prefixes=UPD,GLOBALUPD
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
 RUN:   FileCheck %s --check-prefixes=CHECK,LOCAL
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
 RUN:   FileCheck %s --check-prefixes=CHECK,LOCAL,CHECK-LLVM
 
-RUN: dsymutil --linker llvm --no-odr --update -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr --update -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
 RUN:   FileCheck %s --check-prefixes=UPD,LOCALUPD
 
-RUN: dsymutil --linker llvm --update -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --update -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
 RUN:   -o %t.dir/dwarf5-addr-base.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \

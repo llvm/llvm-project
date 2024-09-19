@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/IndentedOstream.h"
+#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -18,6 +19,7 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Pattern.h"
 #include "mlir/TableGen/Predicate.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -62,7 +64,7 @@ class StaticMatcherHelper;
 
 class PatternEmitter {
 public:
-  PatternEmitter(Record *pat, RecordOperatorMap *mapper, raw_ostream &os,
+  PatternEmitter(const Record *pat, RecordOperatorMap *mapper, raw_ostream &os,
                  StaticMatcherHelper &helper);
 
   // Emits the mlir::RewritePattern struct named `rewriteName`.
@@ -156,6 +158,10 @@ private:
 
   // Returns the symbol of the old value serving as the replacement.
   StringRef handleReplaceWithValue(DagNode tree);
+
+  // Emits the C++ statement to replace the matched DAG with an array of
+  // matched values.
+  std::string handleVariadic(DagNode tree, int depth);
 
   // Trailing directives are used at the end of DAG node argument lists to
   // specify additional behaviour for op matchers and creators, etc.
@@ -287,7 +293,7 @@ public:
 
   // Collect the `Record`s, i.e., the DRR, so that we can get the information of
   // the duplicated DAGs.
-  void addPattern(Record *record);
+  void addPattern(const Record *record);
 
   // Emit all static functions of DAG Matcher.
   void populateStaticMatchers(raw_ostream &os);
@@ -316,7 +322,7 @@ private:
   // inlining.
   //
   // The topological order of all the DagNodes among all patterns.
-  SmallVector<std::pair<DagNode, Record *>> topologicalOrder;
+  SmallVector<std::pair<DagNode, const Record *>> topologicalOrder;
 
   RecordOperatorMap &opMap;
 
@@ -341,7 +347,7 @@ private:
 
 } // namespace
 
-PatternEmitter::PatternEmitter(Record *pat, RecordOperatorMap *mapper,
+PatternEmitter::PatternEmitter(const Record *pat, RecordOperatorMap *mapper,
                                raw_ostream &os, StaticMatcherHelper &helper)
     : loc(pat->getLoc()), opMap(mapper), pattern(pat, mapper),
       symbolInfoMap(pat->getLoc()), staticMatcherHelper(helper), os(os) {
@@ -360,7 +366,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
 
 void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
   os << formatv(
-      "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+      "static ::llvm::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
       "::mlir::Operation *op0, ::llvm::SmallVector<::mlir::Operation "
       "*, 4> &tblgen_ops",
       funcName);
@@ -1075,7 +1081,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   {
     auto classScope = os.scope();
     os.printReindented(R"(
-    ::mlir::LogicalResult matchAndRewrite(::mlir::Operation *op0,
+    ::llvm::LogicalResult matchAndRewrite(::mlir::Operation *op0,
         ::mlir::PatternRewriter &rewriter) const override {)")
         << '\n';
     {
@@ -1111,7 +1117,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
       os << "return ::mlir::success();\n";
     }
-    os << "};\n";
+    os << "}\n";
   }
   os << "};\n\n";
 }
@@ -1239,6 +1245,9 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
   if (resultTree.isReplaceWithValue())
     return handleReplaceWithValue(resultTree).str();
 
+  if (resultTree.isVariadic())
+    return handleVariadic(resultTree, depth);
+
   // Normal op creation.
   auto symbol = handleOpCreation(resultTree, resultIndex, depth);
   if (resultTree.getSymbol().empty()) {
@@ -1247,6 +1256,29 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
     symbolInfoMap.bindOpResult(symbol, pattern.getDialectOp(resultTree));
   }
   return symbol;
+}
+
+std::string PatternEmitter::handleVariadic(DagNode tree, int depth) {
+  assert(tree.isVariadic());
+
+  std::string output;
+  llvm::raw_string_ostream oss(output);
+  auto name = std::string(formatv("tblgen_variadic_values_{0}", nextValueId++));
+  symbolInfoMap.bindValue(name);
+  oss << "::llvm::SmallVector<::mlir::Value, 4> " << name << ";\n";
+  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+    if (auto child = tree.getArgAsNestedDag(i)) {
+      oss << name << ".push_back(" << handleResultPattern(child, i, depth + 1)
+          << ");\n";
+    } else {
+      oss << name << ".push_back("
+          << handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i))
+          << ");\n";
+    }
+  }
+
+  os << oss.str();
+  return name;
 }
 
 StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {
@@ -1518,10 +1550,36 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // the key. This includes both bound and unbound child nodes.
   ChildNodeIndexNameMap childNodeNames;
 
+  // If the argument is a type constraint, then its an operand. Check if the
+  // op's argument is variadic that the argument in the pattern is too.
+  auto checkIfMatchedVariadic = [&](int i) {
+    // FIXME: This does not yet check for variable/leaf case.
+    // FIXME: Change so that native code call can be handled.
+    const auto *operand =
+        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(i));
+    if (!operand || !operand->isVariadic())
+      return;
+
+    auto child = tree.getArgAsNestedDag(i);
+    if (!child)
+      return;
+
+    // Skip over replaceWithValues.
+    while (child.isReplaceWithValue()) {
+      if (!(child = child.getArgAsNestedDag(0)))
+        return;
+    }
+    if (!child.isNativeCodeCall() && !child.isVariadic())
+      PrintFatalError(loc, formatv("op expects variadic operand `{0}`, while "
+                                   "provided is non-variadic",
+                                   resultOp.getArgName(i)));
+  };
+
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
   for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
+    checkIfMatchedVariadic(i);
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
@@ -1785,7 +1843,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
                     range);
       sizes.push_back(formatv("static_cast<int32_t>({0}.size())", range));
     } else {
-      sizes.push_back("1");
+      sizes.emplace_back("1");
       os << formatv("tblgen_values.push_back(");
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(
@@ -1854,7 +1912,7 @@ void StaticMatcherHelper::populateStaticConstraintFunctions(raw_ostream &os) {
   staticVerifierEmitter.emitPatternConstraints(constraints.getArrayRef());
 }
 
-void StaticMatcherHelper::addPattern(Record *record) {
+void StaticMatcherHelper::addPattern(const Record *record) {
   Pattern pat(record, &opMap);
 
   // While generating the function body of the DAG matcher, it may depends on
@@ -1896,7 +1954,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Rewriters", os, recordKeeper);
 
-  const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
+  auto patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
 
   // We put the map here because it can be shared among multiple patterns.
   RecordOperatorMap recordOpMap;
@@ -1904,7 +1962,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
   StaticMatcherHelper staticMatcher(os, recordKeeper, recordOpMap);
-  for (Record *p : patterns)
+  for (const Record *p : patterns)
     staticMatcher.addPattern(p);
   staticMatcher.populateStaticConstraintFunctions(os);
   staticMatcher.populateStaticMatchers(os);
@@ -1915,7 +1973,7 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::string baseRewriterName = "GeneratedConvert";
   int rewriterIndex = 0;
 
-  for (Record *p : patterns) {
+  for (const Record *p : patterns) {
     std::string name;
     if (p->isAnonymous()) {
       // If no name is provided, ensure unique rewriter names simply by

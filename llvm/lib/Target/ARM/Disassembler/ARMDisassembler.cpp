@@ -700,6 +700,9 @@ DecodeMVEOverlappingLongShift(MCInst &Inst, unsigned Insn, uint64_t Address,
 static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
+static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder);
 
 #include "ARMGenDisassemblerTables.inc"
 
@@ -7029,4 +7032,24 @@ static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
   }
 
   return DS;
+}
+
+static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  const unsigned Rn = fieldFromInstruction(Insn, 16, 4);
+  // Adding Rn, holding memory location to save/load to/from, the only argument
+  // that is being encoded.
+  // '$Rn' in the assembly.
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+  // An optional predicate, '$p' in the assembly.
+  DecodePredicateOperand(Inst, ARMCC::AL, Address, Decoder);
+  // An immediate that represents a floating point registers list. '$regs' in
+  // the assembly.
+  Inst.addOperand(MCOperand::createImm(0)); // Arbitrary value, has no effect.
+
+  return S;
 }

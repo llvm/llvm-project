@@ -62,6 +62,8 @@ STATISTIC(NumUnscaledPairCreated,
           "Number of load/store from unscaled generated");
 STATISTIC(NumZeroStoresPromoted, "Number of narrow zero stores promoted");
 STATISTIC(NumLoadsFromStoresPromoted, "Number of loads from stores promoted");
+STATISTIC(NumFailedAlignmentCheck, "Number of load/store pair transformation "
+                                   "not passed the alignment check");
 STATISTIC(NumConstOffsetFolded,
           "Number of const offset of index address folded");
 
@@ -180,7 +182,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   // Scan the instruction list to find a register assigned with a const
   // value that can be combined with the current instruction (a load or store)
-  // using base addressing with writeback. Scan forwards.
+  // using base addressing with writeback. Scan backwards.
   MachineBasicBlock::iterator
   findMatchingConstOffsetBackward(MachineBasicBlock::iterator I, unsigned Limit,
                                   unsigned &Offset);
@@ -188,8 +190,12 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Scan the instruction list to find a base register update that can
   // be combined with the current instruction (a load or store) using
   // pre or post indexed addressing with writeback. Scan backwards.
+  // `MergeEither` is set to true if the combined instruction may be placed
+  // either at the location of the load/store instruction or at the location of
+  // the update intruction.
   MachineBasicBlock::iterator
-  findMatchingUpdateInsnBackward(MachineBasicBlock::iterator I, unsigned Limit);
+  findMatchingUpdateInsnBackward(MachineBasicBlock::iterator I, unsigned Limit,
+                                 bool &MergeEither);
 
   // Find an instruction that updates the base register of the ld/st
   // instruction.
@@ -200,9 +206,10 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
                               unsigned IndexReg, unsigned &Offset);
 
   // Merge a pre- or post-index base register update into a ld/st instruction.
-  MachineBasicBlock::iterator
+  std::optional<MachineBasicBlock::iterator>
   mergeUpdateInsn(MachineBasicBlock::iterator I,
-                  MachineBasicBlock::iterator Update, bool IsPreIdx);
+                  MachineBasicBlock::iterator Update, bool IsForward,
+                  bool IsPreIdx, bool MergeEither);
 
   MachineBasicBlock::iterator
   mergeConstOffsetInsn(MachineBasicBlock::iterator I,
@@ -221,7 +228,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Find and merge a base register updates before or after a ld/st instruction.
   bool tryToMergeLdStUpdate(MachineBasicBlock::iterator &MBBI);
 
-  // Find and merge a index ldr/st instructions into a base ld/st instruction.
+  // Find and merge an index ldr/st instruction into a base ld/st instruction.
   bool tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI, int Scale);
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
@@ -507,12 +514,38 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
 }
 
 static unsigned getBaseAddressOpcode(unsigned Opc) {
-  // TODO: Add more index address loads/stores.
+  // TODO: Add more index address stores.
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no base address equivalent!");
+  case AArch64::LDRBroX:
+    return AArch64::LDRBui;
   case AArch64::LDRBBroX:
     return AArch64::LDRBBui;
+  case AArch64::LDRSBXroX:
+    return AArch64::LDRSBXui;
+  case AArch64::LDRSBWroX:
+    return AArch64::LDRSBWui;
+  case AArch64::LDRHroX:
+    return AArch64::LDRHui;
+  case AArch64::LDRHHroX:
+    return AArch64::LDRHHui;
+  case AArch64::LDRSHXroX:
+    return AArch64::LDRSHXui;
+  case AArch64::LDRSHWroX:
+    return AArch64::LDRSHWui;
+  case AArch64::LDRWroX:
+    return AArch64::LDRWui;
+  case AArch64::LDRSroX:
+    return AArch64::LDRSui;
+  case AArch64::LDRSWroX:
+    return AArch64::LDRSWui;
+  case AArch64::LDRDroX:
+    return AArch64::LDRDui;
+  case AArch64::LDRXroX:
+    return AArch64::LDRXui;
+  case AArch64::LDRQroX:
+    return AArch64::LDRQui;
   }
 }
 
@@ -764,9 +797,30 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   default:
     return false;
   // Scaled instructions.
-  // TODO: Add more index address loads/stores.
+  // TODO: Add more index address stores.
+  case AArch64::LDRBroX:
   case AArch64::LDRBBroX:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSBWroX:
     Scale = 1;
+    return true;
+  case AArch64::LDRHroX:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSHWroX:
+    Scale = 2;
+    return true;
+  case AArch64::LDRWroX:
+  case AArch64::LDRSroX:
+  case AArch64::LDRSWroX:
+    Scale = 4;
+    return true;
+  case AArch64::LDRDroX:
+  case AArch64::LDRXroX:
+    Scale = 8;
+    return true;
+  case AArch64::LDRQroX:
+    Scale = 16;
     return true;
   }
 }
@@ -1267,6 +1321,17 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
               .add(StMO)
               .addImm(AndMaskEncoded)
               .setMIFlags(LoadI->getFlags());
+    } else if (IsStoreXReg && Imms == 31) {
+      // Use the 32 bit variant of UBFM if it's the LSR alias of the
+      // instruction.
+      assert(Immr <= Imms && "Expected LSR alias of UBFM");
+      BitExtMI = BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
+                         TII->get(AArch64::UBFMWri),
+                         TRI->getSubReg(DestReg, AArch64::sub_32))
+                     .addReg(TRI->getSubReg(StRt, AArch64::sub_32))
+                     .addImm(Immr)
+                     .addImm(Imms)
+                     .setMIFlags(LoadI->getFlags());
     } else {
       BitExtMI =
           BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
@@ -1326,10 +1391,14 @@ static int alignTo(int Num, int PowOf2) {
 static bool mayAlias(MachineInstr &MIa,
                      SmallVectorImpl<MachineInstr *> &MemInsns,
                      AliasAnalysis *AA) {
-  for (MachineInstr *MIb : MemInsns)
-    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false))
+  for (MachineInstr *MIb : MemInsns) {
+    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false)) {
+      LLVM_DEBUG(dbgs() << "Aliasing with: "; MIb->dump());
       return true;
+    }
+  }
 
+  LLVM_DEBUG(dbgs() << "No aliases found\n");
   return false;
 }
 
@@ -1757,9 +1826,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
 
+  LLVM_DEBUG(dbgs() << "Find match for: "; FirstMI.dump());
   for (unsigned Count = 0; MBBI != E && Count < Limit;
        MBBI = next_nodbg(MBBI, E)) {
     MachineInstr &MI = *MBBI;
+    LLVM_DEBUG(dbgs() << "Analysing 2nd insn: "; MI.dump());
 
     UsedInBetween.accumulate(MI);
 
@@ -1859,6 +1930,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                               UsedRegUnits, TRI);
             MemInsns.push_back(&MI);
+            LLVM_DEBUG(dbgs() << "Offset doesn't fit in immediate, "
+                              << "keep looking.\n");
             continue;
           }
           // If the alignment requirements of the paired (scaled) instruction
@@ -1868,6 +1941,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                               UsedRegUnits, TRI);
             MemInsns.push_back(&MI);
+            LLVM_DEBUG(dbgs()
+                       << "Offset doesn't fit due to alignment requirements, "
+                       << "keep looking.\n");
             continue;
           }
         }
@@ -1884,14 +1960,22 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         const bool SameLoadReg = MayLoad && TRI->isSuperOrSubRegisterEq(
                                                 Reg, getLdStRegOp(MI).getReg());
 
-        // If the Rt of the second instruction was not modified or used between
-        // the two instructions and none of the instructions between the second
-        // and first alias with the second, we can combine the second into the
-        // first.
-        if (ModifiedRegUnits.available(getLdStRegOp(MI).getReg()) &&
-            !(MI.mayLoad() && !SameLoadReg &&
-              !UsedRegUnits.available(getLdStRegOp(MI).getReg())) &&
-            !mayAlias(MI, MemInsns, AA)) {
+        // If the Rt of the second instruction (destination register of the
+        // load) was not modified or used between the two instructions and none
+        // of the instructions between the second and first alias with the
+        // second, we can combine the second into the first.
+        bool RtNotModified =
+            ModifiedRegUnits.available(getLdStRegOp(MI).getReg());
+        bool RtNotUsed = !(MI.mayLoad() && !SameLoadReg &&
+                           !UsedRegUnits.available(getLdStRegOp(MI).getReg()));
+
+        LLVM_DEBUG(dbgs() << "Checking, can combine 2nd into 1st insn:\n"
+                          << "Reg '" << getLdStRegOp(MI) << "' not modified: "
+                          << (RtNotModified ? "true" : "false") << "\n"
+                          << "Reg '" << getLdStRegOp(MI) << "' not used: "
+                          << (RtNotUsed ? "true" : "false") << "\n");
+
+        if (RtNotModified && RtNotUsed && !mayAlias(MI, MemInsns, AA)) {
           // For pairs loading into the same reg, try to find a renaming
           // opportunity to allow the renaming of Reg between FirstMI and MI
           // and combine MI into FirstMI; otherwise bail and keep looking.
@@ -1904,6 +1988,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
               LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                                 UsedRegUnits, TRI);
               MemInsns.push_back(&MI);
+              LLVM_DEBUG(dbgs() << "Can't find reg for renaming, "
+                                << "keep looking.\n");
               continue;
             }
             Flags.setRenameReg(*RenameReg);
@@ -1919,10 +2005,15 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // between the two instructions and none of the instructions between the
         // first and the second alias with the first, we can combine the first
         // into the second.
-        if (!(MayLoad &&
-              !UsedRegUnits.available(getLdStRegOp(FirstMI).getReg())) &&
-            !mayAlias(FirstMI, MemInsns, AA)) {
+        RtNotModified = !(
+            MayLoad && !UsedRegUnits.available(getLdStRegOp(FirstMI).getReg()));
 
+        LLVM_DEBUG(dbgs() << "Checking, can combine 1st into 2nd insn:\n"
+                          << "Reg '" << getLdStRegOp(FirstMI)
+                          << "' not modified: "
+                          << (RtNotModified ? "true" : "false") << "\n");
+
+        if (RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
             Flags.clearRenameReg();
@@ -1938,8 +2029,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             MBBIWithRenameReg = MBBI;
           }
         }
-        // Unable to combine these instructions due to interference in between.
-        // Keep looking.
+        LLVM_DEBUG(dbgs() << "Unable to combine these instructions due to "
+                          << "interference in between, keep looking.\n");
       }
     }
 
@@ -1948,16 +2039,20 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
     // If the instruction wasn't a matching load or store.  Stop searching if we
     // encounter a call instruction that might modify memory.
-    if (MI.isCall())
+    if (MI.isCall()) {
+      LLVM_DEBUG(dbgs() << "Found a call, stop looking.\n");
       return E;
+    }
 
     // Update modified / uses register units.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
-    if (!ModifiedRegUnits.available(BaseReg))
+    if (!ModifiedRegUnits.available(BaseReg)) {
+      LLVM_DEBUG(dbgs() << "Base reg is modified, stop looking.\n");
       return E;
+    }
 
     // Update list of instructions that read/write memory.
     if (MI.mayLoadOrStore())
@@ -1968,12 +2063,15 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
 static MachineBasicBlock::iterator
 maybeMoveCFI(MachineInstr &MI, MachineBasicBlock::iterator MaybeCFI) {
+  assert((MI.getOpcode() == AArch64::SUBXri ||
+          MI.getOpcode() == AArch64::ADDXri) &&
+         "Expected a register update instruction");
   auto End = MI.getParent()->end();
   if (MaybeCFI == End ||
       MaybeCFI->getOpcode() != TargetOpcode::CFI_INSTRUCTION ||
       !(MI.getFlag(MachineInstr::FrameSetup) ||
         MI.getFlag(MachineInstr::FrameDestroy)) ||
-      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP)
+      MI.getOperand(0).getReg() != AArch64::SP)
     return End;
 
   const MachineFunction &MF = *MI.getParent()->getParent();
@@ -1988,20 +2086,37 @@ maybeMoveCFI(MachineInstr &MI, MachineBasicBlock::iterator MaybeCFI) {
   }
 }
 
-MachineBasicBlock::iterator
-AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
-                                     MachineBasicBlock::iterator Update,
-                                     bool IsPreIdx) {
+std::optional<MachineBasicBlock::iterator> AArch64LoadStoreOpt::mergeUpdateInsn(
+    MachineBasicBlock::iterator I, MachineBasicBlock::iterator Update,
+    bool IsForward, bool IsPreIdx, bool MergeEither) {
   assert((Update->getOpcode() == AArch64::ADDXri ||
           Update->getOpcode() == AArch64::SUBXri) &&
          "Unexpected base register update instruction to merge!");
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
 
-  // If updating the SP and the following instruction is CFA offset related CFI
-  // instruction move it after the merged instruction.
-  MachineBasicBlock::iterator CFI =
-      IsPreIdx ? maybeMoveCFI(*Update, next_nodbg(Update, E)) : E;
+  // If updating the SP and the following instruction is CFA offset related CFI,
+  // make sure the CFI follows the SP update either by merging at the location
+  // of the update or by moving the CFI after the merged instruction. If unable
+  // to do so, bail.
+  MachineBasicBlock::iterator InsertPt = I;
+  if (IsForward) {
+    assert(IsPreIdx);
+    if (auto CFI = maybeMoveCFI(*Update, next_nodbg(Update, E)); CFI != E) {
+      if (MergeEither) {
+        InsertPt = Update;
+      } else {
+        // Take care not to reorder CFIs.
+        if (std::any_of(std::next(CFI), I, [](const auto &Insn) {
+              return Insn.getOpcode() == TargetOpcode::CFI_INSTRUCTION;
+            }))
+          return std::nullopt;
+
+        MachineBasicBlock *MBB = InsertPt->getParent();
+        MBB->splice(std::next(InsertPt), MBB, CFI);
+      }
+    }
+  }
 
   // Return the instruction following the merged instruction, which is
   // the instruction following our unmerged load. Unless that's the add/sub
@@ -2022,8 +2137,9 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
   getPrePostIndexedMemOpInfo(*I, Scale, MinOffset, MaxOffset);
   if (!AArch64InstrInfo::isPairedLdSt(*I)) {
     // Non-paired instruction.
-    MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
-              .add(getLdStRegOp(*Update))
+    MIB = BuildMI(*InsertPt->getParent(), InsertPt, InsertPt->getDebugLoc(),
+                  TII->get(NewOpc))
+              .add(Update->getOperand(0))
               .add(getLdStRegOp(*I))
               .add(AArch64InstrInfo::getLdStBaseOp(*I))
               .addImm(Value / Scale)
@@ -2031,18 +2147,15 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .setMIFlags(I->mergeFlagsWith(*Update));
   } else {
     // Paired instruction.
-    MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
-              .add(getLdStRegOp(*Update))
+    MIB = BuildMI(*InsertPt->getParent(), InsertPt, InsertPt->getDebugLoc(),
+                  TII->get(NewOpc))
+              .add(Update->getOperand(0))
               .add(getLdStRegOp(*I, 0))
               .add(getLdStRegOp(*I, 1))
               .add(AArch64InstrInfo::getLdStBaseOp(*I))
               .addImm(Value / Scale)
               .setMemRefs(I->memoperands())
               .setMIFlags(I->mergeFlagsWith(*Update));
-  }
-  if (CFI != E) {
-    MachineBasicBlock *MBB = I->getParent();
-    MBB->splice(std::next(MIB.getInstr()->getIterator()), MBB, CFI);
   }
 
   if (IsPreIdx) {
@@ -2183,9 +2296,14 @@ bool AArch64LoadStoreOpt::isMatchingMovConstInsn(MachineInstr &MemMI,
     // movz + movk hold a large offset of a Ld/St instruction.
     MachineBasicBlock::iterator B = MI.getParent()->begin();
     MachineBasicBlock::iterator MBBI = &MI;
+    // Skip the scene when the MI is the first instruction of a block.
+    if (MBBI == B)
+      return false;
     MBBI = prev_nodbg(MBBI, B);
     MachineInstr &MovzMI = *MBBI;
-    if (MovzMI.getOpcode() == AArch64::MOVZWi) {
+    // Make sure the MOVKWi and MOVZWi set the same register.
+    if (MovzMI.getOpcode() == AArch64::MOVZWi &&
+        MovzMI.getOperand(0).getReg() == MI.getOperand(0).getReg()) {
       unsigned Low = MovzMI.getOperand(1).getImm();
       unsigned High = MI.getOperand(2).getImm() << MI.getOperand(3).getImm();
       Offset = High + Low;
@@ -2273,7 +2391,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
 }
 
 MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
-    MachineBasicBlock::iterator I, unsigned Limit) {
+    MachineBasicBlock::iterator I, unsigned Limit, bool &MergeEither) {
   MachineBasicBlock::iterator B = I->getParent()->begin();
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineInstr &MemMI = *I;
@@ -2283,6 +2401,11 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   Register BaseReg = AArch64InstrInfo::getLdStBaseOp(MemMI).getReg();
   int Offset = AArch64InstrInfo::getLdStOffsetOp(MemMI).getImm();
 
+  bool IsPairedInsn = AArch64InstrInfo::isPairedLdSt(MemMI);
+  Register DestReg[] = {getLdStRegOp(MemMI, 0).getReg(),
+                        IsPairedInsn ? getLdStRegOp(MemMI, 1).getReg()
+                                     : AArch64::NoRegister};
+
   // If the load/store is the first instruction in the block, there's obviously
   // not any matching update. Ditto if the memory offset isn't zero.
   if (MBBI == B || Offset != 0)
@@ -2290,12 +2413,9 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   // If the base register overlaps a destination register, we can't
   // merge the update.
   if (!isTagStore(MemMI)) {
-    bool IsPairedInsn = AArch64InstrInfo::isPairedLdSt(MemMI);
-    for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
-      Register DestReg = getLdStRegOp(MemMI, i).getReg();
-      if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
+    for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i)
+      if (DestReg[i] == BaseReg || TRI->isSubRegister(BaseReg, DestReg[i]))
         return E;
-    }
   }
 
   const bool BaseRegSP = BaseReg == AArch64::SP;
@@ -2316,6 +2436,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   UsedRegUnits.clear();
   unsigned Count = 0;
   bool MemAcessBeforeSPPreInc = false;
+  MergeEither = true;
   do {
     MBBI = prev_nodbg(MBBI, B);
     MachineInstr &MI = *MBBI;
@@ -2342,6 +2463,20 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     if (!ModifiedRegUnits.available(BaseReg) ||
         !UsedRegUnits.available(BaseReg))
       return E;
+
+    // If we have a destination register (i.e. a load instruction) and a
+    // destination register is used or modified, then we can only merge forward,
+    // i.e. the combined instruction is put in the place of the memory
+    // instruction. Same applies if we see a memory access or side effects.
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() ||
+        (DestReg[0] != AArch64::NoRegister &&
+         !(ModifiedRegUnits.available(DestReg[0]) &&
+           UsedRegUnits.available(DestReg[0]))) ||
+        (DestReg[1] != AArch64::NoRegister &&
+         !(ModifiedRegUnits.available(DestReg[1]) &&
+           UsedRegUnits.available(DestReg[1]))))
+      MergeEither = false;
+
     // Keep track if we have a memory access before an SP pre-increment, in this
     // case we need to validate later that the update amount respects the red
     // zone.
@@ -2492,9 +2627,6 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   MachineBasicBlock::iterator Paired =
       findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ false);
   if (Paired != E) {
-    ++NumPairCreated;
-    if (TII->hasUnscaledLdStOffset(MI))
-      ++NumUnscaledPairCreated;
     // Keeping the iterator straight is a pain, so we let the merge routine tell
     // us what the next instruction is after it's done mucking about.
     auto Prev = std::prev(MBBI);
@@ -2504,24 +2636,31 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     MachineMemOperand *MemOp =
         MI.memoperands_empty() ? nullptr : MI.memoperands().front();
 
-    // Get the needed alignments to check them if
-    // ldp-aligned-only/stp-aligned-only features are opted.
-    uint64_t MemAlignment = MemOp ? MemOp->getAlign().value() : -1;
-    uint64_t TypeAlignment = MemOp ? Align(MemOp->getSize()).value() : -1;
+    // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
+    // that the alignment of the source pointer is at least double the alignment
+    // of the type.
+    if ((MI.mayLoad() && Subtarget->hasLdpAlignedOnly()) ||
+        (MI.mayStore() && Subtarget->hasStpAlignedOnly())) {
+      // If there is no size/align information, cancel the transformation.
+      if (!MemOp || !MemOp->getMemoryType().isValid()) {
+        NumFailedAlignmentCheck++;
+        return false;
+      }
 
-    // If a load arrives and ldp-aligned-only feature is opted, check that the
-    // alignment of the source pointer is at least double the alignment of the
-    // type.
-    if (MI.mayLoad() && Subtarget->hasLdpAlignedOnly() && MemOp &&
-        MemAlignment < 2 * TypeAlignment)
-      return false;
+      // Get the needed alignments to check them if
+      // ldp-aligned-only/stp-aligned-only features are opted.
+      uint64_t MemAlignment = MemOp->getAlign().value();
+      uint64_t TypeAlignment = Align(MemOp->getSize().getValue()).value();
 
-    // If a store arrives and stp-aligned-only feature is opted, check that the
-    // alignment of the source pointer is at least double the alignment of the
-    // type.
-    if (MI.mayStore() && Subtarget->hasStpAlignedOnly() && MemOp &&
-        MemAlignment < 2 * TypeAlignment)
-      return false;
+      if (MemAlignment < 2 * TypeAlignment) {
+        NumFailedAlignmentCheck++;
+        return false;
+      }
+    }
+
+    ++NumPairCreated;
+    if (TII->hasUnscaledLdStOffset(MI))
+      ++NumUnscaledPairCreated;
 
     MBBI = mergePairedInsns(MBBI, Paired, Flags);
     // Collect liveness info for instructions between Prev and the new position
@@ -2548,8 +2687,12 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   Update = findMatchingUpdateInsnForward(MBBI, 0, UpdateLimit);
   if (Update != E) {
     // Merge the update into the ld/st.
-    MBBI = mergeUpdateInsn(MBBI, Update, /*IsPreIdx=*/false);
-    return true;
+    if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/false,
+                                     /*IsPreIdx=*/false,
+                                     /*MergeEither=*/false)) {
+      MBBI = *NextI;
+      return true;
+    }
   }
 
   // Don't know how to handle unscaled pre/post-index versions below, so bail.
@@ -2561,11 +2704,15 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // ldr x1, [x0]
   //   merged into:
   // ldr x1, [x0, #8]!
-  Update = findMatchingUpdateInsnBackward(MBBI, UpdateLimit);
+  bool MergeEither;
+  Update = findMatchingUpdateInsnBackward(MBBI, UpdateLimit, MergeEither);
   if (Update != E) {
     // Merge the update into the ld/st.
-    MBBI = mergeUpdateInsn(MBBI, Update, /*IsPreIdx=*/true);
-    return true;
+    if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/true,
+                                     /*IsPreIdx=*/true, MergeEither)) {
+      MBBI = *NextI;
+      return true;
+    }
   }
 
   // The immediate in the load/store is scaled by the size of the memory
@@ -2582,8 +2729,12 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   Update = findMatchingUpdateInsnForward(MBBI, UnscaledOffset, UpdateLimit);
   if (Update != E) {
     // Merge the update into the ld/st.
-    MBBI = mergeUpdateInsn(MBBI, Update, /*IsPreIdx=*/true);
-    return true;
+    if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/false,
+                                     /*IsPreIdx=*/true,
+                                     /*MergeEither=*/false)) {
+      MBBI = *NextI;
+      return true;
+    }
   }
 
   return false;

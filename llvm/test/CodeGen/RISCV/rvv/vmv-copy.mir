@@ -8,7 +8,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 82 = e32,m4
     ; CHECK-LABEL: name: copy_different_lmul
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -25,7 +24,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 82 = e32,m4
     ; CHECK-LABEL: name: copy_convert_to_vmv_v_v
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -42,7 +40,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14
-    ; 82 = e32,m4
     ; CHECK-LABEL: name: copy_convert_to_vmv_v_i
     ; CHECK: liveins: $x14
     ; CHECK-NEXT: {{  $}}
@@ -59,7 +56,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 82 = e32,m4
     ; CHECK-LABEL: name: copy_from_whole_load_store
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -76,7 +72,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 82 = e32,m4
     ; CHECK-LABEL: name: copy_with_vleff
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -95,8 +90,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16, $x17, $x18
-    ; 82 = e32,m4
-    ; 73 = e16,m2
     ; CHECK-LABEL: name: copy_with_vsetvl_x0_x0_1
     ; CHECK: liveins: $x14, $x16, $x17, $x18
     ; CHECK-NEXT: {{  $}}
@@ -121,8 +114,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16, $x17, $x18
-    ; 82 = e32,m4
-    ; 73 = e16,m2
     ; CHECK-LABEL: name: copy_with_vsetvl_x0_x0_2
     ; CHECK: liveins: $x14, $x16, $x17, $x18
     ; CHECK-NEXT: {{  $}}
@@ -147,8 +138,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16, $x17, $x18
-    ; 82 = e32,m4
-    ; 73 = e16,m2
     ; CHECK-LABEL: name: copy_with_vsetvl_x0_x0_3
     ; CHECK: liveins: $x14, $x16, $x17, $x18
     ; CHECK-NEXT: {{  $}}
@@ -169,7 +158,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x16, $x17
-    ; 73 = e16,m2
     ; CHECK-LABEL: name: copy_subregister
     ; CHECK: liveins: $x16, $x17
     ; CHECK-NEXT: {{  $}}
@@ -191,8 +179,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 82 = e32,m4
-    ; 74 = e16,m4
     ; CHECK-LABEL: name: copy_with_different_vlmax
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -231,7 +217,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 80 = e32,m1
     ; CHECK-LABEL: name: copy_zvlsseg_reg
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -248,14 +233,12 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 80 = e32,m1
     ; CHECK-LABEL: name: copy_zvlsseg_reg_2
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x14, 80 /* e32, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v8_v9 = PseudoVLSEG2E32_V_M1 undef $v8_v9, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $v10 = PseudoVMV_V_V_M1 undef $v10, $v8, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $v11 = PseudoVMV_V_V_M1 undef $v11, $v9, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v10m2 = VMV2R_V $v8m2
     $x15 = PseudoVSETVLI $x14, 80, implicit-def $vl, implicit-def $vtype
     $v8_v9 = PseudoVLSEG2E32_V_M1 undef $v8_v9, killed $x16, $noreg, 5, 0, implicit $vl, implicit $vtype
     $v10_v11 = COPY $v8_v9
@@ -266,7 +249,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x14, $x16
-    ; 87 = e32,mf2
     ; CHECK-LABEL: name: copy_fractional_lmul
     ; CHECK: liveins: $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -283,7 +265,6 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x12, $x14, $x16
-    ; 80 = e32,m1
     ; CHECK-LABEL: name: copy_implicit_def
     ; CHECK: liveins: $x12, $x14, $x16
     ; CHECK-NEXT: {{  $}}
@@ -291,14 +272,7 @@ body:             |
     ; CHECK-NEXT: $v8_v9_v10_v11_v12_v13_v14_v15 = PseudoVLSEG8E32_V_M1 undef $v8_v9_v10_v11_v12_v13_v14_v15, killed $x12, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $x0 = PseudoVSETIVLI 10, 80 /* e32, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v15 = PseudoVLE32_V_M1 undef $v15, killed $x16, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype, implicit killed $v8_v9_v10_v11_v12_v13_v14_v15, implicit-def $v8_v9_v10_v11_v12_v13_v14_v15
-    ; CHECK-NEXT: $v24 = VMV1R_V killed $v8
-    ; CHECK-NEXT: $v25 = VMV1R_V killed $v9
-    ; CHECK-NEXT: $v26 = VMV1R_V killed $v10
-    ; CHECK-NEXT: $v27 = VMV1R_V killed $v11
-    ; CHECK-NEXT: $v28 = VMV1R_V killed $v12
-    ; CHECK-NEXT: $v29 = VMV1R_V killed $v13
-    ; CHECK-NEXT: $v30 = VMV1R_V killed $v14
-    ; CHECK-NEXT: $v31 = VMV1R_V killed $v15
+    ; CHECK-NEXT: $v24m8 = VMV8R_V killed $v8m8
     $x0 = PseudoVSETVLI $x14, 80, implicit-def $vl, implicit-def $vtype
     $v8_v9_v10_v11_v12_v13_v14_v15 = PseudoVLSEG8E32_V_M1 undef $v8_v9_v10_v11_v12_v13_v14_v15, killed $x12, $noreg, 5, 0, implicit $vl, implicit $vtype
     $x0 = PseudoVSETIVLI 10, 80, implicit-def $vl, implicit-def $vtype

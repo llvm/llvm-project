@@ -11,15 +11,13 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; PPC-NEXT:    addi 3, 3, 24493
 ; PPC-NEXT:    lis 4, 82
 ; PPC-NEXT:    addis 3, 3, 41
-; PPC-NEXT:    ori 4, 4, 48987
 ; PPC-NEXT:    clrlwi 3, 3, 3
+; PPC-NEXT:    ori 4, 4, 48987
 ; PPC-NEXT:    cmplw 3, 4
+; PPC-NEXT:    li 3, 1
+; PPC-NEXT:    bclr 12, 0, 0
+; PPC-NEXT:  # %bb.1:
 ; PPC-NEXT:    li 3, 0
-; PPC-NEXT:    li 4, 1
-; PPC-NEXT:    bc 12, 0, .LBB0_1
-; PPC-NEXT:    blr
-; PPC-NEXT:  .LBB0_1:
-; PPC-NEXT:    addi 3, 4, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_srem_odd:
@@ -45,21 +43,20 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC-LABEL: test_srem_even:
 ; PPC:       # %bb.0:
-; PPC-NEXT:    slwi 5, 3, 28
-; PPC-NEXT:    srawi 5, 5, 28
-; PPC-NEXT:    mulli 5, 5, 3
-; PPC-NEXT:    rlwinm 6, 5, 25, 31, 31
-; PPC-NEXT:    srwi 5, 5, 4
-; PPC-NEXT:    add 5, 5, 6
-; PPC-NEXT:    mulli 5, 5, 6
-; PPC-NEXT:    sub 3, 3, 5
+; PPC-NEXT:    slwi 4, 3, 28
+; PPC-NEXT:    srawi 4, 4, 28
+; PPC-NEXT:    mulli 4, 4, 3
+; PPC-NEXT:    rlwinm 5, 4, 25, 31, 31
+; PPC-NEXT:    srwi 4, 4, 4
+; PPC-NEXT:    add 4, 4, 5
+; PPC-NEXT:    mulli 4, 4, 6
+; PPC-NEXT:    sub 3, 3, 4
 ; PPC-NEXT:    clrlwi 3, 3, 28
-; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:    cmpwi 3, 1
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bclr 12, 2, 0
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 3, 4, 0
+; PPC-NEXT:    li 3, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_srem_even:
@@ -88,8 +85,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; PPC-LABEL: test_srem_pow2_setne:
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    slwi 4, 3, 26
-; PPC-NEXT:    srawi 4, 4, 26
-; PPC-NEXT:    rlwinm 4, 4, 23, 30, 31
+; PPC-NEXT:    srawi 4, 4, 31
+; PPC-NEXT:    clrlwi 4, 4, 30
 ; PPC-NEXT:    add 4, 3, 4
 ; PPC-NEXT:    rlwinm 4, 4, 0, 26, 29
 ; PPC-NEXT:    sub 3, 3, 4
@@ -102,8 +99,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; PPC64LE-LABEL: test_srem_pow2_setne:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    slwi 4, 3, 26
-; PPC64LE-NEXT:    srawi 4, 4, 26
-; PPC64LE-NEXT:    rlwinm 4, 4, 23, 30, 31
+; PPC64LE-NEXT:    srawi 4, 4, 31
+; PPC64LE-NEXT:    clrlwi 4, 4, 30
 ; PPC64LE-NEXT:    add 4, 3, 4
 ; PPC64LE-NEXT:    rlwinm 4, 4, 0, 26, 29
 ; PPC64LE-NEXT:    sub 3, 3, 4

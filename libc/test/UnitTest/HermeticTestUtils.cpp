@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
+
+namespace LIBC_NAMESPACE_DECL {
 
 int bcmp(const void *lhs, const void *rhs, size_t count);
 void bzero(void *ptr, size_t count);
@@ -19,7 +25,13 @@ void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
 
-} // namespace LIBC_NAMESPACE
+// TODO: It seems that some old test frameworks does not use
+// add_libc_hermetic_test properly. Such that they won't get correct linkage
+// against the object containing this function. We create a dummy function that
+// always returns 0 to indicate a failure.
+[[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
+
+} // namespace LIBC_NAMESPACE_DECL
 
 namespace {
 
@@ -102,7 +114,17 @@ void __cxa_pure_virtual() {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+// Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
+// defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
+unsigned long __getauxval(unsigned long id) {
+  return LIBC_NAMESPACE::getauxval(id);
+}
+#endif
+
 } // extern "C"
+
+void *operator new(size_t size, void *ptr) { return ptr; }
 
 void *operator new(size_t size) { return malloc(size); }
 
@@ -111,5 +133,20 @@ void *operator new[](size_t size) { return malloc(size); }
 void operator delete(void *) {
   // The libc runtime should not use the global delete operator. Hence,
   // we just trap here to catch any such accidental usages.
+  __builtin_trap();
+}
+
+void operator delete(void *ptr, size_t size) { __builtin_trap(); }
+
+// Defining members in the std namespace is not preferred. But, we do it here
+// so that we can use it to define the operator new which takes std::align_val_t
+// argument.
+namespace std {
+enum class align_val_t : size_t {};
+} // namespace std
+
+void operator delete(void *mem, std::align_val_t) noexcept { __builtin_trap(); }
+
+void operator delete(void *mem, unsigned int, std::align_val_t) noexcept {
   __builtin_trap();
 }

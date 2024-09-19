@@ -11,6 +11,7 @@
 #define _LIBCPP___CHARCONV_TO_CHARS_INTEGRAL_H
 
 #include <__algorithm/copy_n.h>
+#include <__assert>
 #include <__bit/countl.h>
 #include <__charconv/tables.h>
 #include <__charconv/to_chars_base_10.h>
@@ -20,6 +21,7 @@
 #include <__system_error/errc.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_32_64_or_128_bit.h>
 #include <__type_traits/make_unsigned.h>

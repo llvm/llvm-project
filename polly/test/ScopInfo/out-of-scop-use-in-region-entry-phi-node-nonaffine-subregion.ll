@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s 2>&1 | FileCheck %s
 ;
 ; Check whether %newval is identified as escaping value, even though it is used
 ; in a phi that is in the region. Non-affine subregion case.

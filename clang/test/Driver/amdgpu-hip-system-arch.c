@@ -1,6 +1,4 @@
 // REQUIRES: system-linux
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
 // REQUIRES: shell
 
 // RUN: mkdir -p %t
@@ -31,3 +29,11 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib --offload-new-driver --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
 // ARCH-GFX906: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+
+// case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed.
+// RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:     --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 \
+// RUN:     -x hip %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT
+// BAD-TIMEOUT: clang: error: cannot determine amdgcn architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

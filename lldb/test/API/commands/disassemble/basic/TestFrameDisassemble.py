@@ -48,7 +48,7 @@ class FrameDisassembleTestCase(TestBase):
         )
 
         # The hit count for the breakpoint should be 1.
-        self.assertEquals(breakpoint.GetHitCount(), 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
         disassembly = frame.Disassemble()

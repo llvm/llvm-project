@@ -16,14 +16,12 @@ declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #1
 define nonnull ptr @AddrTest1() local_unnamed_addr #0 {
 ; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: AddrTest1:
 ; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, c[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    addi r3, r3, 1
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, c[TL]@le+1(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
 ;
 ; SMALL-LOCAL-EXEC-LARGECM64-LABEL: AddrTest1:
 ; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, c[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addi r3, r3, 1
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, c[TL]@le+1(r13)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @c)

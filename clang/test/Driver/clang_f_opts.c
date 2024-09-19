@@ -45,13 +45,6 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
-// RUN: %clang -### -S -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// RUN: %clang -### -S -fno-reroll-loops -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -freroll-loops -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// CHECK-REROLL-LOOPS: "-freroll-loops"
-// CHECK-NO-REROLL-LOOPS-NOT: "-freroll-loops"
-
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -585,6 +578,19 @@
 // CHECK-TRIVIAL-PATTERN-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 // CHECK-TRIVIAL-ZERO-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-MAX-SIZE %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-MAX-SIZE %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-MAX-SIZE-MISSING-DEPENDENCY %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-max-size=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-MAX-SIZE-INVALID-VALUE %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-max-size=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-MAX-SIZE-INVALID-VALUE %s
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-MAX-SIZE-MISSING-DEPENDENCY: used without '-ftrivial-auto-var-init=zero' or
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-INVALID-VALUE: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-INVALID-VALUE: only accepts positive integers (in bytes)
+
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"
 
@@ -594,10 +600,12 @@
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
 
 // RUN: %clang -### -S -fjmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
-// RUN: %clang -### -S -fjmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -g -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
+// RUN: %clang -### -S -fjmc -g -fno-jmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc -g -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
 // RUN: %clang -### -S -fjmc -g -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
-// RUN: %clang -### -fjmc -g -flto -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // CHECK_JMC_WARN: -fjmc requires debug info. Use -g or debug options that enable debugger's stepping function; option ignored
@@ -615,5 +623,15 @@
 // RUN: %clang -### --target=aarch64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // CHECK-MS-VOLATILE: -fms-volatile
 // CHECK-NO-MS-VOLATILE-NOT: -fms-volatile
+
+// RUN: %clang -### --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fstrict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
+// CHECK-NO-STRICT-ALIASING: -relaxed-aliasing

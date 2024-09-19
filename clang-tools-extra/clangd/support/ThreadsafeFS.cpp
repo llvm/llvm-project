@@ -29,7 +29,7 @@ public:
       : ProxyFileSystem(std::move(FS)) {}
 
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const llvm::Twine &InPath) override {
+  openFileForRead(const llvm::Twine &InPath, bool IsText = true) override {
     llvm::SmallString<128> Path;
     InPath.toVector(Path);
 
@@ -41,7 +41,7 @@ public:
     llvm::StringRef FileName = llvm::sys::path::filename(Path);
     if (FileName.starts_with("preamble-") && FileName.ends_with(".pch"))
       return File;
-    return std::unique_ptr<VolatileFile>(new VolatileFile(std::move(*File)));
+    return std::make_unique<VolatileFile>(std::move(*File));
   }
 
 private:

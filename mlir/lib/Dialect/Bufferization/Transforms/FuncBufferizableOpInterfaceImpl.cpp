@@ -66,7 +66,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   assert(tensorType && "expected TensorType");
 
   BaseMemRefType memrefType = options.functionArgTypeConverterFn(
-      tensorType, *options.defaultMemorySpace, funcOp, options);
+      tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
       index, BufferizationDialect::kBufferLayoutAttrName);
@@ -258,20 +258,23 @@ struct CallOpInterface
         return failure();
       Value buffer = *maybeBuffer;
 
-      // Caller / callee type mismatch is handled with a CastOp.
+      // Caller / callee type mismatch is handled with castOrReallocMemRefValue.
       auto memRefType = funcType.getInput(opOperand.getOperandNumber());
       // Since we don't yet have a clear layout story, to_memref may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
       // that will either canonicalize away or fail compilation until we can do
-      // something better.
+      // something better. Insert a reallocation + copy if it cannot be
+      // statically guaranteed that a direct cast would be valid.
       if (buffer.getType() != memRefType) {
-        assert(
-            memref::CastOp::areCastCompatible(buffer.getType(), memRefType) &&
-            "CallOp::bufferize: cast incompatible");
-        Value castBuffer = rewriter.create<memref::CastOp>(callOp.getLoc(),
-                                                           memRefType, buffer);
-        buffer = castBuffer;
+        auto memrefDstType = dyn_cast<MemRefType>(memRefType);
+        assert(memrefDstType &&
+               "buffer layout not supported on unranked tensors");
+        FailureOr<Value> replacement = bufferization::castOrReallocMemRefValue(
+            rewriter, buffer, memrefDstType, options);
+        if (failed(replacement))
+          return failure();
+        buffer = *replacement;
       }
       newOperands.push_back(buffer);
     }
@@ -324,6 +327,28 @@ struct FuncOpInterface
           FuncOpInterface, FuncOp> {
 
   static bool supportsUnstructuredControlFlow() { return true; }
+
+  bool hasTensorSemantics(Operation *op) const {
+    auto isaTensor = llvm::IsaPred<TensorType>;
+
+    // A function has tensor semantics if it has tensor arguments/results.
+    auto funcOp = cast<FuncOp>(op);
+    bool hasTensorArg = any_of(funcOp.getArgumentTypes(), isaTensor);
+    bool hasTensorResult = any_of(funcOp.getResultTypes(), isaTensor);
+    if (hasTensorArg || hasTensorResult)
+      return true;
+
+    // It also has tensor semantics if it has tensor block arguments.
+    // TODO: Decouple bufferization of unstructured control flow from
+    // BufferizableOpInterface implementations. We should only care about
+    // region entry block arguments here (which are already covered by the
+    // argument types of the function).
+    for (Block &block : funcOp.getBody())
+      if (any_of(block.getArgumentTypes(), isaTensor))
+        return true;
+
+    return false;
+  }
 
   AliasingOpOperandList
   getAliasingOpOperands(Operation *op, Value value,
@@ -421,7 +446,8 @@ struct FuncOpInterface
       // Note: If `inferFunctionResultLayout = true`, cast are later folded
       // away.
       BaseMemRefType resultType = options.functionArgTypeConverterFn(
-          tensorType, *options.defaultMemorySpace, funcOp, options);
+          tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
+          options);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           loc, resultType, returnVal);
       returnValues.push_back(toMemrefOp);

@@ -1,4 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[TRUNC32_16:%.*]] "i32toi16"
 ; CHECK-DAG: OpName [[TRUNC32_8:%.*]] "i32toi8"
@@ -20,6 +24,9 @@
 ; CHECK-DAG: OpName [[ZEXT8_16v4:%.*]] "u8tou16v4"
 ; CHECK-DAG: OpName [[ZEXT16_32v4:%.*]] "u16tou32v4"
 
+; CHECK-DAG: [[F32:%.*]] = OpTypeFloat 32
+; CHECK-DAG: [[F16:%.*]] = OpTypeFloat 16
+; CHECK-DAG: [[U64:%.*]] = OpTypeInt 64 0
 ; CHECK-DAG: [[U32:%.*]] = OpTypeInt 32 0
 ; CHECK-DAG: [[U16:%.*]] = OpTypeInt 16 0
 ; CHECK-DAG: [[U8:%.*]] = OpTypeInt 8 0
@@ -227,3 +234,48 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
   %r = zext <4 x i16> %a to <4 x i32>
   ret <4 x i32>  %r
 }
+
+; CHECK: OpFunction
+; CHECK: [[Arg1:%.*]] = OpFunctionParameter
+; CHECK: [[Arg2:%.*]] = OpFunctionParameter
+; CHECK: %[[#]] = OpConvertFToU [[U32]] %[[#]]
+; CHECK: %[[#]] = OpConvertFToS [[U32]] %[[#]]
+; CHECK: %[[#]] = OpConvertSToF [[F32]] %[[#]]
+; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#]] = OpUConvert [[U32]] %[[#]]
+; CHECK: %[[#]] = OpSConvert [[U32]] %[[#]]
+; CHECK: %[[#]] = OpFConvert [[F16]] %[[#]]
+; CHECK: %[[#]] = OpQuantizeToF16 [[F32]] %[[#]]
+; CHECK: %[[#]] = OpSatConvertSToU [[U64]] %[[#]]
+; CHECK: %[[#]] = OpSatConvertUToS [[U64]] %[[#]]
+; CHECK: %[[#]] = OpConvertPtrToU [[U64]] [[Arg1]]
+; CHECK: %[[#]] = OpConvertUToPtr %[[#]] [[Arg2]]
+; CHECK: OpFunctionEnd
+define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr) {
+  %r1 = call spir_func i32 @__spirv_ConvertFToU(float 0.000000e+00)
+  %r2 = call spir_func i32 @__spirv_ConvertFToS(float 0.000000e+00)
+  %r3 = call spir_func float @__spirv_ConvertSToF(i32 1)
+  %r4 = call spir_func float @__spirv_ConvertUToF(i32 1)
+  %r5 = call spir_func i32 @__spirv_UConvert(i64 1)
+  %r6 = call spir_func i32 @__spirv_SConvert(i64 1)
+  %r7 = call spir_func half @__spirv_FConvert(float 0.000000e+00)
+  %r8 = call spir_func float @__spirv_QuantizeToF16(float 0.000000e+00)
+  %r9 = call spir_func i64 @__spirv_SatConvertSToU(i64 1)
+  %r10 = call spir_func i64 @__spirv_SatConvertUToS(i64 1)
+  %r11 = call spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4) %arg)
+  %r12 = call spir_func ptr addrspace(4) @__spirv_ConvertUToPtr(i64 %arg_ptr)
+  ret void
+}
+
+declare dso_local spir_func i32 @__spirv_ConvertFToU(float)
+declare dso_local spir_func i32 @__spirv_ConvertFToS(float)
+declare dso_local spir_func float @__spirv_ConvertSToF(i32)
+declare dso_local spir_func float @__spirv_ConvertUToF(i32)
+declare dso_local spir_func i32 @__spirv_UConvert(i64)
+declare dso_local spir_func i32 @__spirv_SConvert(i64)
+declare dso_local spir_func half @__spirv_FConvert(float)
+declare dso_local spir_func float @__spirv_QuantizeToF16(float)
+declare dso_local spir_func i64 @__spirv_SatConvertSToU(i64)
+declare dso_local spir_func i64 @__spirv_SatConvertUToS(i64)
+declare dso_local spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4))
+declare dso_local spir_func ptr addrspace(4) @__spirv_ConvertUToPtr(i64)

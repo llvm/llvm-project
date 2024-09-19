@@ -12,7 +12,7 @@ func.func @conv(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loop:2 = transform.structured.tile_using_for %0 tile_sizes [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -30,8 +30,8 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[H:.*]] = memref.dim %[[ARG2]], %[[C0]]
 //   CHECK-DAG:   %[[W:.*]] = memref.dim %[[ARG2]], %[[C1]]
 //       CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[H]] step %[[C2]]
-//       CHECK:     %[[T4:.*]] = affine.min #[[MAP0]](%[[I]])[%[[H]]]
 //       CHECK:     scf.for %[[J:.*]] = %[[C0]] to %[[W]] step %[[C3]]
+//   CHECK-DAG:     %[[T4:.*]] = affine.min #[[MAP0]](%[[I]])[%[[H]]]
 //   CHECK-DAG:       %[[T5:.*]] = affine.min #[[MAP1]](%[[J]])[%[[W]]]
 //   CHECK-DAG:       %[[T6:.*]] = affine.apply #[[MAP2]](%[[T4]])[%[[KH]]]
 //   CHECK-DAG:       %[[T7:.*]] = affine.apply #[[MAP2]](%[[T5]])[%[[KW]]]

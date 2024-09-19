@@ -28,6 +28,7 @@ namespace llvm {
 
 namespace gsym {
 class FileWriter;
+class OutputAggregator;
 
 /// GsymCreator is used to emit GSYM data to a stand alone file or section
 /// within a file.
@@ -351,6 +352,15 @@ public:
   /// \param   FI The function info object to emplace into our functions list.
   void addFunctionInfo(FunctionInfo &&FI);
 
+  /// Organize merged FunctionInfo's
+  ///
+  /// This method processes the list of function infos (Funcs) to identify and
+  /// group functions with overlapping address ranges.
+  ///
+  /// \param  Out Output stream to report information about how merged
+  /// FunctionInfo's were handeled.
+  void prepareMergedFunctions(OutputAggregator &Out);
+
   /// Finalize the data in the GSYM creator prior to saving the data out.
   ///
   /// Finalize must be called after all FunctionInfo objects have been added
@@ -360,7 +370,7 @@ public:
   ///         function infos, and function infos that were merged or removed.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  llvm::Error finalize(llvm::raw_ostream &OS);
+  llvm::Error finalize(OutputAggregator &OS);
 
   /// Set the UUID value.
   ///

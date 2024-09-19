@@ -15,78 +15,92 @@
 #define LLVM_CODEGEN_MACHINEPOSTDOMINATORS_H
 
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include <memory>
 
 namespace llvm {
+
+extern template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
+
+namespace DomTreeBuilder {
+using MBBPostDomTree = PostDomTreeBase<MachineBasicBlock>;
+using MBBPostDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, true>;
+
+extern template void Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
+extern template void InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT,
+                                                MachineBasicBlock *From,
+                                                MachineBasicBlock *To);
+extern template void DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT,
+                                                MachineBasicBlock *From,
+                                                MachineBasicBlock *To);
+extern template void ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT,
+                                                  MBBPostDomTreeGraphDiff &,
+                                                  MBBPostDomTreeGraphDiff *);
+extern template bool
+Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
+                       MBBPostDomTree::VerificationLevel VL);
+} // namespace DomTreeBuilder
 
 ///
 /// MachinePostDominatorTree - an analysis pass wrapper for DominatorTree
 /// used to compute the post-dominator tree for MachineFunctions.
 ///
-class MachinePostDominatorTree : public MachineFunctionPass {
-  using PostDomTreeT = PostDomTreeBase<MachineBasicBlock>;
-  std::unique_ptr<PostDomTreeT> PDT;
+class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
+  using Base = PostDomTreeBase<MachineBasicBlock>;
 
 public:
-  static char ID;
+  MachinePostDominatorTree() = default;
 
-  MachinePostDominatorTree();
+  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
-  PostDomTreeT &getBase() {
-    if (!PDT)
-      PDT.reset(new PostDomTreeT());
-    return *PDT;
-  }
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
-  FunctionPass *createMachinePostDominatorTreePass();
-
-  MachineDomTreeNode *getRootNode() const { return PDT->getRootNode(); }
-
-  MachineDomTreeNode *operator[](MachineBasicBlock *BB) const {
-    return PDT->getNode(BB);
-  }
-
-  MachineDomTreeNode *getNode(MachineBasicBlock *BB) const {
-    return PDT->getNode(BB);
-  }
-
-  bool dominates(const MachineDomTreeNode *A,
-                 const MachineDomTreeNode *B) const {
-    return PDT->dominates(A, B);
-  }
-
-  bool dominates(const MachineBasicBlock *A, const MachineBasicBlock *B) const {
-    return PDT->dominates(A, B);
-  }
-
-  bool properlyDominates(const MachineDomTreeNode *A,
-                         const MachineDomTreeNode *B) const {
-    return PDT->properlyDominates(A, B);
-  }
-
-  bool properlyDominates(const MachineBasicBlock *A,
-                         const MachineBasicBlock *B) const {
-    return PDT->properlyDominates(A, B);
-  }
-
-  bool isVirtualRoot(const MachineDomTreeNode *Node) const {
-    return PDT->isVirtualRoot(Node);
-  }
-
-  MachineBasicBlock *findNearestCommonDominator(MachineBasicBlock *A,
-                                                MachineBasicBlock *B) const {
-    return PDT->findNearestCommonDominator(A, B);
-  }
+  /// Make findNearestCommonDominator(const NodeT *A, const NodeT *B) available.
+  using Base::findNearestCommonDominator;
 
   /// Returns the nearest common dominator of the given blocks.
   /// If that tree node is a virtual root, a nullptr will be returned.
   MachineBasicBlock *
   findNearestCommonDominator(ArrayRef<MachineBasicBlock *> Blocks) const;
+};
+
+class MachinePostDominatorTreeAnalysis
+    : public AnalysisInfoMixin<MachinePostDominatorTreeAnalysis> {
+  friend AnalysisInfoMixin<MachinePostDominatorTreeAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = MachinePostDominatorTree;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+class MachinePostDominatorTreePrinterPass
+    : public PassInfoMixin<MachinePostDominatorTreePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {
+  std::optional<MachinePostDominatorTree> PDT;
+
+public:
+  static char ID;
+
+  MachinePostDominatorTreeWrapperPass();
+
+  MachinePostDominatorTree &getPostDomTree() { return *PDT; }
+  const MachinePostDominatorTree &getPostDomTree() const { return *PDT; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override { PDT.reset(nullptr); }
+  void releaseMemory() override { PDT.reset(); }
   void verifyAnalysis() const override;
   void print(llvm::raw_ostream &OS, const Module *M = nullptr) const override;
 };

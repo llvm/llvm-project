@@ -817,8 +817,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
       if (Size.isUndef())
         Size = UnknownVal();
 
-      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
-                               svalBuilder);
+      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>());
     } else {
       R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
     }
@@ -846,6 +845,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
+  case CE_CXXStaticOperator:
   case CE_Block:
     break;
   case CE_CXXMember:

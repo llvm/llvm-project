@@ -59,3 +59,14 @@ define void @f5(i64 %base, i64 %index) {
   call void asm "blah $0", "=*Q" (ptr elementtype(i64) %addr)
   ret void
 }
+
+; Check A, O and R format flags.
+define void @f6(i64 %base) {
+; CHECK-LABEL: f6:
+; CHECK: blah 111,%r2
+; CHECK: br %r14
+  %add = add i64 %base, 111
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah ${0:O},${0:R}${0:A}", "=*Q" (ptr elementtype(i64) %addr)
+  ret void
+}

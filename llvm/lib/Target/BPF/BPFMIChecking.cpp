@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -42,15 +43,14 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  bool processAtomicInsts();
+  void processAtomicInsts();
 
 public:
-
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!skipFunction(MF.getFunction())) {
       initialize(MF);
-      return processAtomicInsts();
+      processAtomicInsts();
     }
     return false;
   }
@@ -106,7 +106,7 @@ void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
 // Dead correctly, and it is safe to use such information or our purpose.
 static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   const MCRegisterClass *GPR64RegClass =
-    &BPFMCRegisterClasses[BPF::GPRRegClassID];
+      &BPFMCRegisterClasses[BPF::GPRRegClassID];
   std::vector<unsigned> GPR32LiveDefs;
   std::vector<unsigned> GPR64DeadDefs;
 
@@ -152,101 +152,30 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   return false;
 }
 
-bool BPFMIPreEmitChecking::processAtomicInsts() {
+void BPFMIPreEmitChecking::processAtomicInsts() {
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != BPF::XADDW &&
-          MI.getOpcode() != BPF::XADDD &&
-          MI.getOpcode() != BPF::XADDW32)
+      if (MI.getOpcode() != BPF::XADDW && MI.getOpcode() != BPF::XADDD)
         continue;
 
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
         DebugLoc Empty;
         const DebugLoc &DL = MI.getDebugLoc();
-        if (DL != Empty)
-          report_fatal_error(Twine("line ") + std::to_string(DL.getLine()) +
-                             ": Invalid usage of the XADD return value", false);
-        else
-          report_fatal_error("Invalid usage of the XADD return value", false);
+        const Function &F = MF->getFunction();
+        F.getContext().diagnose(DiagnosticInfoUnsupported{
+            F, "Invalid usage of the XADD return value", DL});
       }
     }
   }
-
-  // Check return values of atomic_fetch_and_{add,and,or,xor}.
-  // If the return is not used, the atomic_fetch_and_<op> instruction
-  // is replaced with atomic_<op> instruction.
-  MachineInstr *ToErase = nullptr;
-  bool Changed = false;
-  const BPFInstrInfo *TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
-  for (MachineBasicBlock &MBB : *MF) {
-    for (MachineInstr &MI : MBB) {
-      if (ToErase) {
-        ToErase->eraseFromParent();
-        ToErase = nullptr;
-      }
-
-      if (MI.getOpcode() != BPF::XFADDW32 && MI.getOpcode() != BPF::XFADDD &&
-          MI.getOpcode() != BPF::XFANDW32 && MI.getOpcode() != BPF::XFANDD &&
-          MI.getOpcode() != BPF::XFXORW32 && MI.getOpcode() != BPF::XFXORD &&
-          MI.getOpcode() != BPF::XFORW32 && MI.getOpcode() != BPF::XFORD)
-        continue;
-
-      if (hasLiveDefs(MI, TRI))
-        continue;
-
-      LLVM_DEBUG(dbgs() << "Transforming "; MI.dump());
-      unsigned newOpcode;
-      switch (MI.getOpcode()) {
-      case BPF::XFADDW32:
-        newOpcode = BPF::XADDW32;
-        break;
-      case BPF::XFADDD:
-        newOpcode = BPF::XADDD;
-        break;
-      case BPF::XFANDW32:
-        newOpcode = BPF::XANDW32;
-        break;
-      case BPF::XFANDD:
-        newOpcode = BPF::XANDD;
-        break;
-      case BPF::XFXORW32:
-        newOpcode = BPF::XXORW32;
-        break;
-      case BPF::XFXORD:
-        newOpcode = BPF::XXORD;
-        break;
-      case BPF::XFORW32:
-        newOpcode = BPF::XORW32;
-        break;
-      case BPF::XFORD:
-        newOpcode = BPF::XORD;
-        break;
-      default:
-        llvm_unreachable("Incorrect Atomic Instruction Opcode");
-      }
-
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(newOpcode))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2))
-          .add(MI.getOperand(3));
-
-      ToErase = &MI;
-      Changed = true;
-    }
-  }
-
-  return Changed;
 }
 
-} // end default namespace
+} // namespace
 
 INITIALIZE_PASS(BPFMIPreEmitChecking, "bpf-mi-pemit-checking",
                 "BPF PreEmit Checking", false, false)
 
 char BPFMIPreEmitChecking::ID = 0;
-FunctionPass* llvm::createBPFMIPreEmitCheckingPass()
-{
+FunctionPass *llvm::createBPFMIPreEmitCheckingPass() {
   return new BPFMIPreEmitChecking();
 }

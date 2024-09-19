@@ -154,7 +154,7 @@ public:
   using GetSectionInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef FileName, StringRef SectionName)>;
   using GetStubInfoFunction = std::function<Expected<MemoryRegionInfo>(
-      StringRef StubContainer, StringRef TargetName)>;
+      StringRef StubContainer, StringRef TargetName, StringRef StubKindFilter)>;
   using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef GOTContainer, StringRef TargetName)>;
 

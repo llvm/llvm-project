@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -29,6 +28,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -67,8 +67,6 @@ ARMAsmBackendELF::getFixupKind(StringRef Name) const {
 }
 
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
-  unsigned IsPCRelConstant =
-      MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_Constant;
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
@@ -79,13 +77,14 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
+      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_10", 0, 32,
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 0, 8,
        MCFixupKindInfo::FKF_IsPCRel |
@@ -140,19 +139,22 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
+      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_10", 0, 32,
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 8, 8,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_adr_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_condbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_uncondbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -334,9 +336,8 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
   return nullptr;
 }
 
-bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                         const MCRelaxableFragment *DF,
-                                         const MCAsmLayout &Layout) const {
+bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                         uint64_t Value) const {
   return reasonForFixupRelaxation(Fixup, Value);
 }
 
@@ -586,6 +587,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
         return 0;
     return 0xffffff & ((Value - 8) >> 2);
   case ARM::fixup_t2_uncondbranch: {
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     Value = Value - 4;
     if (!isInt<25>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
@@ -636,6 +645,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
     }
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
 
     // The value doesn't encode the low bit (always zero) and is offset by
     // four. The 32-bit immediate value is encoded as
@@ -665,6 +682,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                          Endian == llvm::endianness::little);
   }
   case ARM::fixup_arm_thumb_blx: {
+    if (STI->getTargetTriple().isOSBinFormatCOFF() && !IsResolved &&
+        Value != 4) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset. ("Value" is offset by 4 at this point.)
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     // The value doesn't encode the low two bits (always zero) and is offset by
     // four (see fixup_arm_thumb_cp). The 32-bit immediate value is encoded as
     //   imm32 = SignExtend(S:I1:I2:imm10H:imm10L:00)
@@ -1145,7 +1170,7 @@ enum CompactUnwindEncodings {
 /// instructions. If the CFI instructions describe a frame that cannot be
 /// encoded in compact unwind, the method returns UNWIND_ARM_MODE_DWARF which
 /// tells the runtime to fallback and unwind using dwarf.
-uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
+uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
   // Only armv7k uses CFI based unwinding.
@@ -1160,14 +1185,14 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     return CU::UNWIND_ARM_MODE_DWARF;
 
   // Start off assuming CFA is at SP+0.
-  unsigned CFARegister = ARM::SP;
+  MCRegister CFARegister = ARM::SP;
   int CFARegisterOffset = 0;
   // Mark savable registers as initially unsaved
-  DenseMap<unsigned, int> RegOffsets;
+  DenseMap<MCRegister, int> RegOffsets;
   int FloatRegCount = 0;
   // Process each .cfi directive and build up compact unwind info.
   for (const MCCFIInstruction &Inst : Instrs) {
-    unsigned Reg;
+    MCRegister Reg;
     switch (Inst.getOperation()) {
     case MCCFIInstruction::OpDefCfa: // DW_CFA_def_cfa
       CFARegisterOffset = Inst.getOffset();
@@ -1201,8 +1226,8 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
       DEBUG_WITH_TYPE("compact-unwind",
                       llvm::dbgs()
                           << "CFI directive not compatible with compact "
-                             "unwind encoding, opcode=" << Inst.getOperation()
-                          << "\n");
+                             "unwind encoding, opcode="
+                          << uint8_t(Inst.getOperation()) << "\n");
       return CU::UNWIND_ARM_MODE_DWARF;
       break;
     }
@@ -1221,12 +1246,12 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   }
   int StackAdjust = CFARegisterOffset - 8;
   if (RegOffsets.lookup(ARM::LR) != (-4 - StackAdjust)) {
-    DEBUG_WITH_TYPE("compact-unwind",
-                    llvm::dbgs()
-                        << "LR not saved as standard frame, StackAdjust="
-                        << StackAdjust
-                        << ", CFARegisterOffset=" << CFARegisterOffset
-                        << ", lr save at offset=" << RegOffsets[14] << "\n");
+    DEBUG_WITH_TYPE(
+        "compact-unwind",
+        llvm::dbgs() << "LR not saved as standard frame, StackAdjust="
+                     << StackAdjust
+                     << ", CFARegisterOffset=" << CFARegisterOffset
+                     << ", lr save at offset=" << RegOffsets[ARM::LR] << "\n");
     return CU::UNWIND_ARM_MODE_DWARF;
   }
   if (RegOffsets.lookup(ARM::R7) != (-8 - StackAdjust)) {
@@ -1307,7 +1332,7 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   // Floating point registers must either be saved sequentially, or we defer to
   // DWARF. No gaps allowed here so check that each saved d-register is
   // precisely where it should be.
-  static unsigned FPRCSRegs[] = { ARM::D8, ARM::D10, ARM::D12, ARM::D14 };
+  static MCPhysReg FPRCSRegs[] = {ARM::D8, ARM::D10, ARM::D12, ARM::D14};
   for (int Idx = FloatRegCount - 1; Idx >= 0; --Idx) {
     auto Offset = RegOffsets.find(FPRCSRegs[Idx]);
     if (Offset == RegOffsets.end()) {
@@ -1347,7 +1372,9 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
-    uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
+    uint8_t OSABI = Options.FDPIC
+                        ? ELF::ELFOSABI_ARM_FDPIC
+                        : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
     return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
                                 Endian);
   }

@@ -68,9 +68,6 @@ static cl::opt<bool>
 ForceFastISel("arm-force-fast-isel",
                cl::init(false), cl::Hidden);
 
-static cl::opt<bool> EnableSubRegLiveness("arm-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
-
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -114,8 +111,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  InstSelector.reset(createARMInstructionSelector(
-      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createARMInstructionSelector(TM, *this, *RBI));
 
   RegBankInfo.reset(RBI);
 }
@@ -289,16 +285,16 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexA710:
   case CortexR4:
-  case CortexR4F:
   case CortexR5:
   case CortexR7:
   case CortexM3:
   case CortexM7:
   case CortexR52:
-  case CortexM52:
+  case CortexR52plus:
   case CortexX1:
   case CortexX1C:
     break;
@@ -313,8 +309,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case Krait:
     PreISelOperandLatencyAdjustment = 1;
     break;
-  case NeoverseN1:
-  case NeoverseN2:
   case NeoverseV1:
     break;
   case Swift:
@@ -352,7 +346,7 @@ bool ARMSubtarget::isRWPI() const {
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
@@ -366,8 +360,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {
@@ -388,8 +381,6 @@ bool ARMSubtarget::enableMachineScheduler() const {
 }
 
 bool ARMSubtarget::enableSubRegLiveness() const {
-  if (EnableSubRegLiveness.getNumOccurrences())
-    return EnableSubRegLiveness;
   // Enable SubRegLiveness for MVE to better optimize s subregs for mqpr regs
   // and q subregs for qqqqpr regs.
   return hasMVEIntegerOps();

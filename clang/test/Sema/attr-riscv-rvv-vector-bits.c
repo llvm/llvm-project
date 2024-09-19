@@ -228,8 +228,13 @@ typedef vint8m1_t two_arguments __attribute__((riscv_rvv_vector_bits(2, 4))); //
 typedef vint8m1_t non_int_size1 __attribute__((riscv_rvv_vector_bits(2.0)));   // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
 typedef vint8m1_t non_int_size2 __attribute__((riscv_rvv_vector_bits("256"))); // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
 
-// bool types and LMUL != 1 are not supported.
-typedef vbool1_t fixed_vbool1_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vbool1_t'}}
+typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool2_t fixed_bool2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+typedef vbool8_t fixed_bool8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
+typedef vbool16_t fixed_bool16_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 16)));
+typedef vbool32_t fixed_bool32_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 32)));
+typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 64)));
 
 // Attribute must be attached to a single RVV vector or predicate type.
 typedef void *badtype1 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));         // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'void *'}}
@@ -242,10 +247,13 @@ vint8m1_t non_typedef_type __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_
 // Test that we can define non-local fixed-length RVV types (unsupported for
 // sizeless types).
 fixed_int8m1_t global_int8;
+fixed_bool1_t global_bool1;
 
 extern fixed_int8m1_t extern_int8;
+extern fixed_bool1_t extern_bool1;
 
 static fixed_int8m1_t static_int8;
+static fixed_bool1_t static_bool1;
 
 fixed_int8m1_t *global_int8_ptr;
 extern fixed_int8m1_t *extern_int8_ptr;
@@ -398,6 +406,26 @@ _Static_assert(sizeof(fixed_int64m8_t) == VECTOR_SIZE * 8, "");
 _Static_assert(sizeof(fixed_float32m8_t) == VECTOR_SIZE * 8, "");
 _Static_assert(sizeof(fixed_float64m8_t) == VECTOR_SIZE * 8, "");
 
+_Static_assert(sizeof(fixed_bool1_t) == VECTOR_SIZE, "");
+_Static_assert(sizeof(fixed_bool2_t) == VECTOR_SIZE / 2, "");
+_Static_assert(sizeof(fixed_bool4_t) == VECTOR_SIZE / 4, "");
+_Static_assert(sizeof(fixed_bool8_t) == VECTOR_SIZE / 8, "");
+#if __riscv_v_fixed_vlen / 16 >= 8
+_Static_assert(sizeof(fixed_bool16_t) == VECTOR_SIZE / 16, "");
+#else
+_Static_assert(sizeof(fixed_bool16_t) == 1, "");
+#endif
+#if __riscv_v_fixed_vlen / 32 >= 8
+_Static_assert(sizeof(fixed_bool32_t) == VECTOR_SIZE / 32, "");
+#else
+_Static_assert(sizeof(fixed_bool32_t) == 1, "");
+#endif
+#if __riscv_v_fixed_vlen / 64 >= 8
+_Static_assert(sizeof(fixed_bool64_t) == VECTOR_SIZE / 64, "");
+#else
+_Static_assert(sizeof(fixed_bool64_t) == 1, "");
+#endif
+
 // --------------------------------------------------------------------------//
 // Alignof
 
@@ -474,6 +502,14 @@ _Static_assert(__alignof__(fixed_uint64m8_t) == VECTOR_ALIGN, "");
 
 _Static_assert(__alignof__(fixed_float32m8_t) == VECTOR_ALIGN, "");
 _Static_assert(__alignof__(fixed_float64m8_t) == VECTOR_ALIGN, "");
+
+_Static_assert(__alignof__(fixed_bool1_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_bool2_t) == (sizeof(fixed_bool2_t) < VECTOR_ALIGN ? sizeof(fixed_bool2_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_bool4_t) == (sizeof(fixed_bool4_t) < VECTOR_ALIGN ? sizeof(fixed_bool4_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_bool8_t) == (sizeof(fixed_bool8_t) < VECTOR_ALIGN ? sizeof(fixed_bool8_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_bool16_t) == (sizeof(fixed_bool16_t) < VECTOR_ALIGN ? sizeof(fixed_bool16_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_bool32_t) == (sizeof(fixed_bool32_t) < VECTOR_ALIGN ? sizeof(fixed_bool32_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_bool64_t) == (sizeof(fixed_bool64_t) < VECTOR_ALIGN ? sizeof(fixed_bool64_t) : VECTOR_ALIGN), "");
 
 // --------------------------------------------------------------------------//
 // Structs
@@ -580,6 +616,26 @@ TEST_CAST_VECTOR(uint64m8)
 TEST_CAST_VECTOR(float32m8)
 TEST_CAST_VECTOR(float64m8)
 
+TEST_CAST_COMMON(bool1);
+TEST_CAST_COMMON(bool2);
+TEST_CAST_COMMON(bool4);
+TEST_CAST_COMMON(bool8);
+#if __riscv_v_fixed_vlen / 16 >= 8
+TEST_CAST_COMMON(bool16);
+#endif
+#if __riscv_v_fixed_vlen / 32 >= 8
+TEST_CAST_COMMON(bool32);
+#endif
+#if __riscv_v_fixed_vlen / 64 >= 8
+TEST_CAST_COMMON(bool64);
+#endif
+
+// Test conversion between mask and uint8 is invalid, both have the same
+// memory representation.
+fixed_bool1_t to_fixed_bool1_t__from_vuint8m1_t(vuint8m1_t x) { return x; } // expected-error-re {{returning 'vuint8m1_t' (aka '__rvv_uint8m1_t') from a function with incompatible result type 'fixed_bool1_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
+
+// --------------------------------------------------------------------------//
+
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably
 
@@ -594,6 +650,14 @@ vfloat64m4_t __attribute__((overloadable)) vfunc(vfloat64m4_t op1, vfloat64m4_t 
 
 vint32m8_t __attribute__((overloadable)) vfunc(vint32m8_t op1, vint32m8_t op2);
 vfloat64m8_t __attribute__((overloadable)) vfunc(vfloat64m8_t op1, vfloat64m8_t op2);
+
+vbool1_t __attribute__((overloadable)) vfunc(vbool1_t op1, vbool1_t op2);
+vbool2_t __attribute__((overloadable)) vfunc(vbool2_t op1, vbool2_t op2);
+vbool4_t __attribute__((overloadable)) vfunc(vbool4_t op1, vbool4_t op2);
+vbool8_t __attribute__((overloadable)) vfunc(vbool8_t op1, vbool8_t op2);
+vbool16_t __attribute__((overloadable)) vfunc(vbool16_t op1, vbool16_t op2);
+vbool32_t __attribute__((overloadable)) vfunc(vbool32_t op1, vbool32_t op2);
+vbool64_t __attribute__((overloadable)) vfunc(vbool64_t op1, vbool64_t op2);
 
 #define TEST_CALL(TYPE)                                              \
   fixed_##TYPE##_t                                                   \
@@ -620,6 +684,20 @@ TEST_CALL(float64m4)
 
 TEST_CALL(int32m8)
 TEST_CALL(float64m8)
+
+TEST_CALL(bool1)
+TEST_CALL(bool2)
+TEST_CALL(bool4)
+TEST_CALL(bool8)
+#if __riscv_v_fixed_vlen / 16 >= 8
+TEST_CALL(bool16)
+#endif
+#if __riscv_v_fixed_vlen / 32 >= 8
+TEST_CALL(bool32)
+#endif
+#if __riscv_v_fixed_vlen / 64 >= 8
+TEST_CALL(bool64)
+#endif
 
 // --------------------------------------------------------------------------//
 // Vector initialization

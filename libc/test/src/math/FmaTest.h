@@ -9,90 +9,94 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
-#include "src/__support/FPUtil/FPBits.h"
+#include "src/stdlib/rand.h"
+#include "src/stdlib/srand.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "test/src/math/RandUtils.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T>
-class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
-private:
-  using Func = T (*)(T, T, T);
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
+template <typename OutType, typename InType = OutType>
+class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
-  StorageType get_random_bit_pattern() {
-    StorageType bits{0};
-    for (StorageType i = 0; i < sizeof(StorageType) / 2; ++i) {
-      bits = (bits << 2) +
-             static_cast<uint16_t>(LIBC_NAMESPACE::testutils::rand());
+  struct OutConstants {
+    DECLARE_SPECIAL_CONSTANTS(OutType)
+  };
+
+  struct InConstants {
+    DECLARE_SPECIAL_CONSTANTS(InType)
+  };
+
+  using OutFPBits = typename OutConstants::FPBits;
+  using OutStorageType = typename OutConstants::StorageType;
+  using InFPBits = typename InConstants::FPBits;
+  using InStorageType = typename InConstants::StorageType;
+
+  static constexpr OutStorageType OUT_MIN_NORMAL_U =
+      OutFPBits::min_normal().uintval();
+  static constexpr InStorageType IN_MAX_NORMAL_U =
+      InFPBits::max_normal().uintval();
+  static constexpr InStorageType IN_MIN_NORMAL_U =
+      InFPBits::min_normal().uintval();
+  static constexpr InStorageType IN_MAX_SUBNORMAL_U =
+      InFPBits::max_subnormal().uintval();
+  static constexpr InStorageType IN_MIN_SUBNORMAL_U =
+      InFPBits::min_subnormal().uintval();
+
+  InStorageType get_random_bit_pattern() {
+    InStorageType bits{0};
+    for (InStorageType i = 0; i < sizeof(InStorageType) / 2; ++i) {
+      bits = (bits << 2) + static_cast<uint16_t>(LIBC_NAMESPACE::rand());
     }
     return bits;
   }
 
 public:
-  void test_special_numbers(Func func) {
-    EXPECT_FP_EQ(func(zero, zero, zero), zero);
-    EXPECT_FP_EQ(func(zero, neg_zero, neg_zero), neg_zero);
-    EXPECT_FP_EQ(func(inf, inf, zero), inf);
-    EXPECT_FP_EQ(func(neg_inf, inf, neg_inf), neg_inf);
-    EXPECT_FP_EQ(func(inf, zero, zero), nan);
-    EXPECT_FP_EQ(func(inf, neg_inf, inf), nan);
-    EXPECT_FP_EQ(func(nan, zero, inf), nan);
-    EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
+  using FmaFunc = OutType (*)(InType, InType, InType);
 
-    // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), FPBits::min_denormal(), FPBits::min_denormal()),
-                 T(FPBits(StorageType(2))));
-    // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
-    EXPECT_FP_EQ(
-        func(T(1) / T(FPBits::MIN_NORMAL << 1), v, FPBits::min_normal()), v);
-    // Test overflow.
-    T z = FPBits::max_normal();
-    EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
-    // Exact cancellation.
-    EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));
-    EXPECT_FP_EQ(func(T(-3.0), T(5.0), T(15.0)), T(0.0));
-  }
-
-  void test_subnormal_range(Func func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
+  void test_subnormal_range(FmaFunc func) {
+    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType STEP =
+        (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
+    LIBC_NAMESPACE::srand(1);
+    for (InStorageType v = IN_MIN_SUBNORMAL_U, w = IN_MAX_SUBNORMAL_U;
+         v <= IN_MAX_SUBNORMAL_U && w >= IN_MIN_SUBNORMAL_U;
          v += STEP, w -= STEP) {
-      T x = T(FPBits(get_random_bit_pattern())), y = T(FPBits(v)),
-        z = T(FPBits(w));
-      mpfr::TernaryInput<T> input{x, y, z};
+      InType x = InFPBits(get_random_bit_pattern()).get_val();
+      InType y = InFPBits(v).get_val();
+      InType z = InFPBits(w).get_val();
+      mpfr::TernaryInput<InType> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);
     }
   }
 
-  void test_normal_range(Func func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w)),
-        z = T(FPBits(get_random_bit_pattern()));
-      mpfr::TernaryInput<T> input{x, y, z};
+  void test_normal_range(FmaFunc func) {
+    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
+    LIBC_NAMESPACE::srand(1);
+    for (InStorageType v = IN_MIN_NORMAL_U, w = IN_MAX_NORMAL_U;
+         v <= IN_MAX_NORMAL_U && w >= IN_MIN_NORMAL_U; v += STEP, w -= STEP) {
+      InType x = InFPBits(v).get_val();
+      InType y = InFPBits(w).get_val();
+      InType z = InFPBits(get_random_bit_pattern()).get_val();
+      mpfr::TernaryInput<InType> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);
     }
   }
 };
+
+#define LIST_FMA_TESTS(T, func)                                                \
+  using LlvmLibcFmaTest = FmaTestTemplate<T>;                                  \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
+
+#define LIST_NARROWING_FMA_TESTS(OutType, InType, func)                        \
+  using LlvmLibcFmaTest = FmaTestTemplate<OutType, InType>;                    \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMATEST_H

@@ -9,6 +9,3 @@ set(LLVM_LINK_COMPONENTS Core Target AllTargetsCodeGens AllTargetsDescs AllTarge
 add_llvm_unittest(TargetMachineCTests
   TargetMachineOptionsTest.cpp
 )
-
-set_property(TARGET TargetMachineCTests
-  PROPERTY FOLDER "Tests/UnitTests/TargetTests")

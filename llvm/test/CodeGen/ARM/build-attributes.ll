@@ -224,6 +224,10 @@
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-neon,-fp64,-d32 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-SP
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NEON
 
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52plus -mattr=-vfp2sp,-fp16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NOFPU
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52plus -mattr=-neon,-fp64,-d32 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-SP
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52plus | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NEON
+
 ; ARMv8-M
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m23 | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=NO-STRICT-ALIGN

@@ -47,22 +47,22 @@ define void @reorder_crash(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[BB0:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[PTR]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP1]], [[BB0]] ], [ [[TMP4]], [[BB1]] ], [ [[SHUFFLE]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x float> [ [[TMP0]], [[BB0]] ], [ [[TMP1]], [[BB1]] ], [ [[TMP4]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

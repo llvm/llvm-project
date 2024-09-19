@@ -191,10 +191,10 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
 ///   non-live across all callers),
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
-/// iff it is not public.
+/// iff it is not public or declaration.
 static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
                         RunLivenessAnalysis &la) {
-  if (funcOp.isPublic())
+  if (funcOp.isPublic() || funcOp.isDeclaration())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
@@ -594,13 +594,9 @@ void RemoveDeadValues::runOnOperation() {
       cleanFuncOp(funcOp, module, la);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       cleanRegionBranchOp(regionBranchOp, la);
-    } else if (op->hasTrait<OpTrait::ReturnLike>()) {
-      // Nothing to do because this terminator is associated with either a
-      // function op or a region branch op and gets cleaned when these ops are
-      // cleaned.
-    } else if (isa<RegionBranchTerminatorOpInterface>(op)) {
-      // Nothing to do because this terminator is associated with a region
-      // branch op and gets cleaned when the latter is cleaned.
+    } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
+      // Nothing to do here because this is a terminator op and it should be
+      // honored with respect to its parent
     } else if (isa<CallOpInterface>(op)) {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.

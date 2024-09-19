@@ -1,9 +1,6 @@
 ## This test checks how we handle the --bb-addr-map option on relocatable
 ## object files.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 # RUN: yaml2obj %s -o %t1.o
 # RUN: llvm-readobj %t1.o --bb-addr-map | FileCheck %s
 
@@ -11,32 +8,42 @@
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x0
 # CHECK-NEXT:     Name: <?>
-# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:     BB Ranges [
 # CHECK-NEXT:       {
-# CHECK-NEXT:         ID: 0
-# CHECK-NEXT:         Offset: 0x0
-# CHECK-NEXT:         Size: 0xF
-# CHECK-NEXT:         HasReturn: Yes
-# CHECK-NEXT:         HasTailCall: No
-# CHECK-NEXT:         IsEHPad: No
-# CHECK-NEXT:         CanFallThrough: No
-# CHECK-NEXT:         HasIndirectBranch: No
+# CHECK-NEXT:         Base Address: 0x0
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0xF
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x10
 # CHECK-NEXT:     Name: <?>
-# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:     BB Ranges [
 # CHECK-NEXT:       {
-# CHECK-NEXT:         ID: 0
-# CHECK-NEXT:         Offset: 0x0
-# CHECK-NEXT:         Size: 0x11
-# CHECK-NEXT:         HasReturn: No
-# CHECK-NEXT:         HasTailCall: No
-# CHECK-NEXT:         IsEHPad: No
-# CHECK-NEXT:         CanFallThrough: Yes
-# CHECK-NEXT:         HasIndirectBranch: No
+# CHECK-NEXT:         Base Address: 0x10
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x11
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: Yes
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -57,17 +64,19 @@ Sections:
     Link:    .text
     Entries:
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0xF
-            Metadata:        0x1
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0xF
+              Metadata:        0x1
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0x11
-            Metadata:        0x8
+        BBRanges:
+          - BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0x11
+               Metadata:        0x8
   - Name:  .rela.llvm_bb_addr_map
     Type:  SHT_RELA
     Flags: [ SHF_INFO_LINK ]
@@ -131,7 +140,8 @@ Sections:
     Link:    .text
     Entries:
       - Version: 2
-        BBEntries:
+        BBRanges:
+        - BBEntries:
           - ID:              0
             AddressOffset:   0x0
             Size:            0xF
@@ -184,12 +194,13 @@ Sections:
     Flags:           [ SHF_LINK_ORDER ]
     Entries:
       - Version:         2
-        Address:         0xF
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0xF
-            Metadata:        0x1
+        BBRanges:
+          - BaseAddress:         0xF
+            BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0xF
+               Metadata:        0x1
 
 # RUN: yaml2obj %s --docnum=5 -o %t5.o
 # RUN: llvm-readobj %t5.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=ET-DYN-NO-WARNING -DFILE=%t5.o
@@ -198,16 +209,21 @@ Sections:
 # ET-DYN-NO-WARNING:   Function {
 # ET-DYN-NO-WARNING:     At: 0xF
 # ET-DYN-NO-WARNING:     Name: <?>
-# ET-DYN-NO-WARNING:     BB entries [
+# ET-DYN-NO-WARNING:     BB Ranges [
 # ET-DYN-NO-WARNING:       {
-# ET-DYN-NO-WARNING:         ID: 0
-# ET-DYN-NO-WARNING:         Offset: 0x0
-# ET-DYN-NO-WARNING:         Size: 0xF
-# ET-DYN-NO-WARNING:         HasReturn: Yes
-# ET-DYN-NO-WARNING:         HasTailCall: No
-# ET-DYN-NO-WARNING:         IsEHPad: No
-# ET-DYN-NO-WARNING:         CanFallThrough: No
-# ET-DYN-NO-WARNING:         HasIndirectBranch: No
+# ET-DYN-NO-WARNING:         Base Address: 0xF
+# ET-DYN-NO-WARNING:         BB Entries [
+# ET-DYN-NO-WARNING:           {
+# ET-DYN-NO-WARNING:             ID: 0
+# ET-DYN-NO-WARNING:             Offset: 0x0
+# ET-DYN-NO-WARNING:             Size: 0xF
+# ET-DYN-NO-WARNING:             HasReturn: Yes
+# ET-DYN-NO-WARNING:             HasTailCall: No
+# ET-DYN-NO-WARNING:             IsEHPad: No
+# ET-DYN-NO-WARNING:             CanFallThrough: No
+# ET-DYN-NO-WARNING:             HasIndirectBranch: No
+# ET-DYN-NO-WARNING:           }
+# ET-DYN-NO-WARNING:         ]
 # ET-DYN-NO-WARNING:       }
 # ET-DYN-NO-WARNING:     ]
 # ET-DYN-NO-WARNING:   }

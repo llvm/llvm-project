@@ -45,9 +45,9 @@ template <typename ...T> struct A {
   template <T ...x[3]> struct B {};
 };
 
-// CHECK1-LABEL: template <typename ...T> void f(T ...[3]) {
+// CHECK1-LABEL: template <typename ...T> void f() {
 // CHECK1-NEXT:    A<T[3]...> a;
-template <typename ...T> void f(T ...[3]) {
+template <typename ...T> void f() {
   A<T[3]...> a;
 }
 
@@ -103,4 +103,18 @@ void (*q)() = f<>;
 // can do to differentiate these two implicit specializations.
 // CHECK1: template<> void f<0L>()
 // CHECK1: template<> void f<0U>()
+}
+
+namespace test6 {
+template <class D>
+constexpr bool C = true;
+
+template <class Key>
+void func() {
+  C<Key>;
+// DUMP:      UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'C'
+// DUMP-NEXT: `-TemplateArgument type 'Key'
+// DUMP-NEXT:   `-TemplateTypeParmType {{.*}} 'Key' dependent depth 0 index 0
+// DUMP-NEXT:     `-TemplateTypeParm {{.*}} 'Key'
+}
 }

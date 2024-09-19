@@ -1,8 +1,7 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64 %s -o - | FileCheck %s --check-prefixes CHECK,V8A
-; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN-V83A: aarch64 -mattr=+v8.3a %s -o - > %t
-; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V8A
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 -mattr=+v8.3a %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 
 define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" nounwind {
 ; CHECK-LABEL:      a:                                     // @a
@@ -21,7 +20,7 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" n
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
 ; V8A:              hint #29
-; V83A:             autiasp
+; V83A:             retaa
   ret void
 }
 
@@ -42,7 +41,7 @@ define void @b() "sign-return-address"="all" nounwind {
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
 ; V8A:              hint #29
-; V83A:             autiasp
+; V83A:             retaa
   ret void
 }
 
@@ -63,7 +62,7 @@ define void @c() "sign-return-address"="all" nounwind {
   store i32 5, ptr %5, align 4
   store i32 6, ptr %6, align 4
 ; V8A:              hint #29
-; V83A:             autiasp
+; V83A:             retaa
   ret void
 }
 
@@ -71,5 +70,5 @@ define void @c() "sign-return-address"="all" nounwind {
 ; V8A:                hint #25
 ; V83A:               paciasp
 ; V8A:                hint #29
-; V83A:               autiasp
-; CHECK-NEXT:         ret
+; V8A-NEXT:           ret
+; V83A:               retaa

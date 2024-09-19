@@ -12,6 +12,7 @@
 
 #include "TGLexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h" // for strtoull()/strtoll() define
@@ -20,7 +21,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include <algorithm>
-#include <cctype>
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -32,17 +32,47 @@ using namespace llvm;
 namespace {
 // A list of supported preprocessing directives with their
 // internal token kinds and names.
-struct {
+struct PreprocessorDir {
   tgtok::TokKind Kind;
-  const char *Word;
-} PreprocessorDirs[] = {
-  { tgtok::Ifdef, "ifdef" },
-  { tgtok::Ifndef, "ifndef" },
-  { tgtok::Else, "else" },
-  { tgtok::Endif, "endif" },
-  { tgtok::Define, "define" }
+  StringRef Word;
 };
 } // end anonymous namespace
+
+/// Returns true if `C` is a valid character in an identifier. If `First` is
+/// true, returns true if `C` is a valid first character of an identifier,
+/// else returns true if `C` is a valid non-first character of an identifier.
+/// Identifiers match the following regular expression:
+///   [a-zA-Z_][0-9a-zA-Z_]*
+static bool isValidIDChar(char C, bool First) {
+  if (C == '_' || isAlpha(C))
+    return true;
+  return !First && isDigit(C);
+}
+
+constexpr PreprocessorDir PreprocessorDirs[] = {{tgtok::Ifdef, "ifdef"},
+                                                {tgtok::Ifndef, "ifndef"},
+                                                {tgtok::Else, "else"},
+                                                {tgtok::Endif, "endif"},
+                                                {tgtok::Define, "define"}};
+
+// Returns a pointer past the end of a valid macro name at the start of `Str`.
+// Valid macro names match the regular expression [a-zA-Z_][0-9a-zA-Z_]*.
+static const char *lexMacroName(StringRef Str) {
+  assert(!Str.empty());
+
+  // Macro names start with [a-zA-Z_].
+  const char *Next = Str.begin();
+  if (!isValidIDChar(*Next, /*First=*/true))
+    return Next;
+  // Eat the first character of the name.
+  ++Next;
+
+  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
+  const char *End = Str.end();
+  while (Next != End && isValidIDChar(*Next, /*First=*/false))
+    ++Next;
+  return Next;
+}
 
 TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   CurBuffer = SrcMgr.getMainFileID();
@@ -54,9 +84,16 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
   PrepIncludeStack.push_back(
       std::make_unique<std::vector<PreprocessorControlDesc>>());
 
-  // Put all macros defined in the command line into the DefinedMacros set.
-  for (const std::string &MacroName : Macros)
+  // Add all macros defined on the command line to the DefinedMacros set.
+  // Check invalid macro names and print fatal error if we find one.
+  for (StringRef MacroName : Macros) {
+    const char *End = lexMacroName(MacroName);
+    if (End != MacroName.end())
+      PrintFatalError("Invalid macro name `" + MacroName +
+                      "` specified on command line");
+
     DefinedMacros.insert(MacroName);
+  }
 }
 
 SMLoc TGLexer::getLoc() const {
@@ -147,7 +184,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
   switch (CurChar) {
   default:
     // Handle letters: [a-zA-Z_]
-    if (isalpha(CurChar) || CurChar == '_')
+    if (isValidIDChar(CurChar, /*First=*/true))
       return LexIdentifier();
 
     // Unknown character, emit an error.
@@ -224,14 +261,14 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
   case '0': case '1': case '2': case '3': case '4': case '5': case '6':
   case '7': case '8': case '9': {
     int NextChar = 0;
-    if (isdigit(CurChar)) {
+    if (isDigit(CurChar)) {
       // Allow identifiers to start with a number if it is followed by
       // an identifier.  This can happen with paste operations like
       // foo#8i.
       int i = 0;
       do {
         NextChar = peekNextChar(i++);
-      } while (isdigit(NextChar));
+      } while (isDigit(NextChar));
 
       if (NextChar == 'x' || NextChar == 'b') {
         // If this is [0-9]b[01] or [0-9]x[0-9A-fa-f] this is most
@@ -255,7 +292,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
       }
     }
 
-    if (isalpha(NextChar) || NextChar == '_')
+    if (isValidIDChar(NextChar, /*First=*/true))
       return LexIdentifier();
 
     return LexNumber();
@@ -321,13 +358,13 @@ tgtok::TokKind TGLexer::LexString() {
 }
 
 tgtok::TokKind TGLexer::LexVarName() {
-  if (!isalpha(CurPtr[0]) && CurPtr[0] != '_')
+  if (!isValidIDChar(CurPtr[0], /*First=*/true))
     return ReturnError(TokStart, "Invalid variable name");
 
   // Otherwise, we're ok, consume the rest of the characters.
   const char *VarNameStart = CurPtr++;
 
-  while (isalpha(*CurPtr) || isdigit(*CurPtr) || *CurPtr == '_')
+  while (isValidIDChar(*CurPtr, /*First=*/false))
     ++CurPtr;
 
   CurStrVal.assign(VarNameStart, CurPtr);
@@ -339,7 +376,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
   const char *IdentStart = TokStart;
 
   // Match the rest of the identifier regex: [0-9a-zA-Z_]*
-  while (isalpha(*CurPtr) || isdigit(*CurPtr) || *CurPtr == '_')
+  while (isValidIDChar(*CurPtr, /*First=*/false))
     ++CurPtr;
 
   // Check to see if this identifier is a reserved keyword.
@@ -360,6 +397,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
                             .Case("foreach", tgtok::Foreach)
                             .Case("defm", tgtok::Defm)
                             .Case("defset", tgtok::Defset)
+                            .Case("deftype", tgtok::Deftype)
                             .Case("multiclass", tgtok::MultiClass)
                             .Case("field", tgtok::Field)
                             .Case("let", tgtok::Let)
@@ -473,7 +511,7 @@ tgtok::TokKind TGLexer::LexNumber() {
       Base = 16;
       do
         ++CurPtr;
-      while (isxdigit(CurPtr[0]));
+      while (isHexDigit(CurPtr[0]));
     } else if (CurPtr[0] == 'b') {
       Base = 2;
       do
@@ -488,7 +526,7 @@ tgtok::TokKind TGLexer::LexNumber() {
   // Check if it's a decimal value.
   if (Base == 0) {
     // Check for a sign without a digit.
-    if (!isdigit(CurPtr[0])) {
+    if (!isDigit(CurPtr[0])) {
       if (CurPtr[-1] == '-')
         return tgtok::minus;
       else if (CurPtr[-1] == '+')
@@ -499,7 +537,7 @@ tgtok::TokKind TGLexer::LexNumber() {
     NumStart = TokStart;
     IsMinus = CurPtr[-1] == '-';
 
-    while (isdigit(CurPtr[0]))
+    while (isDigit(CurPtr[0]))
       ++CurPtr;
   }
 
@@ -547,11 +585,11 @@ tgtok::TokKind TGLexer::LexBracket() {
 
 /// LexExclaim - Lex '!' and '![a-zA-Z]+'.
 tgtok::TokKind TGLexer::LexExclaim() {
-  if (!isalpha(*CurPtr))
+  if (!isAlpha(*CurPtr))
     return ReturnError(CurPtr - 1, "Invalid \"!operator\"");
 
   const char *Start = CurPtr++;
-  while (isalpha(*CurPtr))
+  while (isAlpha(*CurPtr))
     ++CurPtr;
 
   // Check to see which operator this is.
@@ -640,54 +678,43 @@ bool TGLexer::prepExitInclude(bool IncludeStackMustBeEmpty) {
 }
 
 tgtok::TokKind TGLexer::prepIsDirective() const {
-  for (const auto &PD : PreprocessorDirs) {
-    int NextChar = *CurPtr;
-    bool Match = true;
-    unsigned I = 0;
-    for (; I < strlen(PD.Word); ++I) {
-      if (NextChar != PD.Word[I]) {
-        Match = false;
-        break;
-      }
+  for (const auto [Kind, Word] : PreprocessorDirs) {
+    if (StringRef(CurPtr, Word.size()) != Word)
+      continue;
+    int NextChar = peekNextChar(Word.size());
 
-      NextChar = peekNextChar(I + 1);
-    }
-
-    // Check for whitespace after the directive.  If there is no whitespace,
+    // Check for whitespace after the directive. If there is no whitespace,
     // then we do not recognize it as a preprocessing directive.
-    if (Match) {
-      tgtok::TokKind Kind = PD.Kind;
 
-      // New line and EOF may follow only #else/#endif.  It will be reported
-      // as an error for #ifdef/#define after the call to prepLexMacroName().
-      if (NextChar == ' ' || NextChar == '\t' || NextChar == EOF ||
-          NextChar == '\n' ||
-          // It looks like TableGen does not support '\r' as the actual
-          // carriage return, e.g. getNextChar() treats a single '\r'
-          // as '\n'.  So we do the same here.
-          NextChar == '\r')
+    // New line and EOF may follow only #else/#endif. It will be reported
+    // as an error for #ifdef/#define after the call to prepLexMacroName().
+    if (NextChar == ' ' || NextChar == '\t' || NextChar == EOF ||
+        NextChar == '\n' ||
+        // It looks like TableGen does not support '\r' as the actual
+        // carriage return, e.g. getNextChar() treats a single '\r'
+        // as '\n'.  So we do the same here.
+        NextChar == '\r')
+      return Kind;
+
+    // Allow comments after some directives, e.g.:
+    //     #else// OR #else/**/
+    //     #endif// OR #endif/**/
+    //
+    // Note that we do allow comments after #ifdef/#define here, e.g.
+    //     #ifdef/**/ AND #ifdef//
+    //     #define/**/ AND #define//
+    //
+    // These cases will be reported as incorrect after calling
+    // prepLexMacroName().  We could have supported C-style comments
+    // after #ifdef/#define, but this would complicate the code
+    // for little benefit.
+    if (NextChar == '/') {
+      NextChar = peekNextChar(Word.size() + 1);
+
+      if (NextChar == '*' || NextChar == '/')
         return Kind;
 
-      // Allow comments after some directives, e.g.:
-      //     #else// OR #else/**/
-      //     #endif// OR #endif/**/
-      //
-      // Note that we do allow comments after #ifdef/#define here, e.g.
-      //     #ifdef/**/ AND #ifdef//
-      //     #define/**/ AND #define//
-      //
-      // These cases will be reported as incorrect after calling
-      // prepLexMacroName().  We could have supported C-style comments
-      // after #ifdef/#define, but this would complicate the code
-      // for little benefit.
-      if (NextChar == '/') {
-        NextChar = peekNextChar(I + 1);
-
-        if (NextChar == '*' || NextChar == '/')
-          return Kind;
-
-        // Pretend that we do not recognize the directive.
-      }
+      // Pretend that we do not recognize the directive.
     }
   }
 
@@ -697,10 +724,10 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
 bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   TokStart = CurPtr;
 
-  for (const auto &PD : PreprocessorDirs)
-    if (PD.Kind == Kind) {
+  for (const auto [PKind, PWord] : PreprocessorDirs)
+    if (PKind == Kind) {
       // Advance CurPtr to the end of the preprocessing word.
-      CurPtr += strlen(PD.Word);
+      CurPtr += PWord.size();
       return true;
     }
 
@@ -709,9 +736,8 @@ bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   return false;
 }
 
-tgtok::TokKind TGLexer::lexPreprocessor(
-    tgtok::TokKind Kind, bool ReturnNextLiveToken) {
-
+tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
+                                        bool ReturnNextLiveToken) {
   // We must be looking at a preprocessing directive.  Eat it!
   if (!prepEatPreprocessorDirective(Kind))
     PrintFatalError("lexPreprocessor() called for unknown "
@@ -848,7 +874,8 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    prepSkipToLineEnd();
+    while (*CurPtr != '\n')
+      ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).
     if (!prepSkipLineBegin())
@@ -910,14 +937,7 @@ StringRef TGLexer::prepLexMacroName() {
     ++CurPtr;
 
   TokStart = CurPtr;
-  // Macro names start with [a-zA-Z_].
-  if (*CurPtr != '_' && !isalpha(*CurPtr))
-    return "";
-
-  // Match the rest of the identifier regex: [0-9a-zA-Z_]*
-  while (isalpha(*CurPtr) || isdigit(*CurPtr) || *CurPtr == '_')
-    ++CurPtr;
-
+  CurPtr = lexMacroName(StringRef(CurPtr, CurBuf.end() - CurPtr));
   return StringRef(TokStart, CurPtr - TokStart);
 }
 
@@ -1029,11 +1049,6 @@ bool TGLexer::prepSkipDirectiveEnd() {
   }
 
   return true;
-}
-
-void TGLexer::prepSkipToLineEnd() {
-  while (*CurPtr != '\n' && *CurPtr != '\r' && CurPtr != CurBuf.end())
-    ++CurPtr;
 }
 
 bool TGLexer::prepIsProcessingEnabled() {

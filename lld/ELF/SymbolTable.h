@@ -57,6 +57,9 @@ public:
 
   void handleDynamicList();
 
+  Symbol *addUnusedUndefined(StringRef name,
+                             uint8_t binding = llvm::ELF::STB_GLOBAL);
+
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseMap<llvm::CachedHashStringRef, SharedFile *> soNames;
 

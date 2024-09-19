@@ -20,6 +20,8 @@ namespace {
 class LoopExtension
     : public transform::TransformDialectExtension<LoopExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoopExtension)
+
   void init() {
     registerTransformOps<
 #define GET_OP_LIST

@@ -100,8 +100,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
                      hasArgument(0, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("printf")),
@@ -112,8 +111,7 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
         unusedReturnValue(
             callExpr(argumentCountAtLeast(2),
                      hasArgument(1, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         matchers::matchesAnyListedName(
+                     callee(functionDecl(matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))
                                 .bind("func_decl")))
                 .bind("fprintf")),
@@ -129,8 +127,11 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
     FormatArgOffset = 1;
   }
 
+  utils::FormatStringConverter::Configuration ConverterConfig;
+  ConverterConfig.StrictMode = StrictMode;
+  ConverterConfig.AllowTrailingNewlineRemoval = true;
   utils::FormatStringConverter Converter(
-      Result.Context, Printf, FormatArgOffset, StrictMode, getLangOpts());
+      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts());
   const Expr *PrintfCall = Printf->getCallee();
   const StringRef ReplacementFunction = Converter.usePrintNewlineFunction()
                                             ? ReplacementPrintlnFunction
@@ -138,7 +139,8 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Converter.canApply()) {
     diag(PrintfCall->getBeginLoc(),
          "unable to use '%0' instead of %1 because %2")
-        << ReplacementFunction << OldFunction->getIdentifier()
+        << PrintfCall->getSourceRange() << ReplacementFunction
+        << OldFunction->getIdentifier()
         << Converter.conversionNotPossibleReason();
     return;
   }
@@ -148,7 +150,7 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
       << ReplacementFunction << OldFunction->getIdentifier();
 
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(PrintfCall->getBeginLoc(),
+      CharSourceRange::getTokenRange(PrintfCall->getExprLoc(),
                                      PrintfCall->getEndLoc()),
       ReplacementFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);

@@ -11,9 +11,12 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/StreamString.h"
+
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -48,36 +51,8 @@ bool BreakpointIDList::AddBreakpointID(BreakpointID bp_id) {
                // return true.
 }
 
-bool BreakpointIDList::AddBreakpointID(const char *bp_id_str) {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  m_breakpoint_ids.push_back(*bp_id);
-  return true;
-}
-
-bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
-                                        size_t *position) const {
-  for (size_t i = 0; i < m_breakpoint_ids.size(); ++i) {
-    BreakpointID tmp_id = m_breakpoint_ids[i];
-    if (tmp_id.GetBreakpointID() == bp_id.GetBreakpointID() &&
-        tmp_id.GetLocationID() == bp_id.GetLocationID()) {
-      *position = i;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
-                                        size_t *position) const {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  return FindBreakpointID(*bp_id, position);
+bool BreakpointIDList::Contains(BreakpointID bp_id) const {
+  return llvm::is_contained(m_breakpoint_ids, bp_id);
 }
 
 //  This function takes OLD_ARGS, which is usually the result of breaking the
@@ -93,12 +68,9 @@ bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
 //  NEW_ARGS should be a copy of OLD_ARGS, with and ID range specifiers replaced
 //  by the members of the range.
 
-void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
-                                              bool allow_locations,
-                                              BreakpointName::Permissions
-                                                  ::PermissionKinds purpose,
-                                              CommandReturnObject &result,
-                                              Args &new_args) {
+llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
+    Args &old_args, Target *target, bool allow_locations,
+    BreakpointName::Permissions ::PermissionKinds purpose, Args &new_args) {
   llvm::StringRef range_from;
   llvm::StringRef range_to;
   llvm::StringRef current_arg;
@@ -109,11 +81,11 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
 
     current_arg = old_args[i].ref();
     if (!allow_locations && current_arg.contains('.')) {
-      result.AppendErrorWithFormat(
+      new_args.Clear();
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Breakpoint locations not allowed, saw location: %s.",
           current_arg.str().c_str());
-      new_args.Clear();
-      return;
     }
 
     Status error;
@@ -125,8 +97,8 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     } else if (BreakpointID::StringIsBreakpointName(current_arg, error)) {
       if (!error.Success()) {
         new_args.Clear();
-        result.AppendError(error.AsCString());
-        return;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       error.AsCString());
       } else
         names_found.insert(std::string(current_arg));
     } else if ((i + 2 < old_args.size()) &&
@@ -140,31 +112,27 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     } else {
       // See if user has specified id.*
       llvm::StringRef tmp_str = old_args[i].ref();
-      size_t pos = tmp_str.find('.');
-      if (pos != llvm::StringRef::npos) {
-        llvm::StringRef bp_id_str = tmp_str.substr(0, pos);
-        if (BreakpointID::IsValidIDExpression(bp_id_str) &&
-            tmp_str[pos + 1] == '*' && tmp_str.size() == (pos + 2)) {
+      auto [prefix, suffix] = tmp_str.split('.');
+      if (suffix == "*" && BreakpointID::IsValidIDExpression(prefix)) {
 
-          BreakpointSP breakpoint_sp;
-          auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-          if (bp_id)
-            breakpoint_sp = target->GetBreakpointByID(bp_id->GetBreakpointID());
-          if (!breakpoint_sp) {
-            new_args.Clear();
-            result.AppendErrorWithFormat("'%d' is not a valid breakpoint ID.\n",
+        BreakpointSP breakpoint_sp;
+        auto bp_id = BreakpointID::ParseCanonicalReference(prefix);
+        if (bp_id)
+          breakpoint_sp = target->GetBreakpointByID(bp_id->GetBreakpointID());
+        if (!breakpoint_sp) {
+          new_args.Clear();
+          return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                         "'%d' is not a valid breakpoint ID.\n",
                                          bp_id->GetBreakpointID());
-            return;
-          }
-          const size_t num_locations = breakpoint_sp->GetNumLocations();
-          for (size_t j = 0; j < num_locations; ++j) {
-            BreakpointLocation *bp_loc =
-                breakpoint_sp->GetLocationAtIndex(j).get();
-            StreamString canonical_id_str;
-            BreakpointID::GetCanonicalReference(
-                &canonical_id_str, bp_id->GetBreakpointID(), bp_loc->GetID());
-            new_args.AppendArgument(canonical_id_str.GetString());
-          }
+        }
+        const size_t num_locations = breakpoint_sp->GetNumLocations();
+        for (size_t j = 0; j < num_locations; ++j) {
+          BreakpointLocation *bp_loc =
+              breakpoint_sp->GetLocationAtIndex(j).get();
+          StreamString canonical_id_str;
+          BreakpointID::GetCanonicalReference(
+              &canonical_id_str, bp_id->GetBreakpointID(), bp_loc->GetID());
+          new_args.AppendArgument(canonical_id_str.GetString());
         }
       }
     }
@@ -180,17 +148,17 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     if (!start_bp ||
         !target->GetBreakpointByID(start_bp->GetBreakpointID())) {
       new_args.Clear();
-      result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
-                                   range_from.str().c_str());
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "'%s' is not a valid breakpoint ID.\n",
+                                     range_from.str().c_str());
     }
 
     if (!end_bp ||
         !target->GetBreakpointByID(end_bp->GetBreakpointID())) {
       new_args.Clear();
-      result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
-                                   range_to.str().c_str());
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "'%s' is not a valid breakpoint ID.\n",
+                                     range_to.str().c_str());
     }
     break_id_t start_bp_id = start_bp->GetBreakpointID();
     break_id_t start_loc_id = start_bp->GetLocationID();
@@ -201,11 +169,11 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
         ((start_loc_id != LLDB_INVALID_BREAK_ID) &&
          (end_loc_id == LLDB_INVALID_BREAK_ID))) {
       new_args.Clear();
-      result.AppendError("Invalid breakpoint id range:  Either "
-                         "both ends of range must specify"
-                         " a breakpoint location, or neither can "
-                         "specify a breakpoint location.");
-      return;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid breakpoint id range:  Either "
+                                     "both ends of range must specify"
+                                     " a breakpoint location, or neither can "
+                                     "specify a breakpoint location.");
     }
 
     // We have valid range starting & ending breakpoint IDs.  Go through all
@@ -221,13 +189,13 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
         (end_loc_id != LLDB_INVALID_BREAK_ID)) {
       if (start_bp_id != end_bp_id) {
         new_args.Clear();
-        result.AppendErrorWithFormat(
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
             "Invalid range: Ranges that specify particular breakpoint "
             "locations"
             " must be within the same major breakpoint; you specified two"
             " different major breakpoints, %d and %d.\n",
             start_bp_id, end_bp_id);
-        return;
       }
     }
 
@@ -291,7 +259,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     
     if (!names_found.empty()) {
       for (BreakpointSP bkpt_sp : target->GetBreakpointList().Breakpoints()) {
-        for (std::string name : names_found) {
+        for (const std::string &name : names_found) {
           if (bkpt_sp->MatchesName(name.c_str())) {
             StreamString canonical_id_str;
             BreakpointID::GetCanonicalReference(
@@ -302,8 +270,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       }
     }
   }
-
-  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  return llvm::Error::success();
 }
 
 std::pair<llvm::StringRef, llvm::StringRef>

@@ -21,6 +21,8 @@ StringRef clang::languageToString(Language L) {
     return "Asm";
   case Language::LLVM_IR:
     return "LLVM IR";
+  case Language::CIR:
+    return "ClangIR";
   case Language::C:
     return "C";
   case Language::CXX:
@@ -69,6 +71,17 @@ LangStandard::Kind LangStandard::getLangKind(StringRef Name) {
       .Default(lang_unspecified);
 }
 
+LangStandard::Kind LangStandard::getHLSLLangKind(StringRef Name) {
+  return llvm::StringSwitch<LangStandard::Kind>(Name)
+      .Case("2016", LangStandard::lang_hlsl2016)
+      .Case("2017", LangStandard::lang_hlsl2017)
+      .Case("2018", LangStandard::lang_hlsl2018)
+      .Case("2021", LangStandard::lang_hlsl2021)
+      .Case("202x", LangStandard::lang_hlsl202x)
+      .Case("202y", LangStandard::lang_hlsl202y)
+      .Default(LangStandard::lang_unspecified);
+}
+
 const LangStandard *LangStandard::getLangStandardForName(StringRef Name) {
   Kind K = getLangKind(Name);
   if (K == lang_unspecified)
@@ -82,6 +95,7 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   switch (Lang) {
   case Language::Unknown:
   case Language::LLVM_IR:
+  case Language::CIR:
     llvm_unreachable("Invalid input kind!");
   case Language::OpenCL:
     return LangStandard::lang_opencl12;
@@ -103,7 +117,7 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   case Language::RenderScript:
     return LangStandard::lang_c99;
   case Language::HLSL:
-    return LangStandard::lang_hlsl2021;
+    return LangStandard::lang_hlsl202x;
   }
   llvm_unreachable("unhandled Language kind!");
 }

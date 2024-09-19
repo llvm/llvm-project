@@ -16,14 +16,14 @@ define void @constant_expressions() {
 ; CHECK-NEXT:    movl %edx, (%eax)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* inttoptr (i32 add (i32 -289477652, i32 0) to i32*)
-  %1 = load i32, i32* inttoptr (i32 add (i32 -289477652, i32 4) to i32*)
-  %2 = load i32, i32* inttoptr (i32 add (i32 -289477652, i32 8) to i32*)
-  %3 = load i32, i32* inttoptr (i32 add (i32 -289477652, i32 16) to i32*)
+  %0 = load i32, ptr inttoptr (i32 add (i32 -289477652, i32 0) to ptr)
+  %1 = load i32, ptr inttoptr (i32 add (i32 -289477652, i32 4) to ptr)
+  %2 = load i32, ptr inttoptr (i32 add (i32 -289477652, i32 8) to ptr)
+  %3 = load i32, ptr inttoptr (i32 add (i32 -289477652, i32 16) to ptr)
   %4 = add i32 %0, %1
   %5 = add i32 %2, %3
   %6 = add i32 %4, %5
-  store i32 %6, i32* inttoptr (i32 add (i32 -289477652, i32 0) to i32*)
+  store i32 %6, ptr inttoptr (i32 add (i32 -289477652, i32 0) to ptr)
   ret void
 }
 
@@ -43,13 +43,13 @@ define void @constant_expressions2() {
 ; CHECK-NEXT:    movl %edx, (%eax)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* inttoptr (i32 -289477652 to i32*)
-  %1 = load i32, i32* inttoptr (i32 -289477648 to i32*)
-  %2 = load i32, i32* inttoptr (i32 -289477644 to i32*)
-  %3 = load i32, i32* inttoptr (i32 -289477640 to i32*)
+  %0 = load i32, ptr inttoptr (i32 -289477652 to ptr)
+  %1 = load i32, ptr inttoptr (i32 -289477648 to ptr)
+  %2 = load i32, ptr inttoptr (i32 -289477644 to ptr)
+  %3 = load i32, ptr inttoptr (i32 -289477640 to ptr)
   %4 = add i32 %0, %1
   %5 = add i32 %2, %3
   %6 = add i32 %4, %5
-  store i32 %6, i32* inttoptr (i32 -289477652 to i32*)
+  store i32 %6, ptr inttoptr (i32 -289477652 to ptr)
   ret void
 }

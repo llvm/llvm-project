@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; This caused an lnt crash at some point, just verify it will run through and
 ; produce the PHI node in the exit we are looking for.

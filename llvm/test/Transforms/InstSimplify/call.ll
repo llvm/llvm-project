@@ -976,7 +976,7 @@ define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
 ; CHECK-LABEL: @fshr_zero_vec(
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %r = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 undef>, <2 x i8> %shamt)
+  %r = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 poison>, <2 x i8> %shamt)
   ret <2 x i8> %r
 }
 
@@ -984,7 +984,7 @@ define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
 ; CHECK-LABEL: @fshl_ones_vec(
 ; CHECK-NEXT:    ret <2 x i7> <i7 -1, i7 -1>
 ;
-  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 undef, i7 -1>, <2 x i7> <i7 -1, i7 undef>, <2 x i7> %shamt)
+  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 poison, i7 -1>, <2 x i7> <i7 -1, i7 poison>, <2 x i7> %shamt)
   ret <2 x i7> %r
 }
 
@@ -1466,7 +1466,7 @@ define <3 x i33> @cttz_shl1_vec(<3 x i33> %x) {
 ; CHECK-LABEL: @cttz_shl1_vec(
 ; CHECK-NEXT:    ret <3 x i33> [[X:%.*]]
 ;
-  %s = shl <3 x i33> <i33 1, i33 1, i33 undef>, %x
+  %s = shl <3 x i33> <i33 1, i33 1, i33 poison>, %x
   %r = call <3 x i33> @llvm.cttz.v3i33(<3 x i33> %s, i1 false)
   ret <3 x i33> %r
 }
@@ -1509,7 +1509,7 @@ define <3 x i33> @ctlz_lshr_sign_bit_vec(<3 x i33> %x) {
 ; CHECK-LABEL: @ctlz_lshr_sign_bit_vec(
 ; CHECK-NEXT:    ret <3 x i33> [[X:%.*]]
 ;
-  %s = lshr <3 x i33> <i33 undef, i33 4294967296, i33 4294967296>, %x
+  %s = lshr <3 x i33> <i33 poison, i33 4294967296, i33 4294967296>, %x
   %r = call <3 x i33> @llvm.ctlz.v3i33(<3 x i33> %s, i1 false)
   ret <3 x i33> %r
 }
@@ -1549,7 +1549,7 @@ define <3 x i33> @ctlz_ashr_sign_bit_vec(<3 x i33> %x) {
 ; CHECK-LABEL: @ctlz_ashr_sign_bit_vec(
 ; CHECK-NEXT:    ret <3 x i33> zeroinitializer
 ;
-  %s = ashr <3 x i33> <i33 4294967296, i33 undef, i33 4294967296>, %x
+  %s = ashr <3 x i33> <i33 4294967296, i33 poison, i33 4294967296>, %x
   %r = call <3 x i33> @llvm.ctlz.v3i33(<3 x i33> %s, i1 true)
   ret <3 x i33> %r
 }

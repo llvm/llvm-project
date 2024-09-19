@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+
 using namespace llvm;
 
 namespace {
@@ -127,7 +128,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
       PrefixTy = Private;
   }
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   if (!GV->hasName()) {
     // Get the ID for the global, assigning a new one if we haven't got one
     // already.
@@ -192,7 +193,7 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
 
 // Check if the name needs quotes to be safe for the linker to interpret.
 static bool canBeUnquotedInDirective(char C) {
-  return isAlnum(C) || C == '_' || C == '@';
+  return isAlnum(C) || C == '_' || C == '@' || C == '#';
 }
 
 static bool canBeUnquotedInDirective(StringRef Name) {
@@ -226,12 +227,22 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       raw_string_ostream FlagOS(Flag);
       Mangler.getNameWithPrefix(FlagOS, GV, false);
       FlagOS.flush();
-      if (Flag[0] == GV->getParent()->getDataLayout().getGlobalPrefix())
+      if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
         OS << Flag.substr(1);
       else
         OS << Flag;
     } else {
       Mangler.getNameWithPrefix(OS, GV, false);
+    }
+    if (TT.isWindowsArm64EC()) {
+      // Use EXPORTAS for mangled ARM64EC symbols.
+      // FIXME: During LTO, we're invoked prior to the EC lowering pass,
+      // so symbols are not yet mangled. Emitting the unmangled name
+      // typically functions correctly; the linker can resolve the export
+      // with the demangled alias.
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(GV->getName()))
+        OS << ",EXPORTAS," << *demangledName;
     }
     if (NeedQuotes)
       OS << "\"";
@@ -255,7 +266,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     raw_string_ostream FlagOS(Flag);
     Mangler.getNameWithPrefix(FlagOS, GV, false);
     FlagOS.flush();
-    if (Flag[0] == GV->getParent()->getDataLayout().getGlobalPrefix())
+    if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
       OS << Flag.substr(1);
     else
       OS << Flag;
@@ -279,3 +290,43 @@ void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
     OS << "\"";
 }
 
+std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
+  if (Name[0] != '?') {
+    // For non-C++ symbols, prefix the name with "#" unless it's already
+    // mangled.
+    if (Name[0] == '#')
+      return std::nullopt;
+    return std::optional<std::string>(("#" + Name).str());
+  }
+
+  // Insert the ARM64EC "$$h" tag after the mangled function name.
+  if (Name.contains("$$h"))
+    return std::nullopt;
+  size_t InsertIdx = Name.find("@@");
+  size_t ThreeAtSignsIdx = Name.find("@@@");
+  if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
+    InsertIdx += 2;
+  } else {
+    InsertIdx = Name.find("@");
+    if (InsertIdx != std::string::npos)
+      InsertIdx++;
+  }
+
+  return std::optional<std::string>(
+      (Name.substr(0, InsertIdx) + "$$h" + Name.substr(InsertIdx)).str());
+}
+
+std::optional<std::string>
+llvm::getArm64ECDemangledFunctionName(StringRef Name) {
+  // For non-C++ names, drop the "#" prefix.
+  if (Name[0] == '#')
+    return std::optional<std::string>(Name.substr(1));
+  if (Name[0] != '?')
+    return std::nullopt;
+
+  // Drop the ARM64EC "$$h" tag.
+  std::pair<StringRef, StringRef> Pair = Name.split("$$h");
+  if (Pair.second.empty())
+    return std::nullopt;
+  return std::optional<std::string>((Pair.first + Pair.second).str());
+}

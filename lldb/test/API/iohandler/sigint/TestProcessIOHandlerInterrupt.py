@@ -11,6 +11,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class TestCase(PExpectTest):
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test(self):

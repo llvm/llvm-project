@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
+#include "Common/CodeGenTarget.h"
 #include "TableGenBackends.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -102,8 +103,8 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    ArrayRef<const CodeGenInstruction*> numberedInstructions =
-      Target.getInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> numberedInstructions =
+        Target.getInstructionsByEnumValue();
 
     for (unsigned i = 0, e = numberedInstructions.size(); i != e; ++i)
       RecognizableInstr::processInstr(Tables, *numberedInstructions[i], i);
@@ -130,6 +131,8 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     PredicateNamespace = "ARM";
   EmitDecoder(Records, OS, PredicateNamespace);
 }
+
+cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
 static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
                                 "Generate disassembler");

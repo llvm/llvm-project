@@ -1,7 +1,7 @@
 # RUN: dsymutil -f %p/../Inputs/lc_build_version.x86_64 -o - \
 # RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
 
-# RUN: dsymutil --linker llvm -f %p/../Inputs/lc_build_version.x86_64 -o - \
+# RUN: dsymutil --linker parallel -f %p/../Inputs/lc_build_version.x86_64 -o - \
 # RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
 
 CHECK: LoadCommands:

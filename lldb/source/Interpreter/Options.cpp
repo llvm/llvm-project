@@ -811,7 +811,8 @@ Status OptionGroupOptions::SetOptionValue(uint32_t option_idx,
         execution_context);
 
   } else {
-    error.SetErrorString("invalid option index"); // Shouldn't happen...
+    error =
+        Status::FromErrorString("invalid option index"); // Shouldn't happen...
   }
   return error;
 }
@@ -922,7 +923,7 @@ static std::string BuildShortOptions(const Option *long_options) {
       }
     }
   }
-  return std::move(sstr.str());
+  return storage;
 }
 
 llvm::Expected<Args> Options::ParseAlias(const Args &args,
@@ -931,8 +932,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
   Option *long_options = GetLongOptions();
 
   if (long_options == nullptr) {
-    return llvm::make_error<llvm::StringError>("Invalid long options",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Invalid long options");
   }
 
   std::string short_options = BuildShortOptions(long_options);
@@ -957,8 +957,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
       break;
 
     if (val == '?') {
-      return llvm::make_error<llvm::StringError>(
-          "Unknown or ambiguous option", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("Unknown or ambiguous option");
     }
 
     if (val == 0)
@@ -980,9 +979,8 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Invalid option with value '{0}'.", char(val)).str(),
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          llvm::formatv("Invalid option with value '{0}'.", char(val)).str());
     }
 
     StreamString option_str;
@@ -995,11 +993,10 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     switch (has_arg) {
     case OptionParser::eRequiredArgument:
       if (OptionParser::GetOptionArgument() == nullptr) {
-        return llvm::make_error<llvm::StringError>(
+        return llvm::createStringError(
             llvm::formatv("Option '{0}' is missing argument specifier.",
                           option_str.GetString())
-                .str(),
-            llvm::inconvertibleErrorCode());
+                .str());
       }
       [[fallthrough]];
     case OptionParser::eOptionalArgument:
@@ -1008,12 +1005,11 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     case OptionParser::eNoArgument:
       break;
     default:
-      return llvm::make_error<llvm::StringError>(
+      return llvm::createStringError(
           llvm::formatv("error with options table; invalid value in has_arg "
                         "field for option '{0}'.",
                         char(val))
-              .str(),
-          llvm::inconvertibleErrorCode());
+              .str());
     }
     // Find option in the argument list; also see if it was supposed to take an
     // argument and if one was supplied.  Remove option (and argument, if
@@ -1202,21 +1198,12 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
         }
         break;
       case OptionParser::eOptionalArgument:
-        if (OptionParser::GetOptionArgument() != nullptr) {
-          option_element_vector.push_back(OptionArgElement(
-              opt_defs_index,
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
-                                args),
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
-                                args)));
-        } else {
-          option_element_vector.push_back(OptionArgElement(
-              opt_defs_index,
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
-                                args),
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
-                                args)));
-        }
+        option_element_vector.push_back(OptionArgElement(
+            opt_defs_index,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                              args),
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args)));
         break;
       default:
         // The options table is messed up.  Here we'll just continue
@@ -1261,8 +1248,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   Status error;
   Option *long_options = GetLongOptions();
   if (long_options == nullptr) {
-    return llvm::make_error<llvm::StringError>("Invalid long options.",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Invalid long options.");
   }
 
   std::string short_options = BuildShortOptions(long_options);
@@ -1276,7 +1262,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
                               &long_options_index);
 
     if (val == ':') {
-      error.SetErrorString("last option requires an argument");
+      error = Status::FromErrorString("last option requires an argument");
       break;
     }
 
@@ -1285,7 +1271,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
 
     // Did we get an error?
     if (val == '?') {
-      error.SetErrorString("unknown or ambiguous option");
+      error = Status::FromErrorString("unknown or ambiguous option");
       break;
     }
     // The option auto-set itself
@@ -1322,9 +1308,8 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       if (!platform_sp && require_validation) {
         // Caller requires validation but we cannot validate as we don't have
         // the mandatory platform against which to validate.
-        return llvm::make_error<llvm::StringError>(
-            "cannot validate options: no platform available",
-            llvm::inconvertibleErrorCode());
+        return llvm::createStringError(
+            "cannot validate options: no platform available");
       }
 
       bool validation_failed = false;
@@ -1335,9 +1320,9 @@ llvm::Expected<Args> Options::Parse(const Args &args,
             execution_context ? execution_context : &dummy_context;
         if (validator && !validator->IsValid(*platform_sp, *exe_ctx_p)) {
           validation_failed = true;
-          error.SetErrorStringWithFormat("Option \"%s\" invalid.  %s",
-                                         def->long_option,
-                                         def->validator->LongConditionString());
+          error = Status::FromErrorStringWithFormat(
+              "Option \"%s\" invalid.  %s", def->long_option,
+              def->validator->LongConditionString());
         }
       }
 
@@ -1354,7 +1339,8 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       if (error.Fail())
         break;
     } else {
-      error.SetErrorStringWithFormat("invalid option with value '%i'", val);
+      error = Status::FromErrorStringWithFormat(
+          "invalid option with value '%i'", val);
     }
   }
 
@@ -1364,4 +1350,17 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   argv.pop_back();
   argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
   return ReconstituteArgsAfterParsing(argv, args);
+}
+
+llvm::Error lldb_private::CreateOptionParsingError(
+    llvm::StringRef option_arg, const char short_option,
+    llvm::StringRef long_option, llvm::StringRef additional_context) {
+  std::string buffer;
+  llvm::raw_string_ostream stream(buffer);
+  stream << "Invalid value ('" << option_arg << "') for -" << short_option;
+  if (!long_option.empty())
+    stream << " (" << long_option << ")";
+  if (!additional_context.empty())
+    stream << ": " << additional_context;
+  return llvm::createStringError(llvm::inconvertibleErrorCode(), buffer);
 }

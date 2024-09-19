@@ -173,8 +173,6 @@ public:
         Ty = Type::getX86_FP80Ty(Context);
       else if (Arg == "ppc_fp128")
         Ty = Type::getPPC_FP128Ty(Context);
-      else if (Arg == "x86_mmx")
-        Ty = Type::getX86_MMXTy(Context);
       else if (Arg.starts_with("i")) {
         unsigned N = 0;
         Arg.drop_front().getAsInteger(10, N);
@@ -294,11 +292,7 @@ protected:
   /// Pick a random vector type.
   Type *pickVectorType(VectorType *VTy = nullptr) {
 
-    // Vectors of x86mmx are illegal; keep trying till we get something else.
-    Type *Ty;
-    do {
-      Ty = pickScalarType();
-    } while (Ty->isX86_MMXTy());
+    Type *Ty = pickScalarType();
 
     if (VTy)
       return VectorType::get(Ty, VTy->getElementCount());
@@ -342,7 +336,7 @@ struct LoadModifier: public Modifier {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
     Type *Ty = pickType();
-    Value *V = new LoadInst(Ty, Ptr, "L", BB->getTerminator());
+    Value *V = new LoadInst(Ty, Ptr, "L", BB->getTerminator()->getIterator());
     PT->push_back(V);
   }
 };
@@ -362,7 +356,7 @@ struct StoreModifier: public Modifier {
       return;
 
     Value *Val = getRandomValue(ValTy);
-    new StoreInst(Val, Ptr, BB->getTerminator());
+    new StoreInst(Val, Ptr, BB->getTerminator()->getIterator());
   }
 };
 
@@ -405,7 +399,8 @@ struct BinModifier: public Modifier {
     case 12:{Op = Instruction::Xor;  break; }
     }
 
-    PT->push_back(BinaryOperator::Create(Op, Val0, Val1, "B", Term));
+    PT->push_back(
+        BinaryOperator::Create(Op, Val0, Val1, "B", Term->getIterator()));
   }
 };
 
@@ -467,9 +462,9 @@ struct AllocaModifier: public Modifier {
 
   void Act() override {
     Type *Tp = pickType();
-    const DataLayout &DL = BB->getModule()->getDataLayout();
-    PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(),
-                                 "A", BB->getFirstNonPHI()));
+    const DataLayout &DL = BB->getDataLayout();
+    PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(), "A",
+                                 BB->getFirstNonPHIIt()));
   }
 };
 
@@ -480,9 +475,8 @@ struct ExtractElementModifier: public Modifier {
   void Act() override {
     Value *Val0 = getRandomVectorValue();
     Value *V = ExtractElementInst::Create(
-        Val0,
-        getRandomValue(Type::getInt32Ty(BB->getContext())),
-        "E", BB->getTerminator());
+        Val0, getRandomValue(Type::getInt32Ty(BB->getContext())), "E",
+        BB->getTerminator()->getIterator());
     return PT->push_back(V);
   }
 };
@@ -514,7 +508,7 @@ struct ShuffModifier: public Modifier {
     Constant *Mask = ConstantVector::get(Idxs);
 
     Value *V = new ShuffleVectorInst(Val0, Val1, Mask, "Shuff",
-                                     BB->getTerminator());
+                                     BB->getTerminator()->getIterator());
     PT->push_back(V);
   }
 };
@@ -528,9 +522,8 @@ struct InsertElementModifier: public Modifier {
     Value *Val1 = getRandomValue(Val0->getType()->getScalarType());
 
     Value *V = InsertElementInst::Create(
-        Val0, Val1,
-        getRandomValue(Type::getInt32Ty(BB->getContext())),
-        "I", BB->getTerminator());
+        Val0, Val1, getRandomValue(Type::getInt32Ty(BB->getContext())), "I",
+        BB->getTerminator()->getIterator());
     return PT->push_back(V);
   }
 };
@@ -556,7 +549,7 @@ struct CastModifier: public Modifier {
       if (!DestTy->isPointerTy())
         DestTy = PointerType::get(DestTy, 0);
       return PT->push_back(
-        new BitCastInst(V, DestTy, "PC", BB->getTerminator()));
+          new BitCastInst(V, DestTy, "PC", BB->getTerminator()->getIterator()));
     }
 
     unsigned VSize = VTy->getScalarType()->getPrimitiveSizeInBits();
@@ -565,47 +558,50 @@ struct CastModifier: public Modifier {
     // Generate lots of bitcasts.
     if ((getRandom() & 1) && VSize == DestSize) {
       return PT->push_back(
-        new BitCastInst(V, DestTy, "BC", BB->getTerminator()));
+          new BitCastInst(V, DestTy, "BC", BB->getTerminator()->getIterator()));
     }
 
     // Both types are integers:
     if (VTy->isIntOrIntVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (VSize > DestSize) {
         return PT->push_back(
-          new TruncInst(V, DestTy, "Tr", BB->getTerminator()));
+            new TruncInst(V, DestTy, "Tr", BB->getTerminator()->getIterator()));
       } else {
         assert(VSize < DestSize && "Different int types with the same size?");
         if (getRandom() & 1)
-          return PT->push_back(
-            new ZExtInst(V, DestTy, "ZE", BB->getTerminator()));
-        return PT->push_back(new SExtInst(V, DestTy, "Se", BB->getTerminator()));
+          return PT->push_back(new ZExtInst(
+              V, DestTy, "ZE", BB->getTerminator()->getIterator()));
+        return PT->push_back(
+            new SExtInst(V, DestTy, "Se", BB->getTerminator()->getIterator()));
       }
     }
 
     // Fp to int.
     if (VTy->isFPOrFPVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (getRandom() & 1)
-        return PT->push_back(
-          new FPToSIInst(V, DestTy, "FC", BB->getTerminator()));
-      return PT->push_back(new FPToUIInst(V, DestTy, "FC", BB->getTerminator()));
+        return PT->push_back(new FPToSIInst(
+            V, DestTy, "FC", BB->getTerminator()->getIterator()));
+      return PT->push_back(
+          new FPToUIInst(V, DestTy, "FC", BB->getTerminator()->getIterator()));
     }
 
     // Int to fp.
     if (VTy->isIntOrIntVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (getRandom() & 1)
-        return PT->push_back(
-          new SIToFPInst(V, DestTy, "FC", BB->getTerminator()));
-      return PT->push_back(new UIToFPInst(V, DestTy, "FC", BB->getTerminator()));
+        return PT->push_back(new SIToFPInst(
+            V, DestTy, "FC", BB->getTerminator()->getIterator()));
+      return PT->push_back(
+          new UIToFPInst(V, DestTy, "FC", BB->getTerminator()->getIterator()));
     }
 
     // Both floats.
     if (VTy->isFPOrFPVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (VSize > DestSize) {
-        return PT->push_back(
-          new FPTruncInst(V, DestTy, "Tr", BB->getTerminator()));
+        return PT->push_back(new FPTruncInst(
+            V, DestTy, "Tr", BB->getTerminator()->getIterator()));
       } else if (VSize < DestSize) {
         return PT->push_back(
-          new FPExtInst(V, DestTy, "ZE", BB->getTerminator()));
+            new FPExtInst(V, DestTy, "ZE", BB->getTerminator()->getIterator()));
       }
       // If VSize == DestSize, then the two types must be fp128 and ppc_fp128,
       // for which there is no defined conversion. So do nothing.
@@ -631,7 +627,8 @@ struct SelectModifier: public Modifier {
         CondTy = VectorType::get(CondTy, VTy->getElementCount());
 
     Value *Cond = getRandomValue(CondTy);
-    Value *V = SelectInst::Create(Cond, Val0, Val1, "Sl", BB->getTerminator());
+    Value *V = SelectInst::Create(Cond, Val0, Val1, "Sl",
+                                  BB->getTerminator()->getIterator());
     return PT->push_back(V);
   }
 };
@@ -660,7 +657,7 @@ struct CmpModifier: public Modifier {
 
     Value *V = CmpInst::Create(fp ? Instruction::FCmp : Instruction::ICmp,
                                (CmpInst::Predicate)op, Val0, Val1, "Cmp",
-                               BB->getTerminator());
+                               BB->getTerminator()->getIterator());
     return PT->push_back(V);
   }
 };
@@ -718,7 +715,8 @@ static void IntroduceControlFlow(Function *F, Random &R) {
     BasicBlock *Next = Curr->splitBasicBlock(Loc, "CF");
     Instr->moveBefore(Curr->getTerminator());
     if (Curr != &F->getEntryBlock()) {
-      BranchInst::Create(Curr, Next, Instr, Curr->getTerminator());
+      BranchInst::Create(Curr, Next, Instr,
+                         Curr->getTerminator()->getIterator());
       Curr->getTerminator()->eraseFromParent();
     }
   }

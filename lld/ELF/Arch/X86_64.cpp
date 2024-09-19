@@ -310,27 +310,31 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA difference is under 2^31, GOT-generating relocations with a 32-bit range cannot overflow.
-  if (isUInt<31>(maxVA - minVA))
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // -pie/-shared, the condition can be relaxed to test the max VA difference as
+  // there is no R_RELAX_GOT_PC_NOPIC.
+  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && config->isPic))
     return false;
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
       for (Relocation &rel : sec->relocs()) {
-        if (rel.expr != R_RELAX_GOT_PC)
+        if (rel.expr != R_RELAX_GOT_PC && rel.expr != R_RELAX_GOT_PC_NOPIC)
           continue;
+        assert(rel.addend == -4);
 
         uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.addend,
-            sec->getOutputSection()->addr + rel.offset, *rel.sym, rel.expr);
+            sec->file, rel.type, rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4,
+            sec->getOutputSection()->addr + sec->outSecOff + rel.offset,
+            *rel.sym, rel.expr);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {
@@ -403,11 +407,11 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
 }
 
 void X86_64::writeGotPltHeader(uint8_t *buf) const {
-  // The first entry holds the value of _DYNAMIC. It is not clear why that is
-  // required, but it is documented in the psabi and the glibc dynamic linker
-  // seems to use it (note that this is relevant for linking ld.so, not any
-  // other program).
-  write64le(buf, mainPart->dynamic->getVA());
+  // The first entry holds the link-time address of _DYNAMIC. It is documented
+  // in the psABI and glibc before Aug 2021 used the entry to compute run-time
+  // load address of the shared object (note that this is relevant for linking
+  // ld.so, not any other program).
+  write64le(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -428,8 +432,8 @@ void X86_64::writePltHeader(uint8_t *buf) const {
       0x0f, 0x1f, 0x40, 0x00, // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t plt = in.ibtPlt ? in.ibtPlt->getVA() : in.plt->getVA();
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.ibtPlt ? ctx.in.ibtPlt->getVA() : ctx.in.plt->getVA();
   write32le(buf + 2, gotPlt - plt + 2); // GOTPLT+8
   write32le(buf + 8, gotPlt - plt + 4); // GOTPLT+16
 }
@@ -445,7 +449,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 
   write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
   write32le(buf + 7, sym.getPltIdx());
-  write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
+  write32le(buf + 12, ctx.in.plt->getVA() - pltEntryAddr - 16);
 }
 
 RelType X86_64::getDynRel(RelType type) const {
@@ -1069,7 +1073,7 @@ IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
-      in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
+      ctx.in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1158,8 +1162,8 @@ void Retpoline::writePltHeader(uint8_t *buf) const {
   };
   memcpy(buf, insn, sizeof(insn));
 
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
   write32le(buf + 2, gotPlt - plt - 6 + 8);
   write32le(buf + 9, gotPlt - plt - 13 + 16);
 }
@@ -1176,7 +1180,7 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  uint64_t off = pltEntryAddr - in.plt->getVA();
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
 
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
@@ -1217,7 +1221,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   memcpy(buf, insn, sizeof(insn));
 
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
-  write32le(buf + 8, in.plt->getVA() - pltEntryAddr - 12);
+  write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 
 static TargetInfo *getTargetInfo() {

@@ -31,6 +31,7 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "ProcessGDBRemoteLog.h"
@@ -539,9 +540,8 @@ bool GDBRemoteCommunication::DecompressPacket() {
       else if (m_compression_type == CompressionType::ZlibDeflate)
         scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_ZLIB);
       else if (m_compression_type == CompressionType::LZMA)
-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZMA);
-      else if (m_compression_type == CompressionType::LZFSE)
-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZFSE);
+        scratchbuf_size =
+            compression_decode_scratch_buffer_size(COMPRESSION_LZMA);
       if (scratchbuf_size > 0) {
         m_decompression_scratch = (void*) malloc (scratchbuf_size);
         m_decompression_scratch_type = m_compression_type;
@@ -836,7 +836,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 Status GDBRemoteCommunication::StartListenThread(const char *hostname,
                                                  uint16_t port) {
   if (m_listen_thread.IsJoinable())
-    return Status("listen thread already running");
+    return Status::FromErrorString("listen thread already running");
 
   char listen_url[512];
   if (hostname && hostname[0])
@@ -848,7 +848,7 @@ Status GDBRemoteCommunication::StartListenThread(const char *hostname,
   llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
       listen_url, [this] { return GDBRemoteCommunication::ListenThread(); });
   if (!listen_thread)
-    return Status(listen_thread.takeError());
+    return Status::FromError(listen_thread.takeError());
   m_listen_thread = *listen_thread;
 
   return Status();
@@ -880,19 +880,11 @@ lldb::thread_result_t GDBRemoteCommunication::ListenThread() {
   return {};
 }
 
-Status GDBRemoteCommunication::StartDebugserverProcess(
-    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
-    uint16_t *port, const Args *inferior_args, int pass_comm_fd) {
+FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
-            __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
-
-  Status error;
   // If we locate debugserver, keep that located version around
   static FileSpec g_debugserver_file_spec;
-
-  char debugserver_path[PATH_MAX];
-  FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
+  FileSpec debugserver_file_spec;
 
   Environment host_env = Host::GetEnvironment();
 
@@ -944,9 +936,20 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       }
     }
   }
+  return debugserver_file_spec;
+}
 
-  if (debugserver_exists) {
-    debugserver_file_spec.GetPath(debugserver_path, sizeof(debugserver_path));
+Status GDBRemoteCommunication::StartDebugserverProcess(
+    const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
+    uint16_t *port, const Args *inferior_args, shared_fd_t pass_comm_fd) {
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOGF(log, "GDBRemoteCommunication::%s(url=%s, port=%" PRIu16 ")",
+            __FUNCTION__, url ? url : "<empty>", port ? *port : uint16_t(0));
+
+  Status error;
+  FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
+  if ((debugserver_file_spec = GetDebugserverPath(platform))) {
+    std::string debugserver_path = debugserver_file_spec.GetPath();
 
     Args &debugserver_args = launch_info.GetArguments();
     debugserver_args.Clear();
@@ -960,16 +963,19 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 #endif
 
     // If a url is supplied then use it
-    if (url)
+    if (url && url[0])
       debugserver_args.AppendArgument(llvm::StringRef(url));
 
-    if (pass_comm_fd >= 0) {
+    if (pass_comm_fd != SharedSocket::kInvalidFD) {
       StreamString fd_arg;
-      fd_arg.Printf("--fd=%i", pass_comm_fd);
+      fd_arg.Printf("--fd=%" PRIi64, (int64_t)pass_comm_fd);
       debugserver_args.AppendArgument(fd_arg.GetString());
       // Send "pass_comm_fd" down to the inferior so it can use it to
-      // communicate back with this process
-      launch_info.AppendDuplicateFileAction(pass_comm_fd, pass_comm_fd);
+      // communicate back with this process. Ignored on Windows.
+#ifndef _WIN32
+      launch_info.AppendDuplicateFileAction((int)pass_comm_fd,
+                                            (int)pass_comm_fd);
+#endif
     }
 
     // use native registers, not the GDB registers
@@ -989,7 +995,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     // port is null when debug server should listen on domain socket - we're
     // not interested in port value but rather waiting for debug server to
     // become available.
-    if (pass_comm_fd == -1) {
+    if (pass_comm_fd == SharedSocket::kInvalidFD) {
       if (url) {
 // Create a temporary file to get the stdout/stderr and redirect the output of
 // the command into this file. We will later read this file if all goes well
@@ -1053,13 +1059,15 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
           if (port)
             *port = port_;
         } else {
-          error.SetErrorString("failed to bind to port 0 on 127.0.0.1");
           LLDB_LOGF(log, "GDBRemoteCommunication::%s() failed: %s",
                     __FUNCTION__, error.AsCString());
-          return error;
+          return Status::FromErrorString(
+              "failed to bind to port 0 on 127.0.0.1");
         }
       }
     }
+
+    Environment host_env = Host::GetEnvironment();
     std::string env_debugserver_log_file =
         host_env.lookup("LLDB_DEBUGSERVER_LOG_FILE");
     if (!env_debugserver_log_file.empty()) {
@@ -1133,7 +1141,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
     if (error.Success() &&
         (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) &&
-        pass_comm_fd == -1) {
+        pass_comm_fd == SharedSocket::kInvalidFD) {
       if (named_pipe_path.size() > 0) {
         error = socket_pipe.OpenAsReader(named_pipe_path, false);
         if (error.Fail())
@@ -1146,8 +1154,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       if (socket_pipe.CanWrite())
         socket_pipe.CloseWriteFileDescriptor();
       if (socket_pipe.CanRead()) {
-        char port_cstr[PATH_MAX] = {0};
-        port_cstr[0] = '\0';
+        // The port number may be up to "65535\0".
+        char port_cstr[6] = {0};
         size_t num_bytes = sizeof(port_cstr);
         // Read port from pipe with 10 second timeout.
         error = socket_pipe.ReadWithTimeout(
@@ -1192,7 +1200,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       JoinListenThread();
     }
   } else {
-    error.SetErrorStringWithFormat("unable to locate " DEBUGSERVER_BASENAME);
+    error = Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
   }
 
   if (error.Fail()) {

@@ -16,7 +16,7 @@ void t3(S *s) {
   // CHECK: icmp {{.*}} null
   // CHECK: br i1
 
-  // CHECK: call void @_ZdlPv
+  // CHECK: call void @_ZdlPvm
 
   // Check the delete is inside the 'if !null' check unless we're optimizing
   // for size. FIXME: We could omit the branch entirely in this case.
@@ -35,7 +35,7 @@ struct T {
 void t4(T *t) {
   // CHECK: call void @_ZN1TD1Ev
   // CHECK-SIZE-NEXT: br
-  // CHECK: call void @_ZdlPv
+  // CHECK: call void @_ZdlPvm
   delete t;
 }
 
@@ -93,14 +93,16 @@ namespace test1 {
     // CHECK-NEXT: call void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[CUR]])
     // CHECK-NEXT: [[ISDONE:%.*]] = icmp eq ptr [[CUR]], [[BEGIN]]
     // CHECK-NEXT: br i1 [[ISDONE]]
-    // CHECK:      call void @_ZdaPv(ptr noundef [[ALLOC]])
+    // CHECK:      [[MUL:%.*]] = mul i64 4, [[COUNT]]
+    // CHECK-NEXT: [[SIZE:%.*]] = add i64 [[MUL]], 8
+    // CHECK-NEXT: call void @_ZdaPvm(ptr noundef [[ALLOC]], i64 noundef [[SIZE]])
   }
 }
 
 namespace test2 {
   // CHECK-LABEL: define{{.*}} void @_ZN5test21fEPb
   void f(bool *b) {
-    // CHECK: call void @_ZdlPv(ptr
+    // CHECK: call void @_ZdlPvm(ptr{{.*}}i64
     delete b;
     // CHECK: call void @_ZdaPv(ptr
     delete [] b;
@@ -137,7 +139,7 @@ namespace test4 {
     // CHECK-NEXT: [[DTOR:%.*]] = load ptr, ptr [[T0]]
     // CHECK-NEXT: call void [[DTOR]](ptr {{[^,]*}} [[OBJ:%.*]])
     //   Call the global operator delete.
-    // CHECK-NEXT: call void @_ZdlPv(ptr noundef [[ALLOCATED]]) [[NUW:#[0-9]+]]
+    // CHECK-NEXT: call void @_ZdlPvm(ptr noundef [[ALLOCATED]], i64 noundef 8) [[NUW:#[0-9]+]]
     ::delete xp;
   }
 }

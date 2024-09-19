@@ -50,7 +50,13 @@
 # CHECK-NEXT:               DW_AT_decl_line   [DW_FORM_sdata] (3)
 # CHECK-NEXT:               DW_AT_call_file   [DW_FORM_sdata] (4)
 # CHECK-NEXT:               DW_AT_call_line   [DW_FORM_sdata] (5){{[[:space:]]}}
-
+# CHECK-NEXT: Verifying dwo Units...
+# CHECK-NEXT: Verifying .debug_line...
+# CHECK-NEXT: Verifying .debug_str_offsets...
+# CHECK-NEXT: error: Aggregated error counts:
+# CHECK-NEXT: error: Invalid encoding in DW_AT_decl_file occurred 4 time(s).
+# CHECK-NEXT: error: Invalid file index in DW_AT_call_line occurred 1 time(s).
+# CHECK-NEXT: error: Invalid file index in DW_AT_decl_line occurred 1 time(s).
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

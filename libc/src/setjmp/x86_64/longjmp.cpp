@@ -8,14 +8,15 @@
 
 #include "src/setjmp/longjmp.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid file include"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf buf, int val)) {
   register __UINT64_TYPE__ rbx __asm__("rbx");
   register __UINT64_TYPE__ rbp __asm__("rbp");
   register __UINT64_TYPE__ r12 __asm__("r12");
@@ -41,4 +42,4 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   LIBC_INLINE_ASM("jmp *%0\n\t" : : "m"(buf->rip));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -2,8 +2,8 @@
 # RUN: llvm-objdump -t %t.so | FileCheck %s
 #
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 00000001 g F CODE my_func_export
-# CHECK-NEXT: 0000002a g O DATA my_global_export
+# CHECK-NEXT: 00000001 g F CODE 00000003 my_func_export
+# CHECK-NEXT: 0000002a g O DATA 00000000 my_global_export
 
 --- !WASM
 FileHeader:

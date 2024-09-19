@@ -210,8 +210,8 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
   }
   // Mach-O symbol table names have leading underscore, skip it.
-  if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
-    SymbolName = SymbolName.drop_front();
+  if (Module->isMachO())
+    SymbolName.consume_front("_");
 
   if (Obj.isELF() && ELFSymbolRef(Symbol).getBinding() != ELF::STB_LOCAL)
     ELFSymIdx = 0;
@@ -355,7 +355,7 @@ std::vector<object::SectionedAddress>
 SymbolizableObjectFile::findSymbol(StringRef Symbol, uint64_t Offset) const {
   std::vector<object::SectionedAddress> Result;
   for (const SymbolDesc &Sym : Symbols) {
-    if (Sym.Name.equals(Symbol)) {
+    if (Sym.Name == Symbol) {
       uint64_t Addr = Sym.Addr;
       if (Offset < Sym.Size)
         Addr += Offset;

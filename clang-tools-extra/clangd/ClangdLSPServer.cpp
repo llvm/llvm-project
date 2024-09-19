@@ -14,6 +14,7 @@
 #include "Feature.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
+#include "ModulesBuilder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -51,6 +52,7 @@
 
 namespace clang {
 namespace clangd {
+
 namespace {
 // Tracks end-to-end latency of high level lsp calls. Measurements are in
 // seconds.
@@ -73,6 +75,23 @@ std::optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
 
 const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
 const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
+const llvm::StringLiteral ApplyRenameCommand = "clangd.applyRename";
+
+CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
+                        const URIForFile &File) {
+  CodeAction CA;
+  CA.title = R.FixMessage;
+  CA.kind = std::string(CodeAction::REFACTOR_KIND);
+  CA.command.emplace();
+  CA.command->title = R.FixMessage;
+  CA.command->command = std::string(ApplyRenameCommand);
+  RenameParams Params;
+  Params.textDocument = TextDocumentIdentifier{File};
+  Params.position = R.Diag.Range.start;
+  Params.newName = R.NewName;
+  CA.command->argument = Params;
+  return CA;
+}
 
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
@@ -546,6 +565,12 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Mangler.ResourceDir = *Opts.ResourceDir;
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               std::move(Mangler));
+
+  if (Opts.EnableExperimentalModulesSupport) {
+    ModulesManager.emplace(*CDB);
+    Opts.ModulesManager = &*ModulesManager;
+  }
+
   {
     // Switch caller's context with LSPServer's background context. Since we
     // rather want to propagate information from LSPServer's context into the
@@ -808,6 +833,16 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                      std::move(Action));
 }
 
+void ClangdLSPServer::onCommandApplyRename(const RenameParams &R,
+                                           Callback<llvm::json::Value> Reply) {
+  onRename(R, [this, Reply = std::move(Reply)](
+                  llvm::Expected<WorkspaceEdit> Edit) mutable {
+    if (!Edit)
+      Reply(Edit.takeError());
+    applyEdit(std::move(*Edit), "Rename applied.", std::move(Reply));
+  });
+}
+
 void ClangdLSPServer::applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
                                 Callback<llvm::json::Value> Reply) {
   ApplyWorkspaceEditParams Edit;
@@ -844,14 +879,17 @@ void ClangdLSPServer::onWorkspaceSymbol(
 }
 
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
-                                      Callback<std::optional<Range>> Reply) {
+                                      Callback<PrepareRenameResult> Reply) {
   Server->prepareRename(
       Params.textDocument.uri.file(), Params.position, /*NewName*/ std::nullopt,
       Opts.Rename,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
           return Reply(Result.takeError());
-        return Reply(std::move(Result->Target));
+        PrepareRenameResult PrepareResult;
+        PrepareResult.range = Result->Target;
+        PrepareResult.placeholder = Result->Placeholder;
+        return Reply(std::move(PrepareResult));
       });
 }
 
@@ -1043,6 +1081,10 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
         CAs.back().diagnostics = {It->second};
       }
     }
+
+    for (const auto &R : Fixits->Renames)
+      CAs.push_back(toCodeAction(R, File));
+
     for (const auto &TR : Fixits->TweakRefs)
       CAs.push_back(toCodeAction(TR, File, Selection));
 
@@ -1356,7 +1398,7 @@ void ClangdLSPServer::onClangdInlayHints(const InlayHintsParams &Params,
           // Extension doesn't have paddingLeft/Right so adjust the label
           // accordingly.
           {"label",
-           ((Hint.paddingLeft ? " " : "") + llvm::StringRef(Hint.label) +
+           ((Hint.paddingLeft ? " " : "") + llvm::StringRef(Hint.joinLabels()) +
             (Hint.paddingRight ? " " : ""))
                .str()},
       });
@@ -1664,6 +1706,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
+  Bind.command(ApplyRenameCommand, this, &ClangdLSPServer::onCommandApplyRename);
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");
   PublishDiagnostics = Bind.outgoingNotification("textDocument/publishDiagnostics");

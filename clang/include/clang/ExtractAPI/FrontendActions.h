@@ -49,9 +49,6 @@ private:
   void EndSourceFileAction() override;
 
   static StringRef getInputBufferName() { return "<extract-api-includes>"; }
-
-  static std::unique_ptr<llvm::raw_pwrite_stream>
-  CreateOutputFile(CompilerInstance &CI, StringRef InFile);
 };
 
 /// Wrap ExtractAPIAction on top of a pre-existing action
@@ -85,9 +82,6 @@ private:
   /// actions. This is the place where all the gathered symbol graph
   /// information is emited.
   void EndSourceFileAction() override;
-
-  static std::unique_ptr<llvm::raw_pwrite_stream>
-  CreateOutputFile(CompilerInstance &CI, StringRef InFile);
 };
 
 } // namespace clang

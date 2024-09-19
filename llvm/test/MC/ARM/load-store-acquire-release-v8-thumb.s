@@ -14,6 +14,10 @@
 @ CHECK-V7: error: instruction requires: acquire/release
 @ CHECK-V7: error: instruction requires: acquire/release
 
+@ GNU alias
+        ldaexd  r6, [r8]
+@ CHECK:  ldaexd	r6, r7, [r8]            @ encoding: [0xd8,0xe8,0xff,0x67]
+
         stlexb  r1, r3, [r4]
         stlexh  r4, r2, [r5]
         stlex  r2, r1, [r7]
@@ -26,6 +30,10 @@
 @ CHECK-V7: error: instruction requires: acquire/release
 @ CHECK-V7: error: instruction requires: acquire/release
 @ CHECK-V7: error: instruction requires: acquire/release
+
+@ GNU alias
+        stlexd  r6, r2, [r8]
+@ CHECK: stlexd r6, r2, r3, [r8]        @ encoding: [0xc8,0xe8,0xf6,0x23]
 
          lda r5, [r6]
          ldab r5, [r6]

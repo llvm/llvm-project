@@ -1746,7 +1746,7 @@ attributes #1 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-defa
 attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 !llvm.printf.fmts = !{!100, !101}
 

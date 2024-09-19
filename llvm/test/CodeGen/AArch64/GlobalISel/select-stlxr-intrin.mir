@@ -2,16 +2,16 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define i32 @test_store_release_i64(i32 %a, i64* %addr) {
+  define i32 @test_store_release_i64(i32 %a, ptr %addr) {
     ret i32 %a
   }
 
-  define i32 @test_store_release_i32(i32 %a, i64* %addr) {
+  define i32 @test_store_release_i32(i32 %a, ptr %addr) {
     ret i32 %a
   }
 
-  define void @test_store_release_i8(i32, i8 %val, i8* %addr) { ret void }
-  define void @test_store_release_i16(i32, i16 %val, i16* %addr) { ret void }
+  define void @test_store_release_i8(i32, i8 %val, ptr %addr) { ret void }
+  define void @test_store_release_i16(i32, i16 %val, ptr %addr) { ret void }
 ...
 ---
 name:            test_store_release_i64

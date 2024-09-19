@@ -31,31 +31,33 @@
 
 ## Test some cases when a relocatable object file provides a non-exported definition.
 # RUN: not ld.lld main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 # RUN: not ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 # RUN: ld.lld main.o a.so def-hidden.o --allow-shlib-undefined --fatal-warnings -o /dev/null
 ## Test a relocatable object file definition that is converted to STB_LOCAL.
 # RUN: not ld.lld main.o a.so def-hidden.o --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 
 ## The section containing the definition is discarded, and we report an error.
 # RUN: not ld.lld --gc-sections main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
 ## The definition def.so is ignored.
 # RUN: ld.lld -shared def.o -o def.so
-# RUN: not ld.lld --gc-sections main.o a.so def.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --gc-sections main.o a.so def.so def-hidden.o --fatal-warnings -o /dev/null
 
 # CHECK-NOT:   error:
-# CHECK:       error: undefined reference due to --no-allow-shlib-undefined: x1{{$}}
-# CHECK-NEXT:  >>> referenced by a.so{{$}}
+# CHECK:       error: undefined reference: x1{{$}}
+# CHECK-NEXT:  >>> referenced by a.so (disallowed by --no-allow-shlib-undefined){{$}}
 # CHECK-NOT:   {{.}}
 
 # CHECK2-NOT:  error:
-# CHECK2:      error: undefined reference due to --no-allow-shlib-undefined: x1
-# CHECK2-NEXT: >>> referenced by a.so
-# CHECK2:      error: undefined reference due to --no-allow-shlib-undefined: x1
-# CHECK2-NEXT: >>> referenced by b.so
+# CHECK2:      error: undefined reference: x1
+# CHECK2-NEXT: >>> referenced by a.so (disallowed by --no-allow-shlib-undefined)
+# CHECK2:      error: undefined reference: x1
+# CHECK2-NEXT: >>> referenced by b.so (disallowed by --no-allow-shlib-undefined)
 # CHECK2-NOT:  {{.}}
 
-# WARN:        warning: undefined reference due to --no-allow-shlib-undefined: x1
-# WARN-NEXT:   >>> referenced by a.so
+# WARN:        warning: undefined reference: x1
+# WARN-NEXT:   >>> referenced by a.so (disallowed by --no-allow-shlib-undefined)
 
 # NONEXPORTED-NOT: error:
 # NONEXPORTED:     error: non-exported symbol 'x1' in 'def-hidden.o' is referenced by DSO 'a.so'

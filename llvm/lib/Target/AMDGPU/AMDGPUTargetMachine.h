@@ -16,6 +16,8 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <utility>
@@ -34,25 +36,24 @@ protected:
   StringRef getFeatureString(const Function &F) const;
 
 public:
-  static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, TargetOptions Options,
+                      StringRef FS, const TargetOptions &Options,
                       std::optional<Reloc::Model> RM,
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
   const TargetSubtargetInfo *getSubtargetImpl() const;
-  const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override = 0;
+  const TargetSubtargetInfo *
+  getSubtargetImpl(const Function &) const override = 0;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
@@ -66,6 +67,10 @@ public:
   getPredicatedAddrSpace(const Value *V) const override;
 
   unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const override;
+
+  bool splitModule(Module &M, unsigned NumParts,
+                   function_ref<void(std::unique_ptr<Module> MPart)>
+                       ModuleCallback) override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -78,7 +83,7 @@ private:
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                   StringRef FS, TargetOptions Options,
+                   StringRef FS, const TargetOptions &Options,
                    std::optional<Reloc::Model> RM,
                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
@@ -89,9 +94,13 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool useIPRA() const override {
-    return true;
-  }
+  bool useIPRA() const override { return true; }
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
@@ -109,7 +118,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// AMDGPU Pass Setup
+// AMDGPU Pass Setup - For Legacy Pass Manager.
 //===----------------------------------------------------------------------===//
 
 class AMDGPUPassConfig : public TargetPassConfig {
@@ -145,6 +154,34 @@ public:
       return false;
     return Opt;
   }
+};
+
+//===----------------------------------------------------------------------===//
+// AMDGPU CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class AMDGPUCodeGenPassBuilder
+    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
+  using Base = CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine>;
+
+public:
+  AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
+                           const CGPassBuilderOption &Opts,
+                           PassInstrumentationCallbacks *PIC);
+
+  void addIRPasses(AddIRPass &) const;
+  void addCodeGenPrepare(AddIRPass &) const;
+  void addPreISel(AddIRPass &addPass) const;
+  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
+  Error addInstSelector(AddMachinePass &) const;
+
+  /// Check if a pass is enabled given \p Opt option. The option always
+  /// overrides defaults if explicitly used. Otherwise its default will be used
+  /// given that a pass shall work at an optimization \p Level minimum.
+  bool isPassEnabled(const cl::opt<bool> &Opt,
+                     CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
+  void addEarlyCSEOrGVNPass(AddIRPass &) const;
+  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
 };
 
 } // end namespace llvm

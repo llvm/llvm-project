@@ -60,5 +60,6 @@ static_library("Core") {
     "SymbolManager.cpp",
     "TextDiagnostics.cpp",
     "WorkList.cpp",
+    "Z3CrosscheckVisitor.cpp",
   ]
 }

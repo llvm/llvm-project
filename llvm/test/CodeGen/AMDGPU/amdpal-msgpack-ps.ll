@@ -12,8 +12,8 @@
 ; GCN-NEXT:      - 0x123456789abcdef0
 ; GCN-NEXT:      - 0xfedcba9876543210
 ; GCN:         .registers:
-; GCN:           0x2c0a (SPI_SHADER_PGM_RSRC1_PS):
-; GCN:           0x2c0b (SPI_SHADER_PGM_RSRC2_PS): 0x42
+; GCN:           '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)':
+; GCN:           '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x42
 define amdgpu_ps half @ps_amdpal(half %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add
@@ -23,12 +23,12 @@ define amdgpu_ps half @ps_amdpal(half %arg0) {
 ;
 ; 	.amdgpu_pal_metadata
 ; ---
-; amdpal.pipelines: 
+; amdpal.pipelines:
 ;   - .internal_pipeline_hash:
 ;       - 0x123456789abcdef0
 ;       - 0xfedcba9876543210
 ;     .registers:
-;       0x2c0b (SPI_SHADER_PGM_RSRC2_PS): 0x42000000
+;       '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x42000000
 ; ...
 ; 	.end_amdgpu_pal_metadata
 

@@ -1499,7 +1499,7 @@ v128_t test_v128_xor(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_v128_andnot(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-// CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[NOT_I]], [[A:%.*]]
+// CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[A:%.*]], [[NOT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[AND_I]]
 //
 v128_t test_v128_andnot(v128_t a, v128_t b) {
@@ -1572,7 +1572,7 @@ uint32_t test_i8x16_bitmask(v128_t a) {
 // CHECK-LABEL: @test_i8x16_popcnt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]]), !range [[RNG5:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i8 0, 9) <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]])
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //

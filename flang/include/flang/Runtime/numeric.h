@@ -44,7 +44,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTDECL(Ceiling8_8)(
 CppTypeFor<TypeCategory::Integer, 16> RTDECL(Ceiling8_16)(
     CppTypeFor<TypeCategory::Real, 8>);
 #endif
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Ceiling10_1)(
     CppTypeFor<TypeCategory::Real, 10>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Ceiling10_2)(
@@ -73,6 +73,20 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Ceiling16_16)(
 #endif
 #endif
 
+// ERFC_SCALED
+CppTypeFor<TypeCategory::Real, 4> RTDECL(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4>);
+CppTypeFor<TypeCategory::Real, 8> RTDECL(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8>);
+#if HAS_FLOAT80
+CppTypeFor<TypeCategory::Real, 10> RTDECL(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10>);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTDECL(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16>);
+#endif
+
 // EXPONENT is defined to return default INTEGER; support INTEGER(4 & 8)
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent4_4)(
     CppTypeFor<TypeCategory::Real, 4>);
@@ -82,7 +96,7 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent8_4)(
     CppTypeFor<TypeCategory::Real, 8>);
 CppTypeFor<TypeCategory::Integer, 8> RTDECL(Exponent8_8)(
     CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent10_4)(
     CppTypeFor<TypeCategory::Real, 10>);
 CppTypeFor<TypeCategory::Integer, 8> RTDECL(Exponent10_8)(
@@ -120,7 +134,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTDECL(Floor8_8)(
 CppTypeFor<TypeCategory::Integer, 16> RTDECL(Floor8_16)(
     CppTypeFor<TypeCategory::Real, 8>);
 #endif
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Floor10_1)(
     CppTypeFor<TypeCategory::Real, 10>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Floor10_2)(
@@ -154,7 +168,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(Fraction4)(
     CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(Fraction8)(
     CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
@@ -166,7 +180,7 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(Fraction16)(
 // ISNAN / IEEE_IS_NAN
 bool RTDECL(IsNaN4)(CppTypeFor<TypeCategory::Real, 4>);
 bool RTDECL(IsNaN8)(CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 bool RTDECL(IsNaN10)(CppTypeFor<TypeCategory::Real, 10>);
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
@@ -198,7 +212,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(ModReal4)(
 CppTypeFor<TypeCategory::Real, 8> RTDECL(ModReal8)(
     CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>,
     const char *sourceFile = nullptr, int sourceLine = 0);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(ModReal10)(
     CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -233,7 +247,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(ModuloReal4)(
 CppTypeFor<TypeCategory::Real, 8> RTDECL(ModuloReal8)(
     CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>,
     const char *sourceFile = nullptr, int sourceLine = 0);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(ModuloReal10)(
     CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -269,7 +283,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTDECL(Nint8_8)(
 CppTypeFor<TypeCategory::Integer, 16> RTDECL(Nint8_16)(
     CppTypeFor<TypeCategory::Real, 8>);
 #endif
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Nint10_1)(
     CppTypeFor<TypeCategory::Real, 10>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Nint10_2)(
@@ -305,7 +319,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(Nearest4)(
     CppTypeFor<TypeCategory::Real, 4>, bool positive);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(Nearest8)(
     CppTypeFor<TypeCategory::Real, 8>, bool positive);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10>, bool positive);
 #endif
@@ -319,7 +333,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(RRSpacing4)(
     CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(RRSpacing8)(
     CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
@@ -333,7 +347,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(SetExponent4)(
     CppTypeFor<TypeCategory::Real, 4>, std::int64_t);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(SetExponent8)(
     CppTypeFor<TypeCategory::Real, 8>, std::int64_t);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10>, std::int64_t);
 #endif
@@ -347,7 +361,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(Scale4)(
     CppTypeFor<TypeCategory::Real, 4>, std::int64_t);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(Scale8)(
     CppTypeFor<TypeCategory::Real, 8>, std::int64_t);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Scale10)(
     CppTypeFor<TypeCategory::Real, 10>, std::int64_t);
 #endif
@@ -356,20 +370,47 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
+    const char *, int, const char *, std::size_t);
+
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
+    const char *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKindMasked)(
+    const char *, int, void *, int, int);
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
     const char *, int, void *, int);
 
 // SELECTED_REAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKind)(
     const char *, int, void *, int, void *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKindMasked)(
+    const char *, int, void *, int, void *, int, void *, int, int);
 
 // SPACING
+// The variants Spacing2By4 and Spacing3By4 compute SPACING for REAL(2/3)
+// but accept and return REAL(4) values, for use in environments where
+// std::float16_t or std::bfloat16_t are unavailable.
+#if HAS_FP16
+CppTypeFor<TypeCategory::Real, 2> RTDECL(Spacing2)(
+    CppTypeFor<TypeCategory::Real, 2>);
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing2By4)(
+    CppTypeFor<TypeCategory::Real, 4>);
+#if HAS_BF16
+CppTypeFor<TypeCategory::Real, 3> RTDECL(Spacing3)(
+    CppTypeFor<TypeCategory::Real, 3>);
+#endif
+CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing3By4)(
+    CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4>);
 CppTypeFor<TypeCategory::Real, 8> RTDECL(Spacing8)(
     CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
@@ -384,7 +425,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(FPow4i)(
 CppTypeFor<TypeCategory::Real, 8> RTDECL(FPow8i)(
     CppTypeFor<TypeCategory::Real, 8> b,
     CppTypeFor<TypeCategory::Integer, 4> e);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(FPow10i)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 4> e);
@@ -401,7 +442,7 @@ CppTypeFor<TypeCategory::Real, 4> RTDECL(FPow4k)(
 CppTypeFor<TypeCategory::Real, 8> RTDECL(FPow8k)(
     CppTypeFor<TypeCategory::Real, 8> b,
     CppTypeFor<TypeCategory::Integer, 8> e);
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDECL(FPow10k)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 8> e);

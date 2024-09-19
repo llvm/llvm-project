@@ -58,10 +58,16 @@ public:
 
   // Enqueue an LSP method call, returns a promise for the reply. Threadsafe.
   CallResult &call(llvm::StringRef Method, llvm::json::Value Params);
+  // Normally, any call from the server to the client will be marked as a test
+  // failure. Use this to allow a call to pass through, use takeCallParams() to
+  // retrieve it.
+  void expectServerCall(llvm::StringRef Method);
   // Enqueue an LSP notification. Threadsafe.
   void notify(llvm::StringRef Method, llvm::json::Value Params);
   // Returns matching notifications since the last call to takeNotifications.
   std::vector<llvm::json::Value> takeNotifications(llvm::StringRef Method);
+  // Returns matching parameters since the last call to takeCallParams.
+  std::vector<llvm::json::Value> takeCallParams(llvm::StringRef Method);
   // The transport is shut down after all pending messages are sent.
   void stop();
 

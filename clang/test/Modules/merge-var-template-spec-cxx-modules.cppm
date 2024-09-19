@@ -7,6 +7,11 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface -fprebuilt-module-path=%t %t/reexport2.cppm -o %t/reexport2.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/use.cppm -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/var_def.cppm -o %t/var_def.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface -fprebuilt-module-path=%t %t/reexport1.cppm -o %t/reexport1.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface -fprebuilt-module-path=%t %t/reexport2.cppm -o %t/reexport2.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/use.cppm -fsyntax-only -verify
+
 //--- use.cppm
 import reexport1;
 import reexport2;

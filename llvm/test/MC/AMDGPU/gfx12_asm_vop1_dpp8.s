@@ -1,5 +1,7 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+
+// this file will be converted to true16 format when more true16 instructions are supported
 
 v_bfrev_b32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x70,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -73,14 +75,32 @@ v_ctz_i32_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_ctz_i32_b32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0x74,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_cvt_f16_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_f32_fp8 v5, v1 dpp8:[0,1,2,3,4,5,6,7]
+// GFX12: encoding: [0xe9,0xd8,0x0a,0x7e,0x01,0x88,0xc6,0xfa]
+
+v_cvt_f32_fp8 v1, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: encoding: [0xe9,0xd8,0x02,0x7e,0x03,0x77,0x39,0x05]
+
+v_cvt_f32_bf8 v5, v1 dpp8:[0,1,2,3,4,5,6,7]
+// GFX12: encoding: [0xe9,0xda,0x0a,0x7e,0x01,0x88,0xc6,0xfa]
+
+v_cvt_f32_bf8 v1, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: encoding: [0xe9,0xda,0x02,0x7e,0x03,0x77,0x39,0x05]
+
+v_cvt_f16_f32 v5.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x14,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cvt_f16_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_f16_f32 v5.l, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX12: encoding: [0xea,0x14,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cvt_f16_f32 v127, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_f16_f32 v127.l, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0x14,0xfe,0x7e,0xff,0x00,0x00,0x00]
+
+v_cvt_f16_f32 v5.h, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: encoding: [0xea,0x14,0x0a,0x7f,0x01,0x77,0x39,0x05]
+
+v_cvt_f16_f32 v127.h, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: encoding: [0xe9,0x14,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_cvt_f16_i16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0xa2,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -100,14 +120,20 @@ v_cvt_f16_u16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_f16_u16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0xa0,0xfe,0x7e,0x7f,0x00,0x00,0x00]
 
-v_cvt_f32_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_f32_f16 v5, v1.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x16,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cvt_f32_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_f32_f16 v5, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX12: encoding: [0xea,0x16,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cvt_f32_f16 v255, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_f32_f16 v255, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: encoding: [0xe9,0x16,0xfe,0x7f,0x7f,0x00,0x00,0x00]
+
+v_cvt_f32_f16 v5, v1.h dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: encoding: [0xea,0x16,0x0a,0x7e,0x81,0x77,0x39,0x05]
+
+v_cvt_f32_f16 v255, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: encoding: [0xe9,0x16,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_cvt_f32_i32 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: encoding: [0xe9,0x0a,0x0a,0x7e,0x01,0x77,0x39,0x05]

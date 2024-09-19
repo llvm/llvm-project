@@ -33,6 +33,7 @@
 #ifndef LLVM_CLANG_INTERPRETER_VALUE_H
 #define LLVM_CLANG_INTERPRETER_VALUE_H
 
+#include "llvm/Config/llvm-config.h" // for LLVM_BUILD_LLVM_DYLIB, LLVM_BUILD_SHARED_LIBS
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 
@@ -76,6 +77,7 @@ class QualType;
   X(bool, Bool)                                                                \
   X(char, Char_S)                                                              \
   X(signed char, SChar)                                                        \
+  X(unsigned char, Char_U)                                                     \
   X(unsigned char, UChar)                                                      \
   X(short, Short)                                                              \
   X(unsigned short, UShort)                                                    \

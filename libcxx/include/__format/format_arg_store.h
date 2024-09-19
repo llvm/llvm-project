@@ -22,6 +22,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/remove_const.h>
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -151,7 +152,7 @@ consteval __arg_t __determine_arg_t() {
 // The overload for not formattable types allows triggering the static
 // assertion below.
 template <class _Context, class _Tp>
-  requires(!__formattable<_Tp, typename _Context::char_type>)
+  requires(!__formattable_with<_Tp, _Context>)
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__none;
 }
@@ -165,7 +166,6 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   using _Dp               = remove_const_t<_Tp>;
   constexpr __arg_t __arg = __determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
-
   static_assert(__formattable_with<_Tp, _Context>);
 
   // Not all types can be used to directly initialize the
@@ -260,7 +260,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _Storage __storage;
 };
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

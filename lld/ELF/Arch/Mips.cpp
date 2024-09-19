@@ -121,9 +121,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
-    if (&s == ElfSym::mipsGpDisp)
+    if (&s == ctx.sym.mipsGpDisp)
       return R_MIPS_GOT_GP_PC;
-    if (&s == ElfSym::mipsLocalGp)
+    if (&s == ctx.sym.mipsLocalGp)
       return R_MIPS_GOT_GP;
     [[fallthrough]];
   case R_MIPS_32:
@@ -205,7 +205,7 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType type) const {
 
 template <class ELFT>
 void MIPS<ELFT>::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  uint64_t va = in.plt->getVA();
+  uint64_t va = ctx.in.plt->getVA();
   if (isMicroMips())
     va |= 1;
   write32(buf, va);
@@ -257,8 +257,8 @@ static void writeMicroRelocation16(uint8_t *loc, uint64_t v, uint8_t bitsSize,
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
   if (isMicroMips()) {
-    uint64_t gotPlt = in.gotPlt->getVA();
-    uint64_t plt = in.plt->getVA();
+    uint64_t gotPlt = ctx.in.gotPlt->getVA();
+    uint64_t plt = ctx.in.plt->getVA();
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltHeaderSize);
 
@@ -310,7 +310,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
   write32(buf + 24, jalrInst); // jalr.hb $25 or jalr $25
   write32(buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
-  uint64_t gotPlt = in.gotPlt->getVA();
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
   writeValue(buf, gotPlt + 0x8000, 16, 16);
   writeValue(buf + 4, gotPlt, 16, 0);
   writeValue(buf + 8, gotPlt, 16, 0);
@@ -380,7 +380,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
 template <class ELFT>
 int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   switch (type) {
   case R_MIPS_32:
   case R_MIPS_REL32:
@@ -521,7 +521,7 @@ static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
   // to a microMIPS target and vice versa. In that cases jump
   // instructions need to be replaced by their "cross-mode"
   // equivalents.
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   bool isMicroTgt = val & 0x1;
   bool isCrossJump = (isMicroTgt && isBranchReloc(type)) ||
                      (!isMicroTgt && isMicroBranchReloc(type));
@@ -567,7 +567,7 @@ static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
 template <class ELFT>
 void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
                           uint64_t val) const {
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   RelType type = rel.type;
 
   if (ELFT::Is64Bits || config->mipsN32Abi)
@@ -771,12 +771,11 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   if (!sym->section)
     return false;
 
-  ObjFile<ELFT> *file =
-      cast<InputSectionBase>(sym->section)->template getFile<ELFT>();
-  if (!file)
+  InputFile *file = cast<InputSectionBase>(sym->section)->file;
+  if (!file || file->isInternal())
     return false;
 
-  return file->getObj().getHeader().e_flags & EF_MIPS_PIC;
+  return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {

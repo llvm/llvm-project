@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import subprocess
 
 # Setup config name.
 config.name = "ORC" + config.name_suffix
@@ -79,3 +80,14 @@ config.excludes = ["Inputs"]
 
 if config.host_os not in ["Darwin", "FreeBSD", "Linux", "Windows"]:
     config.unsupported = True
+
+# Ask llvm-config about assertion mode.
+try:
+    llvm_config_result = subprocess.check_output(
+        [os.path.join(config.llvm_tools_dir, "llvm-config"), "--assertion-mode"],
+        env=config.environment,
+    )
+    if llvm_config_result.startswith(b"ON"):
+        config.available_features.add("asserts")
+except OSError as e:
+    lit_config.warning(f"Could not determine if LLVM was built with assertions: {e}")

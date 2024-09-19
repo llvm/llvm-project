@@ -247,7 +247,7 @@ CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
   bool Ret = index::generateUSRForDecl(ND, DeclUSR);
   if (Ret)
     return {};
-  return std::string(DeclUSR.str());
+  return std::string(DeclUSR);
 }
 
 /// Recursively visits the decls of a DeclContext, and returns one with the

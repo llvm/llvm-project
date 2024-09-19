@@ -49,6 +49,7 @@ def SysRegsList : GenericTable {
 
   let PrimaryKey = [ "Encoding" ];
   let PrimaryKeyName = "lookupSysRegByEncoding";
+  let PrimaryKeyReturnRange = true;
 }
 
 def lookupSysRegByName : SearchIndex {
@@ -131,6 +132,11 @@ def : SysReg<"sip", 0x144>;
 //===----------------------------------------------------------------------===//
 let DeprecatedName = "sptbr" in
 def : SysReg<"satp", 0x180>;
+
+//===----------------------------------------------------------------------===//
+// Quality-of-Service(QoS) Identifiers (Ssqosid)
+//===----------------------------------------------------------------------===//
+def : SysReg<"srmcfg", 0x181>;
 
 //===----------------------------------------------------------------------===//
 // Debug/Trace Registers
@@ -306,6 +312,11 @@ foreach i = 3...31 in {
 }
 
 //===----------------------------------------------------------------------===//
+// Supervisor Counter Setup
+//===----------------------------------------------------------------------===//
+def : SysReg<"scountinhibit", 0x120>;
+
+//===----------------------------------------------------------------------===//
 // Debug/ Trace Registers (shared with Debug Mode)
 //===----------------------------------------------------------------------===//
 def : SysReg<"tselect", 0x7A0>;
@@ -338,6 +349,11 @@ def : SysReg<"vtype", 0xC21>;
 def SysRegVLENB: SysReg<"vlenb", 0xC22>;
 
 //===----------------------------------------------------------------------===//
+// Shadow Stack CSR
+//===----------------------------------------------------------------------===//
+def : SysReg<"ssp", 0x011>;
+
+//===----------------------------------------------------------------------===//
 // State Enable Extension (Smstateen)
 //===----------------------------------------------------------------------===//
 
@@ -367,6 +383,12 @@ def SEED : SysReg<"seed", 0x015>;
 // Machine-level CSRs
 def : SysReg<"miselect", 0x350>;
 def : SysReg<"mireg", 0x351>;
+foreach i = 2...3 in {
+  def : SysReg<"mireg"#i, !add(0x350, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"mireg"#i, !add(0x351, i)>;
+}
 def : SysReg<"mtopei", 0x35C>;
 def : SysReg<"mtopi", 0xFB0>;
 def : SysReg<"mvien", 0x308>;
@@ -382,6 +404,12 @@ def : SysReg<"miph", 0x354>;
 // Supervisor-level CSRs
 def : SysReg<"siselect", 0x150>;
 def : SysReg<"sireg", 0x151>;
+foreach i = 2...3 in {
+  def : SysReg<"sireg"#i, !add(0x150, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"sireg"#i, !add(0x151, i)>;
+}
 def : SysReg<"stopei", 0x15C>;
 def : SysReg<"stopi", 0xDB0>;
 let isRV32Only = 1 in {
@@ -396,6 +424,12 @@ def : SysReg<"hviprio1", 0x646>;
 def : SysReg<"hviprio2", 0x647>;
 def : SysReg<"vsiselect", 0x250>;
 def : SysReg<"vsireg", 0x251>;
+foreach i = 2...3 in {
+  def : SysReg<"vsireg"#i, !add(0x250, i)>;
+}
+foreach i = 4...6 in {
+  def : SysReg<"vsireg"#i, !add(0x251, i)>;
+}
 def : SysReg<"vstopei", 0x25C>;
 def : SysReg<"vstopi", 0xEB0>;
 let isRV32Only = 1 in {
@@ -408,7 +442,25 @@ def : SysReg<"vsieh", 0x214>;
 def : SysReg<"vsiph", 0x254>;
 } // isRV32Only
 
+//===-----------------------------------------------
 // Jump Vector Table CSR
 //===-----------------------------------------------
 
 def : SysReg<"jvt", 0x017>;
+
+//===-----------------------------------------------
+// Resumable Non-Maskable Interrupts(Smrnmi) CSRs
+//===-----------------------------------------------
+def : SysReg<"mnscratch", 0x740>;
+def : SysReg<"mnepc", 0x741>;
+def : SysReg<"mncause", 0x742>;
+def : SysReg<"mnstatus", 0x744>;
+
+//===-----------------------------------------------
+// Control Transfer Records CSRs
+//===-----------------------------------------------
+def : SysReg<"sctrctl", 0x14e>;
+def : SysReg<"sctrstatus", 0x14f>;
+def : SysReg<"sctrdepth", 0x15f>;
+def : SysReg<"vsctrctl", 0x24e>;
+def : SysReg<"mctrctl", 0x34e>;

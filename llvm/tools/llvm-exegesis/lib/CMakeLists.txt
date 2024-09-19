@@ -64,6 +64,7 @@ add_llvm_library(LLVMExegesis
   PerfHelper.cpp
   RegisterAliasing.cpp
   RegisterValue.cpp
+  ResultAggregator.cpp
   SchedClassResolution.cpp
   SerialSnippetGenerator.cpp
   SnippetFile.cpp
@@ -72,6 +73,7 @@ add_llvm_library(LLVMExegesis
   SubprocessMemory.cpp
   Target.cpp
   UopsBenchmarkRunner.cpp
+  ValidationEvent.cpp
 
   LINK_LIBS ${libs}
 

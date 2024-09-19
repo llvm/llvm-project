@@ -45,6 +45,9 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#ifdef HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#endif // HAVE_LIBPFM
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER
@@ -679,8 +682,9 @@ public:
   ExegesisX86Target()
       : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
-  Expected<std::unique_ptr<pfm::Counter>>
+  Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
+                ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID) const override {
     // If LbrSamplingPeriod was provided, then ignore the
     // CounterName because we only have one for LBR.
@@ -689,16 +693,24 @@ public:
       // __linux__ (for now)
 #if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES) &&                \
     defined(__linux__)
+      // TODO(boomanaiden154): Add in support for using validation counters when
+      // using LBR counters.
+      if (ValidationCounters.size() > 0)
+        return make_error<StringError>(
+            "Using LBR is not currently supported with validation counters",
+            errc::invalid_argument);
+
       return std::make_unique<X86LbrCounter>(
           X86LbrPerfEvent(LbrSamplingPeriod));
 #else
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "LBR counter requested without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, "
           "or running on Linux.",
-          llvm::errc::invalid_argument);
+          errc::invalid_argument);
 #endif
     }
-    return ExegesisTarget::createCounter(CounterName, State, ProcessID);
+    return ExegesisTarget::createCounter(CounterName, State, ValidationCounters,
+                                         ProcessID);
   }
 
   enum ArgumentRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };
@@ -708,7 +720,7 @@ private:
 
   unsigned getScratchMemoryRegister(const Triple &TT) const override;
 
-  unsigned getLoopCounterRegister(const Triple &) const override;
+  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
@@ -721,7 +733,8 @@ private:
 
   void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                    MachineBasicBlock &TargetMBB,
-                                   const MCInstrInfo &MII) const override;
+                                   const MCInstrInfo &MII,
+                                   unsigned LoopRegister) const override;
 
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
@@ -734,8 +747,8 @@ private:
   std::vector<MCInst> generateExitSyscall(unsigned ExitCode) const override;
 
   std::vector<MCInst>
-  generateMmap(intptr_t Address, size_t Length,
-               intptr_t FileDescriptorAddress) const override;
+  generateMmap(uintptr_t Address, size_t Length,
+               uintptr_t FileDescriptorAddress) const override;
 
   void generateMmapAuxMem(std::vector<MCInst> &GeneratedCode) const override;
 
@@ -745,7 +758,7 @@ private:
 
   std::vector<MCInst> setStackRegisterToAuxMem() const override;
 
-  intptr_t getAuxiliaryMemoryStartAddress() const override;
+  uintptr_t getAuxiliaryMemoryStartAddress() const override;
 
   std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
 
@@ -756,11 +769,9 @@ private:
 
   ArrayRef<unsigned> getUnavailableRegisters() const override {
     if (DisableUpperSSERegisters)
-      return ArrayRef(kUnavailableRegistersSSE,
-                      sizeof(kUnavailableRegistersSSE) /
-                          sizeof(kUnavailableRegistersSSE[0]));
+      return ArrayRef(kUnavailableRegistersSSE);
 
-    return ArrayRef(kUnavailableRegisters, std::size(kUnavailableRegisters));
+    return ArrayRef(kUnavailableRegisters);
   }
 
   bool allowAsBackToBack(const Instruction &Instr) const override {
@@ -813,9 +824,9 @@ private:
     report_fatal_error("Running X86 exegesis on unsupported target");
 #endif
 #endif
-    return llvm::make_error<llvm::StringError>(
+    return make_error<StringError>(
         "LBR not supported on this kernel and/or platform",
-        llvm::errc::not_supported);
+        errc::not_supported);
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {
@@ -840,7 +851,7 @@ const unsigned ExegesisX86Target::kUnavailableRegistersSSE[12] = {
 // We're using one of R8-R15 because these registers are never hardcoded in
 // instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
 // conflicts.
-constexpr const unsigned kLoopCounterReg = X86::R8;
+constexpr const unsigned kDefaultLoopCounterReg = X86::R8;
 
 } // namespace
 
@@ -858,11 +869,12 @@ unsigned ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
   return TT.isOSWindows() ? X86::RCX : X86::RDI;
 }
 
-unsigned ExegesisX86Target::getLoopCounterRegister(const Triple &TT) const {
+unsigned
+ExegesisX86Target::getDefaultLoopCounterRegister(const Triple &TT) const {
   if (!TT.isArch64Bit()) {
     return 0;
   }
-  return kLoopCounterReg;
+  return kDefaultLoopCounterReg;
 }
 
 Error ExegesisX86Target::randomizeTargetMCOperand(
@@ -870,6 +882,10 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
+  case X86::OperandType::OPERAND_COND_CODE:
+    AssignedValue =
+        MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
+    return Error::success();
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
@@ -900,10 +916,10 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
 
 void ExegesisX86Target::decrementLoopCounterAndJump(
     MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
-    const MCInstrInfo &MII) const {
+    const MCInstrInfo &MII, unsigned LoopRegister) const {
   BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
-      .addDef(kLoopCounterReg)
-      .addUse(kLoopCounterReg)
+      .addDef(LoopRegister)
+      .addUse(LoopRegister)
       .addImm(-1);
   BuildMI(&MBB, DebugLoc(), MII.get(X86::JCC_1))
       .addMBB(&TargetMBB)
@@ -1075,9 +1091,9 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
 #ifdef __linux__
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 void generateRoundToNearestPage(unsigned int Register,
@@ -1164,8 +1180,8 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
 }
 
 std::vector<MCInst>
-ExegesisX86Target::generateMmap(intptr_t Address, size_t Length,
-                                intptr_t FileDescriptorAddress) const {
+ExegesisX86Target::generateMmap(uintptr_t Address, size_t Length,
+                                uintptr_t FileDescriptorAddress) const {
   std::vector<MCInst> MmapCode;
   MmapCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, Address)));
   MmapCode.push_back(loadImmediate(X86::RSI, 64, APInt(64, Length)));
@@ -1233,7 +1249,7 @@ std::vector<MCInst> ExegesisX86Target::setStackRegisterToAuxMem() const {
                       SubprocessMemory::AuxiliaryMemorySize)};
 }
 
-intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
+uintptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
   // Return the second to last page in the virtual address space to try and
   // prevent interference with memory annotations in the snippet
   return VAddressSpaceCeiling - 2 * getpagesize();
@@ -1243,7 +1259,7 @@ std::vector<MCInst>
 ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
   if (SaveRegisters)
-    saveSyscallRegisters(ConfigurePerfCounterCode, 2);
+    saveSyscallRegisters(ConfigurePerfCounterCode, 3);
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
   ConfigurePerfCounterCode.push_back(MCInstBuilder(X86::MOV32rm)
@@ -1255,9 +1271,13 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
                                          .addReg(0));
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RSI, 64, APInt(64, Request)));
+#ifdef HAVE_LIBPFM
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(X86::RDX, 64, APInt(64, PERF_IOC_FLAG_GROUP)));
+#endif // HAVE_LIBPFM
   generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
   if (SaveRegisters)
-    restoreSyscallRegisters(ConfigurePerfCounterCode, 2);
+    restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
   return ConfigurePerfCounterCode;
 }
 
@@ -1280,7 +1300,7 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
   bool Exploration = false;
   SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
   VariableChoices.resize(Instr.Variables.size());
-  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
+  for (auto I : zip(Instr.Variables, VariableChoices)) {
     const Variable &Var = std::get<0>(I);
     SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
 

@@ -46,9 +46,12 @@
 
 // Sets bits for specified bit mask in specified destination.
 #ifndef AMDHSA_BITS_SET
-#define AMDHSA_BITS_SET(DST, MSK, VAL)  \
-  DST &= ~MSK;                          \
-  DST |= ((VAL << MSK ## _SHIFT) & MSK)
+#define AMDHSA_BITS_SET(DST, MSK, VAL)                                         \
+  do {                                                                         \
+    auto local = VAL;                                                          \
+    DST &= ~MSK;                                                               \
+    DST |= ((local << MSK##_SHIFT) & MSK);                                     \
+  } while (0)
 #endif // AMDHSA_BITS_SET
 
 namespace llvm {

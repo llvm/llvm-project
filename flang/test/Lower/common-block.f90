@@ -1,7 +1,9 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: bbc %s -o - | tco | FileCheck %s
 ! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 
 ! CHECK: @__BLNK__ = common global [8 x i8] zeroinitializer
+! CHECK: @co1_ = common global [16 x i8] zeroinitializer, align 16
 ! CHECK: @rien_ = common global [1 x i8] zeroinitializer
 ! CHECK: @with_empty_equiv_ = common global [8 x i8] zeroinitializer
 ! CHECK: @x_ = global { float, float } { float 1.0{{.*}}, float 2.0{{.*}} }
@@ -72,3 +74,8 @@ subroutine s6
   common /with_empty_equiv/ x, r1, y
   equivalence(r1, r2)
 end subroutine s6
+
+subroutine s7()
+  real(16) r16
+  common /co1/ r16
+end subroutine

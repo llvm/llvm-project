@@ -28,6 +28,7 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class GenericOp;
 
 namespace detail {
 /// Implementation of the method that check if given operands
@@ -109,11 +110,30 @@ struct ConvolutionDimensions {
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
+/// By default, we require the `linalgOp` to have non-empty convolved dims
+/// (implicitly non-empty `output_image` and `filter_loop`).
+/// Users can loosen the constraint by setting `allowEmptyConvolvedDims` to true
 // TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
-bool isaConvolutionOpInterface(LinalgOp linalgOp);
+bool isaConvolutionOpInterface(LinalgOp linalgOp,
+                               bool allowEmptyConvolvedDims = false);
 
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
+
+/// Checks whether a given `genericOp` is semantically equivalent to a single
+/// linalgelementwise unary op. e.g. linalg.exp.
+/// A linalg.generic body could be a series of unary elementwise ops e.g.
+/// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
+/// detecting cases where body is is a single computation op.
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a single linalg
+/// elementwise binary op e.g. linalg.sub.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Returns the scalar fill value if true.
+std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
 namespace detail {
 
@@ -159,9 +179,12 @@ enum class MatchConvolutionResult;
 /// Checks whether `op` conforms to ConvolutionOpInterface and populates
 /// `dimensions` with indexes of the different kinds of dimensions when
 /// present.
+/// If `allowEmptyConvolvedDims` is not set, we further checks whether the `op`
+/// contains convolved dims.
 MatchConvolutionResult
 isConvolutionInterfaceImpl(Operation *op,
-                           ConvolutionDimensions *dimensions = nullptr);
+                           ConvolutionDimensions *dimensions = nullptr,
+                           bool allowEmptyConvolvedDims = false);
 
 /// Returns the error message corresponding to the convolution checking return
 /// code.

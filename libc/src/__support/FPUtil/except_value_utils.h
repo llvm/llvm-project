@@ -13,9 +13,10 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace fputil {
 
@@ -102,20 +103,18 @@ template <typename T, size_t N> struct ExceptValues {
 // Helper functions to set results for exceptional cases.
 template <typename T> LIBC_INLINE T round_result_slightly_down(T value_rn) {
   volatile T tmp = value_rn;
-  const T MIN_NORMAL = FPBits<T>::min_normal();
-  tmp = tmp - MIN_NORMAL;
+  tmp -= FPBits<T>::min_normal().get_val();
   return tmp;
 }
 
 template <typename T> LIBC_INLINE T round_result_slightly_up(T value_rn) {
   volatile T tmp = value_rn;
-  const T MIN_NORMAL = FPBits<T>::min_normal();
-  tmp = tmp + MIN_NORMAL;
+  tmp += FPBits<T>::min_normal().get_val();
   return tmp;
 }
 
 } // namespace fputil
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H

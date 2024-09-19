@@ -51,6 +51,17 @@ define void @test_not_inbounds(ptr %st, i64 %i, i64 %j, i64 %k) {
   ret void
 }
 
+; It is sufficient to have nusw instead of inbounds.
+; CHECK-LABEL: test_nusw
+; CHECK: NoAlias: i32* %x, i32* %y
+define void @test_nusw(ptr %st, i64 %i, i64 %j, i64 %k) {
+  %x = getelementptr nusw %struct, ptr %st, i64 %i, i32 0
+  %y = getelementptr nusw %struct, ptr %st, i64 %j, i32 1
+  load i32, ptr %x
+  load i32, ptr %y
+  ret void
+}
+
 ; CHECK-LABEL: test_in_array
 
 ; CHECK-DAG: MayAlias: [1 x %struct]* %st, i32* %x

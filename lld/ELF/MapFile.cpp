@@ -121,7 +121,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
     if (!pieces.empty()) {
       EhSectionPiece &last = pieces.back();
       if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == p.outputOff) {
+          last.outputOff + last.size == (unsigned)p.outputOff) {
         last.size += p.size;
         return;
       }
@@ -158,7 +158,7 @@ static void writeMapFile(raw_fd_ostream &os) {
      << "     Size Align Out     In      Symbol\n";
 
   OutputSection *osec = nullptr;
-  for (SectionCommand *cmd : script->sectionCommands) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
       if (assign->provide && !assign->sym)
         continue;
@@ -167,6 +167,8 @@ static void writeMapFile(raw_fd_ostream &os) {
       os << assign->commandString << '\n';
       continue;
     }
+    if (isa<SectionClassDesc>(cmd))
+      continue;
 
     osec = &cast<OutputDesc>(cmd)->osec;
     writeHeader(os, osec->addr, osec->getLMA(), osec->size, osec->addralign);

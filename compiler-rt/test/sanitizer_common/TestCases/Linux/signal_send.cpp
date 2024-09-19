@@ -62,14 +62,14 @@ void test_sigwait() {
   int res;
   res = fork_and_signal(s);
   fprintf(stderr, "fork_and_signal with SIGUSR1,2: %d\n", res);
-  // CHECK: died with sig 10
+  // CHECK: died with sig {{10|30}}
   // CHECK: fork_and_signal with SIGUSR1,2: 0
 
   // test sigandset... s should only have SIGUSR2 now
   s = sigset_and(s, mkset(1, SIGUSR2));
   res = fork_and_signal(s);
   fprintf(stderr, "fork_and_signal with SIGUSR2: %d\n", res);
-  // CHECK: died with sig 12
+  // CHECK: died with sig {{12|31}}
   // CHECK: fork_and_signal with SIGUSR2: 0
 }
 

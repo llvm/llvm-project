@@ -47,7 +47,7 @@ class TestCase(TestBase):
         self.expect(
             "expr ClassWithDeletedDefaultCtor().value",
             error=True,
-            substrs=["Couldn't look up symbols:"],
+            substrs=["Couldn't look up symbols:", "function", "optimized out"],
         )
 
     @skipIfWindows  # Can't find operator new.

@@ -65,12 +65,9 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
   if (!isa<PatternOp>(op->getParentOp()) || isa<RewriteOp>(op))
     return;
 
-  // Ignore if already visited.
-  if (visited.contains(op))
+  // Ignore if already visited.  Otherwise, mark as visited.
+  if (!visited.insert(op).second)
     return;
-
-  // Mark as visited.
-  visited.insert(op);
 
   // Traverse the operands / parent.
   TypeSwitch<Operation *>(op)
@@ -94,6 +91,12 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
 LogicalResult ApplyNativeConstraintOp::verify() {
   if (getNumOperands() == 0)
     return emitOpError("expected at least one argument");
+  if (llvm::any_of(getResults(), [](OpResult result) {
+        return isa<OperationType>(result.getType());
+      })) {
+    return emitOpError(
+        "returning an operation from a constraint is not supported");
+  }
   return success();
 }
 

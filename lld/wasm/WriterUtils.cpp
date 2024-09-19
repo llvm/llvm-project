@@ -35,6 +35,10 @@ std::string toString(ValType type) {
     return "funcref";
   case ValType::EXTERNREF:
     return "externref";
+  case ValType::EXNREF:
+    return "exnref";
+  case ValType::OTHERREF:
+    return "otherref";
   }
   llvm_unreachable("Invalid wasm::ValType");
 }
@@ -51,7 +55,7 @@ std::string toString(const WasmSignature &sig) {
     s += "void";
   else
     s += toString(sig.Returns[0]);
-  return std::string(s.str());
+  return std::string(s);
 }
 
 std::string toString(const WasmGlobalType &type) {

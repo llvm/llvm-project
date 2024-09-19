@@ -28,4 +28,7 @@
 main:
     movl data(%rip), %eax
     ret
+    .global _pei386_runtime_relocator
+_pei386_runtime_relocator:
+    ret
     .data

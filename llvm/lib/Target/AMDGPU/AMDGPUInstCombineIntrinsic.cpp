@@ -343,13 +343,9 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
     return true;
   }
 
-  auto *TLI = &IC.getTargetLibraryInfo();
-  if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree()) &&
-      isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I,
-                           &IC.getDominatorTree())) {
+  SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
+  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
+      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -357,23 +353,20 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 }
 
 /// Match an fpext from half to float, or a constant we can convert.
-static bool matchFPExtFromF16(Value *Arg, Value *&FPExtSrc) {
-  if (match(Arg, m_OneUse(m_FPExt(m_Value(FPExtSrc)))))
-    return FPExtSrc->getType()->isHalfTy();
-
-  ConstantFP *CFP;
-  if (match(Arg, m_ConstantFP(CFP))) {
+static Value *matchFPExtFromF16(Value *Arg) {
+  Value *Src = nullptr;
+  ConstantFP *CFP = nullptr;
+  if (match(Arg, m_OneUse(m_FPExt(m_Value(Src))))) {
+    if (Src->getType()->isHalfTy())
+      return Src;
+  } else if (match(Arg, m_ConstantFP(CFP))) {
     bool LosesInfo;
     APFloat Val(CFP->getValueAPF());
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
-    if (LosesInfo)
-      return false;
-
-    FPExtSrc = ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
-    return true;
+    if (!LosesInfo)
+      return ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
   }
-
-  return false;
+  return nullptr;
 }
 
 // Trim all zero components from the end of the vector \p UseV and return
@@ -402,6 +395,35 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   return DemandedElts;
 }
 
+// Trim elements of the end of the vector \p V, if they are
+// equal to the first element of the vector.
+static APInt defaultComponentBroadcast(Value *V) {
+  auto *VTy = cast<FixedVectorType>(V->getType());
+  unsigned VWidth = VTy->getNumElements();
+  APInt DemandedElts = APInt::getAllOnes(VWidth);
+  Value *FirstComponent = findScalarElement(V, 0);
+
+  SmallVector<int> ShuffleMask;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
+    SVI->getShuffleMask(ShuffleMask);
+
+  for (int I = VWidth - 1; I > 0; --I) {
+    if (ShuffleMask.empty()) {
+      auto *Elt = findScalarElement(V, I);
+      if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
+        break;
+    } else {
+      // Detect identical elements in the shufflevector result, even though
+      // findScalarElement cannot tell us what that element is.
+      if (ShuffleMask[I] != ShuffleMask[0] && ShuffleMask[I] != PoisonMaskElem)
+        break;
+    }
+    DemandedElts.clearBit(I);
+  }
+
+  return DemandedElts;
+}
+
 static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
@@ -413,6 +435,21 @@ static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
   return (SqrtOp->getType()->isFloatTy() &&
           (SqrtOp->hasApproxFunc() || SqrtOp->getFPAccuracy() >= 1.0f)) ||
          SqrtOp->getType()->isHalfTy();
+}
+
+/// Return true if we can easily prove that use U is uniform.
+static bool isTriviallyUniform(const Use &U) {
+  Value *V = U.get();
+  if (isa<Constant>(V))
+    return true;
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+      return false;
+    // If II and U are in different blocks then there is a possibility of
+    // temporal divergence.
+    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
+  }
+  return false;
 }
 
 std::optional<Instruction *>
@@ -603,27 +640,38 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_cvt_pkrtz: {
-    Value *Src0 = II.getArgOperand(0);
-    Value *Src1 = II.getArgOperand(1);
-    if (const ConstantFP *C0 = dyn_cast<ConstantFP>(Src0)) {
-      if (const ConstantFP *C1 = dyn_cast<ConstantFP>(Src1)) {
-        const fltSemantics &HalfSem =
-            II.getType()->getScalarType()->getFltSemantics();
+    auto foldFPTruncToF16RTZ = [](Value *Arg) -> Value * {
+      Type *HalfTy = Type::getHalfTy(Arg->getContext());
+
+      if (isa<PoisonValue>(Arg))
+        return PoisonValue::get(HalfTy);
+      if (isa<UndefValue>(Arg))
+        return UndefValue::get(HalfTy);
+
+      ConstantFP *CFP = nullptr;
+      if (match(Arg, m_ConstantFP(CFP))) {
         bool LosesInfo;
-        APFloat Val0 = C0->getValueAPF();
-        APFloat Val1 = C1->getValueAPF();
-        Val0.convert(HalfSem, APFloat::rmTowardZero, &LosesInfo);
-        Val1.convert(HalfSem, APFloat::rmTowardZero, &LosesInfo);
-
-        Constant *Folded =
-            ConstantVector::get({ConstantFP::get(II.getContext(), Val0),
-                                 ConstantFP::get(II.getContext(), Val1)});
-        return IC.replaceInstUsesWith(II, Folded);
+        APFloat Val(CFP->getValueAPF());
+        Val.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero, &LosesInfo);
+        return ConstantFP::get(HalfTy, Val);
       }
-    }
 
-    if (isa<UndefValue>(Src0) && isa<UndefValue>(Src1)) {
-      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
+      Value *Src = nullptr;
+      if (match(Arg, m_FPExt(m_Value(Src)))) {
+        if (Src->getType()->isHalfTy())
+          return Src;
+      }
+
+      return nullptr;
+    };
+
+    if (Value *Src0 = foldFPTruncToF16RTZ(II.getArgOperand(0))) {
+      if (Value *Src1 = foldFPTruncToF16RTZ(II.getArgOperand(1))) {
+        Value *V = PoisonValue::get(II.getType());
+        V = IC.Builder.CreateInsertElement(V, Src0, (uint64_t)0);
+        V = IC.Builder.CreateInsertElement(V, Src1, (uint64_t)1);
+        return IC.replaceInstUsesWith(II, V);
+      }
     }
 
     break;
@@ -742,19 +790,21 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
-    CallInst *NewCall = nullptr;
+    Value *V = nullptr;
     if (match(Src0, PatternMatch::m_NaN()) || isa<UndefValue>(Src0)) {
-      NewCall = IC.Builder.CreateMinNum(Src1, Src2);
+      V = IC.Builder.CreateMinNum(Src1, Src2);
     } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
-      NewCall = IC.Builder.CreateMinNum(Src0, Src2);
+      V = IC.Builder.CreateMinNum(Src0, Src2);
     } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      NewCall = IC.Builder.CreateMaxNum(Src0, Src1);
+      V = IC.Builder.CreateMaxNum(Src0, Src1);
     }
 
-    if (NewCall) {
-      NewCall->copyFastMathFlags(&II);
-      NewCall->takeName(&II);
-      return IC.replaceInstUsesWith(II, NewCall);
+    if (V) {
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        CI->copyFastMathFlags(&II);
+        CI->takeName(&II);
+      }
+      return IC.replaceInstUsesWith(II, V);
     }
 
     bool Swap = false;
@@ -797,15 +847,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!ST->hasMed3_16())
       break;
 
-    Value *X, *Y, *Z;
-
     // Repeat floating-point width reduction done for minnum/maxnum.
     // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
-    if (matchFPExtFromF16(Src0, X) && matchFPExtFromF16(Src1, Y) &&
-        matchFPExtFromF16(Src2, Z)) {
-      Value *NewCall = IC.Builder.CreateIntrinsic(IID, {X->getType()},
-                                                  {X, Y, Z}, &II, II.getName());
-      return new FPExtInst(NewCall, II.getType());
+    if (Value *X = matchFPExtFromF16(Src0)) {
+      if (Value *Y = matchFPExtFromF16(Src1)) {
+        if (Value *Z = matchFPExtFromF16(Src2)) {
+          Value *NewCall = IC.Builder.CreateIntrinsic(
+              IID, {X->getType()}, {X, Y, Z}, &II, II.getName());
+          return new FPExtInst(NewCall, II.getType());
+        }
+      }
     }
 
     break;
@@ -827,8 +878,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (auto *CSrc0 = dyn_cast<Constant>(Src0)) {
       if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
-        Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
-        if (CCmp->isNullValue()) {
+        Constant *CCmp = ConstantFoldCompareInstOperands(
+            (ICmpInst::Predicate)CCVal, CSrc0, CSrc1, DL);
+        if (CCmp && CCmp->isNullValue()) {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
@@ -921,7 +973,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           NewWidth = 32;
         else if (Width <= 64)
           NewWidth = 64;
-        else if (Width > 64)
+        else
           break; // Can't handle this.
 
         if (Width != NewWidth) {
@@ -960,6 +1012,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // amdgcn.ballot(i1 0) is zero.
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
       }
+    }
+    if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
+      // %b64 = call i64 ballot.i64(...)
+      // =>
+      // %b32 = call i32 ballot.i32(...)
+      // %b64 = zext i32 %b32 to i64
+      Value *Call = IC.Builder.CreateZExt(
+          IC.Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
+                                     {IC.Builder.getInt32Ty()},
+                                     {II.getArgOperand(0)}),
+          II.getType());
+      Call->takeName(&II);
+      return IC.replaceInstUsesWith(II, Call);
     }
     break;
   }
@@ -1019,47 +1084,85 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceOperand(II, 0, UndefValue::get(VDstIn->getType()));
   }
   case Intrinsic::amdgcn_permlane64:
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
-    }
-    break;
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
-    }
-
-    // The rest of these may not be safe if the exec may not be the same between
-    // the def and use.
-    Value *Src = II.getArgOperand(0);
-    Instruction *SrcInst = dyn_cast<Instruction>(Src);
-    if (SrcInst && SrcInst->getParent() != II.getParent())
+    // If the first argument is uniform these intrinsics return it unchanged.
+    const Use &Src = II.getArgOperandUse(0);
+    if (isTriviallyUniform(Src))
+      return IC.replaceInstUsesWith(II, Src.get());
+    break;
+  }
+  case Intrinsic::amdgcn_trig_preop: {
+    // The intrinsic is declared with name mangling, but currently the
+    // instruction only exists for f64
+    if (!II.getType()->isDoubleTy())
       break;
 
-    // readfirstlane (readfirstlane x) -> readfirstlane x
-    // readlane (readfirstlane x), y -> readfirstlane x
-    if (match(Src,
-              PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readfirstlane>())) {
-      return IC.replaceInstUsesWith(II, Src);
+    Value *Src = II.getArgOperand(0);
+    Value *Segment = II.getArgOperand(1);
+    if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
+    if (isa<UndefValue>(Src)) {
+      auto *QNaN = ConstantFP::get(
+          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
+      return IC.replaceInstUsesWith(II, QNaN);
     }
 
-    if (IID == Intrinsic::amdgcn_readfirstlane) {
-      // readfirstlane (readlane x, y) -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>())) {
-        return IC.replaceInstUsesWith(II, Src);
-      }
-    } else {
-      // readlane (readlane x, y), y -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>(
-                         PatternMatch::m_Value(),
-                         PatternMatch::m_Specific(II.getArgOperand(1))))) {
-        return IC.replaceInstUsesWith(II, Src);
-      }
+    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
+    if (!Csrc)
+      break;
+
+    if (II.isStrictFP())
+      break;
+
+    const APFloat &Fsrc = Csrc->getValueAPF();
+    if (Fsrc.isNaN()) {
+      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
+      return IC.replaceInstUsesWith(II, Quieted);
     }
 
-    break;
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg)
+      break;
+
+    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
+    unsigned Shift = SegmentVal * 53;
+    if (Exponent > 1077)
+      Shift += Exponent - 1077;
+
+    // 2.0/PI table.
+    static const uint32_t TwoByPi[] = {
+        0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0, 0xdb629599, 0x3c439041,
+        0xfe5163ab, 0xdebbc561, 0xb7246e3a, 0x424dd2e0, 0x06492eea, 0x09d1921c,
+        0xfe1deb1c, 0xb129a73e, 0xe88235f5, 0x2ebb4484, 0xe99c7026, 0xb45f7e41,
+        0x3991d639, 0x835339f4, 0x9c845f8b, 0xbdf9283b, 0x1ff897ff, 0xde05980f,
+        0xef2f118b, 0x5a0a6d1f, 0x6d367ecf, 0x27cb09b7, 0x4f463f66, 0x9e5fea2d,
+        0x7527bac7, 0xebe5f17b, 0x3d0739f7, 0x8a5292ea, 0x6bfb5fb1, 0x1f8d5d08,
+        0x56033046};
+
+    // Return 0 for outbound segment (hardware behavior).
+    unsigned Idx = Shift >> 5;
+    if (Idx + 2 >= std::size(TwoByPi)) {
+      APFloat Zero = APFloat::getZero(II.getType()->getFltSemantics());
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getType(), Zero));
+    }
+
+    unsigned BShift = Shift & 0x1f;
+    uint64_t Thi = Make_64(TwoByPi[Idx], TwoByPi[Idx + 1]);
+    uint64_t Tlo = Make_64(TwoByPi[Idx + 2], 0);
+    if (BShift)
+      Thi = (Thi << BShift) | (Tlo >> (64 - BShift));
+    Thi = Thi >> 11;
+    APFloat Result = APFloat((double)Thi);
+
+    int Scale = -53 - Shift;
+    if (Exponent >= 1968)
+      Scale += 128;
+
+    Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
+    return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Result));
   }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
@@ -1117,12 +1220,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
   }
-  case Intrinsic::amdgcn_buffer_store_format:
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
-  case Intrinsic::amdgcn_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:
@@ -1140,8 +1241,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!isa<FixedVectorType>(II.getArgOperand(0)->getType()))
       break;
 
-    APInt DemandedElts =
-        trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    APInt DemandedElts;
+    if (ST->hasDefaultComponentBroadcast())
+      DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
+    else if (ST->hasDefaultComponentZero())
+      DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    else
+      break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
@@ -1330,8 +1436,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
-  case Intrinsic::amdgcn_buffer_load:
-  case Intrinsic::amdgcn_buffer_load_format:
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
@@ -1345,7 +1449,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-  case Intrinsic::amdgcn_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {

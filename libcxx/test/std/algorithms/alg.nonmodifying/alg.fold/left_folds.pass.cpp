@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// MSVC warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // template<input_iterator I, sentinel_for<I> S, class T,
 //          indirectly-binary-left-foldable<T, I> F>
 //   constexpr see below ranges::fold_left_with_iter(I first, S last, T init, F f);
@@ -56,14 +59,14 @@ concept is_in_value_result =
 template <class Result, class T>
 concept is_dangling_with = std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::dangling, T>>;
 
-struct Long {
+struct Integer {
   int value;
 
-  constexpr Long(int const x) : value(x) {}
+  constexpr Integer(int const x) : value(x) {}
 
-  constexpr Long plus(int const x) const { return Long{value + x}; }
+  constexpr Integer plus(int const x) const { return Integer{value + x}; }
 
-  friend constexpr bool operator==(Long const& x, Long const& y) = default;
+  friend constexpr bool operator==(Integer const& x, Integer const& y) = default;
 };
 
 template <std::ranges::input_range R, class T, class F, std::equality_comparable Expected>
@@ -74,6 +77,7 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     assert(result.in == r.end());
     assert(result.value == expected);
   }
+
   {
     auto telemetry                                        = invocable_telemetry();
     auto f2                                               = invocable_with_telemetry(f, telemetry);
@@ -89,6 +93,7 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     std::same_as<Expected> decltype(auto) result = fold_left(r.begin(), r.end(), init, f);
     assert(result == expected);
   }
+
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
@@ -108,6 +113,7 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
     assert(result.in == r.end());
     assert(result.value == expected);
   }
+
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
@@ -122,6 +128,7 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
     std::same_as<Expected> decltype(auto) result = fold_left(r, init, f);
     assert(result == expected);
   }
+
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
@@ -141,6 +148,7 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f);
     assert(result.value == expected);
   }
+
   {
     auto telemetry                                   = invocable_telemetry();
     auto f2                                          = invocable_with_telemetry(f, telemetry);
@@ -157,6 +165,7 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     std::same_as<Expected> decltype(auto) result = fold_left(std::move(r2), init, f);
     assert(result == expected);
   }
+
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
@@ -183,7 +192,7 @@ constexpr void empty_range_test_case() {
   check(data, -100, std::multiplies(), -100);
 
   check(data | std::views::take_while([](auto) { return false; }), 1.23, std::plus(), 1.23);
-  check(data, Long(52), &Long::plus, Long(52));
+  check(data, Integer(52), &Integer::plus, Integer(52));
 }
 
 constexpr void common_range_test_case() {
@@ -206,7 +215,7 @@ constexpr void common_range_test_case() {
   };
   check(data, 0, fib, fibonacci(data.back()));
 
-  check(data, Long(0), &Long::plus, Long(triangular_sum(data)));
+  check(data, Integer(0), &Integer::plus, Integer(triangular_sum(data)));
 }
 
 constexpr void non_common_range_test_case() {
@@ -266,6 +275,7 @@ void runtime_only_test_case() {
       assert(result.in == data.end());
       assert(result.value == expected);
     }
+
     {
       auto input = std::istringstream(raw_data);
       auto data  = std::views::istream<std::string>(input);
@@ -274,11 +284,13 @@ void runtime_only_test_case() {
       assert(result.in == data.end());
       assert(result.value == expected);
     }
+
     {
       auto input = std::istringstream(raw_data);
       auto data  = std::views::istream<std::string>(input);
       assert(fold_left(data.begin(), data.end(), init, std::plus()) == expected);
     }
+
     {
       auto input = std::istringstream(raw_data);
       auto data  = std::views::istream<std::string>(input);

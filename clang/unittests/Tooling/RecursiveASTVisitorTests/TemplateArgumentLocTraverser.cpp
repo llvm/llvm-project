@@ -1,4 +1,4 @@
-//===- unittest/Tooling/RecursiveASTVisitorTests/TemplateArgumentLocTraverser.cpp -===//
+//===- TemplateArgumentLocTraverser.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ public:
     const TemplateArgument &Arg = ArgLoc.getArgument();
 
     Arg.print(Context->getPrintingPolicy(), Stream, /*IncludeType*/ true);
-    Match(Stream.str(), ArgLoc.getLocation());
+    Match(ArgStr, ArgLoc.getLocation());
     return ExpectedLocationVisitor<TemplateArgumentLocTraverser>::
       TraverseTemplateArgumentLoc(ArgLoc);
   }

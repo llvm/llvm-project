@@ -33,12 +33,11 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
   SmallVector<OpOperand *> outputTensorOperands;
   for (OpOperand &operand : dstStyleOp.getDpsInitsMutable()) {
     Type type = operand.get().getType();
-    if (isa<RankedTensorType>(type)) {
+    if (isa<TensorType>(type)) {
       outputTensorOperands.push_back(&operand);
-    } else if (!isa<MemRefType>(type)) {
+    } else if (!isa<BaseMemRefType>(type)) {
       return op->emitOpError("expected that operand #")
-             << operand.getOperandNumber()
-             << " is a ranked tensor or a ranked memref";
+             << operand.getOperandNumber() << " is a tensor or a memref";
     }
   }
 
@@ -58,5 +57,6 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
              << " to match type of corresponding result (" << result.getType()
              << ")";
   }
+
   return success();
 }

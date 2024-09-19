@@ -2,7 +2,9 @@
 ## 32-bit XCOFF object file.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --symbols %t | FileCheck --check-prefix=SYMBOL32 %s
+# RUN: llvm-readobj --symbols %t | FileCheck --check-prefixes=SYMBOL32,NODEMANGLE %s
+# RUN: llvm-readobj --symbols --no-demangle %t | FileCheck --check-prefixes=SYMBOL32,NODEMANGLE %s
+# RUN: llvm-readobj --symbols --demangle %t | FileCheck --check-prefixes=SYMBOL32,DEMANGLE %s
 
 --- !XCOFF
 FileHeader:
@@ -56,7 +58,7 @@ Symbols:
         StabInfoIndex:          5
         StabSectNum:            6
 ## The C_EXT symbol with a CSECT auxiliary entry.
-  - Name:               .fun1
+  - Name:               ._Z5func1i
     Value:              0x0
     Section:            .text
     Type:               0x20
@@ -224,7 +226,8 @@ Symbols:
 # SYMBOL32-NEXT:   }
 # SYMBOL32-NEXT:   Symbol {
 # SYMBOL32-NEXT:     Index: 8
-# SYMBOL32-NEXT:     Name: .fun1
+# NODEMANGLE-NEXT:   Name: ._Z5func1i
+# DEMANGLE-NEXT:     Name: .func1(int)
 # SYMBOL32-NEXT:     Value (RelocatableAddress): 0x0
 # SYMBOL32-NEXT:     Section: .text
 # SYMBOL32-NEXT:     Type: 0x20

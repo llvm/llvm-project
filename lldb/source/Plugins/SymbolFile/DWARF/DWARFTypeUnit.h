@@ -24,15 +24,15 @@ public:
 
   void Dump(Stream *s) const override;
 
-  uint64_t GetTypeHash() { return m_header.GetTypeHash(); }
+  uint64_t GetTypeHash() { return m_header.getTypeHash(); }
 
-  dw_offset_t GetTypeOffset() { return GetOffset() + m_header.GetTypeOffset(); }
+  dw_offset_t GetTypeOffset() { return GetOffset() + m_header.getTypeOffset(); }
 
   static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
 private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
-                const DWARFUnitHeader &header,
+                const llvm::DWARFUnitHeader &header,
                 const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
                 DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}

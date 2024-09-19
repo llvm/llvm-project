@@ -20,7 +20,7 @@ invoke.cont:
 
 ; CHECK-NEXT: lpad: float = 0.0094467
 lpad:
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   br label %exit
 

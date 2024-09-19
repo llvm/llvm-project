@@ -114,7 +114,7 @@ define i32 @test5_as1_same_size(ptr addrspace(1) %p, i16 %i) {
 define i32 @test6(ptr %p, i64 %i1) {
   %i = shl i64 %i1, 2
   %pi = getelementptr i32, ptr %p, i64 %i
-  %i.next = or i64 %i, 1
+  %i.next = or disjoint i64 %i, 1
   %pi.next = getelementptr i32, ptr %p, i64 %i.next
   %x = load i32, ptr %pi
   store i32 42, ptr %pi.next
@@ -122,6 +122,21 @@ define i32 @test6(ptr %p, i64 %i1) {
   %z = sub i32 %x, %y
   ret i32 %z
 ; CHECK-LABEL: @test6(
+; CHECK: ret i32 0
+}
+
+; P[i] != p[(i*4)|2048] with disjoint or
+define i32 @test6_higheror(ptr %p, i64 %i1) {
+  %i = shl nuw nsw i64 %i1, 2
+  %pi = getelementptr i32, ptr %p, i64 %i
+  %i.next = or disjoint i64 %i, 2048
+  %pi.next = getelementptr i32, ptr %p, i64 %i.next
+  %x = load i32, ptr %pi
+  store i32 42, ptr %pi.next
+  %y = load i32, ptr %pi
+  %z = sub i32 %x, %y
+  ret i32 %z
+; CHECK-LABEL: @test6_higheror(
 ; CHECK: ret i32 0
 }
 

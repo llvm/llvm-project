@@ -28,7 +28,7 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/is_core_convertible.h>
 #include <__type_traits/is_scalar.h>
-#include <__type_traits/is_trivially_copy_constructible.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/strip_signature.h>
@@ -45,6 +45,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #ifndef _LIBCPP_CXX03_LANG
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -52,7 +55,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // bad_function_call
 
 _LIBCPP_DIAGNOSTIC_PUSH
+#  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
+#  endif
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -61,7 +66,7 @@ public:
 // Note that when a key function is not used, every translation unit that uses
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
   ~bad_function_call() _NOEXCEPT override;
 #  else
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
@@ -73,7 +78,7 @@ public:
 };
 _LIBCPP_DIAGNOSTIC_POP
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_function_call();
 #  else
@@ -138,45 +143,46 @@ class __default_alloc_func;
 
 template <class _Fp, class _Ap, class _Rp, class... _ArgTypes>
 class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
-  __compressed_pair<_Fp, _Ap> __f_;
+  _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Ap, __alloc_);
 
 public:
   typedef _LIBCPP_NODEBUG _Fp _Target;
   typedef _LIBCPP_NODEBUG _Ap _Alloc;
 
-  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __f_.first(); }
+  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __func_; }
 
   // WIN32 APIs may define __allocator, so use __get_allocator instead.
-  _LIBCPP_HIDE_FROM_ABI const _Alloc& __get_allocator() const { return __f_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const _Alloc& __get_allocator() const { return __alloc_; }
 
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f)
-      : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)), std::forward_as_tuple()) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f) : __func_(std::move(__f)), __alloc_() {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, const _Alloc& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(__f), std::forward_as_tuple(__a)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, const _Alloc& __a) : __func_(__f), __alloc_(__a) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, _Alloc&& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(__f), std::forward_as_tuple(std::move(__a))) {}
+      : __func_(__f), __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f, _Alloc&& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)), std::forward_as_tuple(std::move(__a))) {}
+      : __func_(std::move(__f)), __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
     typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(__f_.first(), std::forward<_ArgTypes>(__arg)...);
+    return _Invoker::__call(__func_, std::forward<_ArgTypes>(__arg)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI __alloc_func* __clone() const {
     typedef allocator_traits<_Alloc> __alloc_traits;
     typedef __rebind_alloc<__alloc_traits, __alloc_func> _AA;
-    _AA __a(__f_.second());
+    _AA __a(__alloc_);
     typedef __allocator_destructor<_AA> _Dp;
     unique_ptr<__alloc_func, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-    ::new ((void*)__hold.get()) __alloc_func(__f_.first(), _Alloc(__a));
+    ::new ((void*)__hold.get()) __alloc_func(__func_, _Alloc(__a));
     return __hold.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT { __f_.~__compressed_pair<_Target, _Alloc>(); }
+  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT {
+    __func_.~_Fp();
+    __alloc_.~_Alloc();
+  }
 
   _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__alloc_func* __f) {
     typedef allocator_traits<_Alloc> __alloc_traits;
@@ -227,10 +233,10 @@ class _LIBCPP_TEMPLATE_VIS __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
-  __base(const __base&);
-  __base& operator=(const __base&);
-
 public:
+  __base(const __base&)            = delete;
+  __base& operator=(const __base&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI __base() {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
   virtual __base* __clone() const             = 0;
@@ -511,7 +517,7 @@ struct __policy {
   }
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         true,
@@ -538,7 +544,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         &__large_clone<_Fun>,
         &__large_destroy<_Fun>,
         false,
@@ -553,7 +559,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         false,
@@ -765,7 +771,7 @@ public:
   {
   }
 
-  virtual __base<_Rp(_ArgTypes...)>* __clone() const {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __base<_Rp(_ArgTypes...)>* __clone() const {
     _LIBCPP_ASSERT_INTERNAL(
         false,
         "Block pointers are just pointers, so they should always fit into "
@@ -774,9 +780,11 @@ public:
     return nullptr;
   }
 
-  virtual void __clone(__base<_Rp(_ArgTypes...)>* __p) const { ::new ((void*)__p) __func(__f_); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __clone(__base<_Rp(_ArgTypes...)>* __p) const {
+    ::new ((void*)__p) __func(__f_);
+  }
 
-  virtual void destroy() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    ifndef _LIBCPP_HAS_OBJC_ARC
     if (__f_)
       _Block_release(__f_);
@@ -784,7 +792,7 @@ public:
     __f_ = 0;
   }
 
-  virtual void destroy_deallocate() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate() _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(
         false,
         "Block pointers are just pointers, so they should always fit into "
@@ -792,16 +800,20 @@ public:
         "never be invoked.");
   }
 
-  virtual _Rp operator()(_ArgTypes&&... __arg) { return std::__invoke(__f_, std::forward<_ArgTypes>(__arg)...); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual _Rp operator()(_ArgTypes&&... __arg) {
+    return std::__invoke(__f_, std::forward<_ArgTypes>(__arg)...);
+  }
 
 #    ifndef _LIBCPP_HAS_NO_RTTI
-  virtual const void* target(type_info const& __ti) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const void* target(type_info const& __ti) const _NOEXCEPT {
     if (__ti == typeid(__func::__block_type))
       return &__f_;
     return (const void*)nullptr;
   }
 
-  virtual const std::type_info& target_type() const _NOEXCEPT { return typeid(__func::__block_type); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const std::type_info& target_type() const _NOEXCEPT {
+    return typeid(__func::__block_type);
+  }
 #    endif // _LIBCPP_HAS_NO_RTTI
 };
 
@@ -1031,5 +1043,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(function<_Rp(_ArgTypes...)>& __x, functio
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FUNCTIONAL_FUNCTION_H
