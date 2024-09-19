@@ -176,12 +176,14 @@ SwiftDWARFImporterDelegate::SwiftDWARFImporterDelegate(SwiftASTContext &ts)
 void SwiftDWARFImporterDelegate::lookupValue(
     StringRef name, std::optional<swift::ClangTypeKind> kind,
     StringRef inModule, llvm::SmallVectorImpl<clang::Decl *> &results) {
-  bool suspicious = !name.size() || name[0] > 128;
-  lldbassert(!suspicious && "SwiftDWARFImporterDelegate asked to look up bogus type name");
-  if (suspicious)
-    return;
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}::lookupValue(\"{1}\")", m_description,
            name.str());
+  if (!name.size() || name[0] < 0) {
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "SwiftDWARFImporterDelegate was asked to look up a type with a "
+             "non-ASCII or empty type name");
+    return;
+  }
   auto clang_importer = m_swift_ast_ctx.GetClangImporter();
   if (!clang_importer) {
     LLDB_LOG(GetLog(LLDBLog::Types), "no clangimporter");
