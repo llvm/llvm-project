@@ -5802,7 +5802,7 @@ SDValue RISCVTargetLowering::lowerConstantFP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   const APFloat &Imm = cast<ConstantFPSDNode>(Op)->getValueAPF();
 
-  // Can this constant be select by a Zfa FLI instruction?
+  // Can this constant be selected by a Zfa FLI instruction?
   bool Negate = false;
   int Index = getLegalZfaFPImm(Imm, VT);
 
