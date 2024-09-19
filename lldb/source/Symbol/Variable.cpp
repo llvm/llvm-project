@@ -438,6 +438,19 @@ Status Variable::GetValuesForVariableExpressionPath(
   return error;
 }
 
+bool Variable::IsThreadLocal() const {
+  ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
+  // Give the symbol vendor a chance to add to the unified section list.
+  module_sp->GetSymbolFile();
+  std::vector<uint32_t> symbol_indexes;
+  module_sp->GetSymtab()->FindAllSymbolsWithNameAndType(
+      ConstString(GetName()), lldb::SymbolType::eSymbolTypeAny, symbol_indexes);
+  if (symbol_indexes.empty())
+    return false;
+  Symbol *symbol = module_sp->GetSymtab()->SymbolAtIndex(symbol_indexes[0]);
+  return symbol->GetAddress().GetSection()->IsThreadSpecific();
+}
+
 bool Variable::DumpLocations(Stream *s, const Address &address) {
   SymbolContext sc;
   CalculateSymbolContext(&sc);

@@ -254,7 +254,38 @@ bool ValueObjectVariable::UpdateValue() {
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }
   }
-
+  if (m_error.Fail() && variable->IsThreadLocal()) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    Thread *thread = exe_ctx.GetThreadPtr();
+    lldb::ModuleSP module_sp = GetModule();
+    if (!thread) {
+      m_error = Status::FromErrorString("no thread to evaluate TLS within");
+      return m_error.Success();
+    }
+    std::vector<uint32_t> symbol_indexes;
+    module_sp->GetSymtab()->FindAllSymbolsWithNameAndType(
+        ConstString(variable->GetName()), lldb::SymbolType::eSymbolTypeAny,
+        symbol_indexes);
+    Symbol *symbol = module_sp->GetSymtab()->SymbolAtIndex(symbol_indexes[0]);
+    lldb::addr_t tls_file_addr =
+        symbol->GetAddress().GetOffset() +
+        symbol->GetAddress().GetSection()->GetFileAddress();
+    const lldb::addr_t tls_load_addr =
+        thread->GetThreadLocalData(module_sp, tls_file_addr);
+    if (tls_load_addr == LLDB_INVALID_ADDRESS)
+      m_error = Status::FromErrorString(
+          "no TLS data currently exists for this thread");
+    else {
+      Value old_value(m_value);
+      m_value.GetScalar() = tls_load_addr;
+      m_value.SetContext(Value::ContextType::Variable, variable);
+      m_value.SetValueType(Value::ValueType::LoadAddress);
+      m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
+      SetValueDidChange(m_value.GetValueType() != old_value.GetValueType() ||
+                        m_value.GetScalar() != old_value.GetScalar());
+      SetValueIsValid(m_error.Success());
+    }
+  }
   return m_error.Success();
 }
 

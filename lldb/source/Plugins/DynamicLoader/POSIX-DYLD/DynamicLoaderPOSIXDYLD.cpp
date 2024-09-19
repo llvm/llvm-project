@@ -771,9 +771,12 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
             "GetThreadLocalData info: link_map=0x%" PRIx64
             ", thread info metadata: "
             "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
-            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
+            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32
+            ", tls_file_addr=0x%" PRIx64 ", module name=%s "
+            "\n",
             link_map, metadata.modid_offset, metadata.dtv_offset,
-            metadata.tls_offset, metadata.dtv_slot_size);
+            metadata.tls_offset, metadata.dtv_slot_size, tls_file_addr,
+            module_sp->GetFileSpec().GetFilename().AsCString());
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
@@ -790,9 +793,12 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read modid");
     return LLDB_INVALID_ADDRESS;
   }
-
+  const llvm::Triple &triple_ref =
+      m_process->GetTarget().GetArchitecture().GetTriple();
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
+  addr_t dtv_ptr = tp;
+  if (triple_ref.getArch() != llvm::Triple::aarch64)
+    dtv_ptr = dtv_ptr + metadata.dtv_offset;
   addr_t dtv = ReadPointer(dtv_ptr);
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");

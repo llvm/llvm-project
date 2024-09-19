@@ -3499,6 +3499,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  bool is_declaration = false;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3545,6 +3546,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       is_artificial = form_value.Boolean();
       break;
     case DW_AT_declaration:
+      is_declaration = form_value.Boolean();
+      break;
     case DW_AT_description:
     case DW_AT_endianity:
     case DW_AT_segment:
@@ -3555,6 +3558,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_sibling:
       break;
     }
+  }
+
+  // If It's a declaration then symbol not present in this symbolfile
+  // return early to try other linked objects.
+  if (is_declaration) {
+    return nullptr;
   }
 
   // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.

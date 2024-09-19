@@ -79,6 +79,8 @@ public:
     return m_location_list;
   }
 
+  bool IsThreadLocal() const;
+
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
   bool DumpLocations(Stream *s, const Address &address);

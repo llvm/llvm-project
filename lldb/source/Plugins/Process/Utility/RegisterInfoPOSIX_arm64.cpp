@@ -73,19 +73,20 @@
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
 static lldb_private::RegisterInfo g_register_infos_pauth[] = {
-    DEFINE_EXTENSION_REG(data_mask), DEFINE_EXTENSION_REG(code_mask)};
+    DEFINE_EXTENSION_REG(data_mask, KIND_ALL_INVALID),
+    DEFINE_EXTENSION_REG(code_mask, KIND_ALL_INVALID)};
 
 static lldb_private::RegisterInfo g_register_infos_mte[] = {
-    DEFINE_EXTENSION_REG(mte_ctrl)};
+    DEFINE_EXTENSION_REG(mte_ctrl, KIND_ALL_INVALID)};
 
 static lldb_private::RegisterInfo g_register_infos_tls[] = {
-    DEFINE_EXTENSION_REG(tpidr),
+    DEFINE_EXTENSION_REG(tpidr, GENERIC_KIND(LLDB_REGNUM_GENERIC_TP)),
     // Only present when SME is present
-    DEFINE_EXTENSION_REG(tpidr2)};
+    DEFINE_EXTENSION_REG(tpidr2, KIND_ALL_INVALID)};
 
 static lldb_private::RegisterInfo g_register_infos_sme[] = {
-    DEFINE_EXTENSION_REG(svcr),
-    DEFINE_EXTENSION_REG(svg),
+    DEFINE_EXTENSION_REG(svcr, KIND_ALL_INVALID),
+    DEFINE_EXTENSION_REG(svg, KIND_ALL_INVALID),
     // 16 is a default size we will change later.
     {"za", nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
      KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
@@ -95,7 +96,7 @@ static lldb_private::RegisterInfo g_register_infos_sme2[] = {
      KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
 
 static lldb_private::RegisterInfo g_register_infos_fpmr[] = {
-    DEFINE_EXTENSION_REG(fpmr)};
+    DEFINE_EXTENSION_REG(fpmr, KIND_ALL_INVALID)};
 
 // Number of register sets provided by this context.
 enum {
