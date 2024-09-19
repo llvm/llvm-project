@@ -386,6 +386,7 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
                                                          FeatureUseMISched,
+                                                         FeaturePreferScalarToGatherScatter,
                                                          HasMVEFloatOps]>;
 
 def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,

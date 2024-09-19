@@ -254,6 +254,12 @@ def FeatureSlowVDUP32     : SubtargetFeature<"slow-vdup32", "HasSlowVDUP32",
                                              "true",
                                              "Has slow VDUP32 - prefer VMOV">;
 
+// For some MVE-enabled processors, scalar loops are preferred when they are small enough
+// that the overhead of gathers and scatters is detrimental to performance.
+// In these cases, prefer to not use gathers and scatters, or avoid vectorising entirely.
+def FeaturePreferScalarToGatherScatter : SubtargetFeature<"prefer-scalar-to-gatscat", "PreferScalarToGatherScatter",
+                                             "true", "Disable gather and scatter instructions">;
+
 // Some targets (e.g. Cortex-A9) prefer VMOVSR to VMOVDRR even when using NEON
 // for scalar FP, as this allows more effective execution domain optimization.
 // True if VMOVSR will be favored over VMOVDRR.

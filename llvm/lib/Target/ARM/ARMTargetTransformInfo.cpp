@@ -1075,14 +1075,19 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
   unsigned NumVectorInstToHideOverhead = 10;
   int MaxMergeDistance = 64;
 
-  if (ST->hasNEON()) {
+  // For processors that prefer scalar loops to vector loops with gathers and
+  // scatters we disable them, but in a vectorised loop this results in a load
+  // of contiguous loads and stores that make the vectorised loop slower than a
+  // scalar loop, so increase the cost of those scalar loads and stores.
+  if (ST->hasNEON() || ST->preferScalarToGatherScatter()) {
     if (Ty->isVectorTy() && SE &&
         !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
       return NumVectorInstToHideOverhead;
 
     // In many cases the address computation is not merged into the instruction
     // addressing mode.
-    return 1;
+    if (ST->hasNEON())
+      return 1;
   }
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
@@ -1125,7 +1130,8 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
 }
 
 bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) {
-  if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps())
+  if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps() ||
+      ST->preferScalarToGatherScatter())
     return false;
 
   unsigned EltWidth = Ty->getScalarSizeInBits();
@@ -2327,7 +2333,8 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
 //
 static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                  const DataLayout &DL,
-                                 const LoopAccessInfo *LAI) {
+                                 const LoopAccessInfo *LAI,
+                                 const ARMSubtarget *ST) {
   LLVM_DEBUG(dbgs() << "Tail-predication: checking allowed instructions\n");
 
   // If there are live-out values, it is probably a reduction. We can predicate
@@ -2392,7 +2399,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                         "be tail-predicated\n.");
           return false;
           // TODO: don't tail predicate if there is a reversed load?
-        } else if (EnableMaskedGatherScatters) {
+        } else if (EnableMaskedGatherScatters &&
+                   !ST->preferScalarToGatherScatter()) {
           // Gather/scatters do allow loading from arbitrary strides, at
           // least if they are loop invariant.
           // TODO: Loop variant strides should in theory work, too, but
@@ -2465,7 +2473,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI());
+  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI(), ST);
 }
 
 TailFoldingStyle
