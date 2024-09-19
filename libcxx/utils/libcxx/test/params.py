@@ -392,6 +392,7 @@ DEFAULT_PARAMETERS = [
         actions=lambda hardening_mode: filter(
             None,
             [
+                AddCompileFlag("-U_LIBCPP_HARDENING_MODE")                                  if hardening_mode != "undefined" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")      if hardening_mode == "none" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
