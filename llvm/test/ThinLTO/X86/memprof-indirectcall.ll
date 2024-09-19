@@ -74,7 +74,7 @@
 ;; from main allocating cold memory.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRNODIST
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
 
 ;; Try again but with distributed ThinLTO
@@ -419,19 +419,6 @@ attributes #0 = { noinline optnone }
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
-; IRNODIST: define {{.*}} @main(
-; IRNODIST:   call {{.*}} @_Z3foov.argelim()
-; IRNODIST:   call {{.*}} @_Z3foov.memprof.1.argelim()
-; IRNODIST:   call {{.*}} @_Z3barP1A.argelim(
-; IRNODIST:   call {{.*}} @_Z3barP1A.argelim(
-; IRNODIST:   call {{.*}} @_Z3barP1A.argelim(
-; IRNODIST:   call {{.*}} @_Z3barP1A.argelim(
-; IRNODIST: define internal {{.*}} @_Z3foov.argelim()
-; IRNODIST:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
-; IRNODIST: define internal {{.*}} @_Z3foov.memprof.1.argelim()
-; IRNODIST:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
-; IRNODIST: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
-; IRNODIST: attributes #[[COLD]] = { "memprof"="cold" }
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend

@@ -2,7 +2,7 @@
 ; RUN: opt -passes=argpromotion -S %s | FileCheck %s
 
 define internal i32 @callee2(ptr noundef %0) {
-; CHECK-LABEL: define {{[^@]+}}@callee2.argprom
+; CHECK-LABEL: define {{[^@]+}}@callee2
 ; CHECK-SAME: (i32 [[DOT0_VAL:%.*]], i32 [[DOT4_VAL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[DOT0_VAL]], [[DOT4_VAL]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -24,7 +24,7 @@ define i32 @caller2(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[DOTVAL:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    [[DOTVAL1:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @callee2.argprom(i32 [[DOTVAL]], i32 [[DOTVAL1]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @callee2(i32 [[DOTVAL]], i32 [[DOTVAL1]])
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
   %3 = alloca [2 x i32], align 4
