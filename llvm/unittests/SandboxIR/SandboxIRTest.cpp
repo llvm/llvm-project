@@ -1702,6 +1702,77 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, Instruction_isStackSaveOrRestoreIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add = add i8 %v1, %v1
+  %stacksave = call ptr @llvm.stacksave()
+  call void @llvm.stackrestore(ptr %stacksave)
+  call void @llvm.sideeffect()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *StackSave = cast<sandboxir::CallInst>(&*It++);
+  auto *StackRestore = cast<sandboxir::CallInst>(&*It++);
+  auto *Other = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_FALSE(Add->isStackSaveOrRestoreIntrinsic());
+  EXPECT_TRUE(StackSave->isStackSaveOrRestoreIntrinsic());
+  EXPECT_TRUE(StackRestore->isStackSaveOrRestoreIntrinsic());
+  EXPECT_FALSE(Other->isStackSaveOrRestoreIntrinsic());
+  EXPECT_FALSE(Ret->isStackSaveOrRestoreIntrinsic());
+}
+
+TEST_F(SandboxIRTest, Instruction_isMemDepCandidate) {
+  parseIR(C, R"IR(
+declare void @llvm.fake.use(...)
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
+declare void @bar()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add0 = add i8 %v1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %v1, ptr %ptr
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42, i64 1, i32 0, i64 -1)
+  call void @llvm.fake.use(ptr %ptr)
+  call void @bar()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SideEffect0 = cast<sandboxir::CallInst>(&*It++);
+  auto *PseudoProbe0 = cast<sandboxir::CallInst>(&*It++);
+  auto *OtherIntrinsic0 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_FALSE(Add0->isMemDepCandidate());
+  EXPECT_TRUE(Ld0->isMemDepCandidate());
+  EXPECT_TRUE(St0->isMemDepCandidate());
+  EXPECT_FALSE(SideEffect0->isMemDepCandidate());
+  EXPECT_FALSE(PseudoProbe0->isMemDepCandidate());
+  EXPECT_TRUE(OtherIntrinsic0->isMemDepCandidate());
+  EXPECT_TRUE(CallBar->isMemDepCandidate());
+  EXPECT_FALSE(Ret->isMemDepCandidate());
+}
+
 TEST_F(SandboxIRTest, VAArgInst) {
   parseIR(C, R"IR(
 define void @foo(ptr %va) {
