@@ -33,7 +33,7 @@ define void @vp_select(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:     WIDEN ir<%1> = vp.load vp<%8>, vp<%5>
 ; IF-EVL-NEXT:     WIDEN ir<%cmp4> = icmp sgt ir<%0>, ir<%1>
 ; IF-EVL-NEXT:     WIDEN ir<%2> = vp.sub ir<0>, ir<%1>, vp<%5>
-; IF-EVL-NEXT:     WIDEN-SELECT ir<%cond.p> = select ir<%cmp4>, ir<%1>, ir<%2>
+; IF-EVL-NEXT:     WIDEN-SELECT ir<%cond.p> = vp.select ir<%cmp4>, ir<%1>, ir<%2>, vp<%5>
 ; IF-EVL-NEXT:     WIDEN ir<%cond> = vp.add ir<%cond.p>, ir<%0>, vp<%5>
 ; IF-EVL-NEXT:     CLONE ir<%arrayidx15> = getelementptr inbounds ir<%a>, vp<%6>
 ; IF-EVL-NEXT:     vp<%9> = vector-pointer ir<%arrayidx15>
