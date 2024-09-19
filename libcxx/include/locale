@@ -215,6 +215,10 @@ template <class charT> class messages_byname;
 #  include <streambuf>
 #  include <version>
 
+// TODO: This is needed to properly get access to strtold_l on some platforms.
+//       Remove once the locale base API is wrapped properly.
+#  include <stdlib.h>
+
 // TODO: Fix __bsd_locale_defaults.h
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
