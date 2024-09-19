@@ -56,54 +56,49 @@ static cl::opt<bool>
 namespace {
 
 class RegisterInfoEmitter {
-  CodeGenTarget Target;
   RecordKeeper &Records;
+  const CodeGenTarget Target;
+  CodeGenRegBank &RegBank;
 
 public:
-  RegisterInfoEmitter(RecordKeeper &R) : Target(R), Records(R) {
-    CodeGenRegBank &RegBank = Target.getRegBank();
+  RegisterInfoEmitter(RecordKeeper &R)
+      : Records(R), Target(R), RegBank(Target.getRegBank()) {
     RegBank.computeDerivedInfo();
   }
 
   // runEnums - Print out enum values for all of the registers.
-  void runEnums(raw_ostream &o, CodeGenTarget &Target, CodeGenRegBank &Bank);
+  void runEnums(raw_ostream &OS);
 
   // runMCDesc - Print out MC register descriptions.
-  void runMCDesc(raw_ostream &o, CodeGenTarget &Target, CodeGenRegBank &Bank);
+  void runMCDesc(raw_ostream &OS);
 
   // runTargetHeader - Emit a header fragment for the register info emitter.
-  void runTargetHeader(raw_ostream &o, CodeGenTarget &Target,
-                       CodeGenRegBank &Bank);
+  void runTargetHeader(raw_ostream &OS);
 
   // runTargetDesc - Output the target register and register file descriptions.
-  void runTargetDesc(raw_ostream &o, CodeGenTarget &Target,
-                     CodeGenRegBank &Bank);
+  void runTargetDesc(raw_ostream &OS);
 
   // run - Output the register file description.
-  void run(raw_ostream &o);
+  void run(raw_ostream &OS);
 
   void debugDump(raw_ostream &OS);
 
 private:
-  void EmitRegMapping(raw_ostream &o, const std::deque<CodeGenRegister> &Regs,
+  void EmitRegMapping(raw_ostream &OS, const std::deque<CodeGenRegister> &Regs,
                       bool isCtor);
-  void EmitRegMappingTables(raw_ostream &o,
+  void EmitRegMappingTables(raw_ostream &OS,
                             const std::deque<CodeGenRegister> &Regs,
                             bool isCtor);
-  void EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
-                           const std::string &ClassName);
-  void emitComposeSubRegIndices(raw_ostream &OS, CodeGenRegBank &RegBank,
-                                const std::string &ClassName);
-  void emitComposeSubRegIndexLaneMask(raw_ostream &OS, CodeGenRegBank &RegBank,
-                                      const std::string &ClassName);
+  void EmitRegUnitPressure(raw_ostream &OS, StringRef ClassName);
+  void emitComposeSubRegIndices(raw_ostream &OS, StringRef ClassName);
+  void emitComposeSubRegIndexLaneMask(raw_ostream &OS, StringRef ClassName);
 };
 
 } // end anonymous namespace
 
 // runEnums - Print out enum values for all of the registers.
-void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
-                                   CodeGenRegBank &Bank) {
-  const auto &Registers = Bank.getRegisters();
+void RegisterInfoEmitter::runEnums(raw_ostream &OS) {
+  const auto &Registers = RegBank.getRegisters();
 
   // Register enums are stored as uint16_t in the tables. Make sure we'll fit.
   assert(Registers.size() <= 0xffff && "Too many regs to fit in tables");
@@ -134,7 +129,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
   if (!Namespace.empty())
     OS << "} // end namespace " << Namespace << "\n";
 
-  const auto &RegisterClasses = Bank.getRegClasses();
+  const auto &RegisterClasses = RegBank.getRegClasses();
   if (!RegisterClasses.empty()) {
 
     // RegisterClass enums are stored as uint16_t in the tables.
@@ -168,7 +163,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
       OS << "} // end namespace " << Namespace << "\n\n";
   }
 
-  auto &SubRegIndices = Bank.getSubRegIndices();
+  auto &SubRegIndices = RegBank.getSubRegIndices();
   if (!SubRegIndices.empty()) {
     OS << "\n// Subregister indices\n\n";
     std::string Namespace = SubRegIndices.front().getNamespace();
@@ -187,9 +182,9 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
   if (!Namespace.empty())
     OS << "namespace " << Namespace << " {\n";
   OS << "enum RegisterPressureSets {\n";
-  unsigned NumSets = Bank.getNumRegPressureSets();
+  unsigned NumSets = RegBank.getNumRegPressureSets();
   for (unsigned i = 0; i < NumSets; ++i) {
-    const RegUnitSet &RegUnits = Bank.getRegSetAt(i);
+    const RegUnitSet &RegUnits = RegBank.getRegSetAt(i);
     OS << "  " << RegUnits.Name << " = " << i << ",\n";
   }
   OS << "};\n";
@@ -204,8 +199,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
 static void printInt(raw_ostream &OS, int Val) { OS << Val; }
 
 void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
-                                              const CodeGenRegBank &RegBank,
-                                              const std::string &ClassName) {
+                                              StringRef ClassName) {
   unsigned NumRCs = RegBank.getRegClasses().size();
   unsigned NumSets = RegBank.getNumRegPressureSets();
 
@@ -683,10 +677,9 @@ static bool combine(const CodeGenSubRegIndex *Idx,
 }
 
 void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
-                                                   CodeGenRegBank &RegBank,
-                                                   const std::string &ClName) {
+                                                   StringRef ClassName) {
   const auto &SubRegIndices = RegBank.getSubRegIndices();
-  OS << "unsigned " << ClName
+  OS << "unsigned " << ClassName
      << "::composeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const {\n";
 
   // Many sub-register indexes are composition-compatible, meaning that
@@ -751,8 +744,8 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   OS << "}\n\n";
 }
 
-void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(
-    raw_ostream &OS, CodeGenRegBank &RegBank, const std::string &ClName) {
+void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
+                                                         StringRef ClassName) {
   // See the comments in computeSubRegLaneMasks() for our goal here.
   const auto &SubRegIndices = RegBank.getSubRegIndices();
 
@@ -815,7 +808,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(
   }
   OS << "  };\n\n";
 
-  OS << "LaneBitmask " << ClName
+  OS << "LaneBitmask " << ClassName
      << "::composeSubRegIndexLaneMaskImpl(unsigned IdxA, LaneBitmask LaneMask)"
         " const {\n"
         "  --IdxA; assert(IdxA < "
@@ -836,7 +829,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(
         "  return Result;\n"
         "}\n\n";
 
-  OS << "LaneBitmask " << ClName
+  OS << "LaneBitmask " << ClassName
      << "::reverseComposeSubRegIndexLaneMaskImpl(unsigned IdxA, "
         " LaneBitmask LaneMask) const {\n"
         "  LaneMask &= getSubRegIndexLaneMask(IdxA);\n"
@@ -861,8 +854,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(
 //
 // runMCDesc - Print out MC register descriptions.
 //
-void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
-                                    CodeGenRegBank &RegBank) {
+void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   emitSourceFileHeader("MC Register Information", OS);
 
   OS << "\n#ifdef GET_REGINFO_MC_DESC\n";
@@ -1025,7 +1017,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
          << "  const uint8_t " << Name << "Bits[] = {\n    ";
       BitVectorEmitter BVE;
       for (const Record *Reg : Order) {
-        BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
+        BVE.add(RegBank.getReg(Reg)->EnumValue);
       }
       BVE.print(OS);
       OS << "\n  };\n\n";
@@ -1100,9 +1092,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "#endif // GET_REGINFO_MC_DESC\n\n";
 }
 
-void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS,
-                                          CodeGenTarget &Target,
-                                          CodeGenRegBank &RegBank) {
+void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
   emitSourceFileHeader("Register Information Header Fragment", OS);
 
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
@@ -1187,8 +1177,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS,
 //
 // runTargetDesc - Output the target register and register file descriptions.
 //
-void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
-                                        CodeGenRegBank &RegBank) {
+void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
   emitSourceFileHeader("Target Register and Register Classes Information", OS);
 
   OS << "\n#ifdef GET_REGINFO_TARGET_DESC\n";
@@ -1491,8 +1480,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       std::distance(SubRegIndices.begin(), SubRegIndices.end());
 
   if (!SubRegIndices.empty()) {
-    emitComposeSubRegIndices(OS, RegBank, ClassName);
-    emitComposeSubRegIndexLaneMask(OS, RegBank, ClassName);
+    emitComposeSubRegIndices(OS, ClassName);
+    emitComposeSubRegIndexLaneMask(OS, ClassName);
   }
 
   if (!SubRegIndices.empty()) {
@@ -1574,7 +1563,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
        << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n\n";
   }
 
-  EmitRegUnitPressure(OS, RegBank, ClassName);
+  EmitRegUnitPressure(OS, ClassName);
 
   // Emit register base class mapper
   if (!RegisterClasses.empty()) {
@@ -1816,25 +1805,23 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 }
 
 void RegisterInfoEmitter::run(raw_ostream &OS) {
-  CodeGenRegBank &RegBank = Target.getRegBank();
   Records.startTimer("Print enums");
-  runEnums(OS, Target, RegBank);
+  runEnums(OS);
 
   Records.startTimer("Print MC registers");
-  runMCDesc(OS, Target, RegBank);
+  runMCDesc(OS);
 
   Records.startTimer("Print header fragment");
-  runTargetHeader(OS, Target, RegBank);
+  runTargetHeader(OS);
 
   Records.startTimer("Print target registers");
-  runTargetDesc(OS, Target, RegBank);
+  runTargetDesc(OS);
 
   if (RegisterInfoDebug)
     debugDump(errs());
 }
 
 void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
-  CodeGenRegBank &RegBank = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
   unsigned NumModes = CGH.getNumModeIds();
   auto getModeName = [CGH](unsigned M) -> StringRef {
