@@ -1718,6 +1718,16 @@ defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exc
 defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_i32>;
 defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_u32>;
 
+def VOP_PARALLEL_BIT : VOP3_Profile<VOP_I32_I32_I32> {
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 0;
+}
+
+let SubtargetPredicate = isGFX13Plus in {
+  defm V_PDEP_B32 : VOP3Inst<"v_pdep_b32", VOP_PARALLEL_BIT>;
+  defm V_PEXT_B32 : VOP3Inst<"v_pext_b32", VOP_PARALLEL_BIT>;
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
 //===----------------------------------------------------------------------===//
@@ -1793,6 +1803,8 @@ defm V_MINIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x22f>;
 defm V_MAXIMUM3_F16           : VOP3Only_Realtriple_t16_gfx12_gfx13<0x230>;
 defm V_MED3_NUM_F32           : VOP3_Realtriple_with_name_gfx12_gfx13<0x231, 0x231, "V_MED3_F32", "v_med3_num_f32">;
 defm V_MED3_NUM_F16           : VOP3_Realtriple_with_name_gfx12_gfx13<0x232, 0x357, "V_MED3_F16", "v_med3_num_f16">;
+defm V_PDEP_B32               : VOP3_Real_Base<GFX13Gen, 0x23e>;
+defm V_PEXT_B32               : VOP3_Real_Base<GFX13Gen, 0x23f>;
 defm V_WAVE_MATCH_B32         : VOP3_Real_Base<GFX13Gen, 0x241>;
 defm V_EXCLUSIVE_SCAN_SUM_I32 : VOP3_Real_Base<GFX13Gen, 0x242>;
 defm V_EXCLUSIVE_SCAN_SUM_U32 : VOP3_Real_Base<GFX13Gen, 0x243>;
