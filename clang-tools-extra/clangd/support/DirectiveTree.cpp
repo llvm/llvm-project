@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveTree.h"
+#include "DirectiveTree.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -14,7 +14,7 @@
 #include <variant>
 
 namespace clang {
-namespace pseudo {
+namespace clangd {
 namespace {
 
 class DirectiveParser {
@@ -353,5 +353,5 @@ TokenStream DirectiveTree::stripDirectives(const TokenStream &In) const {
   return Out;
 }
 
-} // namespace pseudo
+} // namespace clangd
 } // namespace clang
