@@ -92,10 +92,10 @@ def check_manual_requests(
         "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infrastructure:commit-access"
     }
 
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     users = []
     for issue in data["search"]["nodes"]:
         users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
@@ -121,10 +121,10 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
         }
     """
 
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=user_query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     variables["user_id"] = data["user"]["id"]
 
     query = """
@@ -151,10 +151,10 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
         }
      """
     count = 0
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     for repo in data["organization"]["teams"]["nodes"][0]["repositories"]["nodes"]:
         count += int(repo["ref"]["target"]["history"]["totalCount"])
         if count >= User.THRESHOLD:
@@ -181,10 +181,10 @@ def is_new_committer_query_repo(
         }
     """
 
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=user_query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     variables["owner"] = "llvm"
     variables["user_id"] = data["user"]["id"]
     variables["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
@@ -209,10 +209,10 @@ def is_new_committer_query_repo(
         }
      """
 
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     repo = data["organization"]["repository"]
     commits = repo["ref"]["target"]["history"]["nodes"]
     if len(commits) == 0:
@@ -257,10 +257,10 @@ def get_review_count(
         "query": f"type:pr commenter:{user} -author:{user} merged:>{formatted_start_date} org:llvm",
     }
 
-    res_header, d = gh._Github__requester.graphql_query(
+    res_header, res_data = gh._Github__requester.graphql_query(
         query=query, variables=variables
     )
-    data = d["data"]
+    data = res_data["data"]
     return int(data["search"]["issueCount"])
 
 
@@ -303,10 +303,10 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
         has_next_page = True
         while has_next_page:
             print(variables)
-            res_header, d = gh._Github__requester.graphql_query(
+            res_header, res_data = gh._Github__requester.graphql_query(
                 query=query, variables=variables
             )
-            data = d["data"]
+            data = res_data["data"]
             for pr in data["search"]["nodes"]:
                 # Users can be None if the user has been deleted.
                 if not pr["author"]:
