@@ -15,7 +15,7 @@ define ptr @vfs_addname(ptr %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp
 ; CHECK-NEXT:      #dbg_value(i32 [[LEN]], [[META13:![0-9]+]], !DIExpression(), [[META12]])
 ; CHECK-NEXT:      #dbg_value(i32 [[HASH]], [[META14:![0-9]+]], !DIExpression(), [[META12]])
 ; CHECK-NEXT:      #dbg_value(i32 [[FLAGS]], [[META15:![0-9]+]], !DIExpression(), [[META12]])
-; CHECK-NEXT:    [[TMP0:%.*]] = call fastcc ptr @add_name_internal(ptr [[NAME]], i32 [[HASH]]) #[[ATTR2:[0-9]+]], !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call fastcc ptr @add_name_internal.argelim(ptr [[NAME]], i32 [[HASH]]) #[[ATTR2:[0-9]+]], !dbg [[DBG16:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[TMP0]], !dbg [[DBG16]]
 ;
 entry:
@@ -31,7 +31,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 define internal fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8 zeroext %extra, i32 %flags) noinline nounwind ssp !dbg !16 {
 ;
-; CHECK-LABEL: define {{[^@]+}}@add_name_internal
+; CHECK-LABEL: define {{[^@]+}}@add_name_internal.argelim
 ; CHECK-SAME: (ptr [[NAME:%.*]], i32 [[HASH:%.*]]) #[[ATTR1:[0-9]+]] !dbg [[DBG18:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:      #dbg_value(ptr [[NAME]], [[META22:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])

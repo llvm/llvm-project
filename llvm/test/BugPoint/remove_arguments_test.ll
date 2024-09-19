@@ -11,7 +11,7 @@
 
 declare i32 @test2()
 
-; CHECK: define void @test() {
+; CHECK: define void @test.argelim() {
 define i32 @test(i32 %A, ptr %B, float %C) {
 	call i32 @test2()
 	ret i32 %1
