@@ -260,12 +260,35 @@ struct FormatStyle {
     ///   bbb >>= 2;
     /// \endcode
     bool PadOperators;
+    /// Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    /// are aligned in declarations.
+    /// \code
+    ///   true:
+    ///   someLongFunction(int                /*a*/,
+    ///                    bool               b,
+    ///                    const std::string& c)
+    ///
+    ///   const bool ret = someLongFunction(4    /*a*/,
+    ///                                     true /*b*/,
+    ///                                     str  /*c*/);
+    ///
+    ///   false:
+    ///   someLongFunction(int /*a*/,
+    ///                    bool b,
+    ///                    const std::string& c)
+    ///
+    ///   const bool ret = someLongFunction(4 /*a*/,
+    ///                                     true /*b*/,
+    ///                                     str /*c*/);
+    /// \endcode
+    bool AlignBlockComments;
     bool operator==(const AlignConsecutiveStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
-             PadOperators == R.PadOperators;
+             PadOperators == R.PadOperators &&
+             AlignBlockComments == R.AlignBlockComments;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);

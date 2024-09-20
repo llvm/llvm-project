@@ -1005,6 +1005,12 @@ void WhitespaceManager::alignConsecutiveTableGenDefinitions() {
                          TT_InheritanceColon);
 }
 
+static bool shouldAlignBlockComment(const FormatToken &Tok) {
+  return Tok.is(TT_BlockComment) && Tok.Previous &&
+         !Tok.Previous->isOneOf(TT_StartOfName, TT_BlockComment) && Tok.Next &&
+         Tok.Next->isOneOf(tok::comma, tok::r_paren, TT_BlockComment);
+}
+
 void WhitespaceManager::alignConsecutiveDeclarations() {
   if (!Style.AlignConsecutiveDeclarations.Enabled)
     return;
@@ -1022,7 +1028,10 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
         if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
-          return false;
+          if (!Style.AlignConsecutiveDeclarations.AlignBlockComments ||
+              !shouldAlignBlockComment(*C.Tok)) {
+            return false;
+          }
         if (C.Tok->Previous &&
             C.Tok->Previous->is(TT_StatementAttributeLikeMacro))
           return false;
