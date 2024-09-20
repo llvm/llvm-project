@@ -15,7 +15,7 @@ on:
       - '!llvm/**'
   pull_request:
     branches:
-      - 'main'
+      - '**'
     paths:
       - 'clang/**'
       - '.github/workflows/clang-cir-tests.yml'
