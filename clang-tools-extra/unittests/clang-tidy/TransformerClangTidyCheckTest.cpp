@@ -346,20 +346,20 @@ int h(int x) { return 5; })cc";
   ClangTidyOptions Options;
   std::map<StringRef, StringRef> PathsToContent = {{"input.h", "\n"}};
   Options.CheckOptions["test-check-0.IncludeStyle"] = "llvm";
-  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                       Input, nullptr, "inputTest.cpp",
-                                       {}, Options, PathsToContent));
-  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                      Input, nullptr, "input_test.cpp",
-                                      {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cpp", {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "input_test.cpp", {}, Options, PathsToContent));
 
   Options.CheckOptions["test-check-0.IncludeStyle"] = "google";
-  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                      Input, nullptr, "inputTest.cc",
-                                      {}, Options, PathsToContent));
-  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                       Input, nullptr, "input_test.cc",
-                                       {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cc", {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "input_test.cc", {}, Options, PathsToContent));
 }
 
 TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleGlobalOption) {
@@ -378,20 +378,20 @@ int h(int x) { return 5; })cc";
   ClangTidyOptions Options;
   std::map<StringRef, StringRef> PathsToContent = {{"input.h", "\n"}};
   Options.CheckOptions["IncludeStyle"] = "llvm";
-  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                       Input, nullptr, "inputTest.cpp",
-                                       {}, Options, PathsToContent));
-  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                      Input, nullptr, "input_test.cpp",
-                                      {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cpp", {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "input_test.cpp", {}, Options, PathsToContent));
 
   Options.CheckOptions["IncludeStyle"] = "google";
-  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                      Input, nullptr, "inputTest.cc",
-                                      {}, Options, PathsToContent));
-  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
-                                       Input, nullptr, "input_test.cc",
-                                       {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cc", {}, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "input_test.cc", {}, Options, PathsToContent));
 }
 
 } // namespace

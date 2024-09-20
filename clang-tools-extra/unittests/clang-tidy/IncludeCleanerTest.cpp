@@ -103,14 +103,13 @@ int BazResult = baz();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
                            )"},
-                 {"baz.h", R"(#pragma once
+                           {"baz.h", R"(#pragma once
                               int baz();
                            )"}}));
 }
@@ -124,8 +123,8 @@ int BarResult2 = $diag2^bar();)");
 
   {
     std::vector<ClangTidyError> Errors;
-    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        {}, ClangTidyOptions(),
+    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -141,8 +140,8 @@ int BarResult2 = $diag2^bar();)");
     std::vector<ClangTidyError> Errors;
     ClangTidyOptions Opts;
     Opts.CheckOptions.insert({"DeduplicateFindings", "false"});
-    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        {}, Opts,
+    runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
+                                        Opts,
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -215,14 +214,13 @@ int BazResult_1 = baz_1();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
                            )"},
-                 {"baz.h", R"(#pragma once
+                           {"baz.h", R"(#pragma once
                               int baz_0();
                               int baz_1();
                            )"}}));
@@ -244,13 +242,12 @@ std::vector Vec;
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"string", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"string", R"(#pragma once
                               namespace std { class string {}; }
                             )"},
-                 {"vector", R"(#pragma once
+                           {"vector", R"(#pragma once
                               #include <string>
                               namespace std { class vector {}; }
                             )"}}));
@@ -272,14 +269,13 @@ int FooBarResult = foobar();
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"bar.h", R"(#pragma once
+  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
+                          PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                          {{"bar.h", R"(#pragma once
                               #include "private.h"
                               int bar();
                            )"},
-                 {"private.h", R"(#pragma once
+                           {"private.h", R"(#pragma once
                                 // IWYU pragma: private, include "public.h"
                                 int foobar();
                                )"}}));
@@ -295,11 +291,10 @@ DECLARE(myfunc) {
 )";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PreCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"foo.h",
-                  R"(#pragma once
+  EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
+                         PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                         {{"foo.h",
+                           R"(#pragma once
                      #define DECLARE(X) void X()
                   )"}}));
 
@@ -311,11 +306,10 @@ DECLARE {
 }
 )";
 
-  EXPECT_EQ(PreCode,
-            runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
-                {{"foo.h",
-                  R"(#pragma once
+  EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
+                         PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
+                         {{"foo.h",
+                           R"(#pragma once
                      #define DECLARE void myfunc()
                   )"}}));
 }
