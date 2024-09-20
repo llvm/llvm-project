@@ -81,8 +81,7 @@ TEST(ConvertUTFTest, OddLengthInput) {
 
 TEST(ConvertUTFTest, Empty) {
   std::string Result;
-  bool Success =
-      convertUTF16ToUTF8String(llvm::ArrayRef<char>(), Result);
+  bool Success = convertUTF16ToUTF8String(llvm::ArrayRef<char>(), Result);
   EXPECT_TRUE(Success);
   EXPECT_TRUE(Result.empty());
 }

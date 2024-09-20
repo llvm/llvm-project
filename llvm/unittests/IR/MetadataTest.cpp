@@ -4770,8 +4770,7 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
 
 TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
   // There is no user, but we can still call replace.
-  DistinctMDOperandPlaceholder(7).replaceUseWith(
-      MDTuple::get(Context, {}));
+  DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, {}));
 }
 
 // Test various assertions in metadata tracking. Don't run these tests if gtest

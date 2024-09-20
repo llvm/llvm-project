@@ -896,8 +896,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
     auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
                                     DIB.createFile("F.CBL", "/"),
                                     "llvm-cobol74", true, "", 0);
-    auto Type =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
@@ -1168,8 +1167,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus_11,
                                   DIB.createFile("tmp.cpp", "/"), "", true, "",
                                   0);
-  auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto SP =
       DIB.createFunction(CU, "foo", "foo", File, 1, SPType, 1, DINode::FlagZero,
                          DISubprogram::SPFlagDefinition);
