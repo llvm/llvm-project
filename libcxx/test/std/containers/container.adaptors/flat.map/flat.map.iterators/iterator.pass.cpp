@@ -10,13 +10,13 @@
 
 // <flat_map>
 
-//       iterator begin();
-// const_iterator begin() const;
-//       iterator end();
-// const_iterator end()   const;
+//       iterator begin()   noexcept;
+// const_iterator begin()   const noexcept
+//       iterator end()     noexcept;
+// const_iterator end()     const noexcept;
 //
-// const_iterator         cbegin()  const;
-// const_iterator         cend()    const;
+// const_iterator cbegin()  const noexcept;
+// const_iterator cend()    const noexcept;
 
 #include <cassert>
 #include <cstddef>
@@ -29,14 +29,24 @@
 
 int main(int, char**) {
   {
-    using M = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
-    M m     = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
+    using M     = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
+    M m         = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
+    const M& cm = m;
     ASSERT_SAME_TYPE(decltype(m.begin()), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.cbegin()), M::const_iterator);
+    ASSERT_SAME_TYPE(decltype(cm.begin()), M::const_iterator);
     ASSERT_SAME_TYPE(decltype(m.end()), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.cend()), M::const_iterator);
+    ASSERT_SAME_TYPE(decltype(cm.end()), M::const_iterator);
+    static_assert(noexcept(m.begin()));
+    static_assert(noexcept(cm.begin()));
+    static_assert(noexcept(m.cbegin()));
+    static_assert(noexcept(m.end()));
+    static_assert(noexcept(cm.end()));
+    static_assert(noexcept(m.cend()));
     assert(m.size() == 4);
     assert(std::distance(m.begin(), m.end()) == 4);
+    assert(std::distance(cm.begin(), cm.end()) == 4);
     assert(std::distance(m.cbegin(), m.cend()) == 4);
     M::iterator i;                      // default-construct
     i                   = m.begin();    // move-assignment

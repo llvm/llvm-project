@@ -17,8 +17,18 @@
 #include <string>
 #include <utility>
 
-#include "helpers.h"
+#include "../helpers.h"
 #include "test_macros.h"
+
+// Constraints: The qualified-id Compare::is_transparent is valid and denotes a type.
+template <class M>
+concept CanCount        = requires(M m, Transparent<int> k) { m.count(k); };
+using TransparentMap    = std::flat_map<int, double, TransparentComparator>;
+using NonTransparentMap = std::flat_map<int, double, NonTransparentComparator>;
+static_assert(CanCount<TransparentMap>);
+static_assert(CanCount<const TransparentMap>);
+static_assert(!CanCount<NonTransparentMap>);
+static_assert(!CanCount<const NonTransparentMap>);
 
 int main(int, char**) {
   {

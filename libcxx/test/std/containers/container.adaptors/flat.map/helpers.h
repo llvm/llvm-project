@@ -45,20 +45,32 @@ struct CopyOnlyVector : std::vector<T> {
   CopyOnlyVector& operator=(CopyOnlyVector& other) { return this->operator=(other); }
 };
 
-template <class T>
+template <class T, bool ConvertibleToT = false>
 struct Transparent {
   T t;
+
+  operator T() const
+    requires ConvertibleToT
+  {
+    return t;
+  }
 };
 
+template <class T>
+using ConvertibleTransparent = Transparent<T, true>;
+
+template <class T>
+using NonConvertibleTransparent = Transparent<T, false>;
+
 struct TransparentComparator {
-   using is_transparent = void;
-  template <class T>
-  bool operator()(const T& t, const Transparent<T>& transparent) const {
+  using is_transparent = void;
+  template <class T, bool Convertible>
+  bool operator()(const T& t, const Transparent<T, Convertible>& transparent) const {
     return t < transparent.t;
   }
 
-  template <class T>
-  bool operator()(const Transparent<T>& transparent, const T& t) const {
+  template <class T, bool Convertible>
+  bool operator()(const Transparent<T, Convertible>& transparent, const T& t) const {
     return transparent.t < t;
   }
 
@@ -67,5 +79,21 @@ struct TransparentComparator {
     return t1 < t2;
   }
 };
+
+struct NonTransparentComparator {
+  template <class T, bool Convertible>
+  bool operator()(const T&, const Transparent<T, Convertible>&) const;
+
+  template <class T, bool Convertible>
+  bool operator()(const Transparent<T, Convertible>&, const T&) const;
+
+  template <class T>
+  bool operator()(const T&, const T&) const;
+};
+
+struct NoDefaultCtr {
+  NoDefaultCtr() = delete;
+};
+
 
 #endif // SUPPORT_FLAT_MAP_HELPERS_H

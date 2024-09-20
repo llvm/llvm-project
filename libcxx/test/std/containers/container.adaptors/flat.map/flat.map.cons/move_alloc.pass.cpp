@@ -27,6 +27,24 @@
 
 int main(int, char**) {
   {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<key_container_type, Alloc> is true
+    // and uses_allocator_v<mapped_container_type, Alloc> is true.
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = std::vector<int, A1>;
+    using V2 = std::vector<int, A2>;
+    using M1 = std::flat_map<int, int, C, V1, V1>;
+    using M2 = std::flat_map<int, int, C, V1, V2>;
+    using M3 = std::flat_map<int, int, C, V2, V1>;
+    static_assert( std::is_constructible_v<M1, M1&&, const A1&>);
+    static_assert(!std::is_constructible_v<M1, M1&&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, M2&&, const A2&>);
+    static_assert(!std::is_constructible_v<M3, M3&&, const A2&>);
+  }
+  {
     std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 1}};
     using C                        = test_less<int>;
     using A                        = test_allocator<int>;
@@ -50,6 +68,7 @@ int main(int, char**) {
     assert(mo.values().get_allocator() == A(7));
   }
   {
+    // explicit(false)
     std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 1}};
     using C                        = test_less<int>;
     using M                        = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::deque<int>>;

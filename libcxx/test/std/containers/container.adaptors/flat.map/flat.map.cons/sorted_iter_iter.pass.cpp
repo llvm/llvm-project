@@ -70,7 +70,7 @@ int main(int, char**) {
     assert(m2 == m);
   }
   {
-    // flat_map(sorted_unique_t, InputIterator, InputIterator, const key_compare&);
+    // flat_map(sorted_unique_t, InputIterator, InputIterator);
     // contiguous iterator
     using C = test_less<int>;
     using M = std::flat_map<int, int, C, std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>;

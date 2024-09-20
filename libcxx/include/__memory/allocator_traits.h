@@ -373,9 +373,6 @@ template <class _Traits, class _Tp>
 using __rebind_alloc = typename _Traits::template rebind_alloc<_Tp>::other;
 #endif
 
-template <class _Allocator, class _Tp>
-using __alloc_rebind = __rebind_alloc<allocator_traits<_Allocator>, _Tp>;
-
 template <class _Alloc>
 struct __check_valid_allocator : true_type {
   using _Traits = std::allocator_traits<_Alloc>;

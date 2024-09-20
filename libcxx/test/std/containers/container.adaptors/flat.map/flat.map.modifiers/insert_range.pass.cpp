@@ -25,6 +25,17 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
+// test constraint container-compatible-range
+template <class M, class R>
+concept CanInsertRange = requires(M m, R&& r) { m.insert_range(std::forward<R>(r)); };
+
+using Map = std::flat_map<int, double>;
+
+static_assert(CanInsertRange<Map, std::ranges::subrange<std::pair<int, double>*>>);
+static_assert(CanInsertRange<Map, std::ranges::subrange<std::pair<short, double>*>>);
+static_assert(!CanInsertRange<Map, std::ranges::subrange<int*>>);
+static_assert(!CanInsertRange<Map, std::ranges::subrange<double*>>);
+
 int main(int, char**) {
   {
     using P                 = std::pair<int, int>;

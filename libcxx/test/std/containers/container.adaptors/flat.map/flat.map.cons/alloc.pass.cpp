@@ -21,8 +21,40 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
+#include "../../../test_compare.h"
 
 int main(int, char**) {
+  {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<key_container_type, Alloc> is true
+    // and uses_allocator_v<mapped_container_type, Alloc> is true.
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = std::vector<int, A1>;
+    using V2 = std::vector<int, A2>;
+    using M1 = std::flat_map<int, int, C, V1, V1>;
+    using M2 = std::flat_map<int, int, C, V1, V2>;
+    using M3 = std::flat_map<int, int, C, V2, V1>;
+    using IL = std::initializer_list<std::pair<int, int>>;
+    static_assert(std::is_constructible_v<M1, const A1&>);
+    static_assert(!std::is_constructible_v<M1, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const A2&>);
+    static_assert(!std::is_constructible_v<M3, const A2&>);
+  }
+  {
+    //explicit
+    using M =
+        std::flat_map<int,
+                      long,
+                      std::less<int>,
+                      std::vector<int, test_allocator<int>>,
+                      std::vector<long, test_allocator<long>>>;
+
+    static_assert(std::is_constructible_v<M, test_allocator<int>>);
+    static_assert(!std::is_convertible_v<test_allocator<int>, M>);
+  }
   {
     using A = test_allocator<short>;
     using M =
@@ -38,6 +70,7 @@ int main(int, char**) {
     assert(m.values().get_allocator().get_id() == 5);
   }
   {
+    // pmr
     using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::polymorphic_allocator<int> pa = &mr;

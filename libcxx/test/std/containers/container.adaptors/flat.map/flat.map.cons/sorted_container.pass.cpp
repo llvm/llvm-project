@@ -36,7 +36,7 @@
 
 int main(int, char**) {
   {
-    // The constructors in  this subclause shall not participate in overload
+    // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
     // and uses_allocator_v<mapped_container_type, Alloc> is true.
 

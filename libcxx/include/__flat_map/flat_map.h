@@ -79,7 +79,7 @@ public:
   using key_type    = _Key;
   using mapped_type = _Tp;
   using value_type  = pair<key_type, mapped_type>;
-  using key_compare = _Compare;
+  using key_compare = __type_identity_t<_Compare>;
   // TODO : the following is the spec, but not implementable for vector<bool>
   // using reference              = pair<const key_type&, mapped_type&>;
   // using const_reference        = pair<const key_type&, const mapped_type&>;
@@ -523,12 +523,21 @@ public:
   }
 
   // [flat.map.access], element access
-  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](const key_type& __x) { return try_emplace(__x).first->second; }
+  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](const key_type& __x)
+    requires is_constructible_v<mapped_type>
+  {
+    return try_emplace(__x).first->second;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __x) { return try_emplace(std::move(__x)).first->second; }
+  _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __x)
+    requires is_constructible_v<mapped_type>
+  {
+    return try_emplace(std::move(__x)).first->second;
+  }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type> &&
+             is_convertible_v<_Kp&&, const_iterator> && is_convertible_v<_Kp&&, iterator>
   _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](_Kp&& __x) {
     return try_emplace(std::forward<_Kp>(__x)).first->second;
   }
@@ -574,6 +583,8 @@ public:
   // [flat.map.modifiers], modifiers
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
+  // todo: LWG
+  // insufficiently constrained. key and values need to be move constructible
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __try_emplace(std::move(__pair.first), std::move(__pair.second));
@@ -649,6 +660,11 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void replace(key_container_type&& __key_cont, mapped_container_type&& __mapped_cont) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+        __key_cont.size() == __mapped_cont.size(), "flat_map keys and mapped containers have different size");
+
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__key_cont), "Either the key container is not sorted or it contains duplicates");
     auto __guard         = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     __containers_.keys   = std::move(__key_cont);
     __containers_.values = std::move(__mapped_cont);
@@ -817,6 +833,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __x) const { return find(__x) != end(); }
 
   template <class _Kp>
+  // todo: spec does not say about transparent for this one. LWG issue?
+    requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI bool contains(const _Kp& __x) const {
     return find(__x) != end();
   }
@@ -854,7 +872,7 @@ public:
   template <class _Kp>
     requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return __upper_bound<iterator>(*this, __x);
+    return __upper_bound<const_iterator>(*this, __x);
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -1044,7 +1062,15 @@ private:
 
   template <class _Kp>
   _LIBCPP_HIDE_FROM_ABI bool __is_hint_correct(const_iterator __hint, _Kp&& __key) {
-    if (__hint != cbegin() && !__compare_(std::prev(__hint)->first, __key)) {
+    // todo
+    // note that we have very fragile std::prev in our library
+    // for non LegacyBidirectional iterator, std::prev(it) is well formed and a no-op
+    // here we cannot use std::prev because our iterator is not legacy bidirectional
+    // since its reference type is not a reference
+    // note that user can also attempt to use std::prev on the flat_map::iterator
+    // and it would result in a no-op.
+    // we should probably ban std::prev(LegacyInputIterator)
+    if (__hint != cbegin() && !__compare_((__hint - 1)->first, __key)) {
       return false;
     }
     if (__hint != cend() && __compare_(__hint->first, __key)) {
@@ -1056,7 +1082,7 @@ private:
   template <class _Kp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __try_emplace_hint(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
     if (__is_hint_correct(__hint, __key)) {
-      if (__compare_(__key, __hint->first)) {
+      if (__hint == cend() || __compare_(__key, __hint->first)) {
         return __try_emplace_exact_hint(
             __hint.__key_iter_, __hint.__mapped_iter_, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
       } else {
@@ -1238,24 +1264,25 @@ flat_map(sorted_unique_t, _InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
-          class _Compare   = less<__iter_key_type<_Range>>,
-          class _Allocator = allocator<byte>>
-  requires(!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value)
+          class _Compare   = less<__range_key_type<_Range>>,
+          class _Allocator = allocator<byte>,
+          class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
 flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
-    -> flat_map<__range_key_type<_Range>,
-                __range_mapped_type<_Range>,
-                _Compare,
-                vector<__range_key_type<_Range>, __alloc_rebind<_Allocator, __range_key_type<_Range>>>,
-                vector<__range_mapped_type<_Range>, __alloc_rebind<_Allocator, __range_mapped_type<_Range>>>>;
+    -> flat_map<
+        __range_key_type<_Range>,
+        __range_mapped_type<_Range>,
+        _Compare,
+        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
-template <ranges::input_range _Range, class _Allocator>
-  requires __is_allocator<_Allocator>::value
+template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
 flat_map(from_range_t, _Range&&, _Allocator)
-    -> flat_map<__range_key_type<_Range>,
-                __range_mapped_type<_Range>,
-                less<__range_key_type<_Range>>,
-                vector<__range_key_type<_Range>, __alloc_rebind<_Allocator, __range_key_type<_Range>>>,
-                vector<__range_mapped_type<_Range>, __alloc_rebind<_Allocator, __range_mapped_type<_Range>>>>;
+    -> flat_map<
+        __range_key_type<_Range>,
+        __range_mapped_type<_Range>,
+        less<__range_key_type<_Range>>,
+        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
   requires(!__is_allocator<_Compare>::value)

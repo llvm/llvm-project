@@ -10,13 +10,13 @@
 
 // <flat_map>
 
-//       reverse_iterator rbegin();
-// const_reverse_iterator rbegin() const;
-//       reverse_iterator rend();
-// const_reverse_iterator rend()   const;
+//       reverse_iterator rbegin() noexcept;
+// const_reverse_iterator rbegin() const noexcept;
+//       reverse_iterator rend()   noexcept;
+// const_reverse_iterator rend()   const noexcept;
 //
-// const_reverse_iterator crbegin() const;
-// const_reverse_iterator crend()   const;
+// const_reverse_iterator crbegin() const noexcept;
+// const_reverse_iterator crend()   const noexcept;
 
 #include <cassert>
 #include <cstddef>
@@ -32,12 +32,21 @@
 
 int main(int, char**) {
   {
-    using M = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
-    M m     = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
+    using M     = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
+    M m         = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
+    const M& cm = m;
     ASSERT_SAME_TYPE(decltype(m.rbegin()), M::reverse_iterator);
     ASSERT_SAME_TYPE(decltype(m.crbegin()), M::const_reverse_iterator);
+    ASSERT_SAME_TYPE(decltype(cm.rbegin()), M::const_reverse_iterator);
     ASSERT_SAME_TYPE(decltype(m.rend()), M::reverse_iterator);
     ASSERT_SAME_TYPE(decltype(m.crend()), M::const_reverse_iterator);
+    ASSERT_SAME_TYPE(decltype(cm.rend()), M::const_reverse_iterator);
+    static_assert(noexcept(m.rbegin()));
+    static_assert(noexcept(cm.rbegin()));
+    static_assert(noexcept(m.crbegin()));
+    static_assert(noexcept(m.rend()));
+    static_assert(noexcept(cm.rend()));
+    static_assert(noexcept(m.crend()));
     assert(m.size() == 4);
     assert(std::distance(m.rbegin(), m.rend()) == 4);
     assert(std::distance(m.crbegin(), m.crend()) == 4);

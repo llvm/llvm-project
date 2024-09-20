@@ -37,6 +37,7 @@
 #include <ranges>
 #include <string>
 #include <vector>
+#include "min_allocator.h"
 
 void test() {
   {
@@ -87,5 +88,46 @@ void test() {
     static_assert(requires { typename M::containers; });
     static_assert(std::is_same_v<decltype(M::containers::keys), std::deque<std::string>>);
     static_assert(std::is_same_v<decltype(M::containers::values), std::deque<A>>);
+  }
+  {
+    using C = std::flat_map<int, short>;
+    static_assert(std::is_same_v<C::key_type, int>);
+    static_assert(std::is_same_v<C::mapped_type, short>);
+    static_assert(std::is_same_v<C::value_type, std::pair<int, short>>);
+    static_assert(std::is_same_v<C::key_compare, std::less<int>>);
+    static_assert(!std::is_same_v<C::value_compare, std::less<int>>);
+    static_assert(std::is_same_v<C::reference, std::pair<const int&, short&>>);
+    static_assert(std::is_same_v<C::const_reference, std::pair<const int&, const short&>>);
+    static_assert(std::random_access_iterator<C::iterator>);
+    static_assert(std::random_access_iterator<C::const_iterator>);
+    static_assert(std::random_access_iterator<C::reverse_iterator>);
+    static_assert(std::random_access_iterator<C::const_reverse_iterator>);
+    static_assert(std::is_same_v<C::reverse_iterator, std::reverse_iterator<C::iterator>>);
+    static_assert(std::is_same_v<C::const_reverse_iterator, std::reverse_iterator<C::const_iterator>>);
+    static_assert(std::is_same_v<C::size_type, std::size_t>);
+    static_assert(std::is_same_v<C::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<C::key_container_type, std::vector<int>>);
+    static_assert(std::is_same_v<C::mapped_container_type, std::vector<short>>);
+  }
+  {
+    using C = std::flat_map<short, int, std::greater<long>, std::deque<short, min_allocator<short>>>;
+    static_assert(std::is_same_v<C::key_type, short>);
+    static_assert(std::is_same_v<C::mapped_type, int>);
+    static_assert(std::is_same_v<C::value_type, std::pair<short, int>>);
+    static_assert(std::is_same_v<C::key_compare, std::greater<long>>);
+    static_assert(!std::is_same_v<C::value_compare, std::greater<long>>);
+    static_assert(std::is_same_v<C::reference, std::pair<const short&, int&>>);
+    static_assert(std::is_same_v<C::const_reference, std::pair<const short&, const int&>>);
+    static_assert(std::random_access_iterator<C::iterator>);
+    static_assert(std::random_access_iterator<C::const_iterator>);
+    static_assert(std::random_access_iterator<C::reverse_iterator>);
+    static_assert(std::random_access_iterator<C::const_reverse_iterator>);
+    static_assert(std::is_same_v<C::reverse_iterator, std::reverse_iterator<C::iterator>>);
+    static_assert(std::is_same_v<C::const_reverse_iterator, std::reverse_iterator<C::const_iterator>>);
+    // size_type is invariably size_t
+    static_assert(std::is_same_v<C::size_type, std::size_t>);
+    static_assert(std::is_same_v<C::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<C::key_container_type, std::deque<short, min_allocator<short>>>);
+    static_assert(std::is_same_v<C::mapped_container_type, std::vector<int>>);
   }
 }
