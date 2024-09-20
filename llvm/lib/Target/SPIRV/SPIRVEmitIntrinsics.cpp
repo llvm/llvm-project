@@ -189,30 +189,11 @@ bool isConvergenceIntrinsic(const Instruction *I) {
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
 }
 
-bool isInternalNonVoidIntrinsic(const Value *I) {
-  if (const auto *II = dyn_cast<IntrinsicInst>(I))
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::spv_cmpxchg:
-    case Intrinsic::spv_const_composite:
-    case Intrinsic::spv_track_constant:
-    case Intrinsic::spv_load:
-    case Intrinsic::spv_extractv:
-    case Intrinsic::spv_insertv:
-    case Intrinsic::spv_extractelt:
-    case Intrinsic::spv_insertelt:
-    case Intrinsic::spv_bitcast:
-    case Intrinsic::spv_ptrcast:
-    case Intrinsic::spv_alloca:
-    case Intrinsic::spv_alloca_array:
-    case Intrinsic::spv_undef:
-      return true;
-    }
-  return false;
-}
-
 bool allowEmitFakeUse(const Value *Arg) {
-  if (isInternalNonVoidIntrinsic(Arg))
-    return false;
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return false;
   if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
       dyn_cast<UndefValue>(Arg))
     return false;

@@ -56,7 +56,7 @@ class SPIRVGlobalRegistry {
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
   DenseMap<Value *, Type *> MutatedAggRet;
   // map an instruction to its value's attributes (type, name)
-  DenseMap<MachineInstr *, std::pair<Type *, StringRef>> ValueAttrs;
+  DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -181,7 +181,7 @@ public:
 
   // A registry of value's attributes (type, name)
   // - Add a record.
-  void addValueAttrs(MachineInstr *Key, std::pair<Type *, StringRef> Val) {
+  void addValueAttrs(MachineInstr *Key, std::pair<Type *, std::string> Val) {
     ValueAttrs[Key] = Val;
   }
   // - Find a record.

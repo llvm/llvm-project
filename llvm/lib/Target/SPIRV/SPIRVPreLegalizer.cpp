@@ -482,11 +482,11 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                 cast<MDString>(MD->getOperand(1))->getString();
             const MDNode *TypeMD = cast<MDNode>(MD->getOperand(0));
             Type *ValueTy = getMDOperandAsType(TypeMD, 0);
-            GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName));
+            GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName.str()));
           }
+          ToErase.push_back(MdMI);
         }
         ToErase.push_back(&MI);
-        ToErase.push_back(MdMI);
       } else if (MIOp == TargetOpcode::G_CONSTANT ||
                  MIOp == TargetOpcode::G_FCONSTANT ||
                  MIOp == TargetOpcode::G_BUILD_VECTOR) {

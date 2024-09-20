@@ -1139,7 +1139,7 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   if (!GR.findValueAttrs(&I, ResTy, ResName))
     report_fatal_error(
         "Not enough info to select the arithmetic with overflow instruction");
-  if (!ResTy->isStructTy())
+  if (!ResTy || !ResTy->isStructTy())
     report_fatal_error("Expect struct type result for the arithmetic "
                        "with overflow instruction");
   // "Result Type must be from OpTypeStruct. The struct must have two members,
