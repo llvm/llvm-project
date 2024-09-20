@@ -1,5 +1,5 @@
-// RUN: %clang -target dxil-pc-shadermodel6.0-compute -S -o - %s | FileCheck %s
-// RUN: %clang -target dxil-pc-shadermodel6.3-library -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -S -o - %s | FileCheck %s
 
 // Verify that internal linkage unused functions are removed
 
