@@ -316,6 +316,7 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void removeFnAttributes(Function *F);
 
   void initializeCallbacks(Module &M);
 
@@ -591,47 +592,52 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
+void HWAddressSanitizer::removeFnAttributes(Function *F) {
+  // Remove memory attributes that are invalid with HWASan.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  //
+  // This is not only true for sanitized functions, because AttrInfer can
+  // infer those attributes on libc functions, which is not true if those
+  // are instrumented (Android) or intercepted.
+  //
+  // We might want to model HWASan shadow memory more opaquely to get rid of
+  // this problem altogether, by hiding the shadow memory write in an
+  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
+  // for another day.
+
+  // The API is weird. `onlyReadsMemory` actually means "does not write", and
+  // `onlyWritesMemory` actually means "does not read". So we reconstruct
+  // "accesses memory" && "does not read" <=> "writes".
+  bool Changed = false;
+  if (!F->doesNotAccessMemory()) {
+    bool WritesMemory = !F->onlyReadsMemory();
+    bool ReadsMemory = !F->onlyWritesMemory();
+    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
+      F->removeFnAttr(Attribute::Memory);
+      Changed = true;
+    }
+  }
+  for (Argument &A : F->args()) {
+    if (A.hasAttribute(Attribute::WriteOnly)) {
+      A.removeAttr(Attribute::WriteOnly);
+      Changed = true;
+    }
+  }
+  if (Changed) {
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F->addFnAttr(Attribute::NoBuiltin);
+  }
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
-
-  for (auto &F : M.functions()) {
-    // Remove memory attributes that are invalid with HWASan.
-    // HWASan checks read from shadow, which invalidates memory(argmem: *)
-    // Short granule checks on function arguments read from the argument memory
-    // (last byte of the granule), which invalidates writeonly.
-    //
-    // This is not only true for sanitized functions, because AttrInfer can
-    // infer those attributes on libc functions, which is not true if those
-    // are instrumented (Android) or intercepted.
-
-    // The API is weird. `onlyReadsMemory` actually means "does not write", and
-    // `onlyWritesMemory` actually means "does not read". So we reconstruct
-    // "accesses memory" && "does not read" <=> "writes".
-    bool Changed = false;
-    if (!F.doesNotAccessMemory()) {
-      bool WritesMemory = !F.onlyReadsMemory();
-      bool ReadsMemory = !F.onlyWritesMemory();
-      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
-        F.removeFnAttr(Attribute::Memory);
-        Changed = true;
-      }
-    }
-    for (Argument &A : F.args()) {
-      if (A.hasAttribute(Attribute::WriteOnly)) {
-        Changed = true;
-        A.removeAttr(Attribute::WriteOnly);
-      }
-    }
-    if (Changed) {
-      // nobuiltin makes sure later passes don't restore assumptions about
-      // the function.
-      F.addFnAttr(Attribute::NoBuiltin);
-    }
-  }
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -894,7 +900,13 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
     }
-    maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+    if (Function *F = CI->getCalledFunction()) {
+      LibFunc LF;
+      if (F->hasName() && TLI.getLibFunc(F->getName(), LF)) {
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+        removeFnAttributes(F);
+      }
+    }
   }
 }
 
@@ -1615,6 +1627,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
+
+  removeFnAttributes(&F);
 
   NumInstrumentedFuncs++;
 
