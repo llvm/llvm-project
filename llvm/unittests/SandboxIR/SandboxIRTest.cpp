@@ -993,7 +993,7 @@ define void @bar(float %v, ptr %ptr) {
 
 TEST_F(SandboxIRTest, GetNumBits) {
   parseIR(C, R"IR(
-define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg34) {
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
 bb0:
   ret void
 }
@@ -1003,7 +1003,6 @@ bb0:
   sandboxir::Function *F = Ctx.createFunction(&Foo);
   const DataLayout &DL = M->getDataLayout();
   // getNumBits for scalars
-  // float
   EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
             DL.getTypeSizeInBits(Type::getFloatTy(C)));
   EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),

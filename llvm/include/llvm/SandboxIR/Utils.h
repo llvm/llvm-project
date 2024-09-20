@@ -1,4 +1,4 @@
-//===- SandboxIR.h ----------------------------------------------*- C++ -*-===//
+//===- Utils.h ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,9 +9,10 @@
 // Collector for SandboxIR related convenience functions that don't belong in
 // other classes.
 
-namespace llvm {
+#ifndef LLVM_SANDBOXIR_UTILS_H
+#define LLVM_SANDBOXIR_UTILS_H
 
-namespace sandboxir {
+namespace llvm::sandboxir {
 
 class Utils {
 public:
@@ -48,5 +49,6 @@ public:
     return DL.getTypeSizeInBits(Ty->LLVMTy);
   }
 };
-} // namespace sandboxir
-} // namespace llvm
+} // namespace llvm::sandboxir
+
+#endif // LLVM_SANDBOXIR_TYPE_H
