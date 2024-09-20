@@ -85,13 +85,13 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
   Value *op1 = Orig->getOperand(1);
   IRBuilder<> Builder(Orig);
 
-  Value *op0_x = Builder.CreateExtractElement(op0, (uint64_t)0);
-  Value *op0_y = Builder.CreateExtractElement(op0, 1);
-  Value *op0_z = Builder.CreateExtractElement(op0, 2);
+  Value *op0_x = Builder.CreateExtractElement(op0, (uint64_t)0, "x0");
+  Value *op0_y = Builder.CreateExtractElement(op0, 1, "y0");
+  Value *op0_z = Builder.CreateExtractElement(op0, 2, "z0");
 
-  Value *op1_x = Builder.CreateExtractElement(op1, (uint64_t)0);
-  Value *op1_y = Builder.CreateExtractElement(op1, 1);
-  Value *op1_z = Builder.CreateExtractElement(op1, 2);
+  Value *op1_x = Builder.CreateExtractElement(op1, (uint64_t)0, "x1");
+  Value *op1_y = Builder.CreateExtractElement(op1, 1, "y1");
+  Value *op1_z = Builder.CreateExtractElement(op1, 2, "z1");
 
   auto MulSub = [&](Value *x0, Value *y0, Value *x1, Value *y1) -> Value * {
     Value *xy = Builder.CreateFMul(x0, y1);

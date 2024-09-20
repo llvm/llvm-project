@@ -18644,7 +18644,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            E->getArg(1)->getType()->hasFloatingRepresentation() &&
-           "step operands must have a float representation");
+           "cross operands must have a float representation");
     // make sure each vector has exactly 3 elements
     auto *XVecTy1 = E->getArg(0)->getType()->getAs<VectorType>();
     auto *XVecTy2 = E->getArg(1)->getType()->getAs<VectorType>();
