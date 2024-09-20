@@ -19,8 +19,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
+#include "ABI.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
+#include "MaterializationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1779,9 +1781,9 @@ CallInst *coro::createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
   return TailCall;
 }
 
-static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
-                                SmallVectorImpl<Function *> &Clones,
-                                TargetTransformInfo &TTI) {
+void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
+                                    SmallVectorImpl<Function *> &Clones,
+                                    TargetTransformInfo &TTI) {
   assert(Shape.ABI == coro::ABI::Async);
   assert(Clones.empty());
   // Reset various things that the optimizer might have decided it
@@ -1874,9 +1876,9 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   }
 }
 
-static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
-                                 SmallVectorImpl<Function *> &Clones,
-                                 TargetTransformInfo &TTI) {
+void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
+                                        SmallVectorImpl<Function *> &Clones,
+                                        TargetTransformInfo &TTI) {
   assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
   assert(Clones.empty());
 
@@ -2044,26 +2046,27 @@ static bool hasSafeElideCaller(Function &F) {
   return false;
 }
 
-static coro::Shape
-splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
-               TargetTransformInfo &TTI, bool OptimizeFrame,
-               std::function<bool(Instruction &)> MaterializableCallback) {
+void coro::SwitchABI::splitCoroutine(Function &F, coro::Shape &Shape,
+                                     SmallVectorImpl<Function *> &Clones,
+                                     TargetTransformInfo &TTI) {
+  SwitchCoroutineSplitter::split(F, Shape, Clones, TTI);
+}
+
+static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
+                             coro::BaseABI &ABI, TargetTransformInfo &TTI) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
-  // The suspend-crossing algorithm in buildCoroutineFrame get tripped
-  // up by uses in unreachable blocks, so remove them as a first pass.
-  removeUnreachableBlocks(F);
-
-  coro::Shape Shape(F, OptimizeFrame);
-  if (!Shape.CoroBegin)
-    return Shape;
+  auto &Shape = ABI.Shape;
+  assert(Shape.CoroBegin);
 
   lowerAwaitSuspends(F, Shape);
 
   simplifySuspendPoints(Shape);
+
   normalizeCoroutine(F, Shape, TTI);
-  buildCoroutineFrame(F, Shape, MaterializableCallback);
+  ABI.buildCoroutineFrame();
   replaceFrameSizeAndAlignment(Shape);
+
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
 
   bool shouldCreateNoAllocVariant = !isNoSuspendCoroutine &&
@@ -2075,18 +2078,7 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   if (isNoSuspendCoroutine) {
     handleNoSuspendCoroutine(Shape);
   } else {
-    switch (Shape.ABI) {
-    case coro::ABI::Switch:
-      SwitchCoroutineSplitter::split(F, Shape, Clones, TTI);
-      break;
-    case coro::ABI::Async:
-      splitAsyncCoroutine(F, Shape, Clones, TTI);
-      break;
-    case coro::ABI::Retcon:
-    case coro::ABI::RetconOnce:
-      splitRetconCoroutine(F, Shape, Clones, TTI);
-      break;
-    }
+    ABI.splitCoroutine(F, Shape, Clones, TTI);
   }
 
   // Replace all the swifterror operations in the original function.
@@ -2107,8 +2099,6 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
 
   if (shouldCreateNoAllocVariant)
     SwitchCoroutineSplitter::createNoAllocVariant(F, Shape, Clones);
-
-  return Shape;
 }
 
 static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
@@ -2207,8 +2197,44 @@ static void addPrepareFunction(const Module &M,
     Fns.push_back(PrepareFn);
 }
 
+static std::unique_ptr<coro::BaseABI>
+CreateNewABI(Function &F, coro::Shape &S,
+             std::function<bool(Instruction &)> IsMatCallback) {
+  switch (S.ABI) {
+  case coro::ABI::Switch:
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::SwitchABI(F, S, IsMatCallback));
+  case coro::ABI::Async:
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AsyncABI(F, S, IsMatCallback));
+  case coro::ABI::Retcon:
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AnyRetconABI(F, S, IsMatCallback));
+  case coro::ABI::RetconOnce:
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AnyRetconABI(F, S, IsMatCallback));
+  }
+  llvm_unreachable("Unknown ABI");
+}
+
 CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
-    : MaterializableCallback(coro::defaultMaterializable),
+    : CreateAndInitABI([](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, coro::isTriviallyMaterializable);
+        ABI->init();
+        return std::move(ABI);
+      }),
+      OptimizeFrame(OptimizeFrame) {}
+
+// For back compatibility, constructor takes a materializable callback and
+// creates a generator for an ABI with a modified materializable callback.
+CoroSplitPass::CoroSplitPass(std::function<bool(Instruction &)> IsMatCallback,
+                             bool OptimizeFrame)
+    : CreateAndInitABI([=](Function &F, coro::Shape &S) {
+        std::unique_ptr<coro::BaseABI> ABI = CreateNewABI(F, S, IsMatCallback);
+        ABI->init();
+        return std::move(ABI);
+      }),
       OptimizeFrame(OptimizeFrame) {}
 
 PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
@@ -2241,12 +2267,23 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     Function &F = N->getFunction();
     LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F.getName()
                       << "\n");
+
+    // The suspend-crossing algorithm in buildCoroutineFrame gets tripped up
+    // by unreachable blocks, so remove them as a first pass. Remove the
+    // unreachable blocks before collecting intrinsics into Shape.
+    removeUnreachableBlocks(F);
+
+    coro::Shape Shape(F, OptimizeFrame);
+    if (!Shape.CoroBegin)
+      continue;
+
     F.setSplittedCoroutine();
 
+    std::unique_ptr<coro::BaseABI> ABI = CreateAndInitABI(F, Shape);
+
     SmallVector<Function *, 4> Clones;
-    coro::Shape Shape =
-        splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
-                       OptimizeFrame, MaterializableCallback);
+    auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+    doSplitCoroutine(F, Clones, *ABI, TTI);
     CurrentSCC = &updateCallGraphAfterCoroutineSplit(
         *N, Shape, Clones, *CurrentSCC, CG, AM, UR, FAM);
 
