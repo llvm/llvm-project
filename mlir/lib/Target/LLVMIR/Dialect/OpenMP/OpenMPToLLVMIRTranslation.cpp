@@ -1356,6 +1356,38 @@ private:
   unsigned privateArgEndIdx;
 };
 
+namespace {
+omp::PrivateClauseOp findPrivatizer(Operation *from, SymbolRefAttr symbolName) {
+  omp::PrivateClauseOp privatizer =
+      SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(from,
+                                                                 symbolName);
+  assert(privatizer && "privatizer not found in the symbol table");
+  return privatizer;
+}
+omp::PrivateClauseOp clonePrivatizer(LLVM::ModuleTranslation &moduleTranslation,
+                                     omp::PrivateClauseOp privatizer,
+                                     Operation *fromOperation) {
+  MLIRContext &context = moduleTranslation.getContext();
+  mlir::IRRewriter opCloner(&context);
+  opCloner.setInsertionPoint(privatizer);
+  auto clone =
+      llvm::cast<mlir::omp::PrivateClauseOp>(opCloner.clone(*privatizer));
+
+  // Unique the clone name to avoid clashes in the symbol table.
+  unsigned counter = 0;
+  SmallString<256> cloneName = SymbolTable::generateSymbolName<256>(
+      privatizer.getSymName(),
+      [&](llvm::StringRef candidate) {
+        return SymbolTable::lookupNearestSymbolFrom(
+                   fromOperation, StringAttr::get(&context, candidate)) !=
+               nullptr;
+      },
+      counter);
+
+  clone.setSymName(cloneName);
+  return clone;
+}
+} // namespace
 /// Converts the OpenMP parallel operation to LLVM IR.
 static LogicalResult
 convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
@@ -1611,34 +1643,14 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             continue;
 
           SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(mlirPrivatizerAttr);
-          omp::PrivateClauseOp privatizer =
-              SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-                  opInst, privSym);
+          omp::PrivateClauseOp privatizer = findPrivatizer(opInst, privSym);
 
           // Clone the privatizer in case it is used by more than one parallel
           // region. The privatizer is processed in-place (see below) before it
           // gets inlined in the parallel region and therefore processing the
           // original op is dangerous.
-
-          MLIRContext &context = moduleTranslation.getContext();
-          mlir::IRRewriter opCloner(&context);
-          opCloner.setInsertionPoint(privatizer);
-          auto clone = llvm::cast<mlir::omp::PrivateClauseOp>(
-              opCloner.clone(*privatizer));
-
-          // Unique the clone name to avoid clashes in the symbol table.
-          unsigned counter = 0;
-          SmallString<256> cloneName = SymbolTable::generateSymbolName<256>(
-              privatizer.getSymName(),
-              [&](llvm::StringRef candidate) {
-                return SymbolTable::lookupNearestSymbolFrom(
-                           opInst, StringAttr::get(&context, candidate)) !=
-                       nullptr;
-              },
-              counter);
-
-          clone.setSymName(cloneName);
-          return {mlirPrivVar, clone};
+          return {mlirPrivVar,
+                  clonePrivatizer(moduleTranslation, privatizer, opInst)};
         }
       }
 
@@ -3435,6 +3447,58 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       const auto &arg = targetRegion.front().getArgument(argIndex);
       moduleTranslation.mapValue(arg, mapOpValue);
     }
+
+    // Do privatization after moduleTranslation has already recorded
+    // mapped values.
+    if (!targetOp.getPrivateVars().empty()) {
+      auto oldIP = builder.saveIP();
+      builder.restoreIP(allocaIP);
+
+      OperandRange privateVars = targetOp.getPrivateVars();
+      std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
+      unsigned numMapVars = targetOp.getMapVars().size();
+      Block &firstTargetBlock = targetRegion.front();
+      auto *blockArgsStart = firstTargetBlock.getArguments().begin();
+      auto *privArgsStart = blockArgsStart + numMapVars;
+      auto *privArgsEnd = privArgsStart + targetOp.getPrivateVars().size();
+      MutableArrayRef privateBlockArgs(privArgsStart, privArgsEnd);
+
+      for (auto [privVar, privatizerNameAttr, privBlockArg] :
+           llvm::zip_equal(privateVars, *privateSyms, privateBlockArgs)) {
+
+        SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(privatizerNameAttr);
+        omp::PrivateClauseOp privatizer = findPrivatizer(&opInst, privSym);
+        if (privatizer.getDataSharingType() ==
+                omp::DataSharingClauseType::FirstPrivate ||
+            !privatizer.getDeallocRegion().empty()) {
+          opInst.emitError("Translation of omp.target from MLIR to LLVMIR "
+                           "failed because translation of firstprivate and "
+                           " private allocatables is not supported yet");
+          bodyGenStatus = failure();
+        } else {
+          omp::PrivateClauseOp clonedPrivatizer =
+              clonePrivatizer(moduleTranslation, privatizer, &opInst);
+          Region &allocRegion = clonedPrivatizer.getAllocRegion();
+          BlockArgument allocRegionArg = allocRegion.getArgument(0);
+          replaceAllUsesInRegionWith(allocRegionArg, privVar, allocRegion);
+          SmallVector<llvm::Value *, 1> yieldedValues;
+          if (failed(inlineConvertOmpRegions(
+                  allocRegion, "omp.targetop.privatizer", builder,
+                  moduleTranslation, &yieldedValues))) {
+            opInst.emitError(
+                "failed to inline `alloc` region of an `omp.private` "
+                "op in the target region");
+            bodyGenStatus = failure();
+          } else {
+            assert(yieldedValues.size() == 1);
+            moduleTranslation.mapValue(privBlockArg, yieldedValues.front());
+          }
+          clonedPrivatizer.erase();
+          builder.restoreIP(oldIP);
+        }
+      }
+    }
+    builder.restoreIP(codeGenIP);
     llvm::BasicBlock *exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation, bodyGenStatus);
     builder.SetInsertPoint(exitBlock);
