@@ -532,6 +532,9 @@ private:
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> FunctionToLambdasMap;
+
   struct PendingUpdateRecord {
     Decl *D;
     GlobalDeclID ID;
@@ -1187,15 +1190,6 @@ private:
   /// We will check whether the corresponding declaration is in fact missing
   /// once recursing loading has been completed.
   llvm::SmallVector<NamedDecl *, 16> PendingOdrMergeChecks;
-
-  /// Lambdas that need to be loaded immediately after the function they belong
-  /// to. It is necessary to have a canonical declaration for the lambda class
-  /// from the same module as the enclosing function. This requirement ensures
-  /// the correct resolution of captured variables in the lambda. Without this,
-  /// due to lazy deserialization, canonical declarations for the function and
-  /// lambdas can be from different modules, and DeclRefExprs may refer to AST
-  /// nodes that do not exist in the function.
-  SmallVector<GlobalDeclID, 4> PendingLambdas;
 
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;

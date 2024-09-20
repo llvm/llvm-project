@@ -3856,6 +3856,15 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case FUNCTION_DECL_TO_LAMBDAS_MAP:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
+        GlobalDeclID ID = ReadDeclID(F, Record, I);
+        auto& Lambdas = FunctionToLambdasMap[ID];
+        for (unsigned II = 0, NN = Record[I++]; II < NN; II++)
+          Lambdas.push_back(ReadDeclID(F, Record, I));
+      }
+      break;
+
     case OBJC_CATEGORIES_MAP:
       if (F.LocalNumObjCCategoriesInMap != 0)
         return llvm::createStringError(
@@ -9777,8 +9786,7 @@ void ASTReader::finishPendingActions() {
       !PendingDeducedVarTypes.empty() || !PendingIncompleteDeclChains.empty() ||
       !PendingDeclChains.empty() || !PendingMacroIDs.empty() ||
       !PendingDeclContextInfos.empty() || !PendingUpdateRecords.empty() ||
-      !PendingObjCExtensionIvarRedeclarations.empty() ||
-      !PendingLambdas.empty()) {
+      !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -9922,17 +9930,6 @@ void ASTReader::finishPendingActions() {
         }
       }
       PendingObjCExtensionIvarRedeclarations.pop_back();
-    }
-
-    // Load any pending lambdas. During the deserialization of pending lambdas,
-    // more lambdas can be discovered, so swap the current PendingLambdas with a
-    // local empty vector. Newly discovered lambdas will be deserialized in the
-    // next iteration.
-    if (!PendingLambdas.empty()) {
-      SmallVector<GlobalDeclID, 4> DeclIDs;
-      DeclIDs.swap(PendingLambdas);
-      for (auto ID : DeclIDs)
-        GetDecl(ID);
     }
   }
 

@@ -18,7 +18,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
@@ -626,24 +625,6 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
                                            : QualType());
 }
 
-// Recursively collects all lambda declarations within the function declaration.
-static llvm::SmallVector<const Decl *, 2> collectLambdas(FunctionDecl *FD) {
-  llvm::SmallVector<const Decl *, 2> Lambdas;
-  std::function<void(DeclContext *)> visitor = [&visitor,
-                                                &Lambdas](DeclContext *DC) {
-    for (Decl *D : DC->decls()) {
-      if (!D)
-        continue;
-      if (isa<DeclContext>(D))
-        visitor(cast<DeclContext>(D));
-      if (auto *RD = dyn_cast<CXXRecordDecl>(D); RD && RD->isLambda())
-        Lambdas.push_back(RD);
-    }
-  };
-  visitor(FD);
-  return Lambdas;
-}
-
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
@@ -783,19 +764,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
     Record.AddDeclRef(P);
-
-  // Store references to all lambda decls inside function to load them
-  // immediately after loading the function to make sure that canonical
-  // decls for lambdas will be from the same module.
-  if (D->isCanonicalDecl()) {
-    llvm::SmallVector<const Decl *, 2> Lambdas = collectLambdas(D);
-    Record.push_back(Lambdas.size());
-    for (const auto *L : Lambdas)
-      Record.AddDeclRef(L);
-  } else {
-    Record.push_back(0);
-  }
-
   Code = serialization::DECL_FUNCTION;
 }
 
@@ -1553,6 +1521,11 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
+    // For lambdas inside canonical FunctionDecl remember the mapping.
+    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && FD->isCanonicalDecl()) {
+      Writer.FunctionToLambdasMap[FD].push_back(Writer.GetDeclRef(D));
+    }
   } else {
     Record.push_back(CXXRecNotTemplate);
   }
@@ -2271,7 +2244,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   //
   // This is:
   //         NumParams and Params[] from FunctionDecl, and
-  //         NumLambdas, Lambdas[] from FunctionDecl, and
   //         NumOverriddenMethods, OverriddenMethods[] from CXXMethodDecl.
   //
   //  Add an AbbrevOp for 'size then elements' and use it here.

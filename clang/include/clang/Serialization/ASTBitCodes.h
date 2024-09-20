@@ -724,6 +724,9 @@ enum ASTRecordTypes {
 
   /// Record code for vtables to emit.
   VTABLES_TO_EMIT = 70,
+
+  /// Record code for the FunctionDecl to lambdas mapping.
+  FUNCTION_DECL_TO_LAMBDAS_MAP = 71,
 };
 
 /// Record types used within a source manager block.

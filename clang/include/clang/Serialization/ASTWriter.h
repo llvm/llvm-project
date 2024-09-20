@@ -233,6 +233,9 @@ private:
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
 
+  /// Map that provides the ID of function to the vector of lambdas inside it.
+  llvm::DenseMap<const Decl *, SmallVector<LocalDeclID, 4>> FunctionToLambdasMap;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
