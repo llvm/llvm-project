@@ -36,6 +36,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
@@ -3868,13 +3869,32 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
+  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  if (!m_interface_sp) {
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Stop Hook Interface");
+    return error;
+  }
+
   m_class_name = class_name;
   m_extra_args.SetObjectSP(extra_args_sp);
 
-  m_implementation_sp = script_interp->CreateScriptedStopHook(
-      GetTarget(), m_class_name.c_str(), m_extra_args, error);
+  auto obj_or_err = m_interface_sp->CreatePluginObject(
+      m_class_name, GetTarget(), m_extra_args);
+  if (!obj_or_err) {
+    return Status::FromError(obj_or_err.takeError());
+  }
 
-  return error;
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid()) {
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+    return error;
+  }
+
+  return {};
 }
 
 Target::StopHook::StopHookResult
@@ -3883,16 +3903,15 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   assert(exc_ctx.GetTargetPtr() && "Can't call HandleStop on a context "
                                    "with no target");
 
-  ScriptInterpreter *script_interp =
-      GetTarget()->GetDebugger().GetScriptInterpreter();
-  if (!script_interp)
+  if (!m_interface_sp)
     return StopHookResult::KeepStopped;
 
-  bool should_stop = script_interp->ScriptedStopHookHandleStop(
-      m_implementation_sp, exc_ctx, output_sp);
+  auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, output_sp);
+  if (!should_stop_or_err)
+    return StopHookResult::KeepStopped;
 
-  return should_stop ? StopHookResult::KeepStopped
-                     : StopHookResult::RequestContinue;
+  return *should_stop_or_err ? StopHookResult::KeepStopped
+                             : StopHookResult::RequestContinue;
 }
 
 void Target::StopHookScripted::GetSubclassDescription(
