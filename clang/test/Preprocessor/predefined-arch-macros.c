@@ -4131,16 +4131,14 @@
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SPARC,CHECK_SPARC%if sparc64-distro %{_V9%} %else %{_V8%}
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC
 // CHECK_SPARC: #define __BIG_ENDIAN__ 1
 // CHECK_SPARC: #define __sparc 1
 // CHECK_SPARC: #define __sparc__ 1
 // CHECK_SPARC-NOT: #define __sparcv9 1
 // CHECK_SPARC-NOT: #define __sparcv9__ 1
-// CHECK_SPARC_V8: #define __sparcv8 1
-// CHECK_SPARC_V8-NOT: #define __sparc_v9__ 1
-// CHECK_SPARC_V9: #define __sparc_v9__ 1
-// CHECK_SPARC_V9-NOT: #define __sparcv8 1
+// CHECK_SPARC: #define __sparc_v9__ 1
+// CHECK_SPARC-NOT: #define __sparcv8 1
 // CHECK_SPARC-NOT: #define __sparcv9 1
 // CHECK_SPARC-NOT: #define __sparcv9__ 1
 

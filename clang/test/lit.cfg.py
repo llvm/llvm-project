@@ -224,10 +224,6 @@ if config.clang_default_cxx_stdlib != "":
         "default-cxx-stdlib={}".format(config.clang_default_cxx_stdlib)
     )
 
-# clang -m32 defaults to -mcpu=v9 on Linux/sparc64 distros.
-if re.search(r"debian|gentoo", platform.version(), re.I):
-    config.available_features.add("sparc64-distro")
-
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ["FreeBSD"]:
     config.available_features.add("crash-recovery")
