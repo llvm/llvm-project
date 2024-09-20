@@ -264,6 +264,9 @@ private:
   void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
                                MachineInstr &I) const;
 
+  void selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
+
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             const SPIRVType *ResType = nullptr) const;
@@ -288,6 +291,12 @@ private:
                                   uint32_t Binding, uint32_t ArraySize,
                                   Register IndexReg, bool IsNonUniform,
                                   MachineIRBuilder MIRBuilder) const;
+  SPIRVType *getCorrespondingVec4Type(const SPIRVType *Type,
+                                      MachineInstr &I) const;
+  void extractScalarOrVectorFromVector(Register &ResultReg,
+                                       const SPIRVType *ResType,
+                                       Register &InputReg,
+                                       MachineInstr &InsertionPoint) const;
 };
 
 } // end anonymous namespace
@@ -2767,6 +2776,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     selectHandleFromBinding(ResVReg, ResType, I);
     return true;
   }
+  case Intrinsic::spv_typedBufferLoad: {
+    selectReadImageIntrinsic(ResVReg, ResType, I);
+    return true;
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -2801,6 +2814,83 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(VarReg);
+}
+
+void SPIRVInstructionSelector::selectReadImageIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+
+  // If the load of the image is in a different basic block, then
+  // this will generate invalid code. A proper solution is to move
+  // the OpLoad from selectHandleFromBinding here. However, to do
+  // that we will need to change the return type of the intrinsic.
+  // We will do that when we can, but for now trying to move forward with other
+  // issues.
+  Register ImageReg = I.getOperand(2).getReg();
+
+  SPIRVType *ReadType = getCorrespondingVec4Type(ResType, I);
+  Register ReadReg = MRI->createVirtualRegister(GR.getRegClass(ReadType));
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageRead))
+      .addDef(ReadReg)
+      .addUse(GR.getSPIRVTypeID(ReadType))
+      .addUse(ImageReg)
+      .addUse(I.getOperand(3).getReg());
+
+  extractScalarOrVectorFromVector(ResVReg, ResType, ReadReg, I);
+}
+
+void SPIRVInstructionSelector::extractScalarOrVectorFromVector(
+    Register &ResultReg, const SPIRVType *ResType, Register &InputReg,
+    MachineInstr &InsertionPoint) const {
+  SPIRVType *InputType = GR.getResultType(InputReg);
+  assert(InputType->getOpcode() == SPIRV::OpTypeVector);
+
+  if (ResType->getOpcode() != SPIRV::OpTypeVector) {
+    assert(ResType == GR.getScalarOrVectorComponentType(InputType));
+    BuildMI(*InsertionPoint.getParent(), InsertionPoint,
+            InsertionPoint.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+        .addDef(ResultReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(InputReg)
+        .addImm(0);
+    return;
+  }
+
+  uint64_t InputSize = GR.getScalarOrVectorComponentCount(InputType);
+  uint64_t VectorSize = GR.getScalarOrVectorComponentCount(ResType);
+  if (VectorSize == InputSize) {
+    BuildMI(*InsertionPoint.getParent(), InsertionPoint,
+            InsertionPoint.getDebugLoc(), TII.get(SPIRV::OpCopyObject))
+        .addDef(ResultReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(InputReg);
+    return;
+  }
+
+  assert(VectorSize < InputSize &&
+         "Cannot extract more element than there are in the input.");
+  SmallVector<Register> ComponentRegisters;
+  SPIRVType *ScalarType = GR.getScalarOrVectorComponentType(ResType);
+  const TargetRegisterClass *ScalarRegClass = GR.getRegClass(ScalarType);
+  for (uint64_t i = 0; i < VectorSize; i++) {
+    Register ComponentReg = MRI->createVirtualRegister(ScalarRegClass);
+    BuildMI(*InsertionPoint.getParent(), InsertionPoint,
+            InsertionPoint.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+        .addDef(ComponentReg)
+        .addUse(ScalarType->getOperand(0).getReg())
+        .addUse(InputReg)
+        .addImm(i);
+    ComponentRegisters.emplace_back(ComponentReg);
+  }
+
+  MachineInstrBuilder MIB = BuildMI(*InsertionPoint.getParent(), InsertionPoint,
+                                    InsertionPoint.getDebugLoc(),
+                                    TII.get(SPIRV::OpCompositeConstruct))
+                                .addDef(ResultReg)
+                                .addUse(GR.getSPIRVTypeID(ResType));
+
+  for (Register ComponentReg : ComponentRegisters) {
+    MIB.addUse(ComponentReg);
+  }
 }
 
 Register SPIRVInstructionSelector::buildPointerToResource(
@@ -3303,6 +3393,24 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
                  .addUse(LoadedRegister)
                  .addImm(ThreadId);
   return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
+SPIRVType *
+SPIRVInstructionSelector::getCorrespondingVec4Type(const SPIRVType *Type,
+                                                   MachineInstr &I) const {
+  MachineIRBuilder MIRBuilder(I);
+  if (Type->getOpcode() != SPIRV::OpTypeVector) {
+    return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder);
+  }
+
+  uint64_t VectorSize = Type->getOperand(2).getImm();
+  if (VectorSize == 4) {
+    return Type;
+  }
+
+  Register ScalarTypeReg = Type->getOperand(1).getReg();
+  const SPIRVType *ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
+  return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder);
 }
 
 namespace llvm {

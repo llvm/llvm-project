@@ -1056,6 +1056,11 @@ SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg,
   return nullptr;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getResultType(Register VReg) {
+  MachineInstr *Instr = CurMF->getRegInfo().getVRegDef(VReg);
+  return getSPIRVTypeForVReg(Instr->getOperand(1).getReg());
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
@@ -1124,6 +1129,21 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVType *Type) const {
   return Type->getOpcode() == SPIRV::OpTypeVector
              ? static_cast<unsigned>(Type->getOperand(2).getImm())
              : 1;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getScalarOrVectorComponentType(Register VReg) const {
+  return getScalarOrVectorComponentType(getSPIRVTypeForVReg(VReg));
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVType *Type) const {
+  if (!Type)
+    return nullptr;
+  Register ScalarReg = Type->getOpcode() == SPIRV::OpTypeVector
+                           ? Type->getOperand(1).getReg()
+                           : Type->getOperand(0).getReg();
+  return getSPIRVTypeForVReg(ScalarReg);
 }
 
 unsigned
