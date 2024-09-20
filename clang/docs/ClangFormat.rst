@@ -198,9 +198,12 @@ your `.vimrc`:
 
   function! Formatonsave()
     let l:formatdiff = 1
-    pyf <path-to-this-file>/clang-format.py
+    if has('python')
+      pyf <path-to-this-file>/clang-format.py
+    elseif has('python3')
+      py3f <path-to-this-file>/clang-format.py
   endfunction
-  autocmd BufWritePre *.h,*.cc,*.cpp call Formatonsave()
+  autocmd BufWritePre *.h,*.cc,*.cpp,*.cppm call Formatonsave()
 
 
 Emacs Integration
