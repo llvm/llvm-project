@@ -30,7 +30,7 @@
 "`LWG3948 <https://wg21.link/LWG3948>`__","``possibly-const-range and as-const-pointer`` should be ``noexcept``","2023-11 (Kona)","","",""
 "`LWG3949 <https://wg21.link/LWG3949>`__","``std::atomic<bool>``'s trivial destructor dropped in C++17 spec wording","2023-11 (Kona)","","",""
 "`LWG3951 <https://wg21.link/LWG3951>`__","[expected.object.swap]: Using ``value()`` instead of ``has_value()``","2023-11 (Kona)","|Complete|","16.0",""
-"`LWG3953 <https://wg21.link/LWG3953>`__","``iter_move`` for ``common_iterator`` and ``counted_iterator`` should return ``decltype(auto)``","2023-11 (Kona)","","",""
+"`LWG3953 <https://wg21.link/LWG3953>`__","``iter_move`` for ``common_iterator`` and ``counted_iterator`` should return ``decltype(auto)``","2023-11 (Kona)","|Complete|","20.0",""
 "`LWG3957 <https://wg21.link/LWG3957>`__","[container.alloc.reqmts] The value category of v should be claimed","2023-11 (Kona)","","",""
 "`LWG3965 <https://wg21.link/LWG3965>`__","Incorrect example in [format.string.escaped] p3 for formatting of combining characters","2023-11 (Kona)","|Complete|","19.0",""
 "`LWG3970 <https://wg21.link/LWG3970>`__","[mdspan.syn] Missing definition of ``full_extent_t`` and ``full_extent``","2023-11 (Kona)","","",""

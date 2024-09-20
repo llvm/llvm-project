@@ -157,7 +157,7 @@ TEST_F(MDStringTest, PrintingSimple) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"testing 1 2 3\"", oss.str().c_str());
+  EXPECT_STREQ("!\"testing 1 2 3\"", Str.c_str());
 }
 
 // Test printing of MDString with non-printable characters.
@@ -167,7 +167,7 @@ TEST_F(MDStringTest, PrintingComplex) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", oss.str().c_str());
+  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", Str.c_str());
 }
 
 typedef MetadataTest MDNodeTest;
@@ -299,7 +299,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)
@@ -4224,16 +4223,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   DIExpression *Expr;
   DIExpression *NewExpr;
 
-#define EXPECT_FOLD_CONST(StartWidth, StartValue, EndWidth, EndValue, NumElts)  \
-  Int = ConstantInt::get(Context, APInt(StartWidth, StartValue));               \
-  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                          \
-  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                                \
-  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue));                     \
+#define EXPECT_FOLD_CONST(StartWidth, StartValue, StartIsSigned, EndWidth,     \
+                          EndValue, EndIsSigned, NumElts)                      \
+  Int =                                                                        \
+      ConstantInt::get(Context, APInt(StartWidth, StartValue, StartIsSigned)); \
+  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                         \
+  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                               \
+  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue, EndIsSigned));       \
   EXPECT_EQ(NewExpr->getNumElements(), NumElts##u)
 
   // Unfoldable expression should return the original unmodified Int/Expr.
   Expr = DIExpression::get(Context, {dwarf::DW_OP_deref});
-  EXPECT_FOLD_CONST(32, 117, 32, 117, 1);
+  EXPECT_FOLD_CONST(32, 117, false, 32, 117, false, 1);
   EXPECT_EQ(NewExpr, Expr);
   EXPECT_EQ(NewInt, Int);
   EXPECT_TRUE(NewExpr->startsWithDeref());
@@ -4241,18 +4242,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   // One unsigned bit-width conversion.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 72, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(8, 12, 72, 12, 0);
+  EXPECT_FOLD_CONST(8, 12, false, 72, 12, false, 0);
 
   // Two unsigned bit-width conversions (mask truncation).
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 8, dwarf::DW_ATE_unsigned,
                 dwarf::DW_OP_LLVM_convert, 16, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(32, -1, 16, 0xff, 0);
+  EXPECT_FOLD_CONST(32, -1, true, 16, 0xff, false, 0);
 
   // Sign extension.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 0);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 0);
 
   // Get non-foldable operations back in the new Expr.
   uint64_t Elements[] = {dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
@@ -4261,7 +4262,7 @@ TEST_F(DIExpressionTest, foldConstant) {
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
   Expr = DIExpression::append(Expr, Expected);
   ASSERT_EQ(Expr->getNumElements(), 5u);
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 2);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 2);
   EXPECT_EQ(NewExpr->getElements(), Expected);
 
 #undef EXPECT_FOLD_CONST
@@ -4604,8 +4605,7 @@ TEST(NamedMDNodeTest, Search) {
   std::string Str;
   raw_string_ostream oss(Str);
   NMD->print(oss);
-  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n",
-               oss.str().c_str());
+  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n", Str.c_str());
 }
 
 typedef MetadataTest FunctionAttachmentTest;

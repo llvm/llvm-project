@@ -560,13 +560,25 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isWeak())
+    return true;
+
+  const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+  assert(VD);
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_var_init_weak)
+      << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at);
+
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
-
   if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -578,6 +590,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -883,7 +897,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return diagnoseUnknownDecl(S, OpPC, D);
 
   assert(AK == AK_Assign);
-  if (S.getLangOpts().CPlusPlus11) {
+  if (S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
   }
@@ -1177,16 +1191,16 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID) {
   if (S.checkingPotentialConstantExpression())
     return false;
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func, CE, BuiltinID)) {
+  if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
     NewFrame.release();
     return true;
   }

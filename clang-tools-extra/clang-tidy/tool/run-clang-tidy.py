@@ -49,7 +49,7 @@ import tempfile
 import time
 import traceback
 from types import ModuleType
-from typing import Any, Awaitable, Callable, List, Optional, Tuple, TypeVar
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
 
 yaml: Optional[ModuleType] = None
@@ -621,4 +621,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

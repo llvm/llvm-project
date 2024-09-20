@@ -55,6 +55,10 @@
 #include <unistd.h>      // For syscall()
 #endif
 
+#if defined(__HAIKU__)
+#include <OS.h> // For B_OS_NAME_LENGTH
+#endif
+
 namespace llvm {
 pthread_t
 llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
@@ -139,6 +143,8 @@ uint64_t llvm::get_threadid() {
 static constexpr uint32_t get_max_thread_name_length_impl() {
 #if defined(PTHREAD_MAX_NAMELEN_NP)
   return PTHREAD_MAX_NAMELEN_NP;
+#elif defined(__HAIKU__)
+  return B_OS_NAME_LENGTH;
 #elif defined(__APPLE__)
   return 64;
 #elif defined(__sun__) && defined(__svr4__)

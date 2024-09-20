@@ -260,7 +260,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
   case ARM::tLDMIA: {
     bool Writeback = true;
-    unsigned BaseReg = MI->getOperand(0).getReg();
+    MCRegister BaseReg = MI->getOperand(0).getReg();
     for (unsigned i = 3; i < MI->getNumOperands(); ++i) {
       if (MI->getOperand(i).getReg() == BaseReg)
         Writeback = false;
@@ -291,7 +291,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   case ARM::STLEXD: {
     const MCRegisterClass &MRC = MRI.getRegClass(ARM::GPRRegClassID);
     bool isStore = Opcode == ARM::STREXD || Opcode == ARM::STLEXD;
-    unsigned Reg = MI->getOperand(isStore ? 1 : 0).getReg();
+    MCRegister Reg = MI->getOperand(isStore ? 1 : 0).getReg();
     if (MRC.contains(Reg)) {
       MCInst NewMI;
       MCOperand NewReg;
@@ -342,7 +342,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
     markup(O, Markup::Immediate) << '#' << formatImm(Op.getImm());
@@ -871,7 +871,7 @@ void ARMInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
 void ARMInstPrinter::printGPRPairOperand(const MCInst *MI, unsigned OpNum,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
   printRegName(O, MRI.getSubReg(Reg, ARM::gsub_0));
   O << ", ";
   printRegName(O, MRI.getSubReg(Reg, ARM::gsub_1));
@@ -1141,7 +1141,7 @@ void ARMInstPrinter::printThumbAddrModeRROperand(const MCInst *MI, unsigned Op,
   WithMarkup ScopedMarkup = markup(O, Markup::Memory);
   O << "[";
   printRegName(O, MO1.getReg());
-  if (unsigned RegNum = MO2.getReg()) {
+  if (MCRegister RegNum = MO2.getReg()) {
     O << ", ";
     printRegName(O, RegNum);
   }
@@ -1208,7 +1208,7 @@ void ARMInstPrinter::printT2SOOperand(const MCInst *MI, unsigned OpNum,
   const MCOperand &MO1 = MI->getOperand(OpNum);
   const MCOperand &MO2 = MI->getOperand(OpNum + 1);
 
-  unsigned Reg = MO1.getReg();
+  MCRegister Reg = MO1.getReg();
   printRegName(O, Reg);
 
   // Print the shift opc.
@@ -1490,9 +1490,9 @@ void ARMInstPrinter::printVectorListOne(const MCInst *MI, unsigned OpNum,
 void ARMInstPrinter::printVectorListTwo(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
-  unsigned Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
-  unsigned Reg1 = MRI.getSubReg(Reg, ARM::dsub_1);
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
+  MCRegister Reg1 = MRI.getSubReg(Reg, ARM::dsub_1);
   O << "{";
   printRegName(O, Reg0);
   O << ", ";
@@ -1503,9 +1503,9 @@ void ARMInstPrinter::printVectorListTwo(const MCInst *MI, unsigned OpNum,
 void ARMInstPrinter::printVectorListTwoSpaced(const MCInst *MI, unsigned OpNum,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
-  unsigned Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
-  unsigned Reg1 = MRI.getSubReg(Reg, ARM::dsub_2);
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
+  MCRegister Reg1 = MRI.getSubReg(Reg, ARM::dsub_2);
   O << "{";
   printRegName(O, Reg0);
   O << ", ";
@@ -1558,9 +1558,9 @@ void ARMInstPrinter::printVectorListTwoAllLanes(const MCInst *MI,
                                                 unsigned OpNum,
                                                 const MCSubtargetInfo &STI,
                                                 raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
-  unsigned Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
-  unsigned Reg1 = MRI.getSubReg(Reg, ARM::dsub_1);
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
+  MCRegister Reg1 = MRI.getSubReg(Reg, ARM::dsub_1);
   O << "{";
   printRegName(O, Reg0);
   O << "[], ";
@@ -1605,9 +1605,9 @@ void ARMInstPrinter::printVectorListFourAllLanes(const MCInst *MI,
 void ARMInstPrinter::printVectorListTwoSpacedAllLanes(
     const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
     raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
-  unsigned Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
-  unsigned Reg1 = MRI.getSubReg(Reg, ARM::dsub_2);
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg0 = MRI.getSubReg(Reg, ARM::dsub_0);
+  MCRegister Reg1 = MRI.getSubReg(Reg, ARM::dsub_2);
   O << "{";
   printRegName(O, Reg0);
   O << "[], ";
@@ -1684,7 +1684,7 @@ template<unsigned NumRegs>
 void ARMInstPrinter::printMVEVectorList(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
+  MCRegister Reg = MI->getOperand(OpNum).getReg();
   const char *Prefix = "{";
   for (unsigned i = 0; i < NumRegs; i++) {
     O << Prefix;

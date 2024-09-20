@@ -297,6 +297,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -4587,6 +4588,20 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
   case LoongArch::PseudoCTPOP:
     return emitPseudoCTPOP(MI, BB, Subtarget);
+  case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while bl call instruction (where statepoint will be lowered at the
+    // end) has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      LoongArch::R1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    if (!Subtarget.is64Bit())
+      report_fatal_error("STATEPOINT is only supported on 64-bit targets");
+    return emitPatchPoint(MI, BB);
   }
 }
 

@@ -67,14 +67,14 @@ class CSKYAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
@@ -656,7 +656,7 @@ bool CSKYAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool CSKYAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -1485,7 +1485,7 @@ ParseStatus CSKYAsmParser::parseRegList(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool CSKYAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   // First operand is token for instruction.
   Operands.push_back(CSKYOperand::createToken(Name, NameLoc));

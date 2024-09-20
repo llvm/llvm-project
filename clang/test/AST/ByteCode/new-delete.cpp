@@ -618,22 +618,28 @@ namespace OperatorNewDelete {
 
   constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
     int *p;
-
-    if (alloc_kind == 0)
-      p = new int; // both-note {{allocation performed here}}
-    else if (alloc_kind == 1)
-      p = new int[1]; // both-note {{allocation performed here}}
-    else if (alloc_kind == 2)
+    switch (alloc_kind) {
+    case 0:
+      p = new int; // both-note {{heap allocation performed here}}
+      break;
+    case 1:
+      p = new int[1]; // both-note {{heap allocation performed here}}
+      break;
+    case 2:
       p = std::allocator<int>().allocate(1);
-
-
-    if (dealloc_kind == 0)
+      break;
+    }
+    switch (dealloc_kind) {
+    case 0:
       delete p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
-    else if (dealloc_kind == 1)
+      break;
+    case 1:
       delete[] p; // both-note {{'delete' used to delete pointer to object allocated with 'std::allocator<...>::allocate'}}
-    else if (dealloc_kind == 2)
-      std::allocator<int>().deallocate(p); // both-note 2{{in call to}}
-
+      break;
+    case 2:
+      std::allocator<int>().deallocate(p); // both-note 2{{in call}}
+      break;
+    }
     return true;
   }
   static_assert(mismatched(0, 2)); // both-error {{constant expression}} \
@@ -710,6 +716,21 @@ namespace OperatorNewDelete {
                                                                                         // both-note {{in call}}
 
   static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
+}
+
+namespace Limits {
+  template<typename T>
+  constexpr T dynarray(int elems, int i) {
+    T *p;
+    if constexpr (sizeof(T) == 1)
+      p = new T[elems]{"fox"};
+    else
+      p = new T[elems]{1, 2, 3};
+    T n = p[i];
+    delete [] p;
+    return n;
+  }
+  static_assert(dynarray<char>(5, 0) == 'f');
 }
 
 #else

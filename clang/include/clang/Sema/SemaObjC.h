@@ -218,6 +218,7 @@ public:
     std::pair<iterator, bool> insert(std::pair<Selector, Lists> &&Val) {
       return Methods.insert(Val);
     }
+    Lists &operator[](Selector Key) { return Methods[Key]; }
     int count(Selector Sel) const { return Methods.count(Sel); }
     bool empty() const { return Methods.empty(); }
 

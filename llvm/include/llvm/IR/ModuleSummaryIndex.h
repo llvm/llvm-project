@@ -851,7 +851,7 @@ public:
   /// Create an empty FunctionSummary (with specified call edges).
   /// Used to represent external nodes and the dummy root node.
   static FunctionSummary
-  makeDummyFunctionSummary(std::vector<FunctionSummary::EdgeTy> Edges) {
+  makeDummyFunctionSummary(SmallVectorImpl<FunctionSummary::EdgeTy> &&Edges) {
     return FunctionSummary(
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
@@ -880,7 +880,9 @@ private:
   FFlags FunFlags;
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
-  std::vector<EdgeTy> CallGraphEdgeList;
+  /// We use SmallVector<ValueInfo, 0> instead of std::vector<ValueInfo> for its
+  /// smaller memory footprint.
+  SmallVector<EdgeTy, 0> CallGraphEdgeList;
 
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
@@ -910,7 +912,7 @@ private:
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
                   SmallVectorImpl<ValueInfo> &&Refs,
-                  std::vector<EdgeTy> CGEdges,
+                  SmallVectorImpl<EdgeTy> &&CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
@@ -957,7 +959,7 @@ public:
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
 
-  std::vector<EdgeTy> &mutableCalls() { return CallGraphEdgeList; }
+  SmallVector<EdgeTy, 0> &mutableCalls() { return CallGraphEdgeList; }
 
   void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
 
@@ -1341,7 +1343,7 @@ private:
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
-  std::map<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
+  DenseMap<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
 
   /// Indicates that summary-based GlobalValue GC has run, and values with
   /// GVFlags::Live==false are really dead. Otherwise, all values must be
@@ -1535,19 +1537,14 @@ public:
       discoverNodes(ValueInfo(HaveGVs, &S), FunctionHasParent);
     }
 
-    std::vector<FunctionSummary::EdgeTy> Edges;
+    SmallVector<FunctionSummary::EdgeTy, 0> Edges;
     // create edges to all roots in the Index
     for (auto &P : FunctionHasParent) {
       if (P.second)
         continue; // skip over non-root nodes
       Edges.push_back(std::make_pair(P.first, CalleeInfo{}));
     }
-    if (Edges.empty()) {
-      // Failed to find root - return an empty node
-      return FunctionSummary::makeDummyFunctionSummary({});
-    }
-    auto CallGraphRoot = FunctionSummary::makeDummyFunctionSummary(Edges);
-    return CallGraphRoot;
+    return FunctionSummary::makeDummyFunctionSummary(std::move(Edges));
   }
 
   bool withGlobalValueDeadStripping() const {
@@ -1894,10 +1891,11 @@ template <> struct GraphTraits<ValueInfo> {
     return P.first;
   }
   using ChildIteratorType =
-      mapped_iterator<std::vector<FunctionSummary::EdgeTy>::iterator,
+      mapped_iterator<SmallVector<FunctionSummary::EdgeTy, 0>::iterator,
                       decltype(&valueInfoFromEdge)>;
 
-  using ChildEdgeIteratorType = std::vector<FunctionSummary::EdgeTy>::iterator;
+  using ChildEdgeIteratorType =
+      SmallVector<FunctionSummary::EdgeTy, 0>::iterator;
 
   static NodeRef getEntryNode(ValueInfo V) { return V; }
 

@@ -39,13 +39,16 @@ public:
   /// Create a call instruction for the given DXIL op. The arguments
   /// must be valid for an overload of the operation.
   CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> Args,
-                     Type *RetTy = nullptr);
+                     const Twine &Name = "", Type *RetTy = nullptr);
 
   /// Try to create a call instruction for the given DXIL op. Fails if the
   /// overload is invalid.
   Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args,
+                                   const Twine &Name = "",
                                    Type *RetTy = nullptr);
 
+  /// Get a `%dx.types.ResRet` type with the given element type.
+  StructType *getResRetType(Type *ElementTy);
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
 
