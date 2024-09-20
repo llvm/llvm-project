@@ -640,7 +640,8 @@ old style K&R C function declarations.
 The lifetimes of all local variables and function parameters end immediately
 before the call to the function. This means that it is undefined behaviour to
 pass a pointer or reference to a local variable to the called function, which
-is not the case without the attribute.
+is not the case without the attribute. Clang will emit a warning in common
+cases where this happens.
 
 ``clang::musttail`` provides assurances that the tail call can be optimized on
 all targets, not just one.
