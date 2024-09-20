@@ -1238,8 +1238,15 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back(Args.MakeArgString(TC.getCompilerRTPath()));
     }
+
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    std::string rocmPath = Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
+    if (rocmPath.size() != 0){
+      rocmPath = rocmPath + "/lib";
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(rocmPath.c_str()));
+    }
     if (llvm::find_if(CmdArgs, [](StringRef str) {
           return !str.compare("--enable-new-dtags");
         }) == CmdArgs.end())

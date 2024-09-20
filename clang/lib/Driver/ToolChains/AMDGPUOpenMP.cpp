@@ -550,7 +550,7 @@ void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../include"));
   CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../../include"));
+  CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../../../include"));
 
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 

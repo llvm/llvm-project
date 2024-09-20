@@ -33,6 +33,7 @@ if(DEFINED HSA_RUNTIME)
 elseif(${hsa-runtime64_FOUND})
   message(STATUS "Building hostexec for AMDGCN linked against libhsa")
   set(HSA_INCLUDE ${hsa-runtime64_DIR}/../../../include/hsa)
+  get_target_property(HSA_INCLUDE hsa-runtime64::hsa-runtime64 INTERFACE_INCLUDE_DIRECTORIES)
   set(HOSTEXEC_EXTRA_SOURCE)
   set(HOSTEXEC_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
 else()
@@ -163,7 +164,8 @@ foreach(archname ${HOSTRPC_ARCHS})
    foreach(mcpu ${mcpus})
       if (${archname} STREQUAL "amdgcn")
         find_package(AMDDeviceLibs REQUIRED CONFIG
-		     HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                     HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                           ${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build
                            ${CMAKE_INSTALL_PREFIX}
                      PATHS /opt/rocm
         )
