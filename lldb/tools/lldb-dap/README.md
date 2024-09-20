@@ -237,7 +237,7 @@ The escape character can be changed via the `commandEscapePrefix` configuration 
 The `lldb-dap` tool includes additional custom commands to support the Debug
 Adapter Protocol features.
 
-#### `lldb-dap.startDebugging`
+#### `lldb-dap startDebugging`
 
 Using the command `lldb-dap startDebugging` it is possible to trigger a
 reverse request to the client requesting a child debug session with the
