@@ -3401,13 +3401,13 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     case AMDGPU::sub1:
       return Hi_32(Imm);
     case AMDGPU::lo16:
-      return APInt(16, Imm).getSExtValue();
+      return SignExtend64<16>(Imm);
     case AMDGPU::hi16:
-      return APInt(32, Imm).ashr(16).getSExtValue();
+      return SignExtend64<16>(Imm >> 16);
     case AMDGPU::sub1_lo16:
-      return APInt(16, Hi_32(Imm)).getSExtValue();
+      return SignExtend64<16>(Imm >> 32);
     case AMDGPU::sub1_hi16:
-      return APInt(32, Hi_32(Imm)).ashr(16).getSExtValue();
+      return SignExtend64<16>(Imm >> 48);
     }
   };
 
