@@ -1064,9 +1064,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
   if (!LoopCount.isUsable())
     return nullptr;
 
-  return OpenACCCollapseClause::Create(
-      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.isForce(), LoopCount.get(), Clause.getEndLoc());
+  return OpenACCCollapseClause::Create(Ctx, Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(), Clause.isForce(),
+                                       LoopCount.get(), Clause.getEndLoc());
 }
 
 } // namespace

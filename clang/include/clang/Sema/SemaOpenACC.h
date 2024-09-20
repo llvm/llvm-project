@@ -263,7 +263,6 @@ public:
       return std::get<CollapseDetails>(Details).LoopCount;
     }
 
-
     ArrayRef<DeviceTypeArgument> getDeviceTypeArchitectures() const {
       assert((ClauseKind == OpenACCClauseKind::DeviceType ||
               ClauseKind == OpenACCClauseKind::DType) &&
