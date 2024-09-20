@@ -3,14 +3,14 @@
 ## Procuring the `lldb-dap` binary
 
 The extension requires the `lldb-dap` (formerly `lldb-vscode`) binary.
-This binary is not currently packaged with the VS-Code extension. 
+This binary is not packaged with the VS Code extension.
 
 There are multiple ways to obtain this binary:
 * build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html))
 * download it one of the relase packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
-* contact your toolchain vendor
+* use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it
 
-By default, the VS-Code extension will expect to find `lldb-dap` in your `PATH`.
+By default, the VS Code extension will expect to find `lldb-dap` in your `PATH`.
 Alternatively, you can explictly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
 
 ### Usage with other IDEs
@@ -42,7 +42,7 @@ adds `FOO=1` and `bar` to the environment:
 
 ### Attaching to a process
 
-When attaching to a process using LLDB you can attach in a few ways
+When attaching to a process using LLDB, you can attach in multiple ways:
 
 1. Attach to an existing process using the process ID
 2. Attach to an existing process by name
