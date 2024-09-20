@@ -1304,8 +1304,12 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
     Attribute RangeAttr = F.getRetAttribute(Attribute::Range);
     if (RangeAttr.isValid())
       RetRange = RetRange->intersectWith(RangeAttr.getRange());
-    if (!RetRange->isEmptySet() && !RetRange->isSingleElement())
+    // Don't add attribute for constant integer returns to reduce noise. These
+    // are propagated across functions by IPSCCP.
+    if (!RetRange->isEmptySet() && !RetRange->isSingleElement()) {
       F.addRangeRetAttr(*RetRange);
+      FnChanged = true;
+    }
   }
   return FnChanged;
 }
