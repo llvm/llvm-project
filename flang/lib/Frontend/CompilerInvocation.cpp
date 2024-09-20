@@ -348,6 +348,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -record-command-line option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+    opts.RecordCommandLine = a->getValue();
+  }
+
   // -mlink-builtin-bitcode
   for (auto *a :
        args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
