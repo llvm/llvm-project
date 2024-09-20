@@ -9,7 +9,7 @@ define internal void @a() alwaysinline {
 }
 
 define internal void @b(ptr) noinline {
-; CHECK-LABEL: @b.argprom(
+; CHECK-LABEL: @b(
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -17,7 +17,7 @@ define internal void @b(ptr) noinline {
 
 define internal void @c() noinline {
 ; CHECK-LABEL: @c(
-; CHECK-NEXT:    call void @b.argprom()
+; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    ret void
 ;
   call void @b(ptr @a)

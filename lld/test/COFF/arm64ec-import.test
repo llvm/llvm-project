@@ -12,15 +12,15 @@ RUN: llvm-lib -machine:x64 -def:test.def -out:test-x86_64.lib
 
 Link using ARM64EC import library:
 RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
-RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib
+RUN:          test.obj test-arm64ec.lib test2-arm64ec.lib -map
 
 Link using x86_64 import library:
 RUN: lld-link -machine:arm64ec -dll -noentry -out:out2.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
-RUN:          test.obj test-x86_64.lib test2-arm64ec.lib
+RUN:          test.obj test-x86_64.lib test2-arm64ec.lib -map
 
 Link using x86_64 object file:
 RUN: lld-link -machine:arm64ec -dll -noentry -out:out3.dll loadconfig-arm64ec.obj icall.obj hybmp.obj \
-RUN:          test-x86_64.obj test-arm64ec.lib test2-arm64ec.lib
+RUN:          test-x86_64.obj test-arm64ec.lib test2-arm64ec.lib -map
 
 RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
 RUN: llvm-readobj --coff-imports out2.dll | FileCheck --check-prefix=IMPORTS %s
@@ -86,6 +86,28 @@ TESTSEC-X64:      0x180007000 08300000 00300000 10300000 20300000
 TESTSEC-X64-NEXT: 0x180007010 08300000 00500000 10300000 20300000
 TESTSEC-X64-NEXT: 0x180007020 14100000 28100000 00200000 08100000
 TESTSEC-X64-NEXT: 0x180007030 3c100000 a0420000
+
+RUN: FileCheck --check-prefix=MAP %s < out.map
+RUN: FileCheck --check-prefix=MAP %s < out2.map
+RUN: FileCheck --check-prefix=MAP %s < out3.map
+MAP:      0001:00000008       #func                      0000000180001008     test{{.*}}:test.dll
+MAP-NEXT: 0001:00000014       __impchk_func              0000000180001014     test{{.*}}:test.dll
+MAP-NEXT: 0001:00000028       __impchk_func2             0000000180001028     test{{.*}}:test.dll
+MAP-NEXT: 0001:0000003c       #t2func                    000000018000103c     test2{{.*}}:test2.dll
+MAP-NEXT: 0001:00000048       __impchk_t2func            0000000180001048     test2{{.*}}:test2.dll
+MAP:      0001:00001000       func                       0000000180002000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000000       __imp_data                 0000000180003000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000008       __imp_aux_func             0000000180003008     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000010       __imp_aux_func2            0000000180003010     test{{.*}}:test.dll
+MAP-NEXT: 0002:00000020       __imp_aux_t2func           0000000180003020     test2{{.*}}:test2.dll
+MAP:      0002:00001298       __auximpcopy_data          0000000180004298     test{{.*}}:test.dll
+MAP-NEXT: 0002:000012a0       __auximpcopy_func          00000001800042a0     test{{.*}}:test.dll
+MAP-NEXT: 0002:000012a8       __auximpcopy_func2         00000001800042a8     test{{.*}}:test.dll
+MAP-NEXT: 0002:000012b8       __auximpcopy_t2func        00000001800042b8     test2{{.*}}:test2.dll
+MAP:      0002:00002000       __imp_aux_data             0000000180005000     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002008       __imp_func                 0000000180005008     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002010       __imp_func2                0000000180005010     test{{.*}}:test.dll
+MAP-NEXT: 0002:00002020       __imp_t2func               0000000180005020     test2{{.*}}:test2.dll
 
 RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
 RUN: llvm-readobj --headers out2.dll | FileCheck -check-prefix=HEADERS %s

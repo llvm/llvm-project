@@ -1117,6 +1117,31 @@ define void @foo() {
             Ctx.getValue(LLVMAlias0->getAliaseeObject()));
 }
 
+TEST_F(SandboxIRTest, NoCFIValue) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void no_cfi @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *NoCFI = cast<sandboxir::NoCFIValue>(Call->getCalledOperand());
+  // Check get().
+  auto *NewNoCFI = sandboxir::NoCFIValue::get(&F);
+  EXPECT_EQ(NewNoCFI, NoCFI);
+  // Check getGlobalValue().
+  EXPECT_EQ(NoCFI->getGlobalValue(), &F);
+  // Check getType().
+  EXPECT_EQ(NoCFI->getType(), F.getType());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {

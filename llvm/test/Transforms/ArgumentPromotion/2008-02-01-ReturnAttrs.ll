@@ -3,7 +3,7 @@
 ; RUN: cat %t | FileCheck -check-prefix=REMARK %s
 
 define internal i32 @deref(ptr %x) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@deref.argprom
+; CHECK-LABEL: define {{[^@]+}}@deref
 ; CHECK-SAME: (i32 [[X_0_VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[X_0_VAL]]
@@ -29,7 +29,7 @@ define i32 @f(i32 %x) {
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
 ; CHECK-NEXT:    [[X_ADDR_VAL:%.*]] = load i32, ptr [[X_ADDR]], align 4
-; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @deref.argprom(i32 [[X_ADDR_VAL]])
+; CHECK-NEXT:    [[TEMP1:%.*]] = call i32 @deref(i32 [[X_ADDR_VAL]])
 ; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
 entry:

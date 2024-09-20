@@ -44,7 +44,7 @@ bb:
 }
 
 define internal i1 @eggs(ptr %arg) {
-; ARGPROMOTION-LABEL: define {{[^@]+}}@eggs.argprom() {
+; ARGPROMOTION-LABEL: define {{[^@]+}}@eggs() {
 ; ARGPROMOTION-NEXT:  bb:
 ; ARGPROMOTION-NEXT:    unreachable
 ;

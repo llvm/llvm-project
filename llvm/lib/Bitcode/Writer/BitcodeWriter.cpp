@@ -862,6 +862,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY;
   case Attribute::SanitizeRealtime:
     return bitc::ATTR_KIND_SANITIZE_REALTIME;
+  case Attribute::SanitizeRealtimeUnsafe:
+    return bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE;
   case Attribute::SpeculativeLoadHardening:
     return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
   case Attribute::SwiftError:
@@ -906,6 +908,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_RANGE;
   case Attribute::Initializes:
     return bitc::ATTR_KIND_INITIALIZES;
+  case Attribute::NoExt:
+    return bitc::ATTR_KIND_NO_EXT;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

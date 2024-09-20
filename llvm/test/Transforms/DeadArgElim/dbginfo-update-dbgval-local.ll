@@ -5,7 +5,7 @@
 
 ; Reproducer for PR23260.
 
-; CHECK-LABEL: define internal void @bar.argelim()
+; CHECK-LABEL: define internal void @bar()
 ; CHECK: #dbg_value(i32 poison, ![[LOCAL1:[0-9]+]]
 ; CHECK: call void @sink()
 
@@ -18,9 +18,9 @@ entry:
 }
 
 ; CHECK-LABEL: define void @foo()
-; CHECK: call void @bar.argelim()
+; CHECK: call void @bar()
 ; CHECK: #dbg_value(i32 poison, ![[LOCAL2:[0-9]+]]
-; CHECK: call void @bar.argelim()
+; CHECK: call void @bar()
 
 ; Function Attrs: nounwind uwtable
 define void @foo() #0 !dbg !6 {
