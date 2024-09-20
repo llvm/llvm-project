@@ -159,7 +159,7 @@ class DecoderEmitter {
   std::vector<EncodingAndInst> NumberedEncodings;
 
 public:
-  DecoderEmitter(const RecordKeeper &R, const std::string &PredicateNamespace)
+  DecoderEmitter(const RecordKeeper &R, StringRef PredicateNamespace)
       : RK(R), Target(R), PredicateNamespace(PredicateNamespace) {}
 
   // Emit the decoder state machine table.
@@ -180,7 +180,7 @@ private:
   CodeGenTarget Target;
 
 public:
-  const std::string &PredicateNamespace;
+  StringRef PredicateNamespace;
 };
 
 } // end anonymous namespace
@@ -2645,11 +2645,7 @@ namespace llvm {
   OS << "\n} // end namespace llvm\n";
 }
 
-namespace llvm {
-
-void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                 const std::string &PredicateNamespace) {
+void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,
+                       StringRef PredicateNamespace) {
   DecoderEmitter(RK, PredicateNamespace).run(OS);
 }
-
-} // end namespace llvm
