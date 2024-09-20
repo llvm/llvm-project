@@ -867,6 +867,43 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPIRInstruction::execute(VPTransformState &State) {
+  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
+         "Only PHINodes can have extra operands");
+  if (getNumOperands() == 1) {
+    VPValue *ExitValue = getOperand(0);
+    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                    ? VPLane::getFirstLane()
+                    : VPLane::getLastLaneForVF(State.VF);
+    auto *PredVPBB = cast<VPBasicBlock>(getParent()->getSinglePredecessor());
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+    // Set insertion point in PredBB in case an extract needs to be generated.
+    // TODO: Model extracts explicitly.
+    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+    auto *Phi = cast<PHINode>(&I);
+    Phi->addIncoming(V, PredBB);
+  }
+
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
+  State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
+                            VPSlotTracker &SlotTracker) const {
+  O << Indent << "IR " << I;
+
+  if (getNumOperands() != 0) {
+    assert(getNumOperands() == 1 && "can have at most 1 operand");
+    O << " (extra operand: ";
+    printOperands(O, SlotTracker);
+    O << ")";
+  }
+}
+#endif
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   Function *CalledScalarFn = getCalledScalarFunction();
@@ -1234,7 +1271,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
       RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideVectorRegions())
+        getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy =
         ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
@@ -1316,9 +1353,9 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-VP ";
+  O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode());
+  O << " = vp." << Instruction::getOpcodeName(getOpcode());
   printFlags(O);
   printOperands(O, SlotTracker);
 }
@@ -2056,7 +2093,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 /// TODO: Uniformity should be associated with a VPValue and there should be a
 /// generic way to check.
 static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
-  return C->isDefinedOutsideVectorRegions() ||
+  return C->isDefinedOutsideLoopRegions() ||
          isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
          isa<VPCanonicalIVPHIRecipe>(C->getOperand(0));
 }
@@ -2220,8 +2257,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     return Cost;
 
   return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                        cast<VectorType>(Ty), std::nullopt,
-                                        CostKind, 0);
+                                        cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -2904,10 +2940,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
            "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(
-            StartOffset,
-            State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),
-            "vector.gep"));
+        State.Builder.CreateMul(StartOffset, State.Builder.CreateVectorSplat(
+                                                 State.VF, ScalarStepValue)),
+        "vector.gep");
     State.set(this, GEP, Part);
   }
 }

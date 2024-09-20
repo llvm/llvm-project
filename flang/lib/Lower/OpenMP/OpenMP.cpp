@@ -1123,13 +1123,13 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAligned(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_simd, clauseOps);
+  cp.processNontemporal(clauseOps);
   cp.processOrder(clauseOps);
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
 
-  cp.processTODO<clause::Linear, clause::Nontemporal>(
-      loc, llvm::omp::Directive::OMPD_simd);
+  cp.processTODO<clause::Linear>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -1223,12 +1223,10 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
 
-  if (directive == llvm::omp::Directive::OMPD_target_update) {
-    cp.processMotionClauses<clause::To>(stmtCtx, clauseOps);
-    cp.processMotionClauses<clause::From>(stmtCtx, clauseOps);
-  } else {
+  if (directive == llvm::omp::Directive::OMPD_target_update)
+    cp.processMotionClauses(stmtCtx, clauseOps);
+  else
     cp.processMap(loc, stmtCtx, clauseOps);
-  }
 
   cp.processNowait(clauseOps);
 }

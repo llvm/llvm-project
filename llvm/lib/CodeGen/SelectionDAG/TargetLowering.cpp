@@ -113,6 +113,7 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
   IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
+  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
   IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
   IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
   IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
@@ -1841,7 +1842,7 @@ bool TargetLowering::SimplifyDemandedBits(
         for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
              SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
           EVT SmallVT = EVT::getIntegerVT(*TLO.DAG.getContext(), SmallVTBits);
-          if (isNarrowingProfitable(VT, SmallVT) &&
+          if (isNarrowingProfitable(Op.getNode(), VT, SmallVT) &&
               isTypeDesirableForOp(ISD::SHL, SmallVT) &&
               isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT) &&
               (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, SmallVT))) {
@@ -1865,7 +1866,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if ((BitWidth % 2) == 0 && !VT.isVector() && ShAmt < HalfWidth &&
           DemandedBits.countLeadingOnes() >= HalfWidth) {
         EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), HalfWidth);
-        if (isNarrowingProfitable(VT, HalfVT) &&
+        if (isNarrowingProfitable(Op.getNode(), VT, HalfVT) &&
             isTypeDesirableForOp(ISD::SHL, HalfVT) &&
             isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
             (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, HalfVT))) {
@@ -1984,7 +1985,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if ((BitWidth % 2) == 0 && !VT.isVector()) {
         APInt HiBits = APInt::getHighBitsSet(BitWidth, BitWidth / 2);
         EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), BitWidth / 2);
-        if (isNarrowingProfitable(VT, HalfVT) &&
+        if (isNarrowingProfitable(Op.getNode(), VT, HalfVT) &&
             isTypeDesirableForOp(ISD::SRL, HalfVT) &&
             isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
             (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, HalfVT)) &&
@@ -4762,9 +4763,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       case ISD::SETULT:
       case ISD::SETULE: {
         EVT newVT = N0.getOperand(0).getValueType();
+        // FIXME: Should use isNarrowingProfitable.
         if (DCI.isBeforeLegalizeOps() ||
             (isOperationLegal(ISD::SETCC, newVT) &&
-             isCondCodeLegal(Cond, newVT.getSimpleVT()))) {
+             isCondCodeLegal(Cond, newVT.getSimpleVT()) &&
+             isTypeDesirableForOp(ISD::SETCC, newVT))) {
           EVT NewSetCCVT = getSetCCResultType(Layout, *DAG.getContext(), newVT);
           SDValue NewConst = DAG.getConstant(C1.trunc(InSize), dl, newVT);
 
@@ -10681,7 +10684,7 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   // because one of the conditions can be merged with one of the selects.
   // And finally, if we don't know the contents of high bits of a boolean value
   // we can't perform any arithmetic either.
-  if (shouldExpandCmpUsingSelects() || BoolVT.getScalarSizeInBits() == 1 ||
+  if (shouldExpandCmpUsingSelects(VT) || BoolVT.getScalarSizeInBits() == 1 ||
       getBooleanContents(BoolVT) == UndefinedBooleanContent) {
     SDValue SelectZeroOrOne =
         DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
@@ -11705,11 +11708,13 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     // ... if it is not a splat vector, we need to get the passthru value at
     // position = popcount(mask) and re-load it from the stack before it is
     // overwritten in the loop below.
+    EVT PopcountVT = ScalarVT.changeTypeToInteger();
     SDValue Popcount = DAG.getNode(
         ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
-    Popcount = DAG.getNode(ISD::ZERO_EXTEND, DL,
-                           MaskVT.changeVectorElementType(ScalarVT), Popcount);
-    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, ScalarVT, Popcount);
+    Popcount =
+        DAG.getNode(ISD::ZERO_EXTEND, DL,
+                    MaskVT.changeVectorElementType(PopcountVT), Popcount);
+    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
     SDValue LastElmtPtr =
         getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
     LastWriteVal = DAG.getLoad(
@@ -11748,8 +11753,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
       // Re-write the last ValI if all lanes were selected. Otherwise,
       // overwrite the last write it with the passthru value.
-      LastWriteVal =
-          DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI, LastWriteVal);
+      SDNodeFlags Flags{};
+      Flags.setUnpredictable(true);
+      LastWriteVal = DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI,
+                                   LastWriteVal, Flags);
       Chain = DAG.getStore(
           Chain, DL, LastWriteVal, OutPtr,
           MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));

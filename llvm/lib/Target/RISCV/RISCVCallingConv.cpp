@@ -448,8 +448,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (ValVT.isFixedLengthVector())
+      if (ValVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
@@ -583,8 +587,12 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (MCRegister Reg = allocateRVVReg(ValVT, ValNo, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (LocVT.isFixedLengthVector())
+      if (LocVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }

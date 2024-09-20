@@ -14,29 +14,31 @@
 # RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
 # CHECK-YAML: name: bar
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   pseudo_probes: [ { guid: 0xE413754A191DB537, id: 1, type: 0 }, { guid: 0xE413754A191DB537, id: 4, type: 0 } ]
-# CHECK-YAML: guid: 0xE413754A191DB537
-# CHECK-YAML: pseudo_probe_desc_hash: 0x10E852DA94
+# CHECK-YAML:   probes: [ { blx: 9 } ]
+# CHECK-YAML: inline_tree: [ { } ]
 #
 # CHECK-YAML: name: foo
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   pseudo_probes: [ { guid: 0x5CF8C24CDB18BDAC, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 2, type: 0 } ]
-# CHECK-YAML: guid: 0x5CF8C24CDB18BDAC
-# CHECK-YAML: pseudo_probe_desc_hash: 0x200205A19C5B4
+# CHECK-YAML:   probes: [ { blx: 3 } ]
+# CHECK-YAML: inline_tree: [ { g: 1 }, { g: 0, cs: 8 } ]
 #
 # CHECK-YAML: name: main
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   pseudo_probes: [ { guid: 0xDB956436E78DD5FA, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 1, type: 0 }, { guid: 0x5CF8C24CDB18BDAC, id: 2, type: 0 } ]
-# CHECK-YAML: guid: 0xDB956436E78DD5FA
-# CHECK-YAML: pseudo_probe_desc_hash: 0x10000FFFFFFFF
+# CHECK-YAML:   probes: [ { blx: 3, id: 1 }, { blx: 1 } ]
+# CHECK-YAML: inline_tree: [ { g: 2 }, { g: 1, cs: 2 }, { g: 0, p: 1, cs: 8 } ]
+#
+# CHECK-YAML: pseudo_probe_desc:
+# CHECK-YAML-NEXT: gs: [ 0xE413754A191DB537, 0x5CF8C24CDB18BDAC, 0xDB956436E78DD5FA ]
+# CHECK-YAML-NEXT: gh: [ 2, 0, 1 ]
+# CHECK-YAML-NEXT: hs: [ 0x200205A19C5B4, 0x10000FFFFFFFF, 0x10E852DA94 ]
 #
 ## Check that without --profile-write-pseudo-probes option, no pseudo probes are
 ## generated
-# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata
-# RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-NO-OPT
-# CHECK-NO-OPT-NOT: pseudo_probes
-# CHECK-NO-OPT-NOT: guid
-# CHECK-NO-OPT-NOT: pseudo_probe_desc_hash
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml3 -o %t.fdata
+# RUN: FileCheck --input-file %t.yaml3 %s --check-prefix CHECK-NO-OPT
+# CHECK-NO-OPT-NOT: probes:
+# CHECK-NO-OPT-NOT: inline_tree:
+# CHECK-NO-OPT-NOT: pseudo_probe_desc:
 
 CHECK: Report of decoding input pseudo probe binaries
 

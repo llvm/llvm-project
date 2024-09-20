@@ -78,7 +78,7 @@ mutatedBy(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
     std::string Buffer;
     llvm::raw_string_ostream Stream(Buffer);
     By->printPretty(Stream, nullptr, AST->getASTContext().getPrintingPolicy());
-    Chain.emplace_back(StringRef(Stream.str()).trim().str());
+    Chain.emplace_back(StringRef(Buffer).trim().str());
     E = dyn_cast<DeclRefExpr>(By);
   }
   return Chain;

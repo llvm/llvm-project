@@ -305,7 +305,7 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
   return nullptr;
 }
 
-const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
+static const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   Reg = Reg->getBaseRegion();
   while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
     const auto *OriginReg = SymReg->getSymbol()->getOriginRegion();
@@ -316,7 +316,7 @@ const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   return Reg;
 }
 
-std::optional<std::string> printReferrer(const MemRegion *Referrer) {
+static std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   assert(Referrer);
   const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
     if (isa<StaticGlobalSpaceRegion>(Space))
@@ -354,7 +354,7 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
 
 /// Check whether \p Region refers to a freshly minted symbol after an opaque
 /// function call.
-bool isInvalidatedSymbolRegion(const MemRegion *Region) {
+static bool isInvalidatedSymbolRegion(const MemRegion *Region) {
   const auto *SymReg = Region->getAs<SymbolicRegion>();
   if (!SymReg)
     return false;

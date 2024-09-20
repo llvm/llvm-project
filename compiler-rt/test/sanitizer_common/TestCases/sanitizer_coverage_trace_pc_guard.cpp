@@ -1,7 +1,7 @@
 // Tests trace pc guard coverage collection.
 
 // REQUIRES: has_sancovcc
-// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|thumb).*}}
+// UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|sparc|thumb).*}}
 // This test is failing for lsan on darwin on x86_64h.
 // UNSUPPORTED: x86_64h-darwin && lsan
 // XFAIL: tsan

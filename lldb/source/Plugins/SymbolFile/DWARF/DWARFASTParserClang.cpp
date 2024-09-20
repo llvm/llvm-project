@@ -2932,7 +2932,8 @@ void DWARFASTParserClang::ParseSingleMember(
     last_field_info = this_field_info;
     last_field_info.SetIsBitfield(true);
   } else {
-    FieldInfo this_field_info{.is_bitfield = false};
+    FieldInfo this_field_info;
+    this_field_info.is_bitfield = false;
     this_field_info.bit_offset = field_bit_offset;
 
     // TODO: we shouldn't silently ignore the bit_size if we fail
