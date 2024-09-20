@@ -156,6 +156,15 @@ public:
                               DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
+    return createInstruction(Opcode, Operands, DL, Name);
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -163,14 +172,6 @@ public:
                                      DebugLoc DL = {}, const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
-  }
-
-  VPInstruction *createFPOp(unsigned Opcode,
-                            std::initializer_list<VPValue *> Operands,
-                            FastMathFlags FMFs = {}, DebugLoc DL = {},
-                            const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, FMFs, DL, Name));
   }
 
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
