@@ -82,6 +82,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  iszero_test
+  SUITE
+    libc_include_tests
+  SRCS
+    iszero_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  iszerof_test
+  SUITE
+    libc_include_tests
+  SRCS
+    iszerof_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  iszerol_test
+  SUITE
+    libc_include_tests
+  SRCS
+    iszerol_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
   signbit_test
   SUITE
     libc_include_tests
@@ -254,6 +284,21 @@ add_libc_test(
     libc_include_tests
   SRCS
     isfinite_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  iszero_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    iszero_test.c
   COMPILE_OPTIONS
     -Wall
     -Werror

@@ -404,7 +404,6 @@ static std::string getBranchCondString(Instruction *TI) {
     else
       OS << "_Const";
   }
-  OS.flush();
   return result;
 }
 
@@ -2364,7 +2363,6 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
     raw_string_ostream OS(BranchProbStr);
     OS << BP;
     OS << " (total count : " << TotalCount << ")";
-    OS.flush();
     Function *F = TI->getParent()->getParent();
     OptimizationRemarkEmitter ORE(F);
     ORE.emit([&]() {
