@@ -18,7 +18,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
@@ -626,33 +625,6 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
                                            : QualType());
 }
 
-static llvm::SmallVector<const Decl *, 2> collectLambdas(FunctionDecl *D) {
-  struct LambdaCollector : public ConstStmtVisitor<LambdaCollector> {
-    llvm::SmallVectorImpl<const Decl *> &Lambdas;
-
-    LambdaCollector(llvm::SmallVectorImpl<const Decl *> &Lambdas)
-        : Lambdas(Lambdas) {}
-
-    void VisitLambdaExpr(const LambdaExpr *E) {
-      VisitStmt(E);
-      Lambdas.push_back(E->getLambdaClass());
-    }
-
-    void VisitStmt(const Stmt *S) {
-      if (!S)
-        return;
-      for (const Stmt *Child : S->children())
-        if (Child)
-          Visit(Child);
-    }
-  };
-
-  llvm::SmallVector<const Decl *, 2> Lambdas;
-  if (D->hasBody())
-    LambdaCollector(Lambdas).VisitStmt(D->getBody());
-  return Lambdas;
-}
-
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
@@ -792,19 +764,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
     Record.AddDeclRef(P);
-
-  // Store references to all lambda decls inside function to load them
-  // immediately after loading the function to make sure that canonical
-  // decls for lambdas will be from the same module.
-  if (D->isCanonicalDecl()) {
-    llvm::SmallVector<const Decl *, 2> Lambdas = collectLambdas(D);
-    Record.push_back(Lambdas.size());
-    for (const auto *L : Lambdas)
-      Record.AddDeclRef(L);
-  } else {
-    Record.push_back(0);
-  }
-
   Code = serialization::DECL_FUNCTION;
 }
 
@@ -1748,14 +1707,13 @@ void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   VisitRedeclarable(D);
 
+  Record.push_back(D->isMemberSpecialization());
+
   // Emit data to initialize CommonOrPrev before VisitTemplateDecl so that
   // getCommonPtr() can be used while this is still initializing.
-  if (D->isFirstDecl()) {
+  if (D->isFirstDecl())
     // This declaration owns the 'common' pointer, so serialize that data now.
     Record.AddDeclRef(D->getInstantiatedFromMemberTemplate());
-    if (D->getInstantiatedFromMemberTemplate())
-      Record.push_back(D->isMemberSpecialization());
-  }
 
   VisitTemplateDecl(D);
   Record.push_back(D->getIdentifierNamespace());
@@ -1829,11 +1787,10 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
 
   VisitClassTemplateSpecializationDecl(D);
 
+  Record.push_back(D->isMemberSpecialization());
   // These are read/set from/to the first declaration.
-  if (D->getPreviousDecl() == nullptr) {
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getInstantiatedFromMember());
-    Record.push_back(D->isMemberSpecialization());
-  }
 
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -1897,12 +1854,11 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Record.AddTemplateParameterList(D->getTemplateParameters());
 
   VisitVarTemplateSpecializationDecl(D);
+  Record.push_back(D->isMemberSpecialization());
 
   // These are read/set from/to the first declaration.
-  if (D->getPreviousDecl() == nullptr) {
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getInstantiatedFromMember());
-    Record.push_back(D->isMemberSpecialization());
-  }
 
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -2280,7 +2236,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   //
   // This is:
   //         NumParams and Params[] from FunctionDecl, and
-  //         NumLambdas, Lambdas[] from FunctionDecl, and
   //         NumOverriddenMethods, OverriddenMethods[] from CXXMethodDecl.
   //
   //  Add an AbbrevOp for 'size then elements' and use it here.

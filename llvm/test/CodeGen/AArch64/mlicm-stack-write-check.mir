@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64 -run-pass machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -passes machinelicm -o - %s | FileCheck %s
 ---
 name: test
 tracksRegLiveness: true

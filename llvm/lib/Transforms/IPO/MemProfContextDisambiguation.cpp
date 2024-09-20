@@ -417,6 +417,29 @@ public:
 
     DenseSet<uint32_t> &getContextIds() { return ContextIds; }
 
+    // Helper to clear the fields of this edge when we are removing it from the
+    // graph.
+    inline void clear() {
+      ContextIds.clear();
+      AllocTypes = (uint8_t)AllocationType::None;
+      Caller = nullptr;
+      Callee = nullptr;
+    }
+
+    // Check if edge was removed from the graph. This is useful while iterating
+    // over a copy of edge lists when performing operations that mutate the
+    // graph in ways that might remove one of the edges.
+    inline bool isRemoved() const {
+      if (Callee || Caller)
+        return false;
+      // Any edges that have been removed from the graph but are still in a
+      // shared_ptr somewhere should have all fields null'ed out by clear()
+      // above.
+      assert(AllocTypes == (uint8_t)AllocationType::None);
+      assert(ContextIds.empty());
+      return true;
+    }
+
     void dump() const;
     void print(raw_ostream &OS) const;
 
@@ -470,8 +493,29 @@ protected:
 private:
   using EdgeIter = typename std::vector<std::shared_ptr<ContextEdge>>::iterator;
 
-  using CallContextInfo = std::tuple<CallTy, std::vector<uint64_t>,
-                                     const FuncTy *, DenseSet<uint32_t>>;
+  // Structure to keep track of information for each call as we are matching
+  // non-allocation callsites onto context nodes created from the allocation
+  // call metadata / summary contexts.
+  struct CallContextInfo {
+    // The callsite we're trying to match.
+    CallTy Call;
+    // The callsites stack ids that have a context node in the graph.
+    std::vector<uint64_t> StackIds;
+    // The function containing this callsite.
+    const FuncTy *Func;
+    // Initially empty, if needed this will be updated to contain the context
+    // ids for use in a new context node created for this callsite.
+    DenseSet<uint32_t> ContextIds;
+  };
+
+  /// Helper to remove edge from graph, updating edge iterator if it is provided
+  /// (in which case CalleeIter indicates which edge list is being iterated).
+  /// This will also perform the necessary clearing of the ContextEdge members
+  /// to enable later checking if the edge has been removed (since we may have
+  /// other copies of the shared_ptr in existence, and in fact rely on this to
+  /// enable removal while iterating over a copy of a node's edge list).
+  void removeEdgeFromGraph(ContextEdge *Edge, EdgeIter *EI = nullptr,
+                           bool CalleeIter = true);
 
   /// Assigns the given Node to calls at or inlined into the location with
   /// the Node's stack id, after post order traversing and processing its
@@ -909,14 +953,41 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
+    ContextEdge *Edge, EdgeIter *EI, bool CalleeIter) {
+  assert(!EI || (*EI)->get() == Edge);
+  // Save the Caller and Callee pointers so we can erase Edge from their edge
+  // lists after clearing Edge below. We do the clearing first in case it is
+  // destructed after removing from the edge lists (if those were the last
+  // shared_ptr references to Edge).
+  auto *Callee = Edge->Callee;
+  auto *Caller = Edge->Caller;
+
+  // Make sure the edge fields are cleared out so we can properly detect
+  // removed edges if Edge is not destructed because there is still a shared_ptr
+  // reference.
+  Edge->clear();
+
+  if (!EI) {
+    Callee->eraseCallerEdge(Edge);
+    Caller->eraseCalleeEdge(Edge);
+  } else if (CalleeIter) {
+    Callee->eraseCallerEdge(Edge);
+    *EI = Caller->CalleeEdges.erase(*EI);
+  } else {
+    Caller->eraseCalleeEdge(Edge);
+    *EI = Callee->CallerEdges.erase(*EI);
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<
     DerivedCCG, FuncTy, CallTy>::removeNoneTypeCalleeEdges(ContextNode *Node) {
   for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();) {
     auto Edge = *EI;
     if (Edge->AllocTypes == (uint8_t)AllocationType::None) {
       assert(Edge->ContextIds.empty());
-      Edge->Callee->eraseCallerEdge(Edge.get());
-      EI = Node->CalleeEdges.erase(EI);
+      removeEdgeFromGraph(Edge.get(), &EI, /*CalleeIter=*/true);
     } else
       ++EI;
   }
@@ -1185,13 +1256,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
     }
     // Remove old edge if context ids empty.
     if (Edge->getContextIds().empty()) {
-      if (TowardsCallee) {
-        Edge->Callee->eraseCallerEdge(Edge.get());
-        EI = OrigNode->CalleeEdges.erase(EI);
-      } else {
-        Edge->Caller->eraseCalleeEdge(Edge.get());
-        EI = OrigNode->CallerEdges.erase(EI);
-      }
+      removeEdgeFromGraph(Edge.get(), &EI, TowardsCallee);
       continue;
     }
     ++EI;
@@ -1260,8 +1325,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   auto CallerEdges = Node->CallerEdges;
   for (auto &Edge : CallerEdges) {
     // Skip any that have been removed during the recursion.
-    if (!Edge)
+    if (Edge->isRemoved()) {
+      assert(!is_contained(Node->CallerEdges, Edge));
       continue;
+    }
     assignStackNodesPostOrder(Edge->Caller, Visited, StackIdToMatchingCalls,
                               CallToMatchingCall);
   }
@@ -1390,10 +1457,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
         auto *PrevEdge = CurNode->findEdgeFromCallee(PrevNode);
         assert(PrevEdge);
         set_subtract(PrevEdge->getContextIds(), SavedContextIds);
-        if (PrevEdge->getContextIds().empty()) {
-          PrevNode->eraseCallerEdge(PrevEdge);
-          CurNode->eraseCalleeEdge(PrevEdge);
-        }
+        if (PrevEdge->getContextIds().empty())
+          removeEdgeFromGraph(PrevEdge);
       }
       // Since we update the edges from leaf to tail, only look at the callee
       // edges. This isn't an alloc node, so if there are no callee edges, the
@@ -1458,7 +1523,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
     if (Calls.size() == 1) {
-      auto &Ids = std::get<1>(Calls[0]);
+      auto &Ids = Calls[0].StackIds;
       if (Ids.size() == 1)
         continue;
     }
@@ -1467,26 +1532,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // of length, and within each length, lexicographically by stack id. The
     // latter is so that we can specially handle calls that have identical stack
     // id sequences (either due to cloning or artificially because of the MIB
-    // context pruning). Those with the same Ids are then sorted by function to
-    // facilitate efficiently mapping them to the same context node.
-    // Because the functions are pointers, to ensure a stable sort first assign
-    // each function pointer to its first index in the Calls array, and then use
-    // that to sort by.
-    DenseMap<const FuncTy *, unsigned> FuncToIndex;
-    for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
-      FuncToIndex.insert({std::get<2>(CallCtxInfo), Idx});
-    std::stable_sort(
-        Calls.begin(), Calls.end(),
-        [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          auto &IdsA = std::get<1>(A);
-          auto &IdsB = std::get<1>(B);
-          auto *FuncA = std::get<2>(A);
-          auto *FuncB = std::get<2>(B);
-          return IdsA.size() > IdsB.size() ||
-                 (IdsA.size() == IdsB.size() &&
-                  (IdsA < IdsB ||
-                   (IdsA == IdsB && FuncToIndex[FuncA] < FuncToIndex[FuncB])));
-        });
+    // context pruning).
+    std::stable_sort(Calls.begin(), Calls.end(),
+                     [](const CallContextInfo &A, const CallContextInfo &B) {
+                       return A.StackIds.size() > B.StackIds.size() ||
+                              (A.StackIds.size() == B.StackIds.size() &&
+                               A.StackIds < B.StackIds);
+                     });
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
@@ -1504,34 +1556,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
     assert(!LastNodeContextIds.empty());
 
-#ifndef NDEBUG
-    // Save the set of functions seen for a particular set of the same stack
-    // ids. This is used to ensure that they have been correctly sorted to be
-    // adjacent in the Calls list, since we rely on that to efficiently place
-    // all such matching calls onto the same context node.
-    DenseSet<const FuncTy *> MatchingIdsFuncSet;
-#endif
+    // Map from function to the first call from the below list (with matching
+    // stack ids) found in that function. Note that calls from different
+    // functions can have the same stack ids because this is the list of stack
+    // ids that had (possibly pruned) nodes after building the graph from the
+    // allocation MIBs.
+    DenseMap<const FuncTy *, CallInfo> FuncToCallMap;
 
     for (unsigned I = 0; I < Calls.size(); I++) {
       auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
       assert(SavedContextIds.empty());
       assert(LastId == Ids.back());
-
-#ifndef NDEBUG
-      // If this call has a different set of ids than the last one, clear the
-      // set used to ensure they are sorted properly.
-      if (I > 0 && Ids != std::get<1>(Calls[I - 1]))
-        MatchingIdsFuncSet.clear();
-      else
-        // If the prior call had the same stack ids this set would not be empty.
-        // Check if we already have a call that "matches" because it is located
-        // in the same function. If the Calls list was sorted properly we should
-        // not encounter this situation as all such entries should be adjacent
-        // and processed in bulk further below.
-        assert(!MatchingIdsFuncSet.contains(Func));
-
-      MatchingIdsFuncSet.insert(Func);
-#endif
 
       // First compute the context ids for this stack id sequence (the
       // intersection of the context ids of the corresponding nodes).
@@ -1601,26 +1636,23 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
           continue;
       }
 
+      // If the prior call had the same stack ids this map would not be empty.
+      // Check if we already have a call that "matches" because it is located
+      // in the same function.
+      if (FuncToCallMap.contains(Func)) {
+        // Record the matching call found for this call, and skip it. We
+        // will subsequently combine it into the same node.
+        CallToMatchingCall[Call] = FuncToCallMap[Func];
+        continue;
+      }
+
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
-      // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them.
       bool DuplicateContextIds = false;
-      for (unsigned J = I + 1; J < Calls.size(); J++) {
-        auto &NextIds = std::get<1>(Calls[J]);
-        if (NextIds != Ids)
-          break;
-        auto *NextFunc = std::get<2>(Calls[J]);
-        if (NextFunc != Func) {
-          // We have another Call with the same ids but that cannot share this
-          // node, must duplicate ids for it.
-          DuplicateContextIds = true;
-          break;
-        }
-        auto &NextCall = std::get<0>(Calls[J]);
-        CallToMatchingCall[NextCall] = Call;
-        // Update I so that it gets incremented correctly to skip this call.
-        I = J;
+      if (I + 1 < Calls.size()) {
+        auto &CallCtxInfo = Calls[I + 1];
+        auto &NextIds = CallCtxInfo.StackIds;
+        DuplicateContextIds = Ids == NextIds;
       }
 
       // If we don't have duplicate context ids, then we can assign all the
@@ -1644,7 +1676,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         set_subtract(LastNodeContextIds, StackSequenceContextIds);
         if (LastNodeContextIds.empty())
           break;
-      }
+        // No longer possibly in a sequence of calls with duplicate stack ids,
+        // clear the map.
+        FuncToCallMap.clear();
+      } else
+        // Record the call with its function, so we can locate it the next time
+        // we find a call from this function when processing the calls with the
+        // same stack ids.
+        FuncToCallMap[Func] = Call;
     }
   }
 
@@ -2090,15 +2129,19 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // Hook up edge's original caller to new callee node.
   AddEdge(Edge->Caller, CurCalleeNode);
 
+#ifndef NDEBUG
+  // Save this because Edge's fields get cleared below when removed.
+  auto *Caller = Edge->Caller;
+#endif
+
   // Remove old edge
-  Edge->Callee->eraseCallerEdge(Edge.get());
-  EI = Edge->Caller->CalleeEdges.erase(EI);
+  removeEdgeFromGraph(Edge.get(), &EI, /*CalleeIter=*/true);
 
   // To simplify the increment of EI in the caller, subtract one from EI.
   // In the final AddEdge call we would have either added a new callee edge,
   // to Edge->Caller, or found an existing one. Either way we are guaranteed
   // that there is at least one callee edge.
-  assert(!Edge->Caller->CalleeEdges.empty());
+  assert(!Caller->CalleeEdges.empty());
   --EI;
 
   return true;
@@ -2681,11 +2724,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // If we are moving all of Edge's ids, then just move the whole Edge.
   // Otherwise only move the specified subset, to a new edge if needed.
   if (Edge->getContextIds().size() == ContextIdsToMove.size()) {
+    // First, update the alloc types on New Callee from Edge.
+    // Do this before we potentially clear Edge's fields below!
+    NewCallee->AllocTypes |= Edge->AllocTypes;
     // Moving the whole Edge.
-    if (CallerEdgeI)
-      *CallerEdgeI = OldCallee->CallerEdges.erase(*CallerEdgeI);
-    else
-      OldCallee->eraseCallerEdge(Edge.get());
     if (ExistingEdgeToNewCallee) {
       // Since we already have an edge to NewCallee, simply move the ids
       // onto it, and remove the existing Edge.
@@ -2693,18 +2735,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
                                                       ContextIdsToMove.end());
       ExistingEdgeToNewCallee->AllocTypes |= Edge->AllocTypes;
       assert(Edge->ContextIds == ContextIdsToMove);
-      Edge->ContextIds.clear();
-      Edge->AllocTypes = (uint8_t)AllocationType::None;
-      Edge->Caller->eraseCalleeEdge(Edge.get());
+      removeEdgeFromGraph(Edge.get(), CallerEdgeI, /*CalleeIter=*/false);
     } else {
       // Otherwise just reconnect Edge to NewCallee.
       Edge->Callee = NewCallee;
       NewCallee->CallerEdges.push_back(Edge);
+      // Remove it from callee where it was previously connected.
+      if (CallerEdgeI)
+        *CallerEdgeI = OldCallee->CallerEdges.erase(*CallerEdgeI);
+      else
+        OldCallee->eraseCallerEdge(Edge.get());
       // Don't need to update Edge's context ids since we are simply
       // reconnecting it.
     }
-    // In either case, need to update the alloc types on New Callee.
-    NewCallee->AllocTypes |= Edge->AllocTypes;
   } else {
     // Only moving a subset of Edge's ids.
     if (CallerEdgeI)
@@ -2797,7 +2840,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   auto CallerEdges = Node->CallerEdges;
   for (auto &Edge : CallerEdges) {
     // Skip any that have been removed by an earlier recursive call.
-    if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
+    if (Edge->isRemoved()) {
       assert(!is_contained(Node->CallerEdges, Edge));
       continue;
     }
@@ -2858,8 +2901,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     auto CallerEdges = Node->CallerEdges;
     for (auto &Edge : CallerEdges) {
       // Skip any that have been removed by an earlier recursive call.
-      if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
-        assert(!llvm::count(Node->CallerEdges, Edge));
+      if (Edge->isRemoved()) {
+        assert(!is_contained(Node->CallerEdges, Edge));
         continue;
       }
       // Ignore any caller we previously visited via another edge.
@@ -3303,10 +3346,17 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           // Reset the CallsiteToCalleeFuncCloneMap entry for any callers
           // that were previously assigned to call PreviousAssignedFuncClone,
           // to record that they now call NewFuncClone.
-          for (auto CE : Clone->CallerEdges) {
+          // The none type edge removal may remove some of this Clone's caller
+          // edges, if it is reached via another of its caller's callees.
+          // Iterate over a copy and skip any that were removed.
+          auto CallerEdges = Clone->CallerEdges;
+          for (auto CE : CallerEdges) {
             // Skip any that have been removed on an earlier iteration.
-            if (!CE)
+            if (CE->isRemoved()) {
+              assert(!is_contained(Clone->CallerEdges, CE));
               continue;
+            }
+            assert(CE);
             // Ignore any caller that does not have a recorded callsite Call.
             if (!CE->Caller->hasCall())
               continue;
@@ -3329,11 +3379,18 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             // accordingly. This is important since we subsequently update the
             // calls from the nodes in the graph and their assignments to callee
             // functions recorded in CallsiteToCalleeFuncCloneMap.
-            for (auto CalleeEdge : CE->Caller->CalleeEdges) {
+            // The none type edge removal may remove some of this caller's
+            // callee edges, if it is reached via another of its callees.
+            // Iterate over a copy and skip any that were removed.
+            auto CalleeEdges = CE->Caller->CalleeEdges;
+            for (auto CalleeEdge : CalleeEdges) {
               // Skip any that have been removed on an earlier iteration when
               // cleaning up newly None type callee edges.
-              if (!CalleeEdge)
+              if (CalleeEdge->isRemoved()) {
+                assert(!is_contained(CE->Caller->CalleeEdges, CalleeEdge));
                 continue;
+              }
+              assert(CalleeEdge);
               ContextNode *Callee = CalleeEdge->Callee;
               // Skip the current callsite, we are looking for other
               // callsites Caller calls, as well as any that does not have a

@@ -146,6 +146,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_cmodel_medlow");
   else if (CodeModel == "medium")
     Builder.defineMacro("__riscv_cmodel_medany");
+  else if (CodeModel == "large")
+    Builder.defineMacro("__riscv_cmodel_large");
 
   StringRef ABIName = getABI();
   if (ABIName == "ilp32f" || ABIName == "lp64f")
@@ -457,6 +459,8 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.Duplicate = "tune=";
 
       Ret.Tune = AttrString;
+    } else if (Feature.starts_with("priority")) {
+      // Skip because it only use for FMV.
     }
   }
   return Ret;

@@ -12,6 +12,7 @@ add_libc_test(
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span
+    libc.src.__support.macros.properties.os
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.sanitizer
     libc.src.string.memory_utils.memory_utils

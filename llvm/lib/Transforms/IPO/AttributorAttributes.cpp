@@ -1093,6 +1093,13 @@ struct AAPointerInfoImpl
     return State::numOffsetBins();
   }
   virtual bool reachesReturn() const override { return ReachesReturn; }
+  ChangeStatus setReachesReturn(bool Val) {
+    if (ReachesReturn == Val)
+      return ChangeStatus::UNCHANGED;
+
+    ReachesReturn = Val;
+    return ChangeStatus::CHANGED;
+  }
 
   bool forallInterferingAccesses(
       AA::RangeTy Range,
@@ -1380,12 +1387,12 @@ struct AAPointerInfoImpl
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
 
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
     bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
-    ReachesReturn = OtherAAImpl.ReachesReturn;
+    Changed |= setReachesReturn(OtherAAImpl.ReachesReturn);
 
     // Combine the accesses bin by bin.
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &State = OtherAAImpl.getState();
     for (const auto &It : State) {
       for (auto Index : It.getSecond()) {
@@ -1681,8 +1688,10 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     // Returns are allowed if they are in the associated functions. Users can
     // then check the call site return. Returns from other functions can't be
     // tracked and are cause for invalidation.
-    if (auto *RI = dyn_cast<ReturnInst>(Usr))
-      return ReachesReturn = RI->getFunction() == getAssociatedFunction();
+    if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+      Changed |= setReachesReturn(RI->getFunction() == getAssociatedFunction());
+      return ReachesReturn;
+    }
 
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
@@ -12562,7 +12571,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   AAAddressSpaceImpl(const IRPosition &IRP, Attributor &A)
       : AAAddressSpace(IRP, A) {}
 
-  int32_t getAddressSpace() const override {
+  uint32_t getAddressSpace() const override {
     assert(isValidState() && "the AA is invalid");
     return AssumedAddressSpace;
   }
@@ -12576,7 +12585,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    int32_t OldAddressSpace = AssumedAddressSpace;
+    uint32_t OldAddressSpace = AssumedAddressSpace;
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
     auto Pred = [&](Value &Obj) {
@@ -12597,16 +12606,13 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     Value *AssociatedValue = &getAssociatedValue();
     Value *OriginalValue = peelAddrspacecast(AssociatedValue);
     if (getAddressSpace() == NoAddressSpace ||
-        static_cast<uint32_t>(getAddressSpace()) ==
-            getAssociatedType()->getPointerAddressSpace())
+        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
     PointerType *NewPtrTy =
-        PointerType::get(getAssociatedType()->getContext(),
-                         static_cast<uint32_t>(getAddressSpace()));
+        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() ==
-        static_cast<uint32_t>(getAddressSpace());
+        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
 
     bool Changed = false;
 
@@ -12656,9 +12662,9 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
 private:
-  int32_t AssumedAddressSpace = NoAddressSpace;
+  uint32_t AssumedAddressSpace = NoAddressSpace;
 
-  bool takeAddressSpace(int32_t AS) {
+  bool takeAddressSpace(uint32_t AS) {
     if (AssumedAddressSpace == NoAddressSpace) {
       AssumedAddressSpace = AS;
       return true;

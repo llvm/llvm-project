@@ -108,6 +108,12 @@ FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
       llvm::FixedVectorType::get(ElementType->LLVMTy, NumElts)));
 }
 
+ScalableVectorType *ScalableVectorType::get(Type *ElementType,
+                                            unsigned NumElts) {
+  return cast<ScalableVectorType>(ElementType->getContext().getType(
+      llvm::ScalableVectorType::get(ElementType->LLVMTy, NumElts)));
+}
+
 IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {
   return cast<IntegerType>(
       Ctx.getType(llvm::IntegerType::get(Ctx.LLVMCtx, NumBits)));

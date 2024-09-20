@@ -718,6 +718,21 @@ namespace OperatorNewDelete {
   static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
 }
 
+namespace Limits {
+  template<typename T>
+  constexpr T dynarray(int elems, int i) {
+    T *p;
+    if constexpr (sizeof(T) == 1)
+      p = new T[elems]{"fox"};
+    else
+      p = new T[elems]{1, 2, 3};
+    T n = p[i];
+    delete [] p;
+    return n;
+  }
+  static_assert(dynarray<char>(5, 0) == 'f');
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

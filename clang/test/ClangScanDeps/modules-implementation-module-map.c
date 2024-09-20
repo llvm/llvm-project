@@ -27,8 +27,7 @@ framework module FWPrivate { header "private.h" }
 // CHECK:                "-fmodule-map-file=[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK:                "-fmodule-name=FWPrivate",
 // CHECK:              ],
-// CHECK-NEXT:         "executable": "clang",
-// CHECK-NEXT:         "file-deps": [
+// CHECK:              "file-deps": [
 // CHECK-NEXT:           "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "input-file": "[[PREFIX]]/tu.m"

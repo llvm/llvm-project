@@ -224,10 +224,10 @@ body:             |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK-NEXT: G_STORE [[C]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.dst + 8, align 1)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[PTR_ADD1]](p0) :: (store (s16) into %ir.dst + 16, align 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 16448
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; CHECK-NEXT: G_STORE [[C2]](s16), [[PTR_ADD1]](p0) :: (store (s16) into %ir.dst + 16, align 1)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 64

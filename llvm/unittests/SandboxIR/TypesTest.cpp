@@ -381,6 +381,65 @@ define void @foo(<4 x i16> %vi0, <4 x float> %vf1, i8 %i0) {
   EXPECT_EQ(Vec8i16Ty->getElementCount(), ElementCount::getFixed(8));
 }
 
+TEST_F(SandboxTypeTest, ScalableVectorType) {
+  parseIR(C, R"IR(
+define void @foo(<vscale x 4 x i16> %vi0, <vscale x 4 x float> %vf1, i8 %i0) {
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  // Check classof(), creation, accessors
+  auto *Vec4i16Ty =
+      cast<sandboxir::ScalableVectorType>(F->getArg(0)->getType());
+  EXPECT_TRUE(Vec4i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec4i16Ty->getMinNumElements(), 4u);
+
+  // get(ElementType, NumElements)
+  EXPECT_EQ(
+      sandboxir::ScalableVectorType::get(sandboxir::Type::getInt16Ty(Ctx), 4),
+      F->getArg(0)->getType());
+  // get(ElementType, Other)
+  EXPECT_EQ(sandboxir::ScalableVectorType::get(
+                sandboxir::Type::getInt16Ty(Ctx),
+                cast<sandboxir::ScalableVectorType>(F->getArg(0)->getType())),
+            F->getArg(0)->getType());
+  auto *Vec4FTy = cast<sandboxir::ScalableVectorType>(F->getArg(1)->getType());
+  EXPECT_TRUE(Vec4FTy->getElementType()->isFloatTy());
+  // getInteger
+  auto *Vec4i32Ty = sandboxir::ScalableVectorType::getInteger(Vec4FTy);
+  EXPECT_TRUE(Vec4i32Ty->getElementType()->isIntegerTy(32));
+  EXPECT_EQ(Vec4i32Ty->getMinNumElements(), Vec4FTy->getMinNumElements());
+  // getExtendedElementCountVectorType
+  auto *Vec4i64Ty =
+      sandboxir::ScalableVectorType::getExtendedElementVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec4i64Ty->getElementType()->isIntegerTy(32));
+  EXPECT_EQ(Vec4i64Ty->getMinNumElements(), Vec4i16Ty->getMinNumElements());
+  // getTruncatedElementVectorType
+  auto *Vec4i8Ty =
+      sandboxir::ScalableVectorType::getTruncatedElementVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec4i8Ty->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(Vec4i8Ty->getMinNumElements(), Vec4i8Ty->getMinNumElements());
+  // getSubdividedVectorType
+  auto *Vec8i8Ty =
+      sandboxir::ScalableVectorType::getSubdividedVectorType(Vec4i16Ty, 1);
+  EXPECT_TRUE(Vec8i8Ty->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(Vec8i8Ty->getMinNumElements(), 8u);
+  // getMinNumElements
+  EXPECT_EQ(Vec8i8Ty->getMinNumElements(), 8u);
+  // getHalfElementsVectorType
+  auto *Vec2i16Ty =
+      sandboxir::ScalableVectorType::getHalfElementsVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec2i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec2i16Ty->getMinNumElements(), 2u);
+  // getDoubleElementsVectorType
+  auto *Vec8i16Ty =
+      sandboxir::ScalableVectorType::getDoubleElementsVectorType(Vec4i16Ty);
+  EXPECT_TRUE(Vec8i16Ty->getElementType()->isIntegerTy(16));
+  EXPECT_EQ(Vec8i16Ty->getMinNumElements(), 8u);
+}
+
 TEST_F(SandboxTypeTest, FunctionType) {
   parseIR(C, R"IR(
 define void @foo() {

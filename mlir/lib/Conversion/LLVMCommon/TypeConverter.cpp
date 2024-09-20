@@ -250,7 +250,7 @@ Type LLVMTypeConverter::convertFloatType(FloatType type) const {
   if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
       type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
       type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
-      type.isFloat6E3M2FN())
+      type.isFloat6E2M3FN() || type.isFloat6E3M2FN())
     return IntegerType::get(&getContext(), type.getWidth());
   return type;
 }

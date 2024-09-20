@@ -190,7 +190,7 @@ public:
     setR(getRegEncoding(MI, OpNum));
   }
   void setX(const MCInst &MI, unsigned OpNum, unsigned Shift = 3) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     // X is used to extend vector register only when shift is not 3.
     if (Shift != 3 && X86II::isApxExtendedReg(Reg))
       return;
@@ -220,7 +220,7 @@ public:
   }
   void setM(bool V) { M = V; }
   void setXX2(const MCInst &MI, unsigned OpNum) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     unsigned Encoding = MRI.getEncodingValue(Reg);
     setX(Encoding);
     // Index can be a vector register while X2 is used to extend GPR only.
@@ -228,7 +228,7 @@ public:
       setX2(Encoding);
   }
   void setBB2(const MCInst &MI, unsigned OpNum) {
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     unsigned Encoding = MRI.getEncodingValue(Reg);
     setB(Encoding);
     // Base can be a vector register while B2 is used to extend GPR only
@@ -243,7 +243,7 @@ public:
     // Only needed with VSIB which don't use VVVV.
     if (HasVEX_4V)
       return;
-    unsigned Reg = MI.getOperand(OpNum).getReg();
+    MCRegister Reg = MI.getOperand(OpNum).getReg();
     if (X86II::isApxExtendedReg(Reg))
       return;
     setV2(MRI.getEncodingValue(Reg));
@@ -614,7 +614,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Scale = MI.getOperand(Op + X86::AddrScaleAmt);
   const MCOperand &IndexReg = MI.getOperand(Op + X86::AddrIndexReg);
-  unsigned BaseReg = Base.getReg();
+  MCRegister BaseReg = Base.getReg();
 
   // Handle %rip relative addressing.
   if (BaseReg == X86::RIP ||
@@ -746,7 +746,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       // This is the [REG]+disp16 case.
       emitByte(modRMByte(2, RegOpcodeField, RMfield), CB);
     } else {
-      assert(IndexReg.getReg() == 0 && "Unexpected index register!");
+      assert(!IndexReg.getReg() && "Unexpected index register!");
       // There is no BaseReg; this is the plain [disp16] case.
       emitByte(modRMByte(0, RegOpcodeField, 6), CB);
     }
@@ -768,7 +768,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
   // Determine whether a SIB byte is needed.
   if (!ForceSIB && !X86II::needSIB(BaseReg, IndexReg.getReg(),
                                    STI.hasFeature(X86::Is64Bit))) {
-    if (BaseReg == 0) { // [disp32]     in X86-32 mode
+    if (!BaseReg) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), CB);
       emitImmediate(Disp, MI.getLoc(), 4, FK_Data_4, StartByte, CB, Fixups);
       return;
@@ -831,7 +831,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
   bool ForceDisp32 = false;
   bool ForceDisp8 = false;
   int ImmOffset = 0;
-  if (BaseReg == 0) {
+  if (!BaseReg) {
     // If there is no base register, we emit the special case SIB byte with
     // MOD=0, BASE=5, to JUST get the index, scale, and displacement.
     BaseRegNo = 5;
@@ -968,7 +968,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     const MCOperand &MO = MI.getOperand(I);
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
       report_fatal_error(
           "Cannot encode high byte register in VEX/EVEX-prefixed instruction");
@@ -1351,7 +1351,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
 #ifndef NDEBUG
       HasRegOp = true;
 #endif
-      unsigned Reg = MO.getReg();
+      MCRegister Reg = MO.getReg();
       if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
         UsesHighByteReg = true;
       // If it accesses SPL, BPL, SIL, or DIL, then it requires a REX prefix.
@@ -1449,7 +1449,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
 void X86MCCodeEmitter::emitSegmentOverridePrefix(
     unsigned SegOperand, const MCInst &MI, SmallVectorImpl<char> &CB) const {
   // Check for explicit segment override on memory operand.
-  if (unsigned Reg = MI.getOperand(SegOperand).getReg())
+  if (MCRegister Reg = MI.getOperand(SegOperand).getReg())
     emitByte(X86::getSegmentOverridePrefixForReg(Reg), CB);
 }
 

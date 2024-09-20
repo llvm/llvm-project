@@ -77,18 +77,18 @@ gpu.module @test_module {
       {known_block_size = array<i32: 8, 12, 16>,
        known_grid_size = array<i32: 20, 24, 28>} {
 
-    // CHECK: rocdl.workitem.id.x {range = array<i32: 0, 8>} : i32
+    // CHECK: rocdl.workitem.id.x range <i32, 0, 8> : i32
     %tIdX = gpu.thread_id x
-    // CHECK: rocdl.workitem.id.y {range = array<i32: 0, 12>} : i32
+    // CHECK: rocdl.workitem.id.y range <i32, 0, 12> : i32
     %tIdY = gpu.thread_id y
-    // CHECK: rocdl.workitem.id.z {range = array<i32: 0, 16>} : i32
+    // CHECK: rocdl.workitem.id.z range <i32, 0, 16> : i32
     %tIdZ = gpu.thread_id z
 
-    // CHECK: rocdl.workgroup.id.x {range = array<i32: 0, 20>} : i32
+    // CHECK: rocdl.workgroup.id.x range <i32, 0, 20> : i32
     %bIdX = gpu.block_id x
-    // CHECK: rocdl.workgroup.id.y {range = array<i32: 0, 24>} : i32
+    // CHECK: rocdl.workgroup.id.y range <i32, 0, 24> : i32
     %bIdY = gpu.block_id y
-    // CHECK: rocdl.workgroup.id.z {range = array<i32: 0, 28>} : i32
+    // CHECK: rocdl.workgroup.id.z range <i32, 0, 28> : i32
     %bIdZ = gpu.block_id z
 
     // "Usage" to make the ID calls not die
@@ -126,6 +126,68 @@ gpu.module @test_module {
     // CHECK: rocdl.barrier
     gpu.barrier
     func.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_sqrt
+  func.func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.sqrt %arg_f16 : f16
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f16) -> f16
+    %result32 = math.sqrt %arg_f32 : f32
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f32) -> f32
+    %result64 = math.sqrt %arg_f64 : f64
+    // CHECK: llvm.intr.sqrt(%{{.*}})  : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_fabs
+  func.func @gpu_fabs(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.absf %arg_f16 : f16
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f16) -> f16
+    %result32 = math.absf %arg_f32 : f32
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f32) -> f32
+    %result64 = math.absf %arg_f64 : f64
+    // CHECK: llvm.intr.fabs(%{{.*}})  : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_exp_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_exp
+  func.func @gpu_exp(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.exp %arg_f16 : f16
+    // CHECK: llvm.intr.exp(%{{.*}})  : (f16) -> f16
+    %result32 = math.exp %arg_f32 : f32
+    // CHECK: llvm.intr.exp(%{{.*}})  : (f32) -> f32
+    %result64 = math.exp %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_exp_f64(%{{.*}}) : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_log_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_log
+  func.func @gpu_log(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.log %arg_f16 : f16
+    // CHECK: llvm.intr.log(%{{.*}})  : (f16) -> f16
+    %result32 = math.log %arg_f32 : f32
+    // CHECK: llvm.intr.log(%{{.*}})  : (f32) -> f32
+    %result64 = math.log %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (f64) -> f64
+    func.return  %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -445,22 +507,22 @@ gpu.module @test_module {
 
 // -----
 
-// Test that the bf16 type is lowered away on this target.
+// Test that the bf16 type is passed through to LLVM.
 
 gpu.module @test_module {
   // CHECK-LABEL: func @bf16_id
   func.func @bf16_id(%arg0 : bf16) -> bf16 {
-    // CHECK-SAME: (%[[ARG0:.+]]: i16)
-    // CHECK-SAME: -> i16
-    // CHECK: return %[[ARG0]] : i16
+    // CHECK-SAME: (%[[ARG0:.+]]: bf16)
+    // CHECK-SAME: -> bf16
+    // CHECK: return %[[ARG0]] : bf16
     func.return %arg0 : bf16
   }
 
   // CHECK-LABEL: func @bf16x4_id
   func.func @bf16x4_id(%arg0 : vector<4xbf16>) -> vector<4xbf16> {
-    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xi16>)
-    // CHECK-SAME: -> vector<4xi16>
-    // CHECK: return %[[ARG0]] : vector<4xi16>
+    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xbf16>)
+    // CHECK-SAME: -> vector<4xbf16>
+    // CHECK: return %[[ARG0]] : vector<4xbf16>
     func.return %arg0 : vector<4xbf16>
   }
 

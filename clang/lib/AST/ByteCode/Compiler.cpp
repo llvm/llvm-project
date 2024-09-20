@@ -644,6 +644,31 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return true;
   }
 
+  case CK_HLSLVectorTruncation: {
+    assert(SubExpr->getType()->isVectorType());
+    if (std::optional<PrimType> ResultT = classify(CE)) {
+      assert(!DiscardResult);
+      // Result must be either a float or integer. Take the first element.
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitArrayElemPop(*ResultT, 0, CE);
+    }
+    // Otherwise, this truncates from one vector type to another.
+    assert(CE->getType()->isVectorType());
+
+    if (!Initializing) {
+      unsigned LocalIndex = allocateTemporary(CE);
+      if (!this->emitGetPtrLocal(LocalIndex, CE))
+        return false;
+    }
+    unsigned ToSize = CE->getType()->getAs<VectorType>()->getNumElements();
+    assert(SubExpr->getType()->getAs<VectorType>()->getNumElements() > ToSize);
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitCopyArray(classifyVectorElementType(CE->getType()), 0, 0,
+                               ToSize, CE);
+  };
+
   case CK_ToVoid:
     return discard(SubExpr);
 
@@ -2613,18 +2638,46 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
 
-  bool Fatal = false;
   std::optional<PrimType> FromT = classify(SubExpr);
   std::optional<PrimType> ToT = classify(E);
-  if (!FromT || !ToT)
-    Fatal = true;
-  else
-    Fatal = (ToT != FromT);
 
+  if (!FromT || !ToT)
+    return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, E);
+
+  if (FromT == PT_Ptr || ToT == PT_Ptr) {
+    // Both types could be PT_Ptr because their expressions are glvalues.
+    std::optional<PrimType> PointeeFromT;
+    if (SubExpr->getType()->isPointerOrReferenceType())
+      PointeeFromT = classify(SubExpr->getType()->getPointeeType());
+    else
+      PointeeFromT = classify(SubExpr->getType());
+
+    std::optional<PrimType> PointeeToT;
+    if (E->getType()->isPointerOrReferenceType())
+      PointeeToT = classify(E->getType()->getPointeeType());
+    else
+      PointeeToT = classify(E->getType());
+
+    bool Fatal = true;
+    if (PointeeToT && PointeeFromT) {
+      if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
+        Fatal = false;
+    }
+
+    if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
+      return false;
+
+    if (E->getCastKind() == CK_LValueBitCast)
+      return this->delegate(SubExpr);
+    return this->VisitCastExpr(E);
+  }
+
+  // Try to actually do the cast.
+  bool Fatal = (ToT != FromT);
   if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
     return false;
 
-  return this->delegate(SubExpr);
+  return this->VisitCastExpr(E);
 }
 
 template <class Emitter>
@@ -3335,7 +3388,11 @@ bool Compiler<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->discard(SubExpr) && this->emitInvalid(E);
 
-  return this->delegate(SubExpr);
+  assert(classifyPrim(E) == PT_Ptr);
+  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
+    return this->emitGetPtrGlobal(*I, E);
+
+  return false;
 }
 
 template <class Emitter>
@@ -4118,7 +4175,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString ||
       BuiltinID == Builtin::BI__builtin_ptrauth_sign_constant ||
       BuiltinID == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
+    if (std::optional<unsigned> GlobalOffset = P.getOrCreateDummy(E)) {
       if (!this->emitGetPtrGlobal(*GlobalOffset, E))
         return false;
 

@@ -23,10 +23,6 @@ namespace {
 
 typedef SmallPtrSet<BasicBlock *, 8> VisitedBlocksSet;
 
-static bool isSuspendBlock(BasicBlock *BB) {
-  return isa<AnyCoroSuspendInst>(BB->front());
-}
-
 // Check for structural coroutine intrinsics that should not be spilled into
 // the coroutine frame.
 static bool isCoroutineStructureIntrinsic(Instruction &I) {
@@ -45,7 +41,7 @@ static bool isSuspendReachableFrom(BasicBlock *From,
     return false;
 
   // We assume that we'll already have split suspends into their own blocks.
-  if (isSuspendBlock(From))
+  if (coro::isSuspendBlock(From))
     return true;
 
   // Recurse on the successors.

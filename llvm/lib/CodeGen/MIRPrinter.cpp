@@ -256,7 +256,6 @@ void MIRPrinter::print(const MachineFunction &MF) {
         .print(MBB);
     IsNewlineNeeded = true;
   }
-  StrOS.flush();
   // Convert machine metadata collected during the print of the machine
   // function.
   convertMachineMetadataNodes(YamlMF, MF, MST);
