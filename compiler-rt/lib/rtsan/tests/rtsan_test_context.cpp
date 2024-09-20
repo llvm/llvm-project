@@ -11,6 +11,7 @@
 #include "rtsan_test_utilities.h"
 
 #include "rtsan/rtsan.h"
+#include "rtsan/rtsan_assertions.h"
 #include "rtsan/rtsan_context.h"
 
 #include <gtest/gtest.h>
