@@ -1001,12 +1001,6 @@ public:
                                uint32_t recognizer_id) = 0;
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 1) {
-      result.AppendErrorWithFormat("'%s' takes zero or one arguments.\n",
-                                   m_cmd_name.c_str());
-      return;
-    }
-
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
       result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
