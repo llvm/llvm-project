@@ -340,7 +340,6 @@ namespace {
       std::string FunctionNameAndLine;
       raw_string_ostream FNLOS(FunctionNameAndLine);
       FNLOS << getFunctionName(SP) << SP->getLine();
-      FNLOS.flush();
       FuncChecksum = hash_value(FunctionNameAndLine);
     }
 

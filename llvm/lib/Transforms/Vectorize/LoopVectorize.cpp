@@ -4427,7 +4427,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << " call to " << CalledFn->getName();
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
-      OS.flush();
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
                               R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
