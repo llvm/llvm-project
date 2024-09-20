@@ -957,7 +957,7 @@ static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i8x16_bitmask(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_popcnt(v128_t __a) {
-  return (v128_t)__builtin_wasm_popcnt_i8x16((__i8x16)__a);
+  return (v128_t)__builtin_elementwise_popcount((__i8x16)__a);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shl(v128_t __a,

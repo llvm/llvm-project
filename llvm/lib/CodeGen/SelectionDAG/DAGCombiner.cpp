@@ -7132,7 +7132,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
-        TLI.isNarrowingProfitable(VT, SrcVT))
+        TLI.isNarrowingProfitable(N, VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                          DAG.getNode(ISD::AND, DL, SrcVT, N0Op0,
                                      DAG.getZExtOrTrunc(N1, DL, SrcVT)));
@@ -14704,7 +14704,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // ShLeftAmt will indicate how much a narrowed load should be shifted left.
   unsigned ShLeftAmt = 0;
   if (ShAmt == 0 && N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
-      ExtVT == VT && TLI.isNarrowingProfitable(N0.getValueType(), VT)) {
+      ExtVT == VT && TLI.isNarrowingProfitable(N, N0.getValueType(), VT)) {
     if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       ShLeftAmt = N01->getZExtValue();
       N0 = N0.getOperand(0);
@@ -15264,9 +15264,11 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   }
 
   // trunc (select c, a, b) -> select c, (trunc a), (trunc b)
-  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse()) {
-    if ((!LegalOperations || TLI.isOperationLegal(ISD::SELECT, SrcVT)) &&
-        TLI.isTruncateFree(SrcVT, VT)) {
+  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse() &&
+      TLI.isTruncateFree(SrcVT, VT)) {
+    if (!LegalOperations ||
+        (TLI.isOperationLegal(ISD::SELECT, SrcVT) &&
+         TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))) {
       SDLoc SL(N0);
       SDValue Cond = N0.getOperand(0);
       SDValue TruncOp0 = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
@@ -20207,10 +20209,9 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
-    while (NewBW < BitWidth &&
-           (NewVT.getStoreSizeInBits() != NewBW ||
-            !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
-            !TLI.isNarrowingProfitable(VT, NewVT))) {
+    while (NewBW < BitWidth && (NewVT.getStoreSizeInBits() != NewBW ||
+                                !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
+                                !TLI.isNarrowingProfitable(N, VT, NewVT))) {
       NewBW = NextPowerOf2(NewBW);
       NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     }

@@ -1612,7 +1612,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
                          RegName.Value.size(), SourceMgr::DK_Error,
                          "incorrect register class for field", RegName.Value,
-                         std::nullopt, std::nullopt);
+                         {}, {});
     SourceRange = RegName.SourceRange;
     return true;
   };

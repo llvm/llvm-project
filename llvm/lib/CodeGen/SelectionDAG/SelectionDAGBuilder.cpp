@@ -2284,6 +2284,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setSExt();
         else if (ExtendKind == ISD::ZERO_EXTEND)
           Flags.setZExt();
+        else if (F->getAttributes().hasRetAttr(Attribute::NoExt))
+          Flags.setNoExt();
 
         for (unsigned i = 0; i < NumParts; ++i) {
           Outs.push_back(ISD::OutputArg(Flags,
@@ -3178,10 +3180,9 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setDiscardResult(true);
-  SDValue Chain =
-      TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
-                      std::nullopt, CallOptions, getCurSDLoc())
-          .second;
+  SDValue Chain = TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL,
+                                  MVT::isVoid, {}, CallOptions, getCurSDLoc())
+                      .second;
   // On PS4/PS5, the "return address" must still be within the calling
   // function, even if it's at the very end, so emit an explicit TRAP here.
   // Passing 'true' for doesNotReturn above won't generate the trap for us.
@@ -11018,6 +11019,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setZExt();
       if (Args[i].IsSExt)
         Flags.setSExt();
+      if (Args[i].IsNoExt)
+        Flags.setNoExt();
       if (Args[i].IsInReg) {
         // If we are using vectorcall calling convention, a structure that is
         // passed InReg - is surely an HVA
