@@ -1709,7 +1709,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     OS << "  };\n";
     OS << "  return ArrayRef(Masks);\n";
   } else {
-    OS << "  return std::nullopt;\n";
+    OS << "  return {};\n";
   }
   OS << "}\n\n";
 
@@ -1789,7 +1789,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     OS << "  };\n";
     OS << "  return ArrayRef(Names);\n";
   } else {
-    OS << "  return std::nullopt;\n";
+    OS << "  return {};\n";
   }
   OS << "}\n\n";
 
