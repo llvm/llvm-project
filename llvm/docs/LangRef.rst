@@ -2325,6 +2325,11 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
+``sanitize_realtime_unsafe``
+    This attribute indicates that RealtimeSanitizer should error immediately
+    if the attributed function is called during invocation of a function
+    attributed with ``sanitize_realtime``.
+    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
