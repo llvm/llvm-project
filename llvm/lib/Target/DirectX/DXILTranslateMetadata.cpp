@@ -209,16 +209,15 @@ getEntryPropAsMetadata(const EntryProperties &EP, uint64_t EntryShaderFlags,
   return MDNode::get(Ctx, MDVals);
 }
 
-// Each entry point metadata record specifies:
-//  * reference to the entry point function global symbol
-//  * unmangled name
-//  * list of signatures
-//  * list of resources
-//  * list of tag-value pairs of shader capabilities and other properties
-
 MDTuple *constructEntryMetadata(const Function *EntryFn, MDTuple *Signatures,
                                 MDNode *Resources, MDTuple *Properties,
                                 LLVMContext &Ctx) {
+  // Each entry point metadata record specifies:
+  //  * reference to the entry point function global symbol
+  //  * unmangled name
+  //  * list of signatures
+  //  * list of resources
+  //  * list of tag-value pairs of shader capabilities and other properties
   Metadata *MDVals[5];
   MDVals[0] =
       EntryFn ? ValueAsMetadata::get(const_cast<Function *>(EntryFn)) : nullptr;
@@ -240,19 +239,20 @@ static MDTuple *emitEntryMD(const EntryProperties &EP, MDTuple *Signatures,
 }
 
 static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
-  if (!MMDI.ValidatorVersion.empty()) {
-    LLVMContext &Ctx = M.getContext();
-    IRBuilder<> IRB(Ctx);
-    Metadata *MDVals[2];
-    MDVals[0] =
-        ConstantAsMetadata::get(IRB.getInt32(MMDI.ValidatorVersion.getMajor()));
-    MDVals[1] = ConstantAsMetadata::get(
-        IRB.getInt32(MMDI.ValidatorVersion.getMinor().value_or(0)));
-    NamedMDNode *ValVerNode = M.getOrInsertNamedMetadata("dx.valver");
-    // Set validator version obtained from DXIL Metadata Analysis pass
-    ValVerNode->clearOperands();
-    ValVerNode->addOperand(MDNode::get(Ctx, MDVals));
-  }
+  if (MMDI.ValidatorVersion.empty())
+    return;
+
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> IRB(Ctx);
+  Metadata *MDVals[2];
+  MDVals[0] =
+      ConstantAsMetadata::get(IRB.getInt32(MMDI.ValidatorVersion.getMajor()));
+  MDVals[1] = ConstantAsMetadata::get(
+      IRB.getInt32(MMDI.ValidatorVersion.getMinor().value_or(0)));
+  NamedMDNode *ValVerNode = M.getOrInsertNamedMetadata("dx.valver");
+  // Set validator version obtained from DXIL Metadata Analysis pass
+  ValVerNode->clearOperands();
+  ValVerNode->addOperand(MDNode::get(Ctx, MDVals));
 }
 
 static void emitShaderModelVersionMD(Module &M,
