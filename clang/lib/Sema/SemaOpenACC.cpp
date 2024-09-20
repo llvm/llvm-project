@@ -1642,7 +1642,8 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
     return ExprError();
   }
 
-  return ExprResult{LoopCount};
+  return ExprResult{
+      ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

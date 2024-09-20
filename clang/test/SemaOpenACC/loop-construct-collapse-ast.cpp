@@ -19,6 +19,8 @@ void NormalUses() {
   for(;;);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
+  // CHECK-NEXT: ConstantExpr{{.*}}'int'
+  // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: <<<NULL>>>
@@ -31,6 +33,8 @@ void NormalUses() {
   for(;;);
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
+  // CHECK-NEXT: ConstantExpr{{.*}}'int'
+  // CHECK-NEXT: value: Int 1
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'int'
   // CHECK-NEXT: MemberExpr{{.*}} .operator auto
@@ -101,6 +105,8 @@ void TemplUses() {
 
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
+  // CHECK-NEXT: ConstantExpr{{.*}}'unsigned int'
+  // CHECK-NEXT: value: Int 2
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}} 'unsigned int'
   // CHECK-NEXT: NonTypeTemplateParmDecl
   // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
@@ -118,6 +124,8 @@ void TemplUses() {
 
   // CHECK-NEXT: OpenACCLoopConstruct
   // CHECK-NEXT: collapse clause
+  // CHECK-NEXT: ConstantExpr{{.*}}'int'
+  // CHECK-NEXT: value: Int 2
   // CHECK-NEXT: BinaryOperator {{.*}}'+'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'int'

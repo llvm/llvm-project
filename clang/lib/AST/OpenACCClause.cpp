@@ -148,10 +148,10 @@ OpenACCCollapseClause *
 OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                               SourceLocation LParenLoc, bool HasForce,
                               Expr *LoopCount, SourceLocation EndLoc) {
-  assert(LoopCount &&
-         (LoopCount->isInstantiationDependent() ||
-          (LoopCount->isIntegerConstantExpr(C))) &&
-         "Loop count not constant expression");
+  assert(
+      LoopCount &&
+      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
+      "Loop count not constant expression");
   void *Mem =
       C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
   return new (Mem)
