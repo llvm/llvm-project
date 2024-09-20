@@ -99,12 +99,7 @@ TEST(Parallel, TaskGroupSequentialFor) {
   {
     parallel::TaskGroup tg;
     for (size_t Idx = 0; Idx < 500; Idx++)
-      tg.spawn(
-          [&Count, Idx]() {
-            EXPECT_EQ(Count++, Idx);
-            EXPECT_EQ(llvm::parallel::getThreadIndex(), 0u);
-          },
-          true);
+      tg.spawn([&Count, Idx]() { EXPECT_EQ(Count++, Idx); }, true);
   }
   EXPECT_EQ(Count, 500ul);
 }

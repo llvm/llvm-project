@@ -23,11 +23,11 @@ namespace parallel {
 #if LLVM_ENABLE_THREADS
 
 #ifdef _WIN32
-static thread_local unsigned threadIndex;
+static thread_local unsigned threadIndex = UINT_MAX;
 
-unsigned getThreadIndex() { return threadIndex; }
+unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #else
-thread_local unsigned threadIndex;
+thread_local unsigned threadIndex = UINT_MAX;
 #endif
 
 namespace detail {

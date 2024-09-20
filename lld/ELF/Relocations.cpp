@@ -1647,37 +1647,44 @@ template <class ELFT> void elf::scanRelocations() {
   bool serial = !config->zCombreloc || config->emachine == EM_MIPS ||
                 config->emachine == EM_PPC64;
   parallel::TaskGroup tg;
-  for (ELFFileBase *f : ctx.objectFiles) {
-    auto fn = [f]() {
+  auto outerFn = [&]() {
+    for (ELFFileBase *f : ctx.objectFiles) {
+      auto fn = [f]() {
+        RelocationScanner scanner;
+        for (InputSectionBase *s : f->getSections()) {
+          if (s && s->kind() == SectionBase::Regular && s->isLive() &&
+              (s->flags & SHF_ALLOC) &&
+              !(s->type == SHT_ARM_EXIDX && config->emachine == EM_ARM))
+            scanner.template scanSection<ELFT>(*s);
+        }
+      };
+      if (serial)
+        fn();
+      else
+        tg.spawn(fn);
+    }
+    auto scanEH = [] {
       RelocationScanner scanner;
-      for (InputSectionBase *s : f->getSections()) {
-        if (s && s->kind() == SectionBase::Regular && s->isLive() &&
-            (s->flags & SHF_ALLOC) &&
-            !(s->type == SHT_ARM_EXIDX && config->emachine == EM_ARM))
-          scanner.template scanSection<ELFT>(*s);
+      for (Partition &part : ctx.partitions) {
+        for (EhInputSection *sec : part.ehFrame->sections)
+          scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
+        if (part.armExidx && part.armExidx->isLive())
+          for (InputSection *sec : part.armExidx->exidxSections)
+            if (sec->isLive())
+              scanner.template scanSection<ELFT>(*sec);
       }
     };
     if (serial)
-      fn();
+      scanEH();
     else
-      tg.spawn(fn);
-  }
-
-  auto scanEH = [] {
-    RelocationScanner scanner;
-    for (Partition &part : ctx.partitions) {
-      for (EhInputSection *sec : part.ehFrame->sections)
-        scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
-      if (part.armExidx && part.armExidx->isLive())
-        for (InputSection *sec : part.armExidx->exidxSections)
-          if (sec->isLive())
-            scanner.template scanSection<ELFT>(*sec);
-    }
+      tg.spawn(scanEH);
   };
+  // If `serial` is true, call `spawn` to ensure that `scanner` runs in a thread
+  // with valid getThreadIndex().
   if (serial)
-    scanEH();
+    tg.spawn(outerFn);
   else
-    tg.spawn(scanEH);
+    outerFn();
 }
 
 static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
