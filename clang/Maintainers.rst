@@ -29,8 +29,8 @@ Clang that are typically contained to one area of the compiler.
 
 AST matchers
 ~~~~~~~~~~~~
-| Manuel Klimek
-| klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 Clang LLVM IR generation
@@ -67,9 +67,6 @@ Modules & serialization
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Chuanqi Xu
 | yedeng.yd\@linux.alibaba.com (email), ChuanqiXu (Phabricator), ChuanqiXu9 (GitHub)
-
-| Michael Spencer
-| bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)
 
 
 Templates
@@ -127,11 +124,6 @@ Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
 umbrella or components used to support such tools.
-
-Tooling library
-~~~~~~~~~~~~~~~
-| Manuel Klimek
-| klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)
 
 
 clang-format
@@ -271,3 +263,5 @@ Inactive component maintainers
 ------------------------------
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
+| Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Michael Spencer (bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)) -- Modules & serialization
