@@ -13,7 +13,7 @@
 Test Swift support of ASan.
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test_event.build_exception import BuildError
@@ -25,14 +25,15 @@ class AsanSwiftTestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipIfLinux
-    @decorators.skipUnlessSwiftAddressSanitizer
+    @swiftTest
+    @skipIfLinux
+    @skipUnlessSwiftAddressSanitizer
     def test_asan_swift(self):
         self.build(make_targets=["asan"])
         self.do_test_asan()
 
-    @decorators.skipIf(oslist=decorators.no_match(["macosx"]))
+    @skipIf(oslist=no_match(["macosx"]))
+    @skipIf(macos_version=["<", "15.0"])
     def test_libsanitizers_swift(self):
         try:
             self.build(make_targets=["libsanitizers"])
@@ -43,7 +44,6 @@ class AsanSwiftTestCase(lldbtest.TestBase):
     def setUp(self):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
         self.line_breakpoint = lldbtest.line_number(
             self.main_source, '// breakpoint')
 
