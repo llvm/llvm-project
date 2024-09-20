@@ -1040,7 +1040,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
     // We can only handle vp_cmp intrinsics with underlying instructions.
-    if(!ICA.getInst())
+    if (!ICA.getInst())
       break;
 
     assert(FOp);
