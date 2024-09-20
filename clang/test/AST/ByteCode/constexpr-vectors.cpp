@@ -37,6 +37,14 @@ using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
     b -= a;                                           \
     b *= a;                                           \
     b /= a;                                           \
+    b = (a += a);                                     \
+    b = (a -= a);                                     \
+    b = (a *= a);                                     \
+    b = (a /= a);                                     \
+    b = (b += a);                                     \
+    b = (b -= a);                                     \
+    b = (b *= a);                                     \
+    b = (b /= a);                                     \
     a < b;                                            \
     a > b;                                            \
     a <= b;                                           \
@@ -62,6 +70,10 @@ using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
     a >>= b;                                              \
     a <<= 3;                                              \
     a >>= 3;                                              \
+    b = (a <<= b);                                        \
+    b = (a >>= b);                                        \
+    b = (a <<= 3);                                        \
+    b = (a >>= 3);                                        \
     a = a % b;                                            \
     a &b;                                                 \
     a | b;                                                \

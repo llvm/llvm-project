@@ -1439,7 +1439,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       return false;
   }
 
-  if (E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
+  if (DiscardResult && E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
     return false;
   return true;
 }
