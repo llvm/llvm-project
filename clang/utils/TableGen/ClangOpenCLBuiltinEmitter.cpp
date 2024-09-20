@@ -896,9 +896,8 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     if (ImageTypesMap.contains(T->getValueAsString("Name")))
       continue;
     // Check we have not seen this Type
-    if (TypesSeen.contains(T->getValueAsString("Name")))
+    if (!TypesSeen.try_emplace(T->getValueAsString("Name"), true).second)
       continue;
-    TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
 
     // Check the Type does not have an "abstract" QualType
     auto QT = T->getValueAsDef("QTExpr");
@@ -1081,9 +1080,8 @@ void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
         // the full type name to the extension.
         StringRef Ext =
             Type->getValueAsDef("Extension")->getValueAsString("ExtName");
-        if (!Ext.empty() && !TypeExtMap.contains(FullType)) {
-          TypeExtMap.insert({FullType, Ext});
-        }
+        if (!Ext.empty())
+          TypeExtMap.try_emplace(FullType, Ext);
       }
     }
     NumSignatures = std::max<unsigned>(NumSignatures, ExpandedArg.size());

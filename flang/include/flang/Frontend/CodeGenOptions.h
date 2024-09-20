@@ -63,9 +63,6 @@ public:
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
 
-  /// The string containing the commandline for the llvm.commandline metadata.
-  std::optional<std::string> RecordCommandLine;
-
   /// The name of the file to which the backend should save YAML optimization
   /// records.
   std::string OptRecordFile;

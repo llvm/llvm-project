@@ -73,6 +73,25 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   return result;
 }
 
+#if SANITIZER_INTERCEPT_OPEN64
+INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
+  // TODO Establish whether we should intercept here if the flag contains
+  // O_NONBLOCK
+  __rtsan_expect_not_realtime("open64");
+
+  va_list args;
+  va_start(args, oflag);
+  const mode_t mode = va_arg(args, int);
+  va_end(args);
+
+  const int result = REAL(open64)(path, oflag, mode);
+  return result;
+}
+#define RTSAN_MAYBE_INTERCEPT_OPEN64 INTERCEPT_FUNCTION(open64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OPEN64
+#endif // SANITIZER_INTERCEPT_OPEN64
+
 INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -87,6 +106,25 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   return result;
 }
 
+#if SANITIZER_INTERCEPT_OPENAT64
+INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
+  // TODO Establish whether we should intercept here if the flag contains
+  // O_NONBLOCK
+  __rtsan_expect_not_realtime("openat64");
+
+  va_list args;
+  va_start(args, oflag);
+  mode_t mode = va_arg(args, int);
+  va_end(args);
+
+  const int result = REAL(openat64)(fd, path, oflag, mode);
+  return result;
+}
+#define RTSAN_MAYBE_INTERCEPT_OPENAT64 INTERCEPT_FUNCTION(openat64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_OPENAT64
+#endif // SANITIZER_INTERCEPT_OPENAT64
+
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
@@ -94,6 +132,19 @@ INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   const int result = REAL(creat)(path, mode);
   return result;
 }
+
+#if SANITIZER_INTERCEPT_CREAT64
+INTERCEPTOR(int, creat64, const char *path, mode_t mode) {
+  // TODO Establish whether we should intercept here if the flag contains
+  // O_NONBLOCK
+  __rtsan_expect_not_realtime("creat64");
+  const int result = REAL(creat64)(path, mode);
+  return result;
+}
+#define RTSAN_MAYBE_INTERCEPT_CREAT64 INTERCEPT_FUNCTION(creat64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_CREAT64
+#endif // SANITIZER_INTERCEPT_CREAT64
 
 INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   __rtsan_expect_not_realtime("fcntl");
@@ -116,6 +167,32 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return result;
 }
 
+#if SANITIZER_INTERCEPT_FCNTL64
+INTERCEPTOR(int, fcntl64, int filedes, int cmd, ...) {
+  __rtsan_expect_not_realtime("fcntl64");
+
+  va_list args;
+  va_start(args, cmd);
+
+  // Following precedent here. The linux source (fcntl.c, do_fcntl) accepts the
+  // final argument in a variable that will hold the largest of the possible
+  // argument types (pointers and ints are typical in fcntl) It is then assumed
+  // that the implementation of fcntl will cast it properly depending on cmd.
+  //
+  // This is also similar to what is done in
+  // sanitizer_common/sanitizer_common_syscalls.inc
+  const unsigned long arg = va_arg(args, unsigned long);
+  int result = REAL(fcntl64)(filedes, cmd, arg);
+
+  va_end(args);
+
+  return result;
+}
+#define RTSAN_MAYBE_INTERCEPT_FCNTL64 INTERCEPT_FUNCTION(fcntl64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FCNTL64
+#endif // SANITIZER_INTERCEPT_FCNTL64
+
 INTERCEPTOR(int, close, int filedes) {
   __rtsan_expect_not_realtime("close");
   return REAL(close)(filedes);
@@ -125,6 +202,16 @@ INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   __rtsan_expect_not_realtime("fopen");
   return REAL(fopen)(path, mode);
 }
+
+#if SANITIZER_INTERCEPT_FOPEN64
+INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
+  __rtsan_expect_not_realtime("fopen64");
+  return REAL(fopen64)(path, mode);
+}
+#define RTSAN_MAYBE_INTERCEPT_FOPEN64 INTERCEPT_FUNCTION(fopen64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FOPEN64
+#endif // SANITIZER_INTERCEPT_FOPEN64
 
 INTERCEPTOR(size_t, fread, void *ptr, size_t size, size_t nitems,
             FILE *stream) {
@@ -169,6 +256,16 @@ INTERCEPTOR(ssize_t, pread, int fd, void *buf, size_t count, off_t offset) {
   return REAL(pread)(fd, buf, count, offset);
 }
 
+#if SANITIZER_INTERCEPT_PREAD64
+INTERCEPTOR(ssize_t, pread64, int fd, void *buf, size_t count, off_t offset) {
+  __rtsan_expect_not_realtime("pread64");
+  return REAL(pread64)(fd, buf, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PREAD64 INTERCEPT_FUNCTION(pread64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PREAD64
+#endif // SANITIZER_INTERCEPT_PREAD64
+
 INTERCEPTOR(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_expect_not_realtime("readv");
   return REAL(readv)(fd, iov, iovcnt);
@@ -179,6 +276,17 @@ INTERCEPTOR(ssize_t, pwrite, int fd, const void *buf, size_t count,
   __rtsan_expect_not_realtime("pwrite");
   return REAL(pwrite)(fd, buf, count, offset);
 }
+
+#if SANITIZER_INTERCEPT_PWRITE64
+INTERCEPTOR(ssize_t, pwrite64, int fd, const void *buf, size_t count,
+            off_t offset) {
+  __rtsan_expect_not_realtime("pwrite64");
+  return REAL(pwrite64)(fd, buf, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PWRITE64 INTERCEPT_FUNCTION(pwrite64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PWRITE64
+#endif // SANITIZER_INTERCEPT_PWRITE64
 
 INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_expect_not_realtime("writev");
@@ -420,20 +528,27 @@ void __rtsan::InitializeInterceptors() {
 #endif
 
   INTERCEPT_FUNCTION(open);
+  RTSAN_MAYBE_INTERCEPT_OPEN64;
   INTERCEPT_FUNCTION(openat);
+  RTSAN_MAYBE_INTERCEPT_OPENAT64;
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(fopen);
+  RTSAN_MAYBE_INTERCEPT_FOPEN64;
   INTERCEPT_FUNCTION(fread);
   INTERCEPT_FUNCTION(read);
   INTERCEPT_FUNCTION(write);
   INTERCEPT_FUNCTION(pread);
+  RTSAN_MAYBE_INTERCEPT_PREAD64;
   INTERCEPT_FUNCTION(readv);
   INTERCEPT_FUNCTION(pwrite);
+  RTSAN_MAYBE_INTERCEPT_PWRITE64;
   INTERCEPT_FUNCTION(writev);
   INTERCEPT_FUNCTION(fwrite);
   INTERCEPT_FUNCTION(fclose);
   INTERCEPT_FUNCTION(fcntl);
+  RTSAN_MAYBE_INTERCEPT_FCNTL64;
   INTERCEPT_FUNCTION(creat);
+  RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
 
