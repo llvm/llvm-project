@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -O1 -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 void b0(int a, int b) {
@@ -94,3 +94,25 @@ void testFloatingPointBinOps(float a, float b) {
   a - b;
   // CHECK: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
 }
+
+struct S {};
+
+struct HasOpEq
+{
+  bool operator==(const S& other);
+};
+
+void rewritten_binop()
+{
+  HasOpEq s1;
+  S s2;
+  if (s1 != s2)
+    return;
+}
+
+// CHECK-LABEL: _Z15rewritten_binopv
+// CHECK:   cir.scope {
+// CHECK:     cir.call @_ZN7HasOpEqeqERK1S
+// CHECK:     %[[COND:.*]] = cir.unary(not
+// CHECK:     cir.if %[[COND]]
+// CHECK:       cir.return
