@@ -308,11 +308,6 @@ bool TemplateDecl::isTypeAlias() const {
 
 void RedeclarableTemplateDecl::anchor() {}
 
-RedeclarableTemplateDecl::CommonBase *
-RedeclarableTemplateDecl::getCommonPtrInternal() const {
-  return Common.getPointer();
-}
-
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
   if (CommonBase *C = getCommonPtrInternal())
     return C;
@@ -323,7 +318,7 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   for (const RedeclarableTemplateDecl *Prev = getPreviousDecl(); Prev;
        Prev = Prev->getPreviousDecl()) {
     if (CommonBase *C = Prev->getCommonPtrInternal()) {
-      Common.setPointer(C);
+      setCommonPtr(C);
       break;
     }
 
@@ -335,12 +330,12 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
     // FIXME: If any of the declarations is from an AST file, we probably
     // need an update record to add the common data.
 
-    Common.setPointer(newCommon(getASTContext()));
+    setCommonPtr(newCommon(getASTContext()));
   }
 
   // Update any previous declarations we saw with the common pointer.
   for (const RedeclarableTemplateDecl *Prev : PrevDecls)
-    Prev->Common.setPointer(getCommonPtrInternal());
+    Prev->setCommonPtr(getCommonPtrInternal());
 
   return getCommonPtrInternal();
 }
@@ -490,7 +485,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   // use this common pointer.
   if (!PrevCommon) {
     for (auto *D : PreviousDecls)
-      D->Base::Common.setPointer(ThisCommon);
+      D->setCommonPtr(ThisCommon);
     return;
   }
 
@@ -498,7 +493,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   assert(ThisCommon->Specializations.size() == 0 &&
          "Can't merge incompatible declarations!");
 
-  Base::Common.setPointer(PrevCommon);
+  setCommonPtr(PrevCommon);
 }
 
 //===----------------------------------------------------------------------===//

@@ -809,12 +809,14 @@ protected:
   /// specialization.
   mutable llvm::PointerIntPair<CommonBase *, 1, bool> Common;
 
-  CommonBase *getCommonPtrInternal() const;
+  CommonBase *getCommonPtrInternal() const { return Common.getPointer(); }
 
   /// Retrieves the "common" pointer shared by all (re-)declarations of
   /// the same template. Calling this routine may implicitly allocate memory
   /// for the common pointer.
   CommonBase *getCommonPtr() const;
+
+  void setCommonPtr(CommonBase *C) const { Common.setPointer(C); }
 
   virtual CommonBase *newCommon(ASTContext &C) const = 0;
 
@@ -2259,10 +2261,6 @@ protected:
 
   Common *getCommonPtr() const {
     return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
-  }
-
-  void setCommonPtr(Common *C) {
-    RedeclarableTemplateDecl::Common.setPointer(C);
   }
 
 public:
