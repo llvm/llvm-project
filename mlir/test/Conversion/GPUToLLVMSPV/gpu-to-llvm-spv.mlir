@@ -542,7 +542,8 @@ gpu.module @kernels {
 // CHECK-SAME:                                             [[ARG1:%.*]]: memref<4xf32, 1>
 // CHECK:         [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:         [[I0:%.*]] = llvm.call spir_funccc @_Z12get_group_idj([[C0]]) {
-// CHECK:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i64 to index
+// CHECK-32:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i32 to index
+// CHECK-64:         [[I1:%.*]] = builtin.unrealized_conversion_cast [[I0]] : i64 to index
 // CHECK:         [[LD:%.*]] = memref.load [[ARG0]]{{\[}}[[I1]], [[I1]]{{\]}} : memref<2x2xf32, 1>
 // CHECK:         memref.store [[LD]], [[ARG1]]{{\[}}[[I1]]{{\]}} : memref<4xf32, 1>
   func.func @no_address_spaces_callee(%arg0: memref<2x2xf32>, %arg1: memref<4xf32>) {
