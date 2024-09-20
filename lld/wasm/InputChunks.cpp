@@ -379,7 +379,10 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
 
     Symbol *sym = file->getSymbol(rel);
-    if (!ctx.isPic && !sym->hasGOTIndex())
+    // Runtime relocations are needed when we don't know the address of
+    // a symbol statically.
+    bool requiresRuntimeReloc = ctx.isPic || sym->hasGOTIndex();
+    if (!requiresRuntimeReloc)
       continue;
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
