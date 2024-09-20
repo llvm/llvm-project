@@ -160,7 +160,8 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
 TEST_P(BinaryContextTester, BaseAddress) {
   // Check that  base address calculation is correct for a binary with the
   // following segment layout:
-  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000, true};
+  BC->SegmentMapInfo[0] =
+      SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000, true};
   BC->SegmentMapInfo[0x10e8d2b4] =
       SegmentInfo{0x10e8d2b4, 0x3952faec, 0x10e8c2b4, 0x3952faec, 0x1000, true};
   BC->SegmentMapInfo[0x4a3bddc0] =
