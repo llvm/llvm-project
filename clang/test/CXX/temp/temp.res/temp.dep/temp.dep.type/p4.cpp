@@ -607,3 +607,24 @@ namespace N5 {
 
   template void g(int); // expected-note {{in instantiation of}}
 } // namespace N5
+
+namespace N6 {
+  struct A {
+    int x;
+  };
+
+  struct B {
+    A* operator->();
+  };
+
+  struct C {
+    B y;
+  };
+
+  template<typename T>
+  struct D : C {
+    void f() {
+      y->x;
+    }
+  };
+} // namespace N6
