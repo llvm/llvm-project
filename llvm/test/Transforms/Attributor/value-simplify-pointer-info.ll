@@ -3456,7 +3456,7 @@ define void @returnedPtrAccesses() {
 ; TUNIT-NEXT:    store i8 2, ptr [[A2]], align 1
 ; TUNIT-NEXT:    store i8 4, ptr [[A4]], align 1
 ; TUNIT-NEXT:    store i8 6, ptr [[A6]], align 1
-; TUNIT-NEXT:    call void @use3i8(i8 undef, i8 undef, i8 undef)
+; TUNIT-NEXT:    call void @use3i8(i8 2, i8 4, i8 6)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@returnedPtrAccesses() {
@@ -3499,7 +3499,7 @@ define void @returnedPtrAccessesMultiple(i32 %i) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[AP:%.*]] = call ptr @move246(i32 [[I]], ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR23]]
 ; TUNIT-NEXT:    store i8 2, ptr [[AP]], align 1
-; TUNIT-NEXT:    call void @use3i8(i8 undef, i8 undef, i8 undef)
+; TUNIT-NEXT:    call void @use3i8(i8 2, i8 2, i8 2)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@returnedPtrAccessesMultiple
@@ -3533,9 +3533,18 @@ define void @returnedPtrAccessesMultiple2(i32 %i) {
 ; TUNIT-LABEL: define {{[^@]+}}@returnedPtrAccessesMultiple2
 ; TUNIT-SAME: (i32 [[I:%.*]]) {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i64, align 8
+; TUNIT-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[A]], i32 2
+; TUNIT-NEXT:    [[G4:%.*]] = getelementptr i8, ptr [[A]], i32 4
+; TUNIT-NEXT:    [[G6:%.*]] = getelementptr i8, ptr [[A]], i32 6
+; TUNIT-NEXT:    store i8 0, ptr [[G2]], align 2
+; TUNIT-NEXT:    store i8 0, ptr [[G4]], align 4
+; TUNIT-NEXT:    store i8 0, ptr [[G6]], align 2
 ; TUNIT-NEXT:    [[AP:%.*]] = call ptr @move246(i32 [[I]], ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR23]]
 ; TUNIT-NEXT:    store i8 2, ptr [[AP]], align 1
-; TUNIT-NEXT:    call void @use3i8(i8 noundef 0, i8 noundef 0, i8 noundef 0)
+; TUNIT-NEXT:    [[L2:%.*]] = load i8, ptr [[G2]], align 2
+; TUNIT-NEXT:    [[L4:%.*]] = load i8, ptr [[G4]], align 4
+; TUNIT-NEXT:    [[L6:%.*]] = load i8, ptr [[G6]], align 2
+; TUNIT-NEXT:    call void @use3i8(i8 noundef [[L2]], i8 noundef [[L4]], i8 noundef [[L6]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@returnedPtrAccessesMultiple2
