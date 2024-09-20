@@ -92,20 +92,14 @@ bool MachineTraceMetricsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-MachineTraceMetrics::MachineTraceMetrics(MachineFunction &MF,
-                                         const MachineLoopInfo &LI) {
-  std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);
-  init(MF, LI);
-}
-
 MachineTraceMetrics::~MachineTraceMetrics() { clear(); }
 
 void MachineTraceMetrics::clear() {
   MF = nullptr;
   BlockInfo.clear();
-  for (Ensemble *&E : Ensembles) {
-    delete E;
-    E = nullptr;
+  for (auto &E : Ensembles) {
+    if (E)
+      E.reset();
   }
 }
 
@@ -422,27 +416,31 @@ MachineTraceMetrics::Ensemble *
 MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
   assert(strategy < MachineTraceStrategy::TS_NumStrategies &&
          "Invalid trace strategy enum");
-  Ensemble *&E = Ensembles[static_cast<size_t>(strategy)];
+  std::unique_ptr<MachineTraceMetrics::Ensemble> &E =
+      Ensembles[static_cast<size_t>(strategy)];
   if (E)
-    return E;
+    return E.get();
 
   // Allocate new Ensemble on demand.
   switch (strategy) {
   case MachineTraceStrategy::TS_MinInstrCount:
-    return (E = new MinInstrCountEnsemble(this));
+    E = std::make_unique<MinInstrCountEnsemble>(MinInstrCountEnsemble(this));
+    break;
   case MachineTraceStrategy::TS_Local:
-    return (E = new LocalEnsemble(this));
+    E = std::make_unique<LocalEnsemble>(LocalEnsemble(this));
+    break;
   default: llvm_unreachable("Invalid trace strategy enum");
   }
+  return E.get();
 }
 
 void MachineTraceMetrics::invalidate(const MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Invalidate traces through " << printMBBReference(*MBB)
                     << '\n');
   BlockInfo[MBB->getNumber()].invalidate();
-  for (Ensemble *E : Ensembles)
+  for (auto &E : Ensembles)
     if (E)
-      E->invalidate(MBB);
+      E.get()->invalidate(MBB);
 }
 
 bool MachineTraceMetrics::invalidate(
@@ -461,9 +459,9 @@ void MachineTraceMetrics::verifyAnalysis() const {
     return;
 #ifndef NDEBUG
   assert(BlockInfo.size() == MF->getNumBlockIDs() && "Outdated BlockInfo size");
-  for (Ensemble *E : Ensembles)
+  for (auto &E : Ensembles)
     if (E)
-      E->verify();
+      E.get()->verify();
 #endif
 }
 

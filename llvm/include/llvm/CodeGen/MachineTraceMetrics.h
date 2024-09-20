@@ -110,11 +110,14 @@ public:
   class Ensemble;
 
   // For legacy pass.
-  MachineTraceMetrics() {
-    std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);
+  MachineTraceMetrics() = default;
+
+  explicit MachineTraceMetrics(MachineFunction &MF, const MachineLoopInfo &LI) {
+    init(MF, LI);
   }
 
-  explicit MachineTraceMetrics(MachineFunction &MF, const MachineLoopInfo &LI);
+  MachineTraceMetrics(MachineTraceMetrics &&) = default;
+
   ~MachineTraceMetrics();
 
   void init(MachineFunction &Func, const MachineLoopInfo &LI);
@@ -422,8 +425,8 @@ private:
   SmallVector<unsigned, 0> ProcReleaseAtCycles;
 
   // One ensemble per strategy.
-  Ensemble
-      *Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
+  std::unique_ptr<Ensemble>
+      Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
 
   // Convert scaled resource usage to a cycle count that can be compared with
   // latencies.
