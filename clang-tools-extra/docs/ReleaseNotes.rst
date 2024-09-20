@@ -43,6 +43,11 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+- The ``clang-pseudo`` tool is incomplete and does not have active maintainers,
+  so it has been removed. See
+  `the RFC <https://discourse.llvm.org/t/removing-pseudo-parser/71131/>`_ for
+  more details.
+
 ...
 
 Improvements to clangd
