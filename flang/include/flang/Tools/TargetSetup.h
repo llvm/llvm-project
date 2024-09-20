@@ -9,6 +9,7 @@
 #ifndef FORTRAN_TOOLS_TARGET_SETUP_H
 #define FORTRAN_TOOLS_TARGET_SETUP_H
 
+#include "flang/Common/float128.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
