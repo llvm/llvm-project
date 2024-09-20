@@ -424,10 +424,10 @@ MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
                                                   EVT VT) const {
   SDNode *Lo = CurDAG->getMachineNode(
       AMDGPU::S_MOV_B32, DL, MVT::i32,
-      CurDAG->getTargetConstant(Imm & 0xFFFFFFFF, DL, MVT::i32));
-  SDNode *Hi =
-      CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
-                             CurDAG->getTargetConstant(Imm >> 32, DL, MVT::i32));
+      CurDAG->getTargetConstant(Lo_32(Imm), DL, MVT::i32));
+  SDNode *Hi = CurDAG->getMachineNode(
+      AMDGPU::S_MOV_B32, DL, MVT::i32,
+      CurDAG->getTargetConstant(Hi_32(Imm), DL, MVT::i32));
   const SDValue Ops[] = {
       CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
       SDValue(Lo, 0), CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
@@ -1805,8 +1805,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
       // single VALU instruction to materialize zero. Otherwise it is less
       // instructions to perform VALU adds with immediates or inline literals.
       unsigned NumLiterals =
-          !TII->isInlineConstant(APInt(32, COffsetVal & 0xffffffff)) +
-          !TII->isInlineConstant(APInt(32, COffsetVal >> 32));
+          !TII->isInlineConstant(APInt(32, Lo_32(COffsetVal))) +
+          !TII->isInlineConstant(APInt(32, Hi_32(COffsetVal)));
       if (Subtarget->getConstantBusLimit(AMDGPU::V_ADD_U32_e64) > NumLiterals)
         return false;
     }
