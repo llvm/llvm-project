@@ -284,21 +284,8 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // Emit the EH cleanup if required.
   if (RequiresEHCleanup) {
-    mlir::cir::TryOp tryOp = nullptr;
-    if (CGM.globalOpContext) {
-      SmallVector<mlir::cir::TryOp> trys;
-      CGM.globalOpContext.walk(
-          [&](mlir::cir::TryOp op) { trys.push_back(op); });
-      assert(trys.size() == 1 && "unknow global initialization style");
-      tryOp = trys[0];
-    } else {
-      SmallVector<mlir::cir::TryOp> trys;
-      auto funcOp = dyn_cast<mlir::cir::FuncOp>(CurFn);
-      funcOp.walk([&](mlir::cir::TryOp op) { trys.push_back(op); });
-      assert(trys.size() == 1 && "nested or multiple try/catch NYI");
-      tryOp = trys[0];
-    }
-
+    mlir::cir::TryOp tryOp =
+        ehEntry->getParentOp()->getParentOfType<mlir::cir::TryOp>();
     assert(tryOp && "expected available cir.try");
     auto *nextAction = getEHDispatchBlock(EHParent, tryOp);
     (void)nextAction;
