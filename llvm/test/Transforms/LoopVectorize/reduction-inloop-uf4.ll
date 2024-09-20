@@ -301,10 +301,14 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[COND:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE38:%.*]] ]
@@ -320,10 +324,6 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLAT8]], <i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer

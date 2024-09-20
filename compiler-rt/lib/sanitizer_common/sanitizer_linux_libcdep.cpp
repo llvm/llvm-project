@@ -226,7 +226,7 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
 // sizeof(struct pthread) from glibc.
 static uptr thread_descriptor_size;
 
-// FIXME: Implementation is very GLIBC specific, but it's used by FREEBSD.
+// FIXME: Implementation is very GLIBC specific, but it's used by FreeBSD.
 static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
         SANITIZER_RISCV64
@@ -364,6 +364,7 @@ static uptr TlsPreTcbSize() {
 #    endif
 #  else   // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 void InitTlsSize() {}
+uptr ThreadDescriptorSize() { return 0; }
 #  endif  // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 
 #  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \

@@ -489,7 +489,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                  TargetTriple.getArch() == Triple::ppc64le;
   bool IsSystemZ = TargetTriple.getArch() == Triple::systemz;
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
-  bool IsMIPSN32ABI = TargetTriple.getEnvironment() == Triple::GNUABIN32;
+  bool IsMIPSN32ABI = TargetTriple.isABIN32();
   bool IsMIPS32 = TargetTriple.isMIPS32();
   bool IsMIPS64 = TargetTriple.isMIPS64();
   bool IsArmOrThumb = TargetTriple.isARM() || TargetTriple.isThumb();

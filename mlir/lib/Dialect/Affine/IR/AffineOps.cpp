@@ -3214,6 +3214,9 @@ static LogicalResult verifyAffineMinMaxOp(T op) {
       op.getMap().getNumDims() + op.getMap().getNumSymbols())
     return op.emitOpError(
         "operand count and affine map dimension and symbol count must match");
+
+  if (op.getMap().getNumResults() == 0)
+    return op.emitOpError("affine map expect at least one result");
   return success();
 }
 
