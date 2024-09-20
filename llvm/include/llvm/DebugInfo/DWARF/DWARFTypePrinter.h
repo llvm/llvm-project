@@ -584,7 +584,8 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
 }
 
 template <typename DieType>
-void DWARFTypePrinter<DieType>::appendAndTerminateTemplateParameters(DieType D) {
+void DWARFTypePrinter<DieType>::appendAndTerminateTemplateParameters(
+    DieType D) {
   bool R = appendTemplateParameters(D);
   if (!R)
     return;
