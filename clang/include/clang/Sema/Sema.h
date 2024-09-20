@@ -13072,21 +13072,10 @@ public:
   /// dealing with a specialization. This is only relevant for function
   /// template specializations.
   ///
-  /// \param Pattern If non-NULL, indicates the pattern from which we will be
-  /// instantiating the definition of the given declaration, \p ND. This is
-  /// used to determine the proper set of template instantiation arguments for
-  /// friend function template specializations.
-  ///
   /// \param ForConstraintInstantiation when collecting arguments,
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
-  ///
-  /// \param SkipForSpecialization when specified, any template specializations
-  /// in a traversal would be ignored.
-  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
-  /// when encountering a specialized member function template, rather than
-  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
