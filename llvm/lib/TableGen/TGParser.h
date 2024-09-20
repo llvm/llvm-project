@@ -280,7 +280,8 @@ private:  // Parser methods.
   bool ParseBodyItem(Record *CurRec);
 
   bool ParseTemplateArgList(Record *CurRec);
-  Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
+  Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs,
+                         bool AllowAuto);
   VarInit *ParseForeachDeclaration(Init *&ForeachListValue);
 
   SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);

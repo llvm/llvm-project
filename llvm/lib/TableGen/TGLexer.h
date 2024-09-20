@@ -75,6 +75,7 @@ enum TokKind {
 
   // Reserved keywords. ('ElseKW' is named to distinguish it from the
   // existing 'Else' that means the preprocessor #else.)
+  Auto,
   Bit,
   Bits,
   Code,

@@ -383,6 +383,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
   StringRef Str(IdentStart, CurPtr-IdentStart);
 
   tgtok::TokKind Kind = StringSwitch<tgtok::TokKind>(Str)
+                            .Case("auto", tgtok::Auto)
                             .Case("int", tgtok::Int)
                             .Case("bit", tgtok::Bit)
                             .Case("bits", tgtok::Bits)

@@ -3262,13 +3262,19 @@ bool TGParser::ParseTemplateArgValueList(
 ///
 ///  Declaration ::= FIELD? Type ID ('=' Value)?
 ///
-Init *TGParser::ParseDeclaration(Record *CurRec,
-                                       bool ParsingTemplateArgs) {
+Init *TGParser::ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs,
+                                 bool AllowAuto = false) {
   // Read the field prefix if present.
   bool HasField = consume(tgtok::Field);
 
-  RecTy *Type = ParseType();
-  if (!Type) return nullptr;
+  RecTy *Type;
+  if (AllowAuto && consume(tgtok::Auto)) {
+    Type = nullptr;
+  } else {
+    Type = ParseType();
+    if (!Type)
+      return nullptr;
+  }
 
   if (Lex.getCode() != tgtok::Id) {
     TokError("Expected identifier in declaration");
@@ -3289,6 +3295,32 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   SMLoc IdLoc = Lex.getLoc();
   Init *DeclName = StringInit::get(Records, Str);
   Lex.Lex();
+
+  bool HasValue = consume(tgtok::equal);
+
+  // When 'auto' is used, parse the value and infer the type based on the
+  // value's type.
+  SMLoc ValLoc;
+  Init *Val = nullptr;
+  if (!Type) {
+    if (!HasValue) {
+      // auto used without a value.
+      TokError("auto requires assigning a value");
+      return nullptr;
+    }
+    ValLoc = Lex.getLoc();
+    // When no item type is supplied to ParseValue, it will either infer the
+    // type from the value, or fail to parse
+    Val = ParseValue(CurRec);
+
+    // Infer type from the value.
+    if (TypedInit *TI = dyn_cast_or_null<TypedInit>(Val)) {
+      Type = TI->getType();
+    } else {
+      Error(ValLoc, "unable to infer type");
+      return nullptr;
+    }
+  }
 
   bool BadField;
   if (!ParsingTemplateArgs) { // def, possibly in a multiclass
@@ -3311,10 +3343,14 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   if (BadField)
     return nullptr;
 
-  // If a value is present, parse it and set new field's value.
-  if (consume(tgtok::equal)) {
-    SMLoc ValLoc = Lex.getLoc();
-    Init *Val = ParseValue(CurRec, Type);
+  // For the non-auto case, if a value is present, parse it.
+  if (!Val && HasValue) {
+    ValLoc = Lex.getLoc();
+    Val = ParseValue(CurRec, Type);
+  }
+
+  // Set the new field's value.
+  if (HasValue) {
     if (!Val ||
         SetValue(CurRec, ValLoc, DeclName, {}, Val,
                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
@@ -3423,7 +3459,7 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
   Record *TheRecToAddTo = CurRec ? CurRec : &CurMultiClass->Rec;
 
   // Read the first declaration.
-  Init *TemplArg = ParseDeclaration(CurRec, true/*templateargs*/);
+  Init *TemplArg = ParseDeclaration(CurRec, /*ParsingTemplateArgs=*/true);
   if (!TemplArg)
     return true;
 
@@ -3432,7 +3468,7 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
   while (consume(tgtok::comma)) {
     // Read the following declarations.
     SMLoc Loc = Lex.getLoc();
-    TemplArg = ParseDeclaration(CurRec, true/*templateargs*/);
+    TemplArg = ParseDeclaration(CurRec, /*ParsingTemplateArgs=*/true);
     if (!TemplArg)
       return true;
 
@@ -3467,7 +3503,9 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return ParseDump(nullptr, CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
-    if (!ParseDeclaration(CurRec, false))
+    // Allow 'auto' when parsing declarations in the body of a def or class.
+    if (!ParseDeclaration(CurRec, /*ParsingTemplateArgs=*/false,
+                          /*AllowAuto=*/true))
       return true;
 
     if (!consume(tgtok::semi))
