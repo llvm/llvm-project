@@ -160,13 +160,13 @@ public:
   bool useFP16ConversionIntrinsics() const override { return false; }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+    return {};
   }
 
   std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -175,7 +175,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

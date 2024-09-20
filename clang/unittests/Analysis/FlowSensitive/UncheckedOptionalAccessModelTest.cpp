@@ -1372,7 +1372,7 @@ protected:
                                 DiagOpts.get());
               TD.emitDiagnostic(
                   FullSourceLoc(Loc, SrcMgr), DiagnosticsEngine::Error,
-                  "unexpected diagnostic", std::nullopt, std::nullopt);
+                  "unexpected diagnostic", {}, {});
             }
           }
 

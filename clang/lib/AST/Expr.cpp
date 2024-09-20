@@ -4720,7 +4720,7 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
   BaseAndUpdaterExprs[0] = baseExpr;
 
   InitListExpr *ILE =
-      new (C) InitListExpr(C, lBraceLoc, std::nullopt, rBraceLoc);
+      new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 

@@ -2446,7 +2446,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
               TemplateParameterLists FakedParamLists;
               FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
                   0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-                  std::nullopt, LAngleLoc, nullptr));
+                  {}, LAngleLoc, nullptr));
 
               TheDecl = ParseFunctionDefinition(
                   D,
@@ -2788,7 +2788,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
             0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-            std::nullopt, LAngleLoc, nullptr));
+            {}, LAngleLoc, nullptr));
 
         ThisDecl =
             Actions.ActOnTemplateDeclarator(getCurScope(), FakedParamLists, D);

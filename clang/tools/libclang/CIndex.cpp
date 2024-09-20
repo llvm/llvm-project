@@ -4208,7 +4208,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{},
       unsaved_files);
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),

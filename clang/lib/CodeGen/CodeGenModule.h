@@ -752,7 +752,7 @@ public:
   llvm::MDNode *getNoObjCARCExceptionsMetadata() {
     if (!NoObjCARCExceptionsMetadata)
       NoObjCARCExceptionsMetadata =
-          llvm::MDNode::get(getLLVMContext(), std::nullopt);
+          llvm::MDNode::get(getLLVMContext(), {});
     return NoObjCARCExceptionsMetadata;
   }
 
@@ -1180,7 +1180,7 @@ public:
                                         unsigned BuiltinID);
 
   llvm::Function *getIntrinsic(unsigned IID,
-                               ArrayRef<llvm::Type *> Tys = std::nullopt);
+                               ArrayRef<llvm::Type *> Tys = {});
 
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);

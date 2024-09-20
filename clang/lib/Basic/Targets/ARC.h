@@ -41,7 +41,7 @@ public:
                         MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -60,7 +60,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

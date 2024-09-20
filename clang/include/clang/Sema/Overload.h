@@ -1208,7 +1208,7 @@ class Sema;
     /// to the overload set.
     OverloadCandidate &
     addCandidate(unsigned NumConversions = 0,
-                 ConversionSequenceList Conversions = std::nullopt) {
+                 ConversionSequenceList Conversions = {}) {
       assert((Conversions.empty() || Conversions.size() == NumConversions) &&
              "preallocated conversion sequence has wrong length");
 

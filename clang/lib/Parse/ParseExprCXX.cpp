@@ -1579,7 +1579,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
+                      /*DeclsInPrototype=*/{}, LParenLoc,
                       FunLocalRangeEnd, D, TrailingReturnType,
                       TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);

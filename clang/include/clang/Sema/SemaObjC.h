@@ -350,8 +350,8 @@ public:
                                         ObjCInterfaceDecl *ID);
 
   Decl *ActOnAtEnd(Scope *S, SourceRange AtEnd,
-                   ArrayRef<Decl *> allMethods = std::nullopt,
-                   ArrayRef<DeclGroupPtrTy> allTUVars = std::nullopt);
+                   ArrayRef<Decl *> allMethods = {},
+                   ArrayRef<DeclGroupPtrTy> allTUVars = {});
 
   struct ObjCArgInfo {
     IdentifierInfo *Name;

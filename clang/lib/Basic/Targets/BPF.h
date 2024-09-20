@@ -68,7 +68,7 @@ public:
 
   bool isValidGCCRegisterName(StringRef Name) const override { return true; }
   ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -86,7 +86,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool allowDebugInfoForExternalRef() const override { return true; }

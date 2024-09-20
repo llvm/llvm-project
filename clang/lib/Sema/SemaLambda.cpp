@@ -910,7 +910,7 @@ getDummyLambdaType(Sema &S, SourceLocation Loc = SourceLocation()) {
                                                 ? S.Context.getAutoDeductType()
                                                 : S.Context.DependentTy;
   QualType MethodTy = S.Context.getFunctionType(DefaultTypeForNoTrailingReturn,
-                                                std::nullopt, EPI);
+                                                {}, EPI);
   return S.Context.getTrivialTypeSourceInfo(MethodTy, Loc);
 }
 
@@ -1682,7 +1682,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   ConvExtInfo.TypeQuals.addConst();
   ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
   QualType ConvTy =
-      S.Context.getFunctionType(PtrToFunctionTy, std::nullopt, ConvExtInfo);
+      S.Context.getFunctionType(PtrToFunctionTy, {}, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName ConversionName
@@ -1865,7 +1865,7 @@ static void addBlockPointerConversion(Sema &S,
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
   QualType ConvTy =
-      S.Context.getFunctionType(BlockPtrTy, std::nullopt, ConversionEPI);
+      S.Context.getFunctionType(BlockPtrTy, {}, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name

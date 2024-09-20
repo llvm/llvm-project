@@ -3418,7 +3418,7 @@ public:
   ExprResult RebuildCXXScalarValueInitExpr(TypeSourceInfo *TSInfo,
                                            SourceLocation LParenLoc,
                                            SourceLocation RParenLoc) {
-    return getSema().BuildCXXTypeConstructExpr(TSInfo, LParenLoc, std::nullopt,
+    return getSema().BuildCXXTypeConstructExpr(TSInfo, LParenLoc, {},
                                                RParenLoc,
                                                /*ListInitialization=*/false);
   }
@@ -4234,13 +4234,13 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   // Revert value-initialization back to empty parens.
   if (CXXScalarValueInitExpr *VIE = dyn_cast<CXXScalarValueInitExpr>(Init)) {
     SourceRange Parens = VIE->getSourceRange();
-    return getDerived().RebuildParenListExpr(Parens.getBegin(), std::nullopt,
+    return getDerived().RebuildParenListExpr(Parens.getBegin(), {},
                                              Parens.getEnd());
   }
 
   // FIXME: We shouldn't build ImplicitValueInitExprs for direct-initialization.
   if (isa<ImplicitValueInitExpr>(Init))
-    return getDerived().RebuildParenListExpr(SourceLocation(), std::nullopt,
+    return getDerived().RebuildParenListExpr(SourceLocation(), {},
                                              SourceLocation());
 
   // Revert initialization by constructor back to a parenthesized or braced list
@@ -15264,7 +15264,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
       return ExprError();
     return getDerived().RebuildSizeOfPackExpr(
         E->getOperatorLoc(), Pack, E->getPackLoc(), E->getRParenLoc(),
-        std::nullopt, std::nullopt);
+        std::nullopt, {});
   }
 
   // Try to compute the result without performing a partial substitution.
@@ -15310,7 +15310,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   if (Result)
     return getDerived().RebuildSizeOfPackExpr(
         E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
-        *Result, std::nullopt);
+        *Result, {});
 
   TemplateArgumentListInfo TransformedPackArgs(E->getPackLoc(),
                                                E->getPackLoc());
@@ -15341,7 +15341,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
 
   return getDerived().RebuildSizeOfPackExpr(E->getOperatorLoc(), E->getPack(),
                                             E->getPackLoc(), E->getRParenLoc(),
-                                            Args.size(), std::nullopt);
+                                            Args.size(), {});
 }
 
 template <typename Derived>
@@ -15385,7 +15385,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
         return ExprError();
       return getDerived().RebuildPackIndexingExpr(
           E->getEllipsisLoc(), E->getRSquareLoc(), Pack.get(), IndexExpr.get(),
-          std::nullopt);
+          {});
     }
     for (unsigned I = 0; I != *NumExpansions; ++I) {
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);

@@ -96,7 +96,7 @@ public:
   bool hasFeature(StringRef Feature) const override { return Feature == "tce"; }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+    return {};
   }
 
   std::string_view getClobbers() const override { return ""; }
@@ -106,7 +106,7 @@ public:
   }
 
   ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -115,7 +115,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 };
 

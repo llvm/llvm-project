@@ -2538,7 +2538,7 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   if (FnBody.isInvalid()) {
     Sema::CompoundScopeRAII CompoundScope(Actions);
     FnBody =
-        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, std::nullopt, false);
+        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, {}, false);
   }
 
   BodyScope.Exit();
@@ -2576,7 +2576,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   if (FnBody.isInvalid()) {
     Sema::CompoundScopeRAII CompoundScope(Actions);
     FnBody =
-        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, std::nullopt, false);
+        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, {}, false);
   }
 
   BodyScope.Exit();

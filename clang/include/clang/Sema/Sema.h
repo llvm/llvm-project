@@ -3549,7 +3549,7 @@ public:
   NamedDecl *ActOnVariableDeclarator(
       Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
       LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
-      bool &AddToScope, ArrayRef<BindingDecl *> Bindings = std::nullopt);
+      bool &AddToScope, ArrayRef<BindingDecl *> Bindings = {});
 
   /// Perform semantic checking on a newly-created variable
   /// declaration.
@@ -5393,7 +5393,7 @@ public:
 
   bool SetCtorInitializers(
       CXXConstructorDecl *Constructor, bool AnyErrors,
-      ArrayRef<CXXCtorInitializer *> Initializers = std::nullopt);
+      ArrayRef<CXXCtorInitializer *> Initializers = {});
 
   /// MarkBaseAndMemberDestructorsReferenced - Given a record decl,
   /// mark all the non-trivial destructors of its members and bases as
@@ -6691,7 +6691,7 @@ public:
   /// \param StopAt Subexpressions that we shouldn't recurse into.
   void MarkDeclarationsReferencedInExpr(
       Expr *E, bool SkipLocalVariables = false,
-      ArrayRef<const Expr *> StopAt = std::nullopt);
+      ArrayRef<const Expr *> StopAt = {});
 
   /// Try to convert an expression \p E to type \p Ty. Returns the result of the
   /// conversion.
@@ -6762,7 +6762,7 @@ public:
   DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
-                      ArrayRef<Expr *> Args = std::nullopt,
+                      ArrayRef<Expr *> Args = {},
                       DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
@@ -10195,7 +10195,7 @@ public:
       bool PartialOverloading = false, bool AllowExplicit = true,
       bool AllowExplicitConversion = false,
       ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
-      ConversionSequenceList EarlyConversions = std::nullopt,
+      ConversionSequenceList EarlyConversions = {},
       OverloadCandidateParamOrder PO = {},
       bool AggregateCandidateDeduction = false);
 
@@ -10231,7 +10231,7 @@ public:
                      ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
                      bool SuppressUserConversions = false,
                      bool PartialOverloading = false,
-                     ConversionSequenceList EarlyConversions = std::nullopt,
+                     ConversionSequenceList EarlyConversions = {},
                      OverloadCandidateParamOrder PO = {});
 
   /// Add a C++ member function template as a candidate to the candidate
@@ -13035,7 +13035,7 @@ public:
         Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
         SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
         Decl *Entity, NamedDecl *Template = nullptr,
-        ArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
+        ArrayRef<TemplateArgument> TemplateArgs = {},
         sema::TemplateDeductionInfo *DeductionInfo = nullptr);
 
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;

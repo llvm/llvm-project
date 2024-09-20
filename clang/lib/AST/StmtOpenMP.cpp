@@ -452,7 +452,7 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             Stmt *TransformedStmt, Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
+      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
       EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
@@ -555,7 +555,7 @@ OMPSectionDirective *OMPSectionDirective::Create(const ASTContext &C,
                                                  Stmt *AssociatedStmt,
                                                  bool HasCancel) {
   auto *Dir =
-      createDirective<OMPSectionDirective>(C, std::nullopt, AssociatedStmt,
+      createDirective<OMPSectionDirective>(C, {}, AssociatedStmt,
                                            /*NumChildren=*/0, StartLoc, EndLoc);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -605,7 +605,7 @@ OMPMasterDirective *OMPMasterDirective::Create(const ASTContext &C,
                                                SourceLocation StartLoc,
                                                SourceLocation EndLoc,
                                                Stmt *AssociatedStmt) {
-  return createDirective<OMPMasterDirective>(C, std::nullopt, AssociatedStmt,
+  return createDirective<OMPMasterDirective>(C, {}, AssociatedStmt,
                                              /*NumChildren=*/0, StartLoc,
                                              EndLoc);
 }

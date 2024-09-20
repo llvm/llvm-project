@@ -79,7 +79,7 @@ public:
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

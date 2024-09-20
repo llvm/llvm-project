@@ -2221,7 +2221,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           // template specialization.
           FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
               0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-              std::nullopt, LAngleLoc, nullptr));
+              {}, LAngleLoc, nullptr));
           TemplateParams = &FakedParamLists;
         }
       }

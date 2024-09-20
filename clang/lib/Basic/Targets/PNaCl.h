@@ -53,7 +53,7 @@ public:
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

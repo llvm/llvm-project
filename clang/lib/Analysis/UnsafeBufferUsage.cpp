@@ -3600,7 +3600,7 @@ public:
     auto It = VarGrpMap.find(Var);
 
     if (It == VarGrpMap.end())
-      return std::nullopt;
+      return {};
     return Groups[It->second];
   }
 

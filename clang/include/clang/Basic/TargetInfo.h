@@ -1853,7 +1853,7 @@ protected:
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
   virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return std::nullopt;
+    return {};
   }
 
  private:

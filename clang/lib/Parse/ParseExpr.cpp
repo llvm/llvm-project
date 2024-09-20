@@ -3855,7 +3855,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
                                      /*NumExceptions=*/0,
                                      /*NoexceptExpr=*/nullptr,
                                      /*ExceptionSpecTokens=*/nullptr,
-                                     /*DeclsInPrototype=*/std::nullopt,
+                                     /*DeclsInPrototype=*/{},
                                      CaretLoc, CaretLoc, ParamInfo),
         CaretLoc);
 

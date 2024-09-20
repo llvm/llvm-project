@@ -287,7 +287,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
   // Dump module macros.
   llvm::DenseSet<ModuleMacro*> Active;
   for (auto *MM :
-       State ? State->getActiveModuleMacros(*this, II) : std::nullopt)
+       State ? State->getActiveModuleMacros(*this, II) : ArrayRef<ModuleMacro *>())
     Active.insert(MM);
   llvm::DenseSet<ModuleMacro*> Visited;
   llvm::SmallVector<ModuleMacro *, 16> Worklist(Leaf);
