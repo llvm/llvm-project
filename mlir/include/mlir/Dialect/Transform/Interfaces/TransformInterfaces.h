@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
 

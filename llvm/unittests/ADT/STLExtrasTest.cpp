@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

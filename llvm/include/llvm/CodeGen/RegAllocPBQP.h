@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/PBQP/ReductionRules.h"
 #include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>

@@ -9,6 +9,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "gtest/gtest.h"
 
 using namespace llvm;

@@ -61,6 +61,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"

@@ -9,6 +9,7 @@
 #include "llvm/Support/DataExtractor.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 using namespace llvm;

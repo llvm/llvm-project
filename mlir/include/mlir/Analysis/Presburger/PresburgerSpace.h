@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"

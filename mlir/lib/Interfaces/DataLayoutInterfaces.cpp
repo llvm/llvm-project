@@ -13,6 +13,7 @@
 #include "mlir/IR/Operation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/Support/MathExtras.h"
 
 using namespace mlir;

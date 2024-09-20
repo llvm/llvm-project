@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
