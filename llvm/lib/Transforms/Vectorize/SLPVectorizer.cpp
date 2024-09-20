@@ -413,7 +413,6 @@ static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
   if (Idx >= 0)
     OS << "Idx: " << Idx << ", ";
   OS << "n=" << VL.size() << " [" << *VL.front() << ", ..]";
-  OS.flush();
   return Result;
 }
 #endif

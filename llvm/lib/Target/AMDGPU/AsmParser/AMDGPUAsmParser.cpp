@@ -6094,7 +6094,6 @@ bool AMDGPUAsmParser::ParseToEndDirective(const char *AssemblerDirectiveBegin,
                     Twine(AssemblerDirectiveEnd) + Twine(" not found"));
   }
 
-  CollectStream.flush();
   return false;
 }
 
