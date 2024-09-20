@@ -6,7 +6,7 @@
 
 ; CHECK:     %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
-; CHECK-DAG: %[[#Scope_AllSVMDevices:]] = OpConstant %[[#Int]] 0
+; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstant %[[#Int]] 0
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42
 ; CHECK-DAG: %[[#Scope_Invocation:]] = OpConstant %[[#Int]] 4
@@ -136,28 +136,28 @@ entry:
 
 define dso_local spir_func void @test_all_svm_devices_atomicrmw() local_unnamed_addr {
 entry:
-  %0 = atomicrmw xchg i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicExchange %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %1 = atomicrmw xchg float addrspace(1)* @f, float 42.000000e+00 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicExchange %[[#Float:]] %[[#FPPointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#FPValue:]]
-  %2 = atomicrmw add i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicIAdd %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %3 = atomicrmw sub i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicISub %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %4 = atomicrmw or i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicOr %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %5 = atomicrmw xor i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicXor %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %6 = atomicrmw and i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicAnd %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %7 = atomicrmw max i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicSMax %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %8 = atomicrmw min i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicSMin %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %9 = atomicrmw umax i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicUMax %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
-  %10 = atomicrmw umin i32 addrspace(1)* @ui, i32 42 syncscope("all_svm_devices") seq_cst
-  ; CHECK: %[[#]] = OpAtomicUMin %[[#Int]] %[[#Pointer:]] %[[#Scope_AllSvmDevices:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %0 = atomicrmw xchg i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicExchange %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %1 = atomicrmw xchg float addrspace(1)* @f, float 42.000000e+00 seq_cst
+  ; CHECK: %[[#]] = OpAtomicExchange %[[#Float:]] %[[#FPPointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#FPValue:]]
+  %2 = atomicrmw add i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicIAdd %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %3 = atomicrmw sub i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicISub %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %4 = atomicrmw or i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicOr %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %5 = atomicrmw xor i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicXor %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %6 = atomicrmw and i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicAnd %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %7 = atomicrmw max i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicSMax %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %8 = atomicrmw min i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicSMin %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %9 = atomicrmw umax i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicUMax %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
+  %10 = atomicrmw umin i32 addrspace(1)* @ui, i32 42 seq_cst
+  ; CHECK: %[[#]] = OpAtomicUMin %[[#Int]] %[[#Pointer:]] %[[#Scope_CrossDevice:]] %[[#MemSem_SeqCst:]] %[[#Value:]]
 
   ret void
 }

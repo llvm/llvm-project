@@ -86,6 +86,7 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::OpenCLAllSVMDevices:
     return "";
   }
+  return "";
 }
 } // End anonymous namespace.
 
