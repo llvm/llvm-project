@@ -4398,10 +4398,10 @@ protected:
   friend class PointerType; // For LLVMCtx.
   friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
                         // is complete
-  friend class IntegerType;   // For LLVMCtx.
-  friend class StructType;    // For LLVMCtx.
+  friend class IntegerType;           // For LLVMCtx.
+  friend class StructType;            // For LLVMCtx.
   friend class ::llvm::TargetExtType; // For LLVMCtx.
-  friend class Region;        // For LLVMCtx.
+  friend class Region;                // For LLVMCtx.
 
   Tracker IRTracker;
 
