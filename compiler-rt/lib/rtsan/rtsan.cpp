@@ -10,9 +10,11 @@
 
 #include <rtsan/rtsan.h>
 #include <rtsan/rtsan_context.h>
+#include <rtsan/rtsan_flags.h>
 #include <rtsan/rtsan_interceptors.h>
 
 #include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 
 using namespace __rtsan;
@@ -29,7 +31,11 @@ extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   CHECK(!__rtsan_is_initialized());
+
+  SanitizerToolName = "RealtimeSanitizer";
+  InitializeFlags();
   InitializeInterceptors();
+
   SetInitialized();
 }
 
@@ -58,12 +64,18 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit() {
   __rtsan::GetContextForThisThread().RealtimePop();
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_off() {
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable() {
   __rtsan::GetContextForThisThread().BypassPush();
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_on() {
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
   __rtsan::GetContextForThisThread().BypassPop();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void
+__rtsan_expect_not_realtime(const char *intercepted_function_name) {
+  __rtsan_ensure_initialized();
+  ExpectNotRealtime(GetContextForThisThread(), intercepted_function_name);
 }
 
 } // extern "C"

@@ -193,6 +193,7 @@
 ; CHECK-NEXT:      ARM block placement
 ; CHECK-NEXT:      optimise barriers pass
 ; CHECK-NEXT:      Contiguously Lay Out Funclets
+; CHECK-NEXT:      Remove Loads Into Fake Uses
 ; CHECK-NEXT:      StackMap Liveness Analysis
 ; CHECK-NEXT:      Live DEBUG_VALUE analysis
 ; CHECK-NEXT:      Machine Sanitizer Binary Metadata

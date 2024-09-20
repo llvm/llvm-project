@@ -18,6 +18,7 @@
 #include "flang/Common/OpenMP-features.h"
 #include "flang/Common/Version.h"
 #include "flang/Common/default-kinds.h"
+#include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
@@ -556,8 +557,8 @@ int main(int argc, char **argv) {
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext.targetCharacteristics(), *targetMachine, compilerVersion,
-      compilerOptions);
+      semanticsContext.targetCharacteristics(), *targetMachine, {},
+      compilerVersion, compilerOptions);
 
   return mlir::failed(
       convertFortranSourceToMLIR(inputFilename, options, programPrefix,

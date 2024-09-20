@@ -16,6 +16,7 @@
 #include "mlir/Conversion/UBToSPIRV/UBToSPIRV.h"
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -40,6 +41,35 @@ using namespace mlir;
 
 namespace {
 
+/// Map memRef memory space to SPIR-V storage class.
+void mapToMemRef(Operation *op, spirv::TargetEnvAttr &targetAttr) {
+  spirv::TargetEnv targetEnv(targetAttr);
+  bool targetEnvSupportsKernelCapability =
+      targetEnv.allows(spirv::Capability::Kernel);
+  spirv::MemorySpaceToStorageClassMap memorySpaceMap =
+      targetEnvSupportsKernelCapability
+          ? spirv::mapMemorySpaceToOpenCLStorageClass
+          : spirv::mapMemorySpaceToVulkanStorageClass;
+  spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
+  spirv::convertMemRefTypesAndAttrs(op, converter);
+}
+
+/// Populate patterns for each dialect.
+void populateConvertToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                    ScfToSPIRVContext &scfToSPIRVContext,
+                                    RewritePatternSet &patterns) {
+  arith::populateCeilFloorDivExpandOpsPatterns(patterns);
+  arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+  populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+  populateFuncToSPIRVPatterns(typeConverter, patterns);
+  populateGPUToSPIRVPatterns(typeConverter, patterns);
+  index::populateIndexToSPIRVPatterns(typeConverter, patterns);
+  populateMemRefToSPIRVPatterns(typeConverter, patterns);
+  populateVectorToSPIRVPatterns(typeConverter, patterns);
+  populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
+  ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
+}
+
 /// A pass to perform the SPIR-V conversion.
 struct ConvertToSPIRVPass final
     : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
@@ -57,38 +87,46 @@ struct ConvertToSPIRVPass final
     if (runVectorUnrolling && failed(spirv::unrollVectorsInFuncBodies(op)))
       return signalPassFailure();
 
-    spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
-    SPIRVTypeConverter typeConverter(targetAttr);
-    RewritePatternSet patterns(context);
-    ScfToSPIRVContext scfToSPIRVContext;
+    // Generic conversion.
+    if (!convertGPUModules) {
+      spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
+      std::unique_ptr<ConversionTarget> target =
+          SPIRVConversionTarget::get(targetAttr);
+      SPIRVTypeConverter typeConverter(targetAttr);
+      RewritePatternSet patterns(context);
+      ScfToSPIRVContext scfToSPIRVContext;
+      mapToMemRef(op, targetAttr);
+      populateConvertToSPIRVPatterns(typeConverter, scfToSPIRVContext,
+                                     patterns);
+      if (failed(applyPartialConversion(op, *target, std::move(patterns))))
+        return signalPassFailure();
+      return;
+    }
 
-    // Map MemRef memory space to SPIR-V storage class.
-    spirv::TargetEnv targetEnv(targetAttr);
-    bool targetEnvSupportsKernelCapability =
-        targetEnv.allows(spirv::Capability::Kernel);
-    spirv::MemorySpaceToStorageClassMap memorySpaceMap =
-        targetEnvSupportsKernelCapability
-            ? spirv::mapMemorySpaceToOpenCLStorageClass
-            : spirv::mapMemorySpaceToVulkanStorageClass;
-    spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
-    spirv::convertMemRefTypesAndAttrs(op, converter);
-
-    // Populate patterns for each dialect.
-    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
-    arith::populateArithToSPIRVPatterns(typeConverter, patterns);
-    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
-    populateFuncToSPIRVPatterns(typeConverter, patterns);
-    populateGPUToSPIRVPatterns(typeConverter, patterns);
-    index::populateIndexToSPIRVPatterns(typeConverter, patterns);
-    populateMemRefToSPIRVPatterns(typeConverter, patterns);
-    populateVectorToSPIRVPatterns(typeConverter, patterns);
-    populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
-    ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
-
-    if (failed(applyPartialConversion(op, *target, std::move(patterns))))
-      return signalPassFailure();
+    // Clone each GPU kernel module for conversion, given that the GPU
+    // launch op still needs the original GPU kernel module.
+    SmallVector<Operation *, 1> gpuModules;
+    OpBuilder builder(context);
+    op->walk([&](gpu::GPUModuleOp gpuModule) {
+      builder.setInsertionPoint(gpuModule);
+      gpuModules.push_back(builder.clone(*gpuModule));
+    });
+    // Run conversion for each module independently as they can have
+    // different TargetEnv attributes.
+    for (Operation *gpuModule : gpuModules) {
+      spirv::TargetEnvAttr targetAttr =
+          spirv::lookupTargetEnvOrDefault(gpuModule);
+      std::unique_ptr<ConversionTarget> target =
+          SPIRVConversionTarget::get(targetAttr);
+      SPIRVTypeConverter typeConverter(targetAttr);
+      RewritePatternSet patterns(context);
+      ScfToSPIRVContext scfToSPIRVContext;
+      mapToMemRef(gpuModule, targetAttr);
+      populateConvertToSPIRVPatterns(typeConverter, scfToSPIRVContext,
+                                     patterns);
+      if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
+        return signalPassFailure();
+    }
   }
 };
 

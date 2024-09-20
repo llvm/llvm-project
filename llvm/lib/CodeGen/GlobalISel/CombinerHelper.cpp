@@ -2678,6 +2678,9 @@ bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) {
           MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) &&
          "Expected an insert/extract element op");
   LLT VecTy = MRI.getType(MI.getOperand(1).getReg());
+  if (VecTy.isScalableVector())
+    return false;
+
   unsigned IdxIdx =
       MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT ? 2 : 3;
   auto Idx = getIConstantVRegVal(MI.getOperand(IdxIdx).getReg(), MRI);
@@ -2961,6 +2964,10 @@ bool CombinerHelper::matchCombineInsertVecElts(
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
   assert(DstTy.isVector() && "Invalid G_INSERT_VECTOR_ELT?");
+
+  if (DstTy.isScalableVector())
+    return false;
+
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
@@ -4046,6 +4053,8 @@ bool CombinerHelper::matchExtractVecEltBuildVec(MachineInstr &MI,
   // and find the source register that the index maps to.
   Register SrcVec = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcVec);
+  if (SrcTy.isScalableVector())
+    return false;
 
   auto Cst = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!Cst || Cst->Value.getZExtValue() >= SrcTy.getNumElements())

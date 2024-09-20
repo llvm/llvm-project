@@ -110,7 +110,7 @@ string make_error_str(const error_code& ec) {
   }
   return string();
 }
-} // end namespace
+} // namespace
 
 string __do_message::message(int ev) const {
 #if defined(_LIBCPP_HAS_NO_THREADS)

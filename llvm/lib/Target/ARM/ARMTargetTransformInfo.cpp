@@ -163,6 +163,22 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
 
+  case Intrinsic::arm_neon_vld1x2:
+  case Intrinsic::arm_neon_vld1x3:
+  case Intrinsic::arm_neon_vld1x4:
+  case Intrinsic::arm_neon_vst1x2:
+  case Intrinsic::arm_neon_vst1x3:
+  case Intrinsic::arm_neon_vst1x4: {
+    Align NewAlign =
+        getKnownAlignment(II.getArgOperand(0), IC.getDataLayout(), &II,
+                          &IC.getAssumptionCache(), &IC.getDominatorTree());
+    Align OldAlign = II.getParamAlign(0).valueOrOne();
+    if (NewAlign > OldAlign)
+      II.addParamAttr(0,
+                      Attribute::getWithAlignment(II.getContext(), NewAlign));
+    break;
+  }
+
   case Intrinsic::arm_mve_pred_i2v: {
     Value *Arg = II.getArgOperand(0);
     Value *ArgArg;

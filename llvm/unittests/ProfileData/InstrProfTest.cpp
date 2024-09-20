@@ -431,7 +431,6 @@ MATCHER_P(EqualsRecord, Want, "") {
     Want.print(OS);
     OS << "Got:\n";
     Got.print(OS);
-    OS.flush();
     *result_listener << "MemProf Record differs!\n" << Buffer;
     return false;
   };

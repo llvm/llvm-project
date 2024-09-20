@@ -42,6 +42,12 @@ static uint32_t initProt(StringRef name) {
 static uint32_t maxProt(StringRef name) {
   assert(config->arch() != AK_i386 &&
          "TODO: i386 has different maxProt requirements");
+  auto it = find_if(
+      config->segmentProtections,
+      [&](const SegmentProtection &segprot) { return segprot.name == name; });
+  if (it != config->segmentProtections.end())
+    return it->maxProt;
+
   return initProt(name);
 }
 

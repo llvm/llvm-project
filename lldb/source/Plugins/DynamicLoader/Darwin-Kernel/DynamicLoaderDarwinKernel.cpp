@@ -1605,7 +1605,7 @@ DynamicLoaderDarwinKernel::GetStepThroughTrampolinePlan(Thread &thread,
 
 Status DynamicLoaderDarwinKernel::CanLoadImage() {
   Status error;
-  error.SetErrorString(
+  error = Status::FromErrorString(
       "always unsafe to load or unload shared libraries in the darwin kernel");
   return error;
 }

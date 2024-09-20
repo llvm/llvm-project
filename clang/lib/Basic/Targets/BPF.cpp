@@ -38,7 +38,10 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__BPF_FEATURE_ADDR_SPACE_CAST");
 
-  if (CPU.empty() || CPU == "generic" || CPU == "v1") {
+  if (CPU.empty())
+    CPU = "v3";
+
+  if (CPU == "generic" || CPU == "v1") {
     Builder.defineMacro("__BPF_CPU_VERSION__", "1");
     return;
   }

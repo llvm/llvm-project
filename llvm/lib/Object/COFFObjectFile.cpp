@@ -2369,7 +2369,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
         Expected<StringRef> Contents = S.getContents();
         if (!Contents)
           return Contents.takeError();
-        return Contents->slice(Offset, Offset + Entry.DataSize);
+        return Contents->substr(Offset, Entry.DataSize);
       }
     }
     return createStringError(object_error::parse_failed,

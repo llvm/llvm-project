@@ -430,7 +430,9 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName)
+    if (Format == ScanningOutputFormat::P1689)
+      Action = std::make_unique<PreprocessOnlyAction>();
+    else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -498,6 +500,9 @@ DependencyScanningWorker::DependencyScanningWorker(
       std::make_unique<ObjectFilePCHContainerReader>());
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
+
+  if (Service.shouldTraceVFS())
+    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:

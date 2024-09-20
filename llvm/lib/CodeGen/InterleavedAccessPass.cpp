@@ -101,21 +101,21 @@ private:
 
   /// Transform an interleaved load into target specific intrinsics.
   bool lowerInterleavedLoad(LoadInst *LI,
-                            SmallVector<Instruction *, 32> &DeadInsts);
+                            SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform an interleaved store into target specific intrinsics.
   bool lowerInterleavedStore(StoreInst *SI,
-                             SmallVector<Instruction *, 32> &DeadInsts);
+                             SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform a load and a deinterleave intrinsic into target specific
   /// instructions.
   bool lowerDeinterleaveIntrinsic(IntrinsicInst *II,
-                                  SmallVector<Instruction *, 32> &DeadInsts);
+                                  SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Transform an interleave intrinsic and a store into target specific
   /// instructions.
   bool lowerInterleaveIntrinsic(IntrinsicInst *II,
-                                SmallVector<Instruction *, 32> &DeadInsts);
+                                SmallVectorImpl<Instruction *> &DeadInsts);
 
   /// Returns true if the uses of an interleaved load by the
   /// extractelement instructions in \p Extracts can be replaced by uses of the
@@ -250,7 +250,7 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
 }
 
 bool InterleavedAccessImpl::lowerInterleavedLoad(
-    LoadInst *LI, SmallVector<Instruction *, 32> &DeadInsts) {
+    LoadInst *LI, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!LI->isSimple() || isa<ScalableVectorType>(LI->getType()))
     return false;
 
@@ -454,7 +454,7 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
 }
 
 bool InterleavedAccessImpl::lowerInterleavedStore(
-    StoreInst *SI, SmallVector<Instruction *, 32> &DeadInsts) {
+    StoreInst *SI, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!SI->isSimple())
     return false;
 
@@ -480,7 +480,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
-    IntrinsicInst *DI, SmallVector<Instruction *, 32> &DeadInsts) {
+    IntrinsicInst *DI, SmallVectorImpl<Instruction *> &DeadInsts) {
   LoadInst *LI = dyn_cast<LoadInst>(DI->getOperand(0));
 
   if (!LI || !LI->hasOneUse() || !LI->isSimple())
@@ -499,7 +499,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 }
 
 bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
-    IntrinsicInst *II, SmallVector<Instruction *, 32> &DeadInsts) {
+    IntrinsicInst *II, SmallVectorImpl<Instruction *> &DeadInsts) {
   if (!II->hasOneUse())
     return false;
 

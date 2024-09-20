@@ -155,6 +155,7 @@ namespace llvm {
           XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+          VerifyArgABICompliance(true),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -380,6 +381,12 @@ namespace llvm {
     /// When set to true, const objects with relocatable address values are put
     /// into the RO data section.
     unsigned XCOFFReadOnlyPointers : 1;
+
+    /// When set to true, call/return argument extensions of narrow integers
+    /// are verified in the target backend if it cares about them. This is
+    /// not done with internal tools like llc that run many tests that ignore
+    /// (lack) these extensions.
+    unsigned VerifyArgABICompliance : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

@@ -283,6 +283,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
     }
+    setOperationAction(ISD::CTPOP, GRLenVT, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -296,6 +297,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -4488,6 +4490,44 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static MachineBasicBlock *emitPseudoCTPOP(MachineInstr &MI,
+                                          MachineBasicBlock *BB,
+                                          const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasExtLSX());
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &LoongArch::LSX128RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register ScratchReg1 = MRI.createVirtualRegister(RC);
+  Register ScratchReg2 = MRI.createVirtualRegister(RC);
+  Register ScratchReg3 = MRI.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::VLDI), ScratchReg1).addImm(0);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VINSGR2VR_D
+                                       : LoongArch::VINSGR2VR_W),
+          ScratchReg2)
+      .addReg(ScratchReg1)
+      .addReg(Src)
+      .addImm(0);
+  BuildMI(
+      *BB, MI, DL,
+      TII->get(Subtarget.is64Bit() ? LoongArch::VPCNT_D : LoongArch::VPCNT_W),
+      ScratchReg3)
+      .addReg(ScratchReg2);
+  BuildMI(*BB, MI, DL,
+          TII->get(Subtarget.is64Bit() ? LoongArch::VPICKVE2GR_D
+                                       : LoongArch::VPICKVE2GR_W),
+          Dst)
+      .addReg(ScratchReg3)
+      .addImm(0);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -4546,6 +4586,22 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoXVINSGR2VR_B:
   case LoongArch::PseudoXVINSGR2VR_H:
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
+  case LoongArch::PseudoCTPOP:
+    return emitPseudoCTPOP(MI, BB, Subtarget);
+  case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while bl call instruction (where statepoint will be lowered at the
+    // end) has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      LoongArch::R1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    if (!Subtarget.is64Bit())
+      report_fatal_error("STATEPOINT is only supported on 64-bit targets");
+    return emitPatchPoint(MI, BB);
   }
 }
 
@@ -5012,7 +5068,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
         LoongArch::R23, LoongArch::R24, LoongArch::R25,
         LoongArch::R26, LoongArch::R27, LoongArch::R28,
         LoongArch::R29, LoongArch::R30, LoongArch::R31};
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5023,7 +5079,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs0,fs1,fs2,fs3
     static const MCPhysReg FPR32List[] = {LoongArch::F24, LoongArch::F25,
                                           LoongArch::F26, LoongArch::F27};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5034,7 +5090,7 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     //                        fs4,fs5,fs6,fs7
     static const MCPhysReg FPR64List[] = {LoongArch::F28_64, LoongArch::F29_64,
                                           LoongArch::F30_64, LoongArch::F31_64};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -5672,7 +5728,9 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // operations, use CmpXChg to expand.
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
-      AI->getOperation() == AtomicRMWInst::UDecWrap)
+      AI->getOperation() == AtomicRMWInst::UDecWrap ||
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();

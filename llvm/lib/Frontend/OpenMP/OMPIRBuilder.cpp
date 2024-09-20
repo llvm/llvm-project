@@ -32,6 +32,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -1548,7 +1549,16 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BasicBlock *CommonExit = nullptr;
   SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
   Extractor.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
-  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands);
+
+  Extractor.findInputsOutputs(Inputs, Outputs, SinkingCands,
+                              /*CollectGlobalInputs=*/true);
+
+  Inputs.remove_if([&](Value *I) {
+    if (auto *GV = dyn_cast_if_present<GlobalVariable>(I))
+      return GV->getValueType() == OpenMPIRBuilder::Ident;
+
+    return false;
+  });
 
   LLVM_DEBUG(dbgs() << "Before privatization: " << *OuterFn << "\n");
 
@@ -4319,6 +4329,7 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
   // That's why make an unconditional branch from loop preheader to loop
   // exit block
   Builder.restoreIP({Preheader, Preheader->end()});
+  Builder.SetCurrentDebugLocation(Preheader->getTerminator()->getDebugLoc());
   Preheader->getTerminator()->eraseFromParent();
   Builder.CreateBr(CLI->getExit());
 
@@ -6360,6 +6371,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
+  Builder.restoreIP(CodeGenIP);
   // Disable TargetData CodeGen on Device pass.
   if (Config.IsTargetDevice.value_or(false)) {
     if (BodyGenCB)
@@ -6367,7 +6379,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     return Builder.saveIP();
   }
 
-  Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
   // Generate the code for the opening of the data environment. Capture all the
@@ -6575,13 +6586,45 @@ static Function *createOutlinedFunction(
       ParameterTypes.push_back(Arg->getType());
   }
 
+  auto BB = Builder.GetInsertBlock();
+  auto M = BB->getModule();
   auto FuncType = FunctionType::get(Builder.getVoidTy(), ParameterTypes,
                                     /*isVarArg*/ false);
-  auto Func = Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName,
-                               Builder.GetInsertBlock()->getModule());
+  auto Func =
+      Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName, M);
 
   // Save insert point.
-  auto OldInsertPoint = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  // If there's a DISubprogram associated with current function, then
+  // generate one for the outlined function.
+  if (Function *ParentFunc = BB->getParent()) {
+    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
+      DICompileUnit *CU = SP->getUnit();
+      DIBuilder DB(*M, true, CU);
+      DebugLoc DL = Builder.getCurrentDebugLocation();
+      if (DL) {
+        // TODO: We are using nullopt for arguments at the moment. This will
+        // need to be updated when debug data is being generated for variables.
+        DISubroutineType *Ty =
+            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
+                                          DISubprogram::SPFlagOptimized |
+                                          DISubprogram::SPFlagLocalToUnit;
+
+        DISubprogram *OutlinedSP = DB.createFunction(
+            CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty,
+            DL.getLine(), DINode::DIFlags::FlagArtificial, SPFlags);
+
+        // Attach subprogram to the function.
+        Func->setSubprogram(OutlinedSP);
+        // Update the CurrentDebugLocation in the builder so that right scope
+        // is used for things inside outlined function.
+        Builder.SetCurrentDebugLocation(
+            DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
+                            OutlinedSP, DL.getInlinedAt()));
+      }
+    }
+  }
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -6687,9 +6730,6 @@ static Function *createOutlinedFunction(
   // Replace all of our deferred Input values, currently just Globals.
   for (auto Deferred : DeferredReplacement)
     ReplaceValue(std::get<0>(Deferred), std::get<1>(Deferred), Func);
-
-  // Restore insert point.
-  Builder.restoreIP(OldInsertPoint);
 
   return Func;
 }
@@ -7896,6 +7936,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     llvm_unreachable("Unsupported atomic update operation");
   }
   llvm_unreachable("Unsupported atomic update operation");

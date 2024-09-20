@@ -999,4 +999,119 @@ declare <4 x ptr> @f4()
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorPointerCount, 1);
   EnableDetailedFunctionProperties.setValue(false);
 }
+
+TEST_F(FunctionPropertiesAnalysisTest, ReAddEdges) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C, R"IR(
+define hidden void @f1(ptr noundef %destatep, i32 noundef %offset, i8 noundef zeroext %byte1) {
+entry:
+  %cmp = icmp eq i8 %byte1, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  call fastcc void @f2(ptr noundef %destatep, i32 noundef 37, i32 noundef 600)
+  %and = and i32 %offset, 3
+  switch i32 %and, label %default.unreachable [
+    i32 0, label %sw.bb
+    i32 1, label %sw.bb1
+    i32 2, label %sw.bb1
+    i32 3, label %if.end
+  ]
+
+sw.bb:                                            ; preds = %if.then
+  call fastcc void @f2(ptr noundef %destatep, i32 noundef 57, i32 noundef 600)
+  br label %if.end
+
+sw.bb1:                                           ; preds = %if.then, %if.then
+  call fastcc void @f2(ptr noundef %destatep, i32 noundef 56, i32 noundef 600) #34
+  br label %if.end
+
+default.unreachable:                              ; preds = %if.then
+  unreachable
+
+if.else:                                          ; preds = %entry
+  call fastcc void @f2(ptr noundef %destatep, i32 noundef 56, i32 noundef 600)
+  br label %if.end
+
+if.end:                                           ; preds = %sw.bb, %sw.bb1, %if.then, %if.else
+  ret void
+}
+
+define internal fastcc void @f2(ptr nocapture noundef %destatep, i32 noundef %r_enc, i32 noundef %whack) {
+entry:
+  %enc_prob = getelementptr inbounds nuw i8, ptr %destatep, i32 512
+  %arrayidx = getelementptr inbounds [67 x i32], ptr %enc_prob, i32 0, i32 %r_enc
+  %0 = load i32, ptr %arrayidx, align 4
+  %sub = sub nsw i32 %0, %whack
+  store i32 %sub, ptr %arrayidx, align 4
+  ret void
+}
+  )IR");
+  auto *F1 = M->getFunction("f1");
+  auto *F2 = M->getFunction("f2");
+  auto *CB = [&]() -> CallBase * {
+    for (auto &BB : *F1)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I);
+            CB && CB->getCalledFunction() && CB->getCalledFunction() == F2)
+          return CB;
+    return nullptr;
+  }();
+  ASSERT_NE(CB, nullptr);
+  auto FPI = buildFPI(*F1);
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  EXPECT_TRUE(FPU.finishAndTest(FAM));
+}
+
+TEST_F(FunctionPropertiesAnalysisTest, InvokeLandingCanStillBeReached) {
+  LLVMContext C;
+  // %lpad is reachable from a block not involved in the inlining decision. We
+  // make sure that's not the entry - otherwise the DT will be recomputed from
+  // scratch. The idea here is that the edge known to the inliner to potentially
+  // disappear - %lpad->%ehcleanup -should survive because it is still reachable
+  // from %middle.
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define i64 @f1(i32 noundef %value) {
+entry:
+  br label %middle
+middle:
+  %c = icmp eq i32 %value, 0
+  br i1 %c, label %invoke, label %lpad
+invoke:
+  invoke fastcc void @f2() to label %cont unwind label %lpad
+cont:
+  br label %exit
+lpad:
+  %lp = landingpad i32 cleanup
+  br label %ehcleanup
+ehcleanup:
+  resume i32 0
+exit:
+  ret i64 1
+}
+define void @f2() {
+  ret void
+}
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  auto FPI = buildFPI(*F1);
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  EXPECT_TRUE(FPU.finishAndTest(FAM));
+}
 } // end anonymous namespace

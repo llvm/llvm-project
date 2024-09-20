@@ -280,8 +280,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
 
-  bool isRegOrImmWithIntT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  template <bool IsFake16> bool isRegOrImmWithIntT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrImmWithInt32InputMods() const {
@@ -290,6 +291,11 @@ public:
 
   bool isRegOrInlineImmWithInt16InputMods() const {
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::i16);
+  }
+
+  template <bool IsFake16> bool isRegOrInlineImmWithIntT16InputMods() const {
+    return isRegOrInline(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
   bool isRegOrInlineImmWithInt32InputMods() const {
@@ -304,8 +310,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
   }
 
-  bool isRegOrImmWithFPT16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  template <bool IsFake16> bool isRegOrImmWithFPT16InputMods() const {
+    return isRegOrImmWithInputMods(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrImmWithFP32InputMods() const {
@@ -354,6 +361,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
+  template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
@@ -515,7 +523,7 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
-  bool isVCSrcTB16() const {
+  bool isVCSrcT_b16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
   }
 
@@ -545,7 +553,11 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::bf16);
   }
 
-  bool isVCSrcTF16() const {
+  bool isVCSrcT_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcT_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
@@ -583,7 +595,7 @@ public:
 
   bool isVSrc_b64() const { return isVCSrcF64() || isLiteralImm(MVT::i64); }
 
-  bool isVSrcT_b16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
+  bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcT_b16_Lo128() const {
     return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
@@ -617,7 +629,7 @@ public:
 
   bool isVSrcT_bf16() const { return isVCSrcTBF16() || isLiteralImm(MVT::bf16); }
 
-  bool isVSrcT_f16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
+  bool isVSrcT_f16() const { return isVCSrcT_f16() || isLiteralImm(MVT::f16); }
 
   bool isVSrcT_bf16_Lo128() const {
     return isVCSrcTBF16_Lo128() || isLiteralImm(MVT::bf16);
@@ -1244,7 +1256,7 @@ class KernelScopeInfo {
   }
 
   void usesAgprAt(int i) {
-    // Instruction will error in AMDGPUAsmParser::MatchAndEmitInstruction
+    // Instruction will error in AMDGPUAsmParser::matchAndEmitInstruction
     if (!hasMAIInsts(*MSTI))
       return;
 
@@ -1585,7 +1597,7 @@ public:
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -1593,7 +1605,7 @@ public:
   ParseStatus parseOperand(OperandVector &Operands, StringRef Mnemonic,
                            OperandMode Mode = OperandMode_Default);
   StringRef parseMnemonicSuffix(StringRef Name);
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   //bool ProcessInstruction(MCInst &Inst);
 
@@ -2162,9 +2174,15 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
-template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+template <bool IsFake16>
+bool AMDGPUOperand::isT16_Lo128VRegWithInputMods() const {
   return isRegClass(IsFake16 ? AMDGPU::VGPR_32_Lo128RegClassID
                              : AMDGPU::VGPR_16_Lo128RegClassID);
+}
+
+template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(IsFake16 ? AMDGPU::VGPR_32RegClassID
+                             : AMDGPU::VGPR_16RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -2376,7 +2394,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
+    Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
     setImmKindLiteral();
     return;
 
@@ -2403,7 +2421,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     if (isSafeTruncation(Val, 16) &&
         AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
+      Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
       setImmKindConst();
       return;
     }
@@ -3815,7 +3833,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
     const MCOperand &Opr = Inst.getOperand(OperandIdx);
     return (Opr.isReg() && !isSGPR(mc2PseudoReg(Opr.getReg()), TRI))
                ? Opr.getReg()
-               : MCRegister::NoRegister;
+               : MCRegister();
   };
 
   // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
@@ -4753,7 +4771,7 @@ static int IsAGPROperand(const MCInst &Inst, uint16_t NameIdx,
   if (!Op.isReg())
     return -1;
 
-  unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   return AGPR32.contains(Reg) ? 1 : 0;
@@ -5270,7 +5288,7 @@ static bool isInvalidVOPDY(const OperandVector &Operands,
   return false;
 }
 
-bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
                                               uint64_t &ErrorInfo,
@@ -6375,9 +6393,9 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  const FeatureBitset &Features,
                                  unsigned VariantID);
 
-bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
-                                       StringRef Name,
-                                       SMLoc NameLoc, OperandVector &Operands) {
+bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
+                                       StringRef Name, SMLoc NameLoc,
+                                       OperandVector &Operands) {
   // Add the instruction mnemonic
   Name = parseMnemonicSuffix(Name);
 

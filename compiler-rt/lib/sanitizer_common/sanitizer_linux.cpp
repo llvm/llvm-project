@@ -2018,6 +2018,18 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
     return Unknown;
   return esr & ESR_ELx_WNR ? Write : Read;
 #  elif defined(__loongarch__)
+  // In the musl environment, the Linux kernel uapi sigcontext.h is not
+  // included in signal.h. To avoid missing the SC_ADDRERR_{RD,WR} macros,
+  // copy them here. The LoongArch Linux kernel uapi is already stable,
+  // so there's no need to worry about the value changing.
+#    ifndef SC_ADDRERR_RD
+  // Address error was due to memory load
+#      define SC_ADDRERR_RD (1 << 30)
+#    endif
+#    ifndef SC_ADDRERR_WR
+  // Address error was due to memory store
+#      define SC_ADDRERR_WR (1 << 31)
+#    endif
   u32 flags = ucontext->uc_mcontext.__flags;
   if (flags & SC_ADDRERR_RD)
     return SignalContext::Read;
@@ -2312,11 +2324,11 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#  if SANITIZER_LINUX && SANITIZER_GLIBC && \
+#  if ((SANITIZER_LINUX && SANITIZER_GLIBC) || SANITIZER_NETBSD) && \
       (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
-#    if defined(__arm__)
+#    if defined(__arm__) && !SANITIZER_NETBSD
 #      ifdef MAKE_CASE
 #        undef MAKE_CASE
 #      endif
@@ -2345,10 +2357,15 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
     case REG_R15:
       return ctx->uc_mcontext.arm_pc;
 #    elif defined(__aarch64__)
+#      if SANITIZER_LINUX
     case 0 ... 30:
       return ctx->uc_mcontext.regs[RegNum];
     case 31:
       return ctx->uc_mcontext.sp;
+#      elif SANITIZER_NETBSD
+    case 0 ... 31:
+      return ctx->uc_mcontext.__gregs[RegNum];
+#      endif
 #    endif
     default:
       return 0;
@@ -2456,7 +2473,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_R14);
   DumpSingleReg(ucontext, REG_R15);
   Printf("\n");
-#    elif defined(__aarch64__) && !SANITIZER_NETBSD
+#    elif defined(__aarch64__)
   Report("Register values:\n");
   for (int i = 0; i <= 31; ++i) {
     DumpSingleReg(ucontext, i);
@@ -2655,9 +2672,7 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
-void InitializePlatformEarly() {
-  // Do nothing.
-}
+void InitializePlatformEarly() { InitTlsSize(); }
 
 void CheckASLR() {
 #  if SANITIZER_NETBSD

@@ -212,3 +212,106 @@ define void @both_var_idx(ptr %p, i64 %i, i64 %j) {
 
   ret void
 }
+
+; CHECK-LABEL: add_no_nuw
+; CHECK: MayAlias: i8* %gep, i8* %p
+define i8 @add_no_nuw(ptr %p, i64 %n) {
+  store i8 3, ptr %p
+
+  %add = add i64 %n, 1
+  %gep = getelementptr nuw i8, ptr %p, i64 %add
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: add_nuw
+; CHECK: NoAlias: i8* %gep, i8* %p
+define i8 @add_nuw(ptr %p, i64 %n) {
+  store i8 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %gep = getelementptr nuw i8, ptr %p, i64 %add
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: add_no_nuw
+; CHECK: MayAlias: i8* %gep, i16* %p
+define i8 @add_no_nuw_scale(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add i64 %n, 1
+  %gep = getelementptr nuw i16, ptr %p, i64 %add
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: add_nuw
+; CHECK: NoAlias: i8* %gep, i16* %p
+define i8 @add_nuw_scale(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %gep = getelementptr nuw i16, ptr %p, i64 %add
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: sub_nuw
+; CHECK: MayAlias: i8* %gep, i8* %p
+define i8 @sub_nuw(ptr %p, i64 %n) {
+  store i8 3, ptr %p
+
+  %add = sub nuw i64 %n, 1
+  %gep = getelementptr nuw i8, ptr %p, i64 %add
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: mul_no_nuw
+; CHECK: MayAlias: i8* %gep, i16* %p
+define i8 @mul_no_nuw(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %mul = mul i64 %add, 2
+  %gep = getelementptr nuw i8, ptr %p, i64 %mul
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: mul_nuw
+; CHECK: NoAlias: i8* %gep, i16* %p
+define i8 @mul_nuw(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %mul = mul nuw i64 %add, 2
+  %gep = getelementptr nuw i8, ptr %p, i64 %mul
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: shl_no_nuw
+; CHECK: MayAlias: i8* %gep, i16* %p
+define i8 @shl_no_nuw(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %shl = shl i64 %add, 1
+  %gep = getelementptr nuw i8, ptr %p, i64 %shl
+  %val = load i8, ptr %gep
+  ret i8 %val
+}
+
+; CHECK-LABEL: shl_nuw
+; CHECK: NoAlias: i8* %gep, i16* %p
+define i8 @shl_nuw(ptr %p, i64 %n) {
+  store i16 3, ptr %p
+
+  %add = add nuw i64 %n, 1
+  %shl = shl nuw i64 %add, 1
+  %gep = getelementptr nuw i8, ptr %p, i64 %shl
+  %val = load i8, ptr %gep
+  ret i8 %val
+}

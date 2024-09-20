@@ -157,7 +157,7 @@ public:
   /// So that the stream could keep at least tell() + ExtraSize bytes
   /// without re-allocations. reserveExtraSpace() does not change
   /// the size/data of the stream.
-  virtual void reserveExtraSpace(uint64_t ExtraSize) {}
+  virtual void reserveExtraSpace(uint64_t ExtraSize) { (void)ExtraSize; }
 
   /// Set the stream to be buffered, with an automatically determined buffer
   /// size.
@@ -768,6 +768,25 @@ public:
   }
   ~buffer_unique_ostream() override { *OS << str(); }
 };
+
+// Helper struct to add indentation to raw_ostream. Instead of
+// OS.indent(6) << "more stuff";
+// you can use
+// OS << indent(6) << "more stuff";
+// which has better ergonomics (and clang-formats better as well).
+struct indent {
+  unsigned NumSpaces;
+
+  explicit indent(unsigned NumSpaces) : NumSpaces(NumSpaces) {}
+  void operator+=(unsigned N) { NumSpaces += N; }
+  void operator-=(unsigned N) { NumSpaces -= N; }
+  indent operator+(unsigned N) const { return indent(NumSpaces + N); }
+  indent operator-(unsigned N) const { return indent(NumSpaces - N); }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const indent &Indent) {
+  return OS.indent(Indent.NumSpaces);
+}
 
 class Error;
 

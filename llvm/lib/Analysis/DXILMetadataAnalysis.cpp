@@ -8,11 +8,14 @@
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
@@ -33,15 +36,54 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
   }
+
+  // For all HLSL Shader functions
+  for (auto &F : M.functions()) {
+    if (!F.hasFnAttribute("hlsl.shader"))
+      continue;
+
+    EntryProperties EFP(F);
+    // Get "hlsl.shader" attribute
+    Attribute EntryAttr = F.getFnAttribute("hlsl.shader");
+    assert(EntryAttr.isValid() &&
+           "Invalid value specified for HLSL function attribute hlsl.shader");
+    StringRef EntryProfile = EntryAttr.getValueAsString();
+    Triple T("", "", "", EntryProfile);
+    EFP.ShaderStage = T.getEnvironment();
+    // Get numthreads attribute value, if one exists
+    StringRef NumThreadsStr =
+        F.getFnAttribute("hlsl.numthreads").getValueAsString();
+    if (!NumThreadsStr.empty()) {
+      SmallVector<StringRef> NumThreadsVec;
+      NumThreadsStr.split(NumThreadsVec, ',');
+      assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
+      // Read in the three component values of numthreads
+      [[maybe_unused]] bool Success =
+          llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
+      assert(Success && "Failed to parse X component of numthreads");
+      Success = llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10);
+      assert(Success && "Failed to parse Y component of numthreads");
+      Success = llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10);
+      assert(Success && "Failed to parse Z component of numthreads");
+    }
+    MMDAI.EntryPropertyVec.push_back(EFP);
+  }
   return MMDAI;
 }
 
 void ModuleMetadataInfo::print(raw_ostream &OS) const {
   OS << "Shader Model Version : " << ShaderModelVersion.getAsString() << "\n";
   OS << "DXIL Version : " << DXILVersion.getAsString() << "\n";
-  OS << "Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
+  OS << "Target Shader Stage : " << Triple::getEnvironmentTypeName(ShaderStage)
      << "\n";
   OS << "Validator Version : " << ValidatorVersion.getAsString() << "\n";
+  for (const auto &EP : EntryPropertyVec) {
+    OS << " " << EP.Entry->getName() << "\n";
+    OS << "  Function Shader Stage : "
+       << Triple::getEnvironmentTypeName(EP.ShaderStage) << "\n";
+    OS << "  NumThreads: " << EP.NumThreadsX << "," << EP.NumThreadsY << ","
+       << EP.NumThreadsZ << "\n";
+  }
 }
 
 //===----------------------------------------------------------------------===//

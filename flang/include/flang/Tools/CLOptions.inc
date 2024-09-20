@@ -370,7 +370,7 @@ inline void createOpenMPFIRPassPipeline(
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   if (isTargetDevice)
-    pm.addPass(flangomp::createFunctionFiltering());
+    pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)

@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck -check-prefix=CHECKIF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=ilp32 | FileCheck -check-prefixes=CHECKIZFINX,RV32IZFINX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=CHECKIZFINX,RV64IZFINX %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
@@ -706,12 +706,18 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fneg.s fa0, fa5
 ; CHECKIF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: fnmadd_s_3:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
-; CHECKIZFINX-NEXT:    ret
+; RV32IZFINX-LABEL: fnmadd_s_3:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV32IZFINX-NEXT:    fneg.s a0, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fnmadd_s_3:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV64IZFINX-NEXT:    lui a1, 524288
+; RV64IZFINX-NEXT:    xor a0, a0, a1
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_3:
 ; RV32I:       # %bb.0:
@@ -755,12 +761,17 @@ define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
 ; CHECKIF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: fnmadd_nsz:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
-; CHECKIZFINX-NEXT:    ret
+; RV32IZFINX-LABEL: fnmadd_nsz:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fnmadd.s a0, a0, a1, a2
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fnmadd_nsz:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV64IZFINX-NEXT:    lui a1, 524288
+; RV64IZFINX-NEXT:    xor a0, a0, a1
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
 ; RV32I:       # %bb.0:

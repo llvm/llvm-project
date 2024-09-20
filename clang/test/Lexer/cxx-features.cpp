@@ -325,7 +325,7 @@
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 202306)
+#if check(static_assert, 0, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_static_assert"
 #endif
 

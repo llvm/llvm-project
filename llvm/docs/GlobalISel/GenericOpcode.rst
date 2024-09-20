@@ -504,6 +504,11 @@ G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 
 Convert between integer and floating point.
 
+G_FPTOSI_SAT, G_FPTOUI_SAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Saturating convert between integer and floating point.
+
 G_FABS
 ^^^^^^
 
@@ -701,6 +706,8 @@ vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
+Mixing scalable vectors and fixed vectors are not allowed.
+
 .. code-block:: none
 
   %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
@@ -863,7 +870,9 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
+			       G_ATOMICRMW_USUB_SAT
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.

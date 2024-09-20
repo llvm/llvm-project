@@ -217,12 +217,15 @@ private:
   void createExportTable();
   void mergeSections();
   void sortECChunks();
+  void appendECImportTables();
   void removeUnusedSections();
   void assignAddresses();
-  bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin);
+  bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
+                 MachineTypes machine);
   std::pair<Defined *, bool> getThunk(DenseMap<uint64_t, Defined *> &lastThunks,
                                       Defined *target, uint64_t p,
-                                      uint16_t type, int margin);
+                                      uint16_t type, int margin,
+                                      MachineTypes machine);
   bool createThunks(OutputSection *os, int margin);
   bool verifyRanges(const std::vector<Chunk *> chunks);
   void createECCodeMap();
@@ -396,8 +399,9 @@ void OutputSection::addContributingPartialSection(PartialSection *sec) {
 
 // Check whether the target address S is in range from a relocation
 // of type relType at address P.
-bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
-  if (ctx.config.machine == ARMNT) {
+bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
+                       MachineTypes machine) {
+  if (machine == ARMNT) {
     int64_t diff = AbsoluteDifference(s, p + 4) + margin;
     switch (relType) {
     case IMAGE_REL_ARM_BRANCH20T:
@@ -408,7 +412,7 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
     default:
       return true;
     }
-  } else if (ctx.config.machine == ARM64) {
+  } else if (isAnyArm64(machine)) {
     int64_t diff = AbsoluteDifference(s, p) + margin;
     switch (relType) {
     case IMAGE_REL_ARM64_BRANCH26:
@@ -421,7 +425,7 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
       return true;
     }
   } else {
-    llvm_unreachable("Unexpected architecture");
+    return true;
   }
 }
 
@@ -429,17 +433,17 @@ bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
 // or create a new one.
 std::pair<Defined *, bool>
 Writer::getThunk(DenseMap<uint64_t, Defined *> &lastThunks, Defined *target,
-                 uint64_t p, uint16_t type, int margin) {
+                 uint64_t p, uint16_t type, int margin, MachineTypes machine) {
   Defined *&lastThunk = lastThunks[target->getRVA()];
-  if (lastThunk && isInRange(type, lastThunk->getRVA(), p, margin))
+  if (lastThunk && isInRange(type, lastThunk->getRVA(), p, margin, machine))
     return {lastThunk, false};
   Chunk *c;
-  switch (ctx.config.machine) {
-  case ARMNT:
+  switch (getMachineArchType(machine)) {
+  case Triple::thumb:
     c = make<RangeExtensionThunkARM>(ctx, target);
     break;
-  case ARM64:
-    c = make<RangeExtensionThunkARM64>(ctx, target);
+  case Triple::aarch64:
+    c = make<RangeExtensionThunkARM64>(machine, target);
     break;
   default:
     llvm_unreachable("Unexpected architecture");
@@ -471,6 +475,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     SectionChunk *sc = dyn_cast_or_null<SectionChunk>(os->chunks[i]);
     if (!sc)
       continue;
+    MachineTypes machine = sc->getMachine();
     size_t thunkInsertionSpot = i + 1;
 
     // Try to get a good enough estimate of where new thunks will be placed.
@@ -497,11 +502,12 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
       uint64_t s = sym->getRVA();
 
-      if (isInRange(rel.Type, s, p, margin))
+      if (isInRange(rel.Type, s, p, margin, machine))
         continue;
 
       // If the target isn't in range, hook it up to an existing or new thunk.
-      auto [thunk, wasNew] = getThunk(lastThunks, sym, p, rel.Type, margin);
+      auto [thunk, wasNew] =
+          getThunk(lastThunks, sym, p, rel.Type, margin, machine);
       if (wasNew) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
@@ -603,6 +609,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
     SectionChunk *sc = dyn_cast_or_null<SectionChunk>(c);
     if (!sc)
       continue;
+    MachineTypes machine = sc->getMachine();
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();
     for (const coff_relocation &rel : relocs) {
@@ -615,7 +622,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
       uint64_t p = sc->getRVA() + rel.VirtualAddress;
       uint64_t s = sym->getRVA();
 
-      if (!isInRange(rel.Type, s, p, 0))
+      if (!isInRange(rel.Type, s, p, 0, machine))
         return false;
     }
   }
@@ -625,7 +632,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
 // Assign addresses and add thunks if necessary.
 void Writer::finalizeAddresses() {
   assignAddresses();
-  if (ctx.config.machine != ARMNT && ctx.config.machine != ARM64)
+  if (ctx.config.machine != ARMNT && !isAnyArm64(ctx.config.machine))
     return;
 
   size_t origNumChunks = 0;
@@ -747,6 +754,7 @@ void Writer::run() {
     createExportTable();
     mergeSections();
     sortECChunks();
+    appendECImportTables();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -906,6 +914,41 @@ void Writer::addSyntheticIdata() {
   if (!idata.hints.empty())
     add(".idata$6", idata.hints);
   add(".idata$7", idata.dllNames);
+  if (!idata.auxIat.empty())
+    add(".idata$9", idata.auxIat);
+  if (!idata.auxIatCopy.empty())
+    add(".idata$a", idata.auxIatCopy);
+}
+
+void Writer::appendECImportTables() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  const uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+
+  // IAT is always placed at the begining of .rdata section and its size
+  // is aligned to 4KB. Insert it here, after all merges all done.
+  if (PartialSection *importAddresses = findPartialSection(".idata$5", rdata)) {
+    if (!rdataSec->chunks.empty())
+      rdataSec->chunks.front()->setAlignment(
+          std::max(0x1000u, rdataSec->chunks.front()->getAlignment()));
+    iatSize = alignTo(iatSize, 0x1000);
+
+    rdataSec->chunks.insert(rdataSec->chunks.begin(),
+                            importAddresses->chunks.begin(),
+                            importAddresses->chunks.end());
+    rdataSec->contribSections.insert(rdataSec->contribSections.begin(),
+                                     importAddresses);
+  }
+
+  // The auxiliary IAT is always placed at the end of the .rdata section
+  // and is aligned to 4KB.
+  if (PartialSection *auxIat = findPartialSection(".idata$9", rdata)) {
+    auxIat->chunks.front()->setAlignment(0x1000);
+    rdataSec->chunks.insert(rdataSec->chunks.end(), auxIat->chunks.begin(),
+                            auxIat->chunks.end());
+    rdataSec->addContributingPartialSection(auxIat);
+  }
 }
 
 // Locate the first Chunk and size of the import directory list and the
@@ -1063,6 +1106,12 @@ void Writer::createSections() {
       sortCRTSectionChunks(pSec->chunks);
     }
 
+    // ARM64EC has specific placement and alignment requirements for the IAT.
+    // Delay adding its chunks until appendECImportTables.
+    if (isArm64EC(ctx.config.machine) &&
+        (pSec->name == ".idata$5" || pSec->name == ".idata$9"))
+      continue;
+
     OutputSection *sec = createSection(name, outChars);
     for (Chunk *c : pSec->chunks)
       sec->addChunk(c);
@@ -1205,14 +1254,24 @@ void Writer::appendImportThunks() {
     if (!file->live)
       continue;
 
-    if (!file->thunkSym)
-      continue;
+    if (file->thunkSym) {
+      if (!isa<DefinedImportThunk>(file->thunkSym))
+        fatal(toString(ctx, *file->thunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
 
-    if (!isa<DefinedImportThunk>(file->thunkSym))
-      fatal(toString(ctx, *file->thunkSym) + " was replaced");
-    DefinedImportThunk *thunk = cast<DefinedImportThunk>(file->thunkSym);
-    if (file->thunkLive)
-      textSec->addChunk(thunk->getChunk());
+    if (file->auxThunkSym) {
+      if (!isa<DefinedImportThunk>(file->auxThunkSym))
+        fatal(toString(ctx, *file->auxThunkSym) + " was replaced");
+      auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
+      if (chunk->live)
+        textSec->addChunk(chunk);
+    }
+
+    if (file->impchkThunk)
+      textSec->addChunk(file->impchkThunk);
   }
 
   if (!delayIdata.empty()) {
@@ -2062,6 +2121,24 @@ void Writer::createECChunks() {
     if (auto thunk = dyn_cast<ECExportThunkChunk>(sym->getChunk())) {
       hexpthkSec->addChunk(thunk);
       exportThunks.push_back({thunk, thunk->target});
+    } else if (auto def = dyn_cast<DefinedRegular>(sym)) {
+      // Allow section chunk to be treated as an export thunk if it looks like
+      // one.
+      SectionChunk *chunk = def->getChunk();
+      if (!chunk->live || chunk->getMachine() != AMD64)
+        continue;
+      assert(sym->getName().starts_with("EXP+"));
+      StringRef targetName = sym->getName().substr(strlen("EXP+"));
+      // If EXP+#foo is an export thunk of a hybrid patchable function,
+      // we should use the #foo$hp_target symbol as the redirection target.
+      // First, try to look up the $hp_target symbol. If it can't be found,
+      // assume it's a regular function and look for #foo instead.
+      Symbol *targetSym = ctx.symtab.find((targetName + "$hp_target").str());
+      if (!targetSym)
+        targetSym = ctx.symtab.find(targetName);
+      Defined *t = dyn_cast_or_null<Defined>(targetSym);
+      if (t && isArm64EC(t->getChunk()->getMachine()))
+        exportThunks.push_back({chunk, t});
     }
   }
 
@@ -2199,6 +2276,16 @@ void Writer::setECSymbols() {
   Symbol *entryPointCountSym =
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
   cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
+
+  Symbol *iatSym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat");
+  replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
+                                  idata.auxIat.empty() ? nullptr
+                                                       : idata.auxIat.front());
+
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
+  replaceSymbol<DefinedSynthetic>(
+      iatCopySym, "__hybrid_auxiliary_iat_copy",
+      idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 }
 
 // Write section contents to a mmap'ed file.

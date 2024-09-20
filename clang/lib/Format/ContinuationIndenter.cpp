@@ -809,13 +809,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Tok.Previous->isIf())
       return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                  tok::kw_switch);
+                                  tok::kw_switch) &&
+           !(Style.isJavaScript() && Tok.Previous->is(Keywords.kw_await));
   };
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  const auto IsInTemplateString = [this](const FormatToken &Tok) {
+  auto IsInTemplateString = [this](const FormatToken &Tok) {
     if (!Style.isJavaScript())
       return false;
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
@@ -827,7 +828,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return false;
   };
   // Identifies simple (no expression) one-argument function calls.
-  const auto IsSimpleFunction = [&](const FormatToken &Tok) {
+  auto StartsSimpleOneArgList = [&](const FormatToken &TokAfterLParen) {
+    assert(TokAfterLParen.isNot(tok::comment) || TokAfterLParen.Next);
+    const auto &Tok =
+        TokAfterLParen.is(tok::comment) ? *TokAfterLParen.Next : TokAfterLParen;
     if (!Tok.FakeLParens.empty() && Tok.FakeLParens.back() > prec::Unknown)
       return false;
     // Nested calls that involve `new` expressions also look like simple
@@ -836,6 +840,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // - foo(::new Bar())
     if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
       return true;
+    if (Tok.is(TT_UnaryOperator) ||
+        (Style.isJavaScript() &&
+         Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
+      return true;
+    }
     const auto *Previous = Tok.Previous;
     if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
                                          TT_LambdaDefinitionLParen) &&
@@ -861,7 +870,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       //  or
       //  caaaaaaaaaaaaaaaaaaaaal(
       //       new SomethingElseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee());
-      !IsSimpleFunction(Current)) {
+      !StartsSimpleOneArgList(Current)) {
     CurrentState.NoLineBreak = true;
   }
 
@@ -894,10 +903,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.ContainsUnwrappedBuilder = true;
   }
 
-  if (Current.is(TT_TrailingReturnArrow) &&
-      Style.Language == FormatStyle::LK_Java) {
+  if (Current.is(TT_LambdaArrow) && Style.Language == FormatStyle::LK_Java)
     CurrentState.NoLineBreak = true;
-  }
   if (Current.isMemberAccess() && Previous.is(tok::r_paren) &&
       (Previous.MatchingParen &&
        (Previous.TotalLength - Previous.MatchingParen->TotalLength > 10))) {
@@ -1052,7 +1059,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   //
   // is common and should be formatted like a free-standing function. The same
   // goes for wrapping before the lambda return type arrow.
-  if (Current.isNot(TT_TrailingReturnArrow) &&
+  if (Current.isNot(TT_LambdaArrow) &&
       (!Style.isJavaScript() || Current.NestingLevel != 0 ||
        !PreviousNonComment || PreviousNonComment->isNot(tok::equal) ||
        !Current.isOneOf(Keywords.kw_async, Keywords.kw_function))) {
@@ -1312,7 +1319,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.Indent;
   }
-  if (Current.is(TT_TrailingReturnArrow) &&
+  if (Current.is(TT_LambdaArrow) &&
       Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
                        tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
     return ContinuationIndent;
@@ -1646,7 +1653,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
   if (Current.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) && Newline)
     CurrentState.NestedBlockIndent = State.Column + Current.ColumnWidth + 1;
-  if (Current.isOneOf(TT_LambdaLSquare, TT_TrailingReturnArrow))
+  if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
     CurrentState.LastSpace = State.Column;
   if (Current.is(TT_RequiresExpression) &&
       Style.RequiresExpressionIndentation == FormatStyle::REI_Keyword) {

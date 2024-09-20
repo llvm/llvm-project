@@ -313,7 +313,7 @@ public:
         // convolution operation.
         // TODO(suderman): See if this can be efficiently folded - check whether
         // the input is used anywhere else, if not fold the constant.
-        SmallVector<int64_t> weightPerm;
+        SmallVector<int32_t> weightPerm;
         for (int i = 1; i < resultTy.getRank(); i++)
           weightPerm.push_back(i);
         weightPerm.push_back(0);
@@ -321,7 +321,7 @@ public:
         SmallVector<int64_t> newWeightShape;
         for (auto dim : weightPerm)
           newWeightShape.push_back(weightShape[dim]);
-        auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
+        auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
         Value weightPermValue =
             rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
         Type newWeightTy =
@@ -337,7 +337,7 @@ public:
     if (5 == inputTy.getRank()) {
       // TODO(suderman): See if this can be efficiently folded - check whether
       // the input is used anywhere else, if not fold the constant.
-      SmallVector<int64_t> weightPerm;
+      SmallVector<int32_t> weightPerm;
       for (int i = 1; i < resultTy.getRank(); i++)
         weightPerm.push_back(i);
       weightPerm.push_back(0);
@@ -345,7 +345,7 @@ public:
       SmallVector<int64_t> newWeightShape;
       for (auto dim : weightPerm)
         newWeightShape.push_back(weightShape[dim]);
-      auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
+      auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
       Value weightPermValue =
           rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
       Type newWeightTy =
@@ -1040,22 +1040,25 @@ public:
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const final {
-    SmallVector<int64_t> constantPerms;
+    SmallVector<int32_t> constantPerms;
     if (failed(op.getConstantPerms(constantPerms)))
       return failure();
 
     Location loc = op.getLoc();
-    // The verifier should have made sure we have a valid permutation tensor.
-    assert(isPermutationVector(constantPerms) && "Expected valid permutation");
+    // The verifier should have made sure we have a valid TOSA permutation
+    // tensor. isPermutationVector doesn't actually check the TOSA perms we
+    // expect.
     SmallVector<OpFoldResult> inputSizes =
         tensor::getMixedSizes(rewriter, loc, op.getInput1());
     auto permutedSizes =
-        applyPermutation<OpFoldResult>(inputSizes, constantPerms);
+        applyTOSAPermutation<OpFoldResult>(inputSizes, constantPerms);
 
     auto permutedInit = rewriter.create<tensor::EmptyOp>(
         loc, permutedSizes, op.getInput1().getType().getElementType());
     rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
-        op, op.getInput1(), permutedInit, constantPerms);
+        op, op.getInput1(), permutedInit,
+        llvm::to_vector(llvm::map_range(
+            constantPerms, [](int32_t v) -> int64_t { return v; })));
     return success();
   }
 };

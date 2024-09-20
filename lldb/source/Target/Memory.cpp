@@ -164,7 +164,8 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
   // by an existing invalid range. It cannot check if the argument contains
   // invalid ranges and cannot check for overlaps.
   if (m_invalid_ranges.FindEntryThatContains(addr)) {
-    error.SetErrorStringWithFormat("memory read failed for 0x%" PRIx64, addr);
+    error = Status::FromErrorStringWithFormat(
+        "memory read failed for 0x%" PRIx64, addr);
     return 0;
   }
 
@@ -240,8 +241,8 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     // will have to check the second line to see if it is in an invalid range as
     // well. See the check near the beginning of the function for more details.
     if (m_invalid_ranges.FindEntryThatContains(cache_line_base_addr)) {
-      error.SetErrorStringWithFormat("memory read failed for 0x%" PRIx64,
-                                     cache_line_base_addr);
+      error = Status::FromErrorStringWithFormat(
+          "memory read failed for 0x%" PRIx64, cache_line_base_addr);
       return dst_len - bytes_left;
     }
 

@@ -1396,7 +1396,7 @@ void MicrosoftCXXNameMangler::mangleNestedName(GlobalDecl GD) {
           Stream << '_' << Discriminator;
         if (ParameterDiscriminator)
           Stream << '_' << ParameterDiscriminator;
-        return Stream.str();
+        return Buffer;
       };
 
       unsigned Discriminator = BD->getBlockManglingNumber();
@@ -2967,13 +2967,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       mangleType(ResultType, Range, QMM_Result);
     } else if (IsInLambda) {
       if (const auto *AT = ResultType->getContainedAutoType()) {
-        assert(AT->getKeyword() == AutoTypeKeyword::Auto &&
-               "should only need to mangle auto!");
-        (void)AT;
+        assert(AT->getKeyword() != AutoTypeKeyword::GNUAutoType &&
+               "shouldn't need to mangle __auto_type!");
         Out << '?';
         mangleQualifiers(ResultType.getLocalQualifiers(), /*IsMember=*/false);
         Out << '?';
-        mangleSourceName("<auto>");
+        mangleSourceName(AT->isDecltypeAuto() ? "<decltype-auto>" : "<auto>");
         Out << '@';
       } else {
         Out << '@';

@@ -25,7 +25,7 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
 ; CHECK-NEXT:    li a0, 55
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vloxseg2ei32.v v16, (a0), v8
+; CHECK-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
@@ -81,7 +81,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
 ; SUBREGLIVENESS-NEXT:    li a0, 55
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v16, (a0), v8
+; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v16, (a1), v8
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
@@ -123,8 +123,8 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    addi sp, sp, 32
 ; SUBREGLIVENESS-NEXT:    ret
 entry:
-  %i = call { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half> undef,  <vscale x 16 x half> undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55)
-  %i1 = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %i, 0
+  %i = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55, i64 4)
+  %i1 = tail call <vscale x 16 x half> @llvm.riscv.tuple.extract.v16f16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %i, i32 0)
   %i2 = call <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x half> poison, <vscale x 16 x half> poison, <vscale x 16 x i1> zeroinitializer, i64 7, i64 36, i64 0)
   call void @func()
   %i3 = call <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison, <vscale x 16 x i16> poison, <vscale x 16 x i1> poison, i64 32, i64 0)
@@ -136,7 +136,8 @@ entry:
 }
 
 declare void @func()
-declare { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half>, <vscale x 16 x half>, ptr nocapture, <vscale x 16 x i32>, i64)
+declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr nocapture, <vscale x 16 x i32>, i64, i64)
+declare <vscale x 16 x half> @llvm.riscv.tuple.extract.v16f16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32)
 declare <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x i1>, i64, i64, i64 immarg)
 declare <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
 declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x half>, i64, i64)

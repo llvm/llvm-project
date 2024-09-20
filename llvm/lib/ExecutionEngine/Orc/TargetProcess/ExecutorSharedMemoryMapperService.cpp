@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
-
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-
 #include <sstream>
 
 #if defined(LLVM_ON_UNIX)

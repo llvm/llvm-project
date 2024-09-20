@@ -253,8 +253,8 @@ public:
       return false;
 
     bool Removed = false;
-    for (MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+    for (MachineOperand &MO : MI.all_defs()) {
+      if (MO.getReg() == Reg) {
         MO.setIsDead(false);
         Removed = true;
         break;

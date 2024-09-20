@@ -998,7 +998,7 @@ def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
 /// Create a call to stepvector intrinsic.
 def LLVM_StepVectorOp
-    : LLVM_IntrOp<"experimental.stepvector", [0], [], [Pure], 1> {
+    : LLVM_IntrOp<"stepvector", [0], [], [Pure], 1> {
   let arguments = (ins);
   let results = (outs LLVM_VectorOf<AnySignlessInteger>:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -1156,6 +1156,10 @@ def LLVM_VPShlOp  : LLVM_VPBinaryI<"shl">;
 def LLVM_VPOrOp   : LLVM_VPBinaryI<"or">;
 def LLVM_VPAndOp  : LLVM_VPBinaryI<"and">;
 def LLVM_VPXorOp  : LLVM_VPBinaryI<"xor">;
+def LLVM_VPSMaxOp : LLVM_VPBinaryI<"smax">;
+def LLVM_VPSMinOp : LLVM_VPBinaryI<"smin">;
+def LLVM_VPUMaxOp : LLVM_VPBinaryI<"umax">;
+def LLVM_VPUMinOp : LLVM_VPBinaryI<"umin">;
 
 // Float Binary
 def LLVM_VPFAddOp : LLVM_VPBinaryF<"fadd">;
