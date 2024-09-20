@@ -18,7 +18,6 @@
 #include "flang/Common/OpenMP-features.h"
 #include "flang/Common/Version.h"
 #include "flang/Common/default-kinds.h"
-#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -374,13 +373,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
-  Fortran::frontend::TargetOptions targetOpts;
-  Fortran::frontend::CodeGenOptions cgOpts;
+  constexpr const char *tuneCPU = "";
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
+      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
