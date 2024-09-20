@@ -160,6 +160,9 @@ def NoCapture : EnumAttr<"nocapture", [ParamAttr]>;
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
 
+/// No extension needed before/after call (high bits are undefined).
+def NoExt : EnumAttr<"noext", [ParamAttr, RetAttr]>;
+
 /// Function does not deallocate memory.
 def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
 
@@ -303,6 +306,10 @@ def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAtt
 /// RealtimeSanitizer is on.
 def SanitizeRealtime : EnumAttr<"sanitize_realtime", [FnAttr]>;
 
+/// RealtimeSanitizer should error if a real-time unsafe function is invoked
+/// during a real-time sanitized function (see `sanitize_realtime`).
+def SanitizeRealtimeUnsafe : EnumAttr<"sanitize_realtime_unsafe", [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -396,6 +403,7 @@ def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
 def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
 def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeUnsafeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

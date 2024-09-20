@@ -5,7 +5,7 @@
 
 @g = global i8 0
 
-; CHECK: define internal void @foo.argelim(i8 signext %y) [[NUW:#[0-9]+]]
+; CHECK: define internal void @foo(i8 signext %y) [[NUW:#[0-9]+]]
 ;
 ; REMARK-LABEL: Function: foo
 ; REMARK:       Args:
@@ -21,7 +21,7 @@ define internal zeroext i8 @foo(ptr inreg %p, i8 signext %y, ... )  nounwind {
 }
 
 define i32 @bar() {
-; CHECK: call void @foo.argelim(i8 signext 1) [[NUW]]
+; CHECK: call void @foo(i8 signext 1) [[NUW]]
   %A = call zeroext i8(ptr, i8, ...) @foo(ptr inreg null, i8 signext 1, ptr byval(%struct) null ) nounwind
   ret i32 0
 }

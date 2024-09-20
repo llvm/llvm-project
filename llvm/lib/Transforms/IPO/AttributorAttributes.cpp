@@ -1101,7 +1101,6 @@ struct AAPointerInfoImpl
     return ChangeStatus::CHANGED;
   }
 
-
   bool forallInterferingAccesses(
       AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB)

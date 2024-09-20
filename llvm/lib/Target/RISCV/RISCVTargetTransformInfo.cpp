@@ -1051,13 +1051,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // vp load/store
   case Intrinsic::vp_load:
   case Intrinsic::vp_store: {
+    if (!ICA.getInst())
+      break;
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    auto *UI = dyn_cast<VPIntrinsic>(ICA.getInst());
-
-    if (!UI)
-      break;
     assert(FOp.has_value());
+    auto *UI = cast<VPIntrinsic>(ICA.getInst());
     if (ICA.getID() == Intrinsic::vp_load)
       return getMemoryOpCost(
           *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
@@ -1961,8 +1960,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
         continue;
       Cost += getArithmeticInstrCost(Instruction::Add, GEP->getType(), CostKind,
                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                     {TTI::OK_AnyValue, TTI::OP_None},
-                                     std::nullopt);
+                                     {TTI::OK_AnyValue, TTI::OP_None}, {});
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),

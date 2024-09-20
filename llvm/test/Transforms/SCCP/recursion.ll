@@ -4,8 +4,8 @@
 ; CHECK-NOT: %X
 
 define internal i32 @foo(i32 %X) {
-; CHECK-LABEL: @foo.argelim(
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @foo.argelim()
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @foo()
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[Y]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -16,7 +16,7 @@ define internal i32 @foo(i32 %X) {
 
 define void @bar() {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo.argelim()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo()
 ; CHECK-NEXT:    ret void
 ;
   call i32 @foo( i32 17 )         ; <i32>:1 [#uses=0]

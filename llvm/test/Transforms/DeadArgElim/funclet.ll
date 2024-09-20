@@ -22,7 +22,7 @@ bad1:                                             ; preds = %entry-block
 }
 ; CHECK-LABEL: define void @test1(
 ; CHECK:      %[[pad:.*]] = cleanuppad within none []
-; CHECK-NEXT: call void @callee.argelim() [ "funclet"(token %[[pad]]) ]
+; CHECK-NEXT: call void @callee() [ "funclet"(token %[[pad]]) ]
 
 declare void @thunk()
 

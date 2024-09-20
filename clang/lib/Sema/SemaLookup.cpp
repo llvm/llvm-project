@@ -4905,7 +4905,6 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
       SmallVector<const IdentifierInfo *, 4> NewNameSpecifierIdentifiers;
       getNestedNameSpecifierIdentifiers(NNS, NewNameSpecifierIdentifiers);
       NNS->print(SpecifierOStream, Context.getPrintingPolicy());
-      SpecifierOStream.flush();
       SameNameSpecifier = NewNameSpecifier == CurNameSpecifier;
     }
     if (SameNameSpecifier || llvm::is_contained(CurContextIdentifiers, Name)) {
