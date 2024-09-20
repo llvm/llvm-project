@@ -188,6 +188,9 @@ specific key/value pairs:
 |**commandEscapePrefix** | string | | The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`\``). If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.
 |**customFrameFormat** | string | | If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.
 |**customThreadFormat** | string | | Same as `customFrameFormat`, but for threads instead of stack frames.
+|**enableAutoVariableSummaries**|bool| | Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.
+|**enableDisplayExtendedBacktrace**|bool| | Enable language specific extended backtraces.
+|**enableSyntheticChildDebugging**|bool| | If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.
 |**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating the LLDB target.
 |**preRunCommands** |[string]| | LLDB commands executed just before launching/attaching, after the LLDB target has been created.
 |**stopCommands**   |[string]| | LLDB commands executed just after each stop.
