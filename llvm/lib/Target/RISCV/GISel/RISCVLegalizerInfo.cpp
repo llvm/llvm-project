@@ -1034,7 +1034,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
     assert(SubRegIdx != RISCV::NoSubRegister);
     InterLitTy = getLMUL1Ty(BigTy);
     // SDAG builds a TargetExtractSubreg. A Copy with SubReg specified on the
-    // source Register is the  equivalent.
+    // source Register is the equivalent.
     Vec = MIB.buildInstr(TargetOpcode::COPY, {InterLitTy}, {})
               .addReg(Vec, 0, SubRegIdx)
               .getReg(0);
