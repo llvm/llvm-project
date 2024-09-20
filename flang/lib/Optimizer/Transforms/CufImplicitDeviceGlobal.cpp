@@ -13,6 +13,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -23,23 +24,16 @@ namespace fir {
 
 namespace {
 
-static fir::GlobalOp getGlobalOpFromValue(mlir::Value v) {
-  if (auto addrOfOp{mlir::dyn_cast_or_null<fir::AddrOfOp>(v.getDefiningOp())}) {
-    auto sym{mlir::SymbolTable::lookupNearestSymbolFrom(
-        addrOfOp, addrOfOp.getSymbolAttr())};
-    return mlir::dyn_cast_or_null<fir::GlobalOp>(sym);
-  }
-  return nullptr;
-}
-
 static void prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
+                                         mlir::SymbolTable &symbolTable,
                                          bool onlyConstant = true) {
   auto cudaProcAttr{
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
   if (!cudaProcAttr || cudaProcAttr.getValue() == cuf::ProcAttribute::Host)
     return;
   for (auto addrOfOp : funcOp.getBody().getOps<fir::AddrOfOp>()) {
-    if (auto globalOp{getGlobalOpFromValue(addrOfOp.getResult())}) {
+    if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
+            addrOfOp.getSymbol().getRootReference().getValue())) {
       bool isCandidate{(onlyConstant ? globalOp.getConstant() : true) &&
                        !globalOp.getDataAttr()};
       if (isCandidate)
@@ -56,12 +50,13 @@ class CufImplicitDeviceGlobal
 public:
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
-    mlir::ModuleOp module = mlir::dyn_cast<mlir::ModuleOp>(op);
-    if (!module)
+    mlir::ModuleOp mod = mlir::dyn_cast<mlir::ModuleOp>(op);
+    if (!mod)
       return signalPassFailure();
 
-    module.walk([&](mlir::func::FuncOp funcOp) {
-      prepareImplicitDeviceGlobals(funcOp);
+    mlir::SymbolTable symTable(mod);
+    mod.walk([&](mlir::func::FuncOp funcOp) {
+      prepareImplicitDeviceGlobals(funcOp, symTable);
       return mlir::WalkResult::advance();
     });
   }
