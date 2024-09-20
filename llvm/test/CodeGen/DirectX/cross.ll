@@ -9,19 +9,19 @@ declare <3 x float> @llvm.dx.cross.v3f32(<3 x float>, <3 x float>)
 define noundef <3 x half> @test_cross_half3(<3 x half> noundef %p0, <3 x half> noundef %p1) {
 entry:
   ; CHECK: %x0 = extractelement <3 x half> %p0, i64 0
-  ; CHECK: %y0 = extractelement <3 x half> %p0, i64 1
-  ; CHECK: %z0 = extractelement <3 x half> %p0, i64 2
-  ; CHECK: %x1 = extractelement <3 x half> %p1, i64 0
+  ; CHECK: %x1 = extractelement <3 x half> %p0, i64 1
+  ; CHECK: %x2 = extractelement <3 x half> %p0, i64 2
+  ; CHECK: %y0 = extractelement <3 x half> %p1, i64 0
   ; CHECK: %y1 = extractelement <3 x half> %p1, i64 1
-  ; CHECK: %z1 = extractelement <3 x half> %p1, i64 2
-  ; CHECK: %0 = fmul half %y0, %z1
-  ; CHECK: %1 = fmul half %z0, %y1
+  ; CHECK: %y2 = extractelement <3 x half> %p1, i64 2
+  ; CHECK: %0 = fmul half %x1, %y2
+  ; CHECK: %1 = fmul half %x2, %y1
   ; CHECK: %2 = fsub half %0, %1
-  ; CHECK: %3 = fmul half %z0, %x1
-  ; CHECK: %4 = fmul half %x0, %z1
+  ; CHECK: %3 = fmul half %x2, %y0
+  ; CHECK: %4 = fmul half %x0, %y2
   ; CHECK: %5 = fsub half %3, %4
   ; CHECK: %6 = fmul half %x0, %y1
-  ; CHECK: %7 = fmul half %y0, %x1
+  ; CHECK: %7 = fmul half %x1, %y0
   ; CHECK: %8 = fsub half %6, %7
   ; CHECK: %9 = insertelement <3 x half> undef, half %2, i64 0
   ; CHECK: %10 = insertelement <3 x half> %9, half %5, i64 1
@@ -34,19 +34,19 @@ entry:
 define noundef <3 x float> @test_cross_float3(<3 x float> noundef %p0, <3 x float> noundef %p1) {
 entry:
   ; CHECK: %x0 = extractelement <3 x float> %p0, i64 0
-  ; CHECK: %y0 = extractelement <3 x float> %p0, i64 1
-  ; CHECK: %z0 = extractelement <3 x float> %p0, i64 2
-  ; CHECK: %x1 = extractelement <3 x float> %p1, i64 0
+  ; CHECK: %x1 = extractelement <3 x float> %p0, i64 1
+  ; CHECK: %x2 = extractelement <3 x float> %p0, i64 2
+  ; CHECK: %y0 = extractelement <3 x float> %p1, i64 0
   ; CHECK: %y1 = extractelement <3 x float> %p1, i64 1
-  ; CHECK: %z1 = extractelement <3 x float> %p1, i64 2
-  ; CHECK: %0 = fmul float %y0, %z1
-  ; CHECK: %1 = fmul float %z0, %y1
+  ; CHECK: %y2 = extractelement <3 x float> %p1, i64 2
+  ; CHECK: %0 = fmul float %x1, %y2
+  ; CHECK: %1 = fmul float %x2, %y1
   ; CHECK: %2 = fsub float %0, %1
-  ; CHECK: %3 = fmul float %z0, %x1
-  ; CHECK: %4 = fmul float %x0, %z1
+  ; CHECK: %3 = fmul float %x2, %y0
+  ; CHECK: %4 = fmul float %x0, %y2
   ; CHECK: %5 = fsub float %3, %4
   ; CHECK: %6 = fmul float %x0, %y1
-  ; CHECK: %7 = fmul float %y0, %x1
+  ; CHECK: %7 = fmul float %x1, %y0
   ; CHECK: %8 = fsub float %6, %7
   ; CHECK: %9 = insertelement <3 x float> undef, float %2, i64 0
   ; CHECK: %10 = insertelement <3 x float> %9, float %5, i64 1
