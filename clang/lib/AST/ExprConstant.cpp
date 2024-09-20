@@ -2225,10 +2225,10 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // The null terminator isn't included in the string data, so check for it
   // manually. If the longer string doesn't have a null terminator where the
   // shorter string ends, they aren't potentially overlapping.
-  for (int nullByte : llvm::seq(ShorterCharWidth)) {
-    if (Shorter.size() + nullByte >= Longer.size())
+  for (int NullByte : llvm::seq(ShorterCharWidth)) {
+    if (Shorter.size() + NullByte >= Longer.size())
       break;
-    if (Longer[Shorter.size() + nullByte])
+    if (Longer[Shorter.size() + NullByte])
       return false;
   }
 
