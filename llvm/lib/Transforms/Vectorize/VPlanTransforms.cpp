@@ -977,21 +977,22 @@ static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader =
       cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
 
-  // Return true if-and-only-if we know how to (mechanically) both hoist a given
-  // recipe out of a loop region.  Does not address legality concerns such as
-  // aliasing or speculation safety.
-  auto CanHoistRecipe = [](VPRecipeBase &R) {
+  // Return true if we do not know how to (mechanically) hoist a given recipe
+  // out of a loop region. Does not address legality concerns such as aliasing
+  // or speculation safety.
+  auto CannotHoistRecipe = [](VPRecipeBase &R) {
     // Allocas cannot be hoisted.
     auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-    return !RepR || RepR->getOpcode() != Instruction::Alloca;
+    return RepR && RepR->getOpcode() == Instruction::Alloca;
   };
 
   // Hoist any loop invariant recipes from the vector loop region to the
-  // preheader.
+  // preheader. Preform a shallow traversal of the vector loop region, to
+  // exclude recipes in replicate regions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!CanHoistRecipe(R))
+      if (CannotHoistRecipe(R))
         continue;
       // TODO: Relax checks in the future, e.g. we could also hoist reads, if
       // their memory location is not modified in the vector loop.
