@@ -1187,6 +1187,9 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
             InitEntity->getType()->isReferenceType())
           SemaRef.Diag(DiagLoc, diag::err_ret_local_temp_ref)
               << InitEntity->getType()->isReferenceType() << DiagRange;
+        else if (LK == LK_MustTail)
+          SemaRef.Diag(DiagLoc, diag::warn_musttail_local_temp_addr_ref)
+              << InitEntity->getType()->isReferenceType() << DiagRange;
         else
           SemaRef.Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
               << InitEntity->getType()->isReferenceType() << DiagRange;

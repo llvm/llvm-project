@@ -283,14 +283,18 @@ void PassValues(int a, int *b) {
   [[clang::musttail]] return TakesIntAndPtr(a, b);
 }
 
-void TakesIntAndRef(int, int &);
-void PassRefOfLocal(int a, int &b) {
+void TakesIntAndRef(int, const int &);
+void PassRefOfLocal(int a, const int &b) {
   int c;
   [[clang::musttail]] return TakesIntAndRef(0, c); // expected-warning {{address of stack memory associated with local variable 'c' passed to musttail function}}
 }
-void PassRefOfParam(int a, int &b) {
+void PassRefOfParam(int a, const int &b) {
   [[clang::musttail]] return TakesIntAndRef(0, a); // expected-warning {{address of stack memory associated with parameter 'a' passed to musttail function}}
 }
-void PassValuesRef(int a, int &b) {
+int ReturnInt();
+void PassRefOfTemporary(int a, const int &b) {
+  [[clang::musttail]] return TakesIntAndRef(0, ReturnInt()); // expected-warning {{passing address of local temporary object to musttail function}}
+}
+void PassValuesRef(int a, const int &b) {
   [[clang::musttail]] return TakesIntAndRef(a, b);
 }
