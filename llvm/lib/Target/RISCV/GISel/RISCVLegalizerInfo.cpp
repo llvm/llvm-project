@@ -953,13 +953,8 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   Register Src = ES.getSrcVec();
   uint64_t Idx = ES.getIndexImm();
 
-  // Only support vectors using custom legalization. We know the DstTy is a
-  // vector since we used that to decide whether to custom legalize or not.
-  LLT BigTy = MRI.getType(Src);
-  if (BigTy.isScalar())
-    return false;
-
   LLT LitTy = MRI.getType(Dst);
+  LLT BigTy = MRI.getType(Src);
   Register Vec = Src;
 
   // We don't have the ability to slide mask vectors down indexed by their i1
