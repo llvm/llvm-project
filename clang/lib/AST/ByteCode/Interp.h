@@ -241,11 +241,18 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 
+  // Can't be too many elements if the bitwidth of NumElements is lower than
+  // that of Descriptor::MaxArrayElemBytes.
+  if ((NumElements->bitWidth() - NumElements->isSigned()) <
+      (sizeof(Descriptor::MaxArrayElemBytes) * 8))
+    return true;
+
   // FIXME: GH63562
   // APValue stores array extents as unsigned,
   // so anything that is greater that unsigned would overflow when
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
+  assert(MaxElements.isPositive());
   if (NumElements->toAPSInt().getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
       *NumElements > MaxElements) {
