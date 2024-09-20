@@ -107,6 +107,7 @@
 
 */
 
+#include <__config>
 #include <__functional/operations.h>
 #include <__fwd/functional.h>
 #include <__type_traits/conditional.h>
@@ -128,7 +129,6 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cstddef>
-#include <experimental/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

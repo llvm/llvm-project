@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-avoid-c-arrays %t
+// RUN: %check_clang_tidy -std=c++17 %s modernize-avoid-c-arrays %t
 
 int a[] = {1, 2};
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead
@@ -91,4 +91,4 @@ const char name[] = "Some string";
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
 
 void takeCharArray(const char name[]);
-// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use std::array<> or std::vector<> instead [modernize-avoid-c-arrays]

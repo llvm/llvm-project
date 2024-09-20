@@ -983,14 +983,14 @@ private:
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
   unsigned Slot;
-  Record *NodeXForm;
+  const Record *NodeXForm;
 
 public:
-  EmitNodeXFormMatcher(unsigned slot, Record *nodeXForm)
+  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm)
       : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm) {}
 
   unsigned getSlot() const { return Slot; }
-  Record *getNodeXForm() const { return NodeXForm; }
+  const Record *getNodeXForm() const { return NodeXForm; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;

@@ -207,6 +207,7 @@ class StackFrameRecognizer;
 class StackFrameRecognizerManager;
 class StackID;
 class Status;
+class SaveCoreOptions;
 class StopInfo;
 class Stoppoint;
 class StoppointCallbackContext;

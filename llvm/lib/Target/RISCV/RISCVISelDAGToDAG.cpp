@@ -889,33 +889,25 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-    auto [FPImm, NeedsFNeg] =
-        static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(APF,
-                                                                        VT);
+    int FPImm = static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(
+        APF, VT);
     if (FPImm >= 0) {
       unsigned Opc;
-      unsigned FNegOpc;
       switch (VT.SimpleTy) {
       default:
         llvm_unreachable("Unexpected size");
       case MVT::f16:
         Opc = RISCV::FLI_H;
-        FNegOpc = RISCV::FSGNJN_H;
         break;
       case MVT::f32:
         Opc = RISCV::FLI_S;
-        FNegOpc = RISCV::FSGNJN_S;
         break;
       case MVT::f64:
         Opc = RISCV::FLI_D;
-        FNegOpc = RISCV::FSGNJN_D;
         break;
       }
       SDNode *Res = CurDAG->getMachineNode(
           Opc, DL, VT, CurDAG->getTargetConstant(FPImm, DL, XLenVT));
-      if (NeedsFNeg)
-        Res = CurDAG->getMachineNode(FNegOpc, DL, VT, SDValue(Res, 0),
-                                     SDValue(Res, 0));
 
       ReplaceNode(Node, Res);
       return;
@@ -3535,7 +3527,21 @@ bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
   return selectVSplat(N, SplatVal);
 }
 
-bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
+bool RISCVDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
+  // Allow bitcasts from XLenVT -> FP.
+  if (N.getOpcode() == ISD::BITCAST &&
+      N.getOperand(0).getValueType() == Subtarget->getXLenVT()) {
+    Imm = N.getOperand(0);
+    return true;
+  }
+  // Allow moves from XLenVT to FP.
+  if (N.getOpcode() == RISCVISD::FMV_H_X ||
+      N.getOpcode() == RISCVISD::FMV_W_X_RV64) {
+    Imm = N.getOperand(0);
+    return true;
+  }
+
+  // Otherwise, look for FP constants that can materialized with scalar int.
   ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
   if (!CFP)
     return false;
@@ -3549,9 +3555,8 @@ bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
   // Even if this FPImm requires an additional FNEG (i.e. the second element of
   // the returned pair is true) we still prefer FLI + FNEG over immediate
   // materialization as the latter might generate a longer instruction sequence.
-  if (static_cast<const RISCVTargetLowering *>(TLI)
-          ->getLegalZfaFPImm(APF, VT)
-          .first >= 0)
+  if (static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(APF,
+                                                                      VT) >= 0)
     return false;
 
   MVT XLenVT = Subtarget->getXLenVT();

@@ -639,7 +639,6 @@ operator-name := >
 operator-name := <=
 operator-name := >=
 operator-name := <=>
-operator-name := ^^
 operator-name := ||
 operator-name := <<
 operator-name := greatergreater

@@ -42,6 +42,9 @@ llvm.mlir.global internal @int_global_undef() : i64
 // CHECK: @externally_initialized_global = internal externally_initialized global i32 0
 llvm.mlir.global internal @externally_initialized_global(0 : i32) {externally_initialized} : i32
 
+// CHECK: @f6E2M3FN_global_as_i6 = internal global i6 12
+llvm.mlir.global internal @f6E2M3FN_global_as_i6(1.5 : f6E2M3FN) : i6
+
 // CHECK: @f6E3M2FN_global_as_i6 = internal global i6 14
 llvm.mlir.global internal @f6E3M2FN_global_as_i6(1.5 : f6E3M2FN) : i6
 

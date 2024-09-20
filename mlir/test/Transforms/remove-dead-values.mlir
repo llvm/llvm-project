@@ -357,3 +357,8 @@ func.func @kernel(%arg0: memref<18xf32>) {
 // CHECK: gpu.launch blocks
 // CHECK: memref.store
 // CHECK-NEXT: gpu.terminator
+
+// -----
+
+// CHECK: func.func private @no_block_func_declaration()
+func.func private @no_block_func_declaration() -> ()

@@ -31,6 +31,7 @@
 
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
+#  define _LIBCPP_CONCAT3(X, Y, Z) _LIBCPP_CONCAT(X, _LIBCPP_CONCAT(Y, Z))
 
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
@@ -191,25 +192,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
-// FIXME: ABI detection should be done via compiler builtin macros. This
-// is just a placeholder until Clang implements such macros. For now assume
-// that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
-// and allow the user to explicitly specify the ABI to handle cases where this
-// heuristic falls short.
-#  if defined(_LIBCPP_ABI_FORCE_ITANIUM) && defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#    error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be defined"
-#  elif defined(_LIBCPP_ABI_FORCE_ITANIUM)
-#    define _LIBCPP_ABI_ITANIUM
-#  elif defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#    define _LIBCPP_ABI_MICROSOFT
-#  else
-#    if defined(_WIN32) && defined(_MSC_VER)
-#      define _LIBCPP_ABI_MICROSOFT
-#    else
-#      define _LIBCPP_ABI_ITANIUM
-#    endif
-#  endif
-
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
@@ -224,7 +206,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif
@@ -312,7 +293,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
 #    define _ALIGNAS_TYPE(x) alignas(x)
 #    define _ALIGNAS(x) alignas(x)
-#    define _LIBCPP_NORETURN [[noreturn]]
 #    define _NOEXCEPT noexcept
 #    define _NOEXCEPT_(...) noexcept(__VA_ARGS__)
 #    define _LIBCPP_CONSTEXPR constexpr
@@ -322,7 +302,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _LIBCPP_NORETURN __attribute__((__noreturn__))
 #    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
@@ -592,6 +571,15 @@ typedef __char32_t char32_t;
                                       namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
                                inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
+
+#define _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL namespace std { namespace experimental {
+#define _LIBCPP_END_NAMESPACE_EXPERIMENTAL }}
+
+#define _LIBCPP_BEGIN_NAMESPACE_LFTS _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL inline namespace fundamentals_v1 {
+#define _LIBCPP_END_NAMESPACE_LFTS } _LIBCPP_END_NAMESPACE_EXPERIMENTAL
+
+#define _LIBCPP_BEGIN_NAMESPACE_LFTS_V2 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL inline namespace fundamentals_v2 {
+#define _LIBCPP_END_NAMESPACE_LFTS_V2 } _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #ifdef _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
 #  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD namespace filesystem {
@@ -1108,15 +1096,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
 #  else
 #    define _LIBCPP_USING_IF_EXISTS
-#  endif
-
-#  if __has_cpp_attribute(__nodiscard__)
-#    define _LIBCPP_NODISCARD [[__nodiscard__]]
-#  else
-// We can't use GCC's [[gnu::warn_unused_result]] and
-// __attribute__((warn_unused_result)), because GCC does not silence them via
-// (void) cast.
-#    define _LIBCPP_NODISCARD
 #  endif
 
 #  if __has_attribute(__no_destroy__)

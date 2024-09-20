@@ -125,7 +125,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nostdinc
+             -nocudalib -nogpulib -nogpuinc -nostdlibinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
@@ -270,7 +270,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
       -mllvm -openmp-opt-disable
       -foffload-lto -fvisibility=hidden --offload-device-only
-      -nocudalib -nogpulib -nostdinc -Wno-unknown-cuda-version
+      -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE

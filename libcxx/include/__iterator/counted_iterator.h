@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_COUNTED_ITERATOR_H
 
 #include <__assert>
+#include <__compare/ordering.h>
 #include <__concepts/assignable.h>
 #include <__concepts/common_with.h>
 #include <__concepts/constructible.h>
@@ -28,7 +29,6 @@
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
-#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

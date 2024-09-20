@@ -2597,11 +2597,19 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   auto *SmallTy = cast<FixedVectorType>(ZExted->getType());
   unsigned BW = SmallTy->getElementType()->getPrimitiveSizeInBits();
 
-  // Check that the expression overall uses at most the same number of bits as
-  // ZExted
-  KnownBits KB = computeKnownBits(&I, *DL);
-  if (KB.countMaxActiveBits() > BW)
-    return false;
+  if (I.getOpcode() == Instruction::LShr) {
+    // Check that the shift amount is less than the number of bits in the
+    // smaller type. Otherwise, the smaller lshr will return a poison value.
+    KnownBits ShAmtKB = computeKnownBits(I.getOperand(1), *DL);
+    if (ShAmtKB.getMaxValue().uge(BW))
+      return false;
+  } else {
+    // Check that the expression overall uses at most the same number of bits as
+    // ZExted
+    KnownBits KB = computeKnownBits(&I, *DL);
+    if (KB.countMaxActiveBits() > BW)
+      return false;
+  }
 
   // Calculate costs of leaving current IR as it is and moving ZExt operation
   // later, along with adding truncates if needed
@@ -2628,7 +2636,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
       return false;
 
     // Check if we can propagate ZExt through its other users
-    KB = computeKnownBits(UI, *DL);
+    KnownBits KB = computeKnownBits(UI, *DL);
     if (KB.countMaxActiveBits() > BW)
       return false;
 
@@ -2651,11 +2659,9 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   if (ShrinkCost > CurrentCost)
     return false;
 
-  Value *Op0 = ZExted;
-  if (auto *OI = dyn_cast<Instruction>(OtherOperand))
-    Builder.SetInsertPoint(OI->getNextNode());
-  Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
   Builder.SetInsertPoint(&I);
+  Value *Op0 = ZExted;
+  Value *Op1 = Builder.CreateTrunc(OtherOperand, SmallTy);
   // Keep the order of operands the same
   if (I.getOperand(0) == OtherOperand)
     std::swap(Op0, Op1);

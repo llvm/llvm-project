@@ -575,7 +575,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    ldrb w14, [x0, #18]
 ; CHECK-NEXT:    ldrh w15, [x0, #16]
 ; CHECK-NEXT:    add x0, x0, #32
-; CHECK-NEXT:    ubfx x12, x10, #12, #20
+; CHECK-NEXT:    lsr w12, w10, #12
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    lsr x11, x9, #19
 ; CHECK-NEXT:    lsr x13, x10, #31
@@ -586,7 +586,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    orr x11, x15, x14, lsl #16
 ; CHECK-NEXT:    mov.s v0[1], w13
 ; CHECK-NEXT:    extr x13, x11, x10, #50
-; CHECK-NEXT:    ubfx x10, x11, #5, #27
+; CHECK-NEXT:    lsr w10, w11, #5
 ; CHECK-NEXT:    mov.s v1[2], w12
 ; CHECK-NEXT:    mov.s v0[2], w13
 ; CHECK-NEXT:    mov.s v1[3], w9
@@ -616,14 +616,14 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    lsr x15, x10, #40
 ; CHECK-BE-NEXT:    extr x12, x12, x11, #57
 ; CHECK-BE-NEXT:    fmov s0, w13
-; CHECK-BE-NEXT:    ubfx x13, x10, #7, #25
+; CHECK-BE-NEXT:    lsr w13, w10, #7
 ; CHECK-BE-NEXT:    extr x14, x15, x14, #50
-; CHECK-BE-NEXT:    ubfx x15, x9, #14, #18
+; CHECK-BE-NEXT:    lsr w15, w9, #14
 ; CHECK-BE-NEXT:    extr x9, x10, x9, #40
 ; CHECK-BE-NEXT:    fmov s1, w12
 ; CHECK-BE-NEXT:    orr w12, w17, w16, lsl #8
 ; CHECK-BE-NEXT:    mov v0.s[1], w14
-; CHECK-BE-NEXT:    ubfx x9, x9, #12, #20
+; CHECK-BE-NEXT:    lsr w9, w9, #12
 ; CHECK-BE-NEXT:    orr w11, w12, w11
 ; CHECK-BE-NEXT:    mov v1.s[1], w15
 ; CHECK-BE-NEXT:    lsr w11, w11, #19
@@ -657,14 +657,14 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    lsr x15, x10, #40
 ; CHECK-DISABLE-NEXT:    extr x12, x12, x11, #57
 ; CHECK-DISABLE-NEXT:    fmov s0, w13
-; CHECK-DISABLE-NEXT:    ubfx x13, x10, #7, #25
+; CHECK-DISABLE-NEXT:    lsr w13, w10, #7
 ; CHECK-DISABLE-NEXT:    extr x14, x15, x14, #50
-; CHECK-DISABLE-NEXT:    ubfx x15, x9, #14, #18
+; CHECK-DISABLE-NEXT:    lsr w15, w9, #14
 ; CHECK-DISABLE-NEXT:    extr x9, x10, x9, #40
 ; CHECK-DISABLE-NEXT:    fmov s1, w12
 ; CHECK-DISABLE-NEXT:    orr w12, w17, w16, lsl #8
 ; CHECK-DISABLE-NEXT:    mov v0.s[1], w14
-; CHECK-DISABLE-NEXT:    ubfx x9, x9, #12, #20
+; CHECK-DISABLE-NEXT:    lsr w9, w9, #12
 ; CHECK-DISABLE-NEXT:    orr w11, w12, w11
 ; CHECK-DISABLE-NEXT:    mov v1.s[1], w15
 ; CHECK-DISABLE-NEXT:    lsr w11, w11, #19

@@ -1207,7 +1207,7 @@ private:
 
   void getMemoryGroupFragmentationInfoInRegion(RegionInfo *Region, uptr ClassId,
                                                ScopedString *Str)
-      REQUIRES(Region->MMLock) {
+      REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr AllocatedUserEnd =
         Region->MemMapInfo.AllocatedUser + Region->RegionBeg;
