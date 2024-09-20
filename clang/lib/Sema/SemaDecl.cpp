@@ -4505,10 +4505,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Ensure the template parameters are compatible.
-  if (NewTemplate &&
-      !TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
-                                      OldTemplate->getTemplateParameters(),
-                                      /*Complain=*/true, TPL_TemplateMatch))
+  if (NewTemplate && !TemplateParameterListsAreEqual(
+                         NewTemplate, NewTemplate->getTemplateParameters(),
+                         OldTemplate, OldTemplate->getTemplateParameters(),
+                         /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
   // C++ [class.mem]p1:
@@ -7655,7 +7655,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               : SourceLocation();
       DeclResult Res = ActOnVarTemplateSpecialization(
           S, D, TInfo, Previous, TemplateKWLoc, TemplateParams, SC,
-          IsPartialSpecialization);
+          IsPartialSpecialization, IsMemberSpecialization);
       if (Res.isInvalid())
         return nullptr;
       NewVD = cast<VarDecl>(Res.get());
@@ -7674,6 +7674,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           VarTemplateDecl::Create(Context, DC, D.getIdentifierLoc(), Name,
                                   TemplateParams, NewVD);
       NewVD->setDescribedVarTemplate(NewTemplate);
+      // If we are providing an explicit specialization of a static variable
+      // template, make a note of that.
+      if (IsMemberSpecialization)
+        NewTemplate->setMemberSpecialization();
     }
 
     // If this decl has an auto type in need of deduction, make a note of the
@@ -8049,12 +8053,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                   ? TPC_ClassTemplateMember
                   : TPC_VarTemplate))
         NewVD->setInvalidDecl();
-
-      // If we are providing an explicit specialization of a static variable
-      // template, make a note of that.
-      if (PrevVarTemplate &&
-          PrevVarTemplate->getInstantiatedFromMemberTemplate())
-        PrevVarTemplate->setMemberSpecialization();
     }
   }
 
@@ -9859,6 +9857,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                         NewFD);
         FunctionTemplate->setLexicalDeclContext(CurContext);
         NewFD->setDescribedFunctionTemplate(FunctionTemplate);
+        if (isMemberSpecialization)
+          FunctionTemplate->setMemberSpecialization();
 
         // For source fidelity, store the other template param lists.
         if (TemplateParamLists.size() > 1) {
@@ -12005,10 +12005,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
       // If this is an explicit specialization of a member that is a function
       // template, mark it as a member specialization.
-      if (IsMemberSpecialization &&
-          NewTemplateDecl->getInstantiatedFromMemberTemplate()) {
-        NewTemplateDecl->setMemberSpecialization();
-        assert(OldTemplateDecl->isMemberSpecialization());
+      if (IsMemberSpecialization) {
         // Explicit specializations of a member template do not inherit deleted
         // status from the parent member template that they are specializing.
         if (OldFD->isDeleted()) {
@@ -17067,8 +17064,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         DeclResult Result = CheckClassTemplate(
             S, TagSpec, TUK, KWLoc, SS, Name, NameLoc, Attrs, TemplateParams,
             AS, ModulePrivateLoc,
-            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
-            TemplateParameterLists.data(), SkipBody);
+            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.drop_back(),
+            isMemberSpecialization, SkipBody);
         return Result.get();
       } else {
         // The "template<>" header is extraneous.
