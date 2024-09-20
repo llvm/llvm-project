@@ -44,6 +44,18 @@ using ExtInstList =
 
 namespace {
 
+uint64_t getUnsignedConstantValueFromReg(llvm::Register Reg,
+                                         const llvm::MachineRegisterInfo &MRI) {
+  llvm::SPIRVType *ConstTy = MRI.getVRegDef(Reg);
+  assert(ConstTy && ConstTy->getOpcode() == llvm::SPIRV::ASSIGN_TYPE &&
+         ConstTy->getOperand(1).isReg());
+  llvm::Register ConstReg = ConstTy->getOperand(1).getReg();
+  const llvm::MachineInstr *Const = MRI.getVRegDef(ConstReg);
+  assert(Const && Const->getOpcode() == llvm::TargetOpcode::G_CONSTANT);
+  const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
+  return Val.getZExtValue();
+}
+
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "SPIRVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATE_BITSET
@@ -232,6 +244,9 @@ private:
 
   bool selectUnmergeValues(MachineInstr &I) const;
 
+  void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
+                               MachineInstr &I) const;
+
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             const SPIRVType *ResType = nullptr) const;
@@ -252,6 +267,9 @@ private:
                                           uint32_t Opcode) const;
   MachineInstrBuilder buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
                                            SPIRVType *SrcPtrTy) const;
+  Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
+                                  uint32_t Binding, uint32_t ArraySize,
+                                  MachineIRBuilder MIRBuilder) const;
 };
 
 } // end anonymous namespace
@@ -2549,6 +2567,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
+  case Intrinsic::spv_handle_fromBinding: {
+    selectHandleFromBinding(ResVReg, ResType, I);
+    return true;
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -2558,6 +2580,37 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   }
   return true;
+}
+
+void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
+                                                       const SPIRVType *ResType,
+                                                       MachineInstr &I) const {
+
+  uint32_t Set =
+      getUnsignedConstantValueFromReg(I.getOperand(2).getReg(), *MRI);
+  uint32_t Binding =
+      getUnsignedConstantValueFromReg(I.getOperand(3).getReg(), *MRI);
+  uint32_t ArraySize =
+      getUnsignedConstantValueFromReg(I.getOperand(4).getReg(), *MRI);
+
+  MachineIRBuilder MIRBuilder(I);
+  Register VarReg =
+      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+
+  // TODO: For now we assume the resource is an image, which needs to be
+  // loaded to get the handle. That will not be true for storage buffers.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg);
+}
+
+Register SPIRVInstructionSelector::buildPointerToResource(
+    const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
+    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
+  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
+  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                 MIRBuilder);
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,

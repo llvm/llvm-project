@@ -381,6 +381,13 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
+   * - `int_spv_handle_fromBinding`
+     - spirv.Image
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
+     - Returns the handle for the resource at the given set and binding.\
+       If `ararySize > 1`, then the binding represents and array of resources\
+       of the given size, and the handle for the resource at the given index is returned.\
+       If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
 
 .. _spirv-builtin-functions:
 

@@ -713,6 +713,29 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   return Reg;
 }
 
+Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
+    const SPIRVType *VarType, uint32_t Set, uint32_t Binding,
+    MachineIRBuilder &MIRBuilder) {
+  SPIRVType *VarPointerTypeReg = getOrCreateSPIRVPointerType(
+      VarType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+  Register VarReg =
+      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+
+  // TODO: The name should come from the llvm-ir, but how that name will be
+  // passed from the HLSL to the backend has not been decided. Using this place
+  // holder for now. We use the result register of the type in the name.
+  std::string name = ("__resource_" + Twine(VarType->getOperand(0).getReg()) +
+                      "_" + Twine(Set) + "_" + Twine(Binding))
+                         .str();
+  buildGlobalVariable(VarReg, VarPointerTypeReg, name, nullptr,
+                      SPIRV::StorageClass::UniformConstant, nullptr, false,
+                      false, SPIRV::LinkageType::Import, MIRBuilder, false);
+
+  buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
+  buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
+  return VarReg;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
                                                SPIRVType *ElemType,
                                                MachineIRBuilder &MIRBuilder,
