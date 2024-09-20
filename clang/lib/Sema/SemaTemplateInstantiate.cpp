@@ -232,6 +232,24 @@ struct TemplateInstantiationArgumentCollecter
     return UseNextDecl(VTD);
   }
 
+  Decl *VisitVarTemplatePartialSpecializationDecl(
+      VarTemplatePartialSpecializationDecl *VTPSD) {
+    assert(
+        (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+        "outer template not instantiated?");
+
+    if (Innermost)
+      AddInnermostTemplateArguments(VTPSD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(VTPSD, VTPSD->getTemplateArgs().asArray(),
+                                /*Final=*/false);
+
+    if (VTPSD->isMemberSpecialization())
+      return Done();
+
+    return UseNextDecl(VTPSD);
+  }
+
   Decl *VisitClassTemplateDecl(ClassTemplateDecl *CTD) {
     assert(
         (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
@@ -249,6 +267,24 @@ struct TemplateInstantiationArgumentCollecter
     if (CTD->getFriendObjectKind())
       return ChangeDecl(CTD->getLexicalDeclContext());
     return UseNextDecl(CTD);
+  }
+
+  Decl *VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *CTPSD) {
+    assert(
+        (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
+        "outer template not instantiated?");
+
+    if (Innermost)
+      AddInnermostTemplateArguments(CTPSD);
+    else if (ForConstraintInstantiation)
+      AddOuterTemplateArguments(CTPSD, CTPSD->getTemplateArgs().asArray(),
+                                /*Final=*/false);
+
+    if (CTPSD->isMemberSpecialization())
+      return Done();
+
+    return UseNextDecl(CTPSD);
   }
 
   Decl *VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *TATD) {
@@ -386,13 +422,11 @@ struct TemplateInstantiationArgumentCollecter
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
     // For a class-scope explicit specialization, there are no template
     // arguments at this level, but there may be enclosing template arguments.
-    if (CTSD->isClassScopeExplicitSpecialization() &&
-        !isa<ClassTemplatePartialSpecializationDecl>(CTSD))
+    if (CTSD->isClassScopeExplicitSpecialization())
       return DontClearRelativeToPrimaryNextDecl(CTSD);
 
     // We're done when we hit an explicit specialization.
-    if (CTSD->getSpecializationKind() == TSK_ExplicitSpecialization &&
-        !isa<ClassTemplatePartialSpecializationDecl>(CTSD))
+    if (CTSD->getSpecializationKind() == TSK_ExplicitSpecialization)
       return Done();
 
     if (Innermost)
@@ -401,11 +435,6 @@ struct TemplateInstantiationArgumentCollecter
       AddOuterTemplateArguments(CTSD,
                                 CTSD->getTemplateInstantiationArgs().asArray(),
                                 /*Final=*/false);
-
-    if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(CTSD)) {
-      if (CTPSD->isMemberSpecialization())
-        return Done();
-    }
 
     // If this class template specialization was instantiated from a
     // specialized member that is a class template, we're done.
@@ -430,13 +459,11 @@ struct TemplateInstantiationArgumentCollecter
   VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
     // For a class-scope explicit specialization, there are no template
     // arguments at this level, but there may be enclosing template arguments.
-    if (VTSD->isClassScopeExplicitSpecialization() &&
-        !isa<VarTemplatePartialSpecializationDecl>(VTSD))
+    if (VTSD->isClassScopeExplicitSpecialization())
       return DontClearRelativeToPrimaryNextDecl(VTSD);
 
     // We're done when we hit an explicit specialization.
-    if (VTSD->getSpecializationKind() == TSK_ExplicitSpecialization &&
-        !isa<VarTemplatePartialSpecializationDecl>(VTSD))
+    if (VTSD->getSpecializationKind() == TSK_ExplicitSpecialization)
       return Done();
 
     if (Innermost)
@@ -445,11 +472,6 @@ struct TemplateInstantiationArgumentCollecter
       AddOuterTemplateArguments(VTSD,
                                 VTSD->getTemplateInstantiationArgs().asArray(),
                                 /*Final=*/false);
-
-    if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(VTSD)) {
-      if (VTPSD->isMemberSpecialization())
-        return Done();
-    }
 
     // If this variable template specialization was instantiated from a
     // specialized member that is a variable template, we're done.
