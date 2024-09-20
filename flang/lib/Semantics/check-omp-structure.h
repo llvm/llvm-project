@@ -67,6 +67,7 @@ public:
         ) {
   }
   using llvmOmpClause = const llvm::omp::Clause;
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
 
   void Enter(const parser::OpenMPConstruct &);
   void Enter(const parser::OpenMPLoopConstruct &);
@@ -205,8 +206,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
-  void CheckReductionModifier(
-      const parser::OmpReductionClause::ReductionModifier &);
+  void CheckReductionModifier(const ReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
@@ -225,9 +225,9 @@ private:
       const parser::OmpObjectList &ompObjectList);
   void CheckPredefinedAllocatorRestriction(
       const parser::CharBlock &source, const parser::Name &name);
-  void checkAndAddSymbolsToUsedInScanList(const parser::OmpObjectList &x);
-  void addModifiertoMap(const parser::OmpObjectList &x,
-      parser::OmpReductionClause::ReductionModifier &modifier);
+  void CheckAndAddSymbolsToUsedInScanList(const parser::OmpObjectList &x);
+  void AddModifierToMap(
+      const parser::OmpObjectList &x, const ReductionModifier &modifier);
   bool isPredefinedAllocator{false};
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);

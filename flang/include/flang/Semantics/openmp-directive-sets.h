@@ -186,7 +186,7 @@ static const OmpDirectiveSet allTeamsSet{
 // Directive sets for groups of multiple directives
 //===----------------------------------------------------------------------===//
 
-// Directive sets that form Composite constructs
+// Composite constructs
 static const OmpDirectiveSet allDistributeParallelDoSet{
     allDistributeSet & allParallelSet & allDoSet};
 static const OmpDirectiveSet allDistributeParallelDoSimdSet{
@@ -288,8 +288,9 @@ static const OmpDirectiveSet workShareSet{
 
 //===----------------------------------------------------------------------===//
 // Directive sets for parent directives that do allow/not allow a construct
-static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
 //===----------------------------------------------------------------------===//
+
+static const OmpDirectiveSet scanParentAllowedSet{allDoSet | allSimdSet};
 
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
