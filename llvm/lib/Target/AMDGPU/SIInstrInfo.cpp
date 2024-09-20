@@ -6554,11 +6554,11 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
 
   // SRsrcFormatLo = RSRC_DATA_FORMAT{31-0}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), SRsrcFormatLo)
-      .addImm(RsrcDataFormat & 0xFFFFFFFF);
+      .addImm(Lo_32(RsrcDataFormat));
 
   // SRsrcFormatHi = RSRC_DATA_FORMAT{63-32}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), SRsrcFormatHi)
-      .addImm(RsrcDataFormat >> 32);
+      .addImm(Hi_32(RsrcDataFormat));
 
   // NewSRsrc = {Zero64, SRsrcFormat}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::REG_SEQUENCE), NewSRsrc)
