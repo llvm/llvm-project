@@ -2675,8 +2675,8 @@ macroQualifiedType()
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('memberPointerType0')"><a name="memberPointerType0Anchor">memberPointerType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="memberPointerType0"><pre>Matches member pointer types.
 Given
-  struct A { int i; }
-  A::* ptr = A::i;
+  struct A { int i; };
+  int A::* ptr = &A::i;
 memberPointerType()
   matches "A::* ptr"
 </pre></td></tr>
@@ -10659,5 +10659,3 @@ Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
 </div>
 </body>
 </html>
-
-

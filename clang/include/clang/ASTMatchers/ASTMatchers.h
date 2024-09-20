@@ -7327,8 +7327,8 @@ extern const AstTypeMatcher<BlockPointerType> blockPointerType;
 /// Matches member pointer types.
 /// Given
 /// \code
-///   struct A { int i; }
-///   A::* ptr = A::i;
+///   struct A { int i; };
+///   int A::* ptr = &A::i;
 /// \endcode
 /// memberPointerType()
 ///   matches "A::* ptr"
