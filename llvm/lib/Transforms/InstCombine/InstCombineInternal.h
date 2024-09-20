@@ -734,6 +734,7 @@ public:
   Instruction *foldSelectOfBools(SelectInst &SI);
   Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
+  Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,

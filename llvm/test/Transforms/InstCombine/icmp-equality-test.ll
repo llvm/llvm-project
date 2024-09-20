@@ -4,13 +4,8 @@
 define i1 @icmp_equality_test(i64 %X, i64 %Y, i64 %Z) {
 ; CHECK-LABEL: @icmp_equality_test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQZ:%.*]] = icmp eq i64 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YEQZ:%.*]] = icmp eq i64 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQZ:%.*]] = xor i1 [[YEQZ]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQZ]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQZ]], i1 [[YEQZ]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqZ = icmp eq i64 %X, %Z
@@ -25,13 +20,8 @@ entry:
 define i1 @icmp_equality_test_constant(i42 %X, i42 %Y) {
 ; CHECK-LABEL: @icmp_equality_test_constant(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQC:%.*]] = icmp eq i42 [[X:%.*]], -42
-; CHECK-NEXT:    [[YEQC:%.*]] = icmp eq i42 [[Y:%.*]], -42
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i42 [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQC:%.*]] = xor i1 [[YEQC]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQC]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQC]], i1 [[YEQC]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i42 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqC = icmp eq i42 %X, -42
@@ -46,13 +36,8 @@ entry:
 define i1 @icmp_equality_test_swift_optional_pointers(i64 %X, i64 %Y) {
 ; CHECK-LABEL: @icmp_equality_test_swift_optional_pointers(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQC:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[YEQC:%.*]] = icmp eq i64 [[Y:%.*]], 0
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQC:%.*]] = xor i1 [[YEQC]], true
-; CHECK-NEXT:    [[BOTH:%.*]] = select i1 [[NOT_YEQC]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQC]], i1 [[YEQC]], i1 [[BOTH]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqC = icmp eq i64 %X, 0
@@ -67,13 +52,8 @@ entry:
 define <2 x i1> @icmp_equality_test_vector(<2 x i64> %X, <2 x i64> %Y) {
 ; CHECK-LABEL: @icmp_equality_test_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQC:%.*]] = icmp eq <2 x i64> [[X:%.*]], <i64 123, i64 456>
-; CHECK-NEXT:    [[YEQC:%.*]] = icmp eq <2 x i64> [[Y:%.*]], <i64 123, i64 456>
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq <2 x i64> [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQC:%.*]] = xor <2 x i1> [[YEQC]], <i1 true, i1 true>
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[NOT_YEQC]], <2 x i1> [[XEQY]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[EQUAL:%.*]] = select <2 x i1> [[XEQC]], <2 x i1> [[YEQC]], <2 x i1> [[AND]]
-; CHECK-NEXT:    ret <2 x i1> [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq <2 x i64> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[XEQY]]
 ;
 entry:
   %XeqC = icmp eq <2 x i64> %X, <i64 123, i64 456>
@@ -88,13 +68,8 @@ entry:
 define i1 @icmp_equality_test_commute_icmp1(i64 %X, i64 %Y, i64 %Z) {
 ; CHECK-LABEL: @icmp_equality_test_commute_icmp1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQZ:%.*]] = icmp eq i64 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[YEQZ:%.*]] = icmp eq i64 [[Z]], [[Y:%.*]]
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[Y]], [[X]]
-; CHECK-NEXT:    [[NOT_YEQZ:%.*]] = xor i1 [[YEQZ]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQZ]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQZ]], i1 [[YEQZ]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqZ = icmp eq i64 %Z, %X
@@ -108,13 +83,8 @@ entry:
 
 define i1 @icmp_equality_test_commute_icmp2(i64 %X, i64 %Y, i64 %Z) {
 ; CHECK-LABEL: @icmp_equality_test_commute_icmp2(
-; CHECK-NEXT:    [[XEQZ:%.*]] = icmp eq i64 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[YEQZ:%.*]] = icmp eq i64 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[Y]], [[X]]
-; CHECK-NEXT:    [[NOT_YEQZ:%.*]] = xor i1 [[YEQZ]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQZ]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQZ]], i1 [[YEQZ]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
   %XeqZ = icmp eq i64 %Z, %X
   %YeqZ = icmp eq i64 %Y, %Z
@@ -128,13 +98,8 @@ define i1 @icmp_equality_test_commute_icmp2(i64 %X, i64 %Y, i64 %Z) {
 define i1 @icmp_equality_test_commute_select1(i64 %X, i64 %Y, i64 %Z) {
 ; CHECK-LABEL: @icmp_equality_test_commute_select1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQZ:%.*]] = icmp eq i64 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YEQZ:%.*]] = icmp eq i64 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQZ:%.*]] = xor i1 [[YEQZ]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQZ]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQZ]], i1 [[YEQZ]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqZ = icmp eq i64 %X, %Z
@@ -148,13 +113,8 @@ entry:
 define i1 @icmp_equality_test_commute_select2(i64 %X, i64 %Y, i64 %Z) {
 ; CHECK-LABEL: @icmp_equality_test_commute_select2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XEQZ_NOT:%.*]] = icmp eq i64 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YEQZ:%.*]] = icmp eq i64 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[NOT_YEQZ:%.*]] = xor i1 [[YEQZ]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_YEQZ]], i1 [[XEQY]], i1 false
-; CHECK-NEXT:    [[EQUAL:%.*]] = select i1 [[XEQZ_NOT]], i1 [[YEQZ]], i1 [[AND]]
-; CHECK-NEXT:    ret i1 [[EQUAL]]
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
 ;
 entry:
   %XeqZ = icmp eq i64 %X, %Z
