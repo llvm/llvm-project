@@ -190,8 +190,9 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
   }
 }
 
-LangAS SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(
-    CodeGenModule &CGM, const VarDecl *D) const {
+LangAS
+SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                                 const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
          !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
          "Address space agnostic languages only");
