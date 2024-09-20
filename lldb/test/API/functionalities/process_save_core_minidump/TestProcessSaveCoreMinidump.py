@@ -548,6 +548,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
             registers = thread.GetFrameAtIndex(0).GetRegisters()
             fs_base = registers.GetFirstValueByName("fs_base").GetValueAsUnsigned()
+            self.assertTrue(fs_base != 0)
             core_target = self.dbg.CreateTarget(None)
             core_proc = core_target.LoadCore(one_region_file)
             core_region_list = core_proc.GetMemoryRegions()
@@ -598,3 +599,34 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
+    def minidump_saves_fs_base_region(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+            thread = process.GetThreadAtIndex(0)
+            tls_file = self.getBuildArtifact("core.tls.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(tls_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            options.AddThread(thread)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(tls_file)
+            frame = core_proc.GetThreadAtIndex(0).GetFrameAtIndex(0)
+            tls_val = frame.FindValue('lf')
+            self.assertEqual(tls_val.GetValueAsUnsigned(), 42)
+
+        except:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(tls_file):
+                os.unlink(tls_file)

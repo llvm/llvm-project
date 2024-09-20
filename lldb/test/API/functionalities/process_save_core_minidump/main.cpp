@@ -1,6 +1,7 @@
 #include <cassert>
 #include <iostream>
 #include <thread>
+thread_local size_t lf = 42;
 
 void g() { assert(false); }
 
@@ -15,6 +16,7 @@ size_t h() {
       }
   return sum;
 }
+
 
 int main() {
   std::thread t1(f);
