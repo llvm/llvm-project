@@ -112,4 +112,10 @@ let TargetPrefix = "spv" in {
   // vector.
   def int_spv_typedBufferLoad
       : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_any_ty, llvm_i32_ty]>;
+
+  // Write a value to the image buffer. Translates directly to a single
+  // OpImageWrite.
+  def int_spv_typedBufferStore
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty]>;
+
 }

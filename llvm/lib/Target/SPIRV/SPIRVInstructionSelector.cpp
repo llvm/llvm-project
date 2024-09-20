@@ -271,6 +271,8 @@ private:
   void selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
 
+  void selectImageWriteIntrinsic(MachineInstr &I) const;
+
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -2853,6 +2855,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_handle_fromBinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_typedBufferStore: {
+    selectImageWriteIntrinsic(I);
+    return true;
+  }
   case Intrinsic::spv_typedBufferLoad: {
     selectReadImageIntrinsic(ResVReg, ResType, I);
     return true;
@@ -2969,6 +2975,23 @@ void SPIRVInstructionSelector::extractSubvector(
 
   for (Register ComponentReg : ComponentRegisters)
     MIB.addUse(ComponentReg);
+}
+
+void SPIRVInstructionSelector::selectImageWriteIntrinsic(
+    MachineInstr &I) const {
+  // If the load of the image is in a different basic block, then
+  // this will generate invalid code. A proper solution is to move
+  // the OpLoad from selectHandleFromBinding here. However, to do
+  // that we will need to change the return type of the intrinsic.
+  // We will do that when we can, but for now trying to move forward with other
+  // issues.
+  Register DataReg = I.getOperand(3).getReg();
+  assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
+  assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageWrite))
+      .addUse(I.getOperand(1).getReg())
+      .addUse(I.getOperand(2).getReg())
+      .addUse(DataReg);
 }
 
 Register SPIRVInstructionSelector::buildPointerToResource(

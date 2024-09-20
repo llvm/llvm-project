@@ -400,6 +400,11 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is \
        returned. If the return type is an n-element vector, then the first \
        n-elements of the 4-element vector are returned.
+   * - `int_spv_typedBufferStore`
+     - void
+     - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
+     - Stores the data to the image buffer at the given coordinate. The \
+       data must be a 4-element vector.
 
 .. _spirv-builtin-functions:
 

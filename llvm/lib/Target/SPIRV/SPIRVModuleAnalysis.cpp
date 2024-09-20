@@ -723,7 +723,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.3
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
-    addAvailableCaps({Capability::StorageImageReadWithoutFormat});
+    addAvailableCaps({Capability::StorageImageWriteWithoutFormat,
+                      Capability::StorageImageReadWithoutFormat});
 }
 
 } // namespace SPIRV
