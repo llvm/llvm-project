@@ -95,6 +95,11 @@ static cl::opt<int> BrMergingCcmpBias(
              "supports conditional compare instructions."),
     cl::Hidden);
 
+static cl::opt<bool>
+    WidenShift("x86-widen-shift", cl::init(true),
+               cl::desc("Replacte narrow shifts with wider shifts."),
+               cl::Hidden);
+
 static cl::opt<int> BrMergingLikelyBias(
     "x86-br-merging-likely-bias", cl::init(0),
     cl::desc("Increases 'x86-br-merging-base-cost' in cases that it is likely "
@@ -29851,104 +29856,128 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
-  // Constant ISD::SRA/SRL/SHL can be performed efficiently on vXi8 vectors by
-  // using vXi16 vector operations.
+  // Constant ISD::SRA/SRL/SHL can be performed efficiently on vXiN vectors by
+  // using vYiM vector operations where X*N == Y*M and M > N.
   if (ConstantAmt &&
-      (VT == MVT::v16i8 || (VT == MVT::v32i8 && Subtarget.hasInt256()) ||
-       (VT == MVT::v64i8 && Subtarget.hasBWI())) &&
+      (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
+       VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v32i16) &&
       !Subtarget.hasXOP()) {
+    MVT NarrowScalarVT = VT.getScalarType();
     int NumElts = VT.getVectorNumElements();
-    MVT VT16 = MVT::getVectorVT(MVT::i16, NumElts / 2);
-    // We can do this extra fast if each pair of i8 elements is shifted by the
-    // same amount by doing this SWAR style: use a shift to move the valid bits
-    // to the right position, mask out any bits which crossed from one element
-    // to the other.
-    APInt UndefElts;
-    SmallVector<APInt, 64> AmtBits;
+    // We can do this extra fast if each pair of narrow elements is shifted by
+    // the same amount by doing this SWAR style: use a shift to move the valid
+    // bits to the right position, mask out any bits which crossed from one
+    // element to the other.
     // This optimized lowering is only valid if the elements in a pair can
     // be treated identically.
-    bool SameShifts = true;
-    SmallVector<APInt, 32> AmtBits16(NumElts / 2);
-    APInt UndefElts16 = APInt::getZero(AmtBits16.size());
-    if (getTargetConstantBitsFromNode(Amt, /*EltSizeInBits=*/8, UndefElts,
-                                      AmtBits, /*AllowWholeUndefs=*/true,
-                                      /*AllowPartialUndefs=*/false)) {
-      // Collect information to construct the BUILD_VECTOR for the i16 version
-      // of the shift. Conceptually, this is equivalent to:
-      // 1. Making sure the shift amounts are the same for both the low i8 and
-      // high i8 corresponding to the i16 lane.
-      // 2. Extending that shift amount to i16 for a build vector operation.
-      //
-      // We want to handle undef shift amounts which requires a little more
-      // logic (e.g. if one is undef and the other is not, grab the other shift
-      // amount).
-      for (unsigned SrcI = 0, E = AmtBits.size(); SrcI != E; SrcI += 2) {
+    SmallVector<SDValue, 32> AmtWideElts;
+    AmtWideElts.reserve(NumElts);
+    for (int I = 0; I != NumElts; ++I) {
+      AmtWideElts.push_back(Amt.getOperand(I));
+    }
+    SmallVector<SDValue, 32> TmpAmtWideElts;
+    int WideEltSizeInBits = EltSizeInBits;
+    while (WideEltSizeInBits < 32) {
+      // AVX1 does not have psrlvd, etc. which makes interesting 32-bit shifts
+      // unprofitable.
+      if (WideEltSizeInBits >= 16 && !Subtarget.hasAVX2()) {
+        break;
+      }
+      TmpAmtWideElts.resize(AmtWideElts.size() / 2);
+      bool SameShifts = true;
+      for (unsigned SrcI = 0, E = AmtWideElts.size(); SrcI != E; SrcI += 2) {
         unsigned DstI = SrcI / 2;
         // Both elements are undef? Make a note and keep going.
-        if (UndefElts[SrcI] && UndefElts[SrcI + 1]) {
-          AmtBits16[DstI] = APInt::getZero(16);
-          UndefElts16.setBit(DstI);
+        if (AmtWideElts[SrcI].isUndef() && AmtWideElts[SrcI + 1].isUndef()) {
+          TmpAmtWideElts[DstI] = AmtWideElts[SrcI];
           continue;
         }
         // Even element is undef? We will shift it by the same shift amount as
         // the odd element.
-        if (UndefElts[SrcI]) {
-          AmtBits16[DstI] = AmtBits[SrcI + 1].zext(16);
+        if (AmtWideElts[SrcI].isUndef()) {
+          TmpAmtWideElts[DstI] = AmtWideElts[SrcI + 1];
           continue;
         }
         // Odd element is undef? We will shift it by the same shift amount as
         // the even element.
-        if (UndefElts[SrcI + 1]) {
-          AmtBits16[DstI] = AmtBits[SrcI].zext(16);
+        if (AmtWideElts[SrcI + 1].isUndef()) {
+          TmpAmtWideElts[DstI] = AmtWideElts[SrcI];
           continue;
         }
         // Both elements are equal.
-        if (AmtBits[SrcI] == AmtBits[SrcI + 1]) {
-          AmtBits16[DstI] = AmtBits[SrcI].zext(16);
+        if (AmtWideElts[SrcI].getNode()->getAsAPIntVal() ==
+            AmtWideElts[SrcI + 1].getNode()->getAsAPIntVal()) {
+          TmpAmtWideElts[DstI] = AmtWideElts[SrcI];
           continue;
         }
-        // One of the provisional i16 elements will not have the same shift
+        // One of the provisional wide elements will not have the same shift
         // amount. Let's bail.
         SameShifts = false;
         break;
       }
+      if (!SameShifts) {
+        break;
+      }
+      WideEltSizeInBits *= 2;
+      std::swap(TmpAmtWideElts, AmtWideElts);
     }
+    APInt APIntShiftAmt;
+    bool IsConstantSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
+    bool Profitable = WidenShift;
+    // AVX512BW brings support for vpsllvw.
+    if (WideEltSizeInBits * AmtWideElts.size() >= 512 &&
+        WideEltSizeInBits < 32 && !Subtarget.hasBWI()) {
+      Profitable = false;
+    }
+    // Leave AVX512 uniform arithmetic shifts alone, they can be implemented
+    // fairly cheaply in other ways.
+    if (WideEltSizeInBits * AmtWideElts.size() >= 512 && IsConstantSplat) {
+      Profitable = false;
+    }
+    // Leave it up to GFNI if we have it around.
+    // TODO: gf2p8affine is usually higher latency and more port restricted. It
+    // is probably a win to use other strategies in some cases.
+    if (EltSizeInBits == 8 && Subtarget.hasGFNI()) {
+      Profitable = false;
+    }
+
+    // AVX1 does not have vpand which makes our masking impractical. It does
+    // have vandps but that is an FP instruction and crossing FP<->int typically
+    // has some cost.
+    if (WideEltSizeInBits * AmtWideElts.size() >= 256 &&
+        (WideEltSizeInBits < 32 || IsConstantSplat) && !Subtarget.hasAVX2()) {
+      Profitable = false;
+    }
+    int WideNumElts = AmtWideElts.size();
     // We are only dealing with identical pairs.
-    if (SameShifts) {
-      // Cast the operand to vXi16.
-      SDValue R16 = DAG.getBitcast(VT16, R);
+    if (Profitable && WideNumElts != NumElts) {
+      MVT WideScalarVT = MVT::getIntegerVT(WideEltSizeInBits);
+      MVT WideVT = MVT::getVectorVT(WideScalarVT, WideNumElts);
+      // Cast the operand to vXiM.
+      SDValue RWide = DAG.getBitcast(WideVT, R);
       // Create our new vector of shift amounts.
-      SDValue Amt16 = getConstVector(AmtBits16, UndefElts16, VT16, DAG, dl);
+      SDValue AmtWide = DAG.getBuildVector(
+          MVT::getVectorVT(NarrowScalarVT, WideNumElts), dl, AmtWideElts);
+      AmtWide = DAG.getZExtOrTrunc(AmtWide, dl, WideVT);
       // Perform the actual shift.
       unsigned LogicalOpc = Opc == ISD::SRA ? ISD::SRL : Opc;
-      SDValue ShiftedR = DAG.getNode(LogicalOpc, dl, VT16, R16, Amt16);
+      SDValue ShiftedR = DAG.getNode(LogicalOpc, dl, WideVT, RWide, AmtWide);
       // Now we need to construct a mask which will "drop" bits that get
       // shifted past the LSB/MSB. For a logical shift left, it will look
       // like:
-      //   MaskLowBits = (0xff << Amt16) & 0xff;
-      //   MaskHighBits = MaskLowBits << 8;
-      //   Mask = MaskLowBits | MaskHighBits;
+      //   FullMask = (1 << EltSizeInBits) - 1
+      //   Mask = FullMask << Amt
       //
-      // This masking ensures that bits cannot migrate from one i8 to
+      // This masking ensures that bits cannot migrate from one narrow lane to
       // another. The construction of this mask will be constant folded.
       // The mask for a logical right shift is nearly identical, the only
-      // difference is that 0xff is shifted right instead of left.
-      SDValue Cst255 = DAG.getConstant(0xff, dl, MVT::i16);
-      SDValue Splat255 = DAG.getSplat(VT16, dl, Cst255);
-      // The mask for the low bits is most simply expressed as an 8-bit
-      // field of all ones which is shifted in the exact same way the data
-      // is shifted but masked with 0xff.
-      SDValue MaskLowBits = DAG.getNode(LogicalOpc, dl, VT16, Splat255, Amt16);
-      MaskLowBits = DAG.getNode(ISD::AND, dl, VT16, MaskLowBits, Splat255);
-      SDValue Cst8 = DAG.getConstant(8, dl, MVT::i16);
-      SDValue Splat8 = DAG.getSplat(VT16, dl, Cst8);
-      // The mask for the high bits is the same as the mask for the low bits but
-      // shifted up by 8.
-      SDValue MaskHighBits =
-          DAG.getNode(ISD::SHL, dl, VT16, MaskLowBits, Splat8);
-      SDValue Mask = DAG.getNode(ISD::OR, dl, VT16, MaskLowBits, MaskHighBits);
+      // difference is that the all ones mask is shifted right instead of left.
+      SDValue CstFullMask = DAG.getAllOnesConstant(dl, NarrowScalarVT);
+      SDValue SplatFullMask = DAG.getSplat(VT, dl, CstFullMask);
+      SDValue Mask = DAG.getNode(LogicalOpc, dl, VT, SplatFullMask, Amt);
+      Mask = DAG.getBitcast(WideVT, Mask);
       // Finally, we mask the shifted vector with the SWAR mask.
-      SDValue Masked = DAG.getNode(ISD::AND, dl, VT16, ShiftedR, Mask);
+      SDValue Masked = DAG.getNode(ISD::AND, dl, WideVT, ShiftedR, Mask);
       Masked = DAG.getBitcast(VT, Masked);
       if (Opc != ISD::SRA) {
         // Logical shifts are complete at this point.
@@ -29956,14 +29985,14 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       }
       // At this point, we have done a *logical* shift right. We now need to
       // sign extend the result so that we get behavior equivalent to an
-      // arithmetic shift right. Post-shifting by Amt16, our i8 elements are
-      // `8-Amt16` bits wide.
+      // arithmetic shift right. Post-shifting by AmtWide, our narrow elements
+      // are `EltSizeInBits-AmtWide` bits wide.
       //
-      // To convert our `8-Amt16` bit unsigned numbers to 8-bit signed numbers,
-      // we need to replicate the bit at position `7-Amt16` into the MSBs of
-      // each i8.
-      // We can use the following trick to accomplish this:
-      //   SignBitMask = 1 << (7-Amt16)
+      // To convert our `EltSizeInBits-AmtWide` bit unsigned numbers to signed
+      // numbers as wide as `EltSizeInBits`, we need to replicate the bit at
+      // position `EltSizeInBits-AmtWide` into the MSBs of each narrow lane. We
+      // can use the following trick to accomplish this:
+      //   SignBitMask = 1 << (EltSizeInBits-AmtWide-1)
       //   (Masked ^ SignBitMask) - SignBitMask
       //
       // When the sign bit is already clear, this will compute:
@@ -29977,7 +30006,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       //
       // This is equal to Masked - 2*SignBitMask which will correctly sign
       // extend our result.
-      SDValue CstHighBit = DAG.getConstant(0x80, dl, MVT::i8);
+      SDValue CstHighBit =
+          DAG.getConstant(1 << (EltSizeInBits - 1), dl, NarrowScalarVT);
       SDValue SplatHighBit = DAG.getSplat(VT, dl, CstHighBit);
       // This does not induce recursion, all operands are constants.
       SDValue SignBitMask = DAG.getNode(LogicalOpc, dl, VT, SplatHighBit, Amt);

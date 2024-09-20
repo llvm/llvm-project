@@ -1830,6 +1830,21 @@ LogicalResult ModuleTranslation::createIdentMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createCommandlineMetadata() {
+  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+          LLVMDialect::getCommandlineAttrName())) {
+    StringRef cmdLine = attr;
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::NamedMDNode *nmd = llvmModule->getOrInsertNamedMetadata(
+        LLVMDialect::getCommandlineAttrName());
+    llvm::MDNode *md =
+        llvm::MDNode::get(ctx, llvm::MDString::get(ctx, cmdLine));
+    nmd->addOperand(md);
+  }
+
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -1982,6 +1997,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
   if (failed(translator.createIdentMetadata()))
+    return nullptr;
+  if (failed(translator.createCommandlineMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.
