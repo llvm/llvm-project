@@ -12888,6 +12888,9 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (!getLangOpts().CPlusPlus &&
       !(isa<ExtVectorType>(vType->getAs<VectorType>())))
     return InvalidLogicalVectorOperands(Loc, LHS, RHS);
+  // Beginning with HLSL 2021, HLSL disallows logical operators on vector
+  // operands and instead requires the use of the `and`, `or`, `any`, `all`, and
+  // `select` functions.
   if (getLangOpts().HLSL &&
       getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
     (void)InvalidOperands(Loc, LHS, RHS);
