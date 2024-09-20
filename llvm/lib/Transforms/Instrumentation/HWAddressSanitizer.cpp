@@ -639,9 +639,6 @@ void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
 
-  for (Function &F : M.functions())
-    removeFnAttributes(&F);
-
   // x86_64 currently has two modes:
   // - Intel LAM (default)
   // - pointer aliasing (heap only)
@@ -903,7 +900,13 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
     }
-    maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+    if (Function *F = CI->getCalledFunction()) {
+      LibFunc LF;
+      if (F->hasName() && TLI.getLibFunc(F->getName(), LF)) {
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+        removeFnAttributes(F);
+      }
+    }
   }
 }
 
@@ -1624,6 +1627,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
+
+  removeFnAttributes(&F);
 
   NumInstrumentedFuncs++;
 
