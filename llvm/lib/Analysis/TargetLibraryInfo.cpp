@@ -1268,6 +1268,23 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
 
   llvm::append_range(ScalarDescs, Fns);
   llvm::sort(ScalarDescs, compareByVectorFnName);
+
+#ifndef NDEBUG
+  bool AnyMissing = false;
+  TargetLibraryInfo TLI(*this);
+  for (VecDesc Fn : Fns) {
+    LibFunc LF;
+    if (!getLibFunc(Fn.getScalarFnName(), LF))
+      continue;
+    if (getState(LF) == TargetLibraryInfoImpl::Unavailable)
+      continue;
+    if (!TLI.hasOptimizedCodeGen(LF)) {
+      errs() << Fn.getScalarFnName() << "\n";
+      AnyMissing = true;
+    }
+  }
+  assert(!AnyMissing && "found missing hasOptimizedCodeGen entries");
+#endif
 }
 
 static const VecDesc VecFuncs_Accelerate[] = {
