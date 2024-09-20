@@ -13,7 +13,7 @@ define float @syncscope_system(ptr %addr, float %val) {
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -83,7 +83,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) {
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("workgroup") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -150,7 +150,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX908-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX908:       atomicrmw.shared:
 ; GFX908-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
-; GFX908-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL:%.*]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.check.private:
 ; GFX908-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
@@ -303,7 +303,7 @@ define float @flat_atomicrmw_fadd_f32__align32(ptr %addr, float %val) {
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VAL:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 32
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[ADDR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 32, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
