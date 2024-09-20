@@ -250,7 +250,9 @@ AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
 
 AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
               Handler) {
-  return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  if (Finder->getASTContext().getLangOpts().CPlusPlus)
+    return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
+  return true; /* Only warn about libc calls for C++ */
 }
 
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
@@ -789,7 +791,7 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
   if (!FristParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = (cast<PointerType>(FristParmTy))->getPointeeType();
+  QualType FirstPteTy = FristParmTy->getAs<PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
@@ -865,7 +867,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   if (!FirstParmTy->isPointerType())
     return false; // Not an snprint
 
-  QualType FirstPteTy = cast<PointerType>(FirstParmTy)->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->getAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
   if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
