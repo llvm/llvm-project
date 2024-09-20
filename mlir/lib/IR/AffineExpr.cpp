@@ -415,7 +415,7 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
     case AffineExprKind::Mod: {
       AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
       stack.emplace_back(binaryExpr.getLHS(), symbolPos, AffineExprKind::Mod,
-                         [&stack, &result, binaryExpr, symbolPos, opKind]() {
+                         [&stack, &result, binaryExpr, symbolPos]() {
                            if (result) {
                              stack.emplace_back(
                                  binaryExpr.getRHS(), symbolPos,
