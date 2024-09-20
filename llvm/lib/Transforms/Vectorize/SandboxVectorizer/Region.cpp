@@ -20,6 +20,7 @@ Region::~Region() {}
 
 void Region::add(Instruction *I) {
   Insts.insert(I);
+  // TODO: Consider tagging instructions lazily.
   cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
 }
 
