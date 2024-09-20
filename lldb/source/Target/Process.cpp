@@ -6539,12 +6539,15 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
-static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileMemoryRanges &ranges, lldb::addr_t range_end) {
+static void AddRegisterSections(Process &process, ThreadSP &thread_sp,
+                                CoreFileMemoryRanges &ranges,
+                                lldb::addr_t range_end) {
   lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
   if (!reg_ctx)
     return;
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+      lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
   if (!reg_info)
     return;
 
@@ -6555,10 +6558,11 @@ static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileM
 
   const uint64_t fail_value = UINT64_MAX;
   bool readSuccess = false;
-  const lldb::addr_t reg_value_addr = reg_value.GetAsUInt64(fail_value, &readSuccess);
+  const lldb::addr_t reg_value_addr =
+      reg_value.GetAsUInt64(fail_value, &readSuccess);
   if (!readSuccess || reg_value_addr == fail_value)
     return;
-  
+
   MemoryRegionInfo register_region;
   Status err = process.GetMemoryRegionInfo(reg_value_addr, register_region);
   if (err.Fail())
@@ -6573,9 +6577,10 @@ static void AddRegisterSections(Process &process, ThreadSP &thread_sp, CoreFileM
   AddRegion(register_region, true, ranges);
 }
 
-static void AddModuleSections(Process &process, CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+static void AddModuleSections(Process &process, CoreFileMemoryRanges &ranges,
+                              std::set<addr_t> &stack_ends) {
   ModuleList &module_list = process.GetTarget().GetImages();
-  Target* target = &process.GetTarget();
+  Target *target = &process.GetTarget();
   for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
     ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
     if (!module_sp)
@@ -6639,8 +6644,6 @@ static void SaveOffRegionsWithStackPointers(Process &process,
       // or contains the thread id from thread_sp.
       if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
         AddRegion(sp_region, try_dirty_pages, ranges);
-        // Add the register section if x86_64 and add the module tls data
-        // only if the range isn't the same as this truncated stack range.
         AddRegisterSections(process, thread_sp, ranges, range_end);
       }
     }
@@ -6751,12 +6754,13 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   std::set<addr_t> stack_ends;
   // For fully custom set ups, we don't want to even look at threads if there
   // are no threads specified.
-  if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads()) {
+  if (core_style != lldb::eSaveCoreCustomOnly ||
+      options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
-                                stack_ends);
+                                    stack_ends);
+    // Save off the load sections for the TLS data.
     AddModuleSections(*this, ranges, stack_ends);
   }
-
 
   switch (core_style) {
   case eSaveCoreUnspecified:

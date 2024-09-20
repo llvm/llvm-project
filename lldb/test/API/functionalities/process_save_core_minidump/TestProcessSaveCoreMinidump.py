@@ -557,9 +557,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             live_region_list.GetMemoryRegionForAddress(fs_base, live_region)
             core_region = lldb.SBMemoryRegionInfo()
             error = core_region_list.GetMemoryRegionForAddress(fs_base, core_region)
-            self.assertTrue(error.Success())    
+            self.assertTrue(error.Success())
             self.assertEqual(live_region, core_region)
-            
+
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
             self.assertTrue(self.dbg.DeleteTarget(core_target))
@@ -623,7 +623,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             core_target = self.dbg.CreateTarget(None)
             core_proc = core_target.LoadCore(tls_file)
             frame = core_proc.GetThreadAtIndex(0).GetFrameAtIndex(0)
-            tls_val = frame.FindValue('lf')
+            tls_val = frame.FindValue("lf")
             self.assertEqual(tls_val.GetValueAsUnsigned(), 42)
 
         except:

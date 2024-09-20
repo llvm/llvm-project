@@ -118,9 +118,8 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
       Target &target = m_process->GetTarget();
       Address addr = obj->GetImageInfoAddress(&target);
       addr_t load_addr = addr.GetLoadAddress(&target);
-      if (load_addr != LLDB_INVALID_ADDRESS) {
+      if (load_addr != LLDB_INVALID_ADDRESS)
         rebase_exec = false;
-      } 
     }
   } else {
     // no executable, nothing to re-base

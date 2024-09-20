@@ -17,7 +17,6 @@ size_t h() {
   return sum;
 }
 
-
 int main() {
   std::thread t1(f);
 

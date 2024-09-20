@@ -35,8 +35,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
-#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
 #include <memory>
@@ -335,7 +335,7 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-DynamicLoader* ProcessMinidump::GetDynamicLoader() {
+DynamicLoader *ProcessMinidump::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
@@ -343,11 +343,13 @@ DynamicLoader* ProcessMinidump::GetDynamicLoader() {
 }
 
 DataExtractor ProcessMinidump::GetAuxvData() {
-  std::optional<llvm::ArrayRef<uint8_t>> auxv = m_minidump_parser->GetStream(StreamType::LinuxAuxv);
+  std::optional<llvm::ArrayRef<uint8_t>> auxv =
+      m_minidump_parser->GetStream(StreamType::LinuxAuxv);
   if (!auxv)
     return DataExtractor();
 
-  return DataExtractor(auxv->data(), auxv->size(), ByteOrder::eByteOrderLittle, GetAddressByteSize(), GetAddressByteSize()); 
+  return DataExtractor(auxv->data(), auxv->size(), ByteOrder::eByteOrderLittle,
+                       GetAddressByteSize(), GetAddressByteSize());
 }
 
 void ProcessMinidump::BuildMemoryRegions() {

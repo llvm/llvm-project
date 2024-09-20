@@ -50,7 +50,6 @@ public:
                 bool plugin_specified_by_name) override;
 
   CommandObject *GetPluginCommandObject() override;
-  
 
   Status DoLoadCore() override;
 

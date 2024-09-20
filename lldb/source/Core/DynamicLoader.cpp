@@ -355,7 +355,7 @@ int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
     return (int64_t)value;
 }
 
-addr_t DynamicLoader::  ReadPointer(addr_t addr) {
+addr_t DynamicLoader::ReadPointer(addr_t addr) {
   Status error;
   addr_t value = m_process->ReadPointerFromMemory(addr, error);
   if (error.Fail())
@@ -369,3 +369,4 @@ void DynamicLoader::LoadOperatingSystemPlugin(bool flush)
     if (m_process)
         m_process->LoadOperatingSystemPlugin(flush);
 }
+

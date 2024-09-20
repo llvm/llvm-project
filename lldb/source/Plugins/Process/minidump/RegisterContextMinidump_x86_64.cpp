@@ -46,7 +46,7 @@ static void writeRegister(const void *reg_src, uint8_t *context,
 
 // TODO: Fix the registers in this file!
 // writeRegister checks x86_64 registers without base registers. This causes
-// an overlap in the register enum values. So we were truncating fs_base. 
+// an overlap in the register enum values. So we were truncating fs_base.
 // We should standardize to the x86_64_with_base registers.
 static void writeBaseRegister(const void *reg_src, uint8_t *context,
                               const RegisterInfo &reg) {
@@ -119,9 +119,9 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
   // See comment on base regsiter
   if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
     writeBaseRegister(&context->fs_base, result_base,
-                  reg_info[x86_64_with_base::lldb_fs_base]);
+                      reg_info[x86_64_with_base::lldb_fs_base]);
     writeBaseRegister(&context->gs_base, result_base,
-                  reg_info[x86_64_with_base::lldb_gs_base]);
+                      reg_info[x86_64_with_base::lldb_gs_base]);
   }
 
   // TODO parse the floating point registers
