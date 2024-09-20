@@ -768,7 +768,7 @@ public:
   }
 
   mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
-    llvm_unreachable("NYI");
+    return Visit(E->getSemanticForm());
   }
 
   // Other Operators.
