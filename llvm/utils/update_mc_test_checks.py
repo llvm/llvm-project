@@ -51,9 +51,7 @@ def isTestLine(input_line, mc_mode):
 
 
 def hasErr(err):
-    if not err:
-        return False
-    return ERROR_RE.search(err) is not None
+    return err and ERROR_RE.search(err) is not None
 
 
 def getErrString(err):
