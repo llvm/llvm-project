@@ -168,10 +168,6 @@ struct TemplateInstantiationArgumentCollecter
 
   Decl *UseNextDecl(const Decl *D) { return ChangeDecl(D->getDeclContext()); }
 
-  Decl *DontClearRelativeToPrimaryNextDecl(const Decl *D) {
-    return const_cast<Decl *>(Decl::castFromDeclContext(D->getDeclContext()));
-  }
-
   void AddInnermostTemplateArguments(const Decl *D) {
     assert(Innermost);
     Result.addOuterTemplateArguments(const_cast<Decl *>(D), *Innermost,
@@ -423,7 +419,7 @@ struct TemplateInstantiationArgumentCollecter
     // For a class-scope explicit specialization, there are no template
     // arguments at this level, but there may be enclosing template arguments.
     if (CTSD->isClassScopeExplicitSpecialization())
-      return DontClearRelativeToPrimaryNextDecl(CTSD);
+      return UseNextDecl(CTSD);
 
     // We're done when we hit an explicit specialization.
     if (CTSD->getSpecializationKind() == TSK_ExplicitSpecialization)
@@ -452,7 +448,7 @@ struct TemplateInstantiationArgumentCollecter
       if (CTD->isMemberSpecialization())
         return Done();
     }
-    return DontClearRelativeToPrimaryNextDecl(CTSD);
+    return UseNextDecl(CTSD);
   }
 
   Decl *
@@ -460,7 +456,7 @@ struct TemplateInstantiationArgumentCollecter
     // For a class-scope explicit specialization, there are no template
     // arguments at this level, but there may be enclosing template arguments.
     if (VTSD->isClassScopeExplicitSpecialization())
-      return DontClearRelativeToPrimaryNextDecl(VTSD);
+      return UseNextDecl(VTSD);
 
     // We're done when we hit an explicit specialization.
     if (VTSD->getSpecializationKind() == TSK_ExplicitSpecialization)
@@ -488,7 +484,7 @@ struct TemplateInstantiationArgumentCollecter
       if (VTD->isMemberSpecialization())
         return Done();
     }
-    return DontClearRelativeToPrimaryNextDecl(VTSD);
+    return UseNextDecl(VTSD);
   }
 
   Decl *VisitImplicitConceptSpecializationDecl(
