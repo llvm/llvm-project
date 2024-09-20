@@ -2092,6 +2092,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
+  if (SrcTy->isTemplateTypeParmType() || DestTy->isTemplateTypeParmType()) {
+    return;
+  }
+
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
 }
 
