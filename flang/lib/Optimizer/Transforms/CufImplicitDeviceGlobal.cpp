@@ -55,10 +55,6 @@ class CufImplicitDeviceGlobal
     : public fir::impl::CufImplicitDeviceGlobalBase<CufImplicitDeviceGlobal> {
 public:
   void runOnOperation() override {
-    auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
-    mlir::ConversionTarget target(*ctx);
-
     mlir::Operation *op = getOperation();
     mlir::ModuleOp module = mlir::dyn_cast<mlir::ModuleOp>(op);
     if (!module)
