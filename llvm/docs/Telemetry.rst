@@ -91,6 +91,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 1) Define a custom `Telemeter` and `Destination`
 
 .. code-block:: c++
+
     // This destiantion just prints the given entry to a stdout.
     // In "real life", this would be where you forward the data to your
     // custom data storage.
