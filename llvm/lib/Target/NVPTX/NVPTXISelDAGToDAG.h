@@ -35,6 +35,7 @@ struct NVPTXScopes {
 
 private:
   SmallMapVector<SyncScope::ID, NVPTX::Scope, 8> Scopes{};
+  LLVMContext *CTX = nullptr;
 };
 
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {

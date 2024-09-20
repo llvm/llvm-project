@@ -4176,7 +4176,7 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   return true;
 }
 
-NVPTXScopes::NVPTXScopes(LLVMContext &C) {
+NVPTXScopes::NVPTXScopes(LLVMContext &C) : CTX(&C) {
   Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
   Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
   Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
@@ -4190,13 +4190,11 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
                      "NVPTXScopes::operator[]");
 
   auto S = Scopes.find(ID);
-  if (S == Scopes.end()) {
-    // TODO:
-    // - Add API to LLVMContext to get the name of a single scope.
-    // - Use that API here to print an error containing the name
-    //   of this Unknown ID.
-    report_fatal_error(formatv("Could not find scope ID={}.", int(ID)));
-  }
+  if (S == Scopes.end())
+    report_fatal_error(formatv("Could not find scope ID={} with name \"{}\".",
+                               int(ID),
+                               CTX->getSyncScopeName(ID).value_or("unknown")));
+
   return S->second;
 }
 
