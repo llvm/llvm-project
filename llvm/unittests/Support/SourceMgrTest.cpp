@@ -48,8 +48,8 @@ public:
 
 TEST_F(SourceMgrTest, BasicError) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -59,8 +59,8 @@ TEST_F(SourceMgrTest, BasicError) {
 
 TEST_F(SourceMgrTest, BasicWarning) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Warning, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Warning, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:5: warning: message\n"
             "aaa bbb\n"
@@ -70,8 +70,8 @@ TEST_F(SourceMgrTest, BasicWarning) {
 
 TEST_F(SourceMgrTest, BasicRemark) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Remark, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Remark, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:5: remark: message\n"
             "aaa bbb\n"
@@ -81,8 +81,8 @@ TEST_F(SourceMgrTest, BasicRemark) {
 
 TEST_F(SourceMgrTest, BasicNote) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Note, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Note, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:5: note: message\n"
             "aaa bbb\n"
@@ -92,8 +92,8 @@ TEST_F(SourceMgrTest, BasicNote) {
 
 TEST_F(SourceMgrTest, LocationAtEndOfLine) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(6), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(6), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:7: error: message\n"
             "aaa bbb\n"
@@ -103,8 +103,8 @@ TEST_F(SourceMgrTest, LocationAtEndOfLine) {
 
 TEST_F(SourceMgrTest, LocationAtNewline) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(7), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(7), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:8: error: message\n"
             "aaa bbb\n"
@@ -114,8 +114,8 @@ TEST_F(SourceMgrTest, LocationAtNewline) {
 
 TEST_F(SourceMgrTest, LocationAtEmptyBuffer) {
   setMainBuffer("", "file.in");
-  printMessage(getLoc(0), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(0), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:1: error: message\n"
             "\n"
@@ -125,8 +125,8 @@ TEST_F(SourceMgrTest, LocationAtEmptyBuffer) {
 
 TEST_F(SourceMgrTest, LocationJustOnSoleNewline) {
   setMainBuffer("\n", "file.in");
-  printMessage(getLoc(0), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(0), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:1: error: message\n"
             "\n"
@@ -136,8 +136,8 @@ TEST_F(SourceMgrTest, LocationJustOnSoleNewline) {
 
 TEST_F(SourceMgrTest, LocationJustAfterSoleNewline) {
   setMainBuffer("\n", "file.in");
-  printMessage(getLoc(1), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(1), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:2:1: error: message\n"
             "\n"
@@ -147,8 +147,8 @@ TEST_F(SourceMgrTest, LocationJustAfterSoleNewline) {
 
 TEST_F(SourceMgrTest, LocationJustAfterNonNewline) {
   setMainBuffer("123", "file.in");
-  printMessage(getLoc(3), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(3), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:4: error: message\n"
             "123\n"
@@ -158,8 +158,8 @@ TEST_F(SourceMgrTest, LocationJustAfterNonNewline) {
 
 TEST_F(SourceMgrTest, LocationOnFirstLineOfMultiline) {
   setMainBuffer("1234\n6789\n", "file.in");
-  printMessage(getLoc(3), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(3), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:4: error: message\n"
             "1234\n"
@@ -169,8 +169,8 @@ TEST_F(SourceMgrTest, LocationOnFirstLineOfMultiline) {
 
 TEST_F(SourceMgrTest, LocationOnEOLOfFirstLineOfMultiline) {
   setMainBuffer("1234\n6789\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "1234\n"
@@ -180,8 +180,8 @@ TEST_F(SourceMgrTest, LocationOnEOLOfFirstLineOfMultiline) {
 
 TEST_F(SourceMgrTest, LocationOnSecondLineOfMultiline) {
   setMainBuffer("1234\n6789\n", "file.in");
-  printMessage(getLoc(5), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(5), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:2:1: error: message\n"
             "6789\n"
@@ -191,8 +191,8 @@ TEST_F(SourceMgrTest, LocationOnSecondLineOfMultiline) {
 
 TEST_F(SourceMgrTest, LocationOnSecondLineOfMultilineNoSecondEOL) {
   setMainBuffer("1234\n6789", "file.in");
-  printMessage(getLoc(5), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(5), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:2:1: error: message\n"
             "6789\n"
@@ -202,8 +202,8 @@ TEST_F(SourceMgrTest, LocationOnSecondLineOfMultilineNoSecondEOL) {
 
 TEST_F(SourceMgrTest, LocationOnEOLOfSecondSecondLineOfMultiline) {
   setMainBuffer("1234\n6789\n", "file.in");
-  printMessage(getLoc(9), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(9), SourceMgr::DK_Error, "message", {},
+               {});
 
   EXPECT_EQ("file.in:2:5: error: message\n"
             "6789\n"
@@ -233,8 +233,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf255ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12"                       // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(253), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(253), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:1: error: message\n"
             "12\n"
             "^\n",
@@ -245,8 +245,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf255ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12"                       // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(254), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(254), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:2: error: message\n"
             "12\n"
             " ^\n",
@@ -257,8 +257,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf255ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12"                       // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:3: error: message\n"
             "12\n"
             "  ^\n",
@@ -269,8 +269,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf255ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1\n"                      // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(253), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(253), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:1: error: message\n"
             "1\n"
             "^\n",
@@ -281,8 +281,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf255ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1\n"                      // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(254), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(254), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:2: error: message\n"
             "1\n"
             " ^\n",
@@ -293,8 +293,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf255ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1\n"                      // + 2 = 255 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:25:1: error: message\n"
             "\n"
             "^\n",
@@ -309,8 +309,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf256ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123"                      // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(254), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(254), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:2: error: message\n"
             "123\n"
             " ^\n",
@@ -321,8 +321,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf256ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123"                      // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:3: error: message\n"
             "123\n"
             "  ^\n",
@@ -333,8 +333,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf256ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123"                      // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(256), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(256), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:4: error: message\n"
             "123\n"
             "   ^\n",
@@ -345,8 +345,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf256ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12\n"                     // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(254), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(254), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:2: error: message\n"
             "12\n"
             " ^\n",
@@ -357,8 +357,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf256ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12\n"                     // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:3: error: message\n"
             "12\n"
             "  ^\n",
@@ -369,8 +369,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf256ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "12\n"                     // + 3 = 256 bytes
                 , "file.in");
-  printMessage(getLoc(256), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(256), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:25:1: error: message\n"
             "\n"
             "^\n",
@@ -385,8 +385,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf257ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1234"                     // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:3: error: message\n"
             "1234\n"
             "  ^\n",
@@ -397,8 +397,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf257ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1234"                     // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(256), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(256), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:4: error: message\n"
             "1234\n"
             "   ^\n",
@@ -409,8 +409,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf257ByteBuffer) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "1234"                     // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(257), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(257), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:5: error: message\n"
             "1234\n"
             "    ^\n",
@@ -421,8 +421,8 @@ TEST_F(SourceMgrTest, LocationBeforeEndOf257ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123\n"                    // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(255), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(255), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:3: error: message\n"
             "123\n"
             "  ^\n",
@@ -433,8 +433,8 @@ TEST_F(SourceMgrTest, LocationAtEndOf257ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123\n"                    // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(256), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(256), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:24:4: error: message\n"
             "123\n"
             "   ^\n",
@@ -445,8 +445,8 @@ TEST_F(SourceMgrTest, LocationPastEndOf257ByteBufferEndingInNewline) {
   setMainBuffer(STRING_LITERAL_253_BYTES   // first 253 bytes
                 "123\n"                    // + 4 = 257 bytes
                 , "file.in");
-  printMessage(getLoc(257), SourceMgr::DK_Error, "message", std::nullopt,
-               std::nullopt);
+  printMessage(getLoc(257), SourceMgr::DK_Error, "message", {},
+               {});
   EXPECT_EQ("file.in:25:1: error: message\n"
             "\n"
             "^\n",
@@ -456,7 +456,7 @@ TEST_F(SourceMgrTest, LocationPastEndOf257ByteBufferEndingInNewline) {
 TEST_F(SourceMgrTest, BasicRange) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   printMessage(getLoc(4), SourceMgr::DK_Error, "message", getRange(4, 3),
-               std::nullopt);
+               {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -467,7 +467,7 @@ TEST_F(SourceMgrTest, BasicRange) {
 TEST_F(SourceMgrTest, RangeWithTab) {
   setMainBuffer("aaa\tbbb\nccc ddd\n", "file.in");
   printMessage(getLoc(4), SourceMgr::DK_Error, "message", getRange(3, 3),
-               std::nullopt);
+               {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa     bbb\n"
@@ -478,7 +478,7 @@ TEST_F(SourceMgrTest, RangeWithTab) {
 TEST_F(SourceMgrTest, MultiLineRange) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   printMessage(getLoc(4), SourceMgr::DK_Error, "message", getRange(4, 7),
-               std::nullopt);
+               {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -489,7 +489,7 @@ TEST_F(SourceMgrTest, MultiLineRange) {
 TEST_F(SourceMgrTest, MultipleRanges) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   SMRange Ranges[] = { getRange(0, 3), getRange(4, 3) };
-  printMessage(getLoc(4), SourceMgr::DK_Error, "message", Ranges, std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Error, "message", Ranges, {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -500,7 +500,7 @@ TEST_F(SourceMgrTest, MultipleRanges) {
 TEST_F(SourceMgrTest, OverlappingRanges) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   SMRange Ranges[] = { getRange(0, 3), getRange(2, 4) };
-  printMessage(getLoc(4), SourceMgr::DK_Error, "message", Ranges, std::nullopt);
+  printMessage(getLoc(4), SourceMgr::DK_Error, "message", Ranges, {});
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -510,7 +510,7 @@ TEST_F(SourceMgrTest, OverlappingRanges) {
 
 TEST_F(SourceMgrTest, BasicFixit) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(4), SourceMgr::DK_Error, "message", std::nullopt,
+  printMessage(getLoc(4), SourceMgr::DK_Error, "message", {},
                ArrayRef(SMFixIt(getRange(4, 3), "zzz")));
 
   EXPECT_EQ("file.in:1:5: error: message\n"
@@ -522,7 +522,7 @@ TEST_F(SourceMgrTest, BasicFixit) {
 
 TEST_F(SourceMgrTest, FixitForTab) {
   setMainBuffer("aaa\tbbb\nccc ddd\n", "file.in");
-  printMessage(getLoc(3), SourceMgr::DK_Error, "message", std::nullopt,
+  printMessage(getLoc(3), SourceMgr::DK_Error, "message", {},
                ArrayRef(SMFixIt(getRange(3, 1), "zzz")));
 
   EXPECT_EQ("file.in:1:4: error: message\n"

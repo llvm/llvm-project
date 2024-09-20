@@ -176,7 +176,7 @@ protected:
     auto CU =
         DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
     auto Type =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+        DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
