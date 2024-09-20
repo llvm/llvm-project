@@ -14,10 +14,13 @@ import recognizer
 class FrameRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
     def test_frame_recognizer_1(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "foo", exe_name=exe
+        )
+        frame = thread.GetSelectedFrame()
 
         # Clear internal & plugins recognizers that get initialized at launch
         self.runCmd("frame recognizer clear")
@@ -96,11 +99,6 @@ class FrameRecognizerTestCase(TestBase):
             "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo"
         )
 
-        target, process, thread, _ = lldbutil.run_to_name_breakpoint(
-            self, "foo", exe_name=exe
-        )
-        frame = thread.GetSelectedFrame()
-
         self.expect("frame variable", substrs=["(int) a = 42", "(int) b = 56"])
 
         # Recognized arguments don't show up by default...
@@ -164,7 +162,6 @@ class FrameRecognizerTestCase(TestBase):
                     substrs=['*a = 78'])
         """
 
-    @skipUnlessDarwin
     def test_frame_recognizer_hiding(self):
         self.build()
 
@@ -204,7 +201,6 @@ class FrameRecognizerTestCase(TestBase):
         frame = thread.GetSelectedFrame()
         self.assertIn("main", frame.name)
 
-    @skipUnlessDarwin
     def test_frame_recognizer_multi_symbol(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -250,7 +246,6 @@ class FrameRecognizerTestCase(TestBase):
             substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
         )
 
-    @skipUnlessDarwin
     def test_frame_recognizer_target_specific(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -318,8 +313,139 @@ class FrameRecognizerTestCase(TestBase):
             substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
         )
 
-    @skipUnlessDarwin
     def test_frame_recognizer_not_only_first_instruction(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Clear internal & plugins recognizers that get initialized at launch.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "recognizer.py")
+        )
+
+        self.expect("frame recognizer list", substrs=["no matching results found."])
+
+        # Create a target.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "foo", exe_name=exe
+        )
+
+        # Move the PC one instruction further.
+        self.runCmd("next")
+
+        # Add a frame recognizer in that target.
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar"
+        )
+
+        # It's not applied to foo(), because frame's PC is not at the first instruction of the function.
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 not recognized by any recognizer"],
+        )
+
+        # Add a frame recognizer with --first-instruction-only=true.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar --first-instruction-only=true"
+        )
+
+        # It's not applied to foo(), because frame's PC is not at the first instruction of the function.
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 not recognized by any recognizer"],
+        )
+
+        # Now add a frame recognizer with --first-instruction-only=false.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar --first-instruction-only=false"
+        )
+
+        # This time it should recognize the frame.
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
+        )
+
+        opts = lldb.SBVariablesOptions()
+        opts.SetIncludeRecognizedArguments(True)
+        frame = thread.GetSelectedFrame()
+        variables = frame.GetVariables(opts)
+
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "a")
+        self.assertEqual(variables.GetValueAtIndex(0).signed, 42)
+        self.assertEqual(
+            variables.GetValueAtIndex(0).GetValueType(), lldb.eValueTypeVariableArgument
+        )
+        self.assertEqual(variables.GetValueAtIndex(1).name, "b")
+        self.assertEqual(variables.GetValueAtIndex(1).signed, 56)
+        self.assertEqual(
+            variables.GetValueAtIndex(1).GetValueType(), lldb.eValueTypeVariableArgument
+        )
+
+    def test_frame_recognizer_disable(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "foo", exe_name=exe
+        )
+
+        # Clear internal & plugins recognizers that get initialized at launch.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "recognizer.py")
+        )
+
+        # Add a frame recognizer in that target.
+        self.runCmd(
+            "frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar"
+        )
+
+        # The frame is recognized
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
+        )
+
+        # Disable the recognizer
+        self.runCmd("frame recognizer disable 0")
+
+        self.expect(
+            "frame recognizer list",
+            substrs=[
+                "0: [disabled] recognizer.MyFrameRecognizer, module a.out, demangled symbol foo"
+            ],
+        )
+
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 not recognized by any recognizer"],
+        )
+
+        # Re-enable the recognizer
+        self.runCmd("frame recognizer enable 0")
+
+        self.expect(
+            "frame recognizer list",
+            substrs=[
+                "0: recognizer.MyFrameRecognizer, module a.out, demangled symbol foo"
+            ],
+        )
+
+        self.expect(
+            "frame recognizer info 0",
+            substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
+        )
+
+    def test_frame_recognizer_disable(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
