@@ -1041,8 +1041,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
-    libc.src.sys.socket.bind
     libc.src.sys.socket.socket
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.send
+    libc.src.sys.socket.sendto
+    libc.src.sys.socket.sendmsg
+    libc.src.sys.socket.recv
+    libc.src.sys.socket.recvfrom
+    libc.src.sys.socket.recvmsg
   )
 endif()
 
