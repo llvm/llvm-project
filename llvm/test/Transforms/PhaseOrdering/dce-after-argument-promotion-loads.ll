@@ -16,13 +16,13 @@ define ptr @parent(ptr align 8 dereferenceable(72) %f, i16 %val1, i16 %val2, i32
 ; CHECK-LABEL: define noundef nonnull ptr @parent
 ; CHECK-SAME: (ptr readonly returned align 8 dereferenceable(72) [[F:%.*]], i16 [[VAL1:%.*]], i16 [[VAL2:%.*]], i32 [[VAL3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 64
 ; CHECK-NEXT:    [[F_VAL:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[CMP_NOT_NOT_I:%.*]] = icmp eq i32 [[VAL3]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP_NOT_NOT_I]], i16 [[VAL1]], i16 [[VAL2]]
 ; CHECK-NEXT:    [[SPEC_SELECT2_I:%.*]] = select i1 [[CMP_NOT_NOT_I]], i16 [[VAL2]], i16 [[VAL1]]
 ; CHECK-NEXT:    store i16 [[SPEC_SELECT_I]], ptr [[F_VAL]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[F_VAL]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[F_VAL]], i64 16
 ; CHECK-NEXT:    store i16 [[SPEC_SELECT2_I]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret ptr [[F]]
 ;
