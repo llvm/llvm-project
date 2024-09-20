@@ -258,7 +258,7 @@ module attributes {transform.with_named_sequence} {
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 #map1 = affine_map<(d0, d1, d2) -> (d0 + d1 + d2)>
-func.func @vectorize_nd_tensor_extract_without_outer_unit_dim(%arg0: tensor<8x128x768xf32>, %arg1 : index) -> tensor<8x1xf32> {
+func.func @vectorize_nd_tensor_extract_load_1d_column_vector_using_gather_load(%arg0: tensor<8x128x768xf32>, %arg1 : index) -> tensor<8x1xf32> {
   %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<8x1xf32>
   %1 = linalg.generic {
@@ -276,15 +276,15 @@ func.func @vectorize_nd_tensor_extract_without_outer_unit_dim(%arg0: tensor<8x12
 }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
 
-// CHECK-LABEL: func.func @vectorize_nd_tensor_extract_without_outer_unit_dim
+// CHECK-LABEL: func.func @vectorize_nd_tensor_extract_load_1d_column_vector_using_gather_load
 // CHECK-SAME: %[[ARG0:.*]]: tensor<8x128x768xf32>
 // CHECK-SAME: %[[ARG1:.*]]: index
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
