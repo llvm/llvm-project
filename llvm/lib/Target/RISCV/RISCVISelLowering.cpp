@@ -19750,21 +19750,17 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret;
-    if (NeedSWGuarded)
-      Ret = DAG.getNode(RISCVISD::SW_GUARDED_TAIL, DL, NodeTys, Ops);
-    else
-      Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    unsigned CallOpc =
+        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+    SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
-  if (NeedSWGuarded)
-    Chain = DAG.getNode(RISCVISD::SW_GUARDED_CALL, DL, NodeTys, Ops);
-  else
-    Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
+  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL : RISCVISD::CALL;
+  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
