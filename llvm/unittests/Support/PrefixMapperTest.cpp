@@ -349,7 +349,8 @@ public:
   ErrorOr<std::string> getCurrentWorkingDirectory() const override {
     return make_error_code(std::errc::operation_not_permitted);
   }
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &) override {
+  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &,
+                                                      bool) override {
     return make_error_code(std::errc::operation_not_permitted);
   }
 
