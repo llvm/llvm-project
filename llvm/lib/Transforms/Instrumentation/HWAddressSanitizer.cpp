@@ -990,7 +990,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  bool useFixedShadowIntrinsic = false;
+  bool UseFixedShadowIntrinsic = false;
   // The memaccess fixed shadow intrinsic is only supported on AArch64,
   // which allows a 16-bit immediate to be left-shifted by 32.
   // Since kShadowBaseAlignment == 32, and Linux by default will not
@@ -999,11 +999,12 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   // In particular, an offset of 4TB (1024 << 32) is representable, and
   // ought to be good enough for anybody.
   if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
-    uint16_t offset_shifted = Mapping.Offset >> 32;
-    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+    uint16_t OffsetShifted = Mapping.Offset >> 32;
+    UseFixedShadowIntrinsic =
+        static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.Offset;
   }
 
-  if (useFixedShadowIntrinsic)
+  if (UseFixedShadowIntrinsic)
     IRB.CreateCall(
         Intrinsic::getDeclaration(
             M, UseShortGranules
