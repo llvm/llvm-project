@@ -45,17 +45,17 @@ define i32 @multiuse(<16 x i32> %u, <16 x i32> %v, ptr %b) {
 ; CHECK-LABEL: @multiuse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[U_MASKED]] to <16 x i8>
 ; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i32> [[V_MASKED]] to <16 x i8>
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i8> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[TMP3]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <16 x i8> [[WIDE_LOAD]], <i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i8> [[TMP5]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i32> [[V_MASKED]] to <16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <16 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[TMP2]] to <16 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i8> [[WIDE_LOAD]], <i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i32> [[U_MASKED]] to <16 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i8> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP8]])
 ; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
@@ -98,6 +98,19 @@ vector.body:
   %1 = and <16 x i32> %0, %a.phi
   %2 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
   ret i32 %2
+}
+
+define <2 x i32> @pr108698(<2 x i64> %x, <2 x i32> %y) {
+; CHECK-LABEL: @pr108698(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[CMP]] to <2 x i32>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[LSHR]]
+;
+  %cmp = icmp eq <2 x i64> %x, zeroinitializer
+  %ext = zext <2 x i1> %cmp to <2 x i32>
+  %lshr = lshr <2 x i32> %ext, %y
+  ret <2 x i32> %lshr
 }
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

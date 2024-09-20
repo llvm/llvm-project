@@ -39,6 +39,8 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- The ``clang-rename`` tool has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -114,6 +116,7 @@ C++ Language Changes
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
+- Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -170,6 +173,9 @@ Resolutions to C++ Defect Reports
   in constant expressions. These comparisons always worked in non-constant expressions.
   (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
 
+- Reject explicit object parameters with type ``void`` (``this void``).
+  (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
+
 C Language Changes
 ------------------
 
@@ -178,6 +184,8 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports `N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_ Improved Normal Enumerations.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -247,7 +255,10 @@ Attribute Changes in Clang
   (#GH106864)
 
 - Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
-  to express elideability at call sites where the coroutine is co_awaited as a prvalue.
+  to express elideability at call sites where the coroutine is invoked under a safe elide context.
+
+- Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
+  to propagate safe elide context to arguments if such function is also under a safe elide context.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -300,6 +311,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses dangling cases where a gsl-pointer is constructed from a gsl-owner object inside a container (#GH100384).
 
 - Clang now warns for u8 character literals used in C23 with ``-Wpre-c23-compat`` instead of ``-Wpre-c++17-compat``.
+
+- Clang now diagnose when importing module implementation partition units in module interface units.
+
+- Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -383,13 +398,22 @@ Bug Fixes to C++ Support
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. #GH63819, #GH107560
-
+  pack. (#GH63819), (#GH107560)
+- Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
+- Fixed an assertion failure in debug mode, and potential crashes in release mode, when
+  diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
+- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
+- Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
+  sometimes incorrectly return null even if a comment was present. (#GH108145)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -408,6 +432,8 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when function has more than 65536 parameters.
   Now a diagnostic is emitted. (#GH35741)
+
+- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
 
 OpenACC Specific Changes
 ------------------------
@@ -497,8 +523,10 @@ AST Matchers
 - Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
   inline namespaces with an enclosing namespace of the same name.
 
-- Fixed an ordering issue with the `hasOperands` matcher occuring when setting a
+- Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
+
+- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
 
 clang-format
 ------------

@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -378,7 +379,6 @@ void BuiltinNameEmitter::ExtractEnumTypes(ArrayRef<const Record *> Types,
       TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
     }
   }
-  SS.flush();
 }
 
 void BuiltinNameEmitter::EmitDeclarations() {
@@ -515,8 +515,7 @@ void BuiltinNameEmitter::GetOverloads() {
 
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
-    auto it =
-        llvm::find_if(SignaturesList,
+    auto it = find_if(SignaturesList,
                       [&](const std::pair<std::vector<Record *>, unsigned> &a) {
                         return a.first == Signature;
                       });
@@ -688,7 +687,7 @@ void BuiltinNameEmitter::GroupBySignature() {
       CurSignatureList->push_back(Signature.second);
     }
     // Sort the list to facilitate future comparisons.
-    llvm::sort(*CurSignatureList);
+    sort(*CurSignatureList);
 
     // Check if we have already seen another function with the same list of
     // signatures.  If so, just add the name of the function.
@@ -731,7 +730,6 @@ void BuiltinNameEmitter::EmitStringMatcher() {
       raw_string_ostream SS(RetStmt);
       SS << "return std::make_pair(" << CumulativeIndex << ", " << Ovl.size()
          << ");";
-      SS.flush();
       ValidBuiltins.push_back(
           StringMatcher::StringPair(std::string(FctName), RetStmt));
     }
@@ -892,16 +890,15 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   // Only insert the plain scalar type; vector information and type qualifiers
   // are added in step 2.
   ArrayRef<const Record *> Types = Records.getAllDerivedDefinitions("Type");
-  StringMap<bool> TypesSeen;
+  StringSet<> TypesSeen;
 
   for (const auto *T : Types) {
     // Check this is not an image type
     if (ImageTypesMap.contains(T->getValueAsString("Name")))
       continue;
     // Check we have not seen this Type
-    if (TypesSeen.contains(T->getValueAsString("Name")))
+    if (!TypesSeen.insert(T->getValueAsString("Name")).second)
       continue;
-    TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
 
     // Check the Type does not have an "abstract" QualType
     auto QT = T->getValueAsDef("QTExpr");
@@ -1084,9 +1081,8 @@ void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
         // the full type name to the extension.
         StringRef Ext =
             Type->getValueAsDef("Extension")->getValueAsString("ExtName");
-        if (!Ext.empty() && !TypeExtMap.contains(FullType)) {
-          TypeExtMap.insert({FullType, Ext});
-        }
+        if (!Ext.empty())
+          TypeExtMap.try_emplace(FullType, Ext);
       }
     }
     NumSignatures = std::max<unsigned>(NumSignatures, ExpandedArg.size());
@@ -1278,7 +1274,7 @@ void OpenCLBuiltinHeaderEmitter::emit() {
   // Iterate over all builtins; sort to follow order of definition in .td file.
   std::vector<const Record *> Builtins =
       Records.getAllDerivedDefinitions("Builtin");
-  llvm::sort(Builtins, LessRecord());
+  sort(Builtins, LessRecord());
 
   for (const auto *B : Builtins) {
     StringRef Name = B->getValueAsString("Name");

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-unknown-unknown -target-feature +avx10.2-256 -emit-llvm -Wall -Werror -verify
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-unknown-unknown -target-feature +avx10.2-256 -Wall -Werror -verify
 
 unsigned long long test_mm_cvttssd(unsigned long long __A) {
   return _mm_cvttssd(__A); // expected-error {{call to undeclared function '_mm_cvttssd'}}

@@ -58,7 +58,7 @@ void markLive(COFFLinkerContext &ctx) {
       addImportFile(sym->file);
     } else if (auto *sym = dyn_cast<DefinedImportThunk>(b)) {
       addImportFile(sym->wrappedSym->file);
-      sym->wrappedSym->file->thunkLive = true;
+      sym->getChunk()->live = true;
     }
   };
 

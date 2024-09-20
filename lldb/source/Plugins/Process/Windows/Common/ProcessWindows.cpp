@@ -492,10 +492,10 @@ void ProcessWindows::RefreshStateAfterStop() {
                 << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
     DumpAdditionalExceptionInformation(desc_stream, active_exception);
 
-    stop_info = StopInfo::CreateStopReasonWithException(
-        *stop_thread, desc_stream.str().c_str());
+    stop_info =
+        StopInfo::CreateStopReasonWithException(*stop_thread, desc.c_str());
     stop_thread->SetStopInfo(stop_info);
-    LLDB_LOG(log, "{0}", desc_stream.str());
+    LLDB_LOG(log, "{0}", desc);
     return;
   }
   }

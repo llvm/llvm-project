@@ -14,6 +14,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -493,6 +494,10 @@ PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
 
 bool DXILIntrinsicExpansionLegacy::runOnModule(Module &M) {
   return expansionIntrinsics(M);
+}
+
+void DXILIntrinsicExpansionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILIntrinsicExpansionLegacy::ID = 0;

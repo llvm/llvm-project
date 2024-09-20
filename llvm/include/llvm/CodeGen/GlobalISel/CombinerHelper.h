@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -844,7 +845,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -854,7 +856,8 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector
@@ -908,6 +911,9 @@ public:
 
   bool matchCastOfBuildVector(const MachineInstr &CastMI,
                               const MachineInstr &BVMI, BuildFnTy &MatchInfo);
+
+  bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -1023,6 +1029,11 @@ private:
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
   bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
+                        const GIConstant &RHSCst, BuildFnTy &MatchInfo);
+  bool constantFoldFCmp(const GFCmp &FCmp, const GFConstant &LHSCst,
+                        const GFConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

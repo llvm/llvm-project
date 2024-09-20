@@ -440,12 +440,26 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   }
 
   // Any redeclarations of D that we haven't checked for comments yet?
-  // We can't use DenseMap::iterator directly since it'd get invalid.
-  auto LastCheckedRedecl = [this, CanonicalD]() -> const Decl * {
-    return CommentlessRedeclChains.lookup(CanonicalD);
+  const Decl *LastCheckedRedecl = [&]() {
+    const Decl *LastChecked = CommentlessRedeclChains.lookup(CanonicalD);
+    bool CanUseCommentlessCache = false;
+    if (LastChecked) {
+      for (auto *Redecl : CanonicalD->redecls()) {
+        if (Redecl == D) {
+          CanUseCommentlessCache = true;
+          break;
+        }
+        if (Redecl == LastChecked)
+          break;
+      }
+    }
+    // FIXME: This could be improved so that even if CanUseCommentlessCache
+    // is false, once we've traversed past CanonicalD we still skip ahead
+    // LastChecked.
+    return CanUseCommentlessCache ? LastChecked : nullptr;
   }();
 
-  for (const auto Redecl : D->redecls()) {
+  for (const Decl *Redecl : D->redecls()) {
     assert(Redecl);
     // Skip all redeclarations that have been checked previously.
     if (LastCheckedRedecl) {
@@ -2243,8 +2257,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
-                               SINGLETONID)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3378,7 +3391,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-    case BuiltinType::AMDGPUBufferRsrc:
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
@@ -14244,6 +14258,18 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
       std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+      Features.insert(Features.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.begin(),
+                      Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+    } else if (Target->getTriple().isRISCV()) {
+      StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+      std::vector<std::string> Features;
+      if (VersionStr != "default") {
+        ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(VersionStr);
+        Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                        ParsedAttr.Features.end());
+      }
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
