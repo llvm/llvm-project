@@ -16,7 +16,7 @@ Alternatively, you can explictly specify the location of the `lldb-dap` binary u
 ### Usage with other IDEs
 
 The `lldb-dap` binary is a command line tool that implements the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
-It is used to power the Visual Studio Code extension but can also be used with other IDEs and editors that support DAP.
+It is used to power the VS Code extension but can also be used with other IDEs and editors that support DAP.
 The protocol is easy to run remotely and also can allow other tools and IDEs to get a full featured debugger with a well defined protocol.
 
 ## Launching & Attaching to a debugee
