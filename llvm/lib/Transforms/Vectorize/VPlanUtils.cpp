@@ -74,11 +74,21 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  // Loop invariants are uniform.
-  if (V->isDefinedOutsideLoopRegions())
+  using namespace VPlanPatternMatch;
+  // Live-ins are uniform.
+  if (V->isLiveIn())
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();
+  if (R && V->isDefinedOutsideLoopRegions()) {
+    if (match(V->getDefiningRecipe(),
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
+                  m_VPValue())))
+      return false;
+    return all_of(R->operands(),
+                  [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
+  }
+
   auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())

@@ -124,8 +124,8 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i32> [[WIDE_VEC2]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; AVX2-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <16 x i32> [[WIDE_VEC2]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; AVX2-NEXT:    [[WIDE_VEC3:%.*]] = load <16 x i32>, ptr [[TMP9]], align 4
-; AVX2-NEXT:    [[STRIDED_VEC10:%.*]] = shufflevector <16 x i32> [[WIDE_VEC3]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; AVX2-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i32> [[WIDE_VEC3]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; AVX2-NEXT:    [[STRIDED_VEC10:%.*]] = shufflevector <16 x i32> [[WIDE_VEC3]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; AVX2-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[STRIDED_VEC7]], [[STRIDED_VEC]]
 ; AVX2-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[STRIDED_VEC8]], [[STRIDED_VEC4]]
 ; AVX2-NEXT:    [[TMP12:%.*]] = add nsw <8 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
