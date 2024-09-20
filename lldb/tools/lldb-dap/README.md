@@ -13,7 +13,7 @@ There are multiple ways to obtain this binary:
 By default, the VS-Code extension will expect to find `lldb-dap` in your `PATH`.
 Alternatively, you can explictly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
 
-### Usage with other editors
+### Usage with other IDEs
 
 The `lldb-dap` binary is a command line tool that implements the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
 It is used to power the Visual Studio Code extension but can also be used with other IDEs and editors that support DAP.
