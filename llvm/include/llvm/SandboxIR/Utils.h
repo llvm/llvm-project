@@ -1,4 +1,4 @@
-//===- Utils.h ----------------------------------------------*- C++ -*-===//
+//===- Utils.h --------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,4 +51,4 @@ public:
 };
 } // namespace llvm::sandboxir
 
-#endif // LLVM_SANDBOXIR_TYPE_H
+#endif // LLVM_SANDBOXIR_UTILS_H
