@@ -361,8 +361,8 @@ define void @frem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F32 = frem <1 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F32 = frem <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F32 = frem <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = frem <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F32 = frem <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F32 = frem <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F32 = frem <vscale x 1 x float> undef, undef
@@ -371,7 +371,7 @@ define void @frem() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F32 = frem <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F32 = frem <vscale x 16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F64 = frem <1 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F64 = frem <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F64 = frem <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F64 = frem <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F64 = frem <vscale x 1 x double> undef, undef
@@ -412,9 +412,9 @@ define void @frem_f16() {
 ; ZVFH-LABEL: 'frem_f16'
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F16 = frem <2 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F16 = frem <4 x half> undef, undef
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F16 = frem <8 x half> undef, undef
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
 ; ZVFH-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
@@ -428,9 +428,9 @@ define void @frem_f16() {
 ; ZVFHMIN-LABEL: 'frem_f16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F16 = frem <2 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F16 = frem <4 x half> undef, undef
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F16 = frem <8 x half> undef, undef
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F16 = frem <16 x half> undef, undef
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V32F16 = frem <32 x half> undef, undef
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
@@ -620,9 +620,9 @@ define void @fcopysign_f16() {
 ; ZVFHMIN-LABEL: 'fcopysign_f16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = call half @llvm.copysign.f16(half undef, half undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F16 = call <1 x half> @llvm.copysign.v1f16(<1 x half> undef, <1 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4F16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V8F16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V16F16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V32F16 = call <32 x half> @llvm.copysign.v32f16(<32 x half> undef, <32 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> undef, <vscale x 1 x half> undef)

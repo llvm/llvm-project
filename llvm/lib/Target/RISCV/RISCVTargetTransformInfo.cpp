@@ -616,6 +616,40 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
+static unsigned isM1OrSmaller(MVT VT) {
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
+          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+}
+
+InstructionCost RISCVTTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind) {
+  if (isa<ScalableVectorType>(Ty))
+    return InstructionCost::getInvalid();
+
+  // A build_vector (which is m1 sized or smaller) can be done in no
+  // worse than one vslide1down.vx per element in the type.  We could
+  // in theory do an explode_vector in the inverse manner, but our
+  // lowering today does not have a first class node for this pattern.
+  InstructionCost Cost = BaseT::getScalarizationOverhead(
+      Ty, DemandedElts, Insert, Extract, CostKind);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector() &&
+      Ty->getScalarSizeInBits() != 1) {
+    assert(LT.second.isFixedLengthVector());
+    MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
+    if (isM1OrSmaller(ContainerVT)) {
+      InstructionCost BV =
+          cast<FixedVectorType>(Ty)->getNumElements() *
+          getRISCVInstructionCost(RISCV::VSLIDE1DOWN_VX, LT.second, CostKind);
+      if (BV < Cost)
+        Cost = BV;
+    }
+  }
+  return Cost;
+}
+
 InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
@@ -765,6 +799,23 @@ InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
+}
+
+InstructionCost
+RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+  // FIXME: This is a property of the default vector convention, not
+  // all possible calling conventions.  Fixing that will require
+  // some TTI API and SLP rework.
+  InstructionCost Cost = 0;
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  for (auto *Ty : Tys) {
+    if (!Ty->isVectorTy())
+      continue;
+    Align A = DL.getPrefTypeAlign(Ty);
+    Cost += getMemoryOpCost(Instruction::Store, Ty, A, 0, CostKind) +
+            getMemoryOpCost(Instruction::Load, Ty, A, 0, CostKind);
+  }
+  return Cost;
 }
 
 // Currently, these represent both throughput and codesize costs
