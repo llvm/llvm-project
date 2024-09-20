@@ -308,8 +308,13 @@ bool TemplateDecl::isTypeAlias() const {
 
 void RedeclarableTemplateDecl::anchor() {}
 
+RedeclarableTemplateDecl::CommonBase *
+RedeclarableTemplateDecl::getCommonPtrInternal() const {
+  return Common.getPointer();
+}
+
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
-  if (CommonBase *C = Common.getPointer())
+  if (CommonBase *C = getCommonPtrInternal())
     return C;
 
   // Walk the previous-declaration chain until we either find a declaration
@@ -317,7 +322,7 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   SmallVector<const RedeclarableTemplateDecl *, 2> PrevDecls;
   for (const RedeclarableTemplateDecl *Prev = getPreviousDecl(); Prev;
        Prev = Prev->getPreviousDecl()) {
-    if (CommonBase *C = Prev->Common.getPointer()) {
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
       Common.setPointer(C);
       break;
     }
@@ -326,7 +331,7 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   }
 
   // If we never found a common pointer, allocate one now.
-  if (!Common.getPointer()) {
+  if (!getCommonPtrInternal()) {
     // FIXME: If any of the declarations is from an AST file, we probably
     // need an update record to add the common data.
 
@@ -335,9 +340,9 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
 
   // Update any previous declarations we saw with the common pointer.
   for (const RedeclarableTemplateDecl *Prev : PrevDecls)
-    Prev->Common.setPointer(Common.getPointer());
+    Prev->Common.setPointer(getCommonPtrInternal());
 
-  return Common.getPointer();
+  return getCommonPtrInternal();
 }
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
@@ -467,14 +472,14 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
 
   // If we haven't created a common pointer yet, then it can just be created
   // with the usual method.
-  if (!Base::Common.getPointer())
+  if (!getCommonPtrInternal())
     return;
 
-  Common *ThisCommon = static_cast<Common *>(Base::Common.getPointer());
+  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
   Common *PrevCommon = nullptr;
   SmallVector<FunctionTemplateDecl *, 8> PreviousDecls;
   for (; Prev; Prev = Prev->getPreviousDecl()) {
-    if (CommonBase *C = Prev->Base::Common.getPointer()) {
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
       PrevCommon = static_cast<Common *>(C);
       break;
     }

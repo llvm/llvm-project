@@ -2416,11 +2416,11 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   // Make sure we've allocated the Common pointer first. We do this before
   // VisitTemplateDecl so that getCommonPtr() can be used during initialization.
   RedeclarableTemplateDecl *CanonD = D->getCanonicalDecl();
-  if (!CanonD->Common.getPointer()) {
+  if (!CanonD->getCommonPtrInternal()) {
     CanonD->Common.setPointer(CanonD->newCommon(Reader.getContext()));
     Reader.PendingDefinitions.insert(CanonD);
   }
-  D->Common.setPointer(CanonD->Common.getPointer());
+  D->Common.setPointer(CanonD->getCommonPtrInternal());
   if (Record.readInt())
     D->setMemberSpecialization();
 
@@ -2888,7 +2888,7 @@ void ASTDeclReader::mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
   // If we merged the template with a prior declaration chain, merge the
   // common pointer.
   // FIXME: Actually merge here, don't just overwrite.
-  D->Common.setPointer(D->getCanonicalDecl()->Common.getPointer());
+  D->Common.setPointer(D->getCanonicalDecl()->getCommonPtrInternal());
 }
 
 /// "Cast" to type T, asserting if we don't have an implicit conversion.

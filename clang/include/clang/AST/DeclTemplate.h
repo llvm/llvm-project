@@ -809,6 +809,8 @@ protected:
   /// specialization.
   mutable llvm::PointerIntPair<CommonBase *, 1, bool> Common;
 
+  CommonBase *getCommonPtrInternal() const;
+
   /// Retrieves the "common" pointer shared by all (re-)declarations of
   /// the same template. Calling this routine may implicitly allocate memory
   /// for the common pointer.
