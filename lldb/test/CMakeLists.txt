@@ -108,6 +108,9 @@ endfunction(add_lldb_test_dependency)
 add_lldb_test_dependency(lldb)
 add_lldb_test_dependency(lldb-test)
 
+# Enable Telemetry for testing.
+target_compile_definitions(lldb PRIVATE -DTEST_TELEMETRY)
+
 # On Darwin, darwin-debug is an hard dependency for the testsuites.
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_lldb_test_dependency(darwin-debug)

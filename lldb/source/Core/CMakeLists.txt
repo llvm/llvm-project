@@ -52,6 +52,7 @@ add_lldb_library(lldbCore
   SourceLocationSpec.cpp
   SourceManager.cpp
   Telemetry.cpp
+  TelemetryVendor.cpp
   StreamAsynchronousIO.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp

@@ -129,6 +129,7 @@ typedef bool (*ScriptedInterfaceCreateInstance)(lldb::ScriptLanguage language,
                                                 ScriptedInterfaceUsages usages);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
+typedef TelemetryVendor *(*TelemetryVendorCreateInstance)();
 /// Trace
 /// \{
 typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstanceFromBundle)(

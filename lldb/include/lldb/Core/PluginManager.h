@@ -379,6 +379,15 @@ public:
                                          const UUID *uuid,
                                          const ArchSpec *arch);
 
+  // TelemetryVendor
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             TelemetryVendorCreateInstance create_callback);
+
+  static bool UnregisterPlugin(TelemetryVendorCreateInstance create_callback);
+
+  static TelemetryVendorCreateInstance
+  GetTelemetryVendorCreateCallbackAtIndex(uint32_t idx);
+
   // Trace
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,

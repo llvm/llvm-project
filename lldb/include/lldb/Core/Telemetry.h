@@ -192,15 +192,15 @@ struct CommandTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string ToString() const override;
 };
 
-// The "catch-all" entry to store a set of custom/non-standard
-// data.
+/// The "catch-all" entry to store a set of custom/non-standard
+/// data.
 struct MiscTelemetryInfo : public LldbBaseTelemetryInfo {
-  // If the event is/can be associated with a target entry,
-  // this field contains that target's UUID.
-  // <EMPTY> otherwise.
+  /// If the event is/can be associated with a target entry,
+  /// this field contains that target's UUID.
+  /// <EMPTY> otherwise.
   std::string target_uuid;
 
-  // Set of key-value pairs for any optional (or impl-specific) data
+  /// Set of key-value pairs for any optional (or impl-specific) data
   std::unordered_map<std::string, std::string> meta_data;
 
   MiscTelemetryInfo() = default;
@@ -223,29 +223,39 @@ struct MiscTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string ToString() const override;
 };
 
+/// The base Telemeter instance in LLDB.
+/// This class declares additional instrumentation points
+/// applicable to LLDB.
 class LldbTelemeter : public llvm::telemetry::Telemeter {
 public:
-  static std::unique_ptr<LldbTelemeter> CreateInstance(Debugger *);
+  /// Creates an instance of LldbTelemeter.
+  /// This uses the plugin registry to find an instance:
+  ///  - If a vendor supplies a implementation, it will use it.
+  ///  - If not, it will either return a no-op instance or a basic
+  ///    implementation for testing.
+  ///
+  /// See also lldb_private::TelemetryVendor.
+  static std::unique_ptr<LldbTelemeter> CreateInstance(Debugger *debugger);
 
   virtual ~LldbTelemeter() = default;
 
-  // Invoked upon process exit
+  /// Invoked upon process exit
   virtual void LogProcessExit(int status, llvm::StringRef exit_string,
                               llvm::telemetry::EventStats stats,
                               Target *target_ptr) = 0;
 
-  // Invoked upon loading the main executable module
-  // We log in a fire-n-forget fashion so that if the load
-  // crashes, we don't lose the entry.
+  /// Invoked upon loading the main executable module
+  /// We log in a fire-n-forget fashion so that if the load
+  /// crashes, we don't lose the entry.
   virtual void
   LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
                              llvm::telemetry::EventStats stats) = 0;
   virtual void LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
                                         llvm::telemetry::EventStats stats) = 0;
 
-  // Invoked for each command
-  // We log in a fire-n-forget fashion so that if the command execution
-  // crashes, we don't lose the entry.
+  /// Invoked for each command
+  /// We log in a fire-n-forget fashion so that if the command execution
+  /// crashes, we don't lose the entry.
   virtual void LogCommandStart(llvm::StringRef uuid,
                                llvm::StringRef original_command,
                                llvm::telemetry::EventStats stats,
@@ -258,36 +268,36 @@ public:
 
   virtual std::string GetNextUUID() = 0;
 
-  // For client (eg., SB API) to send telemetry entries.
+  /// For client (eg., SB API) to send telemetry entries.
   virtual void
   LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) = 0;
 };
 
-// Logger configs: LLDB users can also supply their own configs via:
-// $HOME/.lldb_telemetry_config
-//
-// We can propose simple syntax: <field_name><colon><value>
-// Eg.,
-// enable_telemetry:true
-// destination:stdout
-// destination:stderr
-// destination:/path/to/some/file
-//
-// The allowed field_name values are:
-//  * enable_telemetry
-//       If the fields are specified more than once, the last line will take
-//       precedence If enable_logging is set to false, no logging will occur.
-//  * destination.
-//       This is allowed to be specified multiple times - it will add to the
-//       default (ie, specified by vendor) list of destinations.
-//       The value can be either:
-//          + one of the two magic values "stdout" or "stderr".
-//          + a path to a local file
-// !!NOTE!!: We decided to use a separate file instead of the existing settings
-//         file because that file is parsed too late in the process and by the
-//         there might have been lots of telemetry-entries that need to be
-//         sent already.
-//         This approach avoid losing log entries if LLDB crashes during init.
+/// Logger configs: LLDB users can also supply their own configs via:
+/// $HOME/.lldb_telemetry_config
+///
+/// We can propose simple syntax: <field_name><colon><value>
+/// Eg.,
+/// enable_telemetry:true
+/// destination:stdout
+/// destination:stderr
+/// destination:/path/to/some/file
+///
+/// The allowed field_name values are:
+///  * enable_telemetry
+///       If the fields are specified more than once, the last line will take
+///       precedence If enable_logging is set to false, no logging will occur.
+///  * destination.
+///       This is allowed to be specified multiple times - it will add to the
+///       default (ie, specified by vendor) list of destinations.
+///       The value can be either:
+///          + one of the two magic values "stdout" or "stderr".
+///          + a path to a local file
+/// !!NOTE!!: We decided to use a separate file instead of the existing settings
+///         file because that file is parsed too late in the process and by the
+///         there might have been lots of telemetry-entries that need to be
+///         sent already.
+///         This approach avoid losing log entries if LLDB crashes during init.
 llvm::telemetry::Config *GetTelemetryConfig();
 
 } // namespace lldb_private
