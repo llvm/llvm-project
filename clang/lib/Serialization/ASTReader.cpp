@@ -5318,7 +5318,7 @@ std::string ASTReader::getOriginalSourceFile(
   // Open the AST file.
   auto Buffer = FileMgr.getBufferForFile(ASTFileName, /*IsVolatile=*/false,
                                          /*RequiresNullTerminator=*/false,
-                                         /*IsText=*/false);
+                                         /*IsText=*/true);
   if (!Buffer) {
     Diags.Report(diag::err_fe_unable_to_read_pch_file)
         << ASTFileName << Buffer.getError().message();
