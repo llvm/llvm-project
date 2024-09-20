@@ -122,8 +122,6 @@ class Lint : public InstVisitor<Lint> {
   Value *findValue(Value *V, bool OffsetOk) const;
   Value *findValueImpl(Value *V, bool OffsetOk,
                        SmallPtrSetImpl<Value *> &Visited) const;
-
-  bool isConstantAddressSpace(unsigned AS) const;
 public:
   Module *Mod;
   Triple TT;
@@ -382,36 +380,6 @@ void Lint::visitReturnInst(ReturnInst &I) {
   }
 }
 
-bool Lint::isConstantAddressSpace(unsigned AS) const {
-  if (TT.isAMDGPU()) {
-    switch(AS) {
-      using namespace AMDGPUAS;
-    case CONSTANT_ADDRESS:
-    case CONSTANT_ADDRESS_32BIT:
-    case CONSTANT_BUFFER_0:
-    case CONSTANT_BUFFER_1:
-    case CONSTANT_BUFFER_2:
-    case CONSTANT_BUFFER_3:
-    case CONSTANT_BUFFER_4:
-    case CONSTANT_BUFFER_5:
-    case CONSTANT_BUFFER_6:
-    case CONSTANT_BUFFER_7:
-    case CONSTANT_BUFFER_8:
-    case CONSTANT_BUFFER_9:
-    case CONSTANT_BUFFER_10:
-    case CONSTANT_BUFFER_11:
-    case CONSTANT_BUFFER_12:
-    case CONSTANT_BUFFER_13:
-    case CONSTANT_BUFFER_14:
-    case CONSTANT_BUFFER_15:
-      return true;
-    default:
-      return false;
-    }
-  }
-  return false;
-}
-
 // TODO: Check that the reference is in bounds.
 // TODO: Check readnone/readonly function attributes.
 void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
@@ -435,8 +403,9 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
         "Unusual: Address one pointer dereference", &I);
 
   if (Flags & MemRef::Write) {
-    Check(!isConstantAddressSpace(UnderlyingObject->getType()->getPointerAddressSpace()),
-      "Undefined behavior: Write to const memory", &I);
+    if (TT.isAMDGPU())
+      Check(!AMDGPU::isConstantAddressSpace(UnderlyingObject->getType()->getPointerAddressSpace()),
+        "Undefined behavior: Write to const memory", &I);
 
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
       Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
