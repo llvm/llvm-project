@@ -1132,7 +1132,7 @@ let OtherPredicates = [HasGFX10_BEncoding] in {
   >;
 }
 
-let SubtargetPredicate = isGFX8GFX9 in {
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1214,7 +1214,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let SubtargetPredicate = isNotGFX12Plus in
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
 >;
@@ -1297,6 +1297,7 @@ let SubtargetPredicate = isGFX7Plus in {
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 
@@ -3277,18 +3278,12 @@ defm BUFFER_ATOMIC_XOR_X2       : MUBUF_Real_Atomic_vi <0x6a>;
 defm BUFFER_ATOMIC_INC_X2       : MUBUF_Real_Atomic_vi <0x6b>;
 defm BUFFER_ATOMIC_DEC_X2       : MUBUF_Real_Atomic_vi <0x6c>;
 
-let AssemblerPredicate = isGFX8GFX9NotGFX90A in {
-defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_vi <0x3d>;
-}
+defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_vi_gfx90a <0x3d>;
 
-let AssemblerPredicate = isGFX90AOnly in {
-defm BUFFER_STORE_LDS_DWORD     : MUBUF_Real_gfx90a <0x3d>;
-}
-
-let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
+let AssemblerPredicate = isGFX8GFX9 in {
 defm BUFFER_WBINVL1             : MUBUF_Real_vi <0x3e>;
 defm BUFFER_WBINVL1_VOL         : MUBUF_Real_vi <0x3f>;
-} // End AssemblerPredicate = isGFX8GFX9NotGFX940
+} // End AssemblerPredicate = isGFX8GFX9
 
 
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
