@@ -196,7 +196,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(DotProductReal10)(
   return DotProduct<TypeCategory::Real, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(DotProductReal16)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 16>{}(x, y, source, line);
@@ -218,7 +218,7 @@ void RTDEF(CppDotProductComplex10)(
   result = DotProduct<TypeCategory::Complex, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(CppDotProductComplex16)(
     CppTypeFor<TypeCategory::Complex, 16> &result, const Descriptor &x,
     const Descriptor &y, const char *source, int line) {

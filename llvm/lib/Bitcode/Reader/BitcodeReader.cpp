@@ -2144,6 +2144,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SANITIZE_REALTIME:
     return Attribute::SanitizeRealtime;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE:
+    return Attribute::SanitizeRealtimeUnsafe;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
