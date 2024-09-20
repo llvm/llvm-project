@@ -121,6 +121,8 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms = nullptr,
       llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
       llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+  bool processMotionClauses(lower::StatementContext &stmtCtx,
+                            mlir::omp::MapClauseOps &result);
   bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
@@ -141,9 +143,6 @@ public:
       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
 
-  template <typename T>
-  bool processMotionClauses(lower::StatementContext &stmtCtx,
-                            mlir::omp::MapClauseOps &result);
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
   // clauses is found.
@@ -190,38 +189,6 @@ private:
   semantics::SemanticsContext &semaCtx;
   List<Clause> clauses;
 };
-
-template <typename T>
-bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
-                                           mlir::omp::MapClauseOps &result) {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
-  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
-
-  bool clauseFound = findRepeatableClause<T>(
-      [&](const T &clause, const parser::CharBlock &source) {
-        mlir::Location clauseLocation = converter.genLocation(source);
-
-        static_assert(std::is_same_v<T, omp::clause::To> ||
-                      std::is_same_v<T, omp::clause::From>);
-
-        // TODO Support motion modifiers: present, mapper, iterator.
-        constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            std::is_same_v<T, omp::clause::To>
-                ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
-                : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-
-        processMapObjects(stmtCtx, clauseLocation,
-                          std::get<ObjectList>(clause.t), mapTypeBits,
-                          parentMemberIndices, result.mapVars, &mapSymbols);
-      });
-
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               mapSymbols,
-                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
-  return clauseFound;
-}
 
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,

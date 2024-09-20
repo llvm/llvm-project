@@ -6567,29 +6567,22 @@ static void
 collectViableConversionCandidates(Sema &SemaRef, Expr *From, QualType ToType,
                                   UnresolvedSetImpl &ViableConversions,
                                   OverloadCandidateSet &CandidateSet) {
-  for (unsigned I = 0, N = ViableConversions.size(); I != N; ++I) {
-    DeclAccessPair FoundDecl = ViableConversions[I];
+  for (const DeclAccessPair &FoundDecl : ViableConversions.pairs()) {
     NamedDecl *D = FoundDecl.getDecl();
     CXXRecordDecl *ActingContext = cast<CXXRecordDecl>(D->getDeclContext());
     if (isa<UsingShadowDecl>(D))
       D = cast<UsingShadowDecl>(D)->getTargetDecl();
 
-    CXXConversionDecl *Conv;
-    FunctionTemplateDecl *ConvTemplate;
-    if ((ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)))
-      Conv = cast<CXXConversionDecl>(ConvTemplate->getTemplatedDecl());
-    else
-      Conv = cast<CXXConversionDecl>(D);
-
-    if (ConvTemplate)
+    if (auto *ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
       SemaRef.AddTemplateConversionCandidate(
           ConvTemplate, FoundDecl, ActingContext, From, ToType, CandidateSet,
-          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit*/ true);
-    else
-      SemaRef.AddConversionCandidate(Conv, FoundDecl, ActingContext, From,
-                                     ToType, CandidateSet,
-                                     /*AllowObjCConversionOnExplicit=*/false,
-                                     /*AllowExplicit*/ true);
+          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
+      continue;
+    }
+    CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
+    SemaRef.AddConversionCandidate(
+        Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+        /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
   }
 }
 

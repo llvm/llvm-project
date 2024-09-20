@@ -103,7 +103,7 @@ Options
 
     int i = -42;
     unsigned int u = 0xffffffff;
-    printf("%d %u\n", i, u);
+    printf("%u %d\n", i, u);
 
   would be converted to:
 

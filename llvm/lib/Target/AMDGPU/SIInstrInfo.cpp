@@ -3401,13 +3401,13 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     case AMDGPU::sub1:
       return Hi_32(Imm);
     case AMDGPU::lo16:
-      return APInt(16, Imm).getSExtValue();
+      return SignExtend64<16>(Imm);
     case AMDGPU::hi16:
-      return APInt(32, Imm).ashr(16).getSExtValue();
+      return SignExtend64<16>(Imm >> 16);
     case AMDGPU::sub1_lo16:
-      return APInt(16, Hi_32(Imm)).getSExtValue();
+      return SignExtend64<16>(Imm >> 32);
     case AMDGPU::sub1_hi16:
-      return APInt(32, Hi_32(Imm)).ashr(16).getSExtValue();
+      return SignExtend64<16>(Imm >> 48);
     }
   };
 
@@ -4600,14 +4600,37 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
+// Verify the illegal copy from vector register to SGPR for generic opcode COPY
+bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI,
+                             StringRef &ErrInfo) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  // This is a check for copy from vector register to SGPR
+  if (RI.isVectorRegister(MRI, SrcReg) && RI.isSGPRReg(MRI, DstReg)) {
+    ErrInfo = "illegal copy from vector register to SGPR";
+    return false;
+  }
+  return true;
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
-  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
-    return true;
-
   const MachineFunction *MF = MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  // FIXME: At this point the COPY verify is done only for non-ssa forms.
+  // Find a better property to recognize the point where instruction selection
+  // is just done.
+  // We can only enforce this check after SIFixSGPRCopies pass so that the
+  // illegal copies are legalized and thereafter we don't expect a pass
+  // inserting similar copies.
+  if (!MRI.isSSA() && MI.isCopy())
+    return verifyCopy(MI, MRI, ErrInfo);
+
+  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
+    return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
@@ -6231,10 +6254,9 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     return;
 
   Register DstReg = MRI.createVirtualRegister(DstRC);
-  auto Copy = BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).add(Op);
-
+  auto Copy =
+      BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).addReg(OpReg);
   Op.setReg(DstReg);
-  Op.setSubReg(0);
 
   MachineInstr *Def = MRI.getVRegDef(OpReg);
   if (!Def)
@@ -6532,11 +6554,11 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
 
   // SRsrcFormatLo = RSRC_DATA_FORMAT{31-0}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), SRsrcFormatLo)
-      .addImm(RsrcDataFormat & 0xFFFFFFFF);
+      .addImm(Lo_32(RsrcDataFormat));
 
   // SRsrcFormatHi = RSRC_DATA_FORMAT{63-32}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), SRsrcFormatHi)
-      .addImm(RsrcDataFormat >> 32);
+      .addImm(Hi_32(RsrcDataFormat));
 
   // NewSRsrc = {Zero64, SRsrcFormat}
   BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(AMDGPU::REG_SEQUENCE), NewSRsrc)

@@ -206,7 +206,7 @@ public:
   ArrayRef<SVEType> getTypes() const { return Types; }
   SVEType getParamType(unsigned I) const { return Types[I + 1]; }
   unsigned getNumParams() const {
-    return Proto.size() - (2 * llvm::count(Proto, '.')) - 1;
+    return Proto.size() - (2 * count(Proto, '.')) - 1;
   }
 
   uint64_t getFlags() const { return Flags; }
@@ -281,11 +281,11 @@ private:
   static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
 
   const RecordKeeper &Records;
-  llvm::StringMap<uint64_t> EltTypes;
-  llvm::StringMap<uint64_t> MemEltTypes;
-  llvm::StringMap<uint64_t> FlagTypes;
-  llvm::StringMap<uint64_t> MergeTypes;
-  llvm::StringMap<uint64_t> ImmCheckTypes;
+  StringMap<uint64_t> EltTypes;
+  StringMap<uint64_t> MemEltTypes;
+  StringMap<uint64_t> FlagTypes;
+  StringMap<uint64_t> MergeTypes;
+  StringMap<uint64_t> ImmCheckTypes;
 
 public:
   SVEEmitter(const RecordKeeper &R) : Records(R) {
@@ -322,7 +322,7 @@ public:
     auto It = FlagTypes.find(MaskName);
     if (It != FlagTypes.end()) {
       uint64_t Mask = It->getValue();
-      unsigned Shift = llvm::countr_zero(Mask);
+      unsigned Shift = countr_zero(Mask);
       assert(Shift < 64 && "Mask value produced an invalid shift value");
       return (V << Shift) & Mask;
     }
@@ -1187,7 +1187,7 @@ void SVEEmitter::createIntrinsic(
   }
 
   // Remove duplicate type specs.
-  llvm::sort(TypeSpecs);
+  sort(TypeSpecs);
   TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
                   TypeSpecs.end());
 
@@ -1433,8 +1433,8 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
     createIntrinsic(R, Defs);
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
 
@@ -1475,8 +1475,8 @@ void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
     createIntrinsic(R, Defs);
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
 
@@ -1508,11 +1508,10 @@ void SVEEmitter::createRangeChecks(raw_ostream &OS) {
     createIntrinsic(R, Defs);
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
-
 
   OS << "#ifdef GET_SVE_IMMEDIATE_CHECK\n";
 
@@ -1641,8 +1640,8 @@ void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
   }
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
 
@@ -1669,8 +1668,8 @@ void SVEEmitter::createSMECodeGenMap(raw_ostream &OS) {
   }
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
 
@@ -1703,11 +1702,10 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   }
 
   // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
+  sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                const std::unique_ptr<Intrinsic> &B) {
     return A->getMangledName() < B->getMangledName();
   });
-
 
   OS << "#ifdef GET_SME_IMMEDIATE_CHECK\n";
 
@@ -1790,7 +1788,7 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
   OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
 
-  llvm::StringMap<std::set<std::string>> StreamingMap;
+  StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
   uint64_t VerifyRuntimeMode = getEnumValueForFlag("VerifyRuntimeMode");

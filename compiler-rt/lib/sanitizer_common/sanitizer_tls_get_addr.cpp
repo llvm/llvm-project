@@ -14,6 +14,8 @@
 
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_platform_interceptors.h"
 
@@ -115,11 +117,14 @@ SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size,
   const void *start = __sanitizer_get_allocated_begin(tls_begin);
   if (!start)
     return 0;
-  CHECK_EQ(start, tls_begin);
+  CHECK_LE(start, tls_begin);
   uptr tls_size = __sanitizer_get_allocated_size(start);
   VReport(2, "__tls_get_addr: glibc DTLS suspected; tls={%p,0x%zx}\n",
           tls_begin, tls_size);
-  return tls_size;
+  uptr offset =
+      (reinterpret_cast<uptr>(tls_begin) - reinterpret_cast<uptr>(start));
+  CHECK_LE(offset, tls_size);
+  return tls_size - offset;
 }
 
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
@@ -129,7 +134,8 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   uptr dso_id = arg->dso_id;
   DTLS::DTV *dtv = DTLS_Find(dso_id);
   if (!dtv || dtv->beg)
-    return 0;
+    return nullptr;
+  CHECK_LE(static_tls_begin, static_tls_end);
   uptr tls_size = 0;
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VReport(2,

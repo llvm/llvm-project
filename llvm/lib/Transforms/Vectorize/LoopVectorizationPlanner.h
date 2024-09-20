@@ -47,10 +47,10 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
-  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
+  template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
-      BB->insert(VPI, InsertPt);
-    return VPI;
+      BB->insert(R, InsertPt);
+    return R;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -208,6 +208,27 @@ public:
            Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
     return tryInsertInstruction(
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+  }
+
+  VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPCanonicalIVPHIRecipe *CanonicalIV,
+                                     VPValue *Step) {
+    return tryInsertInstruction(
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+  }
+
+  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                       Type *ResultTy) {
+    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPScalarIVStepsRecipe *
+  createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+    return tryInsertInstruction(new VPScalarIVStepsRecipe(
+        IV, Step, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 
   //===--------------------------------------------------------------------===//

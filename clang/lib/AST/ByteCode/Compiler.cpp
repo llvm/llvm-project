@@ -2638,18 +2638,46 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
 
-  bool Fatal = false;
   std::optional<PrimType> FromT = classify(SubExpr);
   std::optional<PrimType> ToT = classify(E);
-  if (!FromT || !ToT)
-    Fatal = true;
-  else
-    Fatal = (ToT != FromT);
 
+  if (!FromT || !ToT)
+    return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, E);
+
+  if (FromT == PT_Ptr || ToT == PT_Ptr) {
+    // Both types could be PT_Ptr because their expressions are glvalues.
+    std::optional<PrimType> PointeeFromT;
+    if (SubExpr->getType()->isPointerOrReferenceType())
+      PointeeFromT = classify(SubExpr->getType()->getPointeeType());
+    else
+      PointeeFromT = classify(SubExpr->getType());
+
+    std::optional<PrimType> PointeeToT;
+    if (E->getType()->isPointerOrReferenceType())
+      PointeeToT = classify(E->getType()->getPointeeType());
+    else
+      PointeeToT = classify(E->getType());
+
+    bool Fatal = true;
+    if (PointeeToT && PointeeFromT) {
+      if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
+        Fatal = false;
+    }
+
+    if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
+      return false;
+
+    if (E->getCastKind() == CK_LValueBitCast)
+      return this->delegate(SubExpr);
+    return this->VisitCastExpr(E);
+  }
+
+  // Try to actually do the cast.
+  bool Fatal = (ToT != FromT);
   if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
     return false;
 
-  return this->delegate(SubExpr);
+  return this->VisitCastExpr(E);
 }
 
 template <class Emitter>

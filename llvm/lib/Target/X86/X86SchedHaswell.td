@@ -1028,8 +1028,8 @@ def HWWriteResGroup17 : SchedWriteRes<[HWPort23,HWPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup17], (instrs VINSERTF128rm,
-                                         VINSERTI128rm,
+def: InstRW<[HWWriteResGroup17], (instrs VINSERTF128rmi,
+                                         VINSERTI128rmi,
                                          VPBLENDDrmi)>;
 
 def HWWriteResGroup17_2 : SchedWriteRes<[HWPort23,HWPort015]> {

@@ -22,7 +22,7 @@ static void EmitOptRST(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Get the options.
   std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
-  llvm::sort(Opts, CompareOptionRecords);
+  llvm::sort(Opts, IsOptionRecordsLess);
 
   // Get the option groups.
   for (const Record *R : Records.getAllDerivedDefinitions("OptionGroup"))

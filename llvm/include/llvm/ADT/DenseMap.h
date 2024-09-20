@@ -318,22 +318,6 @@ public:
     return Ret;
   }
 
-  /// Returns the value associated to the key in the map if it exists. If it
-  /// does not exist, emplace a default value for the key and returns a
-  /// reference to the newly created value.
-  LLVM_DEPRECATED("Use operator[] instead", "[Key]")
-  ValueT &getOrInsertDefault(KeyT &&Key) {
-    return try_emplace(Key).first->second;
-  }
-
-  /// Returns the value associated to the key in the map if it exists. If it
-  /// does not exist, emplace a default value for the key and returns a
-  /// reference to the newly created value.
-  LLVM_DEPRECATED("Use operator[] instead", "[Key]")
-  ValueT &getOrInsertDefault(const KeyT &Key) {
-    return try_emplace(Key).first->second;
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -353,30 +337,12 @@ public:
     incrementNumTombstones();
   }
 
-  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
-  value_type &FindAndConstruct(const KeyT &Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return *TheBucket;
-
-    return *InsertIntoBucket(TheBucket, Key);
-  }
-
   ValueT &operator[](const KeyT &Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
       return TheBucket->second;
 
     return InsertIntoBucket(TheBucket, Key)->second;
-  }
-
-  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
-  value_type &FindAndConstruct(KeyT &&Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return *TheBucket;
-
-    return *InsertIntoBucket(TheBucket, std::move(Key));
   }
 
   ValueT &operator[](KeyT &&Key) {

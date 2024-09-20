@@ -24,9 +24,11 @@ using namespace llvm;
 /// constructor.  It checks if an argument in an InstAlias pattern matches
 /// the corresponding operand of the instruction.  It returns true on a
 /// successful match, with ResOp set to the result operand to be used.
-bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
+bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
+                                       unsigned AliasOpNo,
                                        const Record *InstOpRec, bool hasSubOps,
-                                       ArrayRef<SMLoc> Loc, CodeGenTarget &T,
+                                       ArrayRef<SMLoc> Loc,
+                                       const CodeGenTarget &T,
                                        ResultOperand &ResOp) {
   Init *Arg = Result->getArg(AliasOpNo);
   DefInit *ADI = dyn_cast<DefInit>(Arg);
@@ -152,11 +154,11 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   if (!isRecord())
     return 1;
 
-  Record *Rec = getRecord();
+  const Record *Rec = getRecord();
   if (!Rec->isSubClassOf("Operand"))
     return 1;
 
-  DagInit *MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
+  const DagInit *MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
   if (MIOpInfo->getNumArgs() == 0) {
     // Unspecified, so it defaults to 1
     return 1;
@@ -165,7 +167,8 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   return MIOpInfo->getNumArgs();
 }
 
-CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T) : TheDef(R) {
+CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
+    : TheDef(R) {
   Result = R->getValueAsDag("ResultInst");
   AsmString = std::string(R->getValueAsString("AsmString"));
 

@@ -1560,7 +1560,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   InstructionCost OldCost = CostC0 + CostC1;
   OldCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
-                         OldMask, CostKind, 0, nullptr, std::nullopt, &I);
+                         OldMask, CostKind, 0, nullptr, {}, &I);
 
   InstructionCost NewCost = TTI.getShuffleCost(
       TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
@@ -2597,11 +2597,19 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
   auto *SmallTy = cast<FixedVectorType>(ZExted->getType());
   unsigned BW = SmallTy->getElementType()->getPrimitiveSizeInBits();
 
-  // Check that the expression overall uses at most the same number of bits as
-  // ZExted
-  KnownBits KB = computeKnownBits(&I, *DL);
-  if (KB.countMaxActiveBits() > BW)
-    return false;
+  if (I.getOpcode() == Instruction::LShr) {
+    // Check that the shift amount is less than the number of bits in the
+    // smaller type. Otherwise, the smaller lshr will return a poison value.
+    KnownBits ShAmtKB = computeKnownBits(I.getOperand(1), *DL);
+    if (ShAmtKB.getMaxValue().uge(BW))
+      return false;
+  } else {
+    // Check that the expression overall uses at most the same number of bits as
+    // ZExted
+    KnownBits KB = computeKnownBits(&I, *DL);
+    if (KB.countMaxActiveBits() > BW)
+      return false;
+  }
 
   // Calculate costs of leaving current IR as it is and moving ZExt operation
   // later, along with adding truncates if needed
@@ -2628,7 +2636,7 @@ bool VectorCombine::shrinkType(llvm::Instruction &I) {
       return false;
 
     // Check if we can propagate ZExt through its other users
-    KB = computeKnownBits(UI, *DL);
+    KnownBits KB = computeKnownBits(UI, *DL);
     if (KB.countMaxActiveBits() > BW)
       return false;
 

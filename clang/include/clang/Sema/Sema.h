@@ -626,10 +626,10 @@ public:
   const llvm::MapVector<FieldDecl *, DeleteLocs> &
   getMismatchingDeleteExpressions() const;
 
-  /// Cause the active diagnostic on the DiagosticsEngine to be
-  /// emitted. This is closely coupled to the SemaDiagnosticBuilder class and
+  /// Cause the built diagnostic to be emitted on the DiagosticsEngine.
+  /// This is closely coupled to the SemaDiagnosticBuilder class and
   /// should not be used elsewhere.
-  void EmitCurrentDiagnostic(unsigned DiagID);
+  void EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB);
 
   void addImplicitTypedef(StringRef Name, QualType T);
 
@@ -7958,6 +7958,10 @@ public:
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);
 
+  std::vector<std::pair<QualType, unsigned>> ExcessPrecisionNotSatisfied;
+  SourceLocation LocationOfExcessPrecisionNotSatisfied;
+  void DiagnosePrecisionLossInComplexDivision();
+
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
 
@@ -11386,9 +11390,9 @@ public:
       CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
       const ParsedAttributesView &Attr, TemplateParameterList *TemplateParams,
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
-      SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
-      TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      SourceLocation FriendLoc,
+      ArrayRef<TemplateParameterList *> OuterTemplateParamLists,
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11427,7 +11431,8 @@ public:
   DeclResult ActOnVarTemplateSpecialization(
       Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
-      StorageClass SC, bool IsPartialSpecialization);
+      StorageClass SC, bool IsPartialSpecialization,
+      bool IsMemberSpecialization);
 
   /// Get the specialization of the given variable template corresponding to
   /// the specified argument list, or a null-but-valid result if the arguments
@@ -13068,28 +13073,14 @@ public:
   /// dealing with a specialization. This is only relevant for function
   /// template specializations.
   ///
-  /// \param Pattern If non-NULL, indicates the pattern from which we will be
-  /// instantiating the definition of the given declaration, \p ND. This is
-  /// used to determine the proper set of template instantiation arguments for
-  /// friend function template specializations.
-  ///
   /// \param ForConstraintInstantiation when collecting arguments,
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
-  ///
-  /// \param SkipForSpecialization when specified, any template specializations
-  /// in a traversal would be ignored.
-  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
-  /// when encountering a specialized member function template, rather than
-  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false,
-      bool ForDefaultArgumentSubstitution = false);
+      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
 
   /// RAII object to handle the state changes required to synthesize
   /// a function body.

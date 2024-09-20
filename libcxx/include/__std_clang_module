@@ -73,12 +73,8 @@
 #include <ctime>
 #include <ctype.h>
 #include <cuchar>
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwchar>
-#endif
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwctype>
-#endif
+#include <cwchar>
+#include <cwctype>
 #include <deque>
 #include <errno.h>
 #include <exception>
@@ -193,9 +189,5 @@
 #include <variant>
 #include <vector>
 #include <version>
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <wchar.h>
-#endif
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <wctype.h>
-#endif
+#include <wchar.h>
+#include <wctype.h>

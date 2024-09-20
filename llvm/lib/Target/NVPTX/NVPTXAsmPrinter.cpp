@@ -596,7 +596,6 @@ std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
 
   NameStr << getNVPTXRegClassStr(RC) << MappedVR;
 
-  NameStr.flush();
   return Name;
 }
 

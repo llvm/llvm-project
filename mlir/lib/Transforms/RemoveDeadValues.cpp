@@ -191,10 +191,10 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
 ///   non-live across all callers),
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
-/// iff it is not public.
+/// iff it is not public or declaration.
 static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
                         RunLivenessAnalysis &la) {
-  if (funcOp.isPublic())
+  if (funcOp.isPublic() || funcOp.isDeclaration())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.

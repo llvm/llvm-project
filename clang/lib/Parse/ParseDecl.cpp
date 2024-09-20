@@ -5439,18 +5439,20 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
-      if (!getLangOpts().ObjC && !getLangOpts().C23) {
+      if (!getLangOpts().ObjC) {
         if (getLangOpts().CPlusPlus11)
           Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
               << BaseRange;
         else if (getLangOpts().CPlusPlus)
           Diag(ColonLoc, diag::ext_cxx11_enum_fixed_underlying_type)
               << BaseRange;
-        else if (getLangOpts().MicrosoftExt)
+        else if (getLangOpts().MicrosoftExt && !getLangOpts().C23)
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
               << BaseRange;
         else
-          Diag(ColonLoc, diag::ext_clang_c_enum_fixed_underlying_type)
+          Diag(ColonLoc, getLangOpts().C23
+                             ? diag::warn_c17_compat_enum_fixed_underlying_type
+                             : diag::ext_c23_enum_fixed_underlying_type)
               << BaseRange;
       }
     }
