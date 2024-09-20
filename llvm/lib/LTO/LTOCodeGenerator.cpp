@@ -625,8 +625,7 @@ bool LTOCodeGenerator::optimize() {
   ModuleSummaryIndex CombinedIndex(false);
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
-           /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-           /*CmdArgs*/ std::vector<uint8_t>())) {
+           /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr)) {
     emitError("LTO middle-end optimizations failed");
     return false;
   }

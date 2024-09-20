@@ -184,6 +184,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
+  ctx->storeCmdArgs(args);
 
   if (errorCount())
     return false;

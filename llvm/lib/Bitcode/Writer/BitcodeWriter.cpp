@@ -66,6 +66,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
@@ -5435,6 +5436,19 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   }
   if (Used)
     Used->eraseFromParent();
+
+  // Add the command line and working directory to the module flags
+  if (!CmdArgs.empty()) {
+    M.setModuleFlag(llvm::Module::Warning, "embed.cmd",
+                    llvm::MDString::get(M.getContext(),
+                                        StringRef((const char *)CmdArgs.data(),
+                                                  CmdArgs.size())));
+    SmallString<256> cwd;
+    if (!llvm::sys::fs::current_path(cwd)) {
+      M.setModuleFlag(llvm::Module::Warning, "embed.cwd",
+                      llvm::MDString::get(M.getContext(), cwd));
+    }
+  }
 
   // Embed the bitcode for the llvm module.
   std::string Data;

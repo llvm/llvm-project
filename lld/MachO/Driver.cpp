@@ -1550,6 +1550,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
+  ctx->storeCmdArgs(args);
 
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
                                  "(use --error-limit=0 to see all errors)";
