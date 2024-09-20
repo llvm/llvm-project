@@ -6,11 +6,15 @@ define void @test(<4 x float> %load6, <4 x float> %load7, <4 x float> %load8, <4
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEXT165_I:%.*]] = shufflevector <4 x float> [[LOAD6:%.*]], <4 x float> [[LOAD7:%.*]], <4 x i32> <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[VEXT309_I:%.*]] = shufflevector <4 x float> [[LOAD7]], <4 x float> [[LOAD8:%.*]], <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[FMULADD8:%.*]] = tail call noundef <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[VEXT165_I]], <4 x float> [[LOAD17:%.*]], <4 x float> [[FMULADD7:%.*]])
-; CHECK-NEXT:    [[FMULADD17:%.*]] = tail call noundef <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[VEXT309_I]], <4 x float> [[LOAD17]], <4 x float> [[FMULADD16:%.*]])
-; CHECK-NEXT:    [[ADD_PTR_I_I:%.*]] = getelementptr inbounds i8, ptr [[OUT_PTR:%.*]], i64 16
-; CHECK-NEXT:    store <4 x float> [[FMULADD8]], ptr [[OUT_PTR]], align 4
-; CHECK-NEXT:    store <4 x float> [[FMULADD17]], ptr [[ADD_PTR_I_I]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[VEXT165_I]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP0]], <4 x float> [[VEXT309_I]], i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> poison, i64 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP2]], <4 x float> [[LOAD17:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[FMULADD7:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP5]], <4 x float> [[FMULADD16:%.*]], i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[TMP6]])
+; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[OUT_PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
