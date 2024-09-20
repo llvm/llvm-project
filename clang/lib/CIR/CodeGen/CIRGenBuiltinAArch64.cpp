@@ -1390,7 +1390,9 @@ static mlir::Type GetNeonType(CIRGenFunction *CGF, NeonTypeFlags TypeFlags,
     // so we use v16i8 to represent poly128 and get pattern matched.
     llvm_unreachable("NYI");
   case NeonTypeFlags::Float32:
-    llvm_unreachable("NYI");
+    return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
+                                      CGF->getCIRGenModule().FloatTy,
+                                      V1Ty ? 1 : (2 << IsQuad));
   case NeonTypeFlags::Float64:
     llvm_unreachable("NYI");
   }
@@ -1615,9 +1617,6 @@ mlir::Value buildNeonCall(unsigned int builtinID, CIRGenFunction &cgf,
   // there is an implementation of buildNeonShiftVector
   if (shift > 0)
     llvm_unreachable("Argument shift NYI");
-
-  if (builtinID != clang::NEON::BI__builtin_neon_vrndns_f32)
-    llvm_unreachable("NYT");
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   for (unsigned j = 0; j < argTypes.size(); ++j) {
@@ -2409,7 +2408,9 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v: {
-    llvm_unreachable("NYI");
+    assert(!MissingFeatures::buildConstrainedFPCall());
+    return buildNeonCall(BuiltinID, *this, {Ty}, Ops, "llvm.round", Ty,
+                         getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vrndih_f16: {
     llvm_unreachable("NYI");
