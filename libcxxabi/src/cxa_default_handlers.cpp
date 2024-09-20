@@ -30,18 +30,18 @@ static void demangling_terminate_handler()
 
     // If there is no uncaught exception, just note that we're terminating
     if (!globals)
-        __abort_message("terminating");
+        abort_message("terminating");
 
     __cxa_exception* exception_header = globals->caughtExceptions;
     if (!exception_header)
-        __abort_message("terminating");
+        abort_message("terminating");
 
     _Unwind_Exception* unwind_exception =
         reinterpret_cast<_Unwind_Exception*>(exception_header + 1) - 1;
 
     // If we're terminating due to a foreign exception
     if (!__isOurExceptionClass(unwind_exception))
-        __abort_message("terminating due to %s foreign exception", cause);
+        abort_message("terminating due to %s foreign exception", cause);
 
     void* thrown_object =
         __getExceptionClass(unwind_exception) == kOurDependentExceptionClass ?
@@ -67,19 +67,19 @@ static void demangling_terminate_handler()
     {
         // Include the what() message from the exception
         const std::exception* e = static_cast<const std::exception*>(thrown_object);
-        __abort_message("terminating due to %s exception of type %s: %s", cause, name, e->what());
+        abort_message("terminating due to %s exception of type %s: %s", cause, name, e->what());
     }
     else
     {
         // Else just note that we're terminating due to an exception
-        __abort_message("terminating due to %s exception of type %s", cause, name);
+        abort_message("terminating due to %s exception of type %s", cause, name);
     }
 }
 #else // !_LIBCXXABI_NO_EXCEPTIONS
 __attribute__((noreturn))
 static void demangling_terminate_handler()
 {
-    __abort_message("terminating");
+    abort_message("terminating");
 }
 #endif // !_LIBCXXABI_NO_EXCEPTIONS
 
