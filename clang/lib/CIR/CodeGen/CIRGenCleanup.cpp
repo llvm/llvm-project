@@ -57,7 +57,15 @@ Address CIRGenFunction::createCleanupActiveFlag() { llvm_unreachable("NYI"); }
 
 DominatingValue<RValue>::saved_type
 DominatingValue<RValue>::saved_type::save(CIRGenFunction &CGF, RValue rv) {
-  llvm_unreachable("NYI");
+  if (rv.isScalar()) {
+    llvm_unreachable("scalar NYI");
+  }
+
+  if (rv.isComplex()) {
+    llvm_unreachable("complex NYI");
+  }
+
+  llvm_unreachable("aggregate NYI");
 }
 
 /// Deactive a cleanup that was created in an active state.
