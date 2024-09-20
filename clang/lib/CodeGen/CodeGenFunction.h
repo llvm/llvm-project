@@ -3823,6 +3823,7 @@ public:
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
+  void EmitOMPScopeDirective(const OMPScopeDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
   void EmitOMPSectionDirective(const OMPSectionDirective &S);
   void EmitOMPSingleDirective(const OMPSingleDirective &S);
