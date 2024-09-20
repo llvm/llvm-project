@@ -50,7 +50,7 @@
 "`LWG4013 <https://wg21.link/LWG4013>`__","``lazy_split_view::outer-iterator::value_type`` should not provide default constructor","2024-03 (Tokyo)","","",""
 "`LWG4016 <https://wg21.link/LWG4016>`__","container-insertable checks do not match what container-inserter does","2024-03 (Tokyo)","","",""
 "`LWG4023 <https://wg21.link/LWG4023>`__","Preconditions of ``std::basic_streambuf::setg/setp``","2024-03 (Tokyo)","|Complete|","19.0",""
-"`LWG4025 <https://wg21.link/LWG4025>`__","Move assignment operator of ``std::expected<cv void, E>`` should not be conditionally deleted","2024-03 (Tokyo)","","",""
+"`LWG4025 <https://wg21.link/LWG4025>`__","Move assignment operator of ``std::expected<cv void, E>`` should not be conditionally deleted","2024-03 (Tokyo)","|Complete|","20.0",""
 "`LWG4030 <https://wg21.link/LWG4030>`__","Clarify whether arithmetic expressions in ``[numeric.sat.func]`` are mathematical or C++","2024-03 (Tokyo)","|Nothing To Do|","",""
 "`LWG4031 <https://wg21.link/LWG4031>`__","``bad_expected_access<void>`` member functions should be ``noexcept``","2024-03 (Tokyo)","|Complete|","16.0",""
 "`LWG4035 <https://wg21.link/LWG4035>`__","``single_view`` should provide ``empty``","2024-03 (Tokyo)","|Complete|","19.0",""
