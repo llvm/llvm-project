@@ -13765,7 +13765,9 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   auto *PredConstantMax =
       SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
-  if (PredConstantMax != ConstantBTC || !Preds.empty()) {
+  if (PredConstantMax != ConstantBTC) {
+    assert(!Preds.empty() &&
+           "different predicated constant max BTC but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
