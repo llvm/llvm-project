@@ -180,10 +180,8 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any loop region, i.e. it
-  /// is a live-in value.
-  /// TODO: Also handle recipes defined in pre-header blocks.
-  bool isDefinedOutsideLoopRegions() const { return !hasDefiningRecipe(); }
+  /// Returns true if the VPValue is defined outside any loop region.
+  bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
