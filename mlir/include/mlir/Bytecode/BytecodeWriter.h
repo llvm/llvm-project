@@ -14,6 +14,7 @@
 #define MLIR_BYTECODE_BYTECODEWRITER_H
 
 #include "mlir/IR/AsmState.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 
 namespace mlir {
 class DialectBytecodeWriter;

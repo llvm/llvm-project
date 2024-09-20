@@ -4400,8 +4400,9 @@ protected:
                         // is complete
   friend class IntegerType;   // For LLVMCtx.
   friend class StructType;    // For LLVMCtx.
-  friend class TargetExtType; // For LLVMCtx.
+  friend class ::llvm::TargetExtType; // For LLVMCtx.
   friend class Region;        // For LLVMCtx.
+  
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all

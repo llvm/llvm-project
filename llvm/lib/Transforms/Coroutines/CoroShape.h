@@ -275,7 +275,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    initABI();
     cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };
