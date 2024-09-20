@@ -639,7 +639,7 @@ void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
 
-  for (Function &F: M.functions())
+  for (Function &F : M.functions())
     removeFnAttributes(&F);
 
   // x86_64 currently has two modes:
