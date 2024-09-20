@@ -1,20 +1,21 @@
-//===- ABI.h - Coroutine ABI Transformers ---------------------*- C++ -*---===//
+//===- ABI.h - Coroutine lowering class definitions (ABIs) ----*- C++ -*---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file declares the pass that analyzes a function for coroutine intrs and
-// a transformer class that contains methods for handling different steps of
-// coroutine lowering.
+// This file defines coroutine lowering classes. The interface for coroutine
+// lowering is defined by BaseABI. Each lowering method (ABI) implements the
+// interface. Note that the enum class ABI, such as ABI::Switch, determines
+// which ABI class, such as SwitchABI, is used to lower the coroutine. Both the
+// ABI enum and ABI class are used by the Coroutine passes when lowering.
 //===----------------------------------------------------------------------===//
 
 #ifndef LIB_TRANSFORMS_COROUTINES_ABI_H
 #define LIB_TRANSFORMS_COROUTINES_ABI_H
 
 #include "CoroShape.h"
-#include "MaterializationUtils.h"
 #include "SuspendCrossingInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
@@ -31,9 +32,6 @@ namespace coro {
 
 class LLVM_LIBRARY_VISIBILITY BaseABI {
 public:
-  BaseABI(Function &F, Shape &S)
-      : F(F), Shape(S), IsMaterializable(coro::isTriviallyMaterializable) {}
-
   BaseABI(Function &F, coro::Shape &S,
           std::function<bool(Instruction &)> IsMaterializable)
       : F(F), Shape(S), IsMaterializable(IsMaterializable) {}
@@ -59,8 +57,6 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY SwitchABI : public BaseABI {
 public:
-  SwitchABI(Function &F, coro::Shape &S) : BaseABI(F, S) {}
-
   SwitchABI(Function &F, coro::Shape &S,
             std::function<bool(Instruction &)> IsMaterializable)
       : BaseABI(F, S, IsMaterializable) {}
@@ -74,8 +70,6 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY AsyncABI : public BaseABI {
 public:
-  AsyncABI(Function &F, coro::Shape &S) : BaseABI(F, S) {}
-
   AsyncABI(Function &F, coro::Shape &S,
            std::function<bool(Instruction &)> IsMaterializable)
       : BaseABI(F, S, IsMaterializable) {}
@@ -89,8 +83,6 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY AnyRetconABI : public BaseABI {
 public:
-  AnyRetconABI(Function &F, coro::Shape &S) : BaseABI(F, S) {}
-
   AnyRetconABI(Function &F, coro::Shape &S,
                std::function<bool(Instruction &)> IsMaterializable)
       : BaseABI(F, S, IsMaterializable) {}

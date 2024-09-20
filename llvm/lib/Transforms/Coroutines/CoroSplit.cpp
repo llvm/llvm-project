@@ -22,6 +22,7 @@
 #include "ABI.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
+#include "MaterializationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2196,52 +2197,43 @@ static void addPrepareFunction(const Module &M,
     Fns.push_back(PrepareFn);
 }
 
-static coro::BaseABI *CreateNewABI(Function &F, coro::Shape &S) {
+static std::unique_ptr<coro::BaseABI>
+CreateNewABI(Function &F, coro::Shape &S,
+             std::function<bool(Instruction &)> IsMatCallback) {
   switch (S.ABI) {
   case coro::ABI::Switch:
-    return new coro::SwitchABI(F, S);
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::SwitchABI(F, S, IsMatCallback));
   case coro::ABI::Async:
-    return new coro::AsyncABI(F, S);
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AsyncABI(F, S, IsMatCallback));
   case coro::ABI::Retcon:
-    return new coro::AnyRetconABI(F, S);
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AnyRetconABI(F, S, IsMatCallback));
   case coro::ABI::RetconOnce:
-    return new coro::AnyRetconABI(F, S);
+    return std::unique_ptr<coro::BaseABI>(
+        new coro::AnyRetconABI(F, S, IsMatCallback));
   }
   llvm_unreachable("Unknown ABI");
 }
 
 CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
     : CreateAndInitABI([](Function &F, coro::Shape &S) {
-        coro::BaseABI *ABI = CreateNewABI(F, S);
+        std::unique_ptr<coro::BaseABI> ABI =
+            CreateNewABI(F, S, coro::isTriviallyMaterializable);
         ABI->init();
-        return ABI;
+        return std::move(ABI);
       }),
       OptimizeFrame(OptimizeFrame) {}
-
-static coro::BaseABI *
-CreateNewABIIsMat(Function &F, coro::Shape &S,
-                  std::function<bool(Instruction &)> IsMatCallback) {
-  switch (S.ABI) {
-  case coro::ABI::Switch:
-    return new coro::SwitchABI(F, S, IsMatCallback);
-  case coro::ABI::Async:
-    return new coro::AsyncABI(F, S, IsMatCallback);
-  case coro::ABI::Retcon:
-    return new coro::AnyRetconABI(F, S, IsMatCallback);
-  case coro::ABI::RetconOnce:
-    return new coro::AnyRetconABI(F, S, IsMatCallback);
-  }
-  llvm_unreachable("Unknown ABI");
-}
 
 // For back compatibility, constructor takes a materializable callback and
 // creates a generator for an ABI with a modified materializable callback.
 CoroSplitPass::CoroSplitPass(std::function<bool(Instruction &)> IsMatCallback,
                              bool OptimizeFrame)
     : CreateAndInitABI([=](Function &F, coro::Shape &S) {
-        coro::BaseABI *ABI = CreateNewABIIsMat(F, S, IsMatCallback);
+        std::unique_ptr<coro::BaseABI> ABI = CreateNewABI(F, S, IsMatCallback);
         ABI->init();
-        return ABI;
+        return std::move(ABI);
       }),
       OptimizeFrame(OptimizeFrame) {}
 
@@ -2287,7 +2279,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     F.setSplittedCoroutine();
 
-    std::unique_ptr<coro::BaseABI> ABI(CreateAndInitABI(F, Shape));
+    std::unique_ptr<coro::BaseABI> ABI = CreateAndInitABI(F, Shape);
 
     SmallVector<Function *, 4> Clones;
     auto &TTI = FAM.getResult<TargetIRAnalysis>(F);

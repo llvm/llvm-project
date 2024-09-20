@@ -27,8 +27,6 @@ class Shape;
 } // namespace coro
 
 struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
-  // BaseABITy generates an instance of a coro ABI.
-  using BaseABITy = std::function<coro::BaseABI *(Function &, coro::Shape &)>;
 
   CoroSplitPass(bool OptimizeFrame = false);
   CoroSplitPass(std::function<bool(Instruction &)> MaterializableCallback,
@@ -38,6 +36,8 @@ struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
   static bool isRequired() { return true; }
 
+  using BaseABITy =
+      std::function<std::unique_ptr<coro::BaseABI>(Function &, coro::Shape &)>;
   // Generator for an ABI transformer
   BaseABITy CreateAndInitABI;
 
