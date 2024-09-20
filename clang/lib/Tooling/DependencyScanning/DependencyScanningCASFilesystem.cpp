@@ -315,7 +315,8 @@ private:
 } // end anonymous namespace
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
+DependencyScanningCASFilesystem::openFileForRead(const Twine &Path,
+                                                 bool IsText) {
   LookupPathResult Result = lookupPath(Path);
   if (!Result.Entry) {
     if (std::error_code EC = Result.Status.getError())

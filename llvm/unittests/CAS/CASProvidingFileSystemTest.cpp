@@ -52,7 +52,8 @@ TEST(CASProvidingFileSystemTest, Basic) {
     std::optional<cas::ObjectRef> CASContents;
     auto Buf = CASFS->getBufferForFile(Path2, /*FileSize*/ -1,
                                        /*RequiresNullTerminator*/ false,
-                                       /*IsVolatile*/ false, &CASContents);
+                                       /*IsVolatile*/ false, /*IsText*/ true,
+                                       &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents2, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
