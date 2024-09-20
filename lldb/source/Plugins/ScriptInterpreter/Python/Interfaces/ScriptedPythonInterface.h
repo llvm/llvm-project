@@ -405,6 +405,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::TargetSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -556,6 +560,11 @@ template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::ExecutionContextRefSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 
