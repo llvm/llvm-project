@@ -8,7 +8,7 @@ This binary is not packaged with the VS Code extension.
 There are multiple ways to obtain this binary:
 * build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html))
 * download it one of the relase packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-19.1.0-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary.
-* use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it
+* use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
 
 By default, the VS Code extension will expect to find `lldb-dap` in your `PATH`.
 Alternatively, you can explictly specify the location of the `lldb-dap` binary using the `lldb-dap.executable-path` setting.
