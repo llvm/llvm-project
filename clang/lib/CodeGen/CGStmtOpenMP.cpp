@@ -4452,6 +4452,10 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
+void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
+  EmitStmt(S.getAssociatedStmt());
+}
+
 static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);

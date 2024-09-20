@@ -1462,6 +1462,13 @@ private:
                                            : OMPDeclareVariantScopes.back().TI;
   }
 
+  StmtResult transformDispatchDirective(OpenMPDirectiveKind Kind,
+                                        const DeclarationNameInfo &DirName,
+                                        OpenMPDirectiveKind CancelRegion,
+                                        ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
+
   /// The current `omp begin/end declare variant` scopes.
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 

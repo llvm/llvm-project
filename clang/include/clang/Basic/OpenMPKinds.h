@@ -269,6 +269,12 @@ bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
 /// parallel', otherwise - false.
 bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
 
+/// Checks if the specified directive is a dispatch-kind directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a dispatch-like directive like 'omp
+/// dispatch', otherwise - false.
+bool isOpenMPDispatchDirective(OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a target code offload directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a target code offload directive like

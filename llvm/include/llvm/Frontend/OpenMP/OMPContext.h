@@ -141,6 +141,12 @@ struct VariantMatchInfo {
       ISATraits.push_back(RawString);
 
     RequiredTraits.set(unsigned(Property));
+#if 0
+    unsigned int i = 0;
+    for (unsigned Bit : RequiredTraits.set_bits()) {
+	i++;
+    }
+#endif
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
   }
