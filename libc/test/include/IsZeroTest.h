@@ -18,13 +18,13 @@ template <typename T> class IsZeroTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef int (*IsZeroFunc)(T);
+  typedef bool (*IsZeroFunc)(T);
 
   void testSpecialNumbers(IsZeroFunc func) {
-    EXPECT_EQ(func(inf), 0);
-    EXPECT_EQ(func(neg_inf), 0);
-    EXPECT_EQ(func(zero), 1);
-    EXPECT_EQ(func(neg_zero), 1);
+    EXPECT_FALSE(func(inf));
+    EXPECT_FALSE(func(neg_inf));
+    EXPECT_TRUE(func(zero));
+    EXPECT_TRUE(func(neg_zero));
   }
 };
 
