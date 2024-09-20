@@ -153,6 +153,12 @@
 /// exported when llvm is built as a shared library with everything else that is
 /// unannotated will have internal visibility.
 ///
+/// LLVM_ABI_EXPORT is for the special case for things like plugin symbol
+/// declarations or definitions where we don't want the macro to be switching
+/// between dllexport and dllimport on windows based on what codebase is being
+/// built, it will only be dllexport. For non windows platforms this macro
+/// behaves the same as LLVM_ABI.
+///
 /// LLVM_EXPORT_TEMPLATE is used on explicit template instantiations in source
 /// files that were declared extern in a header. This macro is only set as a
 /// compiler export attribute on windows, on other platforms it does nothing.
