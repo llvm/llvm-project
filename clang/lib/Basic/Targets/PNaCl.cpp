@@ -16,9 +16,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-ArrayRef<const char *> PNaClTargetInfo::getGCCRegNames() const {
-  return {};
-}
+ArrayRef<const char *> PNaClTargetInfo::getGCCRegNames() const { return {}; }
 
 ArrayRef<TargetInfo::GCCRegAlias> PNaClTargetInfo::getGCCRegAliases() const {
   return {};

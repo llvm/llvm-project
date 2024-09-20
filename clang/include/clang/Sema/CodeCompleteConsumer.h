@@ -378,9 +378,8 @@ public:
       : CCKind(CCKind), IsUsingDeclaration(false), SelIdents() {}
 
   /// Construct a new code-completion context of the given kind.
-  CodeCompletionContext(
-      Kind CCKind, QualType T,
-      ArrayRef<const IdentifierInfo *> SelIdents = {})
+  CodeCompletionContext(Kind CCKind, QualType T,
+                        ArrayRef<const IdentifierInfo *> SelIdents = {})
       : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(SelIdents) {
     if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
         CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||

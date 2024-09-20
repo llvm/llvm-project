@@ -392,8 +392,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     return Result.get();
   };
 
-  CallExpr *AwaitReady = cast_or_null<CallExpr>(
-      BuildSubExpr(ACT::ACT_Ready, "await_ready", {}));
+  CallExpr *AwaitReady =
+      cast_or_null<CallExpr>(BuildSubExpr(ACT::ACT_Ready, "await_ready", {}));
   if (!AwaitReady)
     return Calls;
   if (!AwaitReady->getType()->isDependentType()) {
@@ -722,8 +722,8 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
-    ExprResult Operand = buildPromiseCall(*this, ScopeInfo->CoroutinePromise,
-                                          Loc, Name, {});
+    ExprResult Operand =
+        buildPromiseCall(*this, ScopeInfo->CoroutinePromise, Loc, Name, {});
     if (Operand.isInvalid())
       return StmtError();
     ExprResult Suspend =
@@ -1735,8 +1735,8 @@ bool CoroutineStmtBuilder::makeOnException() {
   if (!S.getLangOpts().CXXExceptions)
     return true;
 
-  ExprResult UnhandledException = buildPromiseCall(
-      S, Fn.CoroutinePromise, Loc, "unhandled_exception", {});
+  ExprResult UnhandledException =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "unhandled_exception", {});
   UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc,
                                              /*DiscardedValue*/ false);
   if (UnhandledException.isInvalid())
@@ -1759,8 +1759,8 @@ bool CoroutineStmtBuilder::makeReturnObject() {
   // [dcl.fct.def.coroutine]p7
   // The expression promise.get_return_object() is used to initialize the
   // returned reference or prvalue result object of a call to a coroutine.
-  ExprResult ReturnObject = buildPromiseCall(S, Fn.CoroutinePromise, Loc,
-                                             "get_return_object", {});
+  ExprResult ReturnObject =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "get_return_object", {});
   if (ReturnObject.isInvalid())
     return false;
 

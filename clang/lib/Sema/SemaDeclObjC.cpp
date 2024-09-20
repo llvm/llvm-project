@@ -5516,8 +5516,7 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       InitializationKind InitKind =
           InitializationKind::CreateDefault(ObjCImplementation->getLocation());
 
-      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind,
-                                     {});
+      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind, {});
       ExprResult MemberInit =
           InitSeq.Perform(SemaRef, InitEntity, InitKind, {});
       MemberInit = SemaRef.MaybeCreateExprWithCleanups(MemberInit);

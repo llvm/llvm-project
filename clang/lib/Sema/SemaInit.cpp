@@ -588,10 +588,9 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
     //
     // Only do this if we're initializing a class type, to avoid filling in
     // the initializer list where possible.
-    InitExpr = VerifyOnly
-                   ? &DummyInitList
-                   : new (SemaRef.Context)
-                         InitListExpr(SemaRef.Context, Loc, {}, Loc);
+    InitExpr = VerifyOnly ? &DummyInitList
+                          : new (SemaRef.Context)
+                                InitListExpr(SemaRef.Context, Loc, {}, Loc);
     InitExpr->setType(SemaRef.Context.VoidTy);
     SubInit = InitExpr;
     Kind = InitializationKind::CreateCopy(Loc, Loc);
@@ -5684,11 +5683,13 @@ static void TryOrBuildParenListInitialization(
                                      const InitializationKind &SubKind,
                                      Expr *Arg, Expr **InitExpr = nullptr) {
     InitializationSequence IS = InitializationSequence(
-        S, SubEntity, SubKind, Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
+        S, SubEntity, SubKind,
+        Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
 
     if (IS.Failed()) {
       if (!VerifyOnly) {
-        IS.Diagnose(S, SubEntity, SubKind, Arg ? ArrayRef(Arg) : ArrayRef<Expr *>());
+        IS.Diagnose(S, SubEntity, SubKind,
+                    Arg ? ArrayRef(Arg) : ArrayRef<Expr *>());
       } else {
         Sequence.SetFailed(
             InitializationSequence::FK_ParenthesizedListInitFailed);

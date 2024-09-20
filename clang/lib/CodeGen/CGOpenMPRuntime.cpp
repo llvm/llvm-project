@@ -7867,8 +7867,8 @@ private:
         Kind = Present;
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
-        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from,
-                {}, C->getMotionModifiers(),
+        InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from, {},
+                C->getMotionModifiers(),
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L),
                 *EI);
         ++EI;
@@ -7920,9 +7920,9 @@ private:
             // processed. Nonetheless, generateInfoForComponentList must be
             // called to take the pointer into account for the calculation of
             // the range of the partial struct.
-            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, {},
-                    {}, /*ReturnDevicePointer=*/false, IsImplicit,
-                    nullptr, nullptr, IsDevAddr);
+            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, {}, {},
+                    /*ReturnDevicePointer=*/false, IsImplicit, nullptr, nullptr,
+                    IsDevAddr);
             DeferredInfo[nullptr].emplace_back(IE, VD, IsDevAddr);
           } else {
             llvm::Value *Ptr;
@@ -8732,8 +8732,7 @@ public:
             StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ {},
-            HasMapBasePtr && HasMapArraySec);
+            /*OverlappedElements*/ {}, HasMapBasePtr && HasMapArraySec);
       IsFirstComponentList = false;
     }
   }
