@@ -68,7 +68,6 @@ SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
 #endif
 
       void *Addr = DL.getAddressOfSymbol(DemangledSymName);
-
       if (!Addr && E.Required)
         return make_error<StringError>(Twine("Missing definition for ") +
                                            DemangledSymName,

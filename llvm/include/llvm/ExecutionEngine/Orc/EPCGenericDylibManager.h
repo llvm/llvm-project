@@ -82,13 +82,13 @@ public:
   void lookupAsync(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup,
                    SymbolLookupCompleteFn Complete);
 
-  /// Looks up symbols within the given dylib.
+  /// Look up and resolve symbols across all available dynamic libraries.
   void resolveAsync(const SymbolLookupSet &Lookup,
-                           ResolveSymbolsCompleteFn Complete);
+                    ResolveSymbolsCompleteFn Complete);
 
-  /// Looks up symbols within the given dylib.
+  /// Look up and resolve symbols across all available dynamic libraries.
   void resolveAsync(const RemoteSymbolLookupSet &Lookup,
-                           ResolveSymbolsCompleteFn Complete);
+                    ResolveSymbolsCompleteFn Complete);
 
 private:
   ExecutorProcessControl &EPC;
