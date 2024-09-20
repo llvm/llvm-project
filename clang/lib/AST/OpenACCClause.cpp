@@ -43,7 +43,7 @@ bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
          OpenACCVectorLengthClause::classof(C) ||
-         OpenACCAsyncClause::classof(C);
+         OpenACCCollapseClause::classof(C) || OpenACCAsyncClause::classof(C);
 }
 OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
                                                    OpenACCDefaultClauseKind K,
@@ -132,6 +132,30 @@ OpenACCNumWorkersClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                          alignof(OpenACCNumWorkersClause));
   return new (Mem)
       OpenACCNumWorkersClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             bool HasForce, Expr *LoopCount,
+                                             SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
+                                     LParenLoc, LoopCount, EndLoc),
+      HasForce(HasForce) {
+  assert(LoopCount && "LoopCount required");
+}
+
+OpenACCCollapseClause *
+OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                              SourceLocation LParenLoc, bool HasForce,
+                              Expr *LoopCount, SourceLocation EndLoc) {
+  assert(LoopCount &&
+         (LoopCount->isInstantiationDependent() ||
+          (LoopCount->isIntegerConstantExpr(C))) &&
+         "Loop count not constant expression");
+  void *Mem =
+      C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
+  return new (Mem)
+      OpenACCCollapseClause(BeginLoc, LParenLoc, HasForce, LoopCount, EndLoc);
 }
 
 OpenACCVectorLengthClause::OpenACCVectorLengthClause(SourceLocation BeginLoc,
@@ -549,4 +573,12 @@ void OpenACCClausePrinter::VisitIndependentClause(
 
 void OpenACCClausePrinter::VisitSeqClause(const OpenACCSeqClause &C) {
   OS << "seq";
+}
+
+void OpenACCClausePrinter::VisitCollapseClause(const OpenACCCollapseClause &C) {
+  OS << "collapse(";
+  if (C.hasForce())
+    OS << "force:";
+  printExpr(C.getLoopCount());
+  OS << ")";
 }
