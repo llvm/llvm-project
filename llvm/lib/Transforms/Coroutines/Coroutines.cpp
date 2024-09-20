@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABI.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "CoroShape.h"
@@ -372,11 +373,10 @@ void coro::Shape::invalidateCoroutine(
   }
 }
 
-// Perform semantic checking and initialization of the ABI
-void coro::Shape::initABI() {
-  switch (ABI) {
-  case coro::ABI::Switch: {
-    for (auto *AnySuspend : CoroSuspends) {
+void coro::SwitchABI::init() {
+  assert(Shape.ABI == coro::ABI::Switch);
+  {
+    for (auto *AnySuspend : Shape.CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendInst>(AnySuspend);
       if (!Suspend) {
 #ifndef NDEBUG
@@ -386,21 +386,22 @@ void coro::Shape::initABI() {
       }
 
       if (!Suspend->getCoroSave())
-        createCoroSave(CoroBegin, Suspend);
+        createCoroSave(Shape.CoroBegin, Suspend);
     }
-    break;
   }
-  case coro::ABI::Async: {
-    break;
-  };
-  case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
+}
+
+void coro::AsyncABI::init() { assert(Shape.ABI == coro::ABI::Async); }
+
+void coro::AnyRetconABI::init() {
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
+  {
     // Determine the result value types, and make sure they match up with
     // the values passed to the suspends.
-    auto ResultTys = getRetconResultTypes();
-    auto ResumeTys = getRetconResumeTypes();
+    auto ResultTys = Shape.getRetconResultTypes();
+    auto ResumeTys = Shape.getRetconResumeTypes();
 
-    for (auto *AnySuspend : CoroSuspends) {
+    for (auto *AnySuspend : Shape.CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendRetconInst>(AnySuspend);
       if (!Suspend) {
 #ifndef NDEBUG
@@ -427,7 +428,7 @@ void coro::Shape::initABI() {
 
 #ifndef NDEBUG
           Suspend->dump();
-          RetconLowering.ResumePrototype->getFunctionType()->dump();
+          Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
           report_fatal_error("argument to coro.suspend.retcon does not "
                              "match corresponding prototype function result");
@@ -436,7 +437,7 @@ void coro::Shape::initABI() {
       if (SI != SE || RI != RE) {
 #ifndef NDEBUG
         Suspend->dump();
-        RetconLowering.ResumePrototype->getFunctionType()->dump();
+        Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
         report_fatal_error("wrong number of arguments to coro.suspend.retcon");
       }
@@ -455,7 +456,7 @@ void coro::Shape::initABI() {
       if (SuspendResultTys.size() != ResumeTys.size()) {
 #ifndef NDEBUG
         Suspend->dump();
-        RetconLowering.ResumePrototype->getFunctionType()->dump();
+        Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
         report_fatal_error("wrong number of results from coro.suspend.retcon");
       }
@@ -463,15 +464,13 @@ void coro::Shape::initABI() {
         if (SuspendResultTys[I] != ResumeTys[I]) {
 #ifndef NDEBUG
           Suspend->dump();
-          RetconLowering.ResumePrototype->getFunctionType()->dump();
+          Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
           report_fatal_error("result from coro.suspend.retcon does not "
                              "match corresponding prototype function param");
         }
       }
     }
-    break;
-  }
   }
 }
 
