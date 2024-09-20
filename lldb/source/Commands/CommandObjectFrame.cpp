@@ -964,15 +964,15 @@ PrintRecognizerDetails(Stream &strm, const std::string &name, bool enabled,
 
 // Base class for commands which accept a single frame recognizer as an argument
 class CommandObjectWithFrameRecognizerArg : public CommandObjectParsed {
-  public:
-    CommandObjectWithFrameRecognizerArg(CommandInterpreter &interpreter,
-                                        const char *name,
-                                        const char *help = nullptr,
-                                        const char *syntax = nullptr,
-                                        uint32_t flags = 0)
-        : CommandObjectParsed(interpreter, name, help, syntax, flags) {
-      AddSimpleArgumentList(eArgTypeRecognizerID);
-    }
+public:
+  CommandObjectWithFrameRecognizerArg(CommandInterpreter &interpreter,
+                                      const char *name,
+                                      const char *help = nullptr,
+                                      const char *syntax = nullptr,
+                                      uint32_t flags = 0)
+      : CommandObjectParsed(interpreter, name, help, syntax, flags) {
+    AddSimpleArgumentList(eArgTypeRecognizerID);
+  }
 
   void
   HandleArgumentCompletion(CompletionRequest &request,
@@ -982,7 +982,8 @@ class CommandObjectWithFrameRecognizerArg : public CommandObjectParsed {
       return;
 
     GetTarget().GetFrameRecognizerManager().ForEach(
-        [&request](uint32_t rid, bool enabled, std::string rname, std::string module,
+        [&request](uint32_t rid, bool enabled, std::string rname,
+                   std::string module,
                    llvm::ArrayRef<lldb_private::ConstString> symbols,
                    Mangled::NamePreference symbol_mangling, bool regexp) {
           StreamString strm;
@@ -996,7 +997,8 @@ class CommandObjectWithFrameRecognizerArg : public CommandObjectParsed {
         });
   }
 
-  virtual void DoExecuteWithId(CommandReturnObject &result, uint32_t recognizer_id) = 0;
+  virtual void DoExecuteWithId(CommandReturnObject &result,
+                               uint32_t recognizer_id) = 0;
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
@@ -1016,7 +1018,8 @@ class CommandObjectWithFrameRecognizerArg : public CommandObjectParsed {
   }
 };
 
-class CommandObjectFrameRecognizerEnable : public CommandObjectWithFrameRecognizerArg {
+class CommandObjectFrameRecognizerEnable
+    : public CommandObjectWithFrameRecognizerArg {
 public:
   CommandObjectFrameRecognizerEnable(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
@@ -1028,8 +1031,9 @@ public:
   ~CommandObjectFrameRecognizerEnable() override = default;
 
 protected:
-  void DoExecuteWithId(CommandReturnObject &result, uint32_t recognizer_id) override {
-    auto& recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
       result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
                                    recognizer_id);
@@ -1039,7 +1043,8 @@ protected:
   }
 };
 
-class CommandObjectFrameRecognizerDisable : public CommandObjectWithFrameRecognizerArg {
+class CommandObjectFrameRecognizerDisable
+    : public CommandObjectWithFrameRecognizerArg {
 public:
   CommandObjectFrameRecognizerDisable(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
@@ -1051,8 +1056,9 @@ public:
   ~CommandObjectFrameRecognizerDisable() override = default;
 
 protected:
-  void DoExecuteWithId(CommandReturnObject &result, uint32_t recognizer_id) override {
-    auto& recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
       result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
                                    recognizer_id);
@@ -1062,7 +1068,8 @@ protected:
   }
 };
 
-class CommandObjectFrameRecognizerDelete : public CommandObjectWithFrameRecognizerArg {
+class CommandObjectFrameRecognizerDelete
+    : public CommandObjectWithFrameRecognizerArg {
 public:
   CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
@@ -1074,8 +1081,9 @@ public:
   ~CommandObjectFrameRecognizerDelete() override = default;
 
 protected:
-  void DoExecuteWithId(CommandReturnObject &result, uint32_t recognizer_id) override {
-    auto& recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
       result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
                                    recognizer_id);
@@ -1108,8 +1116,8 @@ protected:
             name = "(internal)";
 
           stream << std::to_string(recognizer_id) << ": ";
-          PrintRecognizerDetails(stream, name, enabled, module, symbols, symbol_mangling,
-                                 regexp);
+          PrintRecognizerDetails(stream, name, enabled, module, symbols,
+                                 symbol_mangling, regexp);
 
           stream.EOL();
           stream.Flush();
