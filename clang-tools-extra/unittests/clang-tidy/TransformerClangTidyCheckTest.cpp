@@ -260,11 +260,11 @@ TEST(TransformerClangTidyCheckTest, DisableByConfig) {
 
   Options.CheckOptions["test-check-0.Skip"] = "true";
   EXPECT_EQ(Input, test::runCheckOnCode<ConfigurableCheck>(
-                       Input, nullptr, "input.cc", std::nullopt, Options));
+                       Input, nullptr, "input.cc", {}, Options));
 
   Options.CheckOptions["test-check-0.Skip"] = "false";
   EXPECT_EQ(Expected, test::runCheckOnCode<ConfigurableCheck>(
-                          Input, nullptr, "input.cc", std::nullopt, Options));
+                          Input, nullptr, "input.cc", {}, Options));
 }
 
 RewriteRuleWith<std::string> replaceCall(IncludeFormat Format) {
@@ -348,18 +348,18 @@ int h(int x) { return 5; })cc";
   Options.CheckOptions["test-check-0.IncludeStyle"] = "llvm";
   EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                        Input, nullptr, "inputTest.cpp",
-                                       std::nullopt, Options, PathsToContent));
+                                       {}, Options, PathsToContent));
   EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                       Input, nullptr, "input_test.cpp",
-                                      std::nullopt, Options, PathsToContent));
+                                      {}, Options, PathsToContent));
 
   Options.CheckOptions["test-check-0.IncludeStyle"] = "google";
   EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                       Input, nullptr, "inputTest.cc",
-                                      std::nullopt, Options, PathsToContent));
+                                      {}, Options, PathsToContent));
   EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                        Input, nullptr, "input_test.cc",
-                                       std::nullopt, Options, PathsToContent));
+                                       {}, Options, PathsToContent));
 }
 
 TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleGlobalOption) {
@@ -380,18 +380,18 @@ int h(int x) { return 5; })cc";
   Options.CheckOptions["IncludeStyle"] = "llvm";
   EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                        Input, nullptr, "inputTest.cpp",
-                                       std::nullopt, Options, PathsToContent));
+                                       {}, Options, PathsToContent));
   EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                       Input, nullptr, "input_test.cpp",
-                                      std::nullopt, Options, PathsToContent));
+                                      {}, Options, PathsToContent));
 
   Options.CheckOptions["IncludeStyle"] = "google";
   EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                       Input, nullptr, "inputTest.cc",
-                                      std::nullopt, Options, PathsToContent));
+                                      {}, Options, PathsToContent));
   EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
                                        Input, nullptr, "input_test.cc",
-                                       std::nullopt, Options, PathsToContent));
+                                       {}, Options, PathsToContent));
 }
 
 } // namespace

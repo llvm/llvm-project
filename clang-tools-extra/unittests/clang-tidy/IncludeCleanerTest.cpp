@@ -49,7 +49,7 @@ TEST(IncludeCleanerCheckTest, BasicUnusedIncludes) {
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"bar.h", "#pragma once"}, {"vector", "#pragma once"}}));
 }
 
@@ -78,7 +78,7 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
   EXPECT_EQ(
       PostCode,
       runCheckOnCode<IncludeCleanerCheck>(
-          PreCode, &Errors, "file.cpp", std::nullopt, Opts,
+          PreCode, &Errors, "file.cpp", {}, Opts,
           {{"bar.h", "#pragma once"},
            {"vector", "#pragma once"},
            {"list", "#pragma once"},
@@ -105,7 +105,7 @@ int BazResult = baz();
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
@@ -125,7 +125,7 @@ int BarResult2 = $diag2^bar();)");
   {
     std::vector<ClangTidyError> Errors;
     runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        std::nullopt, ClangTidyOptions(),
+                                        {}, ClangTidyOptions(),
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -142,7 +142,7 @@ int BarResult2 = $diag2^bar();)");
     ClangTidyOptions Opts;
     Opts.CheckOptions.insert({"DeduplicateFindings", "false"});
     runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp",
-                                        std::nullopt, Opts,
+                                        {}, Opts,
                                         {{"baz.h", R"(#pragma once
                               #include "bar.h"
                            )"},
@@ -176,7 +176,7 @@ std::vector x;
       llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"}))};
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PreCode, runCheckOnCode<IncludeCleanerCheck>(
-                         PreCode, &Errors, "file.cpp", std::nullopt, Opts,
+                         PreCode, &Errors, "file.cpp", {}, Opts,
                          {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               #include "foo/qux.h"
@@ -217,7 +217,7 @@ int BazResult_1 = baz_1();
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"bar.h", R"(#pragma once
                               #include "baz.h"
                               int bar();
@@ -246,7 +246,7 @@ std::vector Vec;
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"string", R"(#pragma once
                               namespace std { class string {}; }
                             )"},
@@ -274,7 +274,7 @@ int FooBarResult = foobar();
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PostCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"bar.h", R"(#pragma once
                               #include "private.h"
                               int bar();
@@ -297,7 +297,7 @@ DECLARE(myfunc) {
   std::vector<ClangTidyError> Errors;
   EXPECT_EQ(PreCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"foo.h",
                   R"(#pragma once
                      #define DECLARE(X) void X()
@@ -313,7 +313,7 @@ DECLARE {
 
   EXPECT_EQ(PreCode,
             runCheckOnCode<IncludeCleanerCheck>(
-                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                PreCode, &Errors, "file.cpp", {}, ClangTidyOptions(),
                 {{"foo.h",
                   R"(#pragma once
                      #define DECLARE void myfunc()
