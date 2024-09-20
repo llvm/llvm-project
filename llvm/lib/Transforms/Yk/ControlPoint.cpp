@@ -1,4 +1,4 @@
-//===- ControlPoint.cpp - Synthesise the yk control point -----------------===//
+//===- ControlPoint.cpp - Patch the yk control point -----------------===//
 //
 // This pass finds the user's call to the dummy control point and replaces it
 // with a call to a new control point that implements the necessary logic to
@@ -19,29 +19,21 @@
 // }
 // ```
 //
-// Into one that looks like this (note that this transformation happens at the
-// IR level):
+// Into one that looks like this:
 //
 // ```
-// // The YkCtrlPointStruct contains one member for each live LLVM variable
-// // just before the call to the control point.
-// struct YkCtrlPointStruct {
-//     size_t pc;
-// }
-//
-// struct YkCtrlPointStruct cp_vars;
 // pc = 0;
 // while (...) {
-//     // Now we call the patched control point.
-//     cp_vars.pc = pc;
-//     __ykrt__control_point(mt, loc, &cp_vars);
-//     pc = cp_vars.pc;
+//     llvm.experimental.patchpoint.void(..., __ykrt_control_point, ...)
 //     bc = program[pc];
 //     switch (bc) {
 //         // bytecode handlers here.
 //     }
 // }
 // ```
+//
+// A patchpoint is used to capture the locations of live variables immediately
+// before a call to __ykrt_control_point.
 //
 // Note that this transformation occurs at the LLVM IR level. The above example
 // is shown as C code for easy comprehension.
@@ -152,7 +144,7 @@ public:
     }
 
     // The old control point should be of the form:
-    //    control_point(YkMT*, YkLocation*)
+    //    yk_mt_control_point(YkMT*, YkLocation*)
     assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
     Type *YkMTTy =
         OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)->getType();
