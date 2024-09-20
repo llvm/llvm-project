@@ -125,12 +125,6 @@ ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
   return *mem_region.m_opaque_up.get();
 }
 
-lldb::ExecutionContextRefSP
-ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
-    const lldb::SBExecutionContext &exe_ctx) const {
-  return exe_ctx.m_exe_ctx_sp;
-}
-
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
