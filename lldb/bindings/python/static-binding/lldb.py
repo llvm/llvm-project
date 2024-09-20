@@ -6435,6 +6435,10 @@ class SBFrame(object):
         """
         return _lldb.SBFrame_IsArtificial(self, *args)
 
+    def IsHidden(self):
+        r"""IsHidden(SBFrame self) -> bool"""
+        return _lldb.SBFrame_IsHidden(self)
+
     def EvaluateExpression(self, *args):
         r"""
         EvaluateExpression(SBFrame self, char const * expr) -> SBValue
