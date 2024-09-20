@@ -301,6 +301,104 @@ unsigned int lldb_private::python::SWIGBridge::LLDBSwigPythonCallBreakpointResol
   return ret_val;
 }
 
+PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopHook(
+    lldb::TargetSP target_sp, const char *python_class_name,
+    const char *session_dictionary_name, const StructuredDataImpl &args_impl,
+    Status &error) {
+  if (python_class_name == NULL || python_class_name[0] == '\0') {
+    error = Status::FromErrorString("Empty class name.");
+    return PythonObject();
+  }
+  if (!session_dictionary_name) {
+    error = Status::FromErrorString("No session dictionary");
+    return PythonObject();
+  }
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
+      session_dictionary_name);
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      python_class_name, dict);
+
+  if (!pfunc.IsAllocated()) {
+    error = Status::FromErrorStringWithFormat("Could not find class: %s.",
+                                   python_class_name);
+    return PythonObject();
+  }
+
+  PythonObject result =
+      pfunc(SWIGBridge::ToSWIGWrapper(target_sp), SWIGBridge::ToSWIGWrapper(args_impl), dict);
+
+  if (result.IsAllocated()) {
+    // Check that the handle_stop callback is defined:
+    auto callback_func = result.ResolveName<PythonCallable>("handle_stop");
+    if (callback_func.IsAllocated()) {
+      if (auto args_info = callback_func.GetArgInfo()) {
+        size_t num_args = (*args_info).max_positional_args;
+        if (num_args != 2) {
+          error = Status::FromErrorStringWithFormat(
+              "Wrong number of args for "
+              "handle_stop callback, should be 2 (excluding self), got: %zu",
+              num_args);
+          return PythonObject();
+        } else
+          return result;
+      } else {
+        error = Status::FromErrorString(
+            "Couldn't get num arguments for handle_stop "
+            "callback.");
+        return PythonObject();
+      }
+      return result;
+    } else {
+      error = Status::FromErrorStringWithFormat(
+          "Class \"%s\" is missing the required "
+          "handle_stop callback.",
+          python_class_name);
+    }
+  }
+  return PythonObject();
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
+    void *implementor, lldb::ExecutionContextRefSP exc_ctx_sp,
+    lldb::StreamSP stream) {
+  // handle_stop will return a bool with the meaning "should_stop"...
+  // If you return nothing we'll assume we are going to stop.
+  // Also any errors should return true, since we should stop on error.
+
+  PyErr_Cleaner py_err_cleaner(false);
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  auto pfunc = self.ResolveName<PythonCallable>("handle_stop");
+
+  if (!pfunc.IsAllocated())
+    return true;
+
+  std::shared_ptr<lldb::SBStream> sb_stream = std::make_shared<lldb::SBStream>();
+  PythonObject sb_stream_arg = SWIGBridge::ToSWIGWrapper(sb_stream);
+  PythonObject result =
+      pfunc(SWIGBridge::ToSWIGWrapper(std::move(exc_ctx_sp)), sb_stream_arg);
+
+  if (PyErr_Occurred()) {
+    stream->PutCString("Python error occurred handling stop-hook.");
+    PyErr_Print();
+    PyErr_Clear();
+    return true;
+  }
+
+  // Now add the result to the output stream.  SBStream only
+  // makes an internally help StreamString which I can't interpose, so I
+  // have to copy it over here.
+  stream->PutCString(sb_stream->GetData());
+  sb_stream_arg.release();
+
+  if (result.get() == Py_False)
+    return false;
+  else
+    return true;
+}
+
 // wrapper that calls an optional instance member of an object taking no
 // arguments
 static PyObject *LLDBSwigPython_CallOptionalMember(
@@ -572,19 +670,6 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyOb
 
   int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
                                    SWIGTYPE_p_lldb__SBMemoryRegionInfo, 0);
-
-  if (valid_cast == -1)
-    return NULL;
-
-  return sb_ptr;
-}
-
-void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *
-                                                                    data) {
-  lldb::SBExecutionContext *sb_ptr = NULL;
-
-  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
-                                   SWIGTYPE_p_lldb__SBExecutionContext, 0);
 
   if (valid_cast == -1)
     return NULL;
