@@ -78,7 +78,7 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
   } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
     NewCB = InvokeInst::Create(NewCallee->getFunctionType(), NewCallee,
                                II->getNormalDest(), II->getUnwindDest(),
-                               NewArgs, std::nullopt, "", NewCBInsertPt);
+                               NewArgs, {}, "", NewCBInsertPt);
   } else {
     llvm_unreachable("CallBase should either be Call or Invoke!");
   }

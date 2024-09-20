@@ -141,6 +141,8 @@ static llvm::Error CloneError(const llvm::Error &error) {
   auto clone = [](const llvm::ErrorInfoBase &e) {
     if (e.isA<CloneableError>())
       return llvm::Error(static_cast<const CloneableError &>(e).Clone());
+    if (e.isA<llvm::ECError>())
+      return llvm::errorCodeToError(e.convertToErrorCode());
     return llvm::make_error<llvm::StringError>(e.message(),
                                                e.convertToErrorCode(), true);
   };
@@ -150,13 +152,7 @@ static llvm::Error CloneError(const llvm::Error &error) {
   return result;
 }
 
-Status Status::FromError(llvm::Error error) {
-  if (error.isA<llvm::ECError>()) {
-    std::error_code ec = llvm::errorToErrorCode(std::move(error));
-    return Status::FromError(llvm::make_error<CloneableECError>(ec));
-  }
-  return Status(std::move(error));
-}
+Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
 
 llvm::Error Status::ToError() const { return CloneError(m_error); }
 
@@ -201,10 +197,6 @@ std::string Win32Error::message() const {
   return RetrieveWin32ErrorString(convertToErrorCode().value());
 #endif
   return "Win32Error";
-}
-
-std::unique_ptr<CloneableError> CloneableECError::Clone() const {
-  return std::make_unique<CloneableECError>(convertToErrorCode());
 }
 
 std::unique_ptr<CloneableError> MachKernelError::Clone() const {
@@ -291,12 +283,7 @@ bool Status::Fail() const {
   return m_error.isA<llvm::ErrorInfoBase>();
 }
 
-Status Status::FromErrno() {
-  std::error_code ec = llvm::errnoAsErrorCode();
-  if (ec)
-    return Status::FromError(llvm::make_error<CloneableECError>(ec));
-  return Status();
-}
+Status Status::FromErrno() { return Status(llvm::errnoAsErrorCode()); }
 
 // Returns true if the error code in this object is considered a successful
 // return value.

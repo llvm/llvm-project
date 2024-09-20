@@ -23,6 +23,13 @@ LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
 };
 
+LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRNO_NAMES = {
+    MsgMapping(0, "0"),
+    MsgMapping(EDOM, "EDOM"),
+    MsgMapping(ERANGE, "ERANGE"),
+    MsgMapping(EILSEQ, "EILSEQ"),
+};
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_ERRORS_H
