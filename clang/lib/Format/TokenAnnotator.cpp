@@ -1407,6 +1407,12 @@ private:
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->setType(TT_RangeBasedForLoopColon);
+        for (auto *Prev = Tok->Previous;
+             Prev && !Prev->isOneOf(tok::semi, tok::l_paren);
+             Prev = Prev->Previous) {
+          if (Prev->isPointerOrReference())
+            Prev->setFinalizedType(TT_PointerOrReference);
+        }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
