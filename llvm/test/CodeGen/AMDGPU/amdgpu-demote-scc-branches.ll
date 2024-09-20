@@ -101,8 +101,8 @@ define void @uniform_br_profitable(i32 noundef inreg %value, ptr addrspace(8) no
 ; GFX9-LABEL: uniform_br_profitable:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cmp_lt_i32 s21, 1
-; GFX9-NEXT:    s_cbranch_scc1 .LBB2_2
+; GFX9-NEXT:    v_cmp_ge_i32_e64 vcc, s21, 1
+; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:  ; %bb.1: ; %if.then
 ; GFX9-NEXT:    s_mov_b32 s11, s18
 ; GFX9-NEXT:    s_mov_b32 s10, s17
@@ -111,26 +111,47 @@ define void @uniform_br_profitable(i32 noundef inreg %value, ptr addrspace(8) no
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s19
 ; GFX9-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
-; GFX9-NEXT:  .LBB2_2: ; %if.end
+; GFX9-NEXT:  ; %bb.2: ; %if.end
+; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: uniform_br_profitable:
-; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_cmp_lt_i32 s21, 1
-; GFX10-NEXT:    s_cbranch_scc1 .LBB2_2
-; GFX10-NEXT:  ; %bb.1: ; %if.then
-; GFX10-NEXT:    v_mov_b32_e32 v0, s6
-; GFX10-NEXT:    v_mov_b32_e32 v1, s19
-; GFX10-NEXT:    s_mov_b32 s11, s18
-; GFX10-NEXT:    s_mov_b32 s10, s17
-; GFX10-NEXT:    s_mov_b32 s9, s16
-; GFX10-NEXT:    s_mov_b32 s8, s7
-; GFX10-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
-; GFX10-NEXT:  .LBB2_2: ; %if.end
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX1010-LABEL: uniform_br_profitable:
+; GFX1010:       ; %bb.0: ; %entry
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-NEXT:    v_cmp_ge_i32_e64 vcc_lo, s21, 1
+; GFX1010-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GFX1010-NEXT:  ; %bb.1: ; %if.then
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s6
+; GFX1010-NEXT:    v_mov_b32_e32 v1, s19
+; GFX1010-NEXT:    s_mov_b32 s11, s18
+; GFX1010-NEXT:    s_mov_b32 s10, s17
+; GFX1010-NEXT:    s_mov_b32 s9, s16
+; GFX1010-NEXT:    s_mov_b32 s8, s7
+; GFX1010-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
+; GFX1010-NEXT:  ; %bb.2: ; %if.end
+; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-NEXT:    s_mov_b32 exec_lo, s4
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1030-LABEL: uniform_br_profitable:
+; GFX1030:       ; %bb.0: ; %entry
+; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1030-NEXT:    s_mov_b32 s4, exec_lo
+; GFX1030-NEXT:    v_cmpx_ge_i32_e64 s21, 1
+; GFX1030-NEXT:  ; %bb.1: ; %if.then
+; GFX1030-NEXT:    v_mov_b32_e32 v0, s6
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s19
+; GFX1030-NEXT:    s_mov_b32 s11, s18
+; GFX1030-NEXT:    s_mov_b32 s10, s17
+; GFX1030-NEXT:    s_mov_b32 s9, s16
+; GFX1030-NEXT:    s_mov_b32 s8, s7
+; GFX1030-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen
+; GFX1030-NEXT:  ; %bb.2: ; %if.end
+; GFX1030-NEXT:    s_mov_b32 exec_lo, s4
+; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp sgt i32 %flag, 0
   br i1 %cmp, label %if.then, label %if.end, !prof !1

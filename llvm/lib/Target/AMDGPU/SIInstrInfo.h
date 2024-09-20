@@ -87,6 +87,7 @@ private:
   TargetSchedModel SchedModel;
   mutable std::unique_ptr<AMDGPUMIRFormatter> Formatter;
 
+public:
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
     INVALID_BR = 0,
@@ -98,6 +99,7 @@ private:
     EXECZ = 3
   };
 
+private:
   using SetVectorType = SmallSetVector<MachineInstr *, 32>;
 
   static unsigned getBranchOpcode(BranchPredicate Cond);
@@ -1031,13 +1033,21 @@ public:
   /// Return true if the instruction modifies the mode register.q
   static bool modifiesModeRegister(const MachineInstr &MI);
 
+  /// Returns true if it's protifable to remove an execz branch from Branch to
+  /// From
+  bool mustRetainExeczBranch(const MachineInstr &Branch,
+                             const MachineBasicBlock &From,
+                             const MachineBasicBlock &To,
+                             unsigned ExtraTransformationCosts = 0) const;
+
   /// This function is used to determine if an instruction can be safely
   /// executed under EXEC = 0 without hardware error, indeterminate results,
   /// and/or visible effects on future vector execution or outside the shader.
-  /// Note: as of 2024 the only use of this is SIPreEmitPeephole where it is
-  /// used in removing branches over short EXEC = 0 sequences.
-  /// As such it embeds certain assumptions which may not apply to every case
-  /// of EXEC = 0 execution.
+  /// Note: as of 2024 the only use of this is SIPreEmitPeephole and
+  /// AMDGPUDemoteSCCBranchToExecz (through SIIInstrInfo::mustRetainExeczBranch)
+  /// where it is used in removing branches over short EXEC = 0 sequences. As
+  /// such it embeds certain assumptions which may not apply to every case of
+  /// EXEC = 0 execution.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
 
   /// Returns true if the instruction could potentially depend on the value of

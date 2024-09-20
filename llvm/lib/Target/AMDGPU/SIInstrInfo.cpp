@@ -4118,6 +4118,88 @@ bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   return is_contained(MI.getDesc().implicit_defs(), AMDGPU::MODE);
 }
 
+namespace {
+class BranchWeightCostModel {
+  const SIInstrInfo &TII;
+  const TargetSchedModel &SchedModel;
+  BranchProbability BranchProb;
+  static constexpr uint64_t BranchNotTakenCost = 1;
+  uint64_t BranchTakenCost;
+  uint64_t ThenCyclesCost;
+
+public:
+  BranchWeightCostModel(const SIInstrInfo &TII, const MachineInstr &Branch,
+                        const MachineBasicBlock &Succ,
+                        unsigned ExtraTransformationCosts)
+      : TII(TII), SchedModel(TII.getSchedModel()),
+        ThenCyclesCost(ExtraTransformationCosts) {
+    const MachineBasicBlock &Head = *Branch.getParent();
+    const auto *FromIt = find(Head.successors(), &Succ);
+    assert(FromIt != Head.succ_end());
+
+    BranchProb = Head.getSuccProbability(FromIt);
+    if (BranchProb.isUnknown())
+      BranchProb = BranchProbability::getZero();
+    BranchTakenCost = SchedModel.computeInstrLatency(&Branch);
+  }
+
+  bool isProfitable(const MachineInstr &MI) {
+    if (TII.isWaitcnt(MI.getOpcode()))
+      return false;
+
+    ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
+
+    // Consider `P = N/D` to be the probability of execz being false (skipping
+    // the then-block) The transformation is profitable if always executing the
+    // 'then' block is cheaper than executing sometimes 'then' and always
+    // executing s_cbranch_execz:
+    // * ThenCost <= P*ThenCost + (1-P)*BranchTakenCost + P*BranchNotTakenCost
+    // * (1-P) * ThenCost <= (1-P)*BranchTakenCost + P*BranchNotTakenCost
+    // * (D-N)/D * ThenCost <= (D-N)/D * BranchTakenCost + N/D *
+    // BranchNotTakenCost
+    uint64_t Numerator = BranchProb.getNumerator();
+    uint64_t Denominator = BranchProb.getDenominator();
+    return (Denominator - Numerator) * ThenCyclesCost <=
+           ((Denominator - Numerator) * BranchTakenCost +
+            Numerator * BranchNotTakenCost);
+  }
+};
+} // namespace
+
+bool SIInstrInfo::mustRetainExeczBranch(
+    const MachineInstr &Branch, const MachineBasicBlock &From,
+    const MachineBasicBlock &To, unsigned ExtraTransformationCosts) const {
+
+  assert(is_contained(Branch.getParent()->successors(), &From));
+  BranchWeightCostModel CostModel{*this, Branch, From,
+                                  ExtraTransformationCosts};
+
+  const MachineFunction *MF = From.getParent();
+  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
+       MBBI != End && MBBI != ToI; ++MBBI) {
+    const MachineBasicBlock &MBB = *MBBI;
+
+    for (const MachineInstr &MI : MBB) {
+      // When a uniform loop is inside non-uniform control flow, the branch
+      // leaving the loop might never be taken when EXEC = 0.
+      // Hence we should retain cbranch out of the loop lest it become infinite.
+      if (MI.isConditionalBranch())
+        return true;
+
+      if (MI.isMetaInstruction())
+        continue;
+
+      if (hasUnwantedEffectsWhenEXECEmpty(MI))
+        return true;
+
+      if (!CostModel.isProfitable(MI))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 

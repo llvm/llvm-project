@@ -15,8 +15,6 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/Support/BranchProbability.h"
 
 using namespace llvm;
 
@@ -35,9 +33,6 @@ private:
                             MachineBasicBlock *&TrueMBB,
                             MachineBasicBlock *&FalseMBB,
                             SmallVectorImpl<MachineOperand> &Cond);
-  bool mustRetainExeczBranch(const MachineInstr &Branch,
-                             const MachineBasicBlock &From,
-                             const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
 
 public:
@@ -299,84 +294,6 @@ bool SIPreEmitPeephole::getBlockDestinations(
   return true;
 }
 
-namespace {
-class BranchWeightCostModel {
-  const SIInstrInfo &TII;
-  const TargetSchedModel &SchedModel;
-  BranchProbability BranchProb;
-  static constexpr uint64_t BranchNotTakenCost = 1;
-  uint64_t BranchTakenCost;
-  uint64_t ThenCyclesCost = 0;
-
-public:
-  BranchWeightCostModel(const SIInstrInfo &TII, const MachineInstr &Branch,
-                        const MachineBasicBlock &Succ)
-      : TII(TII), SchedModel(TII.getSchedModel()) {
-    const MachineBasicBlock &Head = *Branch.getParent();
-    const auto *FromIt = find(Head.successors(), &Succ);
-    assert(FromIt != Head.succ_end());
-
-    BranchProb = Head.getSuccProbability(FromIt);
-    if (BranchProb.isUnknown())
-      BranchProb = BranchProbability::getZero();
-    BranchTakenCost = SchedModel.computeInstrLatency(&Branch);
-  }
-
-  bool isProfitable(const MachineInstr &MI) {
-    if (TII.isWaitcnt(MI.getOpcode()))
-      return false;
-
-    ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
-
-    // Consider `P = N/D` to be the probability of execz being false (skipping
-    // the then-block) The transformation is profitable if always executing the
-    // 'then' block is cheaper than executing sometimes 'then' and always
-    // executing s_cbranch_execz:
-    // * ThenCost <= P*ThenCost + (1-P)*BranchTakenCost + P*BranchNotTakenCost
-    // * (1-P) * ThenCost <= (1-P)*BranchTakenCost + P*BranchNotTakenCost
-    // * (D-N)/D * ThenCost <= (D-N)/D * BranchTakenCost + N/D *
-    // BranchNotTakenCost
-    uint64_t Numerator = BranchProb.getNumerator();
-    uint64_t Denominator = BranchProb.getDenominator();
-    return (Denominator - Numerator) * ThenCyclesCost <=
-           ((Denominator - Numerator) * BranchTakenCost +
-            Numerator * BranchNotTakenCost);
-  }
-};
-
-bool SIPreEmitPeephole::mustRetainExeczBranch(
-    const MachineInstr &Branch, const MachineBasicBlock &From,
-    const MachineBasicBlock &To) const {
-  assert(is_contained(Branch.getParent()->successors(), &From));
-  BranchWeightCostModel CostModel{*TII, Branch, From};
-
-  const MachineFunction *MF = From.getParent();
-  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
-       MBBI != End && MBBI != ToI; ++MBBI) {
-    const MachineBasicBlock &MBB = *MBBI;
-
-    for (const MachineInstr &MI : MBB) {
-      // When a uniform loop is inside non-uniform control flow, the branch
-      // leaving the loop might never be taken when EXEC = 0.
-      // Hence we should retain cbranch out of the loop lest it become infinite.
-      if (MI.isConditionalBranch())
-        return true;
-
-      if (MI.isMetaInstruction())
-        continue;
-
-      if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
-        return true;
-
-      if (!CostModel.isProfitable(MI))
-        return true;
-    }
-  }
-
-  return false;
-}
-} // namespace
-
 // Returns true if the skip branch instruction is removed.
 bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
                                           MachineBasicBlock &SrcMBB) {
@@ -396,7 +313,7 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
     return false;
 
   // Consider only when it is legal and profitable
-  if (mustRetainExeczBranch(MI, *FalseMBB, *TrueMBB))
+  if (TII->mustRetainExeczBranch(MI, *FalseMBB, *TrueMBB))
     return false;
 
   LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
