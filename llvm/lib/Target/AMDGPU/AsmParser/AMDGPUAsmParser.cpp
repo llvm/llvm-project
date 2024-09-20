@@ -2409,7 +2409,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
+    Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
     setImmKindLiteral();
     return;
 
@@ -2436,7 +2436,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     if (isSafeTruncation(Val, 16) &&
         AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
+      Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
       setImmKindConst();
       return;
     }

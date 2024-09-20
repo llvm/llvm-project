@@ -485,6 +485,7 @@ private:
     DK_FILE,
     DK_LINE,
     DK_LOC,
+    DK_LOC_LABEL,
     DK_STABS,
     DK_CV_FILE,
     DK_CV_FUNC_ID,
@@ -580,10 +581,11 @@ private:
   // ".align{,32}", ".p2align{,w,l}"
   bool parseDirectiveAlign(bool IsPow2, unsigned ValueSize);
 
-  // ".file", ".line", ".loc", ".stabs"
+  // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
   bool parseDirectiveLine();
   bool parseDirectiveLoc();
+  bool parseDirectiveLocLabel(SMLoc DirectiveLoc);
   bool parseDirectiveStabs();
 
   // ".cv_file", ".cv_func_id", ".cv_inline_site_id", ".cv_loc", ".cv_linetable",
@@ -2156,6 +2158,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveLine();
     case DK_LOC:
       return parseDirectiveLoc();
+    case DK_LOC_LABEL:
+      return parseDirectiveLocLabel(IDLoc);
     case DK_STABS:
       return parseDirectiveStabs();
     case DK_CV_FILE:
@@ -3730,6 +3734,19 @@ bool AsmParser::parseDirectiveLoc() {
   getStreamer().emitDwarfLocDirective(FileNumber, LineNumber, ColumnPos, Flags,
                                       Isa, Discriminator, StringRef());
 
+  return false;
+}
+
+/// parseDirectiveLoc
+/// ::= .loc_label label
+bool AsmParser::parseDirectiveLocLabel(SMLoc DirectiveLoc) {
+  StringRef Name;
+  DirectiveLoc = Lexer.getLoc();
+  if (parseIdentifier(Name))
+    return TokError("expected identifier");
+  if (parseEOL())
+    return true;
+  getStreamer().emitDwarfLocLabelDirective(DirectiveLoc, Name);
   return false;
 }
 
@@ -5541,6 +5558,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".file"] = DK_FILE;
   DirectiveKindMap[".line"] = DK_LINE;
   DirectiveKindMap[".loc"] = DK_LOC;
+  DirectiveKindMap[".loc_label"] = DK_LOC_LABEL;
   DirectiveKindMap[".stabs"] = DK_STABS;
   DirectiveKindMap[".cv_file"] = DK_CV_FILE;
   DirectiveKindMap[".cv_func_id"] = DK_CV_FUNC_ID;
