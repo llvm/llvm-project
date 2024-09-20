@@ -18925,7 +18925,7 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
 
   // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
   Value *Ptr = Constant::getNullValue(
-      PointerType::get(*DAG.getContext(), is64Bit ? 257 : 256));
+      PointerType::get(*DAG.getContext(), is64Bit ? X86AS::FS : X86AS::GS));
 
   SDValue ThreadPointer =
       DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
@@ -19070,8 +19070,8 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     // %gs:0x58 (64-bit). On MinGW, __tls_array is not available, so directly
     // use its literal value of 0x2C.
     Value *Ptr = Constant::getNullValue(
-        Subtarget.is64Bit() ? PointerType::get(*DAG.getContext(), 256)
-                            : PointerType::get(*DAG.getContext(), 257));
+        Subtarget.is64Bit() ? PointerType::get(*DAG.getContext(), X86AS::GS)
+                            : PointerType::get(*DAG.getContext(), X86AS::FS));
 
     SDValue TlsArray = Subtarget.is64Bit()
                            ? DAG.getIntPtrConstant(0x58, dl)
