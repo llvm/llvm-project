@@ -30007,7 +30007,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // This is equal to Masked - 2*SignBitMask which will correctly sign
       // extend our result.
       SDValue CstHighBit =
-          DAG.getConstant(1 << (EltSizeInBits - 1), dl, NarrowScalarVT);
+          DAG.getConstant(1ULL << (EltSizeInBits - 1), dl, NarrowScalarVT);
       SDValue SplatHighBit = DAG.getSplat(VT, dl, CstHighBit);
       // This does not induce recursion, all operands are constants.
       SDValue SignBitMask = DAG.getNode(LogicalOpc, dl, VT, SplatHighBit, Amt);

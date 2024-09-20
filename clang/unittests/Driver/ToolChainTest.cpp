@@ -662,7 +662,7 @@ struct FileSystemWithError : public llvm::vfs::FileSystem {
     return std::make_error_code(std::errc::no_such_file_or_directory);
   }
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path, bool IsText = true) override {
+  openFileForRead(const Twine &Path) override {
     return std::make_error_code(std::errc::permission_denied);
   }
   llvm::vfs::directory_iterator dir_begin(const Twine &Dir,

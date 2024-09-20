@@ -118,17 +118,14 @@ define i32 @uniform_address(ptr align(4) %addr, i32 %byte_offset) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[BYTE_OFFSET]], 4
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[ADDR:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[ADDR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[ADDR]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[ADDR]], i32 [[TMP3]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -146,7 +143,7 @@ define i32 @uniform_address(ptr align(4) %addr, i32 %byte_offset) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 4096
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       loopexit:
-; CHECK-NEXT:    [[LOAD_LCSSA:%.*]] = phi i32 [ [[LOAD]], [[FOR_BODY]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[LOAD_LCSSA:%.*]] = phi i32 [ [[LOAD]], [[FOR_BODY]] ], [ [[TMP8]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[LOAD_LCSSA]]
 ;
 entry:
