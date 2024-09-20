@@ -1925,4 +1925,3 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     WithFrameRecord = false;
   }
 }
-
