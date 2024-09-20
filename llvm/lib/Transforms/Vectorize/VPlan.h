@@ -3199,6 +3199,7 @@ public:
   VPBasicBlock *splitAt(iterator SplitAt);
 
   VPRegionBlock *getEnclosingLoopRegion();
+  const VPRegionBlock *getEnclosingLoopRegion() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p

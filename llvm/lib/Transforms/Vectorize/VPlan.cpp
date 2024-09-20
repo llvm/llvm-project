@@ -576,14 +576,23 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   return SplitBlock;
 }
 
-VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
-  VPRegionBlock *P = getParent();
+/// Return the enclosing loop region for region \p P. The templated version is
+/// used to support both const and non-const block arguments.
+template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
   if (P && P->isReplicator()) {
     P = P->getParent();
     assert(!cast<VPRegionBlock>(P)->isReplicator() &&
            "unexpected nested replicate regions");
   }
   return P;
+}
+
+VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
+  return getEnclosingLoopRegionForRegion(getParent());
+}
+
+const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
+  return getEnclosingLoopRegionForRegion(getParent());
 }
 
 static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
@@ -1457,6 +1466,11 @@ void VPlanIngredient::print(raw_ostream &O) const {
 }
 
 #endif
+
+bool VPValue::isDefinedOutsideLoopRegions() const {
+  return !hasDefiningRecipe() ||
+         !getDefiningRecipe()->getParent()->getEnclosingLoopRegion();
+}
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
