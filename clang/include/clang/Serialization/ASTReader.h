@@ -533,7 +533,8 @@ private:
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
   /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
-  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> FunctionToLambdasMap;
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
 
   struct PendingUpdateRecord {
     Decl *D;

@@ -3859,7 +3859,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case FUNCTION_DECL_TO_LAMBDAS_MAP:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
         GlobalDeclID ID = ReadDeclID(F, Record, I);
-        auto& Lambdas = FunctionToLambdasMap[ID];
+        auto &Lambdas = FunctionToLambdasMap[ID];
         for (unsigned II = 0, NN = Record[I++]; II < NN; II++)
           Lambdas.push_back(ReadDeclID(F, Record, I));
       }

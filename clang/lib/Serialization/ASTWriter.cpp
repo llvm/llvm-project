@@ -5710,7 +5710,8 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   if (!FunctionToLambdasMap.empty()) {
     RecordData FunctionToLambdasMapRecord;
     for (const auto &Pair : FunctionToLambdasMap) {
-      FunctionToLambdasMapRecord.push_back(GetDeclRef(Pair.first).getRawValue());
+      FunctionToLambdasMapRecord.push_back(
+          GetDeclRef(Pair.first).getRawValue());
       FunctionToLambdasMapRecord.push_back(Pair.second.size());
       for (const auto &Lambda : Pair.second)
         FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
