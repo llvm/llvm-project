@@ -993,8 +993,8 @@ void PythonException::Restore() {
 }
 
 PythonException::~PythonException() {
-  Py_XDECREF(m_exception);
   Py_XDECREF(m_exception_type);
+  Py_XDECREF(m_exception);
   Py_XDECREF(m_traceback);
   Py_XDECREF(m_repr_bytes);
 }

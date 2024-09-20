@@ -13,10 +13,6 @@
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 
-static constexpr unsigned kHostToDevice = 0;
-static constexpr unsigned kDeviceToHost = 1;
-static constexpr unsigned kDeviceToDevice = 2;
-
 namespace Fortran::runtime::cuda {
 
 extern "C" {

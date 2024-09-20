@@ -48,12 +48,12 @@ static cl::opt<bool> ExpandMIOperandInfo(
 namespace {
 
 class InstrInfoEmitter {
-  RecordKeeper &Records;
-  CodeGenDAGPatterns CDP;
+  const RecordKeeper &Records;
+  const CodeGenDAGPatterns CDP;
   const CodeGenSchedModels &SchedModels;
 
 public:
-  InstrInfoEmitter(RecordKeeper &R)
+  InstrInfoEmitter(const RecordKeeper &R)
       : Records(R), CDP(R), SchedModels(CDP.getTargetInfo().getSchedModels()) {}
 
   // run - Output the instruction set description.
@@ -88,8 +88,8 @@ private:
   /// Write verifyInstructionPredicates methods.
   void emitFeatureVerifier(raw_ostream &OS, const CodeGenTarget &Target);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
-                  Record *InstrInfo,
-                  std::map<std::vector<Record *>, unsigned> &EL,
+                  const Record *InstrInfo,
+                  std::map<std::vector<const Record *>, unsigned> &EL,
                   const OperandInfoMapTy &OperandInfo, raw_ostream &OS);
   void emitOperandTypeMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
@@ -136,7 +136,7 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
     // registers in their multi-operand operands.  It may also be an anonymous
     // operand, which has a single operand, but no declared class for the
     // operand.
-    DagInit *MIOI = Op.MIOperandInfo;
+    const DagInit *MIOI = Op.MIOperandInfo;
 
     if (!MIOI || MIOI->getNumArgs() == 0) {
       // Single, anonymous, operand.
@@ -356,10 +356,11 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
 
   StringRef Namespace = Target.getInstNamespace();
-  std::vector<Record *> Operands = Records.getAllDerivedDefinitions("Operand");
-  std::vector<Record *> RegisterOperands =
+  ArrayRef<const Record *> Operands =
+      Records.getAllDerivedDefinitions("Operand");
+  ArrayRef<const Record *> RegisterOperands =
       Records.getAllDerivedDefinitions("RegisterOperand");
-  std::vector<Record *> RegisterClasses =
+  ArrayRef<const Record *> RegisterClasses =
       Records.getAllDerivedDefinitions("RegisterClass");
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_TYPES_ENUM\n";
@@ -370,9 +371,9 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "enum OperandType {\n";
 
   unsigned EnumVal = 0;
-  for (const std::vector<Record *> *RecordsToAdd :
-       {&Operands, &RegisterOperands, &RegisterClasses}) {
-    for (const Record *Op : *RecordsToAdd) {
+  for (ArrayRef<const Record *> RecordsToAdd :
+       {Operands, RegisterOperands, RegisterClasses}) {
+    for (const Record *Op : RecordsToAdd) {
       if (!Op->isAnonymous())
         OS << "  " << Op->getName() << " = " << EnumVal << ",\n";
       ++EnumVal;
@@ -764,8 +765,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
   }
 
-  llvm::sort(FeatureBitsets, [&](const std::vector<const Record *> &A,
-                                 const std::vector<const Record *> &B) {
+  llvm::sort(FeatureBitsets, [&](ArrayRef<const Record *> A,
+                                 ArrayRef<const Record *> B) {
     if (A.size() < B.size())
       return true;
     if (A.size() > B.size())
@@ -928,9 +929,9 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Target Instruction Enum Values and Descriptors", OS);
   emitEnums(OS);
 
-  CodeGenTarget &Target = CDP.getTargetInfo();
+  const CodeGenTarget &Target = CDP.getTargetInfo();
   const std::string &TargetName = std::string(Target.getName());
-  Record *InstrInfo = Target.getInstructionSet();
+  const Record *InstrInfo = Target.getInstructionSet();
 
   // Collect all of the operand info records.
   Records.startTimer("Collect operand info");
@@ -941,11 +942,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   // Collect all of the instruction's implicit uses and defs.
   Records.startTimer("Collect uses/defs");
-  std::map<std::vector<Record *>, unsigned> EmittedLists;
-  std::vector<std::vector<Record *>> ImplicitLists;
+  std::map<std::vector<const Record *>, unsigned> EmittedLists;
+  std::vector<std::vector<const Record *>> ImplicitLists;
   unsigned ImplicitListSize = 0;
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-    std::vector<Record *> ImplicitOps = II->ImplicitUses;
+    std::vector<const Record *> ImplicitOps = II->ImplicitUses;
     llvm::append_range(ImplicitOps, II->ImplicitDefs);
     if (EmittedLists.insert({ImplicitOps, ImplicitListSize}).second) {
       ImplicitLists.push_back(ImplicitOps);
@@ -1175,8 +1176,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 }
 
 void InstrInfoEmitter::emitRecord(
-    const CodeGenInstruction &Inst, unsigned Num, Record *InstrInfo,
-    std::map<std::vector<Record *>, unsigned> &EmittedLists,
+    const CodeGenInstruction &Inst, unsigned Num, const Record *InstrInfo,
+    std::map<std::vector<const Record *>, unsigned> &EmittedLists,
     const OperandInfoMapTy &OperandInfoMap, raw_ostream &OS) {
   int MinOperands = 0;
   if (!Inst.Operands.empty())
@@ -1195,11 +1196,11 @@ void InstrInfoEmitter::emitRecord(
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t";
 
-  CodeGenTarget &Target = CDP.getTargetInfo();
+  const CodeGenTarget &Target = CDP.getTargetInfo();
 
   // Emit the implicit use/def list...
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
-  std::vector<Record *> ImplicitOps = Inst.ImplicitUses;
+  std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
   OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
      << ",\t";

@@ -46,17 +46,15 @@ class CloneableECError
     : public llvm::ErrorInfo<CloneableECError, CloneableError> {
 public:
   using llvm::ErrorInfo<CloneableECError, CloneableError>::ErrorInfo;
-  CloneableECError() = delete;
-  CloneableECError(std::error_code ec) : ErrorInfo(), EC(ec) {}
   std::error_code convertToErrorCode() const override { return EC; }
   void log(llvm::raw_ostream &OS) const override { OS << EC.message(); }
-  std::unique_ptr<CloneableError> Clone() const override;
   static char ID;
 
 protected:
+  CloneableECError() = delete;
+  CloneableECError(std::error_code ec) : ErrorInfo(), EC(ec) {}
   std::error_code EC;
 };
-
 /// FIXME: Move these declarations closer to where they're used.
 class MachKernelError
     : public llvm::ErrorInfo<MachKernelError, CloneableECError> {
@@ -242,7 +240,7 @@ public:
 protected:
   Status(llvm::Error error) : m_error(std::move(error)) {}
   llvm::Error m_error;
-  /// TODO: Replace this with just callling toString(m_error).
+  /// TODO: Replace this with just calling toString(m_error).
   mutable std::string m_string;
 };
 
