@@ -866,7 +866,6 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
       llvm::sys::printArg(OS, Arg, /*Quote=*/true);
       OS << ' ';
     }
-    OS.flush();
     return Buffer;
   };
 
@@ -1235,7 +1234,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
       os << " ";
     os << Args.getArgString(i);
   }
-  os.flush();
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4018,7 +4016,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
-    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, OS.str());
+    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, Targets);
   }
 
   if (!Opts.OMPHostIRFile.empty())

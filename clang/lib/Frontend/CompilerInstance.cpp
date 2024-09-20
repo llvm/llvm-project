@@ -1558,7 +1558,6 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     std::string InferredModuleMapContent;
     llvm::raw_string_ostream OS(InferredModuleMapContent);
     Module->print(OS);
-    OS.flush();
 
     Result = compileModuleImpl(
         ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
