@@ -408,6 +408,8 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
+- Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
+  sometimes incorrectly return null even if a comment was present. (#GH108145)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
