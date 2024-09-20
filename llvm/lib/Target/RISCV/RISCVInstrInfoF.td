@@ -388,11 +388,11 @@ foreach Ext = FExts in {
 } // foreach Ext = FExts
 
 let Predicates = [HasStdExtF], mayRaiseFPException = 0,
-    IsSignExtendingOpW = 1 in
+    IsSignExtendingOpW = 1, isMoveReg = 1 in
 def FMV_X_W : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR32, "fmv.x.w">,
               Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 
-let Predicates = [HasStdExtF], mayRaiseFPException = 0 in
+let Predicates = [HasStdExtF], mayRaiseFPException = 0, isMoveReg = 1 in
 def FMV_W_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR32, GPR, "fmv.w.x">,
               Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
 
