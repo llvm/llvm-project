@@ -320,7 +320,10 @@ public:
       if (memSpaceAttr)
         return std::nullopt;
 
-      Attribute addrSpaceAttr = IntegerAttr::get(IntegerType::get(ctx, 64), 1);
+      unsigned globalAddrspace = storageClassToAddressSpace(
+          spirv::ClientAPI::OpenCL, spirv::StorageClass::CrossWorkgroup);
+      Attribute addrSpaceAttr =
+          IntegerAttr::get(IntegerType::get(ctx, 64), globalAddrspace);
       if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
         return MemRefType::get(memRefType.getShape(),
                                memRefType.getElementType(),
