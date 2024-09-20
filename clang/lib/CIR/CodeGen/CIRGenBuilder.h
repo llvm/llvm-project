@@ -61,11 +61,9 @@ public:
     RecordNames["anon"] = 0; // in order to start from the name "anon.0"
   }
 
-  std::string getUniqueAnonRecordName() {
-    return getUniqueRecordName("anon");
-  }
+  std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
-  std::string getUniqueRecordName(const std::string& baseName) {
+  std::string getUniqueRecordName(const std::string &baseName) {
     auto it = RecordNames.find(baseName);
     if (it == RecordNames.end()) {
       RecordNames[baseName] = 0;
@@ -500,6 +498,9 @@ public:
                   mlir::cir::ArrayType, mlir::cir::BoolType, mlir::cir::IntType,
                   mlir::cir::CIRFPTypeInterface>(ty))
       return true;
+    if (mlir::isa<mlir::cir::VectorType>(ty)) {
+      return isSized(mlir::cast<mlir::cir::VectorType>(ty).getEltType());
+    }
     assert(0 && "Unimplemented size for type");
     return false;
   }
