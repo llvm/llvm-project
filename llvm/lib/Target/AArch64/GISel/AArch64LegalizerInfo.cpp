@@ -239,7 +239,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
       .legalFor({{s32, s32}, {s64, s32}})
       .clampScalar(0, s32, s64)
-       .clampScalar(1, s32, s64)
+      .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
@@ -253,6 +253,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return (Ty == v8s16 || Ty == v4s16) && HasFP16;
       })
       .libcallFor({s128})
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .minScalarOrElt(0, MinFPScalar)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
