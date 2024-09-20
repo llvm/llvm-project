@@ -1659,57 +1659,6 @@ ScriptInterpreterPythonImpl::ScriptedBreakpointResolverSearchDepth(
   return lldb::eSearchDepthModule;
 }
 
-StructuredData::GenericSP ScriptInterpreterPythonImpl::CreateScriptedStopHook(
-    TargetSP target_sp, const char *class_name,
-    const StructuredDataImpl &args_data, Status &error) {
-
-  if (!target_sp) {
-    error = Status::FromErrorString("No target for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  if (class_name == nullptr || class_name[0] == '\0') {
-    error = Status::FromErrorString("No class name for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  ScriptInterpreterPythonImpl *python_interpreter =
-      GetPythonInterpreter(m_debugger);
-
-  if (!python_interpreter) {
-    error = Status::FromErrorString(
-        "No script interpreter for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  Locker py_lock(this,
-                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-
-  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedStopHook(
-      target_sp, class_name, python_interpreter->m_dictionary_name.c_str(),
-      args_data, error);
-
-  return StructuredData::GenericSP(
-      new StructuredPythonObject(std::move(ret_val)));
-}
-
-bool ScriptInterpreterPythonImpl::ScriptedStopHookHandleStop(
-    StructuredData::GenericSP implementor_sp, ExecutionContext &exc_ctx,
-    lldb::StreamSP stream_sp) {
-  assert(implementor_sp &&
-         "can't call a stop hook with an invalid implementor");
-  assert(stream_sp && "can't call a stop hook with an invalid stream");
-
-  Locker py_lock(this,
-                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-
-  lldb::ExecutionContextRefSP exc_ctx_ref_sp(new ExecutionContextRef(exc_ctx));
-
-  bool ret_val = SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
-      implementor_sp->GetValue(), exc_ctx_ref_sp, stream_sp);
-  return ret_val;
-}
-
 StructuredData::ObjectSP
 ScriptInterpreterPythonImpl::LoadPluginModule(const FileSpec &file_spec,
                                               lldb_private::Status &error) {
