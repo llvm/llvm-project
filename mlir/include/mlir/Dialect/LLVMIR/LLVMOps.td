@@ -593,7 +593,7 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
   let builders = [LLVM_OneResultOpBuilder];
 
   let llvmBuilder = " $res = builder.CreateVAArg($arg, $_resultType); ";
-  let assemblyFormat = "$arg attr-dict `:` `(` type($arg) `)` `->` type($res)";
+  let assemblyFormat = "$arg attr-dict `:` functional-type($arg, $res)";
 
   string llvmInstName = "VAArg";
   string mlirBuilder = [{
