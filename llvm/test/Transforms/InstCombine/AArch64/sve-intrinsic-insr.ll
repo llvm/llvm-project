@@ -7,8 +7,7 @@ define <vscale x 16 x i8> @insr_val_into_splatted_val_int(i8 %a) #0 {
 ; CHECK-LABEL: @insr_val_into_splatted_val_int(
 ; CHECK-NEXT:    [[T0:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = shufflevector <vscale x 16 x i8> [[T0]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[T2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.insr.nxv16i8(<vscale x 16 x i8> [[T1]], i8 [[A]])
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[T2]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[T1]]
 ;
   %t0 = insertelement <vscale x 16 x i8> poison, i8 %a, i64 0
   %t1 = shufflevector <vscale x 16 x i8> %t0, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -18,8 +17,7 @@ define <vscale x 16 x i8> @insr_val_into_splatted_val_int(i8 %a) #0 {
 
 define <vscale x 8 x i16> @insr_five_into_fives() #0 {
 ; CHECK-LABEL: @insr_five_into_fives(
-; CHECK-NEXT:    [[T1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.insr.nxv8i16(<vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 5, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer), i16 5)
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[T1]]
+; CHECK-NEXT:    ret <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 5, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
 ;
   %t1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.insr.nxv8i16(<vscale x 8 x i16> splat (i16 5), i16 5)
   ret <vscale x 8 x i16> %t1
@@ -29,8 +27,7 @@ define <vscale x 4 x float> @insr_val_into_splatted_val_fp(float %a) #0 {
 ; CHECK-LABEL: @insr_val_into_splatted_val_fp(
 ; CHECK-NEXT:    [[T0:%.*]] = insertelement <vscale x 4 x float> poison, float [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[T1:%.*]] = shufflevector <vscale x 4 x float> [[T0]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[T2:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.insr.nxv4f32(<vscale x 4 x float> [[T1]], float [[A]])
-; CHECK-NEXT:    ret <vscale x 4 x float> [[T2]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[T1]]
 ;
   %t0 = insertelement <vscale x 4 x float> poison, float %a, i64 0
   %t1 = shufflevector <vscale x 4 x float> %t0, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -40,8 +37,7 @@ define <vscale x 4 x float> @insr_val_into_splatted_val_fp(float %a) #0 {
 
 define <vscale x 2 x double> @insr_zero_into_zero() #0 {
 ; CHECK-LABEL: @insr_zero_into_zero(
-; CHECK-NEXT:    [[T1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.insr.nxv2f64(<vscale x 2 x double> zeroinitializer, double 0.000000e+00)
-; CHECK-NEXT:    ret <vscale x 2 x double> [[T1]]
+; CHECK-NEXT:    ret <vscale x 2 x double> zeroinitializer
 ;
   %t1 = tail call <vscale x 2 x double> @llvm.aarch64.sve.insr.nxv2f64(<vscale x 2 x double> zeroinitializer, double zeroinitializer)
   ret <vscale x 2 x double> %t1
