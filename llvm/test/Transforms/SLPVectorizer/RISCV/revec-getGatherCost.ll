@@ -47,7 +47,7 @@ declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
 ; YAML: Function:        test2
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '15'
+; YAML:   - Cost:            '16'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '5'
 
