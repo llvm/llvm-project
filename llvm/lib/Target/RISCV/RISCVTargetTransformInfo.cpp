@@ -637,9 +637,8 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Insert && !Extract && LT.first.isValid() && LT.second.isVector() &&
       Ty->getScalarSizeInBits() != 1) {
-    MVT ContainerVT = LT.second;
-    if (ContainerVT.isFixedLengthVector())
-      ContainerVT = TLI->getContainerForFixedLengthVector(ContainerVT);
+    assert(LT.second.isFixedLengthVector());
+    MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
     if (isM1OrSmaller(ContainerVT)) {
       InstructionCost BV = cast<FixedVectorType>(Ty)->getNumElements();
       if (BV < Cost)
