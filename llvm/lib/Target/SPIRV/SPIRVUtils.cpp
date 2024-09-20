@@ -589,6 +589,8 @@ bool sortBlocks(Function &F) {
   }
 
   return Modified;
+}
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
   if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
