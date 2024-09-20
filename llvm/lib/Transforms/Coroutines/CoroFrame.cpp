@@ -15,7 +15,6 @@
 // the value into the coroutine frame.
 //===----------------------------------------------------------------------===//
 
-#include "ABI.h"
 #include "CoroInternal.h"
 #include "MaterializationUtils.h"
 #include "SpillUtils.h"
@@ -2056,9 +2055,11 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
   rewritePHIs(F);
 }
 
-void coro::BaseABI::buildCoroutineFrame() {
+void coro::buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
   SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
-  doRematerializations(F, Checker, IsMaterializable);
+  doRematerializations(F, Checker, MaterializableCallback);
 
   const DominatorTree DT(F);
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
