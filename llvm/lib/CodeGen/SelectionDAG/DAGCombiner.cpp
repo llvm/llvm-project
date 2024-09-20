@@ -6065,7 +6065,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
     // widening a binop.
     if (TLI.isZExtFree(VT, XVT) && TLI.isTruncateFree(XVT, VT))
       return SDValue();
-    // Prevent an infinite loop if the target preferts the inverse
+    // Prevent an infinite loop if the target prefers the inverse
     // transformation.
     if (TLI.isNarrowingProfitable(XVT, VT))
       return SDValue();
