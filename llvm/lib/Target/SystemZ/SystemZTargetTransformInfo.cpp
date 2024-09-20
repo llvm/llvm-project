@@ -63,12 +63,10 @@ static void countNumMemAccesses(const Value *Ptr, unsigned &NumStores,
         if (const auto *SI = dyn_cast<StoreInst>(User)) {
           if (SI->getPointerOperand() == Ptr && !SI->isVolatile())
             NumStores++;
-        }
-        else if (const auto *LI = dyn_cast<LoadInst>(User)) {
+        } else if (const auto *LI = dyn_cast<LoadInst>(User)) {
           if (LI->getPointerOperand() == Ptr && !LI->isVolatile())
             NumLoads++;
-        }
-        else if (const auto *GEP = dyn_cast<GetElementPtrInst>(User)) {
+        } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(User)) {
           if (GEP->getPointerOperand() == Ptr)
             countNumMemAccesses(GEP, NumStores, NumLoads, F);
         }
@@ -122,7 +120,7 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned NumStores = 0;
   unsigned NumLoads = 0;
   for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
-    Value    *CallerArg = CB->getArgOperand(OpIdx);
+    Value *CallerArg = CB->getArgOperand(OpIdx);
     Argument *CalleeArg = Callee->getArg(OpIdx);
     if (isa<AllocaInst>(CallerArg))
       countNumMemAccesses(CalleeArg, NumStores, NumLoads, Callee);
