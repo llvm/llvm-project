@@ -49,7 +49,7 @@ public:
       using Base = RecursiveASTVisitor<LocalVisitor>;
 
       const UncountedCallArgsChecker *Checker;
-      Decl *DeclWithIssue { nullptr };
+      Decl *DeclWithIssue{nullptr};
 
       explicit LocalVisitor(const UncountedCallArgsChecker *Checker)
           : Checker(Checker) {
