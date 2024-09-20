@@ -262,7 +262,7 @@ def ROCDL_BarrierSignalOp : ROCDL_IntrOp<"s.barrier.signal", [], [], [], 0, 0, 0
   let assemblyFormat = "$id attr-dict";
 }
 
-def ROCDL_BarrierWaitOp : ROCDL_IntrOp<"s.barrier.wait", [], [], [], 0>,
+def ROCDL_BarrierWaitOp : ROCDL_IntrOp<"s.barrier.wait", [], [], [], 0, 0, 0, [0], ["id"]>,
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
