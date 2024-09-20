@@ -18922,7 +18922,7 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
 
   // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
   Value *Ptr = Constant::getNullValue(
-      PointerType::get(*DAG.getContext(), is64Bit ? 257 : 256));
+      PointerType::get(*DAG.getContext(), is64Bit ? X86AS::FS : X86AS::GS));
 
   SDValue ThreadPointer =
       DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
@@ -19067,8 +19067,8 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     // %gs:0x58 (64-bit). On MinGW, __tls_array is not available, so directly
     // use its literal value of 0x2C.
     Value *Ptr = Constant::getNullValue(
-        Subtarget.is64Bit() ? PointerType::get(*DAG.getContext(), 256)
-                            : PointerType::get(*DAG.getContext(), 257));
+        Subtarget.is64Bit() ? PointerType::get(*DAG.getContext(), X86AS::GS)
+                            : PointerType::get(*DAG.getContext(), X86AS::FS));
 
     SDValue TlsArray = Subtarget.is64Bit()
                            ? DAG.getIntPtrConstant(0x58, dl)
@@ -30002,7 +30002,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // This is equal to Masked - 2*SignBitMask which will correctly sign
       // extend our result.
       SDValue CstHighBit =
-          DAG.getConstant(1 << (EltSizeInBits - 1), dl, NarrowScalarVT);
+          DAG.getConstant(1ULL << (EltSizeInBits - 1), dl, NarrowScalarVT);
       SDValue SplatHighBit = DAG.getSplat(VT, dl, CstHighBit);
       // This does not induce recursion, all operands are constants.
       SDValue SignBitMask = DAG.getNode(LogicalOpc, dl, VT, SplatHighBit, Amt);
@@ -42858,15 +42858,18 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::VBROADCAST: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
-    if (!SrcVT.isVector())
-      break;
     // Don't bother broadcasting if we just need the 0'th element.
     if (DemandedElts == 1) {
+      if (!SrcVT.isVector())
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(Op), VT, Src));
       if (Src.getValueType() != VT)
         Src = widenSubVector(VT.getSimpleVT(), Src, false, Subtarget, TLO.DAG,
                              SDLoc(Op));
       return TLO.CombineTo(Op, Src);
     }
+    if (!SrcVT.isVector())
+      break;
     APInt SrcUndef, SrcZero;
     APInt SrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(), 0);
     if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,

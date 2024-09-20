@@ -560,6 +560,11 @@ void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(P));
 }
 
+void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args) const {
+  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
 /// Convert path list to Fortran frontend argument
 static void AddFlangSysIncludeArg(const ArgList &DriverArgs,
                                   ArgStringList &Flang1args,
@@ -599,12 +604,6 @@ void AMDGPUOpenMPToolChain::AddFlangSystemIncludeArgs(const ArgList &DriverArgs,
 
   AddFlangSysIncludeArg(DriverArgs, Flang1args, IncludePathList);
   return;
-}
-
-
-void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
-                                                 ArgStringList &CC1Args) const {
-  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
 
 void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
