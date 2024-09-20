@@ -31,10 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <string>
 
 using namespace lldb;
@@ -977,7 +975,6 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    std::cerr << request.GetCursorIndex() << std::endl;
     if (request.GetCursorIndex() != 0)
       return;
 
