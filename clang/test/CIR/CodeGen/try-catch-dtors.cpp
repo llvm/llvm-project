@@ -264,3 +264,49 @@ void yo3(bool x) {
 // LLVM:   br label %[[RET]],
 // LLVM: [[RET]]:
 // LLVM:   ret void
+
+void yo2(bool x) {
+  int r = 1;
+  try {
+    Vec v1, v2;
+    try {
+        Vec v3, v4;
+    } catch (...) {
+    r++;
+    }
+  } catch (...) {
+    r++;
+  }
+}
+
+// CIR: cir.scope {
+// CIR:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
+// CIR:   %[[V2:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v2"
+// CIR:   cir.try {
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call exception @_ZN3VecC1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> () cleanup {
+// CIR:       cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.scope {
+// CIR:       %[[V3:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v3"
+// CIR:       %[[V4:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v4"
+// CIR:       cir.try {
+// CIR:         cir.call exception @_ZN3VecC1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:         cir.call exception @_ZN3VecC1Ev(%[[V4]]) : (!cir.ptr<![[VecTy]]>) -> () cleanup {
+// CIR:           cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:           cir.yield
+// CIR:         }
+// CIR:         cir.call @_ZN3VecD1Ev(%[[V4]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:         cir.call @_ZN3VecD1Ev(%[[V3]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:         cir.yield
+// CIR:       } catch [type #cir.all {
+// CIR:         cir.catch_param -> !cir.ptr<!void>
+// CIR:       }]
+// CIR:     }
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V2]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.call @_ZN3VecD1Ev(%[[V1]]) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR:     cir.yield
+// CIR:   } catch [type #cir.all {
+// CIR:     cir.catch_param -> !cir.ptr<!void>
+// CIR:   }]
