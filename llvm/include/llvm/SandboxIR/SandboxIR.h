@@ -4018,6 +4018,7 @@ public:
   void dumpOS(raw_ostream &OS) const final;
 #endif
 };
+
 } // namespace sandboxir
 } // namespace llvm
 

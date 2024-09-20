@@ -60,7 +60,7 @@ protected:
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
-      Context &Ctx;
+  Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}
   friend class Context; // For constructor and ~Type().
