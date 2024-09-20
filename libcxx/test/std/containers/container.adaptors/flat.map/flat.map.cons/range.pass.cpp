@@ -33,9 +33,43 @@
 #include "test_macros.h"
 #include "../../../test_compare.h"
 
+// test constraint container-compatible-range
+
+template <class V>
+using RangeOf = std::ranges::subrange<V*>;
+using Map     = std::flat_map<int, double>;
+
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<int, double>>>);
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<short, double>>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<double>>);
+
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<int, double>>, std::less<int>>);
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<short, double>>, std::less<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<int>, std::less<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<double>, std::less<int>>);
+
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<int, double>>, std::allocator<int>>);
+static_assert(std::is_constructible_v<Map, std::from_range_t, RangeOf<std::pair<short, double>>, std::allocator<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<int>, std::allocator<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<double>, std::allocator<int>>);
+
+static_assert(std::is_constructible_v<Map,
+                                      std::from_range_t,
+                                      RangeOf<std::pair<int, double>>,
+                                      std::less<int>,
+                                      std::allocator<int>>);
+static_assert(std::is_constructible_v<Map,
+                                      std::from_range_t,
+                                      RangeOf<std::pair<short, double>>,
+                                      std::less<int>,
+                                      std::allocator<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<int>, std::less<int>, std::allocator<int>>);
+static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<double>, std::less<int>, std::allocator<int>>);
+
 int main(int, char**) {
   {
-    // The constructors in  this subclause shall not participate in overload
+    // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
     // and uses_allocator_v<mapped_container_type, Alloc> is true.
 

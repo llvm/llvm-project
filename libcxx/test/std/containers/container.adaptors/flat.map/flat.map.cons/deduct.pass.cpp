@@ -213,6 +213,7 @@ void test_iter_iter() {
     assert(std::ranges::equal(m, sorted_arr));
   }
 #if 0
+// spec has no CTAD for (Iter, Iter, Allocator)  or (sorted_unique_t, Iter, Iter, Allocator)
   {
     std::flat_map m(std::begin(arr), std::end(arr), test_allocator<short>(0, 44));
 
@@ -289,6 +290,7 @@ void test_iter_iter_compare() {
     assert(std::ranges::equal(m, sorted_arr));
   }
 #if 0
+// spec has no CTAD for (Iter, Iter, Compare, Allocator)  or (sorted_unique_t, Iter, Iter, Compare, Allocator)
   {
     std::flat_map m(std::begin(arr), std::end(arr), C(), test_allocator<short>(0, 44));
 
@@ -349,6 +351,7 @@ void test_initializer_list() {
     assert(std::ranges::equal(m, sorted_arr));
   }
 #if 0
+// spec has no CTAD for (initializer_list, Allocator)  or (sorted_unique_t, initializer_list, Allocator)
   {
     std::flat_map m({ std::pair{1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} }, test_allocator<long>(0, 42));
 
@@ -384,6 +387,7 @@ void test_initializer_list_compare() {
     assert(std::ranges::equal(m, sorted_arr));
   }
 #if 0
+// spec has no CTAD for (initializer_list, Compare, Allocator)  or (sorted_unique_t, initializer_list, Compare, Allocator)
   {
     std::flat_map m({ std::pair{1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} }, C(), test_allocator<long>(0, 42));
 
@@ -461,8 +465,8 @@ int main(int, char**) {
   test_from_range();
   test_from_range_compare();
 
-  AssociativeContainerDeductionGuidesSfinaeAway<std::flat_map, std::flat_map<int, short>>();
 
+  AssociativeContainerDeductionGuidesSfinaeAway<std::flat_map, std::flat_map<int, short>>();
   {
     std::flat_map s = {std::make_pair(1, 'a')}; // flat_map(initializer_list<pair<int, char>>)
     ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, char>);

@@ -25,6 +25,24 @@
 
 int main(int, char**) {
   {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<key_container_type, Alloc> is true
+    // and uses_allocator_v<mapped_container_type, Alloc> is true.
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = std::vector<int, A1>;
+    using V2 = std::vector<int, A2>;
+    using M1 = std::flat_map<int, int, C, V1, V1>;
+    using M2 = std::flat_map<int, int, C, V1, V2>;
+    using M3 = std::flat_map<int, int, C, V2, V1>;
+    static_assert( std::is_constructible_v<M1, const M1&, const A1&>);
+    static_assert(!std::is_constructible_v<M1, const M1&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const M2&, const A2&>);
+    static_assert(!std::is_constructible_v<M3, const M3&, const A2&>);
+  }
+  {
     using C = test_less<int>;
     std::vector<int, test_allocator<int>> ks({1, 3, 5}, test_allocator<int>(6));
     std::vector<char, test_allocator<char>> vs({2, 2, 1}, test_allocator<char>(7));
@@ -46,6 +64,7 @@ int main(int, char**) {
     assert(mo.values().get_allocator() == test_allocator<char>(7));
   }
   {
+    // explicit(false)
     using C = test_less<int>;
     using M = std::flat_map<int, int, C, std::pmr::vector<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr1;

@@ -18,8 +18,18 @@
 #include <string>
 #include <utility>
 
-#include "helpers.h"
+#include "../helpers.h"
 #include "test_macros.h"
+
+// Constraints: The qualified-id Compare::is_transparent is valid and denotes a type.
+template <class M>
+concept CanEqualRange   = requires(M m, Transparent<int> k) { m.equal_range(k); };
+using TransparentMap    = std::flat_map<int, double, TransparentComparator>;
+using NonTransparentMap = std::flat_map<int, double, NonTransparentComparator>;
+static_assert(CanEqualRange<TransparentMap>);
+static_assert(CanEqualRange<const TransparentMap>);
+static_assert(!CanEqualRange<NonTransparentMap>);
+static_assert(!CanEqualRange<const NonTransparentMap>);
 
 int main(int, char**) {
   {

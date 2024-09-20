@@ -23,6 +23,21 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
+// Constraints: is_constructible_v<pair<key_type, mapped_type>, P> is true.
+template <class M, class...Args>
+concept CanInsert = requires (M m, Args&&... args) {
+  m.insert(std::forward<Args>(args)...);
+};
+
+using Map = std::flat_map<int, double>;
+using Iter = Map::const_iterator;
+
+static_assert(CanInsert<Map, std::pair<short, double>&&>);
+static_assert(CanInsert<Map, Iter, std::pair<short, double>&&>);
+static_assert(!CanInsert<Map, int>);
+static_assert(!CanInsert<Map, Iter, int>);
+
+
 static int expensive_comparisons = 0;
 static int cheap_comparisons     = 0;
 

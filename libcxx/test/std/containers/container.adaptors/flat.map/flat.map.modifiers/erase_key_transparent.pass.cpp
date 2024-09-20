@@ -20,9 +20,19 @@
 #include <string>
 #include <utility>
 
-#include "helpers.h"
+#include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
+
+// Constraints: The qualified-id Compare::is_transparent is valid and denotes a type.
+template <class M>
+concept CanErase        = requires(M m, Transparent<int> k) { m.erase(k); };
+using TransparentMap    = std::flat_map<int, double, TransparentComparator>;
+using NonTransparentMap = std::flat_map<int, double, NonTransparentComparator>;
+static_assert(CanErase<TransparentMap>);
+static_assert(!CanErase<const TransparentMap>);
+static_assert(!CanErase<NonTransparentMap>);
+static_assert(!CanErase<const NonTransparentMap>);
 
 template <class Key, class It>
 struct HeterogeneousKey {

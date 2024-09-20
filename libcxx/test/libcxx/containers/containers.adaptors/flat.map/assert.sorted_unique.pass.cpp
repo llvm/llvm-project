@@ -206,5 +206,14 @@ int main(int, char**) {
         m.insert(std::sorted_unique, v);
       }()),
       "Either the key container is not sorted or it contains duplicates");
+
+  TEST_LIBCPP_ASSERT_FAILURE(
+      ([] {
+        std::vector keys{1, 1, 3};
+        std::vector values{4, 5, 6};
+        M m;
+        m.replace(std::move(keys), std::move(values));
+      }()),
+      "Either the key container is not sorted or it contains duplicates");
   return 0;
 }
