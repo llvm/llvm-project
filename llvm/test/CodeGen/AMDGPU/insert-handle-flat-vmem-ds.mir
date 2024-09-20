@@ -7,9 +7,7 @@ name: skip_execz_flat
 body: |
   ; CHECK-LABEL: name: skip_execz_flat
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -38,9 +36,7 @@ name: skip_execz_mubuf
 body: |
   ; CHECK-LABEL: name: skip_execz_mubuf
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -69,9 +65,7 @@ name: skip_execz_ds
 body: |
   ; CHECK-LABEL: name: skip_execz_ds
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   successors: %bb.1(0x7fffffff)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
