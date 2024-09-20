@@ -640,7 +640,9 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     assert(LT.second.isFixedLengthVector());
     MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
     if (isM1OrSmaller(ContainerVT)) {
-      InstructionCost BV = cast<FixedVectorType>(Ty)->getNumElements();
+      InstructionCost BV =
+          cast<FixedVectorType>(Ty)->getNumElements() *
+          getRISCVInstructionCost(RISCV::VSLIDE1DOWN_VX, LT.second, CostKind);
       if (BV < Cost)
         Cost = BV;
     }
