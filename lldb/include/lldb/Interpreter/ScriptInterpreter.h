@@ -14,7 +14,6 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
-#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
@@ -270,6 +269,24 @@ public:
   ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
   {
     return lldb::eSearchDepthModule;
+  }
+
+  virtual StructuredData::GenericSP
+  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
+                         const StructuredDataImpl &args_data, Status &error) {
+    error =
+        Status::FromErrorString("Creating scripted stop-hooks with the current "
+                                "script interpreter is not supported.");
+    return StructuredData::GenericSP();
+  }
+
+  // This dispatches to the handle_stop method of the stop-hook class.  It
+  // returns a "should_stop" bool.
+  virtual bool
+  ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
+                             ExecutionContext &exc_ctx,
+                             lldb::StreamSP stream_sp) {
+    return true;
   }
 
   virtual StructuredData::ObjectSP
@@ -544,10 +561,6 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
-    return {};
-  }
-
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -573,9 +586,6 @@ public:
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
-
-  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
-      const lldb::SBExecutionContext &exe_ctx) const;
 
 protected:
   Debugger &m_debugger;
