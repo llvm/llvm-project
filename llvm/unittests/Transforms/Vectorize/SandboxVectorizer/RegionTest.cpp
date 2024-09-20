@@ -79,6 +79,33 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #endif
 }
 
+TEST_F(RegionTest, MetadataFromIR) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1, !sbvec !0
+  %t1 = add i8 %t0, %v1, !sbvec !1
+  %t2 = add i8 %t1, %v1, !sbvec !1
+  ret i8 %t2
+}
+
+!0 = distinct !{!"region"}
+!1 = distinct !{!"region"}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *T2 = cast<sandboxir::Instruction>(&*It++);
+
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F);
+  EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0));
+  EXPECT_THAT(Regions[1]->insts(), testing::UnorderedElementsAre(T1, T2));
+}
+
 TEST_F(RegionTest, MetadataRoundTrip) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {

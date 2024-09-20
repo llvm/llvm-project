@@ -11,14 +11,9 @@
 namespace llvm::sandboxir {
 
 Region::Region(Context &Ctx) : Ctx(Ctx) {
-  static unsigned StaticRegionID;
-  RegionID = StaticRegionID++;
-
   LLVMContext &LLVMCtx = Ctx.LLVMCtx;
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
-  auto *RegionIDMD = llvm::ConstantAsMetadata::get(
-      llvm::ConstantInt::get(LLVMCtx, APInt(sizeof(RegionID) * 8, RegionID)));
-  RegionMDN = MDNode::get(LLVMCtx, {RegionStrMD, RegionIDMD});
+  RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
 }
 
 Region::~Region() {}
@@ -43,7 +38,6 @@ bool Region::operator==(const Region &Other) const {
 }
 
 void Region::dump(raw_ostream &OS) const {
-  OS << "RegionID: " << getID() << "\n";
   for (auto *I : Insts)
     OS << *I << "\n";
 }
