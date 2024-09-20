@@ -8662,8 +8662,8 @@ public:
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitStringLiteral(const StringLiteral *E) {
-    uint64_t Version = Info.getASTContext().getNextStringLiteralVersion();
-    return Success(APValue::LValueBase(E, 0, static_cast<unsigned>(Version)));
+    return Success(APValue::LValueBase(
+        E, 0, Info.getASTContext().getNextStringLiteralVersion()));
   }
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E) { return Success(E); }
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
