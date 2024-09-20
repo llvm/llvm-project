@@ -483,9 +483,8 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
       Unsanitize.emplace_back(&F);
   }
 
-  for (Function *F : Unsanitize) {
+  for (Function *F : Unsanitize)
     HWASan.unsanitizeFunction(*F);
-  }
 
   PreservedAnalyses PA = PreservedAnalyses::none();
   // DominatorTreeAnalysis, PostDominatorTreeAnalysis, and LoopAnalysis
