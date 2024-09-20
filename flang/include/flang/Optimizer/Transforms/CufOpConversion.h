@@ -19,7 +19,8 @@ class LLVMTypeConverter;
 namespace cuf {
 
 void populateCUFToFIRConversionPatterns(fir::LLVMTypeConverter &converter,
-    mlir::DataLayout &dl, mlir::RewritePatternSet &patterns);
+                                        mlir::DataLayout &dl,
+                                        mlir::RewritePatternSet &patterns);
 
 } // namespace cuf
 
