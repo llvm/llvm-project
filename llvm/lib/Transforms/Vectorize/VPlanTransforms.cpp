@@ -1644,7 +1644,7 @@ class UnrollState {
 
   void unrollReplicateRegion(VPRegionBlock *VPR);
   void unrollRecipe(VPRecipeBase &R);
-  void unrollHeaderPHI(VPRecipeBase &R, VPBasicBlock::iterator InsertPtForPhi);
+  void unrollHeaderPHI(VPHeaderPHIRecipe *R, VPBasicBlock::iterator InsertPtForPhi);
   void unrollWidenInduction(VPWidenIntOrFpInductionRecipe *IV,
                             VPBasicBlock::iterator InsertPtForPhi);
 
@@ -1809,35 +1809,35 @@ void UnrollState::unrollWidenInduction(VPWidenIntOrFpInductionRecipe *IV,
   IV->addOperand(Prev);
 }
 
-void UnrollState::unrollHeaderPHI(VPRecipeBase &R,
+void UnrollState::unrollHeaderPHI(VPHeaderPHIRecipe *R,
                                   VPBasicBlock::iterator InsertPtForPhi) {
   // First-order recurrences pass a single vector or scalar through their header
   // phis, irrespective of interleaving.
-  if (isa<VPFirstOrderRecurrencePHIRecipe>(&R))
+  if (isa<VPFirstOrderRecurrencePHIRecipe>(R))
     return;
 
   // Generate step vectors for each unrolled part.
-  if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+  if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(R)) {
     unrollWidenInduction(IV, InsertPtForPhi);
     return;
   }
 
-  auto *RdxPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+  auto *RdxPhi = dyn_cast<VPReductionPHIRecipe>(R);
   if (RdxPhi && RdxPhi->isOrdered())
     return;
 
-  auto InsertPt = std::next(R.getIterator());
+  auto InsertPt = std::next(R->getIterator());
   for (unsigned Part = 1; Part != UF; ++Part) {
-    VPRecipeBase *Copy = R.clone();
-    Copy->insertBefore(*R.getParent(), InsertPt);
-    addRecipeForPart(&R, Copy, Part);
-    if (isa<VPWidenPointerInductionRecipe>(&R)) {
-      Copy->addOperand(R.getVPSingleValue());
+    VPRecipeBase *Copy = R->clone();
+    Copy->insertBefore(*R->getParent(), InsertPt);
+    addRecipeForPart(R, Copy, Part);
+    if (isa<VPWidenPointerInductionRecipe>(R)) {
+      Copy->addOperand(R);
       Copy->addOperand(getConstantVPV(Part));
     } else if (RdxPhi) {
       Copy->addOperand(getConstantVPV(Part));
     } else {
-      assert(isa<VPActiveLaneMaskPHIRecipe>(&R) &&
+      assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");
     }
   }
@@ -1981,6 +1981,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
             cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
         R.getVPSingleValue()->replaceAllUsesWith(
             getValueForPart(Op0, UF - Offset));
+        R.eraseFromParent();
       } else {
         // Otherwise we extract from the last part.
         remapOperands(&R, UF - 1);
@@ -1995,7 +1996,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     }
 
     if (auto *H = dyn_cast<VPHeaderPHIRecipe>(&R)) {
-      unrollHeaderPHI(R, InsertPtForPhi);
+      unrollHeaderPHI(H, InsertPtForPhi);
       continue;
     }
 
