@@ -272,7 +272,7 @@ struct OperandsSignature {
       DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
       if (!OpDI)
         return false;
-      Record *OpLeafRec = OpDI->getDef();
+      const Record *OpLeafRec = OpDI->getDef();
 
       // For now, the only other thing we accept is register operands.
       const CodeGenRegisterClass *RC = nullptr;
@@ -407,7 +407,7 @@ class FastISelMap {
 public:
   explicit FastISelMap(StringRef InstNS);
 
-  void collectPatterns(CodeGenDAGPatterns &CGP);
+  void collectPatterns(const CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
 
@@ -417,7 +417,8 @@ private:
 };
 } // End anonymous namespace
 
-static std::string getOpcodeName(const Record *Op, CodeGenDAGPatterns &CGP) {
+static std::string getOpcodeName(const Record *Op,
+                                 const CodeGenDAGPatterns &CGP) {
   return std::string(CGP.getSDNodeInfo(Op).getEnumName());
 }
 
@@ -437,7 +438,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   if (!Op.isLeaf())
     return PhysReg;
 
-  Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
+  const Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
   if (!OpLeafRec->isSubClassOf("Register"))
     return PhysReg;
 
@@ -448,7 +449,7 @@ static std::string PhyRegForNode(TreePatternNode &Op,
   return PhysReg;
 }
 
-void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
+void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
   const CodeGenTarget &Target = CGP.getTargetInfo();
 
   // Scan through all the patterns and record the simple ones.
@@ -864,8 +865,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // TODO: SignaturesWithConstantForms should be empty here.
 }
 
-static void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenDAGPatterns CGP(RK);
+static void EmitFastISel(const RecordKeeper &RK, raw_ostream &OS) {
+  const CodeGenDAGPatterns CGP(RK);
   const CodeGenTarget &Target = CGP.getTargetInfo();
   emitSourceFileHeader("\"Fast\" Instruction Selector for the " +
                            Target.getName().str() + " target",

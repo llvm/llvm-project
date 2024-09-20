@@ -144,7 +144,7 @@ public:
 
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.
-  std::vector<ValueTypeByHwMode> getRegisterVTs(Record *R) const;
+  std::vector<ValueTypeByHwMode> getRegisterVTs(const Record *R) const;
 
   ArrayRef<ValueTypeByHwMode> getLegalValueTypes() const {
     if (LegalValueTypes.empty())

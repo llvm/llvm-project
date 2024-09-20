@@ -125,6 +125,9 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
 endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
+endif()
 
 add_fp_unittest(
   sprintf_test
