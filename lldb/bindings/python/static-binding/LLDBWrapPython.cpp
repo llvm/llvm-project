@@ -5653,7 +5653,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecogni
 }
 
 PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject * implementor, const lldb::StackFrameSP &frame_sp) {
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
   static char callee_name[] = "get_recognized_arguments";
 
   PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
@@ -5662,6 +5662,22 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArgument
   PyObject *result =
       PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
   return result;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
+    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
+  static char callee_name[] = "should_hide";
+
+  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
+
+  PythonString str(callee_name);
+
+  PyObject *result =
+      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
+  bool ret_val = result ? PyObject_IsTrue(result) : false;
+  Py_XDECREF(result);
+
+  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
@@ -37375,6 +37391,34 @@ fail:
     "    lldb::SBFrame::IsArtificial()\n"
     "    lldb::SBFrame::IsArtificial() const\n");
   return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBFrame_IsHidden(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFrame_IsHidden" "', argument " "1"" of type '" "lldb::SBFrame const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBFrame * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBFrame const *)arg1)->IsHidden();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
 }
 
 
@@ -96389,6 +96433,7 @@ static PyMethodDef SwigMethods[] = {
 		"    capture a tail call). Local variables may not be available in an artificial\n"
 		"    frame.\n"
 		""},
+	 { "SBFrame_IsHidden", _wrap_SBFrame_IsHidden, METH_O, "SBFrame_IsHidden(SBFrame self) -> bool"},
 	 { "SBFrame_EvaluateExpression", _wrap_SBFrame_EvaluateExpression, METH_VARARGS, "\n"
 		"SBFrame_EvaluateExpression(SBFrame self, char const * expr) -> SBValue\n"
 		"SBFrame_EvaluateExpression(SBFrame self, char const * expr, lldb::DynamicValueType use_dynamic) -> SBValue\n"
