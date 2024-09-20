@@ -635,8 +635,19 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   InstructionCost Cost = BaseT::getScalarizationOverhead(
       Ty, DemandedElts, Insert, Extract, CostKind);
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector() &&
-      Ty->getScalarSizeInBits() != 1) {
+  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector()) {
+    if (Ty->getScalarSizeInBits() == 1) {
+      auto *WideVecTy = cast<VectorType>(Ty->getWithNewBitWidth(8));
+      // Note: Implicit scalar anyextend is assumed to be free since the i1
+      // must be stored in a GPR.
+      InstructionCost BVCost =
+        getScalarizationOverhead(WideVecTy, DemandedElts, Insert, Extract, CostKind);
+      InstructionCost TruncCost =
+        getCastInstrCost(Instruction::Trunc, Ty, WideVecTy, TTI::CastContextHint::None,
+                         CostKind, nullptr);
+      return BVCost + TruncCost;
+    }
+
     assert(LT.second.isFixedLengthVector());
     MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
     if (isM1OrSmaller(ContainerVT)) {
