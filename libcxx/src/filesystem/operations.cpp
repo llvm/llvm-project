@@ -49,8 +49,15 @@
 #  include <copyfile.h>
 #  define _LIBCPP_FILESYSTEM_USE_COPYFILE
 #else
-#  include <fstream>
 #  define _LIBCPP_FILESYSTEM_USE_FSTREAM
+#endif
+
+// sendfile and copy_file_range need to fall back
+// to the fstream implementation for special files
+#if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE) || defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE) ||                     \
+    defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
+#  include <fstream>
+#  define _LIBCPP_FILESYSTEM_NEED_FSTREAM
 #endif
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_RT_LIB)
@@ -183,6 +190,42 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
 namespace detail {
 namespace {
 
+#if defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
+bool copy_file_impl_fstream(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
+  ifstream in;
+  in.__open(read_fd.fd, ios::binary);
+  if (!in.is_open()) {
+    // This assumes that __open didn't reset the error code.
+    ec = capture_errno();
+    return false;
+  }
+  read_fd.fd = -1;
+  ofstream out;
+  out.__open(write_fd.fd, ios::binary);
+  if (!out.is_open()) {
+    ec = capture_errno();
+    return false;
+  }
+  write_fd.fd = -1;
+
+  if (in.good() && out.good()) {
+    using InIt  = istreambuf_iterator<char>;
+    using OutIt = ostreambuf_iterator<char>;
+    InIt bin(in);
+    InIt ein;
+    OutIt bout(out);
+    copy(bin, ein, bout);
+  }
+  if (out.fail() || in.fail()) {
+    ec = make_error_code(errc::io_error);
+    return false;
+  }
+
+  ec.clear();
+  return true;
+}
+#endif
+
 #if defined(_LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE)
 bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   size_t count = read_fd.get_stat().st_size;
@@ -214,6 +257,12 @@ bool copy_file_impl_copy_file_range(FileDescriptor& read_fd, FileDescriptor& wri
 #if defined(_LIBCPP_FILESYSTEM_USE_SENDFILE)
 bool copy_file_impl_sendfile(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   size_t count = read_fd.get_stat().st_size;
+  // a zero-length file is either empty, or not copyable by this syscall
+  // return early to avoid the syscall cost
+  if (count == 0) {
+    ec = {EINVAL, generic_category()};
+    return false;
+  }
   do {
     ssize_t res;
     if ((res = ::sendfile(write_fd.fd, read_fd.fd, nullptr, count)) == -1) {
@@ -264,8 +313,8 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   }
   ec.clear();
 #  endif
-  ec = {EINVAL, generic_category()};
-  return false;
+
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_COPYFILE)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
@@ -290,37 +339,7 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
 }
 #elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
-  ifstream in;
-  in.__open(read_fd.fd, ios::binary);
-  if (!in.is_open()) {
-    // This assumes that __open didn't reset the error code.
-    ec = capture_errno();
-    return false;
-  }
-  read_fd.fd = -1;
-  ofstream out;
-  out.__open(write_fd.fd, ios::binary);
-  if (!out.is_open()) {
-    ec = capture_errno();
-    return false;
-  }
-  write_fd.fd = -1;
-
-  if (in.good() && out.good()) {
-    using InIt  = istreambuf_iterator<char>;
-    using OutIt = ostreambuf_iterator<char>;
-    InIt bin(in);
-    InIt ein;
-    OutIt bout(out);
-    copy(bin, ein, bout);
-  }
-  if (out.fail() || in.fail()) {
-    ec = make_error_code(errc::io_error);
-    return false;
-  }
-
-  ec.clear();
-  return true;
+  return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
 #else
 #  error "Unknown implementation for copy_file_impl"
