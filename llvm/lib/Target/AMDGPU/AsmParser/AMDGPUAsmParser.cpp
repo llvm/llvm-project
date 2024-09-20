@@ -7315,12 +7315,7 @@ ParseStatus AMDGPUAsmParser::tryParseMatrixScale(OperandVector &Operands,
                                                  StringRef Name,
                                                  AMDGPUOperand::ImmTy Type) {
   return parseStringOrIntWithPrefix(
-      Operands, Name,
-      {"MATRIX_SCALE_DEFAULT", "MATRIX_SCALE_ROW1", "MATRIX_SCALE_WORD1",
-       "MATRIX_SCALE_ROW1_WORD1", "MATRIX_SCALE_BYTE1",
-       "MATRIX_SCALE_ROW1_BYTE1", "MATRIX_SCALE_WORD1_BYTE1",
-       "MATRIX_SCALE_ROW1_WORD1_BYTE1"},
-      Type);
+      Operands, Name, {"MATRIX_SCALE_ROW0", "MATRIX_SCALE_ROW1"}, Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseMatrixAScale(OperandVector &Operands) {
