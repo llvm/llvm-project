@@ -121,7 +121,7 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLocalVarsChecker *Checker;
-      Decl *DeclWithIssue { nullptr };
+      Decl *DeclWithIssue{nullptr};
 
       TrivialFunctionAnalysis TFA;
 
@@ -138,7 +138,7 @@ public:
       bool TraverseDecl(Decl *D) {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && isa<FunctionDecl>(D))
-            DeclWithIssue = D;
+          DeclWithIssue = D;
         return Base::TraverseDecl(D);
       }
 
