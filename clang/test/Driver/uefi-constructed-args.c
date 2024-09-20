@@ -1,5 +1,4 @@
-// RUN: %clang_cl -### %s --target=x86_64-unknown-uefi \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld -g 2>&1 \
+// RUN: %clang_cl -### --target=x86_64-unknown-uefi -g -- %s 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK %s
 // CHECK: "-cc1"
 // CHECK-SAME: "-triple" "x86_64-unknown-uefi"
