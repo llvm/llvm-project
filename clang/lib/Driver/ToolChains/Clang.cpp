@@ -94,24 +94,6 @@ static void CheckCodeGenerationOptions(const Driver &D, const ArgList &Args) {
                                                       << "-static";
 }
 
-// Add backslashes to escape spaces and other backslashes.
-// This is used for the space-separated argument list specified with
-// the -dwarf-debug-flags option.
-static void EscapeSpacesAndBackslashes(const char *Arg,
-                                       SmallVectorImpl<char> &Res) {
-  for (; *Arg; ++Arg) {
-    switch (*Arg) {
-    default:
-      break;
-    case ' ':
-    case '\\':
-      Res.push_back('\\');
-      break;
-    }
-    Res.push_back(*Arg);
-  }
-}
-
 /// Apply \a Work on the current tool chain \a RegularToolChain and any other
 /// offloading tool chain that is associated with the current action \a JA.
 static void
@@ -7702,31 +7684,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Also record command line arguments into the debug info if
   // -grecord-gcc-switches options is set on.
   // By default, -gno-record-gcc-switches is set on and no recording.
-  auto GRecordSwitches =
-      Args.hasFlag(options::OPT_grecord_command_line,
-                   options::OPT_gno_record_command_line, false);
-  auto FRecordSwitches =
-      Args.hasFlag(options::OPT_frecord_command_line,
-                   options::OPT_fno_record_command_line, false);
-  if (FRecordSwitches && !Triple.isOSBinFormatELF() &&
-      !Triple.isOSBinFormatXCOFF() && !Triple.isOSBinFormatMachO())
-    D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
-        << TripleStr;
-  if (TC.UseDwarfDebugFlags() || GRecordSwitches || FRecordSwitches) {
-    ArgStringList OriginalArgs;
-    for (const auto &Arg : Args)
-      Arg->render(Args, OriginalArgs);
-
-    SmallString<256> Flags;
-    EscapeSpacesAndBackslashes(Exec, Flags);
-    for (const char *OriginalArg : OriginalArgs) {
-      SmallString<128> EscapedArg;
-      EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
-      Flags += " ";
-      Flags += EscapedArg;
-    }
-    auto FlagsArgString = Args.MakeArgString(Flags);
+  auto GRecordSwitches = false;
+  auto FRecordSwitches = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordSwitches, GRecordSwitches)) {
+    auto FlagsArgString = renderEscapedCommandLine(TC, Args);
     if (TC.UseDwarfDebugFlags() || GRecordSwitches) {
       CmdArgs.push_back("-dwarf-debug-flags");
       CmdArgs.push_back(FlagsArgString);
@@ -8726,10 +8687,10 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<256> Flags;
     const char *Exec = getToolChain().getDriver().getClangProgramPath();
-    EscapeSpacesAndBackslashes(Exec, Flags);
+    escapeSpacesAndBackslashes(Exec, Flags);
     for (const char *OriginalArg : OriginalArgs) {
       SmallString<128> EscapedArg;
-      EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
+      escapeSpacesAndBackslashes(OriginalArg, EscapedArg);
       Flags += " ";
       Flags += EscapedArg;
     }
