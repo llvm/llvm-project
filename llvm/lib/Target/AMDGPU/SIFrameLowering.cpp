@@ -829,12 +829,12 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     }
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc2)
-      .addImm(Rsrc23 & 0xffffffff)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Lo_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc3)
-      .addImm(Rsrc23 >> 32)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Hi_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
   } else if (ST.isAmdHsaOrMesa(Fn)) {
     assert(PreloadedScratchRsrcReg);
 

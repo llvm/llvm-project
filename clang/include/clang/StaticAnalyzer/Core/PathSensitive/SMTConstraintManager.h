@@ -278,6 +278,11 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
+    // UnarySymExpr support is not yet implemented in the Z3 wrapper.
+    if (isa<UnarySymExpr>(Sym)) {
+      return false;
+    }
+
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
         return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));

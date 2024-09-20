@@ -1039,25 +1039,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_fcmp: {
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    auto *UI = dyn_cast<VPCmpIntrinsic>(ICA.getInst());
-
     // We can only handle vp_cmp intrinsics with underlying instructions.
-    if (!UI)
+    if (!ICA.getInst())
       break;
+
     assert(FOp);
+    auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
     return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
                               UI->getPredicate(), CostKind);
   }
   // vp load/store
   case Intrinsic::vp_load:
   case Intrinsic::vp_store: {
+    if (!ICA.getInst())
+      break;
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    auto *UI = dyn_cast<VPIntrinsic>(ICA.getInst());
-
-    if (!UI)
-      break;
     assert(FOp.has_value());
+    auto *UI = cast<VPIntrinsic>(ICA.getInst());
     if (ICA.getID() == Intrinsic::vp_load)
       return getMemoryOpCost(
           *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
@@ -1961,8 +1960,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
         continue;
       Cost += getArithmeticInstrCost(Instruction::Add, GEP->getType(), CostKind,
                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                     {TTI::OK_AnyValue, TTI::OP_None},
-                                     std::nullopt);
+                                     {TTI::OK_AnyValue, TTI::OP_None}, {});
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
