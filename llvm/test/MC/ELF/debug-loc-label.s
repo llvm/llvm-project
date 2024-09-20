@@ -1,13 +1,13 @@
 // Verify that the .loc_label instruction resets the line sequence and generates
 // the requested label at the correct position in the line stream
 
-// RUN: llvm-mc -filetype obj -triple x86_64-linux-elf %s -o %t.o
+// RUN: llvm-mc -filetype obj -triple x86_64 %s -o %t.o
 // RUN: llvm-dwarfdump -v --debug-line %t.o | FileCheck %s --check-prefix=CHECK-LINE-TABLE
 // RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=CHECK-SYM
 // RUN: llvm-objdump -s -j .offsets %t.o | FileCheck %s --check-prefix=CHECK-OFFSETS
 
-// RUN: not llvm-mc -filetype obj -triple x86_64-linux-elf --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
-// RUN: not llvm-mc -filetype obj -triple x86_64-linux-elf --defsym ERR2=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
+// RUN: not llvm-mc -filetype obj -triple x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+// RUN: not llvm-mc -filetype obj -triple x86_64 --defsym ERR2=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
 
 
 
