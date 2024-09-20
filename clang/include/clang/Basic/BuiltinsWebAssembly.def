@@ -68,11 +68,6 @@ TARGET_BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f64, "LLid", "nc", "nontrappi
 // SIMD builtins
 TARGET_BUILTIN(__builtin_wasm_swizzle_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_add_sat_s_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_add_sat_u_i8x16, "V16UcV16UcV16Uc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_add_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_add_sat_u_i16x8, "V8UsV8UsV8Us", "nc", "simd128")
-
 TARGET_BUILTIN(__builtin_wasm_sub_sat_s_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_sub_sat_u_i8x16, "V16UcV16UcV16Uc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_sub_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
