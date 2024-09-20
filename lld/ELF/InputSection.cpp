@@ -148,12 +148,12 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
     InputSectionBase *const &relSec = f->getSections()[relSecIdx];
     // Otherwise, allocate a buffer to hold the decoded RELA relocations. When
     // called for the first time, relSec is null (without --emit-relocs) or an
-    // InputSection with zero eqClass[0].
-    if (!relSec || !cast<InputSection>(relSec)->eqClass[0]) {
+    // InputSection with false decodedCrel.
+    if (!relSec || !cast<InputSection>(relSec)->decodedCrel) {
       auto *sec = makeThreadLocal<InputSection>(*f, shdr, name);
       f->cacheDecodedCrel(relSecIdx, sec);
       sec->type = SHT_RELA;
-      sec->eqClass[0] = SHT_RELA;
+      sec->decodedCrel = true;
 
       RelocsCrel<ELFT::Is64Bits> entries(sec->content_);
       sec->size = entries.size() * sizeof(typename ELFT::Rela);

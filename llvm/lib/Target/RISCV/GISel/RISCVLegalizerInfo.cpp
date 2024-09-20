@@ -287,34 +287,48 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
   auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+  auto &ExtLoadActions = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD});
 
-  LoadActions
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                     {s32, p0, s16, 16},
-                                     {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen}});
-  StoreActions
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                     {s32, p0, s16, 16},
-                                     {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen}});
-  auto &ExtLoadActions =
-      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  // Return the alignment needed for scalar memory ops. If unaligned scalar mem
+  // is supported, we only require byte alignment. Otherwise, we need the memory
+  // op to be natively aligned.
+  auto getScalarMemAlign = [&ST](unsigned Size) {
+    return ST.enableUnalignedScalarMem() ? 8 : Size;
+  };
+
+  LoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  StoreActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  ExtLoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)}});
   if (XLen == 64) {
-    LoadActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
-                                          {s64, p0, s16, 16},
-                                          {s64, p0, s32, 32},
-                                          {s64, p0, s64, 64}});
-    StoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
-                                           {s64, p0, s16, 16},
-                                           {s64, p0, s32, 32},
-                                           {s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
-        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)}});
   } else if (ST.hasStdExtD()) {
-    LoadActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
-    StoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
   }
 
   // Vector loads/stores.
