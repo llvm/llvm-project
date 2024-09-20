@@ -838,7 +838,7 @@ void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
                                  MachineBasicBlock *MBB) {
   // Emit the code for the jump table
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   MachineIRBuilder MIB(*MBB->getParent());
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());

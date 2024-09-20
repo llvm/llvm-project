@@ -78,8 +78,9 @@ public:
   // functional units.
   int collectAllComboFuncs(ArrayRef<Record *> ComboFuncList);
 
-  ResourceVector getResourcesForItinerary(Record *Itinerary);
-  void createScheduleClasses(unsigned ItineraryIdx, const RecVec &Itineraries);
+  ResourceVector getResourcesForItinerary(const Record *Itinerary);
+  void createScheduleClasses(unsigned ItineraryIdx,
+                             const ConstRecVec &Itineraries);
 
   // Emit code for a subset of itineraries.
   void emitForItineraries(raw_ostream &OS,
@@ -174,12 +175,12 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
 }
 
 ResourceVector
-DFAPacketizerEmitter::getResourcesForItinerary(Record *Itinerary) {
+DFAPacketizerEmitter::getResourcesForItinerary(const Record *Itinerary) {
   ResourceVector Resources;
   assert(Itinerary);
-  for (Record *StageDef : Itinerary->getValueAsListOfDefs("Stages")) {
+  for (const Record *StageDef : Itinerary->getValueAsListOfDefs("Stages")) {
     uint64_t StageResources = 0;
-    for (Record *Unit : StageDef->getValueAsListOfDefs("Units")) {
+    for (const Record *Unit : StageDef->getValueAsListOfDefs("Units")) {
       StageResources |= FUNameToBitsMap[std::string(Unit->getName())];
     }
     if (StageResources != 0)
@@ -188,10 +189,10 @@ DFAPacketizerEmitter::getResourcesForItinerary(Record *Itinerary) {
   return Resources;
 }
 
-void DFAPacketizerEmitter::createScheduleClasses(unsigned ItineraryIdx,
-                                                 const RecVec &Itineraries) {
+void DFAPacketizerEmitter::createScheduleClasses(
+    unsigned ItineraryIdx, const ConstRecVec &Itineraries) {
   unsigned Idx = 0;
-  for (Record *Itinerary : Itineraries) {
+  for (const Record *Itinerary : Itineraries) {
     if (!Itinerary) {
       ScheduleClasses.push_back({ItineraryIdx, Idx++, 0, ResourceVector{}});
       continue;

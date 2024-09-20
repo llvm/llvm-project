@@ -10775,7 +10775,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     MVT WidenVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, Op.getOperand(0));
     SDValue Op2 = DAG.getNode(ISD::VECTOR_REVERSE, DL, WidenVT, Op1);
-    return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Op2);
+    return DAG.getSetCC(DL, VecVT, Op2,
+                        DAG.getConstant(0, DL, Op2.getValueType()), ISD::SETNE);
   }
 
   MVT ContainerVT = VecVT;

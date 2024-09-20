@@ -12348,7 +12348,7 @@ static SDValue lowerShuffleAsElementInsertion(
     }
     V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);
   } else if (Mask[V2Index] != (int)Mask.size() || EltVT == MVT::i8 ||
-             EltVT == MVT::i16) {
+             (EltVT == MVT::i16 && !Subtarget.hasAVX10_2())) {
     // Either not inserting from the low element of the input or the input
     // element size is too small to use VZEXT_MOVL to clear the high bits.
     return SDValue();
@@ -57789,6 +57789,19 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                              extractSubVector(InVec.getOperand(1), IdxVal, DAG,
                                               DL, SizeInBits),
                              DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
+      case X86ISD::VPERMV3:
+        if (IdxVal != 0) {
+          SDValue Src0 = InVec.getOperand(0);
+          SDValue Mask = InVec.getOperand(1);
+          SDValue Src1 = InVec.getOperand(2);
+          Mask = extractSubVector(Mask, IdxVal, DAG, DL, SizeInBits);
+          Mask = widenSubVector(Mask, /*ZeroNewElements=*/false, Subtarget, DAG,
+                                DL, InSizeInBits);
+          SDValue Shuffle =
+              DAG.getNode(InOpcode, DL, InVecVT, Src0, Mask, Src1);
+          return extractSubVector(Shuffle, 0, DAG, DL, SizeInBits);
         }
         break;
       }

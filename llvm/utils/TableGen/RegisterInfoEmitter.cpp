@@ -123,7 +123,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, CodeGenTarget &Target,
 
   if (!Namespace.empty())
     OS << "namespace " << Namespace << " {\n";
-  OS << "enum {\n  NoRegister,\n";
+  OS << "enum : unsigned {\n  NoRegister,\n";
 
   for (const auto &Reg : Registers)
     OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
