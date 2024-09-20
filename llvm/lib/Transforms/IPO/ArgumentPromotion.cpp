@@ -728,7 +728,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   append_range(ArgPartsVec, ArgParts);
   sort(ArgPartsVec, llvm::less_first());
 
-  // Make sure the parts are non-overlapping.
+  // Make sure the parts are non-overlapping. This also computes the size of the
+  // memory region accessed through Arg.
   int64_t Offset = ArgPartsVec[0].first;
   for (const auto &Pair : ArgPartsVec) {
     if (Pair.first < Offset)
@@ -749,13 +750,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // If we can determine that no call to the Function modifies the memory region
   // accessed through Arg, through alias analysis using actual arguments in the
   // callers, we know that it is guaranteed to be safe to promote the argument.
-
-  // Compute the size of the memory region accessed by the Loads through Arg.
-  LocationSize Size = LocationSize::precise(0);
-  for (LoadInst *Load : Loads) {
-    Size = Size.unionWith(MemoryLocation::get(Load).Size);
-  }
-  if (isArgUnmodifiedByAllCalls(Arg, Size, FAM))
+  if (isArgUnmodifiedByAllCalls(Arg, LocationSize::precise(Offset), FAM))
     return true;
 
   // Otherwise, use alias analysis to check if the pointer is guaranteed to not
