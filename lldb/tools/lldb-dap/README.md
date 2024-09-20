@@ -198,6 +198,9 @@ specific key/value pairs:
 |**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends.
 
 All commands and command outputs will be sent to the debugger console when they are executed.
+Commands can be prefixed with `?` or `!` to modify their behavior:
+* Commands prefixed with `?` are quiet on success, i.e. nothing is written to stdout if the command succeeds.
+* Prefixing a command with `!` enables error checking: If a command prefixed with `!` fails, subsequent commands will not be run. This is usefule if one of the commands depends on another, as it will stop the chain of commands.
 
 For JSON configurations of `"type": "launch"`, the JSON configuration can additionally
 contain the following key/value pairs:
