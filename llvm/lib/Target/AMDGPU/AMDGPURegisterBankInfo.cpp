@@ -816,7 +816,6 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   MachineBasicBlock *BodyBB = MF->CreateMachineBasicBlock();
   MachineBasicBlock *RemainderBB = MF->CreateMachineBasicBlock();
   MachineBasicBlock *RestoreExecBB = MF->CreateMachineBasicBlock();
-
   MachineFunction::iterator MBBI(MBB);
   ++MBBI;
   MF->insert(MBBI, LoopBB);
