@@ -1985,6 +1985,8 @@ public:
   /// template arguments have been deduced.
   void setInstantiationOf(ClassTemplatePartialSpecializationDecl *PartialSpec,
                           const TemplateArgumentList *TemplateArgs) {
+    assert(!isa<ClassTemplatePartialSpecializationDecl>(this) &&
+           "A partial specialization cannot be instantiated from a template");
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Already set to a class template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
@@ -1996,6 +1998,8 @@ public:
   /// Note that this class template specialization is an instantiation
   /// of the given class template.
   void setInstantiationOf(ClassTemplateDecl *TemplDecl) {
+    assert(!isa<ClassTemplatePartialSpecializationDecl>(this) &&
+           "A partial specialization cannot be instantiated from a template");
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization*>() &&
            "Previously set to a class template partial specialization!");
     SpecializedTemplate = TemplDecl;
@@ -2743,6 +2747,8 @@ public:
   /// template arguments have been deduced.
   void setInstantiationOf(VarTemplatePartialSpecializationDecl *PartialSpec,
                           const TemplateArgumentList *TemplateArgs) {
+    assert(!isa<VarTemplatePartialSpecializationDecl>(this) &&
+           "A partial specialization cannot be instantiated from a template");
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Already set to a variable template partial specialization!");
     auto *PS = new (getASTContext()) SpecializedPartialSpecialization();
@@ -2754,6 +2760,8 @@ public:
   /// Note that this variable template specialization is an instantiation
   /// of the given variable template.
   void setInstantiationOf(VarTemplateDecl *TemplDecl) {
+    assert(!isa<VarTemplatePartialSpecializationDecl>(this) &&
+           "A partial specialization cannot be instantiated from a template");
     assert(!SpecializedTemplate.is<SpecializedPartialSpecialization *>() &&
            "Previously set to a variable template partial specialization!");
     SpecializedTemplate = TemplDecl;
