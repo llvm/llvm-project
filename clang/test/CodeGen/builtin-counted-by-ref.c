@@ -123,6 +123,44 @@ struct c *test3(int size) {
 
   return p;
 }
+
+struct d {
+  char x;
+  short count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+// X86_64-LABEL: define dso_local noalias noundef ptr @test4(
+// X86_64-SAME: i32 noundef [[SIZE:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// X86_64-NEXT:  [[ENTRY:.*:]]
+// X86_64-NEXT:    [[CONV:%.*]] = sext i32 [[SIZE]] to i64
+// X86_64-NEXT:    [[MUL:%.*]] = shl nsw i64 [[CONV]], 2
+// X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
+// X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
+// X86_64-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 2
+// X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i16
+// X86_64-NEXT:    store i16 [[CONV1]], ptr [[COUNT]], align 2, !tbaa [[TBAA2]]
+// X86_64-NEXT:    ret ptr [[CALL]]
+//
+// I386-LABEL: define dso_local noalias noundef ptr @test4(
+// I386-SAME: i32 noundef [[SIZE:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// I386-NEXT:  [[ENTRY:.*:]]
+// I386-NEXT:    [[MUL:%.*]] = shl i32 [[SIZE]], 2
+// I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
+// I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
+// I386-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 2
+// I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i16
+// I386-NEXT:    store i16 [[CONV]], ptr [[COUNT]], align 2, !tbaa [[TBAA3]]
+// I386-NEXT:    ret ptr [[CALL]]
+//
+struct d *test4(int size, int idx) {
+  struct d *p = __builtin_malloc(sizeof(struct d) + sizeof(int) * size);
+
+  if (__builtin_counted_by_ref(&p->array[0]))
+    *__builtin_counted_by_ref(&p->array[idx++]) = size;
+
+  return p;
+}
 //.
 // X86_64: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // X86_64: [[META3]] = !{!"short", [[META4:![0-9]+]], i64 0}
