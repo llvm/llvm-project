@@ -8751,22 +8751,18 @@ void ASTReader::ReadMethodPool(Selector Sel) {
     return;
 
   Sema &S = *getSema();
-  SemaObjC::GlobalMethodPool::iterator Pos =
-      S.ObjC()
-          .MethodPool
-          .insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
-          .first;
+  auto &Methods = S.ObjC().MethodPool[Sel];
 
-  Pos->second.first.setBits(Visitor.getInstanceBits());
-  Pos->second.first.setHasMoreThanOneDecl(Visitor.instanceHasMoreThanOneDecl());
-  Pos->second.second.setBits(Visitor.getFactoryBits());
-  Pos->second.second.setHasMoreThanOneDecl(Visitor.factoryHasMoreThanOneDecl());
+  Methods.first.setBits(Visitor.getInstanceBits());
+  Methods.first.setHasMoreThanOneDecl(Visitor.instanceHasMoreThanOneDecl());
+  Methods.second.setBits(Visitor.getFactoryBits());
+  Methods.second.setHasMoreThanOneDecl(Visitor.factoryHasMoreThanOneDecl());
 
   // Add methods to the global pool *after* setting hasMoreThanOneDecl, since
   // when building a module we keep every method individually and may need to
   // update hasMoreThanOneDecl as we add the methods.
-  addMethodsToPool(S, Visitor.getInstanceMethods(), Pos->second.first);
-  addMethodsToPool(S, Visitor.getFactoryMethods(), Pos->second.second);
+  addMethodsToPool(S, Visitor.getInstanceMethods(), Methods.first);
+  addMethodsToPool(S, Visitor.getFactoryMethods(), Methods.second);
 }
 
 void ASTReader::updateOutOfDateSelector(Selector Sel) {

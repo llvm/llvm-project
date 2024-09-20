@@ -208,23 +208,8 @@ public:
   /// of -Wselector.
   llvm::MapVector<Selector, SourceLocation> ReferencedSelectors;
 
-  class GlobalMethodPool {
-  public:
-    using Lists = std::pair<ObjCMethodList, ObjCMethodList>;
-    using iterator = llvm::DenseMap<Selector, Lists>::iterator;
-    iterator begin() { return Methods.begin(); }
-    iterator end() { return Methods.end(); }
-    iterator find(Selector Sel) { return Methods.find(Sel); }
-    std::pair<iterator, bool> insert(std::pair<Selector, Lists> &&Val) {
-      return Methods.insert(Val);
-    }
-    Lists &operator[](Selector Key) { return Methods[Key]; }
-    int count(Selector Sel) const { return Methods.count(Sel); }
-    bool empty() const { return Methods.empty(); }
-
-  private:
-    llvm::DenseMap<Selector, Lists> Methods;
-  };
+  using GlobalMethodPool =
+      llvm::DenseMap<Selector, std::pair<ObjCMethodList, ObjCMethodList>>;
 
   /// Method Pool - allows efficient lookup when typechecking messages to "id".
   /// We need to maintain a list, since selectors can have differing signatures
