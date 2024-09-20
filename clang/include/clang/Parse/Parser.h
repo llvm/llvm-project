@@ -1356,8 +1356,8 @@ private:
     void ParseLexedPragmas() override;
 
     // Delete copy constructor and copy assignment operator.
-    LateParsedClass(const LateParsedClass&) = delete;
-    LateParsedClass& operator=(const LateParsedClass&) = delete;
+    LateParsedClass(const LateParsedClass &) = delete;
+    LateParsedClass &operator=(const LateParsedClass &) = delete;
 
   private:
     Parser *Self;
