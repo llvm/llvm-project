@@ -7327,11 +7327,11 @@ extern const AstTypeMatcher<BlockPointerType> blockPointerType;
 /// Matches member pointer types.
 /// Given
 /// \code
-///   struct A { int i; }
-///   A::* ptr = A::i;
+///   struct A { int i; };
+///   int A::* ptr = &A::i;
 /// \endcode
 /// memberPointerType()
-///   matches "A::* ptr"
+///   matches "int A::* ptr"
 extern const AstTypeMatcher<MemberPointerType> memberPointerType;
 
 /// Matches pointer types, but does not match Objective-C object pointer
