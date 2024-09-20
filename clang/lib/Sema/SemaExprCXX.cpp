@@ -8101,7 +8101,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // it's legal for the type to be incomplete if this is a pseudo-destructor
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
-  if (!isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
+  if (BaseType->isDependentType() || !BaseType->isRecordType()) {
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
@@ -8112,16 +8112,11 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   //   Unlike the object expression in other contexts, *this is not required to
   //   be of complete type for purposes of class member access (5.2.5) outside
   //   the member function body.
-  if (!BaseType->isDependentType() &&
-      !isThisOutsideMemberFunctionBody(BaseType) &&
+  if (!isThisOutsideMemberFunctionBody(BaseType) &&
       RequireCompleteType(OpLoc, BaseType,
                           diag::err_incomplete_member_access)) {
     return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
   }
-
-  // We can't implicitly declare the destructor for a templated class.
-  if (BaseType->isDependentType())
-    MayBePseudoDestructor = true;
 
   // C++ [basic.lookup.classref]p2:
   //   If the id-expression in a class member access (5.2.5) is an
