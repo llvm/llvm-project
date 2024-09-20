@@ -58,6 +58,8 @@ public:
   SPIRVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : CommonSPIRTargetCodeGenInfo(std::make_unique<SPIRVABIInfo>(CGT)) {}
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override;
 };
 } // End anonymous namespace.
 
@@ -186,6 +188,27 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
         FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
     return;
   }
+}
+
+LangAS SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(
+    CodeGenModule &CGM, const VarDecl *D) const {
+  assert(!CGM.getLangOpts().OpenCL &&
+         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  // If we're here it means that we're using the SPIRDefIsGen ASMap, hence for
+  // the global AS we can rely on either cuda_device or sycl_global to be
+  // correct; however, since this is not a CUDA Device context, we use
+  // sycl_global to prevent confusion with the assertion.
+  LangAS DefaultGlobalAS = getLangASFromTargetAS(
+      CGM.getContext().getTargetAddressSpace(LangAS::sycl_global));
+  if (!D)
+    return DefaultGlobalAS;
+
+  LangAS AddrSpace = D->getType().getAddressSpace();
+  if (AddrSpace != LangAS::Default)
+    return AddrSpace;
+
+  return DefaultGlobalAS;
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.
