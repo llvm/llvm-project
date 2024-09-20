@@ -1,0 +1,9 @@
+## Reproduces missing call continuation fallthrough count when using
+## pre-aggregated perf data
+
+# RUN: yaml2obj %p/Inputs/callcont-fallthru.yaml > %t.exe
+# RUN: llvm-bolt %t.exe --pa -p %p/Inputs/callcont-fallthru.preagg -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s
+
+# CHECK:      callq foo
+# CHECK-NEXT: count: 0
