@@ -480,7 +480,6 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   uint64_t NumInitElements = Args.size();
 
   uint64_t NumArrayElements = AType.getSize();
-  assert(NumInitElements != 0 && "expected at least one initializaed value");
   assert(NumInitElements <= NumArrayElements);
 
   QualType elementType =
