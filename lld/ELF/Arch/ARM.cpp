@@ -81,13 +81,13 @@ uint32_t ARM::calcEFlags() const {
   // with BE-8 code.
   uint32_t armBE8 = 0;
 
-  if (config->armVFPArgs == ARMVFPArgKind::Base ||
-      config->armVFPArgs == ARMVFPArgKind::Default)
+  if (ctx.arg.armVFPArgs == ARMVFPArgKind::Base ||
+      ctx.arg.armVFPArgs == ARMVFPArgKind::Default)
     abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
-  else if (config->armVFPArgs == ARMVFPArgKind::VFP)
+  else if (ctx.arg.armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
 
-  if (!config->isLE && config->armBe8)
+  if (!ctx.arg.isLE && ctx.arg.armBe8)
     armBE8 = EF_ARM_BE8;
 
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
@@ -134,11 +134,11 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_SBREL32:
     return R_ARM_SBREL;
   case R_ARM_TARGET1:
-    return config->target1Rel ? R_PC : R_ABS;
+    return ctx.arg.target1Rel ? R_PC : R_ABS;
   case R_ARM_TARGET2:
-    if (config->target2 == Target2Policy::Rel)
+    if (ctx.arg.target2 == Target2Policy::Rel)
       return R_PC;
-    if (config->target2 == Target2Policy::Abs)
+    if (ctx.arg.target2 == Target2Policy::Abs)
       return R_ABS;
     return R_GOT_PC;
   case R_ARM_TLS_GD32:
@@ -198,7 +198,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
 }
 
 RelType ARM::getDynRel(RelType type) const {
-  if ((type == R_ARM_ABS32) || (type == R_ARM_TARGET1 && !config->target1Rel))
+  if ((type == R_ARM_ABS32) || (type == R_ARM_TARGET1 && !ctx.arg.target1Rel))
     return R_ARM_ABS32;
   return R_ARM_NONE;
 }
@@ -231,7 +231,7 @@ static void writePltHeaderLong(uint8_t *buf) {
 // True if we should use Thumb PLTs, which currently require Thumb2, and are
 // only used if the target does not have the ARM ISA.
 static bool useThumbPLTs() {
-  return config->armHasThumb2ISA && !config->armHasArmISA;
+  return ctx.arg.armHasThumb2ISA && !ctx.arg.armHasArmISA;
 }
 
 // The default PLT header requires the .got.plt to be within 128 Mb of the
@@ -407,7 +407,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1));
+        (!ctx.arg.armHasBlx && (s.getVA() & 1));
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
@@ -420,7 +420,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1) == 0);;
+        (!ctx.arg.armHasBlx && (s.getVA() & 1) == 0);;
   }
   }
   return false;
@@ -456,7 +456,7 @@ uint32_t ARM::getThunkSectionSpacing() const {
   // range. On earlier Architectures such as ARMv4, ARMv5 and ARMv6 (except
   // ARMv6T2) the range is +/- 4MiB.
 
-  return (config->armJ1J2BranchEncoding) ? 0x1000000 - 0x30000
+  return (ctx.arg.armJ1J2BranchEncoding) ? 0x1000000 - 0x30000
                                          : 0x400000 - 0x7500;
 }
 
@@ -481,7 +481,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     return llvm::isInt<21>(offset);
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
-    return config->armJ1J2BranchEncoding ? llvm::isInt<25>(offset)
+    return ctx.arg.armJ1J2BranchEncoding ? llvm::isInt<25>(offset)
                                          : llvm::isInt<23>(offset);
   default:
     return true;
@@ -697,7 +697,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     } else {
       write16(loc + 2, (read16(loc + 2) & ~0x1000) | 1 << 12);
     }
-    if (!config->armJ1J2BranchEncoding) {
+    if (!ctx.arg.armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
       checkInt(loc, val, 23, rel);
@@ -909,7 +909,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x07ff) << 1));  // imm11:0
   }
   case R_ARM_THM_CALL:
-    if (!config->armJ1J2BranchEncoding) {
+    if (!ctx.arg.armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
       uint16_t hi = read16(buf);
@@ -1261,7 +1261,7 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
 void elf::processArmCmseSymbols() {
-  if (!config->cmseImplib)
+  if (!ctx.arg.cmseImplib)
     return;
   // Only symbols with external linkage end up in symtab, so no need to do
   // linkage checks. Only check symbol type.
@@ -1270,9 +1270,9 @@ void elf::processArmCmseSymbols() {
       continue;
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
-    if (!config->armCMSESupport) {
+    if (!ctx.arg.armCMSESupport) {
       error("CMSE is only supported by ARMv8-M architecture or later");
-      config->cmseImplib = false;
+      ctx.arg.cmseImplib = false;
       break;
     }
 
@@ -1348,7 +1348,7 @@ ArmCmseSGSection::ArmCmseSGSection()
            "' from CMSE import library is not present in secure application");
   }
 
-  if (!symtab.cmseImportLib.empty() && config->cmseOutputLib.empty()) {
+  if (!symtab.cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : symtab.cmseSymMap) {
       Symbol *sym = entryFunc.sym;
       if (!symtab.inCMSEOutImpLib.count(sym->getName()))
@@ -1476,17 +1476,17 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
     off = osec->offset + osec->size;
   }
 
-  const uint64_t sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
+  const uint64_t sectionHeaderOff = alignToPowerOf2(off, ctx.arg.wordsize);
   const auto shnum = osIsPairs.size() + 1;
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      config->mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
-  unlinkAsync(config->cmseOutputLib);
+      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+  unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
-      FileOutputBuffer::create(config->cmseOutputLib, fileSize, flags);
+      FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    error("failed to open " + config->cmseOutputLib + ": " +
+    error("failed to open " + ctx.arg.cmseOutputLib + ": " +
           llvm::toString(bufferOrErr.takeError()));
     return;
   }
@@ -1500,13 +1500,13 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   eHdr->e_entry = 0;
   eHdr->e_shoff = sectionHeaderOff;
   eHdr->e_ident[EI_CLASS] = ELFCLASS32;
-  eHdr->e_ident[EI_DATA] = config->isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_DATA] = ctx.arg.isLE ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
-  eHdr->e_ident[EI_OSABI] = config->osabi;
+  eHdr->e_ident[EI_OSABI] = ctx.arg.osabi;
   eHdr->e_ident[EI_ABIVERSION] = 0;
   eHdr->e_machine = EM_ARM;
   eHdr->e_version = EV_CURRENT;
-  eHdr->e_flags = config->eflags;
+  eHdr->e_flags = ctx.arg.eflags;
   eHdr->e_ehsize = sizeof(typename ELFT::Ehdr);
   eHdr->e_phnum = 0;
   eHdr->e_shentsize = sizeof(typename ELFT::Shdr);

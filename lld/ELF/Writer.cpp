@@ -49,7 +49,7 @@ template <class ELFT> class Writer {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  Writer() : buffer(errorHandler().outputBuffer) {}
+  Writer(Ctx &ctx) : ctx(ctx), buffer(errorHandler().outputBuffer) {}
 
   void run();
 
@@ -80,6 +80,7 @@ private:
   void writeSectionsBinary();
   void writeBuildId();
 
+  Ctx &ctx;
   std::unique_ptr<FileOutputBuffer> &buffer;
 
   void addRelIpltSymbols();
@@ -91,8 +92,8 @@ private:
 };
 } // anonymous namespace
 
-template <class ELFT> void elf::writeResult() {
-  Writer<ELFT>().run();
+template <class ELFT> void elf::writeResult(Ctx &ctx) {
+  Writer<ELFT>(ctx).run();
 }
 
 static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
@@ -2409,8 +2410,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
           (config->zSeparate == SeparateSegmentKind::Code && prev &&
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)
-        cmd->addrExpr = [] {
-          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize);
+        cmd->addrExpr = [&ctx = this->ctx] {
+          return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize);
         };
       // PT_TLS is at the start of the first RW PT_LOAD. If `p` includes PT_TLS,
       // it must be the RW. Align to p_align(PT_TLS) to make sure
@@ -2426,15 +2427,15 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // bug, musl (TLS Variant 1 architectures) before 1.1.23 handled TLS
       // blocks correctly. We need to keep the workaround for a while.
       else if (ctx.tlsPhdr && ctx.tlsPhdr->firstSec == p->firstSec)
-        cmd->addrExpr = [] {
-          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize) +
-                 alignToPowerOf2(ctx.script->getDot() % config->maxPageSize,
+        cmd->addrExpr = [&ctx = this->ctx] {
+          return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize) +
+                 alignToPowerOf2(ctx.script->getDot() % ctx.arg.maxPageSize,
                                  ctx.tlsPhdr->p_align);
         };
       else
-        cmd->addrExpr = [] {
-          return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize) +
-                 ctx.script->getDot() % config->maxPageSize;
+        cmd->addrExpr = [&ctx = this->ctx] {
+          return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize) +
+                 ctx.script->getDot() % ctx.arg.maxPageSize;
         };
     }
   };
@@ -2766,7 +2767,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
-  uint64_t maxSize = config->is64 ? INT64_MAX : UINT32_MAX;
+  uint64_t maxSize = ctx.arg.is64 ? INT64_MAX : UINT32_MAX;
   if (fileSize != size_t(fileSize) || maxSize < fileSize) {
     std::string msg;
     raw_string_ostream s(msg);
@@ -2778,17 +2779,17 @@ template <class ELFT> void Writer<ELFT>::openFile() {
     return;
   }
 
-  unlinkAsync(config->outputFile);
+  unlinkAsync(ctx.arg.outputFile);
   unsigned flags = 0;
-  if (!config->relocatable)
+  if (!ctx.arg.relocatable)
     flags |= FileOutputBuffer::F_executable;
-  if (!config->mmapOutputFile)
+  if (!ctx.arg.mmapOutputFile)
     flags |= FileOutputBuffer::F_no_mmap;
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
-      FileOutputBuffer::create(config->outputFile, fileSize, flags);
+      FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 
   if (!bufferOrErr) {
-    error("failed to open " + config->outputFile + ": " +
+    error("failed to open " + ctx.arg.outputFile + ": " +
           llvm::toString(bufferOrErr.takeError()));
     return;
   }
@@ -2936,7 +2937,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     part.buildId->writeBuildId(output);
 }
 
-template void elf::writeResult<ELF32LE>();
-template void elf::writeResult<ELF32BE>();
-template void elf::writeResult<ELF64LE>();
-template void elf::writeResult<ELF64BE>();
+template void elf::writeResult<ELF32LE>(Ctx &);
+template void elf::writeResult<ELF32BE>(Ctx &);
+template void elf::writeResult<ELF64LE>(Ctx &);
+template void elf::writeResult<ELF64BE>(Ctx &);

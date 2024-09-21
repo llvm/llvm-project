@@ -79,7 +79,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 // --force-group-allocation, the SHF_GROUP flag and section groups are retained.
 static uint64_t getFlags(uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
-  if (config->resolveGroups)
+  if (ctx.arg.resolveGroups)
     flags &= ~(uint64_t)SHF_GROUP;
   return flags;
 }
@@ -298,7 +298,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
 
   // We don't have file for synthetic sections.
   if (file == nullptr)
-    return (config->outputFile + ":(" + secAndOffset).str();
+    return (ctx.arg.outputFile + ":(" + secAndOffset).str();
 
   std::string filename = toString(file);
   if (Defined *d = getEnclosingFunction(offset))
@@ -398,8 +398,8 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(uint8_t *buf) {
-  if (config->relax && !config->relocatable &&
-      (config->emachine == EM_RISCV || config->emachine == EM_LOONGARCH)) {
+  if (ctx.arg.relax && !ctx.arg.relocatable &&
+      (ctx.arg.emachine == EM_RISCV || ctx.arg.emachine == EM_LOONGARCH)) {
     // On LoongArch and RISC-V, relaxation might change relocations: copy
     // from internal ones that are updated by relaxation.
     InputSectionBase *sec = getRelocatedSection();
@@ -412,7 +412,7 @@ void InputSection::copyRelocations(uint8_t *buf) {
       const ObjFile<ELFT> &file;
       Relocation operator()(const RelTy &rel) const {
         // RelExpr is not used so set to a dummy value.
-        return Relocation{R_NONE, rel.getType(config->isMips64EL), rel.r_offset,
+        return Relocation{R_NONE, rel.getType(ctx.arg.isMips64EL), rel.r_offset,
                           getAddend<ELFT>(rel), &file.getRelocTargetSym(rel)};
       }
     };
@@ -453,7 +453,7 @@ void InputSection::copyRelocations(uint8_t *buf,
     // section, but for --emit-relocs it is a virtual address.
     p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(ctx.in.symTab->getSymbolIndex(sym), type,
-                        config->isMips64EL);
+                        ctx.arg.isMips64EL);
 
     if (sym.type == STT_SECTION) {
       // We combine multiple section symbols into only one per
@@ -490,7 +490,7 @@ void InputSection::copyRelocations(uint8_t *buf,
       if (!RelTy::HasAddend)
         addend = target.getImplicitAddend(bufLoc, type);
 
-      if (config->emachine == EM_MIPS &&
+      if (ctx.arg.emachine == EM_MIPS &&
           target.getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
@@ -513,10 +513,10 @@ void InputSection::copyRelocations(uint8_t *buf,
       // writeSections will update the implicit addend. Non-SHF_ALLOC sections
       // utilize relocateNonAlloc to process raw relocations and do not need
       // this sec->relocations change.
-      else if (config->relocatable && (sec->flags & SHF_ALLOC) &&
+      else if (ctx.arg.relocatable && (sec->flags & SHF_ALLOC) &&
                type != target.noneRel)
         sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
-    } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
+    } else if (ctx.arg.emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
       // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
       // indicates that r30 is relative to the input section .got2
@@ -682,12 +682,12 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   PhdrEntry *tls = ctx.tlsPhdr;
   if (!tls) // Reported an error in getSymVA
     return 0;
-  switch (config->emachine) {
+  switch (ctx.arg.emachine) {
     // Variant 1.
   case EM_ARM:
   case EM_AARCH64:
-    return s.getVA(0) + config->wordsize * 2 +
-           ((tls->p_vaddr - config->wordsize * 2) & (tls->p_align - 1));
+    return s.getVA(0) + ctx.arg.wordsize * 2 +
+           ((tls->p_vaddr - ctx.arg.wordsize * 2) & (tls->p_align - 1));
   case EM_MIPS:
   case EM_PPC:
   case EM_PPC64:
@@ -845,13 +845,13 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       // aware of the issue) while ensuring no overflow.
       // Note: if the symbol is hidden, its binding has been converted to local,
       // so we just check isUndefined() here.
-      if (config->emachine == EM_ARM)
+      if (ctx.arg.emachine == EM_ARM)
         dest = getARMUndefinedRelativeWeakVA(type, a, p);
-      else if (config->emachine == EM_AARCH64)
+      else if (ctx.arg.emachine == EM_AARCH64)
         dest = getAArch64UndefinedRelativeWeakVA(type, p) + a;
-      else if (config->emachine == EM_PPC)
+      else if (ctx.arg.emachine == EM_PPC)
         dest = p;
-      else if (config->emachine == EM_RISCV)
+      else if (ctx.arg.emachine == EM_RISCV)
         dest = getRISCVUndefinedRelativeWeakVA(type, p) + a;
       else
         dest = sym.getVA(a);
@@ -958,7 +958,7 @@ template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::ctx.target;
-  const auto emachine = config->emachine;
+  const auto emachine = ctx.arg.emachine;
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
@@ -970,7 +970,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
     else
       tombstone = 0;
   }
-  for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
+  for (const auto &patAndValue : llvm::reverse(ctx.arg.deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
       break;
@@ -979,7 +979,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
   const InputFile *f = this->file;
   for (auto it = rels.begin(), end = rels.end(); it != end; ++it) {
     const RelTy &rel = *it;
-    const RelType type = rel.getType(config->isMips64EL);
+    const RelType type = rel.getType(ctx.arg.isMips64EL);
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
@@ -1060,7 +1060,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
     // explicit addend, such as RELA, remain unchanged and we can stop here.
     // While content relocated by relocation types with an implicit addend, such
     // as REL, needs the implicit addend updated.
-    if (config->relocatable && (RelTy::HasAddend || sym.type != STT_SECTION))
+    if (ctx.arg.relocatable && (RelTy::HasAddend || sym.type != STT_SECTION))
       continue;
 
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
@@ -1371,7 +1371,7 @@ static size_t findNull(StringRef s, size_t entSize) {
 // Split SHF_STRINGS section. Such section is a sequence of
 // null-terminated strings.
 void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
-  const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
+  const bool live = !(flags & SHF_ALLOC) || !ctx.arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
   if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
     fatal(toString(this) + ": string is not null terminated");
@@ -1397,7 +1397,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
                                         size_t entSize) {
   size_t size = data.size();
   assert((size % entSize) == 0);
-  const bool live = !(flags & SHF_ALLOC) || !config->gcSections;
+  const bool live = !(flags & SHF_ALLOC) || !ctx.arg.gcSections;
 
   pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
