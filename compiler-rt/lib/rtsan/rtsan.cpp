@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <rtsan/rtsan.h>
-#include <rtsan/rtsan_context.h>
+#include <rtsan/rtsan_assertions.h>
 #include <rtsan/rtsan_flags.h>
 #include <rtsan/rtsan_interceptors.h>
 
@@ -77,5 +77,4 @@ __rtsan_expect_not_realtime(const char *intercepted_function_name) {
   __rtsan_ensure_initialized();
   ExpectNotRealtime(GetContextForThisThread(), intercepted_function_name);
 }
-
 } // extern "C"
