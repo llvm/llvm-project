@@ -13,7 +13,9 @@
 #pragma once
 
 #include "rtsan/rtsan_context.h"
+#include "rtsan/rtsan_diagnostics.h"
 
 namespace __rtsan {
-void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
+
+void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info);
 } // namespace __rtsan
