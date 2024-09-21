@@ -308,6 +308,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 
+  Tokens = annotate("if (Foo *&foo{a})");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
