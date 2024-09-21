@@ -1936,7 +1936,7 @@ bb:
 define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_negC(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_negC:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1 neg_lo:[0,0,1]
+; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 neg_lo:[0,0,1]
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -1945,14 +1945,14 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_negC(<16 x i32> %A, 
 ;
 ; GISEL-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_negC:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1 neg_lo:[0,0,1]
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 neg_lo:[0,0,1]
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 1, <8 x float> %C, i32 1, i32 2, i32 3, i32 4, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 1, <8 x float> %C, i32 1, i32 2, i32 1, i32 4, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1960,7 +1960,7 @@ bb:
 define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_neg_absC(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_neg_absC:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -1969,14 +1969,14 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_neg_absC(<16 x i32> 
 ;
 ; GISEL-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_neg_absC:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1 neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 3, <8 x float> %C, i32 1, i32 2, i32 3, i32 4, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 3, <8 x float> %C, i32 1, i32 2, i32 1, i32 4, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1984,7 +1984,7 @@ bb:
 define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ignoreC(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_ignoreC:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1
+; GFX1210-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -1993,14 +1993,14 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ignoreC(<16 x i32> %
 ;
 ; GISEL-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_ignoreC:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1_WORD1
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], 2, 4 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 4, <8 x float> %C, i32 1, i32 2, i32 3, i32 4, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 4, <8 x float> %C, i32 1, i32 2, i32 1, i32 4, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }

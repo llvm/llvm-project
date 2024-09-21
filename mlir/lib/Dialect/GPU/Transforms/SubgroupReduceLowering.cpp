@@ -210,13 +210,21 @@ Value createSubgroupShuffleReduction(OpBuilder &builder, Location loc,
 struct ScalarSubgroupReduceToShuffles final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   ScalarSubgroupReduceToShuffles(MLIRContext *ctx, unsigned subgroupSize,
-                                 unsigned shuffleBitwidth,
+                                 unsigned shuffleBitwidth, bool matchClustered,
                                  PatternBenefit benefit)
       : OpRewritePattern(ctx, benefit), subgroupSize(subgroupSize),
-        shuffleBitwidth(shuffleBitwidth) {}
+        shuffleBitwidth(shuffleBitwidth), matchClustered(matchClustered) {}
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getClusterSize().has_value() != matchClustered) {
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("op is {0}clustered but pattern is configured to "
+                            "only match {1}clustered ops",
+                            matchClustered ? "non-" : "",
+                            matchClustered ? "" : "non-"));
+    }
+
     auto ci = getAndValidateClusterInfo(op, subgroupSize);
     if (failed(ci))
       return failure();
@@ -262,19 +270,28 @@ struct ScalarSubgroupReduceToShuffles final
 private:
   unsigned subgroupSize = 0;
   unsigned shuffleBitwidth = 0;
+  bool matchClustered = false;
 };
 
 /// Lowers vector gpu subgroup reductions to a series of shuffles.
 struct VectorSubgroupReduceToShuffles final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   VectorSubgroupReduceToShuffles(MLIRContext *ctx, unsigned subgroupSize,
-                                 unsigned shuffleBitwidth,
+                                 unsigned shuffleBitwidth, bool matchClustered,
                                  PatternBenefit benefit)
       : OpRewritePattern(ctx, benefit), subgroupSize(subgroupSize),
-        shuffleBitwidth(shuffleBitwidth) {}
+        shuffleBitwidth(shuffleBitwidth), matchClustered(matchClustered) {}
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getClusterSize().has_value() != matchClustered) {
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("op is {0}clustered but pattern is configured to "
+                            "only match {1}clustered ops",
+                            matchClustered ? "non-" : "",
+                            matchClustered ? "" : "non-"));
+    }
+
     auto ci = getAndValidateClusterInfo(op, subgroupSize);
     if (failed(ci))
       return failure();
@@ -343,6 +360,7 @@ struct VectorSubgroupReduceToShuffles final
 private:
   unsigned subgroupSize = 0;
   unsigned shuffleBitwidth = 0;
+  bool matchClustered = false;
 };
 } // namespace
 
@@ -358,5 +376,14 @@ void mlir::populateGpuLowerSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth, PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToShuffles, VectorSubgroupReduceToShuffles>(
-      patterns.getContext(), subgroupSize, shuffleBitwidth, benefit);
+      patterns.getContext(), subgroupSize, shuffleBitwidth,
+      /*matchClustered=*/false, benefit);
+}
+
+void mlir::populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth, PatternBenefit benefit) {
+  patterns.add<ScalarSubgroupReduceToShuffles, VectorSubgroupReduceToShuffles>(
+      patterns.getContext(), subgroupSize, shuffleBitwidth,
+      /*matchClustered=*/true, benefit);
 }

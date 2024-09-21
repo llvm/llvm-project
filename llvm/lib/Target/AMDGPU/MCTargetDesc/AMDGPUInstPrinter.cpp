@@ -1508,7 +1508,7 @@ void AMDGPUInstPrinter::printMatrixBFMT(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, char AorB) {
-  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  auto Imm = MI->getOperand(OpNo).getImm() & 1;
   if (Imm == 0)
     return;
 
@@ -1517,29 +1517,11 @@ void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
   default:
     O << Imm;
     break;
-  case WMMA::MatrixScale::MATRIX_SCALE_DEFAULT:
-    O << "MATRIX_SCALE_DEFAULT";
+  case WMMA::MatrixScale::MATRIX_SCALE_ROW0:
+    O << "MATRIX_SCALE_ROW0";
     break;
   case WMMA::MatrixScale::MATRIX_SCALE_ROW1:
     O << "MATRIX_SCALE_ROW1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_WORD1:
-    O << "MATRIX_SCALE_WORD1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW1_WORD1:
-    O << "MATRIX_SCALE_ROW1_WORD1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_BYTE1:
-    O << "MATRIX_SCALE_BYTE1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW1_BYTE1:
-    O << "MATRIX_SCALE_ROW1_BYTE1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_WORD1_BYTE1:
-    O << "MATRIX_SCALE_WORD1_BYTE1";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW1_WORD1_BYTE1:
-    O << "MATRIX_SCALE_ROW1_WORD1_BYTE1";
     break;
   }
 }

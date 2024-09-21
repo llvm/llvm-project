@@ -234,7 +234,8 @@ CodeGenTarget::getRegisterClass(const Record *R) const {
   return *getRegBank().getRegClass(R);
 }
 
-std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R) const {
+std::vector<ValueTypeByHwMode>
+CodeGenTarget::getRegisterVTs(const Record *R) const {
   const CodeGenRegister *Reg = getRegBank().getReg(R);
   std::vector<ValueTypeByHwMode> Result;
   for (const auto &RC : getRegBank().getRegClasses()) {

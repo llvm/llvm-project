@@ -186,6 +186,45 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_global(ptr addrspace(1) inreg %ptr, i32 %offset) {
+; GFX1210-LABEL: prefetch_data_sgpr_vgpr_offset_global:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
+; GFX1210-NEXT:    s_endpgm
+;
+; GFX12-LABEL: prefetch_data_sgpr_vgpr_offset_global:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_endpgm
+;
+; GFX11-LABEL: prefetch_data_sgpr_vgpr_offset_global:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_endpgm
+entry:
+  %gep = getelementptr i8, ptr addrspace(1) %ptr, i32 %offset
+  tail call void @llvm.prefetch.p1(ptr addrspace(1) %gep, i32 0, i32 0, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_flat(ptr inreg %ptr, i32 %offset) {
+; GFX1210-LABEL: prefetch_data_sgpr_vgpr_offset_flat:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    flat_prefetch_b8 v0, s[0:1] offset:128 scope:SCOPE_SYS
+; GFX1210-NEXT:    s_endpgm
+;
+; GFX12-LABEL: prefetch_data_sgpr_vgpr_offset_flat:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_endpgm
+;
+; GFX11-LABEL: prefetch_data_sgpr_vgpr_offset_flat:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_endpgm
+entry:
+  %gep1 = getelementptr i8, ptr %ptr, i32 %offset
+  %gep2 = getelementptr i8, ptr %gep1, i32 128
+  tail call void @llvm.prefetch.pf(ptr %gep2, i32 0, i32 0, i32 1)
+  ret void
+}
+
 ; Check LDS and Scratch, we cannot prefetch it
 
 define amdgpu_ps void @prefetch_data_lds(ptr addrspace(3) inreg %ptr) {
@@ -565,11 +604,11 @@ entry:
 ; Force vector prefetch for uniform address with rw = 1 argument.
 
 define amdgpu_ps void @prefetch_data_sgpr_flat_force_vector(ptr inreg %ptr) {
-; GFX1210-SDAG-LABEL: prefetch_data_sgpr_flat_force_vector:
-; GFX1210-SDAG:       ; %bb.0: ; %entry
-; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1210-SDAG-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SYS
-; GFX1210-SDAG-NEXT:    s_endpgm
+; GFX1210-LABEL: prefetch_data_sgpr_flat_force_vector:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    flat_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
+; GFX1210-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: prefetch_data_sgpr_flat_force_vector:
 ; GFX12:       ; %bb.0: ; %entry
@@ -579,12 +618,6 @@ define amdgpu_ps void @prefetch_data_sgpr_flat_force_vector(ptr inreg %ptr) {
 ; GFX11-LABEL: prefetch_data_sgpr_flat_force_vector:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX1210-GISEL-LABEL: prefetch_data_sgpr_flat_force_vector:
-; GFX1210-GISEL:       ; %bb.0: ; %entry
-; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-GISEL-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SYS
-; GFX1210-GISEL-NEXT:    s_endpgm
 entry:
   tail call void @llvm.prefetch.pf(ptr %ptr, i32 1, i32 0, i32 1)
   ret void
