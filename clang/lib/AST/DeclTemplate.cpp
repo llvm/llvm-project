@@ -463,8 +463,6 @@ void FunctionTemplateDecl::addSpecialization(
 }
 
 void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
-  using Base = RedeclarableTemplateDecl;
-
   // If we haven't created a common pointer yet, then it can just be created
   // with the usual method.
   if (!getCommonPtrInternal())

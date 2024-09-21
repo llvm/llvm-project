@@ -1159,7 +1159,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan);
-  licm(Plan);
   legalizeAndOptimizeInductions(Plan);
   removeDeadRecipes(Plan);
 
@@ -1167,6 +1166,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+  licm(Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
