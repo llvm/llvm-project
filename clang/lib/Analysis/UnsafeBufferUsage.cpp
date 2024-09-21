@@ -786,12 +786,12 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     return false; // possibly some user-defined printf function
 
   ASTContext &Ctx = Finder->getASTContext();
-  QualType FristParmTy = FD->getParamDecl(0)->getType();
+  QualType FirstParmTy = FD->getParamDecl(0)->getType();
 
-  if (!FristParmTy->isPointerType())
+  if (!FirstParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = FristParmTy->getAs<PointerType>()->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->getAs<PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
