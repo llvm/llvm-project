@@ -1210,11 +1210,11 @@ bool ValuePointsToCode(lldb::SBValue v) {
 }
 
 int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-   return var_ref << 1 | is_value_location;
+  return var_ref << 1 | is_value_location;
 }
 
 std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-   return std::pair{ location_id >> 1, location_id & 1};
+  return std::pair{location_id >> 1, location_id & 1};
 }
 
 // "Variable": {
@@ -1421,7 +1421,8 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
     object.try_emplace("variablesReference", 0);
 
   if (v.GetDeclaration().IsValid())
-    object.try_emplace("declarationLocationReference", PackLocation(var_ref, false));
+    object.try_emplace("declarationLocationReference",
+                       PackLocation(var_ref, false));
 
   if (ValuePointsToCode(v))
     object.try_emplace("valueLocationReference", PackLocation(var_ref, true));

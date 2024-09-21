@@ -1643,8 +1643,8 @@ void request_evaluate(const llvm::json::Object &request) {
       EmplaceSafeString(body, "type", desc.display_type_name);
       int64_t var_ref = 0;
       if (value.MightHaveChildren() || ValuePointsToCode(value))
-         var_ref = g_dap.variables.InsertVariable(
-          value, /*is_permanent=*/context == "repl");
+        var_ref = g_dap.variables.InsertVariable(
+            value, /*is_permanent=*/context == "repl");
       if (value.MightHaveChildren())
         body.try_emplace("variablesReference", var_ref);
       else
