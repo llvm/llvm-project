@@ -20,17 +20,28 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             # `std::ranges::sort` is implemented as an object of types `__sort`.
             # We never hide the frame of the entry-point into the standard library, even
             # if the name starts with `__` which usually indicates an internal function.
-            "ranges_sort_less(int, int)": ["ranges::__sort::operator()", "test_algorithms"],
+            "ranges_sort_less(int, int)": [
+                "ranges::__sort::operator()",
+                "test_algorithms",
+            ],
             # `ranges::views::transform` internally uses `std::invoke`, and that
             # call also shows up in the stack trace
-            "view_transform(int)": ["::invoke", "ranges::transform_view", "test_algorithms"],
+            "view_transform(int)": [
+                "::invoke",
+                "ranges::transform_view",
+                "test_algorithms",
+            ],
             # Various types of `invoke` calls
             "consume_number(int)": ["::invoke", "test_invoke"],
             "invoke_add(int, int)": ["::invoke", "test_invoke"],
             "Callable::member_function(int) const": ["::invoke", "test_invoke"],
             "Callable::operator()(int) const": ["::invoke", "test_invoke"],
             # Containers
-            "MyKey::operator<(MyKey const&) const": ["less", "::emplace", "test_containers"],
+            "MyKey::operator<(MyKey const&) const": [
+                "less",
+                "::emplace",
+                "test_containers",
+            ],
         }
         stop_set = set()
         while process.GetState() != lldb.eStateExited:
