@@ -27,7 +27,7 @@ struct StableFunctionMapRecord {
     FunctionMap = std::make_unique<StableFunctionMap>();
   }
   StableFunctionMapRecord(std::unique_ptr<StableFunctionMap> FunctionMap)
-      : FunctionMap(std::move(FunctionMap)){};
+      : FunctionMap(std::move(FunctionMap)) {}
 
   /// Serialize the stable function map to a raw_ostream.
   void serialize(raw_ostream &OS) const;

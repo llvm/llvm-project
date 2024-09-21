@@ -26,7 +26,6 @@
 
 namespace llvm {
 
-
 using IndexPairHash = std::pair<IndexPair, stable_hash>;
 using IndexOperandHashVecType = SmallVector<IndexPairHash>;
 
