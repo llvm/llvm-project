@@ -804,9 +804,10 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
-  // Ignore returns.
+  // Record returns as call->call continuation fall-through.
   if (IsReturn)
-    return true;
+    return doTrace(To - 1, To, Count);
+
   BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
@@ -820,16 +821,24 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }
 
-bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
+bool DataAggregator::doTrace(const uint64_t From, const uint64_t To,
                              uint64_t Count) {
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(First.To);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(Second.From);
+  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
+  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
   if (!FromFunc || !ToFunc) {
     LLVM_DEBUG({
-      dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
-             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
-             << " and ending in " << ToFunc->getPrintName()
-             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+      dbgs() << "Out of range trace starting in ";
+      if (FromFunc)
+        dbgs() << formatv("{0} @ {1:x}", *FromFunc,
+                          From - FromFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(From);
+      dbgs() << " and ending in ";
+      if (ToFunc)
+        dbgs() << formatv("{0} @ {1:x}", *ToFunc, To - ToFunc->getAddress());
+      else
+        dbgs() << Twine::utohexstr(To);
+      dbgs() << '\n';
     });
     NumLongRangeTraces += Count;
     return false;
@@ -838,32 +847,30 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     NumInvalidTraces += Count;
     LLVM_DEBUG({
       dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
-             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
+             << formatv(" @ {0:x}", From - FromFunc->getAddress())
              << " and ending in " << ToFunc->getPrintName()
-             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+             << formatv(" @ {0:x}\n", To - ToFunc->getAddress());
     });
     return false;
   }
 
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
-      BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
-                                        Second.From)
-          : getFallthroughsInTrace(*FromFunc, First, Second, Count);
+      BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), From, To)
+          : getFallthroughsInTrace(*FromFunc, From, To, Count);
   if (!FTs) {
     LLVM_DEBUG(
         dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(First.To - FromFunc->getAddress())
+               << " @ " << Twine::utohexstr(From - FromFunc->getAddress())
                << " and ending in " << ToFunc->getPrintName() << " @ "
                << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(Second.From - ToFunc->getAddress()) << '\n');
+               << Twine::utohexstr(To - ToFunc->getAddress()) << '\n');
     NumInvalidTraces += Count;
     return false;
   }
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
-                    << FromFunc->getPrintName() << ":"
-                    << Twine::utohexstr(First.To) << " to "
-                    << Twine::utohexstr(Second.From) << ".\n");
+                    << FromFunc->getPrintName() << ":" << Twine::utohexstr(From)
+                    << " to " << Twine::utohexstr(To) << ".\n");
   BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
   for (auto [From, To] : *FTs) {
     if (BAT) {
@@ -877,10 +884,8 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
 }
 
 std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
-                                       const LBREntry &FirstLBR,
-                                       const LBREntry &SecondLBR,
-                                       uint64_t Count) const {
+DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, uint64_t From,
+                                       uint64_t To, uint64_t Count) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
 
   BinaryContext &BC = BF.getBinaryContext();
@@ -891,8 +896,8 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
   assert(BF.hasCFG() && "can only record traces in CFG state");
 
   // Offsets of the trace within this function.
-  const uint64_t From = FirstLBR.To - BF.getAddress();
-  const uint64_t To = SecondLBR.From - BF.getAddress();
+  From = From - BF.getAddress();
+  To = To - BF.getAddress();
 
   if (From > To)
     return std::nullopt;
@@ -902,24 +907,6 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
 
   if (!FromBB || !ToBB)
     return std::nullopt;
-
-  // Adjust FromBB if the first LBR is a return from the last instruction in
-  // the previous block (that instruction should be a call).
-  if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
-      !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
-    const BinaryBasicBlock *PrevBB =
-        BF.getLayout().getBlock(FromBB->getIndex() - 1);
-    if (PrevBB->getSuccessor(FromBB->getLabel())) {
-      const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
-      if (Instr && BC.MIB->isCall(*Instr))
-        FromBB = PrevBB;
-      else
-        LLVM_DEBUG(dbgs() << "invalid incoming LBR (no call): " << FirstLBR
-                          << '\n');
-    } else {
-      LLVM_DEBUG(dbgs() << "invalid incoming LBR: " << FirstLBR << '\n');
-    }
-  }
 
   // Fill out information for fall-through edges. The From and To could be
   // within the same basic block, e.g. when two call instructions are in the
@@ -937,8 +924,8 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
     // Check for bad LBRs.
     if (!BB->getSuccessor(NextBB->getLabel())) {
       LLVM_DEBUG(dbgs() << "no fall-through for the trace:\n"
-                        << "  " << FirstLBR << '\n'
-                        << "  " << SecondLBR << '\n');
+                        << "  " << From << '\n'
+                        << "  " << To << '\n');
       return std::nullopt;
     }
 
@@ -1595,16 +1582,11 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  for (const auto &AggrLBR : FallthroughLBRs) {
-    const Trace &Loc = AggrLBR.first;
-    const FTInfo &Info = AggrLBR.second;
-    LBREntry First{Loc.From, Loc.From, false};
-    LBREntry Second{Loc.To, Loc.To, false};
+  for (const auto &[Loc, Info]: FallthroughLBRs) {
     if (Info.InternCount)
-      doTrace(First, Second, Info.InternCount);
+      doTrace(Loc.From, Loc.To, Info.InternCount);
     if (Info.ExternCount) {
-      First.From = 0;
-      doTrace(First, Second, Info.ExternCount);
+      doTrace(0, Loc.To, Info.ExternCount);
     }
   }
 
@@ -1768,21 +1750,16 @@ void DataAggregator::processPreAggregated() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   uint64_t NumTraces = 0;
-  for (const AggregatedLBREntry &AggrEntry : AggregatedLBRs) {
-    switch (AggrEntry.EntryType) {
+  for (const auto &[From, To, Count, Mispreds, Type]: AggregatedLBRs) {
+    bool IsExternalOrigin = Type == AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
+    switch (Type) {
     case AggregatedLBREntry::BRANCH:
-      doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds);
+      doBranch(From.Offset, To.Offset, Count, Mispreds);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
-      LBREntry First{AggrEntry.EntryType == AggregatedLBREntry::FT
-                         ? AggrEntry.From.Offset
-                         : 0,
-                     AggrEntry.From.Offset, false};
-      LBREntry Second{AggrEntry.To.Offset, AggrEntry.To.Offset, false};
-      doTrace(First, Second, AggrEntry.Count);
-      NumTraces += AggrEntry.Count;
+      doTrace(IsExternalOrigin ? 0 : From.Offset, To.Offset, Count);
+      NumTraces += Count;
       break;
     }
     }

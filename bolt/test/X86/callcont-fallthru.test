@@ -6,4 +6,4 @@
 # RUN:   --print-cfg --print-only=main | FileCheck %s
 
 # CHECK:      callq foo
-# CHECK-NEXT: count: 0
+# CHECK-NEXT: count: 103204
