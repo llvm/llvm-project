@@ -53,7 +53,31 @@ void CIRGenFunction::buildCXXTemporary(const CXXTemporary *Temporary,
               /*useEHCleanup*/ true);
 }
 
-Address CIRGenFunction::createCleanupActiveFlag() { llvm_unreachable("NYI"); }
+Address CIRGenFunction::createCleanupActiveFlag() {
+  mlir::Location loc = currSrcLoc ? *currSrcLoc : builder.getUnknownLoc();
+
+  // Create a variable to decide whether the cleanup needs to be run.
+  // FIXME: set the insertion point for the alloca to be at the entry
+  // basic block of the previous scope, not the entry block of the function.
+  Address active = CreateTempAllocaWithoutCast(
+      builder.getBoolTy(), CharUnits::One(), loc, "cleanup.cond");
+  mlir::Value falseVal, trueVal;
+  {
+    // Place true/false flags close to their allocas.
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointAfterValue(active.getPointer());
+    falseVal = builder.getFalse(loc);
+    trueVal = builder.getTrue(loc);
+  }
+
+  // Initialize it to false at a site that's guaranteed to be run
+  // before each evaluation.
+  setBeforeOutermostConditional(falseVal, active);
+
+  // Initialize it to true at the current location.
+  builder.createStore(loc, trueVal, active);
+  return active;
+}
 
 DominatingValue<RValue>::saved_type
 DominatingValue<RValue>::saved_type::save(CIRGenFunction &CGF, RValue rv) {
@@ -129,21 +153,30 @@ static void destroyOptimisticNormalEntry(CIRGenFunction &CGF,
 static void buildCleanup(CIRGenFunction &CGF, EHScopeStack::Cleanup *Fn,
                          EHScopeStack::Cleanup::Flags flags,
                          Address ActiveFlag) {
+  auto emitCleanup = [&]() {
+    // Ask the cleanup to emit itself.
+    assert(CGF.HaveInsertPoint() && "expected insertion point");
+    Fn->Emit(CGF, flags);
+    assert(CGF.HaveInsertPoint() && "cleanup ended with no insertion point?");
+  };
+
   // If there's an active flag, load it and skip the cleanup if it's
   // false.
-  if (ActiveFlag.isValid()) {
-    llvm_unreachable("NYI");
-  }
+  cir::CIRGenBuilderTy &builder = CGF.getBuilder();
+  mlir::Location loc =
+      CGF.currSrcLoc ? *CGF.currSrcLoc : builder.getUnknownLoc();
 
-  // Ask the cleanup to emit itself.
-  assert(CGF.HaveInsertPoint() && "expected insertion point");
-  Fn->Emit(CGF, flags);
-  assert(CGF.HaveInsertPoint() && "cleanup ended with no insertion point?");
-
-  // Emit the continuation block if there was an active flag.
   if (ActiveFlag.isValid()) {
-    llvm_unreachable("NYI");
+    mlir::Value isActive = builder.createLoad(loc, ActiveFlag);
+    builder.create<mlir::cir::IfOp>(loc, isActive, false,
+                                    [&](mlir::OpBuilder &b, mlir::Location) {
+                                      emitCleanup();
+                                      builder.createYield(loc);
+                                    });
+  } else {
+    emitCleanup();
   }
+  // No need to emit continuation block because CIR uses a cir.if.
 }
 
 /// Pops a cleanup block. If the block includes a normal cleanup, the

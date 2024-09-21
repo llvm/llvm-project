@@ -1844,11 +1844,12 @@ public:
 
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
-    // llvm::BasicBlock *StartBB;
+    mlir::OpBuilder::InsertPoint insertPt;
 
   public:
     ConditionalEvaluation(CIRGenFunction &CGF)
-    /*: StartBB(CGF.Builder.GetInsertBlock())*/ {}
+        : insertPt(CGF.builder.saveInsertionPoint()) {}
+    ConditionalEvaluation(mlir::OpBuilder::InsertPoint ip) : insertPt(ip) {}
 
     void begin(CIRGenFunction &CGF) {
       assert(CGF.OutermostConditional != this);
@@ -1862,9 +1863,10 @@ public:
         CGF.OutermostConditional = nullptr;
     }
 
-    /// Returns a block which will be executed prior to each
-    /// evaluation of the conditional code.
-    // llvm::BasicBlock *getStartingBlock() const { return StartBB; }
+    /// Returns the insertion point which will be executed prior to each
+    /// evaluation of the conditional code. In LLVM OG, this method
+    /// is called getStartingBlock.
+    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
   };
 
   struct ConditionalInfo {
@@ -1882,7 +1884,16 @@ public:
 
   void setBeforeOutermostConditional(mlir::Value value, Address addr) {
     assert(isInConditionalBranch());
-    llvm_unreachable("NYI");
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(OutermostConditional->getInsertPoint());
+      builder.createStore(
+          value.getLoc(), value, addr,
+          /*volatile*/ false,
+          mlir::IntegerAttr::get(
+              mlir::IntegerType::get(value.getContext(), 64),
+              (uint64_t)addr.getAlignment().getAsAlign().value()));
+    }
   }
 
   void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,

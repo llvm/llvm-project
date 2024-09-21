@@ -53,8 +53,8 @@ namespace test15 {
   // CIR:           %[[VAL_5:.*]] = cir.call @_ZnwmPvb(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]])
   // CIR:           %[[VAL_6:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
   // CIR:           %[[VAL_7:.*]] = cir.cmp(ne, %[[VAL_5]], %[[VAL_6]]) : !cir.ptr<!void>, !cir.bool
+  // CIR:           %[[VAL_8:.*]] = cir.cast(bitcast, %[[VAL_5]] : !cir.ptr<!void>), !cir.ptr<![[TEST15A]]>
   // CIR:           cir.if %[[VAL_7]] {
-  // CIR:             %[[VAL_8:.*]] = cir.cast(bitcast, %[[VAL_5]] : !cir.ptr<!void>), !cir.ptr<![[TEST15A]]>
   // CIR:             cir.call @_ZN6test151AC1Ev(%[[VAL_8]]) : (!cir.ptr<![[TEST15A]]>) -> ()
   // CIR:           }
   // CIR:           cir.return

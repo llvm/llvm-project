@@ -937,18 +937,16 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
 
   // The null-check means that the initializer is conditionally
   // evaluated.
-  ConditionalEvaluation conditional(*this);
-  mlir::OpBuilder::InsertPoint ifBody, postIfBody;
+  mlir::OpBuilder::InsertPoint ifBody, postIfBody, preIfBody;
+  mlir::Value nullCmpResult;
   mlir::Location loc = getLoc(E->getSourceRange());
 
   if (nullCheck) {
-    conditional.begin(*this);
     mlir::Value nullPtr =
         builder.getNullPtr(allocation.getPointer().getType(), loc);
-    mlir::Value nullCmpResult = builder.createCompare(
-        loc, mlir::cir::CmpOpKind::ne, allocation.getPointer(), nullPtr);
-
-    // mlir::Value Failed = CGF.getBuilder().createNot(Success);
+    nullCmpResult = builder.createCompare(loc, mlir::cir::CmpOpKind::ne,
+                                          allocation.getPointer(), nullPtr);
+    preIfBody = builder.saveInsertionPoint();
     builder.create<mlir::cir::IfOp>(loc, nullCmpResult,
                                     /*withElseRegion=*/false,
                                     [&](mlir::OpBuilder &, mlir::Location) {
@@ -957,10 +955,21 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
     postIfBody = builder.saveInsertionPoint();
   }
 
+  // Make sure the conditional evaluation uses the insertion
+  // point right before the if check.
+  mlir::OpBuilder::InsertPoint ip = builder.saveInsertionPoint();
+  if (ifBody.isSet()) {
+    builder.setInsertionPointAfterValue(nullCmpResult);
+    ip = builder.saveInsertionPoint();
+  }
+  ConditionalEvaluation conditional(ip);
+
   // All the actual work to be done should be placed inside the IfOp above,
   // so change the insertion point over there.
-  if (ifBody.isSet())
+  if (ifBody.isSet()) {
+    conditional.begin(*this);
     builder.restoreInsertionPoint(ifBody);
+  }
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
@@ -982,9 +991,25 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
     llvm_unreachable("NYI");
   }
 
-  mlir::Type elementTy = getTypes().convertTypeForMem(allocType);
-  Address result = builder.createElementBitCast(getLoc(E->getSourceRange()),
-                                                allocation, elementTy);
+  mlir::Type elementTy;
+  Address result = Address::invalid();
+  auto createCast = [&]() {
+    elementTy = getTypes().convertTypeForMem(allocType);
+    result = builder.createElementBitCast(getLoc(E->getSourceRange()),
+                                          allocation, elementTy);
+  };
+
+  if (preIfBody.isSet()) {
+    // Generate any cast before the if condition check on the null because the
+    // result can be used after the if body and should dominate all potential
+    // uses.
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    assert(nullCmpResult && "expected");
+    builder.setInsertionPointAfterValue(nullCmpResult);
+    createCast();
+  } else {
+    createCast();
+  }
 
   // Passing pointer through launder.invariant.group to avoid propagation of
   // vptrs information which may be included in previous type.
