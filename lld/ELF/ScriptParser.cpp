@@ -47,7 +47,7 @@ using namespace lld::elf;
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
-  ScriptParser(Ctx &ctx, MemoryBufferRef mb) : ScriptLexer(ctx, mb) {}
+  ScriptParser(Ctx &ctx, MemoryBufferRef mb) : ScriptLexer(ctx, mb), ctx(ctx) {}
 
   void readLinkerScript();
   void readVersionScript();
@@ -126,6 +126,8 @@ private:
   std::pair<SmallVector<SymbolVersion, 0>, SmallVector<SymbolVersion, 0>>
   readSymbols();
 
+  Ctx &ctx;
+
   // If we are currently parsing a PROVIDE|PROVIDE_HIDDEN command,
   // then this member is set to the PROVIDE symbol name.
   std::optional<llvm::StringRef> activeProvideSym;
@@ -140,16 +142,16 @@ static StringRef unquote(StringRef s) {
 
 // Some operations only support one non absolute value. Move the
 // absolute one to the right hand side for convenience.
-static void moveAbsRight(ExprValue &a, ExprValue &b) {
+static void moveAbsRight(LinkerScript &s, ExprValue &a, ExprValue &b) {
   if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
     std::swap(a, b);
   if (!b.isAbsolute())
-    ctx.script->recordError(
-        a.loc + ": at least one side of the expression must be absolute");
+    s.recordError(a.loc +
+                  ": at least one side of the expression must be absolute");
 }
 
-static ExprValue add(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
+static ExprValue add(LinkerScript &s, ExprValue a, ExprValue b) {
+  moveAbsRight(s, a, b);
   return {a.sec, a.forceAbsolute, a.getSectionOffset() + b.getValue(), a.loc};
 }
 
@@ -160,20 +162,20 @@ static ExprValue sub(ExprValue a, ExprValue b) {
   return {a.sec, false, a.getSectionOffset() - b.getValue(), a.loc};
 }
 
-static ExprValue bitAnd(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
+static ExprValue bitAnd(LinkerScript &s, ExprValue a, ExprValue b) {
+  moveAbsRight(s, a, b);
   return {a.sec, a.forceAbsolute,
           (a.getValue() & b.getValue()) - a.getSecAddr(), a.loc};
 }
 
-static ExprValue bitXor(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
+static ExprValue bitXor(LinkerScript &s, ExprValue a, ExprValue b) {
+  moveAbsRight(s, a, b);
   return {a.sec, a.forceAbsolute,
           (a.getValue() ^ b.getValue()) - a.getSecAddr(), a.loc};
 }
 
-static ExprValue bitOr(ExprValue a, ExprValue b) {
-  moveAbsRight(a, b);
+static ExprValue bitOr(LinkerScript &s, ExprValue a, ExprValue b) {
+  moveAbsRight(s, a, b);
   return {a.sec, a.forceAbsolute,
           (a.getValue() | b.getValue()) - a.getSecAddr(), a.loc};
 }
@@ -561,15 +563,15 @@ void ScriptParser::readSearchDir() {
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr addrExpr;
   if (consume(":")) {
-    addrExpr = [&] { return ctx.script->getDot(); };
+    addrExpr = [s = ctx.script] { return s->getDot(); };
   } else {
     addrExpr = readExpr();
     expect(":");
   }
   // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
   // lmaExpr will ensure this, even if the start address is specified.
-  Expr lmaExpr =
-      consume("AT") ? readParenExpr() : [&] { return ctx.script->getDot(); };
+  Expr lmaExpr = consume("AT") ? readParenExpr()
+                               : [s = ctx.script] { return s->getDot(); };
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -891,10 +893,10 @@ Expr ScriptParser::readAssert() {
   StringRef msg = readName();
   expect(")");
 
-  return [=] {
+  return [=, s = ctx.script]() -> ExprValue {
     if (!e().getValue())
       errorOrWarn(msg);
-    return ctx.script->getDot();
+    return s->getDot();
   };
 }
 
@@ -1196,8 +1198,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   Expr e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = [=, c = op[0]]() -> ExprValue {
-      ExprValue lhs = ctx.script->getSymbolValue(name, loc);
+    e = [=, s = ctx.script, c = op[0]]() -> ExprValue {
+      ExprValue lhs = s->getSymbolValue(name, loc);
       switch (c) {
       case '*':
         return lhs.getValue() * e().getValue();
@@ -1207,7 +1209,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
         error(loc + ": division by zero");
         return 0;
       case '+':
-        return add(lhs, e());
+        return add(*s, lhs, e());
       case '-':
         return sub(lhs, e());
       case '<':
@@ -1241,7 +1243,7 @@ Expr ScriptParser::readExpr() {
 
 Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
   if (op == "+")
-    return [=] { return add(l(), r()); };
+    return [=, s = ctx.script] { return add(*s, l(), r()); };
   if (op == "-")
     return [=] { return sub(l(), r()); };
   if (op == "*")
@@ -1285,11 +1287,11 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
   if (op == "&&")
     return [=] { return l().getValue() && r().getValue(); };
   if (op == "&")
-    return [=] { return bitAnd(l(), r()); };
+    return [=, s = ctx.script] { return bitAnd(*s, l(), r()); };
   if (op == "^")
-    return [=] { return bitXor(l(), r()); };
+    return [=, s = ctx.script] { return bitXor(*s, l(), r()); };
   if (op == "|")
-    return [=] { return bitOr(l(), r()); };
+    return [=, s = ctx.script] { return bitOr(*s, l(), r()); };
   llvm_unreachable("invalid operator");
 }
 
@@ -1324,7 +1326,7 @@ Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
 
 Expr ScriptParser::getPageSize() {
   std::string location = getCurrentLocation();
-  return [=]() -> uint64_t {
+  return [=, &ctx = this->ctx]() -> uint64_t {
     if (ctx.target)
       return ctx.arg.commonPageSize;
     error(location + ": unable to calculate page size");
@@ -1337,7 +1339,7 @@ Expr ScriptParser::readConstant() {
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
-    return [&] { return ctx.arg.maxPageSize; };
+    return [&ctx = this->ctx] { return ctx.arg.maxPageSize; };
   setError("unknown constant: " + s);
   return [] { return 0; };
 }
@@ -1459,9 +1461,10 @@ StringRef ScriptParser::readParenName() {
   return tok;
 }
 
-static void checkIfExists(const OutputSection &osec, StringRef location) {
-  if (osec.location.empty() && ctx.script->errorOnMissingSection)
-    ctx.script->recordError(location + ": undefined section " + osec.name);
+static void checkIfExists(LinkerScript &script, const OutputSection &osec,
+                          StringRef location) {
+  if (osec.location.empty() && script.errorOnMissingSection)
+    script.recordError(location + ": undefined section " + osec.name);
 }
 
 static bool isValidSymbolName(StringRef s) {
@@ -1505,8 +1508,8 @@ Expr ScriptParser::readPrimary() {
     StringRef name = readParenName();
     OutputSection *osec = &ctx.script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
-    return [=]() -> ExprValue {
-      checkIfExists(*osec, location);
+    return [=, s = ctx.script]() -> ExprValue {
+      checkIfExists(*s, *osec, location);
       return {osec, false, 0, location};
     };
   }
@@ -1515,8 +1518,9 @@ Expr ScriptParser::readPrimary() {
     Expr e = readExpr();
     if (consume(")")) {
       e = checkAlignment(e, location);
-      return
-          [=] { return alignToPowerOf2(ctx.script->getDot(), e().getValue()); };
+      return [=, s = ctx.script] {
+        return alignToPowerOf2(s->getDot(), e().getValue());
+      };
     }
     expect(",");
     Expr e2 = checkAlignment(readExpr(), location);
@@ -1530,8 +1534,8 @@ Expr ScriptParser::readPrimary() {
   if (tok == "ALIGNOF") {
     StringRef name = readParenName();
     OutputSection *osec = &ctx.script->getOrCreateOutputSection(name)->osec;
-    return [=] {
-      checkIfExists(*osec, location);
+    return [=, s = ctx.script] {
+      checkIfExists(*s, *osec, location);
       return osec->addralign;
     };
   }
@@ -1546,16 +1550,16 @@ Expr ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     ctx.script->seenDataAlign = true;
-    return [=] {
+    return [=, s = ctx.script] {
       uint64_t align = std::max(uint64_t(1), e().getValue());
-      return (ctx.script->getDot() + align - 1) & -align;
+      return (s->getDot() + align - 1) & -align;
     };
   }
   if (tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return [&] { return ctx.script->getDot(); };
+    return [s = ctx.script] { return s->getDot(); };
   }
   if (tok == "DATA_SEGMENT_RELRO_END") {
     // GNU linkers implements more complicated logic to handle
@@ -1567,7 +1571,7 @@ Expr ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     ctx.script->seenRelroEnd = true;
-    return [&] {
+    return [&ctx = this->ctx] {
       return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize);
     };
   }
@@ -1576,7 +1580,7 @@ Expr ScriptParser::readPrimary() {
     // Return 1 if s is defined. If the definition is only found in a linker
     // script, it must happen before this DEFINED.
     auto order = ctx.scriptSymOrderCounter++;
-    return [=] {
+    return [=, &ctx = this->ctx] {
       Symbol *s = symtab.find(name);
       return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
                                                                          : 0;
@@ -1594,8 +1598,8 @@ Expr ScriptParser::readPrimary() {
     StringRef name = readParenName();
     OutputSection *osec = &ctx.script->getOrCreateOutputSection(name)->osec;
     osec->usedInExpression = true;
-    return [=] {
-      checkIfExists(*osec, location);
+    return [=, s = ctx.script] {
+      checkIfExists(*s, *osec, location);
       return osec->getLMA();
     };
   }
@@ -1647,7 +1651,7 @@ Expr ScriptParser::readPrimary() {
 
   // Tok is the dot.
   if (tok == ".")
-    return [=] { return ctx.script->getSymbolValue(tok, location); };
+    return [=, s = ctx.script] { return s->getSymbolValue(tok, location); };
 
   // Tok is a literal number.
   if (std::optional<uint64_t> val = parseInt(tok))
@@ -1662,7 +1666,7 @@ Expr ScriptParser::readPrimary() {
     ctx.script->provideMap[*activeProvideSym].push_back(tok);
   else
     ctx.script->referencedSymbols.push_back(tok);
-  return [=] { return ctx.script->getSymbolValue(tok, location); };
+  return [=, s = ctx.script] { return s->getSymbolValue(tok, location); };
 }
 
 Expr ScriptParser::readTernary(Expr cond) {

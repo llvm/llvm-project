@@ -242,11 +242,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
-                               G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
-                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
-                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
-                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
+  getActionDefinitionsBuilder(
+      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM,
+       G_FMAXIMUM, G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
+       G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
@@ -260,7 +259,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_FABS)
+  getActionDefinitionsBuilder({G_FABS, G_FNEG})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
