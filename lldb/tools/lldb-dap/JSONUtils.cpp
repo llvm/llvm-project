@@ -769,10 +769,14 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     else
       object.try_emplace("line", 0);
     auto column = line_entry.GetColumn();
-    object.try_emplace("column", column);
+    if (column == 0)
+      object.try_emplace("column", 1);
+    else
+      object.try_emplace("column", column);
   } else {
     object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
+    // column indices start at 1 by default, column 0 is an invalid response
+    object.try_emplace("column", 1);
   }
 
   const auto pc = frame.GetPC();
