@@ -2,7 +2,6 @@ include_directories(..)
 
 set(RTSAN_CXX_SOURCES
   rtsan.cpp
-  rtsan_assertions.cpp
   rtsan_context.cpp
   rtsan_diagnostics.cpp
   rtsan_flags.cpp
