@@ -2134,7 +2134,9 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  return this->delegate(E->getString());
+  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
+    return this->emitGetPtrGlobal(*I, E);
+  return false;
 }
 
 template <class Emitter>
