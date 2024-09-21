@@ -9,8 +9,8 @@
 // Part of the RealtimeSanitizer runtime library
 //
 //===----------------------------------------------------------------------===//
-
 #include "rtsan/rtsan_assertions.h"
+
 #include "rtsan/rtsan.h"
 #include "rtsan/rtsan_diagnostics.h"
 

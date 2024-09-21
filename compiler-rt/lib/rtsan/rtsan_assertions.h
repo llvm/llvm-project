@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "rtsan_context.h"
+#include "rtsan/rtsan_context.h"
 
 namespace __rtsan {
 void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
