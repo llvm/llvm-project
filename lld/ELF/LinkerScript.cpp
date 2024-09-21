@@ -834,7 +834,7 @@ void LinkerScript::processSymbolAssignments() {
   // `st` captures the local AddressState and makes it accessible deliberately.
   // This is needed as there are some cases where we cannot just thread the
   // current state through to a lambda function created by the script parser.
-  AddressState st;
+  AddressState st(*this);
   state = &st;
   st.outSec = aether;
 
@@ -1468,8 +1468,8 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
                  [](const PhdrEntry *e) { return e->p_type == PT_PHDR; });
 }
 
-LinkerScript::AddressState::AddressState() {
-  for (auto &mri : ctx.script->memoryRegions) {
+LinkerScript::AddressState::AddressState(const LinkerScript &script) {
+  for (auto &mri : script.memoryRegions) {
     MemoryRegion *mr = mri.second;
     mr->curPos = (mr->origin)().getValue();
   }
@@ -1495,7 +1495,7 @@ LinkerScript::assignAddresses() {
   }
 
   OutputSection *changedOsec = nullptr;
-  AddressState st;
+  AddressState st(*this);
   state = &st;
   errorOnMissingSection = true;
   st.outSec = aether;
