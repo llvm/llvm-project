@@ -1,4 +1,4 @@
-//===--- rtsan_stack.h - Realtime Sanitizer ---------------------*- C++ -*-===//
+//===--- rtsan_diagnostics.h - Realtime Sanitizer ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Part of the RealtimeSanitizer runtime library
+//
 //===----------------------------------------------------------------------===//
 
 #pragma once
 
-#include <sanitizer_common/sanitizer_internal_defs.h>
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 namespace __rtsan {
-void PrintStackTrace(__sanitizer::uptr pc, __sanitizer::uptr bp);
+void PrintDiagnostics(const char *intercepted_function_name,
+                      __sanitizer::uptr pc, __sanitizer::uptr bp);
 } // namespace __rtsan
