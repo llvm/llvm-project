@@ -3497,222 +3497,40 @@ def: Pat<(v2i16 (scalar_to_vector (i16 Int16Regs:$a))),
          (CVT_u32_u16 Int16Regs:$a, CvtNONE)>;
 
 //
-// Rotate: Use ptx shf instruction if available.
+// Funnel-Shift
 //
 
 // Create SDNodes so they can be used in the DAG code, e.g.
 // NVPTXISelLowering (LowerShiftLeftParts and LowerShiftRightParts)
-def FUN_SHFL_CLAMP : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
-def FUN_SHFR_CLAMP : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
+def fshl_clamp : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
+def fshr_clamp : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
 
 // Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
 // no side effects.
 let hasSideEffects = false in {
+  multiclass ShfInst<string mode, SDNode op> {
+    def _i
+      : NVPTXInst<(outs Int32Regs:$dst),
+                  (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
+                  "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
+                  [(set Int32Regs:$dst,
+                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt)))]>,
+        Requires<[hasHWROT32]>;
 
-  def SHF_L_CLAMP_B32_REG :
-    NVPTXInst<(outs Int32Regs:$dst),
-              (ins Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-              "shf.l.clamp.b32 \t$dst, $lo, $hi, $amt;",
-              [(set Int32Regs:$dst,
-                (FUN_SHFL_CLAMP (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt)))]>,
-    Requires<[hasHWROT32]>;
+    def _r
+      : NVPTXInst<(outs Int32Regs:$dst),
+                  (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
+                  "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
+                  [(set Int32Regs:$dst,
+                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt)))]>,
+        Requires<[hasHWROT32]>;
+  }
 
-  def SHF_R_CLAMP_B32_REG :
-    NVPTXInst<(outs Int32Regs:$dst),
-              (ins Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-              "shf.r.clamp.b32 \t$dst, $lo, $hi, $amt;",
-              [(set Int32Regs:$dst,
-              (FUN_SHFR_CLAMP (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt)))]>,
-    Requires<[hasHWROT32]>;
-
-  def SHF_L_WRAP_B32_IMM
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_L_WRAP_B32_REG
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_R_WRAP_B32_IMM
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_R_WRAP_B32_REG
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
+  defm SHF_L_CLAMP : ShfInst<"l.clamp", fshl_clamp>;
+  defm SHF_R_CLAMP : ShfInst<"r.clamp", fshr_clamp>;
+  defm SHF_L_WRAP  : ShfInst<"l.wrap", fshl>;
+  defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
 }
-
-// 32 bit r2 = rotl r1, n
-//    =>
-//        r2 = shf.l r1, r1, n
-def : Pat<(rotl (i32 Int32Regs:$src), (i32 imm:$amt)),
-          (SHF_L_WRAP_B32_IMM Int32Regs:$src, Int32Regs:$src, imm:$amt)>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(rotl (i32 Int32Regs:$src), (i32 Int32Regs:$amt)),
-          (SHF_L_WRAP_B32_IMM Int32Regs:$src, Int32Regs:$src, Int32Regs:$amt)>,
-      Requires<[hasHWROT32]>;
-
-// 32 bit r2 = rotr r1, n
-//    =>
-//        r2 = shf.r r1, r1, n
-def : Pat<(rotr (i32 Int32Regs:$src), (i32 imm:$amt)),
-          (SHF_R_WRAP_B32_IMM Int32Regs:$src, Int32Regs:$src, imm:$amt)>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(rotr (i32 Int32Regs:$src), (i32 Int32Regs:$amt)),
-          (SHF_R_WRAP_B32_IMM Int32Regs:$src, Int32Regs:$src, Int32Regs:$amt)>,
-      Requires<[hasHWROT32]>;
-
-// HW version of rotate 64
-def : Pat<(rotl Int64Regs:$src, (i32 imm:$amt)),
-          (V2I32toI64
-            (SHF_L_WRAP_B32_IMM (I64toI32H Int64Regs:$src),
-                                (I64toI32L Int64Regs:$src), imm:$amt),
-            (SHF_L_WRAP_B32_IMM (I64toI32L Int64Regs:$src),
-                                (I64toI32H Int64Regs:$src), imm:$amt))>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(rotl Int64Regs:$src, (i32 Int32Regs:$amt)),
-          (V2I32toI64
-            (SHF_L_WRAP_B32_REG (I64toI32H Int64Regs:$src),
-                                (I64toI32L Int64Regs:$src), Int32Regs:$amt),
-            (SHF_L_WRAP_B32_REG (I64toI32L Int64Regs:$src),
-                                (I64toI32H Int64Regs:$src), Int32Regs:$amt))>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(rotr Int64Regs:$src, (i32 imm:$amt)),
-          (V2I32toI64
-            (SHF_R_WRAP_B32_IMM (I64toI32L Int64Regs:$src),
-                                (I64toI32H Int64Regs:$src), imm:$amt),
-            (SHF_R_WRAP_B32_IMM (I64toI32H Int64Regs:$src),
-                                (I64toI32L Int64Regs:$src), imm:$amt))>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(rotr Int64Regs:$src, (i32 Int32Regs:$amt)),
-          (V2I32toI64
-            (SHF_R_WRAP_B32_REG (I64toI32L Int64Regs:$src),
-                                (I64toI32H Int64Regs:$src), Int32Regs:$amt),
-            (SHF_R_WRAP_B32_REG (I64toI32H Int64Regs:$src),
-                                (I64toI32L Int64Regs:$src), Int32Regs:$amt))>,
-      Requires<[hasHWROT32]>;
-
-// 32-bit software rotate by immediate.  $amt2 should equal 32 - $amt1.
-def ROT32imm_sw :
-  NVPTXInst<(outs Int32Regs:$dst),
-            (ins Int32Regs:$src, i32imm:$amt1, i32imm:$amt2),
-            "{{\n\t"
-            ".reg .b32 %lhs;\n\t"
-            ".reg .b32 %rhs;\n\t"
-            "shl.b32 \t%lhs, $src, $amt1;\n\t"
-            "shr.b32 \t%rhs, $src, $amt2;\n\t"
-            "add.u32 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            []>;
-
-def SUB_FRM_32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def : Pat<(rotl (i32 Int32Regs:$src), (i32 imm:$amt)),
-          (ROT32imm_sw Int32Regs:$src, imm:$amt, (SUB_FRM_32 node:$amt))>,
-      Requires<[noHWROT32]>;
-def : Pat<(rotr (i32 Int32Regs:$src), (i32 imm:$amt)),
-          (ROT32imm_sw Int32Regs:$src, (SUB_FRM_32 node:$amt), imm:$amt)>,
-      Requires<[noHWROT32]>;
-
-// 32-bit software rotate left by register.
-def ROTL32reg_sw :
-  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$src, Int32Regs:$amt),
-            "{{\n\t"
-            ".reg .b32 %lhs;\n\t"
-            ".reg .b32 %rhs;\n\t"
-            ".reg .b32 %amt2;\n\t"
-            "shl.b32 \t%lhs, $src, $amt;\n\t"
-            "sub.s32 \t%amt2, 32, $amt;\n\t"
-            "shr.b32 \t%rhs, $src, %amt2;\n\t"
-            "add.u32 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            [(set Int32Regs:$dst, (rotl (i32 Int32Regs:$src), (i32 Int32Regs:$amt)))]>,
-           Requires<[noHWROT32]>;
-
-// 32-bit software rotate right by register.
-def ROTR32reg_sw :
-  NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$src, Int32Regs:$amt),
-            "{{\n\t"
-            ".reg .b32 %lhs;\n\t"
-            ".reg .b32 %rhs;\n\t"
-            ".reg .b32 %amt2;\n\t"
-            "shr.b32 \t%lhs, $src, $amt;\n\t"
-            "sub.s32 \t%amt2, 32, $amt;\n\t"
-            "shl.b32 \t%rhs, $src, %amt2;\n\t"
-            "add.u32 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            [(set Int32Regs:$dst, (rotr (i32 Int32Regs:$src), (i32 Int32Regs:$amt)))]>,
-           Requires<[noHWROT32]>;
-
-// 64-bit software rotate by immediate.  $amt2 should equal 64 - $amt1.
-def ROT64imm_sw :
-  NVPTXInst<(outs Int64Regs:$dst),
-            (ins Int64Regs:$src, i32imm:$amt1, i32imm:$amt2),
-            "{{\n\t"
-            ".reg .b64 %lhs;\n\t"
-            ".reg .b64 %rhs;\n\t"
-            "shl.b64 \t%lhs, $src, $amt1;\n\t"
-            "shr.b64 \t%rhs, $src, $amt2;\n\t"
-            "add.u64 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            []>;
-
-def SUB_FRM_64 : SDNodeXForm<imm, [{
-    return CurDAG->getTargetConstant(64-N->getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def : Pat<(rotl Int64Regs:$src, (i32 imm:$amt)),
-          (ROT64imm_sw Int64Regs:$src, imm:$amt, (SUB_FRM_64 node:$amt))>,
-           Requires<[noHWROT32]>;
-def : Pat<(rotr Int64Regs:$src, (i32 imm:$amt)),
-          (ROT64imm_sw Int64Regs:$src, (SUB_FRM_64 node:$amt), imm:$amt)>,
-           Requires<[noHWROT32]>;
-
-// 64-bit software rotate left by register.
-def ROTL64reg_sw :
-  NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$src, Int32Regs:$amt),
-            "{{\n\t"
-            ".reg .b64 %lhs;\n\t"
-            ".reg .b64 %rhs;\n\t"
-            ".reg .u32 %amt2;\n\t"
-            "and.b32 \t%amt2, $amt, 63;\n\t"
-            "shl.b64 \t%lhs, $src, %amt2;\n\t"
-            "sub.u32 \t%amt2, 64, %amt2;\n\t"
-            "shr.b64 \t%rhs, $src, %amt2;\n\t"
-            "add.u64 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            [(set Int64Regs:$dst, (rotl Int64Regs:$src, (i32 Int32Regs:$amt)))]>,
-           Requires<[noHWROT32]>;
-
-def ROTR64reg_sw :
-  NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$src, Int32Regs:$amt),
-            "{{\n\t"
-            ".reg .b64 %lhs;\n\t"
-            ".reg .b64 %rhs;\n\t"
-            ".reg .u32 %amt2;\n\t"
-            "and.b32 \t%amt2, $amt, 63;\n\t"
-            "shr.b64 \t%lhs, $src, %amt2;\n\t"
-            "sub.u32 \t%amt2, 64, %amt2;\n\t"
-            "shl.b64 \t%rhs, $src, %amt2;\n\t"
-            "add.u64 \t$dst, %lhs, %rhs;\n\t"
-            "}}",
-            [(set Int64Regs:$dst, (rotr Int64Regs:$src, (i32 Int32Regs:$amt)))]>,
-           Requires<[noHWROT32]>;
 
 // Count leading zeros
 let hasSideEffects = false in {
