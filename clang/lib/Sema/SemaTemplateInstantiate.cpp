@@ -1646,6 +1646,21 @@ namespace {
                                            SubstTemplateTypeParmPackTypeLoc TL,
                                            bool SuppressObjCLifetime);
 
+    QualType
+    TransformSubstTemplateTypeParmType(TypeLocBuilder &TLB,
+                                       SubstTemplateTypeParmTypeLoc TL) {
+      if (SemaRef.CodeSynthesisContexts.back().Kind !=
+          Sema::CodeSynthesisContext::ConstraintSubstitution)
+        return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
+
+      auto PackIndex = TL.getTypePtr()->getPackIndex();
+      std::optional<Sema::ArgumentPackSubstitutionIndexRAII> SubstIndex;
+      if (SemaRef.ArgumentPackSubstitutionIndex == -1 && PackIndex)
+        SubstIndex.emplace(SemaRef, *PackIndex);
+
+      return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
+    }
+
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
       if (auto TypeAlias = getEnclosingTypeAliasTemplateDecl(getSema());
@@ -3056,6 +3071,46 @@ namespace {
 
 } // namespace
 
+namespace {
+
+struct ExpandPackedTypeConstraints
+    : TreeTransform<ExpandPackedTypeConstraints> {
+
+  using inherited = TreeTransform<ExpandPackedTypeConstraints>;
+
+  ExpandPackedTypeConstraints(Sema &SemaRef) : inherited(SemaRef) {}
+
+  using inherited::TransformTemplateTypeParmType;
+
+  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
+                                         TemplateTypeParmTypeLoc TL, bool) {
+    const TemplateTypeParmType *T = TL.getTypePtr();
+    if (!T->isParameterPack()) {
+      TemplateTypeParmTypeLoc NewTL =
+          TLB.push<TemplateTypeParmTypeLoc>(TL.getType());
+      NewTL.setNameLoc(TL.getNameLoc());
+      return TL.getType();
+    }
+
+    assert(SemaRef.ArgumentPackSubstitutionIndex != -1);
+
+    QualType Result = SemaRef.Context.getSubstTemplateTypeParmType(
+        TL.getType(), T->getDecl(), T->getIndex(),
+        SemaRef.ArgumentPackSubstitutionIndex);
+    SubstTemplateTypeParmTypeLoc NewTL =
+        TLB.push<SubstTemplateTypeParmTypeLoc>(Result);
+    NewTL.setNameLoc(TL.getNameLoc());
+    return Result;
+  }
+
+  bool SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
+                              TemplateArgumentListInfo &Out) {
+    return inherited::TransformTemplateArguments(Args.begin(), Args.end(), Out);
+  }
+};
+
+} // namespace
+
 bool Sema::SubstTypeConstraint(
     TemplateTypeParmDecl *Inst, const TypeConstraint *TC,
     const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -3064,9 +3119,62 @@ bool Sema::SubstTypeConstraint(
       TC->getTemplateArgsAsWritten();
 
   if (!EvaluateConstraints) {
-      Inst->setTypeConstraint(TC->getConceptReference(),
-                              TC->getImmediatelyDeclaredConstraint());
-      return false;
+    bool ShouldExpandExplicitTemplateArgs =
+        TemplArgInfo && ArgumentPackSubstitutionIndex != -1 &&
+        llvm::any_of(TemplArgInfo->arguments(), [](auto &Arg) {
+          return Arg.getArgument().containsUnexpandedParameterPack();
+        });
+
+    // We want to transform the packs into Subst* nodes for type constraints
+    // inside a pack expansion. For example,
+    //
+    //  template <class... Ts> void foo() {
+    //    bar([](C<Ts> auto value) {}...);
+    //  }
+    //
+    // As we expand Ts in the process of instantiating foo(), and retain
+    // the original template depths of Ts until the constraint evaluation, we
+    // would otherwise have no chance to expand Ts by the time of evaluating
+    // C<auto, Ts>.
+    //
+    // So we form a Subst* node for Ts along with a proper substitution index
+    // here, and substitute the node with a complete MLTAL later in evaluation.
+    if (ShouldExpandExplicitTemplateArgs) {
+      TemplateArgumentListInfo InstArgs;
+      InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
+      InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
+      if (ExpandPackedTypeConstraints(*this).SubstTemplateArguments(
+              TemplArgInfo->arguments(), InstArgs))
+        return true;
+
+      // The type of the original parameter.
+      auto *ConstraintExpr = TC->getImmediatelyDeclaredConstraint();
+      QualType ConstrainedType;
+
+      if (auto *FE = dyn_cast<CXXFoldExpr>(ConstraintExpr)) {
+        assert(FE->getLHS());
+        ConstraintExpr = FE->getLHS();
+      }
+      auto *CSE = cast<ConceptSpecializationExpr>(ConstraintExpr);
+      assert(!CSE->getTemplateArguments().empty() &&
+             "Empty template arguments?");
+      ConstrainedType = CSE->getTemplateArguments()[0].getAsType();
+      assert(!ConstrainedType.isNull() &&
+             "Failed to extract the original ConstrainedType?");
+
+      return AttachTypeConstraint(
+          TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
+          TC->getNamedConcept(),
+          /*FoundDecl=*/TC->getConceptReference()->getFoundDecl(), &InstArgs,
+          Inst, ConstrainedType,
+          Inst->isParameterPack()
+              ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
+                    ->getEllipsisLoc()
+              : SourceLocation());
+    }
+    Inst->setTypeConstraint(TC->getConceptReference(),
+                            TC->getImmediatelyDeclaredConstraint());
+    return false;
   }
 
   TemplateArgumentListInfo InstArgs;
@@ -3082,6 +3190,7 @@ bool Sema::SubstTypeConstraint(
       TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
       TC->getNamedConcept(),
       /*FoundDecl=*/TC->getConceptReference()->getFoundDecl(), &InstArgs, Inst,
+      Context.getTypeDeclType(Inst),
       Inst->isParameterPack()
           ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
                 ->getEllipsisLoc()

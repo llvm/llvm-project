@@ -11252,6 +11252,7 @@ public:
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
+                            QualType ConstrainedType,
                             SourceLocation EllipsisLoc);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,
