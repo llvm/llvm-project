@@ -784,7 +784,8 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
       Call->Arguments.size() >= 3 ? Call->Arguments[2] : Register();
   MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
                                          Semantics, MIRBuilder, GR);
-  Register ValueReg = Call->Arguments[1];
+  Register ValueReg =
+      Call->Arguments.size() >= 2 ? Call->Arguments[1] : Register();
   Register ValueTypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   // support cl_ext_float_atomics
   if (Call->ReturnType->getOpcode() == SPIRV::OpTypeFloat) {
@@ -807,13 +808,14 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
       ValueReg = NegValueReg;
     }
   }
-  MIRBuilder.buildInstr(Opcode)
-      .addDef(Call->ReturnRegister)
-      .addUse(ValueTypeReg)
-      .addUse(PtrRegister)
-      .addUse(ScopeRegister)
-      .addUse(MemSemanticsReg)
-      .addUse(ValueReg);
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(ValueTypeReg)
+                 .addUse(PtrRegister)
+                 .addUse(ScopeRegister)
+                 .addUse(MemSemanticsReg);
+  if (ValueReg)
+    MIB.addUse(ValueReg);
   return true;
 }
 
@@ -1458,6 +1460,10 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicXor:
   case SPIRV::OpAtomicAnd:
   case SPIRV::OpAtomicExchange:
+  case SPIRV::OpAtomicUMin:
+  case SPIRV::OpAtomicUMax:
+  case SPIRV::OpAtomicIIncrement:
+  case SPIRV::OpAtomicIDecrement:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
