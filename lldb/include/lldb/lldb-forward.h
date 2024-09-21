@@ -190,7 +190,6 @@ class ScriptInterpreterLocker;
 class ScriptedMetadata;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
-class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
 class ScriptedThreadPlanInterface;
 class ScriptedSyntheticChildren;
@@ -409,8 +408,6 @@ typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
-typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
-    ScriptedStopHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
