@@ -620,6 +620,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
     return false;
+  if (!CheckWeak(S, OpPC, Ptr))
+    return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
   return true;
