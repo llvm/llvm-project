@@ -1,4 +1,4 @@
-//===- RawMemProfReader.h - Instrumented memory profiling reader *- C++ -*-===//
+//===--- rtsan_assertions.h - Realtime Sanitizer ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file just includes MemProfReader.h for compatibility with
-// out-of-tree users.
+// Part of the RealtimeSanitizer runtime library
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PROFILEDATA_RAWMEMPROFREADER_H_
-#define LLVM_PROFILEDATA_RAWMEMPROFREADER_H_
+#pragma once
 
-#include "llvm/ProfileData/MemProfReader.h"
+#include "rtsan/rtsan_context.h"
 
-#endif // LLVM_PROFILEDATA_RAWMEMPROFREADER_H_
+namespace __rtsan {
+void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
+} // namespace __rtsan
