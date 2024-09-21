@@ -509,8 +509,7 @@ public:
       llvm::sort(H->second);
 
       // Record this header and its contents if we haven't seen it before.
-      auto [KnownH, Inserted] =
-          AllHeaderContents.insert(*H);
+      auto [KnownH, Inserted] = AllHeaderContents.insert(*H);
       if (Inserted)
         continue;
 
