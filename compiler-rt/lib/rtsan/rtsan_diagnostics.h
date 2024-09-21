@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#include <string>
 #include <variant>
 
 namespace __rtsan {

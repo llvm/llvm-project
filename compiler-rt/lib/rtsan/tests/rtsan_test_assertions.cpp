@@ -25,7 +25,7 @@ protected:
 };
 
 DiagnosticsInfo FakeDiagnosticsInfo() {
-  DiagnosticsInfo info{};
+  DiagnosticsInfo info;
   info.pc = 0;
   info.bp = 0;
   info.call_info = InterceptedCallInfo{"fake_function_name"};
