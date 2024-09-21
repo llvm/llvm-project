@@ -18,11 +18,11 @@
 namespace __rtsan {
 
 template <typename OnViolationAction>
-void ExpectNotRealtime(Context &context, OnViolationAction &&on_violation) {
+void ExpectNotRealtime(Context &context, OnViolationAction &&OnViolation) {
   CHECK(__rtsan_is_initialized());
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     context.BypassPush();
-    on_violation();
+    OnViolation();
     context.BypassPop();
   }
 }

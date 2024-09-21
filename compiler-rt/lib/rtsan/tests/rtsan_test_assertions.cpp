@@ -23,7 +23,7 @@ protected:
   void SetUp() override { __rtsan_ensure_initialized(); }
 };
 
-static void testExpectNotRealtime(__rtsan::Context &context,
+static void ExpectViolationAction(__rtsan::Context &context,
                                   bool expect_violation_callback) {
   ::testing::MockFunction<void()> mock_on_violation;
   EXPECT_CALL(mock_on_violation, Call).Times(expect_violation_callback ? 1 : 0);
@@ -34,7 +34,7 @@ TEST_F(TestRtsanAssertions,
        ExpectNotRealtimeDoesNotCallViolationActionIfNotInRealtimeContext) {
   __rtsan::Context context{};
   ASSERT_FALSE(context.InRealtimeContext());
-  testExpectNotRealtime(context, false);
+  ExpectViolationAction(context, false);
 }
 
 TEST_F(TestRtsanAssertions,
@@ -42,7 +42,7 @@ TEST_F(TestRtsanAssertions,
   __rtsan::Context context{};
   context.RealtimePush();
   ASSERT_TRUE(context.InRealtimeContext());
-  testExpectNotRealtime(context, true);
+  ExpectViolationAction(context, true);
 }
 
 TEST_F(TestRtsanAssertions,
@@ -51,5 +51,5 @@ TEST_F(TestRtsanAssertions,
   context.RealtimePush();
   context.BypassPush();
   ASSERT_TRUE(context.IsBypassed());
-  testExpectNotRealtime(context, false);
+  ExpectViolationAction(context, false);
 }
