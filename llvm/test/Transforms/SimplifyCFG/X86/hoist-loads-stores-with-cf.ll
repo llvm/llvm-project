@@ -276,21 +276,19 @@ if.false:                                    ; preds = %if.true, %entry
 }
 
 ;; Both of successor 0 and successor 1 have a single predecessor.
-;; TODO: Support transform for this case.
 define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @single_predecessor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       common.ret:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 1>, ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret void
-; CHECK:       if.end:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %tobool = icmp ne i32 %a, 0
@@ -726,6 +724,34 @@ if.false:
 if.true:
   %res = phi i32 [ %0, %if.false ], [ 0, %entry ]
   ret i32 %res
+}
+
+define void @diamondCFG(i32 %a, ptr %c, ptr %d) {
+; CHECK-LABEL: @diamondCFG(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TOBOOL_NOT]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TOBOOL_NOT]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr [[D:%.*]], i32 4, <1 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[A]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[C:%.*]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool.not = icmp eq i32 %a, 0
+  br i1 %tobool.not, label %if.else, label %if.then
+
+if.then:                                          ; preds = %entry
+  store i32 %a, ptr %c, align 4
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  store i32 0, ptr %d, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  ret void
 }
 
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable

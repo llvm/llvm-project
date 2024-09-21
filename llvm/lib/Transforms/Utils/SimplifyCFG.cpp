@@ -1663,18 +1663,29 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
-    bool Invert) {
+    std::optional<bool> Invert) {
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
-  IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
-  Value *Mask = Builder.CreateBitCast(
-      Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
-      VCondTy);
+  IRBuilder<> Builder(Invert ? SpeculatedConditionalLoadsStores.back() : BI);
+  Value *Mask = nullptr;
+  Value *Mask0 = nullptr;
+  Value *Mask1 = nullptr;
+  if (Invert) {
+    Mask = Builder.CreateBitCast(
+        *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
+        VCondTy);
+  } else {
+    Mask0 = Builder.CreateBitCast(
+        Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
+    Mask1 = Builder.CreateBitCast(Cond, VCondTy);
+  }
   for (auto *I : SpeculatedConditionalLoadsStores) {
-    IRBuilder<> Builder(I);
+    IRBuilder<> Builder(Invert ? I : BI);
+    if (!Invert)
+      Mask = I->getParent() == BI->getSuccessor(0) ? Mask1 : Mask0;
     // We currently assume conditional faulting load/store is supported for
     // scalar types only when creating new instructions. This can be easily
     // extended for vector types in the future.
@@ -1770,6 +1781,25 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   for (auto *Succ : successors(BB))
     if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
       return false;
+
+  auto *BI = dyn_cast<BranchInst>(TI);
+  if (BI && HoistLoadsStoresWithCondFaulting &&
+      Options.HoistLoadsStoresWithCondFaulting) {
+    SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
+    for (auto *Succ : successors(BB)) {
+      for (Instruction &I : drop_end(*Succ)) {
+        if (!isSafeCheapLoadStore(&I, TTI) ||
+            SpeculatedConditionalLoadsStores.size() ==
+                HoistLoadsStoresWithCondFaultingThreshold)
+          return false;
+        SpeculatedConditionalLoadsStores.push_back(&I);
+      }
+    }
+
+    if (!SpeculatedConditionalLoadsStores.empty())
+      hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
+                                  std::nullopt);
+  }
 
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
