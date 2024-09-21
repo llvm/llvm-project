@@ -2529,6 +2529,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
+    if (!this->checkLiteralType(SubExpr))
+      return false;
     // Non-primitive values.
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
@@ -2549,6 +2551,10 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     return this->emitGetPtrLocal(LocalIndex, E);
   } else {
+
+    if (!this->checkLiteralType(SubExpr))
+      return false;
+
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
             allocateLocal(Inner, E->getExtendingDecl())) {
@@ -3569,9 +3575,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (!this->checkLiteralType(E))
-    return false;
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
