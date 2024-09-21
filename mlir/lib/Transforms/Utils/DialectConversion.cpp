@@ -2531,12 +2531,12 @@ static Operation *findLiveUserOfReplaced(
 static std::pair<ValueRange, const TypeConverter *>
 getReplacedValues(IRRewrite *rewrite) {
   if (auto *opRewrite = dyn_cast<ReplaceOperationRewrite>(rewrite))
-    return std::make_pair(opRewrite->getOperation()->getResults(),
-                          opRewrite->getConverter());
+    return {opRewrite->getOperation()->getResults(),
+                          opRewrite->getConverter()};
   if (auto *blockRewrite = dyn_cast<BlockTypeConversionRewrite>(rewrite))
-    return std::make_pair(blockRewrite->getOrigBlock()->getArguments(),
-                          blockRewrite->getConverter());
-  return std::make_pair(ValueRange(), nullptr);
+    return {blockRewrite->getOrigBlock()->getArguments(),
+                          blockRewrite->getConverter()};
+  return {};
 }
 
 LogicalResult
