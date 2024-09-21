@@ -407,6 +407,8 @@ Bug Fixes to C++ Support
 - Clang now uses the correct set of template argument lists when comparing the constraints of
   out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
   a class template. (#GH102320)
+- Clang now correctly considers member functions with in-class definition of `constexpr` and `consteval` to be inline,
+  when the class is attached to named module.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

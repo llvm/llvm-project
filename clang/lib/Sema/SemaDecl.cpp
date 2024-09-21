@@ -9760,8 +9760,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().CPlusPlus) {
     // The rules for implicit inlines changed in C++20 for methods and friends
     // with an in-class definition (when such a definition is not attached to
-    // the global module). This does not affect declarations, that are already
-    // inline, for example due being declared `inline` or `consteval`
+    // the global module). This does not affect declarations that are already
+    // inline (whether explicitly or implicitly by being declared constexpr,
+    // consteval, etc).
     // FIXME: We need a better way to separate C++ standard and clang modules.
     bool ImplicitInlineCXX20 = !getLangOpts().CPlusPlusModules ||
                                NewFD->isConstexpr() || NewFD->isConsteval() ||
