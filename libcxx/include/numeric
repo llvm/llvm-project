@@ -128,6 +128,18 @@ template <class ForwardIterator, class T>
     constexpr void  // constexpr since C++20
     iota(ForwardIterator first, ForwardIterator last, T value);
 
+namespace ranges {
+    template<class O, class T>
+        using iota_result = out_value_result<O, T>;                                     // C++23
+
+    template<input_or_output_iterator O, sentinel_for<O> S, weakly_incrementable T>
+        requires indirectly_writable<O, const T&>
+        constexpr iota_result<O, T> iota(O first, S last, T value);                     // C++23
+
+    template<weakly_incrementable T, output_range<const T&> R>
+        constexpr iota_result<borrowed_iterator_t<R>, T> iota(R&& r, T value);          // C++23
+}
+
 template <class M, class N>
     constexpr common_type_t<M,N> gcd(M m, N n);    // C++17
 
