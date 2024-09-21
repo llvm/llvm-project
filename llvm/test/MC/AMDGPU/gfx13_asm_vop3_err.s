@@ -394,3 +394,90 @@ v_trig_preop_f64 v[4:5], v[8:9], v2 row_share:1
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-NEXT:{{^}}v_trig_preop_f64 v[4:5], v[8:9], v2 row_share:1
 // GFX13-NEXT:{{^}}                                    ^
+
+v_wave_match_b32 v5, v3, |v1|
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_wave_match_b32 v5, v3, |v1|
+// GFX13-NEXT:{{^}}                         ^
+
+v_wave_match_b32 v5, v3, -v1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_wave_match_b32 v5, v3, -v1
+// GFX13-NEXT:{{^}}                         ^
+
+v_wave_match_b32 v5, v3, v1 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_wave_match_b32 v5, v3, v1 clamp
+// GFX13-NEXT:{{^}}                            ^
+
+v_wave_match_b32 v5, v3, v1 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_wave_match_b32 v5, v3, v1 mul:2
+// GFX13-NEXT:{{^}}                            ^
+
+v_wave_match_b32_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_wave_match_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_wave_match_b32_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_pdep_b32 v5, v3, -v1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pdep_b32 v5, v3, -v1
+// GFX13-NEXT:{{^}}                   ^
+
+v_pdep_b32 v5, v3, v1 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_pdep_b32 v5, v3, v1 clamp
+// GFX13-NEXT:{{^}}                      ^
+
+v_pdep_b32 v5, v3, v1 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pdep_b32 v5, v3, v1 mul:2
+// GFX13-NEXT:{{^}}                      ^
+
+v_pdep_b32 v5, v3, |v1|
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pdep_b32 v5, v3, |v1|
+// GFX13-NEXT:{{^}}                   ^
+
+v_pdep_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_pdep_b32_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_pdep_b32_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_pext_b32 v5, v3, -v1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pext_b32 v5, v3, -v1
+// GFX13-NEXT:{{^}}                   ^
+
+v_pext_b32 v5, v3, v1 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_pext_b32 v5, v3, v1 clamp
+// GFX13-NEXT:{{^}}                      ^
+
+v_pext_b32 v5, v3, v1 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pext_b32 v5, v3, v1 mul:2
+// GFX13-NEXT:{{^}}                      ^
+
+v_pext_b32 v5, v3, |v1|
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_pext_b32 v5, v3, |v1|
+// GFX13-NEXT:{{^}}                   ^
+
+v_pext_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_pext_b32_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_pext_b32_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported

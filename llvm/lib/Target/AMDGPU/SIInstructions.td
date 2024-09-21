@@ -1997,33 +1997,26 @@ def : BitConvert <v8i64, v32bf16, SReg_512>;
 
 // 576-bit bitcast
 
-def : BitConvert <v36i16, v36f16, SReg_576>;
-def : BitConvert <v36f16, v36i16, SReg_576>;
-def : BitConvert <v36i16, v36f16, VReg_576>;
-def : BitConvert <v36f16, v36i16, VReg_576>;
-
-def : BitConvert <v36i16, v36bf16, SReg_576>;
-def : BitConvert <v36bf16, v36i16, SReg_576>;
-def : BitConvert <v36i16, v36bf16, VReg_576>;
-def : BitConvert <v36bf16, v36i16, VReg_576>;
-
-def : BitConvert <v36bf16, v36f16, SReg_576>;
-def : BitConvert <v36f16, v36bf16, SReg_576>;
-def : BitConvert <v36bf16, v36f16, VReg_576>;
-def : BitConvert <v36f16, v36bf16, VReg_576>;
-
-def : BitConvert <v36i16, v18i32, SReg_576>;
-def : BitConvert <v36f16, v18i32, SReg_576>;
-def : BitConvert <v36bf16, v18i32, VReg_576>;
-
-def : BitConvert <v36i16, v18f32, SReg_576>;
-def : BitConvert <v36f16, v18f32, SReg_576>;
-def : BitConvert <v36bf16, v18f32, VReg_576>;
-
-def : BitConvert <v18i32, v18f32, SReg_576>;
-def : BitConvert <v18f32, v18i32, SReg_576>;
-def : BitConvert <v18i32, v18f32, VReg_576>;
 def : BitConvert <v18f32, v18i32, VReg_576>;
+def : BitConvert <v18f32, v36bf16, VReg_576>;
+def : BitConvert <v18f32, v36f16, VReg_576>;
+def : BitConvert <v18f32, v36i16, VReg_576>;
+def : BitConvert <v18i32, v18f32, VReg_576>;
+def : BitConvert <v18i32, v36bf16, VReg_576>;
+def : BitConvert <v18i32, v36f16, VReg_576>;
+def : BitConvert <v18i32, v36i16, VReg_576>;
+def : BitConvert <v36bf16, v18f32, VReg_576>;
+def : BitConvert <v36bf16, v18i32, VReg_576>;
+def : BitConvert <v36bf16, v36f16, VReg_576>;
+def : BitConvert <v36bf16, v36i16, VReg_576>;
+def : BitConvert <v36f16, v18f32, VReg_576>;
+def : BitConvert <v36f16, v18i32, VReg_576>;
+def : BitConvert <v36f16, v36bf16, VReg_576>;
+def : BitConvert <v36f16, v36i16, VReg_576>;
+def : BitConvert <v36i16, v18f32, VReg_576>;
+def : BitConvert <v36i16, v18i32, VReg_576>;
+def : BitConvert <v36i16, v36bf16, VReg_576>;
+def : BitConvert <v36i16, v36f16, VReg_576>;
 
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;

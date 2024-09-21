@@ -458,29 +458,3 @@ v_rsq_f64_e64_dpp v[4:5], v[2:3] row_share:1
 
 v_sqrt_f64_e64_dpp v[4:5], v[2:3] row_share:1
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
-
-v_wave_match_b32 v5, v3, |v1|
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-ERR-NEXT:{{^}}v_wave_match_b32 v5, v3, |v1|
-// GFX13-ERR-NEXT:{{^}}                         ^
-
-v_wave_match_b32 v5, v3, -v1
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-ERR-NEXT:{{^}}v_wave_match_b32 v5, v3, -v1
-// GFX13-ERR-NEXT:{{^}}                         ^
-
-v_wave_match_b32 v5, v3, v1 clamp
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// GFX13-ERR-NEXT:{{^}}v_wave_match_b32 v5, v3, v1 clamp
-// GFX13-ERR-NEXT:{{^}}                            ^
-
-v_wave_match_b32 v5, v3, v1 mul:2
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-ERR-NEXT:{{^}}v_wave_match_b32 v5, v3, v1 mul:2
-// GFX13-ERR-NEXT:{{^}}                            ^
-
-v_wave_match_b32_dpp v5, v3, v1 row_share:1
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
-
-v_wave_match_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
