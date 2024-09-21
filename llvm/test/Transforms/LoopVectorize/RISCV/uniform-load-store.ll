@@ -963,9 +963,6 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; FIXEDLEN:       vector.body:
 ; FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXEDLEN-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; FIXEDLEN-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
-; FIXEDLEN-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; FIXEDLEN-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
 ; FIXEDLEN-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6

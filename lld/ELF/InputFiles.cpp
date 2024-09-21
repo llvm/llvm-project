@@ -135,10 +135,10 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
     return;
   }
   // Follow ld.bfd and error if there is a mix of calling conventions.
-  if (config->armVFPArgs != arg && config->armVFPArgs != ARMVFPArgKind::Default)
+  if (ctx.arg.armVFPArgs != arg && ctx.arg.armVFPArgs != ARMVFPArgKind::Default)
     error(toString(f) + ": incompatible Tag_ABI_VFP_args");
   else
-    config->armVFPArgs = arg;
+    ctx.arg.armVFPArgs = arg;
 }
 
 // The ARM support in lld makes some use of instructions that are not available
@@ -168,19 +168,19 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
   case ARMBuildAttrs::v6:
   case ARMBuildAttrs::v6KZ:
   case ARMBuildAttrs::v6K:
-    config->armHasBlx = true;
+    ctx.arg.armHasBlx = true;
     // Architectures used in pre-Cortex processors do not support
     // The J1 = 1 J2 = 1 Thumb branch range extension, with the exception
     // of Architecture v6T2 (arm1156t2-s and arm1156t2f-s) that do.
     break;
   default:
     // All other Architectures have BLX and extended branch encoding
-    config->armHasBlx = true;
-    config->armJ1J2BranchEncoding = true;
+    ctx.arg.armHasBlx = true;
+    ctx.arg.armJ1J2BranchEncoding = true;
     if (arch != ARMBuildAttrs::v6_M && arch != ARMBuildAttrs::v6S_M)
       // All Architectures used in Cortex processors with the exception
       // of v6-M and v6S-M have the MOVT and MOVW instructions.
-      config->armHasMovtMovw = true;
+      ctx.arg.armHasMovtMovw = true;
     break;
   }
 
@@ -191,7 +191,7 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
     return;
   if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
       profile == ARMBuildAttrs::MicroControllerProfile)
-    config->armCMSESupport = true;
+    ctx.arg.armCMSESupport = true;
 
   // The thumb PLT entries require Thumb2 which can be used on multiple archs.
   // For now, let's limit it to ones where ARM isn't available and we know have
@@ -200,8 +200,8 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       attributes.getAttributeValue(ARMBuildAttrs::ARM_ISA_use);
   std::optional<unsigned> thumb =
       attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
-  config->armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
-  config->armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
+  ctx.arg.armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
+  ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -217,16 +217,16 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
 
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
-  if (!config->chroot.empty() && path.starts_with("/"))
-    path = saver().save(config->chroot + path);
+  if (!ctx.arg.chroot.empty() && path.starts_with("/"))
+    path = saver().save(ctx.arg.chroot + path);
 
   bool remapped = false;
-  auto it = config->remapInputs.find(path);
-  if (it != config->remapInputs.end()) {
+  auto it = ctx.arg.remapInputs.find(path);
+  if (it != ctx.arg.remapInputs.end()) {
     path = it->second;
     remapped = true;
   } else {
-    for (const auto &[pat, toFile] : config->remapInputsWildcards) {
+    for (const auto &[pat, toFile] : ctx.arg.remapInputsWildcards) {
       if (pat.match(path)) {
         path = toFile;
         remapped = true;
@@ -244,7 +244,7 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
   }
 
   log(path);
-  config->dependencyFiles.insert(llvm::CachedHashString(path));
+  ctx.arg.dependencyFiles.insert(llvm::CachedHashString(path));
 
   auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
                                        /*RequiresNullTerminator=*/false);
@@ -268,15 +268,15 @@ static bool isCompatible(InputFile *file) {
   if (!file->isElf() && !isa<BitcodeFile>(file))
     return true;
 
-  if (file->ekind == config->ekind && file->emachine == config->emachine) {
-    if (config->emachine != EM_MIPS)
+  if (file->ekind == ctx.arg.ekind && file->emachine == ctx.arg.emachine) {
+    if (ctx.arg.emachine != EM_MIPS)
       return true;
-    if (isMipsN32Abi(file) == config->mipsN32Abi)
+    if (isMipsN32Abi(file) == ctx.arg.mipsN32Abi)
       return true;
   }
 
   StringRef target =
-      !config->bfdname.empty() ? config->bfdname : config->emulation;
+      !ctx.arg.bfdname.empty() ? ctx.arg.bfdname : ctx.arg.emulation;
   if (!target.empty()) {
     error(toString(file) + " is incompatible with " + target);
     return false;
@@ -311,7 +311,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
     return;
   }
 
-  if (config->trace)
+  if (ctx.arg.trace)
     message(toString(file));
 
   if (file->kind() == InputFile::ObjKind) {
@@ -419,7 +419,7 @@ StringRef InputFile::getNameForScript() const {
 // is a form of autolinking and is called `dependent libraries`. It is currently
 // unique to LLVM and lld.
 static void addDependentLibrary(StringRef specifier, const InputFile *f) {
-  if (!config->dependentLibraries)
+  if (!ctx.arg.dependentLibraries)
     return;
   if (std::optional<std::string> s = searchLibraryBaseName(specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
@@ -599,7 +599,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
-    if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !config->relocatable) {
+    if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !ctx.arg.relocatable) {
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       ArrayRef<char> data = CHECK(
           this->getObj().template getSectionContentsAsArray<char>(sec), this);
@@ -619,7 +619,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       continue;
     }
 
-    if (sec.sh_type == SHT_ARM_ATTRIBUTES && config->emachine == EM_ARM) {
+    if (sec.sh_type == SHT_ARM_ATTRIBUTES && ctx.arg.emachine == EM_ARM) {
       ARMAttributeParser attributes;
       ArrayRef<uint8_t> contents =
           check(this->getObj().getSectionContents(sec));
@@ -672,7 +672,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
             .second;
     if (keepGroup) {
-      if (!config->resolveGroups)
+      if (!ctx.arg.resolveGroups)
         this->sections[i] = createInputSection(
             i, sec, check(obj.getSectionName(sec, shstrtab)));
       continue;
@@ -718,7 +718,7 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   // SHF_MERGE sections based both on their name and sh_entsize, but that seems
   // to be more trouble than it is worth. Instead, we just use the regular (-O1)
   // logic for -r.
-  if (config->optimize == 0 && !config->relocatable)
+  if (ctx.arg.optimize == 0 && !ctx.arg.relocatable)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -786,7 +786,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
-    if ((sec.sh_flags & SHF_EXCLUDE) && !config->relocatable) {
+    if ((sec.sh_flags & SHF_EXCLUDE) && !ctx.arg.relocatable) {
       if (type == SHT_LLVM_CALL_GRAPH_PROFILE)
         cgProfileSectionIndex = i;
       if (type == SHT_LLVM_ADDRSIG) {
@@ -796,7 +796,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
         // in the address-significance table, which refers to symbols by index.
         if (sec.sh_link != 0)
           this->addrsigSec = &sec;
-        else if (config->icf == ICFLevel::Safe)
+        else if (ctx.arg.icf == ICFLevel::Safe)
           warn(toString(this) +
                ": --icf=safe conservatively ignores "
                "SHT_LLVM_ADDRSIG [index " +
@@ -810,7 +810,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 
     switch (type) {
     case SHT_GROUP: {
-      if (!config->relocatable)
+      if (!ctx.arg.relocatable)
         sections[i] = &InputSection::discarded;
       StringRef signature =
           cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
@@ -846,7 +846,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // The concatenated output does not properly reflect the linking
       // semantics. In addition, since we do not use the bitcode wrapper format,
       // the concatenated raw bitcode would be invalid.
-      if (config->relocatable && !config->fatLTOObjects) {
+      if (ctx.arg.relocatable && !ctx.arg.fatLTOObjects) {
         sections[i] = &InputSection::discarded;
         break;
       }
@@ -856,7 +856,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       if (type == SHT_LLVM_SYMPART)
         ctx.hasSympart.store(true, std::memory_order_relaxed);
-      else if (config->rejectMismatch &&
+      else if (ctx.arg.rejectMismatch &&
                !isKnownSpecificSectionType(type, sec.sh_flags))
         errorOrWarn(toString(this->sections[i]) + ": unknown section type 0x" +
                     Twine::utohexstr(type));
@@ -909,7 +909,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // `nullptr` for the normal case. However, if -r or --emit-relocs is
       // specified, we need to copy them to the output. (Some post link analysis
       // tools specify --emit-relocs to obtain the information.)
-      if (config->copyRelocs) {
+      if (ctx.arg.copyRelocs) {
         auto *isec = makeThreadLocal<InputSection>(
             *this, sec, check(obj.getSectionName(sec, shstrtab)));
         // If the relocated section is discarded (due to /DISCARD/ or
@@ -973,7 +973,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
       continue;
     }
 
-    uint32_t featureAndType = config->emachine == EM_AARCH64
+    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
                                   ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                   : GNU_PROPERTY_X86_FEATURE_1_AND;
 
@@ -996,7 +996,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
         f.andFeatures |= read32<ELFT::Endianness>(desc.data());
-      } else if (config->emachine == EM_AARCH64 &&
+      } else if (ctx.arg.emachine == EM_AARCH64 &&
                  type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
         if (!f.aarch64PauthAbiCoreInfo.empty()) {
           reportFatal(data.data(),
@@ -1080,7 +1080,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
     // for split stack will include a .note.GNU-split-stack section.
     if (name == ".note.GNU-split-stack") {
-      if (config->relocatable) {
+      if (ctx.arg.relocatable) {
         error(
             "cannot mix split-stack and non-split-stack in a relocatable link");
         return &InputSection::discarded;
@@ -1109,7 +1109,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
-  if (name == ".eh_frame" && !config->relocatable)
+  if (name == ".eh_frame" && !ctx.arg.relocatable)
     return makeThreadLocal<EhInputSection>(*this, sec, name);
 
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
@@ -1358,7 +1358,7 @@ unsigned SharedFile::vernauxNum;
 
 SharedFile::SharedFile(MemoryBufferRef m, StringRef defaultSoName)
     : ELFFileBase(SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
-      isNeeded(!config->asNeeded) {}
+      isNeeded(!ctx.arg.asNeeded) {}
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
@@ -1578,7 +1578,7 @@ template <class ELFT> void SharedFile::parse() {
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
       if (sym.getBinding() != STB_WEAK &&
-          config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
+          ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
       continue;
     }
@@ -1588,7 +1588,7 @@ template <class ELFT> void SharedFile::parse() {
       // In GNU ld < 2.31 (before 3be08ea4728b56d35e136af4e6fd3086ade17764), the
       // MIPS port puts _gp_disp symbol into DSO files and incorrectly assigns
       // VER_NDX_LOCAL. Workaround this bug.
-      if (config->emachine == EM_MIPS && name == "_gp_disp")
+      if (ctx.arg.emachine == EM_MIPS && name == "_gp_disp")
         continue;
       error("corrupt input file: version definition index " + Twine(idx) +
             " for symbol " + name + " is out of bounds\n>>> defined in " +
@@ -1702,7 +1702,7 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   this->lazy = lazy;
 
   std::string path = mb.getBufferIdentifier().str();
-  if (config->thinLTOIndexOnly)
+  if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
@@ -1917,7 +1917,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) const {
 }
 
 std::string elf::replaceThinLTOSuffix(StringRef path) {
-  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
+  auto [suffix, repl] = ctx.arg.thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);

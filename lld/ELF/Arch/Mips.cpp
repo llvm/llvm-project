@@ -77,7 +77,7 @@ template <class ELFT>
 RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
                                const uint8_t *loc) const {
   // See comment in the calculateMipsRelChain.
-  if (ELFT::Is64Bits || config->mipsN32Abi)
+  if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
     type &= 0xff;
 
   switch (type) {
@@ -283,7 +283,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
     return;
   }
 
-  if (config->mipsN32Abi) {
+  if (ctx.arg.mipsN32Abi) {
     write32(buf, 0x3c0e0000);      // lui   $14, %hi(&GOTPLT[0])
     write32(buf + 4, 0x8dd90000);  // lw    $25, %lo(&GOTPLT[0])($14)
     write32(buf + 8, 0x25ce0000);  // addiu $14, $14, %lo(&GOTPLT[0])
@@ -306,7 +306,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
     write32(buf + 20, 0x0018c082); // srl   $24, $24, 2
   }
 
-  uint32_t jalrInst = config->zHazardplt ? 0x0320fc09 : 0x0320f809;
+  uint32_t jalrInst = ctx.arg.zHazardplt ? 0x0320fc09 : 0x0320f809;
   write32(buf + 24, jalrInst); // jalr.hb $25 or jalr $25
   write32(buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
@@ -341,8 +341,8 @@ void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
   }
 
   uint32_t loadInst = ELFT::Is64Bits ? 0xddf90000 : 0x8df90000;
-  uint32_t jrInst = isMipsR6() ? (config->zHazardplt ? 0x03200409 : 0x03200009)
-                               : (config->zHazardplt ? 0x03200408 : 0x03200008);
+  uint32_t jrInst = isMipsR6() ? (ctx.arg.zHazardplt ? 0x03200409 : 0x03200009)
+                               : (ctx.arg.zHazardplt ? 0x03200408 : 0x03200008);
   uint32_t addInst = ELFT::Is64Bits ? 0x65f80000 : 0x25f80000;
 
   write32(buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
@@ -465,7 +465,7 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case (R_MIPS_64 << 8) | R_MIPS_REL32:
     return read64(buf);
   case R_MIPS_COPY:
-    return config->is64 ? read64(buf) : read32(buf);
+    return ctx.arg.is64 ? read64(buf) : read32(buf);
   case R_MIPS_NONE:
   case R_MIPS_JUMP_SLOT:
   case R_MIPS_JALR:
@@ -570,7 +570,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   const endianness e = ELFT::Endianness;
   RelType type = rel.type;
 
-  if (ELFT::Is64Bits || config->mipsN32Abi)
+  if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
     std::tie(type, val) = calculateMipsRelChain(loc, type, val);
 
   // Detect cross-mode jump/branch and fix instruction.
@@ -604,7 +604,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     // The R_MIPS_GOT16 relocation's value in "relocatable" linking mode
     // is updated addend (not a GOT index). In that case write high 16 bits
     // to store a correct addend value.
-    if (config->relocatable) {
+    if (ctx.arg.relocatable) {
       writeValue(loc, val + 0x8000, 16, 16);
     } else {
       checkInt(loc, val, 16, rel);
@@ -612,7 +612,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     }
     break;
   case R_MICROMIPS_GOT16:
-    if (config->relocatable) {
+    if (ctx.arg.relocatable) {
       writeShuffleValue<e>(loc, val + 0x8000, 16, 16);
     } else {
       checkInt(loc, val, 16, rel);

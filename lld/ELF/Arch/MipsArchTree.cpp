@@ -70,7 +70,7 @@ static void checkFlags(ArrayRef<FileFlags> files) {
   bool fp = files[0].flags & EF_MIPS_FP64;
 
   for (const FileFlags &f : files) {
-    if (config->is64 && f.flags & EF_MIPS_MICROMIPS)
+    if (ctx.arg.is64 && f.flags & EF_MIPS_MICROMIPS)
       error(toString(f.file) + ": microMIPS 64-bit is not supported");
 
     uint32_t abi2 = f.flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
@@ -301,9 +301,9 @@ template <class ELFT> uint32_t elf::calcMipsEFlags() {
     // If we don't have any input files, we'll have to rely on the information
     // we can derive from emulation information, since this at least gets us
     // ABI.
-    if (config->emulation.empty() || config->is64)
+    if (ctx.arg.emulation.empty() || ctx.arg.is64)
       return 0;
-    return config->mipsN32Abi ? EF_MIPS_ABI2 : EF_MIPS_ABI_O32;
+    return ctx.arg.mipsN32Abi ? EF_MIPS_ABI2 : EF_MIPS_ABI_O32;
   }
   checkFlags(v);
   return getMiscFlags(v) | getPicFlags(v) | getArchFlags(v);
@@ -367,7 +367,7 @@ template <class ELFT> static bool isN32Abi(const InputFile *f) {
 }
 
 bool elf::isMipsN32Abi(const InputFile *f) {
-  switch (config->ekind) {
+  switch (ctx.arg.ekind) {
   case ELF32LEKind:
     return isN32Abi<ELF32LE>(f);
   case ELF32BEKind:
@@ -381,10 +381,10 @@ bool elf::isMipsN32Abi(const InputFile *f) {
   }
 }
 
-bool elf::isMicroMips() { return config->eflags & EF_MIPS_MICROMIPS; }
+bool elf::isMicroMips() { return ctx.arg.eflags & EF_MIPS_MICROMIPS; }
 
 bool elf::isMipsR6() {
-  uint32_t arch = config->eflags & EF_MIPS_ARCH;
+  uint32_t arch = ctx.arg.eflags & EF_MIPS_ARCH;
   return arch == EF_MIPS_ARCH_32R6 || arch == EF_MIPS_ARCH_64R6;
 }
 

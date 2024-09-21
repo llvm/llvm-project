@@ -242,7 +242,7 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
   for (; rai != rae; ++rai, ++rbi) {
     if (rai->r_offset != rbi->r_offset ||
-        rai->getType(config->isMips64EL) != rbi->getType(config->isMips64EL))
+        rai->getType(ctx.arg.isMips64EL) != rbi->getType(ctx.arg.isMips64EL))
       return false;
 
     uint64_t addA = getAddend<ELFT>(*rai);
@@ -458,7 +458,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 }
 
 static void print(const Twine &s) {
-  if (config->printIcfSections)
+  if (ctx.arg.printIcfSections)
     message(s);
 }
 
@@ -467,7 +467,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Compute isPreemptible early. We may add more symbols later, so this loop
   // cannot be merged with the later computeIsPreemptible() pass which is used
   // by scanRelocations().
-  if (config->hasDynSymTab)
+  if (ctx.arg.hasDynSymTab)
     for (Symbol *sym : symtab.getSymbols())
       sym->isPreemptible = computeIsPreemptible(*sym);
 
