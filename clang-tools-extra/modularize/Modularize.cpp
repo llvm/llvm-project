@@ -510,7 +510,7 @@ public:
 
       // Record this header and its contents if we haven't seen it before.
       auto [KnownH, Inserted] =
-          AllHeaderContents.try_emplace(H->first, H->second);
+          AllHeaderContents.insert(*H);
       if (Inserted)
         continue;
 
