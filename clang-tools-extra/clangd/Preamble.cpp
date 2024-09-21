@@ -479,9 +479,9 @@ public:
       : ProxyFileSystem(std::move(FS)) {}
 
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const llvm::Twine &Path, bool IsText = true) override {
+  openFileForRead(const llvm::Twine &Path) override {
     WallTimerRegion T(Timer);
-    auto FileOr = getUnderlyingFS().openFileForRead(Path, IsText);
+    auto FileOr = getUnderlyingFS().openFileForRead(Path);
     if (!FileOr)
       return FileOr;
     return std::make_unique<TimerFile>(Timer, std::move(FileOr.get()));
