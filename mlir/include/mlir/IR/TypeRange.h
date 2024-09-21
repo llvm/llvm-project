@@ -47,8 +47,7 @@ public:
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Type>, Arg>::value>>
   TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
-  TypeRange(std::nullopt_t)
-      : TypeRange(ArrayRef<Type>()) {}
+  TypeRange(std::nullopt_t) : TypeRange(ArrayRef<Type>()) {}
   TypeRange(std::initializer_list<Type> types)
       : TypeRange(ArrayRef<Type>(types)) {}
 

@@ -249,8 +249,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     auto shifted =
         rewriter.create<arith::ShRSIOp>(loc, resultTypes, args[0], subtract)
             ->getResults();
-    auto truncated =
-        rewriter.create<arith::TruncIOp>(loc, i1Ty, shifted, llvm::ArrayRef<NamedAttribute>());
+    auto truncated = rewriter.create<arith::TruncIOp>(
+        loc, i1Ty, shifted, llvm::ArrayRef<NamedAttribute>());
     auto isInputOdd =
         rewriter.create<arith::AndIOp>(loc, i1Ty, truncated, i1one);
 

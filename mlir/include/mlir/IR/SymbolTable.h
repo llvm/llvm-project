@@ -395,7 +395,8 @@ public:
   /// Return the users of the provided symbol operation.
   ArrayRef<Operation *> getUsers(Operation *symbol) const {
     auto it = symbolToUsers.find(symbol);
-    return it != symbolToUsers.end() ? it->second.getArrayRef() : ArrayRef<Operation *>();
+    return it != symbolToUsers.end() ? it->second.getArrayRef()
+                                     : ArrayRef<Operation *>();
   }
 
   /// Return true if the given symbol has no uses.

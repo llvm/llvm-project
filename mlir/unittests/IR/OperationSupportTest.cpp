@@ -18,8 +18,7 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = {},
+static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
@@ -159,8 +158,7 @@ TEST(OperandStorageTest, RangeErase) {
   Builder builder(&context);
 
   Type type = builder.getNoneType();
-  Operation *useOp =
-      createOp(&context, /*operands=*/{}, {type, type});
+  Operation *useOp = createOp(&context, /*operands=*/{}, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 

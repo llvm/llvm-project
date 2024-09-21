@@ -897,8 +897,8 @@ public:
                                         ArrayRef<VariableDecl *> results,
                                         const CompoundStmt *body,
                                         Type resultType) {
-    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/{},
-                      results, /*codeBlock=*/std::nullopt, body, resultType);
+    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/{}, results,
+                      /*codeBlock=*/std::nullopt, body, resultType);
   }
 
   /// Return the name of the constraint.

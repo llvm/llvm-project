@@ -99,8 +99,9 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
   auto retType = cast<MemRefType>(base.getType());
-  return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
-                                                    llvm::ArrayRef<OpFoldResult>(), llvm::ArrayRef<OpFoldResult>());
+  return rewriter.create<memref::ReinterpretCastOp>(
+      loc, retType, base, offset, llvm::ArrayRef<OpFoldResult>(),
+      llvm::ArrayRef<OpFoldResult>());
 }
 
 static bool needFlatten(Value val) {
