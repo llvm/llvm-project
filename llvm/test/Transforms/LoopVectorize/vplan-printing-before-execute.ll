@@ -66,13 +66,19 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
+; CHECK-NEXT:     vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
+; CHECK-NEXT:     vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:     vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR1]]>
+; CHECK-NEXT:     WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
+; CHECK-NEXT:     WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
+; CHECK-NEXT:     vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:     vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:     WIDEN store vp<[[VPTR3]]>, ir<%add>
+; CHECK-NEXT:     WIDEN store vp<[[VPTR4]]>, ir<%add>.1
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:   No successors
