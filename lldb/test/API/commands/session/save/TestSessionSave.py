@@ -113,14 +113,17 @@ class SessionSaveTestCase(TestBase):
             res = lldb.SBCommandReturnObject()
             interpreter.HandleCommand(command, res)
 
-        output_file = self.getBuildArtifact('my-session')
+        output_file = self.getBuildArtifact("my-session")
 
         res = lldb.SBCommandReturnObject()
         interpreter.HandleCommand("session save " + output_file, res)
         self.assertTrue(res.Succeeded())
         # We should warn about the setting being false.
         self.assertIn("interpreter.save-transcript is set to false", res.GetError())
-        self.assertTrue(os.path.getsize(output_file) == 0, "Output file should be empty since we didn't save the transcript.")
+        self.assertTrue(
+            os.path.getsize(output_file) == 0,
+            "Output file should be empty since we didn't save the transcript.",
+        )
 
     @no_debug_info_test
     def test_session_save_on_quit(self):
