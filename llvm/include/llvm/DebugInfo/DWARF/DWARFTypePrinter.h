@@ -20,36 +20,7 @@ namespace llvm {
 
 class raw_ostream;
 
-inline std::optional<uint64_t> getLanguage(DWARFDie D) {
-  if (std::optional<DWARFFormValue> LV =
-          D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
-    return LV->getAsUnsignedConstant();
-  return std::nullopt;
-}
-
 namespace detail {
-inline llvm::SmallString<128> toString(const llvm::format_object_base &Fmt) {
-  size_t NextBufferSize = 127;
-  llvm::SmallString<128> V;
-
-  while (true) {
-    V.resize_for_overwrite(NextBufferSize);
-
-    // Try formatting into the SmallVector.
-    size_t BytesUsed = Fmt.print(V.data(), NextBufferSize);
-
-    // If BytesUsed fit into the vector, we win.
-    if (BytesUsed <= NextBufferSize) {
-      V.resize(BytesUsed);
-      return V;
-    }
-
-    // Otherwise, try again with a new size.
-    assert(BytesUsed > NextBufferSize && "Didn't grow buffer!?");
-    NextBufferSize = BytesUsed;
-  }
-}
-
 /// Returns True if the DIE TAG is one of the ones that is scopped.
 inline bool scopedTAGs(dwarf::Tag Tag) {
   switch (Tag) {
