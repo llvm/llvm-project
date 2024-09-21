@@ -90,10 +90,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
-  if (!S.getLangOpts().CPlusPlus)
-    return;
-
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (!S.getLangOpts().CPlusPlus) {
+    S.FFDiag(Loc);
+    return;
+  }
+
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
       !VarD->getAnyInitializer()) {
