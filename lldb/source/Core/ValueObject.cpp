@@ -1452,8 +1452,9 @@ bool ValueObject::DumpPrintableRepresentation(
           (custom_format == eFormatComplexFloat) ||
           (custom_format == eFormatDecimal) || (custom_format == eFormatHex) ||
           (custom_format == eFormatHexUppercase) ||
-          (custom_format == eFormatFloat) || (custom_format == eFormatOctal) ||
-          (custom_format == eFormatOSType) ||
+          (custom_format == eFormatFloat) ||
+          (custom_format == eFormatFloat128) ||
+          (custom_format == eFormatOctal) || (custom_format == eFormatOSType) ||
           (custom_format == eFormatUnicode16) ||
           (custom_format == eFormatUnicode32) ||
           (custom_format == eFormatUnsigned) ||

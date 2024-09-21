@@ -200,6 +200,10 @@ enum Format {
   eFormatInstruction, ///< Disassemble an opcode
   eFormatVoid,        ///< Do not print this
   eFormatUnicode8,
+  eFormatFloat128, //< Disambiguate between 128-bit `long double` (which uses
+                   //< `eFormatFloat`) and `__float128` (which uses
+                   //< `eFormatFloat128`). If the value being formatted is not
+                   //< 128 bits, then this is identical to `eFormatFloat`.
   kNumFormats
 };
 
@@ -827,7 +831,8 @@ enum BasicType {
   eBasicTypeObjCClass,
   eBasicTypeObjCSel,
   eBasicTypeNullPtr,
-  eBasicTypeOther
+  eBasicTypeOther,
+  eBasicTypeFloat128
 };
 
 /// Deprecated
