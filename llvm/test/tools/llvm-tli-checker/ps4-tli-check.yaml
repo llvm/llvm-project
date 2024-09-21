@@ -814,6 +814,18 @@ DynamicSymbols:
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
+  - Name:            fdim
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            fdimf
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+  - Name:            fdiml
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
   - Name:            rewind
     Type:            STT_FUNC
     Section:         .text
