@@ -333,6 +333,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("for (int i; Foo *&foo : foos)");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[7], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_RangeBasedForLoopColon);
+
   Tokens = annotate("#define FOO auto Foo = [] { f(a * b); };");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[12], tok::star, TT_BinaryOperator);
