@@ -27,8 +27,7 @@ constexpr bool test() {
     constexpr int value = 42;
     for (int i = 0; i < 2; ++i) {
       const auto [last, final_value] =
-          (i == 0) ? std::ranges::iota(vec.begin(), vec.end(), value)
-                   : std::ranges::iota<decltype(vec.begin())>(vec, value);
+          (i == 0) ? std::ranges::iota(vec.begin(), vec.end(), value) : std::ranges::iota(vec, value);
       assert(vec.empty());
       assert(last == vec.end());
       assert(final_value == value);
@@ -41,8 +40,7 @@ constexpr bool test() {
     constexpr int value = 42;
     for (int i = 0; i < 2; ++i) {
       const auto [last, final_value] =
-          (i == 0) ? std::ranges::iota(vec.begin(), vec.end(), value)
-                   : std::ranges::iota<decltype(vec.begin())>(vec, value);
+          (i == 0) ? std::ranges::iota(vec.begin(), vec.end(), value) : std::ranges::iota(vec, value);
       assert(std::ranges::equal(vec, std::vector{value, value + 1, value + 2}));
       assert(last == vec.end());
       assert(final_value == value + size);
