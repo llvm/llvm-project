@@ -66,6 +66,8 @@ int main(int, char**) {
     assert(std::as_const(m).equal_range(8) == std::pair(m.cbegin(), m.cbegin() + 1));
     assert(std::as_const(m).equal_range(9) == std::pair(m.cbegin(), m.cbegin()));
   }
+#if 0
+  // vector<bool> is not supported
   {
     using M  = std::flat_map<bool, bool>;
     using R  = std::pair<M::iterator, M::iterator>;
@@ -85,5 +87,6 @@ int main(int, char**) {
     assert(m.equal_range(true) == std::pair(m.begin(), m.begin()));
     assert(m.equal_range(false) == std::pair(m.begin(), m.begin()));
   }
+#endif
   return 0;
 }

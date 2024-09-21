@@ -28,7 +28,6 @@
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
-#include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/ranges_iterator_traits.h>
@@ -74,18 +73,23 @@ class flat_map {
   template <class, class, class, class, class>
   friend class flat_map;
 
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
+  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
+  static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
+  static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
+
 public:
   // types
-  using key_type    = _Key;
-  using mapped_type = _Tp;
-  using value_type  = pair<key_type, mapped_type>;
-  using key_compare = __type_identity_t<_Compare>;
-  // TODO : the following is the spec, but not implementable for vector<bool>
-  // using reference              = pair<const key_type&, mapped_type&>;
-  // using const_reference        = pair<const key_type&, const mapped_type&>;
-  using reference = pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<_MappedContainer>>;
-  using const_reference =
-      pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<const _MappedContainer>>;
+  using key_type        = _Key;
+  using mapped_type     = _Tp;
+  using value_type      = pair<key_type, mapped_type>;
+  using key_compare     = __type_identity_t<_Compare>;
+  using reference       = pair<const key_type&, mapped_type&>;
+  using const_reference = pair<const key_type&, const mapped_type&>;
+  // TODO : to support vector<bool> in the future, the following typedefs need to replace the above
+  // using reference = pair<ranges::range_reference_t<const _KeyContainer>,
+  // ranges::range_reference_t<_MappedContainer>>; using const_reference =
+  //    pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<const _MappedContainer>>;
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using iterator               = __iterator<false>; // see [container.requirements]
@@ -94,9 +98,6 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using key_container_type     = _KeyContainer;
   using mapped_container_type  = _MappedContainer;
-
-  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
-  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
 
   class value_compare {
   private:
@@ -364,23 +365,24 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit flat_map(const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {}
 
-  template <__cpp17_input_iterator _InputIterator>
+  template <class _InputIterator>
+    requires __has_input_iterator_category<_InputIterator>::value
   _LIBCPP_HIDE_FROM_ABI
   flat_map(_InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __containers_(), __compare_(__comp) {
     insert(__first, __last);
   }
 
-  template <__cpp17_input_iterator _InputIterator, class _Allocator>
-    requires __allocator_ctor_constraint<_Allocator>
+  template <class _InputIterator, class _Allocator>
+    requires(__has_input_iterator_category<_InputIterator>::value && __allocator_ctor_constraint<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI
   flat_map(_InputIterator __first, _InputIterator __last, const key_compare& __comp, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
     insert(__first, __last);
   }
 
-  template <__cpp17_input_iterator _InputIterator, class _Allocator>
-    requires __allocator_ctor_constraint<_Allocator>
+  template <class _InputIterator, class _Allocator>
+    requires(__has_input_iterator_category<_InputIterator>::value && __allocator_ctor_constraint<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI flat_map(_InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {
     insert(__first, __last);
@@ -409,14 +411,15 @@ public:
     insert_range(std::forward<_Range>(__rg));
   }
 
-  template <__cpp17_input_iterator _InputIterator>
+  template <class _InputIterator>
+    requires __has_input_iterator_category<_InputIterator>::value
   _LIBCPP_HIDE_FROM_ABI
   flat_map(sorted_unique_t, _InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __containers_(), __compare_(__comp) {
     insert(sorted_unique, __first, __last);
   }
-  template <__cpp17_input_iterator _InputIterator, class _Allocator>
-    requires __allocator_ctor_constraint<_Allocator>
+  template <class _InputIterator, class _Allocator>
+    requires(__has_input_iterator_category<_InputIterator>::value && __allocator_ctor_constraint<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI
   flat_map(sorted_unique_t,
            _InputIterator __first,
@@ -427,8 +430,8 @@ public:
     insert(sorted_unique, __first, __last);
   }
 
-  template <__cpp17_input_iterator _InputIterator, class _Allocator>
-    requires __allocator_ctor_constraint<_Allocator>
+  template <class _InputIterator, class _Allocator>
+    requires(__has_input_iterator_category<_InputIterator>::value && __allocator_ctor_constraint<_Allocator>)
   _LIBCPP_HIDE_FROM_ABI
   flat_map(sorted_unique_t, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {
@@ -621,7 +624,8 @@ public:
     return emplace_hint(__hint, std::forward<_Pp>(__x));
   }
 
-  template <__cpp17_input_iterator _InputIterator>
+  template <class _InputIterator>
+    requires __has_input_iterator_category<_InputIterator>::value
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
@@ -629,7 +633,8 @@ public:
     __append_sort_merge_unique</*WasSorted = */ false>(std::move(__first), std::move(__last));
   }
 
-  template <__cpp17_input_iterator _InputIterator>
+  template <class _InputIterator>
+    requires __has_input_iterator_category<_InputIterator>::value
   void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
@@ -1253,13 +1258,13 @@ flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Compare, _Allocator)
                 _KeyContainer,
                 _MappedContainer>;
 
-template <__cpp17_input_iterator _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
-  requires(!__is_allocator<_Compare>::value)
+template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
 flat_map(_InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
-template <__cpp17_input_iterator _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
-  requires(!__is_allocator<_Compare>::value)
+template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
 flat_map(sorted_unique_t, _InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 

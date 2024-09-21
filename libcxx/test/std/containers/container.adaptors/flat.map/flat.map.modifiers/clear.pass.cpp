@@ -47,6 +47,8 @@ int main(int, char**) {
     m.clear();
     assert(m.size() == 0);
   }
+#if 0
+  // vector<bool> is not supported
   {
     using M = std::flat_map<bool, bool>;
     M m     = {{true, false}, {false, true}};
@@ -56,5 +58,6 @@ int main(int, char**) {
     m.clear();
     assert(m.size() == 0);
   }
+#endif
   return 0;
 }
