@@ -16,6 +16,10 @@ namespace fir {
 class LLVMTypeConverter;
 }
 
+namespace mlir {
+class DataLayout;
+}
+
 namespace cuf {
 
 void populateCUFToFIRConversionPatterns(fir::LLVMTypeConverter &converter,
