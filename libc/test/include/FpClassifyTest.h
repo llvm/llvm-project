@@ -23,12 +23,12 @@ public:
   typedef int (*FpClassifyFunc)(T, T, T, T, T, T);
 
   void testSpecialNumbers(FpClassifyFunc func) {
-    EXPECT_EQ(func(1, 2, 3, 4, 5, inf), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_inf), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, aNaN), 2);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_aNaN), 2);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, sNaN), 2);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_sNaN), 2);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, aNaN), 1);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_aNaN), 1);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, sNaN), 1);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_sNaN), 1);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, inf), 2);
+    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_inf), 2);
     EXPECT_EQ(func(1, 2, 3, 4, 5, min_normal), 3);
     EXPECT_EQ(func(1, 2, 3, 4, 5, max_normal), 3);
     EXPECT_EQ(func(1, 2, 3, 4, 5, neg_max_normal), 3);
