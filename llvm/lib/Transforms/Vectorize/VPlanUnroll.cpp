@@ -1,4 +1,4 @@
-//===-- VPlanTransforms.cpp - Utility VPlan to VPlan transforms -----------===//
+//===-- VPlanUnroll.cpp - VPlan unroller ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a set of utility VPlan to VPlan transformations.
+/// This file implements explicit unrolling for VPlans.
 ///
 //===----------------------------------------------------------------------===//
 
