@@ -56,7 +56,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
       if (!out) {
-        assert(config->relocatable && (rel->flags & SHF_LINK_ORDER));
+        assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
         return s->name;
       }
       if (s->type == SHT_CREL)
@@ -67,7 +67,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     }
   }
 
-  if (config->relocatable)
+  if (ctx.arg.relocatable)
     return s->name;
 
   // A BssSection created for a common symbol is identified as "COMMON" in
@@ -96,7 +96,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // profile inaccuracy. Techniques such as hugepage remapping can make
   // conservative decisions at the section granularity.
   if (isSectionPrefix(".text", s->name)) {
-    if (config->zKeepTextSectionPrefix)
+    if (ctx.arg.zKeepTextSectionPrefix)
       for (StringRef v : {".text.hot", ".text.unknown", ".text.unlikely",
                           ".text.startup", ".text.exit", ".text.split"})
         if (isSectionPrefix(v.substr(5), s->name.substr(5)))
@@ -308,7 +308,7 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
 void LinkerScript::processInsertCommands() {
   SmallVector<OutputDesc *, 0> moves;
   for (const InsertCommand &cmd : insertCommands) {
-    if (config->enableNonContiguousRegions)
+    if (ctx.arg.enableNonContiguousRegions)
       error("INSERT cannot be used with --enable-non-contiguous-regions");
 
     for (StringRef name : cmd.names) {
@@ -486,7 +486,7 @@ static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
     return;
 
   if (inner == SortSectionPolicy::Default)
-    sortSections(vec, config->sortSection);
+    sortSections(vec, ctx.arg.sortSection);
   else
     sortSections(vec, inner);
   sortSections(vec, outer);
@@ -518,7 +518,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         ret[i] = sections[indexes[i]];
       sortInputSections(
           MutableArrayRef<InputSectionBase *>(ret).slice(begin, end - begin),
-          config->sortSection, SortSectionPolicy::None);
+          ctx.arg.sortSection, SortSectionPolicy::None);
     };
 
     for (const SectionPattern &pat : cmd->sectionPatterns) {
@@ -550,7 +550,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
         if (sec->parent) {
           // Skip if not allowing multiple matches.
-          if (!config->enableNonContiguousRegions)
+          if (!ctx.arg.enableNonContiguousRegions)
             continue;
 
           // Disallow spilling into /DISCARD/; special handling would be needed
@@ -734,7 +734,7 @@ void LinkerScript::processSectionCommands() {
 
   // Process OVERWRITE_SECTIONS first so that it can overwrite the main script
   // or orphans.
-  if (config->enableNonContiguousRegions && !overwriteSections.empty())
+  if (ctx.arg.enableNonContiguousRegions && !overwriteSections.empty())
     error("OVERWRITE_SECTIONS cannot be used with "
           "--enable-non-contiguous-regions");
   DenseMap<CachedHashStringRef, OutputDesc *> map;
@@ -944,7 +944,7 @@ static OutputDesc *addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
     if (sec->partition != isec->partition)
       continue;
 
-    if (config->relocatable && (isec->flags & SHF_LINK_ORDER)) {
+    if (ctx.arg.relocatable && (isec->flags & SHF_LINK_ORDER)) {
       // Merging two SHF_LINK_ORDER sections with different sh_link fields will
       // change their semantics, so we only merge them in -r links if they will
       // end up being linked to the same output section. The casts are fine
@@ -978,7 +978,7 @@ void LinkerScript::addOrphanSections() {
       orphanSections.push_back(s);
 
       StringRef name = getOutputSectionName(s);
-      if (config->unique) {
+      if (ctx.arg.unique) {
         v.push_back(createSection(s, name));
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
@@ -1004,7 +1004,7 @@ void LinkerScript::addOrphanSections() {
     // In -r links, SHF_LINK_ORDER sections are added while adding their parent
     // sections because we need to know the parent's output section before we
     // can select an output section for the SHF_LINK_ORDER section.
-    if (config->relocatable && (isec->flags & SHF_LINK_ORDER))
+    if (ctx.arg.relocatable && (isec->flags & SHF_LINK_ORDER))
       continue;
 
     if (auto *sec = dyn_cast<InputSection>(isec))
@@ -1012,7 +1012,7 @@ void LinkerScript::addOrphanSections() {
         if (auto *relIS = dyn_cast_or_null<InputSectionBase>(rel->parent))
           add(relIS);
     add(isec);
-    if (config->relocatable)
+    if (ctx.arg.relocatable)
       for (InputSectionBase *depSec : isec->dependentSections)
         if (depSec->flags & SHF_LINK_ORDER)
           add(depSec);
@@ -1032,7 +1032,7 @@ void LinkerScript::addOrphanSections() {
 
 void LinkerScript::diagnoseOrphanHandling() const {
   llvm::TimeTraceScope timeScope("Diagnose orphan sections");
-  if (config->orphanHandling == OrphanHandlingPolicy::Place ||
+  if (ctx.arg.orphanHandling == OrphanHandlingPolicy::Place ||
       !hasSectionsCommand)
     return;
   for (const InputSectionBase *sec : orphanSections) {
@@ -1047,7 +1047,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
       continue;
 
     StringRef name = getOutputSectionName(sec);
-    if (config->orphanHandling == OrphanHandlingPolicy::Error)
+    if (ctx.arg.orphanHandling == OrphanHandlingPolicy::Error)
       error(toString(sec) + " is being placed in '" + name + "'");
     else
       warn(toString(sec) + " is being placed in '" + name + "'");
@@ -1055,11 +1055,11 @@ void LinkerScript::diagnoseOrphanHandling() const {
 }
 
 void LinkerScript::diagnoseMissingSGSectionAddress() const {
-  if (!config->cmseImplib || !ctx.in.armCmseSGSection->isNeeded())
+  if (!ctx.arg.cmseImplib || !ctx.in.armCmseSGSection->isNeeded())
     return;
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
-  if (sec && !sec->addrExpr && !config->sectionStartMap.count(".gnu.sgstubs"))
+  if (sec && !sec->addrExpr && !ctx.arg.sectionStartMap.count(".gnu.sgstubs"))
     error("no address assigned to the veneers output section " + sec->name);
 }
 
@@ -1238,7 +1238,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // If .relro_padding is present, round up the end to a common-page-size
   // boundary to protect the last page.
   if (ctx.in.relroPadding && sec == ctx.in.relroPadding->getParent())
-    expandOutputSection(alignToPowerOf2(dot, config->commonPageSize) - dot);
+    expandOutputSection(alignToPowerOf2(dot, ctx.arg.commonPageSize) - dot);
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
   // as they are not part of the process image.
@@ -1441,16 +1441,16 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
       llvm::any_of(phdrsCommands, [](const PhdrsCommand &cmd) {
         return cmd.hasPhdrs || cmd.hasFilehdr;
       });
-  bool paged = !config->omagic && !config->nmagic;
+  bool paged = !ctx.arg.omagic && !ctx.arg.nmagic;
   uint64_t headerSize = getHeaderSize();
 
   uint64_t base = 0;
   // If SECTIONS is present and the linkerscript is not explicit about program
   // headers, only allocate program headers if that would not add a page.
   if (hasSectionsCommand && !hasExplicitHeaders)
-    base = alignDown(min, config->maxPageSize);
+    base = alignDown(min, ctx.arg.maxPageSize);
   if ((paged || hasExplicitHeaders) && headerSize <= min - base) {
-    min = alignDown(min - headerSize, config->maxPageSize);
+    min = alignDown(min - headerSize, ctx.arg.maxPageSize);
     ctx.out.elfHeader->addr = min;
     ctx.out.programHeaders->addr = min + ctx.out.elfHeader->size;
     return;
@@ -1485,7 +1485,7 @@ LinkerScript::assignAddresses() {
   if (hasSectionsCommand) {
     // With a linker script, assignment of addresses to headers is covered by
     // allocateHeaders().
-    dot = config->imageBase.value_or(0);
+    dot = ctx.arg.imageBase.value_or(0);
   } else {
     // Assign addresses to headers right now.
     dot = ctx.target->getImageBase();
