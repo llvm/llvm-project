@@ -9,11 +9,13 @@
 #ifndef LLVM_LIBC_MACROS_MATH_FUNCTION_MACROS_H
 #define LLVM_LIBC_MACROS_MATH_FUNCTION_MACROS_H
 
+#include "math-macros.h"
+
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
 #define isnan(x) __builtin_isnan(x)
 #define signbit(x) __builtin_signbit(x)
 #define iszero(x) (x == 0)
-#define fpclassify(a, b, c, d, e, f) __builtin_fpclassify(a, b, c, d, e, f)
+#define fpclassify(x) __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, x)
 
 #endif // LLVM_LIBC_MACROS_MATH_FUNCTION_MACROS_H

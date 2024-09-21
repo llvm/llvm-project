@@ -14,12 +14,12 @@
 #error "fpclassify macro is not defined"
 #else
 int main(void) {
-  assert(fpclassify(1, 2, 3, 4, 5, 1.819f) == 3);
-  assert(fpclassify(1, 2, 3, 4, 5, -1.726) == 3);
-  assert(fpclassify(1, 2, 3, 4, 5, 1.426L) == 3);
-  assert(fpclassify(1, 2, 3, 4, 5, -0.0f) == 5);
-  assert(fpclassify(1, 2, 3, 4, 5, 0.0) == 5);
-  assert(fpclassify(1, 2, 3, 4, 5, -0.0L) == 5);
+  assert(fpclassify(1.819f) == 4);
+  assert(fpclassify(-1.726) == 4);
+  assert(fpclassify(1.426L) == 4);
+  assert(fpclassify(-0.0f) == 2);
+  assert(fpclassify(0.0) == 2);
+  assert(fpclassify(-0.0L) == 2);
   return 0;
 }
 #endif

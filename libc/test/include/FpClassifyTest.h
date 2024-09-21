@@ -19,31 +19,37 @@ class FpClassifyTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef int (*FpClassifyFunc)(T, T, T, T, T, T);
+  typedef int (*FpClassifyFunc)(T);
 
   void testSpecialNumbers(FpClassifyFunc func) {
-    EXPECT_EQ(func(1, 2, 3, 4, 5, aNaN), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_aNaN), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, sNaN), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_sNaN), 1);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, inf), 2);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_inf), 2);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, min_normal), 3);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, max_normal), 3);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_max_normal), 3);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, min_denormal), 4);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_min_denormal), 4);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, max_denormal), 4);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, zero), 5);
-    EXPECT_EQ(func(1, 2, 3, 4, 5, neg_zero), 5);
+    EXPECT_EQ(func(aNaN), 0);
+    EXPECT_EQ(func(neg_aNaN), 0);
+    EXPECT_EQ(func(sNaN), 0);
+    EXPECT_EQ(func(neg_sNaN), 0);
+    EXPECT_EQ(func(inf), 1);
+    EXPECT_EQ(func(neg_inf), 1);
+    EXPECT_EQ(func(min_normal), 4);
+    EXPECT_EQ(func(max_normal), 4);
+    EXPECT_EQ(func(neg_max_normal), 4);
+    EXPECT_EQ(func(min_denormal), 3);
+    EXPECT_EQ(func(neg_min_denormal), 3);
+    EXPECT_EQ(func(max_denormal), 3);
+    EXPECT_EQ(func(zero), 2);
+    EXPECT_EQ(func(neg_zero), 2);
   }
 };
+
+#define FP_NAN 0
+#define FP_INFINITE 1
+#define FP_ZERO 2
+#define FP_SUBNORMAL 3
+#define FP_NORMAL 4
 
 #define LIST_FPCLASSIFY_TESTS(T, func)                                         \
   using LlvmLibcFpClassifyTest = FpClassifyTest<T>;                            \
   TEST_F(LlvmLibcFpClassifyTest, SpecialNumbers) {                             \
-    auto fpclassify_func = [](T a, T b, T c, T d, T e, T f) {                  \
-      return func(a, b, c, d, e, f);                                           \
+    auto fpclassify_func = [](T x) {                                           \
+      return func(x);                                                          \
     };                                                                         \
     testSpecialNumbers(fpclassify_func);                                       \
   }
