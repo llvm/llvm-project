@@ -1142,6 +1142,43 @@ define void @foo() {
   EXPECT_EQ(NoCFI->getType(), F.getType());
 }
 
+TEST_F(SandboxIRTest, ConstantPtrAuth) {
+  parseIR(C, R"IR(
+define ptr @foo() {
+  ret ptr ptrauth (ptr @foo, i32 2, i64 1234)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto *LLVMRet = cast<llvm::ReturnInst>(&*LLVMBB->begin());
+  auto *LLVMPtrAuth = cast<llvm::ConstantPtrAuth>(LLVMRet->getReturnValue());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  auto *PtrAuth = cast<sandboxir::ConstantPtrAuth>(Ret->getReturnValue());
+  // Check get(), getKey(), getDiscriminator(), getAddrDiscriminator().
+  auto *NewPtrAuth = sandboxir::ConstantPtrAuth::get(
+      &F, PtrAuth->getKey(), PtrAuth->getDiscriminator(),
+      PtrAuth->getAddrDiscriminator());
+  EXPECT_EQ(NewPtrAuth, PtrAuth);
+  // Check hasAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasAddressDiscriminator(),
+            LLVMPtrAuth->hasAddressDiscriminator());
+  // Check hasSpecialAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasSpecialAddressDiscriminator(0u),
+            LLVMPtrAuth->hasSpecialAddressDiscriminator(0u));
+  // Check isKnownCompatibleWith().
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_TRUE(PtrAuth->isKnownCompatibleWith(PtrAuth->getKey(),
+                                             PtrAuth->getDiscriminator(), DL));
+  // Check getWithSameSchema().
+  EXPECT_EQ(PtrAuth->getWithSameSchema(&F), PtrAuth);
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
