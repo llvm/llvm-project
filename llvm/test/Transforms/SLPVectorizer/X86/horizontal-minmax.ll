@@ -837,18 +837,21 @@ define i32 @maxi8_mutiple_uses(i32) {
 ; THRESH-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP3]], i32 [[TMP4]]
 ; THRESH-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
-; THRESH-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP7]])
-; THRESH-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; THRESH-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP8]], i32 0
-; THRESH-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP6]], i32 1
-; THRESH-NEXT:    [[TMP12:%.*]] = icmp sgt <2 x i32> [[TMP10]], [[TMP11]]
-; THRESH-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP12]], <2 x i32> [[TMP10]], <2 x i32> [[TMP11]]
-; THRESH-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP13]], i32 0
-; THRESH-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP13]], i32 1
-; THRESH-NEXT:    [[OP_RDX4:%.*]] = icmp sgt i32 [[TMP14]], [[TMP15]]
-; THRESH-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX4]], i32 [[TMP14]], i32 [[TMP15]]
-; THRESH-NEXT:    [[TMP16:%.*]] = select i1 [[TMP5]], i32 3, i32 4
-; THRESH-NEXT:    store i32 [[TMP16]], ptr @var, align 8
+; THRESH-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 7), align 4
+; THRESH-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP7]])
+; THRESH-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP10]], i32 0
+; THRESH-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP9]], i32 1
+; THRESH-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP8]], i32 0
+; THRESH-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP6]], i32 1
+; THRESH-NEXT:    [[TMP15:%.*]] = icmp sgt <2 x i32> [[TMP12]], [[TMP14]]
+; THRESH-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP12]], <2 x i32> [[TMP14]]
+; THRESH-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[TMP16]], i32 0
+; THRESH-NEXT:    [[TMP18:%.*]] = extractelement <2 x i32> [[TMP16]], i32 1
+; THRESH-NEXT:    [[OP_RDX4:%.*]] = icmp sgt i32 [[TMP17]], [[TMP18]]
+; THRESH-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX4]], i32 [[TMP17]], i32 [[TMP18]]
+; THRESH-NEXT:    [[TMP19:%.*]] = select i1 [[TMP5]], i32 3, i32 4
+; THRESH-NEXT:    store i32 [[TMP19]], ptr @var, align 8
 ; THRESH-NEXT:    ret i32 [[OP_RDX5]]
 ;
   %2 = load i32, ptr @arr, align 16
