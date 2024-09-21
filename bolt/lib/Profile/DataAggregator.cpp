@@ -858,12 +858,12 @@ bool DataAggregator::doTrace(const uint64_t From, const uint64_t To,
       BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), From, To)
           : getFallthroughsInTrace(*FromFunc, From, To, Count);
   if (!FTs) {
-    LLVM_DEBUG(
-        dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(From - FromFunc->getAddress())
-               << " and ending in " << ToFunc->getPrintName() << " @ "
-               << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(To - ToFunc->getAddress()) << '\n');
+    LLVM_DEBUG(dbgs() << "Invalid trace starting in "
+                      << FromFunc->getPrintName() << " @ "
+                      << Twine::utohexstr(From - FromFunc->getAddress())
+                      << " and ending in " << ToFunc->getPrintName() << " @ "
+                      << ToFunc->getPrintName() << " @ "
+                      << Twine::utohexstr(To - ToFunc->getAddress()) << '\n');
     NumInvalidTraces += Count;
     return false;
   }
@@ -1582,7 +1582,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  for (const auto &[Loc, Info]: FallthroughLBRs) {
+  for (const auto &[Loc, Info] : FallthroughLBRs) {
     if (Info.InternCount)
       doTrace(Loc.From, Loc.To, Info.InternCount);
     if (Info.ExternCount) {
@@ -1750,7 +1750,7 @@ void DataAggregator::processPreAggregated() {
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   uint64_t NumTraces = 0;
-  for (const auto &[From, To, Count, Mispreds, Type]: AggregatedLBRs) {
+  for (const auto &[From, To, Count, Mispreds, Type] : AggregatedLBRs) {
     bool IsExternalOrigin = Type == AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
     switch (Type) {
     case AggregatedLBREntry::BRANCH:
