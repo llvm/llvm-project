@@ -37,6 +37,12 @@ public:
   const char *FunctionName() const { return Green(); }
   const char *Reason() const { return Blue(); }
 };
+
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+// TODO: Remove below when c++20
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 } // namespace
 
 static void PrintStackTrace(uptr pc, uptr bp) {
@@ -46,13 +52,8 @@ static void PrintStackTrace(uptr pc, uptr bp) {
   stack.Print();
 }
 
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-// TODO: Remove below when c++20
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
-
-void PrintError(Decorator &decorator, const DiagnosticsCallerInfo &info) {
+static void PrintError(const Decorator &decorator,
+                       const DiagnosticsCallerInfo &info) {
   const char *violation_type = std::visit(
       Overloaded{
           [](const InterceptedCallInfo &) { return "unsafe-library-call"; },
@@ -63,7 +64,8 @@ void PrintError(Decorator &decorator, const DiagnosticsCallerInfo &info) {
   Report("ERROR: RealtimeSanitizer: %s\n", violation_type);
 }
 
-void PrintReason(Decorator &decorator, const DiagnosticsCallerInfo &info) {
+static void PrintReason(const Decorator &decorator,
+                        const DiagnosticsCallerInfo &info) {
   Printf("%s", decorator.Reason());
 
   std::visit(
