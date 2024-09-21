@@ -12,8 +12,19 @@
 
 #pragma once
 
+#include "rtsan/rtsan.h"
 #include "rtsan/rtsan_context.h"
 
 namespace __rtsan {
-void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
+
+template <typename OnViolationAction>
+void ExpectNotRealtime(Context &context, OnViolationAction &&OnViolation) {
+  CHECK(__rtsan_is_initialized());
+  if (context.InRealtimeContext() && !context.IsBypassed()) {
+    context.BypassPush();
+    OnViolation();
+    context.BypassPop();
+  }
+}
+
 } // namespace __rtsan

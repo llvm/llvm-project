@@ -148,32 +148,33 @@ namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() {
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() {
     elf::ctx.reset();
     elf::ctx.partitions.emplace_back();
     symtab = SymbolTable();
 
     SharedFile::vernauxNum = 0;
   };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "--error-limit=0 to see all errors)";
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
 
-  LinkerScript script;
-  elf::ctx.script = &script;
-  elf::ctx.symAux.emplace_back();
+  LinkerScript script(ctx);
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
 
-  elf::ctx.partitions.clear();
-  elf::ctx.partitions.emplace_back();
+  ctx.partitions.clear();
+  ctx.partitions.emplace_back();
 
   config->progName = args[0];
 
-  elf::ctx.driver.linkerMain(args);
+  ctx.driver.linkerMain(args);
 
   return errorCount() == 0;
 }
@@ -292,7 +293,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::unknown:
-    readLinkerScript(mbref);
+    readLinkerScript(ctx, mbref);
     return;
   case file_magic::archive: {
     auto members = getArchiveMembers(mbref);
@@ -1822,12 +1823,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   for (auto *arg :
        args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-      readDynamicList(*buffer);
+      readDynamicList(ctx, *buffer);
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (std::optional<std::string> path = searchScript(arg->getValue())) {
       if (std::optional<MemoryBufferRef> buffer = readFile(*path))
-        readVersionScript(*buffer);
+        readVersionScript(ctx, *buffer);
     } else {
       error(Twine("cannot find version script ") + arg->getValue());
     }
@@ -1955,7 +1956,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
+      readDefsym(ctx, MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -1965,7 +1966,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
           if (arg->getOption().matches(OPT_default_script)) {
             defaultScript = mb;
           } else {
-            readLinkerScript(*mb);
+            readLinkerScript(ctx, *mb);
             hasScript = true;
           }
         }
@@ -2051,7 +2052,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   }
 
   if (defaultScript && !hasScript)
-    readLinkerScript(*defaultScript);
+    readLinkerScript(ctx, *defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
@@ -2540,7 +2541,7 @@ template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile bitcode files and replace bitcode symbols.
-  lto.reset(new BitcodeCompiler);
+  lto.reset(new BitcodeCompiler(ctx));
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
@@ -3222,5 +3223,5 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Write the result to the file.
-  writeResult<ELFT>();
+  writeResult<ELFT>(ctx);
 }

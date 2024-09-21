@@ -432,12 +432,12 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <32 x i8>, ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <32 x i8> [[WIDE_VEC2]], <32 x i8> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
 ; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <32 x i8>, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <32 x i8> [[WIDE_VEC2]], <32 x i8> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <32 x i8> [[WIDE_VEC2]], <32 x i8> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <8 x i8> [[STRIDED_VEC4]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext <8 x i8> [[STRIDED_VEC5]] to <8 x i32>

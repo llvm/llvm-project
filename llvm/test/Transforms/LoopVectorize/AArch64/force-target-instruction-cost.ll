@@ -207,18 +207,16 @@ define void @test_exit_branch_cost(ptr %dst, i64 %x, i32 %y, ptr %dst.1, i1 %c.4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT40:%.*]] = insertelement <2 x i1> poison, i1 [[C_3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT41:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT40]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT56:%.*]] = insertelement <2 x i1> poison, i1 [[C_4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT57:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT56]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE74:.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP47]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i1> [[TMP47]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -244,7 +242,7 @@ define void @test_exit_branch_cost(ptr %dst, i64 %x, i32 %y, ptr %dst.1, i1 %c.4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE47]]
 ; CHECK:       [[PRED_STORE_CONTINUE47]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP2]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[TMP3]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[TMP2]], <i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP5]], <2 x i1> [[TMP11]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
@@ -276,7 +274,7 @@ define void @test_exit_branch_cost(ptr %dst, i64 %x, i32 %y, ptr %dst.1, i1 %c.4
 ; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP18]], <2 x i1> [[BROADCAST_SPLAT57]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP19]], <2 x i1> [[BROADCAST_SPLAT57]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <2 x i1> [[TMP47]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i1> [[TMP1]], [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i1> [[TMP47]], [[TMP21]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP20]], <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 1>
 ; CHECK-NEXT:    [[PREDPHI58:%.*]] = select <2 x i1> [[TMP21]], <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i1> [[TMP22]], i32 0
