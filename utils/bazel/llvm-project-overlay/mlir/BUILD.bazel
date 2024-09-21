@@ -4231,6 +4231,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorToSCF",
         ":VectorToSPIRV",
+        ":VectorToXeGPU",
     ],
 )
 
@@ -5278,6 +5279,7 @@ cc_library(
         ":IR",
         ":Support",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -7459,6 +7461,7 @@ cc_library(
     deps = [
         ":SPIRVDialect",
         ":Support",
+        "//llvm:config",
     ],
 )
 
@@ -8435,6 +8438,25 @@ cc_library(
         ":VectorDialect",
         ":VectorToSPIRV",
         ":VectorTransforms",
+    ],
+)
+
+cc_library(
+    name = "VectorToXeGPU",
+    srcs = ["lib/Conversion/VectorToXeGPU/VectorToXeGPU.cpp"],
+    hdrs = ["include/mlir/Conversion/VectorToXeGPU/VectorToXeGPU.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
+        ":Transforms",
+        ":VectorDialect",
+        ":XeGPUDialect",
+        "//llvm:Support",
     ],
 )
 

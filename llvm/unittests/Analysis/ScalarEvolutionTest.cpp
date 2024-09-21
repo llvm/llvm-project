@@ -984,7 +984,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   // entry:
   BranchInst::Create(LoopBB, EntryBB);
   // loop:
-  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U, true));
+  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);

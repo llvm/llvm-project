@@ -2,9 +2,10 @@ include_directories(..)
 
 set(RTSAN_CXX_SOURCES
   rtsan.cpp
+  rtsan_assertions.cpp
   rtsan_context.cpp
+  rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_stack.cpp
   rtsan_interceptors.cpp)
 
 set(RTSAN_PREINIT_SOURCES
@@ -12,11 +13,11 @@ set(RTSAN_PREINIT_SOURCES
 
 set(RTSAN_HEADERS
   rtsan.h
+  rtsan_assertions.h
   rtsan_context.h
+  rtsan_diagnostics.h
   rtsan_flags.h
-  rtsan_flags.inc
-  rtsan_stack.h
-  )
+  rtsan_flags.inc)
 
 set(RTSAN_DEPS)
 
