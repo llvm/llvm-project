@@ -411,44 +411,12 @@ static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
-// riscv32 Linux
-static const MemoryMapParams Linux_RISCV32_MemoryMapParams = {
-    0x000080000000, // AndMask
-    0,              // XorMask (not used)
-    0,              // ShadowBase (not used)
-    0x000040000000, // OriginBase
-};
-
-// riscv64 Linux
-static const MemoryMapParams Linux_RISCV64_MemoryMapParams = {
-    0,              // AndMask (not used)
-    0x008000000000, // XorMask
-    0,              // ShadowBase (not used)
-    0x002000000000, // OriginBase
-};
-
-// mips32 Linux
-static const MemoryMapParams Linux_MIPS32_MemoryMapParams = {
-    0x000080000000, // AndMask
-    0,              // XorMask (not used)
-    0,              // ShadowBase (not used)
-    0x000040000000, // OriginBase
-};
-
 // mips64 Linux
 static const MemoryMapParams Linux_MIPS64_MemoryMapParams = {
     0,              // AndMask (not used)
     0x008000000000, // XorMask
     0,              // ShadowBase (not used)
     0x002000000000, // OriginBase
-};
-
-// ppc32 Linux
-static const MemoryMapParams Linux_PowerPC32_MemoryMapParams = {
-    0x000080000000, // AndMask
-    0,              // XorMask (not used)
-    0,              // ShadowBase (not used)
-    0x000040000000, // OriginBase
 };
 
 // ppc64 Linux
@@ -465,14 +433,6 @@ static const MemoryMapParams Linux_S390X_MemoryMapParams = {
     0,              // XorMask (not used)
     0x080000000000, // ShadowBase
     0x1C0000000000, // OriginBase
-};
-
-// ARM32 Linux
-static const MemoryMapParams Linux_ARM32_MemoryMapParams = {
-    0x000080000000, // AndMask
-    0,              // XorMask (not used)
-    0,              // ShadowBase (not used)
-    0x000040000000, // OriginBase
 };
 
 // aarch64 Linux
@@ -528,18 +488,13 @@ static const PlatformMemoryMapParams Linux_X86_MemoryMapParams = {
     &Linux_X86_64_MemoryMapParams,
 };
 
-static const PlatformMemoryMapParams Linux_RISCV_MemoryMapParams = {
-    &Linux_RISCV32_MemoryMapParams,
-    &Linux_RISCV64_MemoryMapParams,
-};
-
 static const PlatformMemoryMapParams Linux_MIPS_MemoryMapParams = {
-    &Linux_MIPS32_MemoryMapParams,
+    nullptr,
     &Linux_MIPS64_MemoryMapParams,
 };
 
 static const PlatformMemoryMapParams Linux_PowerPC_MemoryMapParams = {
-    &Linux_PowerPC32_MemoryMapParams,
+    nullptr,
     &Linux_PowerPC64_MemoryMapParams,
 };
 
@@ -549,7 +504,7 @@ static const PlatformMemoryMapParams Linux_S390_MemoryMapParams = {
 };
 
 static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
-    &Linux_ARM32_MemoryMapParams,
+    nullptr,
     &Linux_AArch64_MemoryMapParams,
 };
 
@@ -1059,23 +1014,9 @@ void MemorySanitizer::initializeModule(Module &M) {
       case Triple::x86_64:
         MapParams = Linux_X86_MemoryMapParams.bits64;
         break;
-      case Triple::riscv32:
-        MapParams = Linux_RISCV_MemoryMapParams.bits32;
-        break;
-      case Triple::riscv64:
-        MapParams = Linux_RISCV_MemoryMapParams.bits64;
-        break;
-      case Triple::mips:
-      case Triple::mipsel:
-        MapParams = Linux_MIPS_MemoryMapParams.bits32;
-        break;
       case Triple::mips64:
       case Triple::mips64el:
         MapParams = Linux_MIPS_MemoryMapParams.bits64;
-        break;
-      case Triple::ppc:
-      case Triple::ppcle:
-        MapParams = Linux_PowerPC_MemoryMapParams.bits32;
         break;
       case Triple::ppc64:
       case Triple::ppc64le:
@@ -1083,10 +1024,6 @@ void MemorySanitizer::initializeModule(Module &M) {
         break;
       case Triple::systemz:
         MapParams = Linux_S390_MemoryMapParams.bits64;
-        break;
-      case Triple::arm:
-      case Triple::armeb:
-        MapParams = Linux_ARM_MemoryMapParams.bits32;
         break;
       case Triple::aarch64:
       case Triple::aarch64_be:
@@ -4605,10 +4542,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Size = DL.getTypeAllocSize(A->getType());
         if (ArgOffset + Size > kParamTLSSize)
           break;
-
-        Value *ArgShadow = getShadow(A);
-        Value *ArgShadowBase = getShadowPtrForArgument(IRB, ArgOffset);
-        IRB.CreateAlignedStore(ArgShadow, ArgShadowBase, kShadowTLSAlignment);
       } else {
         Value *Store = nullptr;
         // Compute the Shadow for arg even if it is ByVal, because
@@ -5159,13 +5092,13 @@ struct VarArgHelperBase : public VarArgHelper {
     Value *TailSize =
         ConstantInt::getSigned(IRB.getInt32Ty(), kParamTLSSize - BaseOffset);
     IRB.CreateMemSet(ShadowBase, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                     TailSize, Align(4));
+                     TailSize, Align(8));
   }
 
   void unpoisonVAListTagForInst(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *VAListTag = I.getArgOperand(0);
-    const Align Alignment = Align(4);
+    const Align Alignment = Align(8);
     auto [ShadowPtr, OriginPtr] = MSV.getShadowOriginPtr(
         VAListTag, IRB, IRB.getInt8Ty(), Alignment, /*isStore*/ true);
     // Unpoison the whole __va_list_tag.
@@ -6146,7 +6079,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
         if (!IsFixed) {
           Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
           if (Base)
-            IRB.CreateStore(MSV.getShadow(A), Base);
+            IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
           VAArgOffset += ArgSize;
           VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
         }
@@ -6237,7 +6170,7 @@ struct VarArgGenericHelper : public VarArgHelperBase {
         continue;
       }
       Value *Shadow = MSV.getShadow(A);
-      IRB.CreateStore(Shadow, Base);
+      IRB.CreateAlignedStore(Shadow, Base, kShadowTLSAlignment);
     }
 
     Constant *TotalVAArgSize = ConstantInt::get(MS.IntptrTy, VAArgOffset);
