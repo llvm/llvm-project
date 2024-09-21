@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___NUMERIC_IOTA_H
 #define _LIBCPP___NUMERIC_IOTA_H
 
+#include <__algorithm/out_value_result.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__ranges/access.h>
@@ -31,9 +32,12 @@ iota(_ForwardIterator __first, _ForwardIterator __last, _Tp __value) {
 
 #if _LIBCPP_STD_VER >= 23
 namespace ranges {
+template < class _O, class _T >
+using iota_result = ranges::out_value_result<_O, _T>;
+
 template <input_or_output_iterator _O, sentinel_for<_O> _S, weakly_incrementable _T>
   requires indirectly_writable<_O, const _T&>
-constexpr pair<_O, _T> iota(_O __first, _S __last, _T __value) {
+constexpr iota_result<_O, _T> iota(_O __first, _S __last, _T __value) {
   while (__first != __last) {
     *__first = __value;
     ++__first;
@@ -42,8 +46,8 @@ constexpr pair<_O, _T> iota(_O __first, _S __last, _T __value) {
   return {std::move(__first), std::move(__value)};
 }
 
-template < input_or_output_iterator _O, weakly_incrementable _T, output_range<const _T&> _R >
-constexpr pair<_O, _T> iota(_R&& __r, _T __value) {
+template <weakly_incrementable _T, output_range<const _T&> _R >
+constexpr iota_result<ranges::borrowed_iterator_t<_R>, _T> iota(_R&& __r, _T __value) {
   return std::ranges::iota(std::ranges::begin(__r), std::ranges::end(__r), std::move(__value));
 }
 } // namespace ranges

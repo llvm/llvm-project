@@ -65,6 +65,7 @@ set(files
   __algorithm/next_permutation.h
   __algorithm/none_of.h
   __algorithm/nth_element.h
+  __algorithm/out_value_result.h
   __algorithm/partial_sort.h
   __algorithm/partial_sort_copy.h
   __algorithm/partition.h
