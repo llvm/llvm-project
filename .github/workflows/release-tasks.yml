@@ -93,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - ubuntu-22.04
+          - ubuntu-24.04
           - windows-2022
           - macos-13
           - macos-14

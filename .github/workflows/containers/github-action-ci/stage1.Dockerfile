@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:22.04 as base
+FROM docker.io/library/ubuntu:24.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain

@@ -17,7 +17,7 @@ on:
         required: true
         type: choice
         options:
-          - ubuntu-22.04
+          - ubuntu-24.04
           - windows-2022
           - macos-13
           - macos-14
@@ -413,7 +413,7 @@ jobs:
       always() &&
       github.event_name != 'pull_request' &&
       needs.prepare.outputs.upload == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
       id-token: write     # For artifact attestations
