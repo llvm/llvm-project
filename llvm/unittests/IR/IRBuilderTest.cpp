@@ -438,7 +438,7 @@ TEST_F(IRBuilderTest, ConstrainedFPFunctionCall) {
   // Now call the empty constrained FP function.
   Builder.setIsFPConstrained(true);
   Builder.setConstrainedFPFunctionAttr();
-  CallInst *FCall = Builder.CreateCall(Callee, std::nullopt);
+  CallInst *FCall = Builder.CreateCall(Callee, {});
 
   // Check the attributes to verify the strictfp attribute is on the call.
   EXPECT_TRUE(
@@ -697,24 +697,24 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   auto Callee =
       Function::Create(CalleeTy, Function::ExternalLinkage, "", M.get());
 
-  FCall = Builder.CreateCall(Callee, std::nullopt);
+  FCall = Builder.CreateCall(Callee, {});
   EXPECT_FALSE(FCall->hasNoNaNs());
 
   Function *V =
       Function::Create(CalleeTy, Function::ExternalLinkage, "", M.get());
-  FCall = Builder.CreateCall(V, std::nullopt);
+  FCall = Builder.CreateCall(V, {});
   EXPECT_FALSE(FCall->hasNoNaNs());
 
   FMF.clear();
   FMF.setNoNaNs();
   Builder.setFastMathFlags(FMF);
 
-  FCall = Builder.CreateCall(Callee, std::nullopt);
+  FCall = Builder.CreateCall(Callee, {});
   EXPECT_TRUE(Builder.getFastMathFlags().any());
   EXPECT_TRUE(Builder.getFastMathFlags().NoNaNs);
   EXPECT_TRUE(FCall->hasNoNaNs());
 
-  FCall = Builder.CreateCall(V, std::nullopt);
+  FCall = Builder.CreateCall(V, {});
   EXPECT_TRUE(Builder.getFastMathFlags().any());
   EXPECT_TRUE(Builder.getFastMathFlags().NoNaNs);
   EXPECT_TRUE(FCall->hasNoNaNs());
@@ -856,7 +856,7 @@ TEST_F(IRBuilderTest, createFunction) {
   auto File = DIB.createFile("error.swift", "/");
   auto CU =
       DIB.createCompileUnit(dwarf::DW_LANG_Swift, File, "swiftc", true, "", 0);
-  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto NoErr = DIB.createFunction(
       CU, "noerr", "", File, 1, Type, 1, DINode::FlagZero,
       DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
@@ -896,8 +896,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
     auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
                                     DIB.createFile("F.CBL", "/"),
                                     "llvm-cobol74", true, "", 0);
-    auto Type =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
@@ -1014,7 +1013,7 @@ TEST_F(IRBuilderTest, createArtificialSubprogram) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
                                   /*isOptimized=*/true, /*Flags=*/"",
                                   /*Runtime Version=*/0);
-  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto SP = DIB.createFunction(
       CU, "foo", /*LinkageName=*/"", File,
       /*LineNo=*/1, Type, /*ScopeLine=*/2, DINode::FlagZero,
@@ -1168,8 +1167,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus_11,
                                   DIB.createFile("tmp.cpp", "/"), "", true, "",
                                   0);
-  auto SPType =
-      DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto SP =
       DIB.createFunction(CU, "foo", "foo", File, 1, SPType, 1, DINode::FlagZero,
                          DISubprogram::SPFlagDefinition);
@@ -1183,13 +1181,13 @@ TEST_F(IRBuilderTest, DebugLoc) {
   IRBuilder<> Builder(Ctx);
   Builder.SetInsertPoint(Br);
   EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
-  auto Call1 = Builder.CreateCall(Callee, std::nullopt);
+  auto Call1 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL1, Call1->getDebugLoc());
 
   Call1->setDebugLoc(DL2);
   Builder.SetInsertPoint(Call1->getParent(), Call1->getIterator());
   EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
-  auto Call2 = Builder.CreateCall(Callee, std::nullopt);
+  auto Call2 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL2, Call2->getDebugLoc());
 
   DIB.finalize();
@@ -1202,7 +1200,7 @@ TEST_F(IRBuilderTest, DIImportedEntity) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
                                   F, "llvm-cobol74",
                                   true, "", 0);
-  MDTuple *Elements = MDTuple::getDistinct(Ctx, std::nullopt);
+  MDTuple *Elements = MDTuple::getDistinct(Ctx, {});
 
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
