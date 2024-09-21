@@ -766,6 +766,7 @@ module std_private_algorithm_move_backward                               [system
 module std_private_algorithm_next_permutation                            [system] { header "__algorithm/next_permutation.h" }
 module std_private_algorithm_none_of                                     [system] { header "__algorithm/none_of.h" }
 module std_private_algorithm_nth_element                                 [system] { header "__algorithm/nth_element.h" }
+module std_private_algorithm_out_value_result                            [system] { header "__algorithm/out_value_result.h" }
 module std_private_algorithm_partial_sort                                [system] { header "__algorithm/partial_sort.h" }
 module std_private_algorithm_partial_sort_copy                           [system] { header "__algorithm/partial_sort_copy.h" }
 module std_private_algorithm_partition                                   [system] { header "__algorithm/partition.h" }
