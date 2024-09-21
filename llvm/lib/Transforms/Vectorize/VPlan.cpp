@@ -391,6 +391,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
           ->shouldEmitDebugInfoForProfiling() &&
       !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
+    unsigned UF = Plan->getUF();
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
     if (NewDIL)
@@ -1018,6 +1019,10 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  // Set UF to 1, as the unrollByUF VPlan transform already explicitly unrolled
+  // the VPlan.
+  // TODO: Remove State::UF and all uses.
+  State->UF = 1;
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -1093,6 +1098,10 @@ void VPlan::execute(VPTransformState *State) {
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
       Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+      // Use the steps for the last part as backedge value for the induction.
+      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand(), 0));
       continue;
     }
 
