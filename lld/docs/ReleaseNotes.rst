@@ -36,6 +36,10 @@ ELF Improvements
   increases the expressive power of linker scripts.
   (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
 
+* Experimental ``--thinlto-index=`` is added for distributed ThinLTO,
+  addressing some symbol resolution issues with the old ``--thinlto-index-only=``.
+  The ThinLTO indexing and the final link have very similar command lines.
+
 Breaking changes
 ----------------
 

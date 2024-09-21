@@ -48,8 +48,19 @@
 ; RUN: ls | FileCheck --implicit-check-not='thin.{{.*}}.thinlto.bc' /dev/null
 ; RUN: FileCheck %s --check-prefix=IDX < single5.idx
 ; RUN: count 1 < single5.idx
+; RUN: rm main.o.thinlto.bc
 
 ; IDX: main.o
+
+; RUN: ld.lld main.o thin.a --thinlto-single-module=main.o --thinlto-index=single5.map
+; RUN: ls main.o.thinlto.bc
+; RUN: ls | FileCheck --implicit-check-not='thin.{{.*}}.thinlto.bc' /dev/null
+; RUN: FileCheck --input-file=single5.map %s --check-prefix=REMAP --implicit-check-not={{.}}
+
+;; Currently the --thinlto-index= file is not affected by --thinlto-single-module.
+; REMAP:      main.o=main.o
+; REMAP-NEXT: thin1.o=thin1.o
+; REMAP-NEXT: thin2.o=thin2.o
 
 ;; Check temporary output generated for main.o only.
 ; RUN: ld.lld main.o thin.a --thinlto-single-module=main.o --save-temps
