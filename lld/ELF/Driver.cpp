@@ -148,32 +148,33 @@ namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() {
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() {
     elf::ctx.reset();
     elf::ctx.partitions.emplace_back();
     symtab = SymbolTable();
 
     SharedFile::vernauxNum = 0;
   };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "--error-limit=0 to see all errors)";
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
 
-  LinkerScript script;
-  elf::ctx.script = &script;
-  elf::ctx.symAux.emplace_back();
+  LinkerScript script(ctx);
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
 
-  elf::ctx.partitions.clear();
-  elf::ctx.partitions.emplace_back();
+  ctx.partitions.clear();
+  ctx.partitions.emplace_back();
 
   config->progName = args[0];
 
-  elf::ctx.driver.linkerMain(args);
+  ctx.driver.linkerMain(args);
 
   return errorCount() == 0;
 }
