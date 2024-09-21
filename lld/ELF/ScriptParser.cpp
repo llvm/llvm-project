@@ -47,8 +47,7 @@ using namespace lld::elf;
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
-  ScriptParser(MemoryBufferRef mb) : ScriptLexer(mb) {
-  }
+  ScriptParser(Ctx &ctx, MemoryBufferRef mb) : ScriptLexer(ctx, mb) {}
 
   void readLinkerScript();
   void readVersionScript();
@@ -197,7 +196,7 @@ void ScriptParser::readDynamicList() {
   }
 
   for (SymbolVersion v : globals)
-    config->dynamicList.push_back(v);
+    ctx.arg.dynamicList.push_back(v);
 }
 
 void ScriptParser::readVersionScript() {
@@ -313,11 +312,11 @@ void ScriptParser::readNoCrossRefs(bool to) {
 void ScriptParser::addFile(StringRef s) {
   if (curBuf.isUnderSysroot && s.starts_with("/")) {
     SmallString<128> pathData;
-    StringRef path = (config->sysroot + s).toStringRef(pathData);
+    StringRef path = (ctx.arg.sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
       ctx.driver.addFile(saver().save(path), /*withLOption=*/false);
     else
-      setError("cannot find " + s + " inside " + config->sysroot);
+      setError("cannot find " + s + " inside " + ctx.arg.sysroot);
     return;
   }
 
@@ -326,10 +325,10 @@ void ScriptParser::addFile(StringRef s) {
     ctx.driver.addFile(s, /*withLOption=*/false);
   } else if (s.starts_with("=")) {
     // Case 2: relative to the sysroot.
-    if (config->sysroot.empty())
+    if (ctx.arg.sysroot.empty())
       ctx.driver.addFile(s.substr(1), /*withLOption=*/false);
     else
-      ctx.driver.addFile(saver().save(config->sysroot + "/" + s.substr(1)),
+      ctx.driver.addFile(saver().save(ctx.arg.sysroot + "/" + s.substr(1)),
                          /*withLOption=*/false);
   } else if (s.starts_with("-l")) {
     // Case 3: search in the list of library paths.
@@ -361,26 +360,26 @@ void ScriptParser::addFile(StringRef s) {
 
 void ScriptParser::readAsNeeded() {
   expect("(");
-  bool orig = config->asNeeded;
-  config->asNeeded = true;
+  bool orig = ctx.arg.asNeeded;
+  ctx.arg.asNeeded = true;
   while (auto tok = till(")"))
     addFile(unquote(tok));
-  config->asNeeded = orig;
+  ctx.arg.asNeeded = orig;
 }
 
 void ScriptParser::readEntry() {
   // -e <symbol> takes predecence over ENTRY(<symbol>).
   expect("(");
   StringRef name = readName();
-  if (config->entry.empty())
-    config->entry = name;
+  if (ctx.arg.entry.empty())
+    ctx.arg.entry = name;
   expect(")");
 }
 
 void ScriptParser::readExtern() {
   expect("(");
   while (auto tok = till(")"))
-    config->undefined.push_back(unquote(tok));
+    ctx.arg.undefined.push_back(unquote(tok));
 }
 
 void ScriptParser::readGroup() {
@@ -402,7 +401,7 @@ void ScriptParser::readInclude() {
   if (std::optional<std::string> path = searchScript(name)) {
     if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
       buffers.push_back(curBuf);
-      curBuf = Buffer(*mb);
+      curBuf = Buffer(ctx, *mb);
       mbs.push_back(*mb);
     }
     return;
@@ -424,8 +423,8 @@ void ScriptParser::readOutput() {
   // -o <file> takes predecence over OUTPUT(<file>).
   expect("(");
   StringRef name = readName();
-  if (config->outputFile.empty())
-    config->outputFile = name;
+  if (ctx.arg.outputFile.empty())
+    ctx.arg.outputFile = name;
   expect(")");
 }
 
@@ -479,34 +478,34 @@ void ScriptParser::readOutputFormat() {
   if (!consume(")")) {
     expect(",");
     StringRef tmp = readName();
-    if (config->optEB)
+    if (ctx.arg.optEB)
       s = tmp;
     expect(",");
     tmp = readName();
-    if (config->optEL)
+    if (ctx.arg.optEL)
       s = tmp;
     consume(")");
   }
   // If more than one OUTPUT_FORMAT is specified, only the first is checked.
-  if (!config->bfdname.empty())
+  if (!ctx.arg.bfdname.empty())
     return;
-  config->bfdname = s;
+  ctx.arg.bfdname = s;
 
   if (s == "binary") {
-    config->oFormatBinary = true;
+    ctx.arg.oFormatBinary = true;
     return;
   }
 
   if (s.consume_back("-freebsd"))
-    config->osabi = ELFOSABI_FREEBSD;
+    ctx.arg.osabi = ELFOSABI_FREEBSD;
 
-  std::tie(config->ekind, config->emachine) = parseBfdName(s);
-  if (config->emachine == EM_NONE)
-    setError("unknown output format name: " + config->bfdname);
+  std::tie(ctx.arg.ekind, ctx.arg.emachine) = parseBfdName(s);
+  if (ctx.arg.emachine == EM_NONE)
+    setError("unknown output format name: " + ctx.arg.bfdname);
   if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
-    config->mipsN32Abi = true;
-  if (config->emachine == EM_MSP430)
-    config->osabi = ELFOSABI_STANDALONE;
+    ctx.arg.mipsN32Abi = true;
+  if (ctx.arg.emachine == EM_MSP430)
+    ctx.arg.osabi = ELFOSABI_STANDALONE;
 }
 
 void ScriptParser::readPhdrs() {
@@ -550,8 +549,8 @@ void ScriptParser::readRegionAlias() {
 void ScriptParser::readSearchDir() {
   expect("(");
   StringRef name = readName();
-  if (!config->nostdlib)
-    config->searchPaths.push_back(name);
+  if (!ctx.arg.nostdlib)
+    ctx.arg.searchPaths.push_back(name);
   expect(")");
 }
 
@@ -562,7 +561,7 @@ void ScriptParser::readSearchDir() {
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr addrExpr;
   if (consume(":")) {
-    addrExpr = [] { return ctx.script->getDot(); };
+    addrExpr = [&] { return ctx.script->getDot(); };
   } else {
     addrExpr = readExpr();
     expect(":");
@@ -570,7 +569,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
   // lmaExpr will ensure this, even if the start address is specified.
   Expr lmaExpr =
-      consume("AT") ? readParenExpr() : [] { return ctx.script->getDot(); };
+      consume("AT") ? readParenExpr() : [&] { return ctx.script->getDot(); };
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -704,9 +703,9 @@ void ScriptParser::readTarget() {
   expect(")");
 
   if (tok.starts_with("elf"))
-    config->formatBinary = false;
+    ctx.arg.formatBinary = false;
   else if (tok == "binary")
-    config->formatBinary = true;
+    ctx.arg.formatBinary = true;
   else
     setError("unknown target: " + tok);
 }
@@ -1327,7 +1326,7 @@ Expr ScriptParser::getPageSize() {
   std::string location = getCurrentLocation();
   return [=]() -> uint64_t {
     if (ctx.target)
-      return config->commonPageSize;
+      return ctx.arg.commonPageSize;
     error(location + ": unable to calculate page size");
     return 4096; // Return a dummy value.
   };
@@ -1338,7 +1337,7 @@ Expr ScriptParser::readConstant() {
   if (s == "COMMONPAGESIZE")
     return getPageSize();
   if (s == "MAXPAGESIZE")
-    return [] { return config->maxPageSize; };
+    return [&] { return ctx.arg.maxPageSize; };
   setError("unknown constant: " + s);
   return [] { return 0; };
 }
@@ -1556,7 +1555,7 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     expect(".");
     expect(")");
-    return [] { return ctx.script->getDot(); };
+    return [&] { return ctx.script->getDot(); };
   }
   if (tok == "DATA_SEGMENT_RELRO_END") {
     // GNU linkers implements more complicated logic to handle
@@ -1568,8 +1567,8 @@ Expr ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     ctx.script->seenRelroEnd = true;
-    return [=] {
-      return alignToPowerOf2(ctx.script->getDot(), config->maxPageSize);
+    return [&] {
+      return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize);
     };
   }
   if (tok == "DEFINED") {
@@ -1728,9 +1727,9 @@ void ScriptParser::readAnonymousDeclaration() {
   SmallVector<SymbolVersion, 0> globals;
   std::tie(locals, globals) = readSymbols();
   for (const SymbolVersion &pat : locals)
-    config->versionDefinitions[VER_NDX_LOCAL].localPatterns.push_back(pat);
+    ctx.arg.versionDefinitions[VER_NDX_LOCAL].localPatterns.push_back(pat);
   for (const SymbolVersion &pat : globals)
-    config->versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(pat);
+    ctx.arg.versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(pat);
 
   expect(";");
 }
@@ -1748,8 +1747,8 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
   ver.name = verStr;
   ver.nonLocalPatterns = std::move(globals);
   ver.localPatterns = std::move(locals);
-  ver.id = config->versionDefinitions.size();
-  config->versionDefinitions.push_back(ver);
+  ver.id = ctx.arg.versionDefinitions.size();
+  ctx.arg.versionDefinitions.push_back(ver);
 
   // Each version may have a parent version. For example, "Ver2"
   // defined as "Ver2 { global: foo; local: *; } Ver1;" has "Ver1"
@@ -1891,21 +1890,23 @@ void ScriptParser::readMemoryAttributes(uint32_t &flags, uint32_t &invFlags,
   }
 }
 
-void elf::readLinkerScript(MemoryBufferRef mb) {
+void elf::readLinkerScript(Ctx &ctx, MemoryBufferRef mb) {
   llvm::TimeTraceScope timeScope("Read linker script",
                                  mb.getBufferIdentifier());
-  ScriptParser(mb).readLinkerScript();
+  ScriptParser(ctx, mb).readLinkerScript();
 }
 
-void elf::readVersionScript(MemoryBufferRef mb) {
+void elf::readVersionScript(Ctx &ctx, MemoryBufferRef mb) {
   llvm::TimeTraceScope timeScope("Read version script",
                                  mb.getBufferIdentifier());
-  ScriptParser(mb).readVersionScript();
+  ScriptParser(ctx, mb).readVersionScript();
 }
 
-void elf::readDynamicList(MemoryBufferRef mb) {
+void elf::readDynamicList(Ctx &ctx, MemoryBufferRef mb) {
   llvm::TimeTraceScope timeScope("Read dynamic list", mb.getBufferIdentifier());
-  ScriptParser(mb).readDynamicList();
+  ScriptParser(ctx, mb).readDynamicList();
 }
 
-void elf::readDefsym(MemoryBufferRef mb) { ScriptParser(mb).readDefsym(); }
+void elf::readDefsym(Ctx &ctx, MemoryBufferRef mb) {
+  ScriptParser(ctx, mb).readDefsym();
+}
