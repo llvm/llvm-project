@@ -65,18 +65,18 @@ static uint16_t lo(uint32_t v) { return v; }
 static uint16_t ha(uint32_t v) { return (v + 0x8000) >> 16; }
 
 static uint32_t readFromHalf16(const uint8_t *loc) {
-  return read32(config->isLE ? loc : loc - 2);
+  return read32(ctx.arg.isLE ? loc : loc - 2);
 }
 
 static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
-  write32(config->isLE ? loc : loc - 2, insn);
+  write32(ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
 void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = ctx.in.plt->getVA(); // VA of .glink
-  if (!config->isPic) {
+  if (!ctx.arg.isPic) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
       writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
@@ -104,7 +104,7 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // itself) and calls _dl_runtime_resolve() (in glibc).
   uint32_t got = ctx.in.got->getVA();
   const uint8_t *end = buf + 64;
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     uint32_t afterBcl = 4 * ctx.in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
     write32(buf + 0, 0x3d6b0000 | ha(afterBcl));  // addis r11,r11,1f-glink@ha
