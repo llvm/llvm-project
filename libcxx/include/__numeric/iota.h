@@ -15,6 +15,7 @@
 #include <__iterator/concepts.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__utility/as_const.h>
 #include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -39,7 +40,7 @@ template <input_or_output_iterator _O, sentinel_for<_O> _S, weakly_incrementable
   requires indirectly_writable<_O, const _T&>
 constexpr iota_result<_O, _T> iota(_O __first, _S __last, _T __value) {
   while (__first != __last) {
-    *__first = __value;
+    *__first = std::as_const(__value);
     ++__first;
     ++__value;
   }
