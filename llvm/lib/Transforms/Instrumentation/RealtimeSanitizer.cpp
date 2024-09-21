@@ -52,7 +52,7 @@ static PreservedAnalyses rtsanPreservedCFGAnalyses() {
   return PA;
 }
 
-static void insertExpectNotRealtimeAtFunctionEntryPoint(Function &F) {
+static void insertNotifyBlockingCallAtFunctionEntryPoint(Function &F) {
   IRBuilder<> Builder(&F.front().front());
   Value *NameArg = Builder.CreateGlobalString(demangle(F.getName()));
 
@@ -61,7 +61,7 @@ static void insertExpectNotRealtimeAtFunctionEntryPoint(Function &F) {
                         {PointerType::getUnqual(F.getContext())}, false);
 
   FunctionCallee Func = F.getParent()->getOrInsertFunction(
-      "__rtsan_expect_not_realtime", FuncType);
+      "__rtsan_notify_blocking_call", FuncType);
 
   Builder.CreateCall(Func, {NameArg});
 }
@@ -78,7 +78,7 @@ PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
   }
 
   if (F.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe)) {
-    insertExpectNotRealtimeAtFunctionEntryPoint(F);
+    insertNotifyBlockingCallAtFunctionEntryPoint(F);
     return rtsanPreservedCFGAnalyses();
   }
 

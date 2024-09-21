@@ -16,4 +16,4 @@ attributes #0 = { mustprogress noinline sanitize_realtime_unsafe optnone ssp uwt
 ; CHECK: [[GLOBAL_STR:@[a-zA-Z0-9\.]+]]
 ; CHECK-SAME: c"blocking_function()\00"
 ; CHECK-LABEL: @_Z17blocking_functionv()
-; CHECK-NEXT: call{{.*}}@__rtsan_expect_not_realtime(ptr{{.*}}[[GLOBAL_STR]])
+; CHECK-NEXT: call{{.*}}@__rtsan_notify_blocking_call(ptr{{.*}}[[GLOBAL_STR]])
