@@ -31,20 +31,20 @@ iota(_ForwardIterator __first, _ForwardIterator __last, _Tp __value) {
 
 #if _LIBCPP_STD_VER >= 23
 namespace ranges {
-template <input_or_output_iterator O, sentinel_for<O> S, weakly_incrementable T>
-  requires indirectly_writable<O, const T&>
-constexpr pair<O, T> iota(O first, S last, T value) {
-  while (first != last) {
-    *first = value;
-    ++first;
-    ++value;
+template <input_or_output_iterator _O, sentinel_for<_O> _S, weakly_incrementable _T>
+  requires indirectly_writable<_O, const _T&>
+constexpr pair<_O, _T> iota(_O __first, _S __last, _T __value) {
+  while (__first != __last) {
+    *__first = __value;
+    ++__first;
+    ++__value;
   }
-  return {std::move(first), std::move(value)};
+  return {std::move(__first), std::move(__value)};
 }
 
-template < input_or_output_iterator O, weakly_incrementable T, output_range<const T&> R >
-constexpr pair<O, T> iota(R&& r, T value) {
-  return std::ranges::iota(std::ranges::begin(r), std::ranges::end(r), std::move(value));
+template < input_or_output_iterator _O, weakly_incrementable _T, output_range<const _T&> _R >
+constexpr pair<_O, _T> iota(_R&& __r, _T __value) {
+  return std::ranges::iota(std::ranges::begin(__r), std::ranges::end(__r), std::move(__value));
 }
 } // namespace ranges
 #endif // _LIBCPP_STD_VER >= 23
