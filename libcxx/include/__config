@@ -302,7 +302,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
 #    define _NOEXCEPT_(...)
