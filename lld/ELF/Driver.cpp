@@ -2527,7 +2527,7 @@ template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile bitcode files and replace bitcode symbols.
-  lto.reset(new BitcodeCompiler);
+  lto.reset(new BitcodeCompiler(ctx));
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
