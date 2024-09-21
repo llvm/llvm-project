@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
 // RUN:            -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN:            -verify %s -x objective-c++
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
 // RUN:            -verify %s
 

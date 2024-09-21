@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wunsafe-buffer-usage %s -verify %s
+// RUN: %clang_cc1 -Wunsafe-buffer-usage %s -verify %s -x c
+// RUN: %clang_cc1 -Wunsafe-buffer-usage %s -verify %s -x objective-c
 
 void* memcpy(void *dst,const void *src, unsigned long size);
 

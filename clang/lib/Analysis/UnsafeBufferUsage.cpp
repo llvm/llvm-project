@@ -791,7 +791,7 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
   if (!FirstParmTy->isPointerType())
     return false; // possibly some user-defined printf function
 
-  QualType FirstPteTy = FirstParmTy->getAs<PointerType>()->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
 
   if (!Ctx.getFILEType()
            .isNull() && //`FILE *` must be in the context if it is fprintf
@@ -867,7 +867,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   if (!FirstParmTy->isPointerType())
     return false; // Not an snprint
 
-  QualType FirstPteTy = FirstParmTy->getAs<PointerType>()->getPointeeType();
+  QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
   if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||

@@ -2549,7 +2549,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
 
   // UnsafeBufferUsage analysis settings.
-  bool IsCXXLang = S.getLangOpts().CPlusPlus;
   bool UnsafeBufferUsageCanEmitSuggestions = S.getLangOpts().CPlusPlus20;
   bool UnsafeBufferUsageShouldEmitSuggestions =  // Should != Can.
       UnsafeBufferUsageCanEmitSuggestions &&
@@ -2583,7 +2582,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
                        SourceLocation()) ||
       (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
-       IsCXXLang)) {
+       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }
