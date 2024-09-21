@@ -118,6 +118,9 @@ static void removeIdenticalIndexPair(
 }
 
 bool StableFunctionMap::finalize() {
+  // TODO: Add an option for finalization.
+  return false;
+
   bool Changed = false;
 
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {

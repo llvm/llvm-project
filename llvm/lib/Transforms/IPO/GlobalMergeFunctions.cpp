@@ -487,10 +487,14 @@ computeParamInfo(const SmallVector<std::unique_ptr<StableFunctionEntry>> &SFS) {
       ConstHashSeq.push_back(SHash);
     }
 
-    // we've already minimized the Const hash sequence.
+// we've already minimized the Const hash sequence.
+#if 0
     (void)(Identical);
     assert(!Identical &&
            "Function Map has not been finalized or minimized before");
+#endif
+    if (Identical)
+      continue;
 
     // For each unique Const hash sequence (parameter), add the locations.
     HashSeqToLocs[ConstHashSeq].push_back(IndexPair);
@@ -518,7 +522,10 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
 
   auto ModId = M.getModuleIdentifier();
   for (auto &[Hash, SFS] : FunctionMap->getFunctionMap()) {
-    assert(SFS.size() >= 2);
+    // assert(SFS.size() >= 2);
+    // No finalized merge info might have a single function candidate.
+    if (SFS.size() < 2)
+      continue;
     auto ParamLocsVec = computeParamInfo(SFS);
     LLVM_DEBUG({
       dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash << " with Params "
