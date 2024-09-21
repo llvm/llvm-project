@@ -10,6 +10,7 @@
 
 #include <rtsan/rtsan.h>
 #include <rtsan/rtsan_assertions.h>
+#include <rtsan/rtsan_diagnostics.h>
 #include <rtsan/rtsan_flags.h>
 #include <rtsan/rtsan_interceptors.h>
 
@@ -26,6 +27,13 @@ static atomic_uint8_t rtsan_initialized = {0};
 
 static void SetInitialized() {
   atomic_store(&rtsan_initialized, 1, memory_order_release);
+}
+
+static auto PrintDiagnosticsAndDieAction(DiagnosticsInfo info) {
+  return [info]() {
+    __rtsan::PrintDiagnostics(info);
+    Die();
+  };
 }
 
 extern "C" {
@@ -74,22 +82,21 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
-__rtsan_notify_intercepted_call(const char *intercepted_function_name) {
+__rtsan_notify_intercepted_call(const char *func_name) {
   __rtsan_ensure_initialized();
-
   GET_CALLER_PC_BP;
-  DiagnosticsInfo info = {InterceptedCallInfo{intercepted_function_name}, pc,
-                          bp};
-  ExpectNotRealtime(GetContextForThisThread(), info);
+  ExpectNotRealtime(
+      GetContextForThisThread(),
+      PrintDiagnosticsAndDieAction({InterceptedCallInfo{func_name}, pc, bp}));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
-__rtsan_notify_blocking_call(const char *blocking_function_name) {
+__rtsan_notify_blocking_call(const char *func_name) {
   __rtsan_ensure_initialized();
-
   GET_CALLER_PC_BP;
-  DiagnosticsInfo info = {BlockingCallInfo{blocking_function_name}, pc, bp};
-  ExpectNotRealtime(GetContextForThisThread(), info);
+  ExpectNotRealtime(
+      GetContextForThisThread(),
+      PrintDiagnosticsAndDieAction({BlockingCallInfo{func_name}, pc, bp}));
 }
 
 } // extern "C"
