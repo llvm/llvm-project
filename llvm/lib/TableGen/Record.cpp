@@ -838,7 +838,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.

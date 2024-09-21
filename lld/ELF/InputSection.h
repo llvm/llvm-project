@@ -176,6 +176,10 @@ public:
 
   mutable bool compressed = false;
 
+  // Whether this section is SHT_CREL and has been decoded to RELA by
+  // relsOrRelas.
+  bool decodedCrel = false;
+
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
   bool nopFiller = false;

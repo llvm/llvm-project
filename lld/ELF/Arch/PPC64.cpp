@@ -245,7 +245,7 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
 }
 
 void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
-  insn = config->isLE ? insn << 32 | insn >> 32 : insn;
+  insn = ctx.arg.isLE ? insn << 32 | insn >> 32 : insn;
   write64(loc, insn);
 }
 
@@ -379,7 +379,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 // Returns true if the relaxation is performed.
 static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
                                         uint8_t *bufLoc) {
-  assert(config->tocOptimize);
+  assert(ctx.arg.tocOptimize);
   if (rel.addend < 0)
     return false;
 
@@ -392,7 +392,7 @@ static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
   int64_t addend;
   auto *tocISB = cast<InputSectionBase>(defSym->section);
   std::tie(d, addend) =
-      config->isLE ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
+      ctx.arg.isLE ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
                    : getRelaTocSymAndAddend<ELF64BE>(tocISB, rel.addend);
 
   // Only non-preemptable defined symbols can be relaxed.
@@ -566,16 +566,16 @@ static int64_t getTotalDisp(uint64_t prefixedInsn, uint32_t accessInsn) {
 // little-endian it is pointing to the start of the word. These 2 helpers are to
 // simplify reading and writing in that context.
 static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
-  write32(config->isLE ? loc : loc - 2, insn);
+  write32(ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
 static uint32_t readFromHalf16(const uint8_t *loc) {
-  return read32(config->isLE ? loc : loc - 2);
+  return read32(ctx.arg.isLE ? loc : loc - 2);
 }
 
 static uint64_t readPrefixedInstruction(const uint8_t *loc) {
   uint64_t fullInstr = read64(loc);
-  return config->isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
+  return ctx.arg.isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
 }
 
 PPC64::PPC64() {
@@ -762,7 +762,7 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
       // Since we are relocating a half16 type relocation and Loc + 4 points to
       // the start of an instruction we need to advance the buffer by an extra
       // 2 bytes on BE.
-      relocateNoSym(loc + 4 + (config->ekind == ELF64BEKind ? 2 : 0),
+      relocateNoSym(loc + 4 + (ctx.arg.ekind == ELF64BEKind ? 2 : 0),
                     R_PPC64_TPREL16_LO, val);
     } else if (locAsInt % 4 == 1) {
       write32(loc - 1, NOP);
@@ -909,7 +909,7 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   // instruction, if we are accessing memory it will use any of the X-form
   // indexed load or store instructions.
 
-  unsigned offset = (config->ekind == ELF64BEKind) ? 2 : 0;
+  unsigned offset = (ctx.arg.ekind == ELF64BEKind) ? 2 : 0;
   switch (rel.type) {
   case R_PPC64_GOT_TPREL16_HA:
     write32(loc - offset, NOP);
@@ -1026,7 +1026,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
-    return config->tocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
+    return ctx.arg.tocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
   case R_PPC64_TOC:
     return R_PPC64_TOCBASE;
   case R_PPC64_REL14:
@@ -1291,7 +1291,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0)
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0)
       writeFromHalf16(loc, NOP);
     else {
       checkInt(loc, val + 0x8000, 32, rel);
@@ -1329,7 +1329,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // When the high-adjusted part of a toc relocation evaluates to 0, it is
     // changed into a nop. The lo part then needs to be updated to use the
     // toc-pointer register r2, as the base register.
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0) {
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       uint32_t insn = readFromHalf16(loc);
       if (isInstructionUpdateForm(insn))
         error(getErrorLocation(loc) +
@@ -1347,7 +1347,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     uint32_t insn = readFromHalf16(loc);
     uint16_t mask = isDQFormInstruction(insn) ? 0xf : 0x3;
     checkAlignment(loc, lo(val), mask + 1, rel);
-    if (config->tocOptimize && shouldTocOptimize && ha(val) == 0) {
+    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       // When the high-adjusted part of a toc relocation evaluates to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
@@ -1483,7 +1483,7 @@ RelExpr PPC64::adjustTlsExpr(RelType type, RelExpr expr) const {
 RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
                                const uint8_t *loc) const {
   if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
-      config->pcRelOptimize) {
+      ctx.arg.pcRelOptimize) {
     // It only makes sense to optimize pld since paddi means that the address
     // of the object in the GOT is required rather than the object itself.
     if ((readPrefixedInstruction(loc) & 0xfc000000) == 0xe4000000)
@@ -1726,13 +1726,13 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   int32_t stackFrameSize = (hiImm * 65536) + loImm;
   // Check that the adjusted size doesn't overflow what we can represent with 2
   // instructions.
-  if (stackFrameSize < config->splitStackAdjustSize + INT32_MIN) {
+  if (stackFrameSize < ctx.arg.splitStackAdjustSize + INT32_MIN) {
     error(getErrorLocation(loc) + "split-stack prologue adjustment overflows");
     return false;
   }
 
   int32_t adjustedStackFrameSize =
-      stackFrameSize - config->splitStackAdjustSize;
+      stackFrameSize - ctx.arg.splitStackAdjustSize;
 
   loImm = adjustedStackFrameSize & 0xFFFF;
   hiImm = (adjustedStackFrameSize + 0x8000) >> 16;

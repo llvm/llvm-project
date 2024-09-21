@@ -205,6 +205,12 @@ struct DAP {
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  // This is used to allow request_evaluate to handle empty expressions
+  // (ie the user pressed 'return' and expects the previous expression to
+  // repeat). If the previous expression was a command, this string will be
+  // empty; if the previous expression was a variable expression, this string
+  // will contain that expression.
+  std::string last_nonempty_var_expression;
 
   DAP();
   ~DAP();

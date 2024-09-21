@@ -39,7 +39,7 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
   // A value defined outside the vector region must be uniform after
   // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideVectorRegions())
+  if (VPV->isDefinedOutsideLoopRegions())
     return true;
   const VPRecipeBase *Def = VPV->getDefiningRecipe();
   assert(Def && "Must have definition for value defined inside vector region");
@@ -54,6 +54,13 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
 
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(const VPValue *V, VPlan &Plan);
+
+/// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
+/// as such if it is either loop invariant (defined outside the vector region)
+/// or its operand is known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or VPCanonicalIVPHI).
+bool isUniformAcrossVFsAndUFs(VPValue *V);
+
 } // end namespace llvm::vputils
 
 #endif

@@ -39,6 +39,11 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- ``clang -m32`` defaults to ``-mcpu=v9`` on SPARC Linux now.  Distros
+  still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
+  `config file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
+  
 - The ``clang-rename`` tool has been removed.
 
 C/C++ Language Potentially Breaking Changes
@@ -403,11 +408,17 @@ Bug Fixes to C++ Support
 - Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
+- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
+- Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
+  sometimes incorrectly return null even if a comment was present. (#GH108145)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -426,6 +437,8 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when function has more than 65536 parameters.
   Now a diagnostic is emitted. (#GH35741)
+
+- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
 
 OpenACC Specific Changes
 ------------------------
