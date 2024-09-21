@@ -810,6 +810,28 @@ static Value calculateGatherOffset(RewriterBase &rewriter,
 
 enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 
+/// Find the non-unit dim in a linalgOp.
+/// When executing this hook, it is expected that only one dim will be non-unit.
+/// Other cases (i.e. reading n-D vectors) should've been labelled as gather
+/// loads before calling this method. This is used for finding contiguous loads
+/// (represented as `tensor.extract`) within `linalg.generic` Ops. Note that
+/// this condition is expected to hold for statically shaped Linalg Ops only.
+static uint64_t getNonUnitLoopDim(LinalgOp linalgOp) {
+  uint64_t nonUnitDim = 0;
+  uint64_t countNonUnitDim = 0;
+  for (auto tripCount : llvm::enumerate(linalgOp.getStaticLoopRanges())) {
+    if (tripCount.value() != 1) {
+      nonUnitDim = tripCount.index();
+      countNonUnitDim++;
+    }
+  }
+
+  assert(linalgOp.hasDynamicShape() ||
+         countNonUnitDim == 1 && "For statically shaped Linalg Ops, only one "
+                                 "non-unit loop dim is expected");
+  return nonUnitDim;
+}
+
 /// Checks whether `val` can be used for calculating a loop invariant index.
 static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
                                VectorType resType) {
@@ -889,11 +911,12 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   Operation *defOp = val.getDefiningOp();
   assert(defOp && "This is neither a block argument nor an operation result");
 
-  // Given the assumption on the loop ranges above, only the trailing loop
-  // index is not constant.
-  auto trailingLoopDim = linalgOp.getStaticLoopRanges().size() - 1;
+  // Given the assumption on the loop ranges above, we expect only 1 non-unit
+  // loop dim.
+  auto nonUnitLoopDim = getNonUnitLoopDim(linalgOp);
+
   if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    foundIndexOp = (indexOp.getDim() == trailingLoopDim);
+    foundIndexOp = (indexOp.getDim() == nonUnitLoopDim);
     return true;
   }
 

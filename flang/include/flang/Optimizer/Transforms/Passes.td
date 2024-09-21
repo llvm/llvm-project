@@ -428,4 +428,12 @@ def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   ];
 }
 
+def CufImplicitDeviceGlobal :
+    Pass<"cuf-implicit-device-global", "mlir::ModuleOp"> {
+  let summary = "Flag globals used in device function with data attribute";
+  let dependentDialects = [
+    "cuf::CUFDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

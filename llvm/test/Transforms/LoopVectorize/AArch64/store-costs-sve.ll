@@ -169,9 +169,8 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TMP4]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = trunc <16 x i64> [[BROADCAST_SPLAT2]] to <16 x i8>
-; DEFAULT-NEXT:    [[TMP6:%.*]] = trunc <16 x i64> [[BROADCAST_SPLAT2]] to <16 x i8>
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
-; DEFAULT-NEXT:    [[TMP9:%.*]] = and <16 x i8> [[TMP6]], [[TMP7]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
