@@ -3103,6 +3103,18 @@ struct ExpandPackedTypeConstraints
     return Result;
   }
 
+  QualType TransformSubstTemplateTypeParmType(TypeLocBuilder &TLB,
+                                              SubstTemplateTypeParmTypeLoc TL) {
+    const SubstTemplateTypeParmType *T = TL.getTypePtr();
+    if (T->getPackIndex()) {
+      SubstTemplateTypeParmTypeLoc TypeLoc =
+          TLB.push<SubstTemplateTypeParmTypeLoc>(TL.getType());
+      TypeLoc.setNameLoc(TL.getNameLoc());
+      return TypeLoc.getType();
+    }
+    return inherited::TransformSubstTemplateTypeParmType(TLB, TL);
+  }
+
   bool SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                               TemplateArgumentListInfo &Out) {
     return inherited::TransformTemplateArguments(Args.begin(), Args.end(), Out);
