@@ -8248,6 +8248,9 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
   case NxUnsupportedXteamRedThreadLimit:
     StatusMsg += "Thread Limit less than 256 not supported";
     break;
+  case NxNonRectangularLoopCollapse:
+    StatusMsg += "Non-rectangular loop collapse not supported";
+    break;
   }
 
   SourceLocation L = D.getBeginLoc();
@@ -8300,6 +8303,14 @@ const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
       S = CompStmt.body_front();
     }
   return nullptr;
+}
+
+bool CodeGenModule::hasNonRectangularLoopCollapse(const OMPLoopDirective &LD) {
+  // A non-rectangular collapse will have at least one valid dependent counter.
+  for (const Expr *DC : LD.dependent_counters())
+    if (DC != nullptr)
+      return true;
+  return false;
 }
 
 const VarDecl *CodeGenModule::checkLoopInit(const OMPLoopDirective &LD) {
@@ -8484,6 +8495,11 @@ CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
 
   assert(isa<OMPLoopDirective>(D) && "Expected a loop directive");
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+
+  // Specialized kernels don't handle a segmented iteration space that
+  // is used for non-rectangular loop collapse.
+  if (hasNonRectangularLoopCollapse(LD))
+    return std::make_pair(NxNonRectangularLoopCollapse, HasNestedGenericCall);
 
   // Ensure loop init and condition are supported
   const VarDecl *VD = checkLoopInit(LD);
