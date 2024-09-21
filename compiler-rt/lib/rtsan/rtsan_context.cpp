@@ -26,11 +26,11 @@ static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 static void InternalFreeWrapper(void *ptr) { __sanitizer::InternalFree(ptr); }
 
 static __rtsan::Context &GetContextForThisThreadImpl() {
-  auto make_thread_local_context_key = []() {
+  auto MakeThreadLocalContextKey = []() {
     CHECK_EQ(pthread_key_create(&context_key, InternalFreeWrapper), 0);
   };
 
-  pthread_once(&key_once, make_thread_local_context_key);
+  pthread_once(&key_once, MakeThreadLocalContextKey);
   __rtsan::Context *current_thread_context =
       static_cast<__rtsan::Context *>(pthread_getspecific(context_key));
   if (current_thread_context == nullptr) {

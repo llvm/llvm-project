@@ -13,9 +13,8 @@
 #include "rtsan_test_utilities.h"
 
 #include "rtsan/rtsan_assertions.h"
-#include "rtsan/rtsan_diagnostics.h"
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 using namespace __rtsan;
 
@@ -24,30 +23,33 @@ protected:
   void SetUp() override { __rtsan_ensure_initialized(); }
 };
 
-DiagnosticsInfo FakeDiagnosticsInfo() {
-  DiagnosticsInfo info;
-  info.pc = 0;
-  info.bp = 0;
-  info.call_info = InterceptedCallInfo{"fake_function_name"};
-  return info;
+static void ExpectViolationAction(__rtsan::Context &context,
+                                  bool expect_violation_callback) {
+  ::testing::MockFunction<void()> mock_on_violation;
+  EXPECT_CALL(mock_on_violation, Call).Times(expect_violation_callback ? 1 : 0);
+  ExpectNotRealtime(context, mock_on_violation.AsStdFunction());
 }
 
-TEST_F(TestRtsanAssertions, ExpectNotRealtimeDoesNotDieIfNotInRealtimeContext) {
+TEST_F(TestRtsanAssertions,
+       ExpectNotRealtimeDoesNotCallViolationActionIfNotInRealtimeContext) {
   __rtsan::Context context{};
   ASSERT_FALSE(context.InRealtimeContext());
-  ExpectNotRealtime(context, FakeDiagnosticsInfo());
+  ExpectViolationAction(context, false);
 }
 
-TEST_F(TestRtsanAssertions, ExpectNotRealtimeDiesIfInRealtimeContext) {
+TEST_F(TestRtsanAssertions,
+       ExpectNotRealtimeCallsViolationActionIfInRealtimeContext) {
   __rtsan::Context context{};
   context.RealtimePush();
   ASSERT_TRUE(context.InRealtimeContext());
-  EXPECT_DEATH(ExpectNotRealtime(context, FakeDiagnosticsInfo()), "");
+  ExpectViolationAction(context, true);
 }
 
-TEST_F(TestRtsanAssertions, ExpectNotRealtimeDoesNotDieIfRealtimeButBypassed) {
+TEST_F(TestRtsanAssertions,
+       ExpectNotRealtimeDoesNotCallViolationActionIfRealtimeButBypassed) {
   __rtsan::Context context{};
   context.RealtimePush();
   context.BypassPush();
-  ExpectNotRealtime(context, FakeDiagnosticsInfo());
+  ASSERT_TRUE(context.IsBypassed());
+  ExpectViolationAction(context, false);
 }
