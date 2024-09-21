@@ -310,8 +310,9 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     if (J != E &&
         // Don't print if it's obvious nothing extract could be merged anyway.
         std::next(J) != E) {
-      LLVM_DEBUG(errs() << "Couldn't merge this:\n"; Optn->print(errs(), 4);
-                 errs() << "into this:\n"; (*J)->print(errs(), 4);
+      LLVM_DEBUG(errs() << "Couldn't merge this:\n";
+                 Optn->print(errs(), indent(4)); errs() << "into this:\n";
+                 (*J)->print(errs(), indent(4));
                  (*std::next(J))->printOne(errs());
                  if (std::next(J, 2) != E)(*std::next(J, 2))->printOne(errs());
                  errs() << "\n");

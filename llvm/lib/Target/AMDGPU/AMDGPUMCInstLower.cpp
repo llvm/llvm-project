@@ -362,7 +362,6 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
       }
 
-      DisasmStream.flush();
       DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
     }
   }
