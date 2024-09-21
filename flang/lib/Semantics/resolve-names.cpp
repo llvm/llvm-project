@@ -1204,7 +1204,7 @@ private:
       const parser::Name &, const parser::Name *);
   Symbol *MakeTypeSymbol(const SourceName &, Details &&);
   Symbol *MakeTypeSymbol(const parser::Name &, Details &&);
-  bool OkToAddComponent(const parser::Name &, const Symbol * = nullptr);
+  bool OkToAddComponent(const parser::Name &, const Symbol *extends = nullptr);
   ParamValue GetParamValue(
       const parser::TypeParamValue &, common::TypeParamAttr attr);
   void CheckCommonBlockDerivedType(
@@ -3059,10 +3059,10 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
             (useGeneric->derivedType() &&
                 useUltimate.name() != localSymbol->name()))) {
       // We are use-associating a generic that either shadows a procedure
-      // pointer or shadows a derived type of the same name.
+      // pointer or shadows a derived type with a distinct name.
       // Local references that might be made to the procedure pointer should
       // use a UseDetails symbol for proper data addressing, and a derived
-      // type needs to be in scope with the renamed name.  So create an
+      // type needs to be in scope with its local name.  So create an
       // empty local generic now into which the use-associated generic may
       // be copied.
       localSymbol->set_details(GenericDetails{});
@@ -3143,6 +3143,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   // scope's name map.
   auto CreateLocalUseError{[&]() {
     EraseSymbol(*localSymbol);
+    CHECK(localSymbol->has<UseDetails>());
     UseErrorDetails details{localSymbol->get<UseDetails>()};
     details.add_occurrence(location, *useModuleScope_);
     Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
@@ -3161,10 +3162,13 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     if (useDerivedType->name() == localName) {
       combinedDerivedType = useDerivedType;
     } else {
-      Symbol &combined{currScope().MakeSymbol(localName,
-          useDerivedType->attrs(), UseDetails{localName, *useDerivedType})};
-      combinedDerivedType = &combined;
+      combinedDerivedType =
+          &currScope().MakeSymbol(localSymbol->name(), useDerivedType->attrs(),
+              UseDetails{localSymbol->name(), *useDerivedType});
     }
+  } else if (&localDerivedType->GetUltimate() ==
+      &useDerivedType->GetUltimate()) {
+    combinedDerivedType = localDerivedType;
   } else {
     const Scope *localScope{localDerivedType->GetUltimate().scope()};
     const Scope *useScope{useDerivedType->GetUltimate().scope()};
@@ -5606,7 +5610,7 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
       comp.set(Symbol::Flag::ParentComp);
       DeclTypeSpec &type{currScope().MakeDerivedType(
           DeclTypeSpec::TypeDerived, std::move(*extendsType))};
-      type.derivedTypeSpec().set_scope(*extendsSymbol.scope());
+      type.derivedTypeSpec().set_scope(DEREF(extendsSymbol.scope()));
       comp.SetType(type);
       DerivedTypeDetails &details{symbol.get<DerivedTypeDetails>()};
       details.add_component(comp);
@@ -6797,15 +6801,20 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
 
 std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveExtendsType(
     const parser::Name &typeName, const parser::Name *extendsName) {
-  if (!extendsName) {
-    return std::nullopt;
-  } else if (typeName.source == extendsName->source) {
-    Say(extendsName->source,
-        "Derived type '%s' cannot extend itself"_err_en_US);
-    return std::nullopt;
-  } else {
-    return ResolveDerivedType(*extendsName);
+  if (extendsName) {
+    if (typeName.source == extendsName->source) {
+      Say(extendsName->source,
+          "Derived type '%s' cannot extend itself"_err_en_US);
+    } else if (auto dtSpec{ResolveDerivedType(*extendsName)}) {
+      if (!dtSpec->IsForwardReferenced()) {
+        return dtSpec;
+      }
+      Say(typeName.source,
+          "Derived type '%s' cannot extend type '%s' that has not yet been defined"_err_en_US,
+          typeName.source, extendsName->source);
+    }
   }
+  return std::nullopt;
 }
 
 Symbol *DeclarationVisitor::NoteInterfaceName(const parser::Name &name) {

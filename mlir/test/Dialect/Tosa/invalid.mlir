@@ -360,6 +360,22 @@ func.func @test_reshape_invalid_size(%arg0 : tensor<2x4xf32>) -> () {
 
 // -----
 
+func.func @test_reshape_invalid_newshape(%arg0 : tensor<1xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 1 elements into 4}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 4>} : (tensor<1xf32>) -> tensor<?x4xf32>
+  return
+}
+
+// -----
+
+func.func @test_reshape_invalid_newshape(%arg0 : tensor<8xf32>) -> () {
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 4}}
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 1, 4>} : (tensor<8xf32>) -> tensor<?x4xf32>
+  return
+}
+
+// -----
+
 func.func @test_reshape_invalid_placeholders(%arg0 : tensor<?xf32>) -> () {
   // expected-error@+1 {{'tosa.reshape' op expected at most one target dimension to be -1}}
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1, -1>} : (tensor<?xf32>) -> tensor<2x?x?xf32>
