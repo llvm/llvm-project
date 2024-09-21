@@ -158,6 +158,7 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID);
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 
 enum class ShiftDir { Left, Right };
 
@@ -2944,39 +2945,6 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
   return true;
-}
-
-inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
-  assert(T);
-  assert(!S.getLangOpts().CPlusPlus23);
-
-  // C++1y: A constant initializer for an object o [...] may also invoke
-  // constexpr constructors for o and its subobjects even if those objects
-  // are of non-literal class types.
-  //
-  // C++11 missed this detail for aggregates, so classes like this:
-  //   struct foo_t { union { int i; volatile int j; } u; };
-  // are not (obviously) initializable like so:
-  //   __attribute__((__require_constant_initialization__))
-  //   static const foo_t x = {{0}};
-  // because "i" is a subobject with non-literal initialization (due to the
-  // volatile member of the union). See:
-  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
-  // Therefore, we use the C++1y behavior.
-
-  if (S.EvaluatingDecl)
-    return true;
-
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
-      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl)
-    return true;
-
-  const Expr *E = S.Current->getExpr(OpPC);
-  if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
-  else
-    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
