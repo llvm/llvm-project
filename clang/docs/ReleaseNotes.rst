@@ -407,6 +407,8 @@ Bug Fixes to C++ Support
 - Clang now uses the correct set of template argument lists when comparing the constraints of
   out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
   a class template. (#GH102320)
+- Fixed an issue in constraint evaluation, where type constraints on the lambda expression
+  containing outer unexpanded parameters were not correctly expanded. (#GH101754)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
