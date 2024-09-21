@@ -39,6 +39,11 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- ``clang -m32`` defaults to ``-mcpu=v9`` on SPARC Linux now.  Distros
+  still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
+  `config file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
+  
 - The ``clang-rename`` tool has been removed.
 
 C/C++ Language Potentially Breaking Changes
