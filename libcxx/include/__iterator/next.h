@@ -43,25 +43,25 @@ next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n =
 namespace ranges {
 struct __next {
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
     ++__x;
     return __x;
   }
 
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
     ranges::advance(__x, __n);
     return __x;
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, _Sp __bound_sentinel) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, _Sp __bound_sentinel) const {
     ranges::advance(__x, __bound_sentinel);
     return __x;
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
     ranges::advance(__x, __n, __bound_sentinel);
     return __x;
   }

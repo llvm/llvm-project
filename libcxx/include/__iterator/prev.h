@@ -42,19 +42,19 @@ prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n =
 namespace ranges {
 struct __prev {
   template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
     --__x;
     return __x;
   }
 
   template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
     ranges::advance(__x, -__n);
     return __x;
   }
 
   template <bidirectional_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Ip __bound_iter) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Ip __bound_iter) const {
     ranges::advance(__x, -__n, __bound_iter);
     return __x;
   }
