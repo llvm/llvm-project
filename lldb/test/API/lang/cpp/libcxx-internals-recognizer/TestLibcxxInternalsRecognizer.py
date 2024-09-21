@@ -17,10 +17,10 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
 
         expected_parents = {
             "sort_less(int, int)": ["::sort", "test_algorithms"],
-            # `std::ranges::sort` is implemented as an object of types `__sort`,
-            # which unfortunately means that there is no `std::ranges::sort`
-            # stack frame, and `main` is the direct parent of `my_less_ranges`.
-            "ranges_sort_less(int, int)": ["test_algorithms"],
+            # `std::ranges::sort` is implemented as an object of types `__sort`.
+            # We never hide the frame of the entry-point into the standard library, even
+            # if the name starts with `__` which usually indicates an internal function.
+            "ranges_sort_less(int, int)": ["ranges::__sort::operator()", "test_algorithms"],
             # `ranges::views::transform` internally uses `std::invoke`, and that
             # call also shows up in the stack trace
             "view_transform(int)": ["::invoke", "ranges::transform_view", "test_algorithms"],
