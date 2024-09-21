@@ -54,6 +54,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -301,7 +302,8 @@ public:
     initializeModule();
   }
 
-  void sanitizeFunction(Function &F, FunctionAnalysisManager &FAM);
+  bool sanitizeFunction(Function &F, FunctionAnalysisManager &FAM);
+  void unsanitizeFunction(Function &F);
 
 private:
   struct ShadowTagCheckInfo {
@@ -316,6 +318,8 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void removeFnAttributes(Function *F);
+  void restoreFnAttributes(CallInst *CI);
 
   void initializeCallbacks(Module &M);
 
@@ -450,6 +454,13 @@ private:
   Value *StackBaseTag = nullptr;
   Value *CachedFP = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
+
+  struct ChangedFn {
+    std::optional<MemoryEffects> OriginalME;
+    SmallVector<size_t, 2> RemovedArgAttrs;
+  };
+
+  SmallMapVector<const Function *, ChangedFn, 2> ChangedFns;
 };
 
 } // end anonymous namespace
@@ -466,8 +477,14 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
 
   HWAddressSanitizer HWASan(M, Options.CompileKernel, Options.Recover, SSI);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M)
-    HWASan.sanitizeFunction(F, FAM);
+  SmallVector<Function *, 5> Unsanitize;
+  for (Function &F : M) {
+    if (!HWASan.sanitizeFunction(F, FAM))
+      Unsanitize.emplace_back(&F);
+  }
+
+  for (Function *F : Unsanitize)
+    HWASan.unsanitizeFunction(*F);
 
   PreservedAnalyses PA = PreservedAnalyses::none();
   // DominatorTreeAnalysis, PostDominatorTreeAnalysis, and LoopAnalysis
@@ -591,47 +608,81 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
+void HWAddressSanitizer::removeFnAttributes(Function *F) {
+  if (!F || ChangedFns.contains(F))
+    return;
+  // Remove memory attributes that are invalid with HWASan.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  //
+  // This is not only true for sanitized functions, because AttrInfer can
+  // infer those attributes on libc functions, which is not true if those
+  // are instrumented (Android) or intercepted.
+  //
+  // We might want to model HWASan shadow memory more opaquely to get rid of
+  // this problem altogether, by hiding the shadow memory write in an
+  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
+  // for another day.
+
+  // The API is weird. `onlyReadsMemory` actually means "does not write", and
+  // `onlyWritesMemory` actually means "does not read". So we reconstruct
+  // "accesses memory" && "does not read" <=> "writes".
+  bool Changed = false;
+  if (!F->doesNotAccessMemory()) {
+    bool WritesMemory = !F->onlyReadsMemory();
+    bool ReadsMemory = !F->onlyWritesMemory();
+    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
+      ChangedFns[F].OriginalME = F->getMemoryEffects();
+      F->removeFnAttr(Attribute::Memory);
+      Changed = true;
+    }
+  }
+  if (UseShortGranules) {
+    for (Argument &A : F->args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        A.removeAttr(Attribute::WriteOnly);
+        ChangedFns[F].RemovedArgAttrs.emplace_back(A.getArgNo());
+        Changed = true;
+      }
+    }
+  }
+  if (Changed) {
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F->addFnAttr(Attribute::NoBuiltin);
+  }
+}
+
+void HWAddressSanitizer::restoreFnAttributes(CallInst *CI) {
+  auto It = ChangedFns.find(CI->getCalledFunction());
+  if (It == ChangedFns.end())
+    return;
+  // The memory effects are stored as a bitmap where a bit e.g. means
+  // "may write memory". CI->getMemoryEffects is the AND (i.e. intersection)
+  // of the bits of the CallInst and the underlying function. So, we removed
+  // the original ME from the function, which means the bitmap there all 1.
+  // Now we are adding the original mask back to the CallInst, which means
+  // CI->getMemoryEffects is now OriginalME & all 1 = OriginalME.
+  //
+  // Restoring the memory access is slightly dubious, because the called
+  // function will still read the memory. But because the function does not
+  // operate on the shadow memory, there should not be any difficulties with
+  // removing the shadow write, or reordering it.
+  ChangedFn &CFn = It->second;
+  if (CFn.OriginalME.has_value())
+    CI->setMemoryEffects(*CFn.OriginalME);
+  for (size_t I : CFn.RemovedArgAttrs)
+    CI->addAttributeAtIndex(I + AttributeList::FirstArgIndex,
+                            Attribute::WriteOnly);
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
-
-  for (auto &F : M.functions()) {
-    // Remove memory attributes that are invalid with HWASan.
-    // HWASan checks read from shadow, which invalidates memory(argmem: *)
-    // Short granule checks on function arguments read from the argument memory
-    // (last byte of the granule), which invalidates writeonly.
-    //
-    // This is not only true for sanitized functions, because AttrInfer can
-    // infer those attributes on libc functions, which is not true if those
-    // are instrumented (Android) or intercepted.
-
-    // The API is weird. `onlyReadsMemory` actually means "does not write", and
-    // `onlyWritesMemory` actually means "does not read". So we reconstruct
-    // "accesses memory" && "does not read" <=> "writes".
-    bool Changed = false;
-    if (!F.doesNotAccessMemory()) {
-      bool WritesMemory = !F.onlyReadsMemory();
-      bool ReadsMemory = !F.onlyWritesMemory();
-      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
-        F.removeFnAttr(Attribute::Memory);
-        Changed = true;
-      }
-    }
-    for (Argument &A : F.args()) {
-      if (A.hasAttribute(Attribute::WriteOnly)) {
-        Changed = true;
-        A.removeAttr(Attribute::WriteOnly);
-      }
-    }
-    if (Changed) {
-      // nobuiltin makes sure later passes don't restore assumptions about
-      // the function.
-      F.addFnAttr(Attribute::NoBuiltin);
-    }
-  }
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -894,7 +945,13 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
     }
-    maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+    if (Function *F = CI->getCalledFunction()) {
+      LibFunc LF;
+      if (F->hasName() && TLI.getLibFunc(F->getName(), LF)) {
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
+        removeFnAttributes(F);
+      }
+    }
   }
 }
 
@@ -1594,20 +1651,27 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
   return Skip;
 }
 
-void HWAddressSanitizer::sanitizeFunction(Function &F,
+void HWAddressSanitizer::unsanitizeFunction(Function &F) {
+  for (auto &Inst : instructions(F)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+      restoreFnAttributes(CI);
+  }
+}
+
+bool HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
-    return;
+    return false;
 
   // Do not apply any instrumentation for naked functions.
   if (F.hasFnAttribute(Attribute::Naked))
     return;
 
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
-    return;
+    return false;
 
   if (F.empty())
-    return;
+    return false;
 
   NumTotalFuncs++;
 
@@ -1615,7 +1679,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
       FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   if (selectiveInstrumentationShouldSkip(F, FAM))
-    return;
+    return false;
+
+  removeFnAttributes(&F);
 
   NumInstrumentedFuncs++;
 
@@ -1658,7 +1724,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (SInfo.AllocasToInstrument.empty() && OperandsToInstrument.empty() &&
       IntrinToInstrument.empty())
-    return;
+    return false;
 
   assert(!ShadowBase);
 
@@ -1707,6 +1773,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   ShadowBase = nullptr;
   StackBaseTag = nullptr;
   CachedFP = nullptr;
+  return true;
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
