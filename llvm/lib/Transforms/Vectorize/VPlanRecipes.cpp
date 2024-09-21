@@ -2928,8 +2928,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    NewPointerPhi =
-        PHINode::Create(ScStValueType, 2, "pointer.phi", CanonicalIV);
+    NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
+                                    CanonicalIV->getIterator());
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
@@ -3138,8 +3138,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     } else {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
-      StartV = Iden =
-          Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
+      StartV = Iden = State.get(StartVPV, 0);
     }
   } else {
     Iden = llvm::getRecurrenceIdentity(RK, VecTy->getScalarType(),
