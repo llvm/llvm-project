@@ -2588,6 +2588,20 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*CI.getOperand(0)),
                          getOrCreateVReg(*CI.getOperand(1)));
     return true;
+  case Intrinsic::vector_extract: {
+    ConstantInt *Index = cast<ConstantInt>(CI.getOperand(1));
+    MIRBuilder.buildExtractSubvector(getOrCreateVReg(CI),
+                                     getOrCreateVReg(*CI.getOperand(0)),
+                                     Index->getZExtValue());
+    return true;
+  }
+  case Intrinsic::vector_insert: {
+    ConstantInt *Index = cast<ConstantInt>(CI.getOperand(2));
+    MIRBuilder.buildInsertSubvector(
+        getOrCreateVReg(CI), getOrCreateVReg(*CI.getOperand(0)),
+        getOrCreateVReg(*CI.getOperand(1)), Index->getZExtValue());
+    return true;
+  }
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
