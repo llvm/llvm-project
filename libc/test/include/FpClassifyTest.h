@@ -1,4 +1,5 @@
-//===-- Utility class to test the fpclassify macro  -----------------*- C++ -*-===//
+//===-- Utility class to test the fpclassify macro  -----------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +15,8 @@
 
 #include "include/llvm-libc-macros/math-function-macros.h"
 
-template <typename T> class FpClassifyTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FpClassifyTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
@@ -42,7 +44,7 @@ public:
   using LlvmLibcFpClassifyTest = FpClassifyTest<T>;                            \
   TEST_F(LlvmLibcFpClassifyTest, SpecialNumbers) {                             \
     auto fpclassify_func = [](T a, T b, T c, T d, T e, T f) {                  \
-        return func(a, b, c, d, e, f);                                         \
+      return func(a, b, c, d, e, f);                                           \
     };                                                                         \
     testSpecialNumbers(fpclassify_func);                                       \
   }
