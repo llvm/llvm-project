@@ -1909,6 +1909,11 @@ public:
   // we know if a temporary should be destroyed conditionally.
   ConditionalEvaluation *OutermostConditional = nullptr;
 
+  template <class T>
+  typename DominatingValue<T>::saved_type saveValueInCond(T value) {
+    return DominatingValue<T>::save(*this, value);
+  }
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
@@ -1919,14 +1924,13 @@ public:
     if (!isInConditionalBranch())
       return EHStack.pushCleanup<T>(kind, A...);
 
-    llvm_unreachable("NYI");
     // Stash values in a tuple so we can guarantee the order of saves.
-    // typedef std::tuple<typename DominatingValue<As>::saved_type...>
-    // SavedTuple; SavedTuple Saved{saveValueInCond(A)...};
+    typedef std::tuple<typename DominatingValue<As>::saved_type...> SavedTuple;
+    SavedTuple Saved{saveValueInCond(A)...};
 
-    // typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
-    // EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
-    // initFullExprCleanup();
+    typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
+    EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
+    initFullExprCleanup();
   }
 
   /// Set up the last cleanup that was pushed as a conditional
@@ -2285,6 +2289,28 @@ public:
 private:
   QualType getVarArgType(const Expr *Arg);
 };
+
+/// Helper class with most of the code for saving a value for a
+/// conditional expression cleanup.
+struct DominatingCIRValue {
+  typedef llvm::PointerIntPair<mlir::Value, 1, bool> saved_type;
+
+  /// Answer whether the given value needs extra work to be saved.
+  static bool needsSaving(mlir::Value value) { llvm_unreachable("NYI"); }
+
+  static saved_type save(CIRGenFunction &CGF, mlir::Value value);
+  static mlir::Value restore(CIRGenFunction &CGF, saved_type value);
+};
+
+inline DominatingCIRValue::saved_type
+DominatingCIRValue::save(CIRGenFunction &CGF, mlir::Value value) {
+  llvm_unreachable("NYI");
+}
+
+inline mlir::Value DominatingCIRValue::restore(CIRGenFunction &CGF,
+                                               saved_type value) {
+  llvm_unreachable("NYI");
+}
 
 /// A specialization of DominatingValue for RValue.
 template <> struct DominatingValue<RValue> {
