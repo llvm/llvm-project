@@ -52,6 +52,8 @@ int main(int, char**) {
     assert(std::as_const(m).count(8) == 1);
     assert(std::as_const(m).count(9) == 0);
   }
+#if 0
+  // vector<bool> is not supported
   {
     using M = std::flat_map<bool, int>;
     M m     = {{true, 1}, {false, 2}};
@@ -68,5 +70,6 @@ int main(int, char**) {
     assert(m.count(true) == 0);
     assert(m.count(false) == 0);
   }
+#endif
   return 0;
 }

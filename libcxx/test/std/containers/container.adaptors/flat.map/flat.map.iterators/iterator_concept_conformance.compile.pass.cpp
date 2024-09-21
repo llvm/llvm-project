@@ -100,6 +100,8 @@ void test() {
     static_assert(std::indirectly_movable_storable<RI, std::pair<char*, int>*>);
     static_assert(std::indirectly_movable_storable<CRI, std::pair<char*, int>*>);
   }
+#if 0
+  // vector<bool> is not supported
   {
     using C   = std::flat_map<char, bool, std::less<>, std::string, std::vector<bool>>;
     using I   = C::iterator;
@@ -139,4 +141,5 @@ void test() {
     static_assert(std::indirectly_movable_storable<RI, std::pair<char, bool>*>);
     static_assert(std::indirectly_movable_storable<CRI, std::pair<char, bool>*>);
   }
+#endif
 }

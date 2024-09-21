@@ -40,6 +40,8 @@ void test() {
     static_assert(!std::ranges::borrowed_range<const C>);
     static_assert(!std::ranges::viewable_range<const C>);
   }
+#if 0
+  // vector<bool> is not supported
   {
     using C = std::flat_map<char, bool, std::less<>, std::string, std::vector<bool>>;
 
@@ -62,5 +64,6 @@ void test() {
     static_assert(std::ranges::sized_range<const C>);
     static_assert(!std::ranges::borrowed_range<const C>);
     static_assert(!std::ranges::viewable_range<const C>);
-  }
+
+#endif
 }

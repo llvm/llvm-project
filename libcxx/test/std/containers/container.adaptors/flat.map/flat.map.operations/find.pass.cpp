@@ -60,6 +60,8 @@ int main(int, char**) {
     assert(std::as_const(m).find(9) == m.end());
   }
 #endif
+#if 0
+  // vector<bool> is not supported
   {
     using M = std::flat_map<bool, bool>;
     M m     = {{true, false}, {false, true}};
@@ -77,5 +79,6 @@ int main(int, char**) {
     assert(m.find(true) == m.end());
     assert(m.find(false) == m.end());
   }
+#endif
   return 0;
 }

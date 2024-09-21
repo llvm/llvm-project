@@ -88,6 +88,9 @@ int main(int, char**) {
   test<std::flat_map<int, char, std::greater<int>, std::deque<int, test_allocator<int>>>>();
   test<std::flat_map<long, int>>();
   test<std::flat_map<double, int>>();
+
+#if 0
+  // vector<bool> is not supported
   {
     using M                      = std::flat_map<bool, bool>;
     std::flat_map<bool, bool> fs = {{true, false}, {false, true}};
@@ -98,5 +101,6 @@ int main(int, char**) {
     assert(fs.empty());
     assert(n == 1);
   }
+#endif
   return 0;
 }

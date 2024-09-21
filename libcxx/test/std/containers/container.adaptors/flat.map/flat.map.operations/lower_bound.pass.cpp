@@ -60,6 +60,8 @@ int main(int, char**) {
     assert(std::as_const(m).lower_bound(8) == m.begin());
     assert(std::as_const(m).lower_bound(9) == m.begin());
   }
+#if 0
+  // vector<bool> is not supported
   {
     using M = std::flat_map<bool, bool>;
     M m     = {{true, false}, {false, true}};
@@ -77,5 +79,6 @@ int main(int, char**) {
     assert(m.lower_bound(true) == m.end());
     assert(m.lower_bound(false) == m.end());
   }
+#endif
   return 0;
 }

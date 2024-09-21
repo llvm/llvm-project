@@ -17,6 +17,7 @@
 #include <flat_map>
 #include <functional>
 #include <stdexcept>
+#include <vector>
 
 #include "min_allocator.h"
 #include "test_macros.h"
