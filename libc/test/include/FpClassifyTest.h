@@ -48,9 +48,7 @@ public:
 #define LIST_FPCLASSIFY_TESTS(T, func)                                         \
   using LlvmLibcFpClassifyTest = FpClassifyTest<T>;                            \
   TEST_F(LlvmLibcFpClassifyTest, SpecialNumbers) {                             \
-    auto fpclassify_func = [](T x) {                                           \
-      return func(x);                                                          \
-    };                                                                         \
+    auto fpclassify_func = [](T x) { return func(x); };                        \
     testSpecialNumbers(fpclassify_func);                                       \
   }
 
