@@ -9,11 +9,12 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: ;       Double-precision extensions for 11.1
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: {{^;$}}
-define double @div(double %a, double %b) {
+define double @div(double %a, double %b) #0 {
   %res = fdiv double %a, %b
   ret double %res
 }
 
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 
 ; DXC: - Name:            SFI0
 ; DXC-NEXT:     Size:            8

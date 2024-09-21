@@ -21,7 +21,7 @@ using namespace llvm;
 static bool finalizeLinkage(Module &M) {
   SmallPtrSet<Function *, 8> Funcs;
 
-  // Find all entry points and export functions
+  // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
     if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
       continue;
@@ -31,7 +31,7 @@ static bool finalizeLinkage(Module &M) {
   for (Function *F : Funcs) {
     if (F->getLinkage() == GlobalValue::ExternalLinkage)
       F->setLinkage(GlobalValue::InternalLinkage);
-    if (F->hasFnAttribute(Attribute::AlwaysInline) && F->isDefTriviallyDead())
+    if (F->isDefTriviallyDead())
       M.getFunctionList().erase(F);
   }
 
