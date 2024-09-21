@@ -1857,6 +1857,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ;
 ; RV64IA-WMO-ZABHA-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA-WMO-ZABHA:       # %bb.0:
+; RV64IA-WMO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZABHA-NEXT:    amocas.b.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZABHA-NEXT:    ret
 ;
@@ -1885,6 +1886,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ;
 ; RV64IA-TSO-ZABHA-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA-TSO-ZABHA:       # %bb.0:
+; RV64IA-TSO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZABHA-NEXT:    amocas.b a1, a2, (a0)
 ; RV64IA-TSO-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst seq_cst
@@ -3787,6 +3789,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ;
 ; RV64IA-WMO-ZABHA-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV64IA-WMO-ZABHA:       # %bb.0:
+; RV64IA-WMO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZABHA-NEXT:    amocas.h.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZABHA-NEXT:    ret
 ;
@@ -3816,6 +3819,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ;
 ; RV64IA-TSO-ZABHA-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV64IA-TSO-ZABHA:       # %bb.0:
+; RV64IA-TSO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZABHA-NEXT:    amocas.h a1, a2, (a0)
 ; RV64IA-TSO-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst seq_cst
@@ -4788,6 +4792,7 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    fence rw, rw
 ; RV32IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV32IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -4804,6 +4809,7 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    fence rw, rw
 ; RV32IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV32IA-TSO-ZACAS-NEXT:    ret
 ;
@@ -4834,11 +4840,13 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
 ; RV64IA-WMO-ZABHA-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-WMO-ZABHA:       # %bb.0:
+; RV64IA-WMO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZABHA-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZABHA-NEXT:    ret
 ;
@@ -4856,11 +4864,13 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
 ;
 ; RV64IA-TSO-ZABHA-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-TSO-ZABHA:       # %bb.0:
+; RV64IA-TSO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZABHA-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
@@ -5753,11 +5763,13 @@ define void @cmpxchg_i64_seq_cst_seq_cst(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.d.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
 ; RV64IA-WMO-ZABHA-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; RV64IA-WMO-ZABHA:       # %bb.0:
+; RV64IA-WMO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-WMO-ZABHA-NEXT:    amocas.d.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZABHA-NEXT:    ret
 ;
@@ -5774,11 +5786,13 @@ define void @cmpxchg_i64_seq_cst_seq_cst(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.d a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
 ;
 ; RV64IA-TSO-ZABHA-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; RV64IA-TSO-ZABHA:       # %bb.0:
+; RV64IA-TSO-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-TSO-ZABHA-NEXT:    amocas.d a1, a2, (a0)
 ; RV64IA-TSO-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst seq_cst

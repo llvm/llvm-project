@@ -133,6 +133,8 @@ class GlobalObject;
 class GlobalIFunc;
 class GlobalVariable;
 class GlobalAlias;
+class NoCFIValue;
+class ConstantPtrAuth;
 class Context;
 class Function;
 class Instruction;
@@ -340,6 +342,8 @@ protected:
   friend class GlobalIFunc;           // For `Val`.
   friend class GlobalVariable;        // For `Val`.
   friend class GlobalAlias;           // For `Val`.
+  friend class NoCFIValue;            // For `Val`.
+  friend class ConstantPtrAuth;       // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1561,6 +1565,99 @@ public:
 
   static bool isValidLinkage(LinkageTypes L) {
     return llvm::GlobalAlias::isValidLinkage(L);
+  }
+};
+
+class NoCFIValue final : public Constant {
+  NoCFIValue(llvm::NoCFIValue *C, Context &Ctx)
+      : Constant(ClassID::NoCFIValue, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  /// Return a NoCFIValue for the specified function.
+  static NoCFIValue *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::NoCFIValue;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::NoCFIValue>(Val) && "Expected a NoCFIValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class ConstantPtrAuth final : public Constant {
+  ConstantPtrAuth(llvm::ConstantPtrAuth *C, Context &Ctx)
+      : Constant(ClassID::ConstantPtrAuth, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const;
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const;
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const;
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const;
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasAddressDiscriminator();
+  }
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasSpecialAddressDiscriminator(
+        Value);
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->isKnownCompatibleWith(
+        Key->Val, Discriminator->Val, DL);
+  }
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPtrAuth;
   }
 };
 
@@ -4358,7 +4455,7 @@ protected:
                         // is complete
   friend class IntegerType;   // For LLVMCtx.
   friend class StructType;    // For LLVMCtx.
-  friend class TargetExtType; // For LLVMCtx.
+  friend class ::llvm::TargetExtType; // For LLVMCtx.
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all

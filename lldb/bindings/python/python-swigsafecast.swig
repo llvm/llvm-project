@@ -33,7 +33,7 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
                       SWIGTYPE_p_lldb__SBBreakpoint);
 }
 
-PythonObject SWIGBridge::ToSWIGWrapper(Status status) {
+PythonObject SWIGBridge::ToSWIGWrapper(Status&& status) {
   return ToSWIGHelper(new lldb::SBError(std::move(status)), SWIGTYPE_p_lldb__SBError);
 }
 
