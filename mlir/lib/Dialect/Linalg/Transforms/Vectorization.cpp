@@ -829,6 +829,7 @@ static uint64_t getNonUnitLoopDim(LinalgOp linalgOp) {
   assert(linalgOp.hasDynamicShape() ||
          countNonUnitDim == 1 && "For statically shaped Linalg Ops, only one "
                                  "non-unit loop dim is expected");
+  (void)countNonUnitDim;
   return nonUnitDim;
 }
 
