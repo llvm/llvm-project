@@ -22,20 +22,20 @@ public:
   typedef int (*FpClassifyFunc)(T);
 
   void testSpecialNumbers(FpClassifyFunc func) {
-    EXPECT_EQ(func(aNaN), 0);
-    EXPECT_EQ(func(neg_aNaN), 0);
-    EXPECT_EQ(func(sNaN), 0);
-    EXPECT_EQ(func(neg_sNaN), 0);
-    EXPECT_EQ(func(inf), 1);
-    EXPECT_EQ(func(neg_inf), 1);
-    EXPECT_EQ(func(min_normal), 4);
-    EXPECT_EQ(func(max_normal), 4);
-    EXPECT_EQ(func(neg_max_normal), 4);
-    EXPECT_EQ(func(min_denormal), 3);
-    EXPECT_EQ(func(neg_min_denormal), 3);
-    EXPECT_EQ(func(max_denormal), 3);
-    EXPECT_EQ(func(zero), 2);
-    EXPECT_EQ(func(neg_zero), 2);
+    EXPECT_EQ(func(aNaN), FP_NAN);
+    EXPECT_EQ(func(neg_aNaN), FP_NAN);
+    EXPECT_EQ(func(sNaN), FP_NAN);
+    EXPECT_EQ(func(neg_sNaN), FP_NAN);
+    EXPECT_EQ(func(inf), FP_INFINITE);
+    EXPECT_EQ(func(neg_inf), FP_INFINITE);
+    EXPECT_EQ(func(min_normal), FP_NORMAL);
+    EXPECT_EQ(func(max_normal), FP_NORMAL);
+    EXPECT_EQ(func(neg_max_normal), FP_NORMAL);
+    EXPECT_EQ(func(min_denormal), FP_SUBNORMAL);
+    EXPECT_EQ(func(neg_min_denormal), FP_SUBNORMAL);
+    EXPECT_EQ(func(max_denormal), FP_SUBNORMAL);
+    EXPECT_EQ(func(zero), FP_ZERO);
+    EXPECT_EQ(func(neg_zero), FP_ZERO);
   }
 };
 
