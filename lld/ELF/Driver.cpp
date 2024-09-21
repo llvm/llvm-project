@@ -293,7 +293,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::unknown:
-    readLinkerScript(mbref);
+    readLinkerScript(ctx, mbref);
     return;
   case file_magic::archive: {
     auto members = getArchiveMembers(mbref);
@@ -1810,12 +1810,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   for (auto *arg :
        args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-      readDynamicList(*buffer);
+      readDynamicList(ctx, *buffer);
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (std::optional<std::string> path = searchScript(arg->getValue())) {
       if (std::optional<MemoryBufferRef> buffer = readFile(*path))
-        readVersionScript(*buffer);
+        readVersionScript(ctx, *buffer);
     } else {
       error(Twine("cannot find version script ") + arg->getValue());
     }
@@ -1943,7 +1943,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
+      readDefsym(ctx, MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -1953,7 +1953,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
           if (arg->getOption().matches(OPT_default_script)) {
             defaultScript = mb;
           } else {
-            readLinkerScript(*mb);
+            readLinkerScript(ctx, *mb);
             hasScript = true;
           }
         }
@@ -2039,7 +2039,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   }
 
   if (defaultScript && !hasScript)
-    readLinkerScript(*defaultScript);
+    readLinkerScript(ctx, *defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
