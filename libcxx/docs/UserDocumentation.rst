@@ -368,9 +368,8 @@ represent internal implementation details such as ``__sort4`` and similar
 utility functions.
 
 To also show those implementation details, use ``thread backtrace -u``.
-Alternatively, to disable those compact backtraces for good, use
-``frame recognizer list`` and ``frame recognizer delete`` to delete the libc++
-frame recognizer.
+Alternatively, to disable those compact backtraces, use ``frame recognizer list``
+and ``frame recognizer disable`` on the "libc++ frame recognizer".
 
 GDB Pretty printers for libc++
 ------------------------------
