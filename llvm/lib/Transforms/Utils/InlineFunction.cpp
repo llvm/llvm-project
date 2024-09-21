@@ -1349,7 +1349,8 @@ static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
 // Add attributes from CB params and Fn attributes that can always be propagated
 // to the corresponding argument / inner callbases.
 static void AddParamAndFnBasicAttributes(const CallBase &CB,
-                                         ValueToValueMapTy &VMap) {
+                                         ValueToValueMapTy &VMap,
+                                         ClonedCodeInfo &InlinedFunctionInfo) {
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
 
@@ -1380,6 +1381,11 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       auto *NewInnerCB = dyn_cast_or_null<CallBase>(VMap.lookup(InnerCB));
       if (!NewInnerCB)
         continue;
+      // The InnerCB might have be simplified during the inlining
+      // process which can make propagation incorrect.
+      if (InlinedFunctionInfo.isSimplified(InnerCB, NewInnerCB))
+        continue;
+
       AttributeList AL = NewInnerCB->getAttributes();
       for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
         // Check if the underlying value for the parameter is an argument.
@@ -1455,7 +1461,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
-static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
+static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
+                                ClonedCodeInfo &InlinedFunctionInfo) {
   AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
   AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
   if (!ValidUB.hasAttributes() && !ValidPG.hasAttributes())
@@ -1473,6 +1480,11 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // could have transformed the cloned instruction.
     auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
     if (!NewRetVal)
+      continue;
+
+    // The RetVal might have be simplified during the inlining
+    // process which can make propagation incorrect.
+    if (InlinedFunctionInfo.isSimplified(RetVal, NewRetVal))
       continue;
     // Backward propagation of attributes to the returned value may be incorrect
     // if it is control flow dependent.
@@ -2456,11 +2468,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
-    AddReturnAttributes(CB, VMap);
+    AddReturnAttributes(CB, VMap, InlinedFunctionInfo);
 
     // Clone attributes on the params of the callsite to calls within the
     // inlined function which use the same param.
-    AddParamAndFnBasicAttributes(CB, VMap);
+    AddParamAndFnBasicAttributes(CB, VMap, InlinedFunctionInfo);
 
     propagateMemProfMetadata(CalledFunc, CB,
                              InlinedFunctionInfo.ContainsMemProfMetadata, VMap);
