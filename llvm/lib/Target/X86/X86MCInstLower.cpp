@@ -350,8 +350,12 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
-  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
+  case MachineOperand::MO_ExternalSymbol: {
+    MCSymbol *Sym = GetSymbolFromOperand(MO);
+    Sym->setExternal(true);
+    return LowerSymbolOperand(MO, Sym);
+  }
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
