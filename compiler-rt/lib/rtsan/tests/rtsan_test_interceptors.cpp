@@ -37,6 +37,24 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#if _FILE_OFFSET_BITS == 64 && SANITIZER_GLIBC
+const char *const kCreatFunctionName = "creat64";
+const char *const kFcntlFunctionName = "fcntl64";
+const char *const kFopenFunctionName = "fopen64";
+const char *const kOpenAtFunctionName = "openat64";
+const char *const kOpenFunctionName = "open64";
+const char *const kPreadFunctionName = "pread64";
+const char *const kPwriteFunctionName = "pwrite64";
+#else
+const char *const kCreatFunctionName = "creat";
+const char *const kFcntlFunctionName = "fcntl";
+const char *const kFopenFunctionName = "fopen";
+const char *const kOpenAtFunctionName = "openat";
+const char *const kOpenFunctionName = "open";
+const char *const kPreadFunctionName = "pread";
+const char *const kPwriteFunctionName = "pwrite";
+#endif
+
 using namespace testing;
 using namespace rtsan_testing;
 using namespace std::chrono_literals;
@@ -183,13 +201,13 @@ TEST(TestRtsanInterceptors, NanosleepDiesWhenRealtime) {
 
 TEST_F(RtsanFileTest, OpenDiesWhenRealtime) {
   auto func = [this]() { open(GetTemporaryFilePath(), O_RDONLY); };
-  ExpectRealtimeDeath(func, "open");
+  ExpectRealtimeDeath(func, kOpenFunctionName);
   ExpectNonRealtimeSurvival(func);
 }
 
 TEST_F(RtsanFileTest, OpenatDiesWhenRealtime) {
   auto func = [this]() { openat(0, GetTemporaryFilePath(), O_RDONLY); };
-  ExpectRealtimeDeath(func, "openat");
+  ExpectRealtimeDeath(func, kOpenAtFunctionName);
   ExpectNonRealtimeSurvival(func);
 }
 
@@ -214,13 +232,13 @@ TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
 
 TEST_F(RtsanFileTest, CreatDiesWhenRealtime) {
   auto func = [this]() { creat(GetTemporaryFilePath(), S_IWOTH | S_IROTH); };
-  ExpectRealtimeDeath(func, "creat");
+  ExpectRealtimeDeath(func, kCreatFunctionName);
   ExpectNonRealtimeSurvival(func);
 }
 
 TEST(TestRtsanInterceptors, FcntlDiesWhenRealtime) {
   auto func = []() { fcntl(0, F_GETFL); };
-  ExpectRealtimeDeath(func, "fcntl");
+  ExpectRealtimeDeath(func, kFcntlFunctionName);
   ExpectNonRealtimeSurvival(func);
 }
 
@@ -239,7 +257,7 @@ TEST_F(RtsanFileTest, FcntlFlockDiesWhenRealtime) {
     ASSERT_THAT(fcntl(fd, F_GETLK, &lock), Eq(0));
     ASSERT_THAT(lock.l_type, F_UNLCK);
   };
-  ExpectRealtimeDeath(func, "fcntl");
+  ExpectRealtimeDeath(func, kFcntlFunctionName);
   ExpectNonRealtimeSurvival(func);
 
   close(fd);
@@ -261,7 +279,7 @@ TEST_F(RtsanFileTest, FcntlSetFdDiesWhenRealtime) {
     ASSERT_THAT(fcntl(fd, F_GETFD), Eq(old_flags));
   };
 
-  ExpectRealtimeDeath(func, "fcntl");
+  ExpectRealtimeDeath(func, kFcntlFunctionName);
   ExpectNonRealtimeSurvival(func);
 
   close(fd);
@@ -278,7 +296,8 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
     auto fd = fopen(GetTemporaryFilePath(), "w");
     EXPECT_THAT(fd, Ne(nullptr));
   };
-  ExpectRealtimeDeath(func, "fopen");
+
+  ExpectRealtimeDeath(func, kFopenFunctionName);
   ExpectNonRealtimeSurvival(func);
 }
 
@@ -366,7 +385,7 @@ TEST_F(RtsanOpenedFileTest, PreadDiesWhenRealtime) {
     char c{};
     pread(GetOpenFd(), &c, 1, 0);
   };
-  ExpectRealtimeDeath(Func, "pread");
+  ExpectRealtimeDeath(Func, kPreadFunctionName);
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -385,7 +404,7 @@ TEST_F(RtsanOpenedFileTest, PwriteDiesWhenRealtime) {
     char c = 'a';
     pwrite(GetOpenFd(), &c, 1, 0);
   };
-  ExpectRealtimeDeath(Func, "pwrite");
+  ExpectRealtimeDeath(Func, kPwriteFunctionName);
   ExpectNonRealtimeSurvival(Func);
 }
 

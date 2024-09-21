@@ -917,7 +917,6 @@ std::string AMDGPUTargetID::toString() const {
 
   StreamRep << Processor << Features;
 
-  StreamRep.flush();
   return StringRep;
 }
 
