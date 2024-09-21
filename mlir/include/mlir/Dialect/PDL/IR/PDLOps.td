@@ -363,7 +363,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
   let builders = [
     OpBuilder<(ins CArg<"std::optional<StringRef>", "std::nullopt">:$name,
       CArg<"ValueRange", "std::nullopt">:$operandValues,
-      CArg<"ArrayRef<StringRef>", "std::nullopt">:$attrNames,
+      CArg<"ArrayRef<StringRef>", "{}">:$attrNames,
       CArg<"ValueRange", "std::nullopt">:$attrValues,
       CArg<"ValueRange", "std::nullopt">:$resultTypes), [{
       auto nameAttr = name ? $_builder.getStringAttr(*name) : StringAttr();

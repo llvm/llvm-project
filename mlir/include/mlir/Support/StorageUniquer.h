@@ -97,7 +97,7 @@ public:
     template <typename T>
     ArrayRef<T> copyInto(ArrayRef<T> elements) {
       if (elements.empty())
-        return std::nullopt;
+        return {};
       auto result = allocator.Allocate<T>(elements.size());
       std::uninitialized_copy(elements.begin(), elements.end(), result);
       return ArrayRef<T>(result, elements.size());

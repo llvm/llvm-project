@@ -1070,7 +1070,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
     using ShapedType::Trait<UnrankedMemRefType>::getDimSize;
     using ShapedType::Trait<UnrankedMemRefType>::getDynamicDimIndex;
 
-    ArrayRef<int64_t> getShape() const { return std::nullopt; }
+    ArrayRef<int64_t> getShape() const { return {}; }
 
     /// [deprecated] Returns the memory space in old raw integer representation.
     /// New `Attribute getMemorySpace()` method should be used instead.
@@ -1129,7 +1129,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
     using ShapedType::Trait<UnrankedTensorType>::getDimSize;
     using ShapedType::Trait<UnrankedTensorType>::getDynamicDimIndex;
 
-    ArrayRef<int64_t> getShape() const { return std::nullopt; }
+    ArrayRef<int64_t> getShape() const { return {}; }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

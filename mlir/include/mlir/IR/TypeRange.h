@@ -36,7 +36,7 @@ class TypeRange : public llvm::detail::indexed_accessor_range_base<
                       Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = std::nullopt);
+  TypeRange(ArrayRef<Type> types = {});
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
@@ -47,6 +47,8 @@ public:
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Type>, Arg>::value>>
   TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::nullopt_t)
+      : TypeRange(ArrayRef<Type>()) {}
   TypeRange(std::initializer_list<Type> types)
       : TypeRange(ArrayRef<Type>(types)) {}
 

@@ -710,7 +710,7 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
     raw_ostream &os, llvm::SourceMgr &mgr, const llvm::MemoryBuffer *buf) {
   // If the buffer is invalid, return an empty list.
   if (!buf)
-    return std::nullopt;
+    return {};
   auto &expectedDiags = expectedDiagsPerFile[buf->getBufferIdentifier()];
 
   // The number of the last line that did not correlate to a designator.

@@ -463,14 +463,14 @@ public:
   /// should match the size of `argTypes`.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
                      TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+                     ArrayRef<Location> locs = {});
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'. `locs` contains the
   /// locations of the inserted arguments, and should match the size of
   /// `argTypes`.
   Block *createBlock(Block *insertBefore, TypeRange argTypes = std::nullopt,
-                     ArrayRef<Location> locs = std::nullopt);
+                     ArrayRef<Location> locs = {});
 
   //===--------------------------------------------------------------------===//
   // Operation Creation

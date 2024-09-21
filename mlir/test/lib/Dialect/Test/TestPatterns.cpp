@@ -903,7 +903,7 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, operands,
-                                             std::nullopt);
+                                             llvm::ArrayRef<NamedAttribute>());
     return success();
   }
 };
@@ -919,7 +919,7 @@ struct TestDropAndReplaceInvalidOp : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     rewriter.replaceOpWithNewOp<TestValidOp>(op, std::nullopt, ValueRange(),
-                                             std::nullopt);
+                                             llvm::ArrayRef<NamedAttribute>());
     return success();
   }
 };

@@ -250,7 +250,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter.create<arith::ShRSIOp>(loc, resultTypes, args[0], subtract)
             ->getResults();
     auto truncated =
-        rewriter.create<arith::TruncIOp>(loc, i1Ty, shifted, std::nullopt);
+        rewriter.create<arith::TruncIOp>(loc, i1Ty, shifted, llvm::ArrayRef<NamedAttribute>());
     auto isInputOdd =
         rewriter.create<arith::AndIOp>(loc, i1Ty, truncated, i1one);
 
@@ -453,20 +453,20 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
     if (isa<FloatType>(srcTy) && isa<FloatType>(dstTy) && bitExtend)
       return rewriter.create<arith::ExtFOp>(loc, resultTypes, args,
-                                            std::nullopt);
+                                            llvm::ArrayRef<NamedAttribute>());
 
     if (isa<FloatType>(srcTy) && isa<FloatType>(dstTy) && !bitExtend)
       return rewriter.create<arith::TruncFOp>(loc, resultTypes, args,
-                                              std::nullopt);
+                                              llvm::ArrayRef<NamedAttribute>());
 
     // 1-bit integers need to be treated as signless.
     if (srcTy.isInteger(1) && arith::UIToFPOp::areCastCompatible(srcTy, dstTy))
       return rewriter.create<arith::UIToFPOp>(loc, resultTypes, args,
-                                              std::nullopt);
+                                              llvm::ArrayRef<NamedAttribute>());
 
     if (srcTy.isInteger(1) && isa<IntegerType>(dstTy) && bitExtend)
       return rewriter.create<arith::ExtUIOp>(loc, resultTypes, args,
-                                             std::nullopt);
+                                             llvm::ArrayRef<NamedAttribute>());
 
     // Unsigned integers need an unrealized cast so that they can be passed
     // to UIToFP.
@@ -484,7 +484,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     // All other si-to-fp conversions should be handled by SIToFP.
     if (arith::SIToFPOp::areCastCompatible(srcTy, dstTy))
       return rewriter.create<arith::SIToFPOp>(loc, resultTypes, args,
-                                              std::nullopt);
+                                              llvm::ArrayRef<NamedAttribute>());
 
     // Casting to boolean, floats need to only be checked as not-equal to zero.
     if (isa<FloatType>(srcTy) && dstTy.isInteger(1)) {
@@ -590,7 +590,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
     if (isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) && bitExtend)
       return rewriter.create<arith::ExtSIOp>(loc, resultTypes, args,
-                                             std::nullopt);
+                                             llvm::ArrayRef<NamedAttribute>());
 
     if (isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) && !bitExtend) {
       return rewriter.create<arith::TruncIOp>(loc, dstTy, args[0]);

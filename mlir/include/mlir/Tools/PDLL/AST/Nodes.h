@@ -897,7 +897,7 @@ public:
                                         ArrayRef<VariableDecl *> results,
                                         const CompoundStmt *body,
                                         Type resultType) {
-    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/std::nullopt,
+    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/{},
                       results, /*codeBlock=*/std::nullopt, body, resultType);
   }
 

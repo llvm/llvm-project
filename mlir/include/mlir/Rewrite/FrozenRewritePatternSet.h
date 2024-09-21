@@ -49,8 +49,8 @@ public:
   /// their type name.
   FrozenRewritePatternSet(
       RewritePatternSet &&patterns,
-      ArrayRef<std::string> disabledPatternLabels = std::nullopt,
-      ArrayRef<std::string> enabledPatternLabels = std::nullopt);
+      ArrayRef<std::string> disabledPatternLabels = {},
+      ArrayRef<std::string> enabledPatternLabels = {});
 
   /// Return the op specific native patterns held by this list.
   const OpSpecificNativePatternListT &getOpSpecificNativePatterns() const {
