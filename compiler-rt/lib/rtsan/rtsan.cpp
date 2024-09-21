@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
@@ -75,6 +76,20 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_notify_intercepted_call(const char *intercepted_function_name) {
   __rtsan_ensure_initialized();
-  ExpectNotRealtime(GetContextForThisThread(), intercepted_function_name);
+
+  GET_CALLER_PC_BP;
+  DiagnosticsInfo info = {InterceptedCallInfo{intercepted_function_name}, pc,
+                          bp};
+  ExpectNotRealtime(GetContextForThisThread(), info);
 }
+
+SANITIZER_INTERFACE_ATTRIBUTE void
+__rtsan_notify_blocking_call(const char *blocking_function_name) {
+  __rtsan_ensure_initialized();
+
+  GET_CALLER_PC_BP;
+  DiagnosticsInfo info = {BlockingCallInfo{blocking_function_name}, pc, bp};
+  ExpectNotRealtime(GetContextForThisThread(), info);
+}
+
 } // extern "C"
