@@ -124,46 +124,47 @@ template <class InputIterator, class OutputIterator, class BinaryOperation>
     constexpr OutputIterator  // constexpr since C++20
     adjacent_difference(InputIterator first, InputIterator last, OutputIterator result, BinaryOperation binary_op);
 
-template <class ForwardIterator, class T>
-    constexpr void  // constexpr since C++20
-    iota(ForwardIterator first, ForwardIterator last, T value);
+// [numeric.iota], iota
+template<class ForwardIterator, class T>
+  constexpr void iota(ForwardIterator first, ForwardIterator last, T value);        // constexpr since C++20
 
 namespace ranges {
-    template<class O, class T>
-        using iota_result = out_value_result<O, T>;                                     // C++23
+  template<class O, class T>
+    using iota_result = out_value_result<O, T>;                                     // C++23
 
-    template<input_or_output_iterator O, sentinel_for<O> S, weakly_incrementable T>
-        requires indirectly_writable<O, const T&>
-        constexpr iota_result<O, T> iota(O first, S last, T value);                     // C++23
+  template<input_or_output_iterator O, sentinel_for<O> S, weakly_incrementable T>
+    requires indirectly_writable<O, const T&>
+    constexpr iota_result<O, T> iota(O first, S last, T value);                     // C++23
 
-    template<weakly_incrementable T, output_range<const T&> R>
-        constexpr iota_result<borrowed_iterator_t<R>, T> iota(R&& r, T value);          // C++23
+  template<weakly_incrementable T, output_range<const T&> R>
+    constexpr iota_result<borrowed_iterator_t<R>, T> iota(R&& r, T value);          // C++23
 }
 
-template <class M, class N>
-    constexpr common_type_t<M,N> gcd(M m, N n);    // C++17
+// [numeric.ops.gcd], greatest common divisor
+template<class M, class N>
+  constexpr common_type_t<M, N> gcd(M m, N n);                // C++17
 
-template <class M, class N>
-    constexpr common_type_t<M,N> lcm(M m, N n);    // C++17
+// [numeric.ops.lcm], least common multiple
+template<class M, class N>
+  constexpr common_type_t<M, N> lcm(M m, N n);                // C++17
 
+// [numeric.ops.midpoint], midpoint
 template<class T>
-    constexpr T midpoint(T a, T b) noexcept;  // C++20
-
+  constexpr T midpoint(T a, T b) noexcept;                    // C++20
 template<class T>
-    constexpr T* midpoint(T* a, T* b);        // C++20
+  constexpr T* midpoint(T* a, T* b);                          // C++20
 
 // [numeric.sat], saturation arithmetic
 template<class T>
-constexpr T add_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+  constexpr T add_sat(T x, T y) noexcept;                     // freestanding, Since C++26
 template<class T>
-constexpr T sub_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+  constexpr T sub_sat(T x, T y) noexcept;                     // freestanding, Since C++26
 template<class T>
-constexpr T mul_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+  constexpr T mul_sat(T x, T y) noexcept;                     // freestanding, Since C++26
 template<class T>
-constexpr T div_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+  constexpr T div_sat(T x, T y) noexcept;                     // freestanding, Since C++26
 template<class T, class U>
-constexpr T saturate_cast(U x) noexcept;                    // freestanding, Since C++26
-
+  constexpr T saturate_cast(U x) noexcept;                    // freestanding, Since C++26
 }  // std
 
 */
