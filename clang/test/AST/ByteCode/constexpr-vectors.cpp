@@ -84,20 +84,24 @@ using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
 MathShiftOps(FourCharsVecSize);
 MathShiftOps(FourIntsVecSize);
 MathShiftOps(FourLongLongsVecSize);
+MathShiftOps(FourI128VecSize);
 MathShiftOps(FourFloatsVecSize);
 MathShiftOps(FourDoublesVecSize);
 MathShiftOps(FourCharsExtVec);
 MathShiftOps(FourIntsExtVec);
 MathShiftOps(FourLongLongsExtVec);
+MathShiftOps(FourI128ExtVec);
 MathShiftOps(FourFloatsExtVec);
 MathShiftOps(FourDoublesExtVec);
 
 MathShiftOpsInts(FourCharsVecSize);
 MathShiftOpsInts(FourIntsVecSize);
 MathShiftOpsInts(FourLongLongsVecSize);
+MathShiftOpsInts(FourI128VecSize);
 MathShiftOpsInts(FourCharsExtVec);
 MathShiftOpsInts(FourIntsExtVec);
 MathShiftOpsInts(FourLongLongsExtVec);
+MathShiftOpsInts(FourI128ExtVec);
 
 template <typename T, typename U>
 constexpr auto CmpMul(T t, U u) {
