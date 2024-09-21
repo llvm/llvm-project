@@ -9,6 +9,7 @@ add_flang_library(FIRTransforms
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CufImplicitDeviceGlobal.cpp
   CufOpConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
