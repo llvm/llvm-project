@@ -1333,24 +1333,53 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
 static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
                                               MachineBasicBlock &MBB,
                                               const TargetInstrInfo &TII,
-                                              bool Is64Bit, bool IsMicroMips) {
+                                              bool Is64Bit, bool IsMicroMips,
+                                              bool IsMips1) {
   if (NoZeroDivCheck)
     return &MBB;
 
-  // Insert instruction "teq $divisor_reg, $zero, 7".
-  MachineBasicBlock::iterator I(MI);
-  MachineInstrBuilder MIB;
   MachineOperand &Divisor = MI.getOperand(2);
-  MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
-                TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
-            .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-            .addReg(Mips::ZERO)
-            .addImm(7);
 
-  // Use the 32-bit sub-register if this is a 64-bit division.
-  if (Is64Bit)
-    MIB->getOperand(0).setSubReg(Mips::sub_32);
+  if (IsMips1) {
 
+    // Insert "beq $divisor_reg, $zero, label"
+    // Insert "break 7"
+    DebugLoc DL = MI.getDebugLoc();
+    MachineBasicBlock *BMBB = MBB.splitAt(MI, true);
+    MachineInstrBuilder MIB;
+    // Add branch after div
+    MIB = BuildMI(MBB, std::next(MI.getIterator()), DL, TII.get(Mips::BNE))
+              .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+              .addReg(Mips::ZERO);
+
+    // insert break at start of next block
+    BuildMI(*BMBB, BMBB->instr_front(), DL, TII.get(Mips::BREAK))
+        .addImm(0)
+        .addImm(7);
+
+    // split break into own block
+    MachineBasicBlock *EndMBB = BMBB->splitAt(BMBB->front(), true);
+    // add branch target
+    MBB.addSuccessor(EndMBB);
+    MIB.addMBB(EndMBB);
+
+    Divisor.setIsKill(false);
+    return EndMBB;
+
+  } else {
+    MachineBasicBlock::iterator I(MI);
+    // Insert instruction "teq $divisor_reg, $zero, 7".
+    MachineInstrBuilder MIB;
+    MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
+                  TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
+              .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+              .addReg(Mips::ZERO)
+              .addImm(7);
+
+    // Use the 32-bit sub-register if this is a 64-bit division.
+    if (Is64Bit)
+      MIB->getOperand(0).setSubReg(Mips::sub_32);
+  }
   // Clear Divisor's kill flag.
   Divisor.setIsKill(false);
 
@@ -1480,8 +1509,8 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU:
   case Mips::MOD:
   case Mips::MODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               false);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, false,
+                               !Subtarget.hasMips2());
   case Mips::SDIV_MM_Pseudo:
   case Mips::UDIV_MM_Pseudo:
   case Mips::SDIV_MM:
@@ -1490,14 +1519,16 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU_MMR6:
   case Mips::MOD_MMR6:
   case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true,
+                               false);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false,
+                               false);
 
   case Mips::PseudoSELECT_I:
   case Mips::PseudoSELECT_I64:
