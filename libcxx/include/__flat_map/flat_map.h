@@ -1177,6 +1177,7 @@ private:
   struct __key_equiv {
     __key_equiv(key_compare __c) : __comp_(__c) {}
     bool operator()(const_reference __x, const_reference __y) const {
+      // todo
       // LWG issue ? spec uses __x.first but zip_view no longer uses pair
       return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
     }
