@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --coff-load-config %t | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --coff-load-config %t1 | FileCheck %s
 
 # CHECK: CHPEMetadataPointer: 0x180005000
 # CHECK:      CHPEMetadata [
@@ -17,6 +17,7 @@
 # CHECK-NEXT:     0x1000 -> 0x2000
 # CHECK-NEXT:     0x1020 -> 0x2030
 # CHECK-NEXT:   ]
+# CHECK-NOT:    AuxiliaryDelayloadIAT:
 
 --- !COFF
 OptionalHeader:
@@ -83,5 +84,69 @@ sections:
       - UInt32: 0x2000
       - UInt32: 0x1020  # RedirectionMetadata[1]
       - UInt32: 0x2030
+symbols:         []
+...
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --coff-load-config %t2 | FileCheck --check-prefix=CHPE2 %s
+
+# CHPE2:      CHPEMetadata [
+# CHPE2-NEXT:   Version: 0x2
+# CHPE2:        AuxiliaryDelayloadIAT: 0x1
+# CHPE2-NEXT:   AuxiliaryDelayloadIATCopy: 0x2
+# CHPE2-NEXT:   HybridImageInfoBitfield: 0x4
+
+--- !COFF
+OptionalHeader:
+  ImageBase:       0x180000000
+  SectionAlignment: 4096
+  FileAlignment:   512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x4000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     0x2050
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x4000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180005000
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x5000
+    VirtualSize:     144
+    StructuredData:
+      - UInt32: 2       # Version
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 1       # AuxiliaryDelayloadIAT
+      - UInt32: 2       # AuxiliaryDelayloadIATCopy
+      - UInt32: 4       # HybridImageInfoBitfield
 symbols:         []
 ...
