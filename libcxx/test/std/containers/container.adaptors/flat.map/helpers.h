@@ -9,9 +9,12 @@
 #ifndef SUPPORT_FLAT_MAP_HELPERS_H
 #define SUPPORT_FLAT_MAP_HELPERS_H
 
+#include <algorithm>
 #include <cassert>
 #include <string>
 #include <vector>
+
+#include "test_macros.h"
 
 struct StartsWith {
   explicit StartsWith(char ch) : lower_(1, ch), upper_(1, ch + 1) {}
@@ -95,5 +98,58 @@ struct NoDefaultCtr {
   NoDefaultCtr() = delete;
 };
 
+template <bool Copyable = true>
+struct ThrowOnMove {
+  int i;
+  ThrowOnMove(int ii) : i(ii) {}
+  ThrowOnMove(const ThrowOnMove&)
+    requires Copyable
+  = default;
+
+  ThrowOnMove& operator=(const ThrowOnMove&)
+    requires Copyable
+  = default;
+
+  ThrowOnMove(ThrowOnMove&&) { throw 42; }
+
+  ThrowOnMove& operator=(ThrowOnMove&& other) {
+    other.i = -1;
+    throw 42;
+  }
+
+  friend bool operator==(const ThrowOnMove&, const ThrowOnMove&)  = default;
+  friend auto operator<=>(const ThrowOnMove&, const ThrowOnMove&) = default;
+};
+
+using CopyableThrowOnMove = ThrowOnMove<true>;
+using MoveOnlyThrowOnMove = ThrowOnMove<false>;
+
+struct ThrowOnSecondMove {
+  int i;
+  int count;
+  ThrowOnSecondMove(int ii) : i(ii), count(0) {}
+  ThrowOnSecondMove(const ThrowOnSecondMove&)            = delete;
+  ThrowOnSecondMove& operator=(const ThrowOnSecondMove&) = delete;
+
+  ThrowOnSecondMove(ThrowOnSecondMove&& other) : i(other.i), count(other.count) {
+    if (++count > 1)
+      throw 42;
+  }
+
+  ThrowOnSecondMove& operator=(ThrowOnSecondMove&&) {
+    if (++count > 1)
+      throw 42;
+    return *this;
+  }
+
+  friend bool operator==(const ThrowOnSecondMove&, const ThrowOnSecondMove&)  = default;
+  friend auto operator<=>(const ThrowOnSecondMove&, const ThrowOnSecondMove&) = default;
+};
+
+template <class T, class Compare = std::less<>>
+bool is_sorted_and_unique(T&& container, Compare compare = Compare()) {
+  auto greater_or_equal_to = [&](const auto& x, const auto& y) { return !compare(x, y); };
+  return std::ranges::adjacent_find(container, greater_or_equal_to) == std::ranges::end(container);
+}
 
 #endif // SUPPORT_FLAT_MAP_HELPERS_H
