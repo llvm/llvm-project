@@ -32,18 +32,20 @@ program reduce15
   print *,"min: ", mins
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @min_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
+! CHECK-LABEL:   omp.declare_reduction @min_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 2147483647 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           fir.if %[[VAL_7]] {
 ! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_8]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_8]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -56,9 +58,9 @@ end program
 ! CHECK:             %[[VAL_17:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:             %[[VAL_18:.*]] = fir.rebox %[[VAL_14]]#0(%[[VAL_17]]) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:             hlfir.assign %[[VAL_1]] to %[[VAL_18]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_18]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_18]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           }
-! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -89,18 +91,20 @@ end program
 ! CHECK:           omp.yield
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.declare_reduction @max_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
+! CHECK-LABEL:   omp.declare_reduction @max_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant -2147483648 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           fir.if %[[VAL_7]] {
 ! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_8]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_8]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -113,9 +117,9 @@ end program
 ! CHECK:             %[[VAL_17:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:             %[[VAL_18:.*]] = fir.rebox %[[VAL_14]]#0(%[[VAL_17]]) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:             hlfir.assign %[[VAL_1]] to %[[VAL_18]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_18]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_18]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           }
-! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -244,8 +248,7 @@ end program
 ! CHECK:                   %[[VAL_85:.*]] = arith.select %[[VAL_84]], %[[VAL_76]], %[[VAL_83]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_85]] : i32
 ! CHECK:                 }
-! CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_62]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 hlfir.assign %[[VAL_68]] to %[[VAL_86]] : !hlfir.expr<?xi32>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:                 hlfir.assign %[[VAL_68]] to %[[VAL_62]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 hlfir.destroy %[[VAL_68]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
@@ -288,8 +291,7 @@ end program
 ! CHECK:                   %[[VAL_117:.*]] = arith.select %[[VAL_116]], %[[VAL_108]], %[[VAL_115]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_117]] : i32
 ! CHECK:                 }
-! CHECK:                 %[[VAL_118:.*]] = fir.load %[[VAL_94]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                 hlfir.assign %[[VAL_100]] to %[[VAL_118]] : !hlfir.expr<?xi32>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:                 hlfir.assign %[[VAL_100]] to %[[VAL_94]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 hlfir.destroy %[[VAL_100]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }

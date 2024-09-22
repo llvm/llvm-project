@@ -25,7 +25,7 @@ set(assets
 )
 
 set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
-set(resource_dir "${CMAKE_BINARY_DIR}/share/clang-doc")
+set(resource_dir "${LLVM_RUNTIME_OUTPUT_INTDIR}/../share/clang-doc")
 set(out_files)
 
 function(copy_files_to_dst src_dir dst_dir file)

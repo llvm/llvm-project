@@ -32,7 +32,7 @@ func.func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
                                  %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
-      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>}
+      {in_bounds = [false, true, false], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
   return
@@ -43,7 +43,7 @@ func.func @transfer_read_3d_mask_broadcast(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[0, 1]> : vector<2xi1>
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42, %mask
-      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, 0)>}
+      {in_bounds = [false, true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, 0, 0)>}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
   return

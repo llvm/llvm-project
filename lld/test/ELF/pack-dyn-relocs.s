@@ -264,30 +264,30 @@
 // RELR64-EMPTY: 
 // RELR64-NEXT:  Relocation section '.relr.dyn' at offset {{.*}} contains 24 entries:
 // RELR64-NEXT:  Symbolic Address
-// RELR64-NEXT:  $d.0{{$}}
-// RELR64-NEXT:  $d.0 + 0x8
-// RELR64-NEXT:  $d.0 + 0x10
-// RELR64-NEXT:  $d.0 + 0x18
-// RELR64-NEXT:  $d.0 + 0x20
-// RELR64-NEXT:  $d.0 + 0x28
-// RELR64-NEXT:  $d.0 + 0x30
-// RELR64-NEXT:  $d.0 + 0x38
-// RELR64-NEXT:  $d.0 + 0x48
-// RELR64-NEXT:  $d.0 + 0x50
-// RELR64-NEXT:  $d.0 + 0x58
-// RELR64-NEXT:  $d.0 + 0x60
-// RELR64-NEXT:  $d.0 + 0x68
-// RELR64-NEXT:  $d.0 + 0x70
-// RELR64-NEXT:  $d.0 + 0x78
-// RELR64-NEXT:  $d.0 + 0x90
-// RELR64-NEXT:  $d.0 + 0x98
-// RELR64-NEXT:  $d.0 + 0xa0
-// RELR64-NEXT:  $d.0 + 0xa8
-// RELR64-NEXT:  $d.0 + 0xb0
-// RELR64-NEXT:  $d.0 + 0xb8
-// RELR64-NEXT:  $d.0 + 0xc0
-// RELR64-NEXT:  $d.0 + 0xc8
-// RELR64-NEXT:  $d.0 + 0xd0
+// RELR64-NEXT:  $d{{$}}
+// RELR64-NEXT:  $d + 0x8
+// RELR64-NEXT:  $d + 0x10
+// RELR64-NEXT:  $d + 0x18
+// RELR64-NEXT:  $d + 0x20
+// RELR64-NEXT:  $d + 0x28
+// RELR64-NEXT:  $d + 0x30
+// RELR64-NEXT:  $d + 0x38
+// RELR64-NEXT:  $d + 0x48
+// RELR64-NEXT:  $d + 0x50
+// RELR64-NEXT:  $d + 0x58
+// RELR64-NEXT:  $d + 0x60
+// RELR64-NEXT:  $d + 0x68
+// RELR64-NEXT:  $d + 0x70
+// RELR64-NEXT:  $d + 0x78
+// RELR64-NEXT:  $d + 0x90
+// RELR64-NEXT:  $d + 0x98
+// RELR64-NEXT:  $d + 0xa0
+// RELR64-NEXT:  $d + 0xa8
+// RELR64-NEXT:  $d + 0xb0
+// RELR64-NEXT:  $d + 0xb8
+// RELR64-NEXT:  $d + 0xc0
+// RELR64-NEXT:  $d + 0xc8
+// RELR64-NEXT:  $d + 0xd0
 // RELR64-EMPTY:
 // RELR64-NEXT: Hex dump of section '.data':
 // RELR64-NEXT: 0x00030490 90040300 00000000 91040300 00000000 .

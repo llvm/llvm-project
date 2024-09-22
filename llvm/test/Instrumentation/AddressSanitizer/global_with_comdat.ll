@@ -4,12 +4,12 @@
 ; We keep using comdats for garbage collection if odr indicators are
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
-; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
+; RUN: rm -rf %t && split-file %s %t
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < a.ll -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+; RUN: opt < %t/a.ll -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 
-; RUN: opt < no_module_id.ll -passes=asan -S | FileCheck %s --check-prefix=NOMODULEID
+; RUN: opt < %t/no_module_id.ll -passes=asan -S | FileCheck %s --check-prefix=NOMODULEID
 
 ;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -46,9 +46,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; NOCOMDAT: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, align 32
 
 ; Check emitted location descriptions:
-; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
+; CHECK: [[VARNAME:@___asan_gen_global[.0-9]*]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
 ; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint (ptr @__odr_asan_gen_global to i64){{.*}} section "asan_globals"{{.*}}, comdat($global), !associated
-; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @___asan_gen_ to i64){{.*}} section "asan_globals"{{.*}}, comdat($.str.{{.*}}), !associated
+; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @___asan_gen_global{{[.0-9]*}} to i64){{.*}} section "asan_globals"{{.*}}, comdat($.str.{{.*}}), !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.

@@ -13,6 +13,7 @@
 #include "MCTargetDesc/AVRAsmBackend.h"
 #include "MCTargetDesc/AVRFixupKinds.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -87,6 +88,9 @@ static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Adjusts the value of a relative branch target before fixup application.
 static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
                                  uint64_t &Value, MCContext *Ctx = nullptr) {
+  // Jumps are relative to the current instruction.
+  Value -= 2;
+
   // We have one extra bit of precision because the value is rightshifted by
   // one.
   signed_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
@@ -512,15 +516,10 @@ bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   switch ((unsigned)Fixup.getKind()) {
   default:
     return Fixup.getKind() >= FirstLiteralRelocationKind;
-  // Fixups which should always be recorded as relocations.
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
-    // Do not force relocation for PC relative branch like 'rjmp .',
-    // 'rcall . - off' and 'breq . + off'.
-    if (const auto *SymA = Target.getSymA())
-      if (SymA->getSymbol().getName().size() == 0)
-        return false;
-    [[fallthrough]];
+    // Always resolve relocations for PC-relative branches
+    return false;
   case AVR::fixup_call:
     return true;
   }

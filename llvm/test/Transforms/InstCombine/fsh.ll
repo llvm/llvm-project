@@ -725,7 +725,7 @@ define i32 @fsh_orconst_rotate(i32 %a) {
 define i32 @fsh_rotate_5(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_5(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 5)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
@@ -741,7 +741,7 @@ define i32 @fsh_rotate_5(i8 %x, i32 %y) {
 define i32 @fsh_rotate_18(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_18(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
 ; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 18)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;

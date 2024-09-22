@@ -58,11 +58,6 @@ inline _LIBCPP_HIDE_FROM_ABI long long strtoll_l(const char* __nptr, char** __en
   return ::strtoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long strtol_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtol(__nptr, __endptr, __base);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr, locale_t locale) {
   __setAndRestore __newloc(locale);
   return ::strtod(__nptr, __endptr);
@@ -84,15 +79,10 @@ strtoull_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
   return ::strtoull(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI unsigned long strtoul_l(const char* __nptr, char** __endptr, int __base, locale_t locale) {
-  __setAndRestore __newloc(locale);
-  return ::strtoul(__nptr, __endptr, __base);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char* fmt, va_list ap) {
   const size_t buff_size = 256;
-  if ((*strp = (char*)malloc(buff_size)) == NULL) {
+  if ((*strp = (char*)malloc(buff_size)) == nullptr) {
     return -1;
   }
 
@@ -107,7 +97,7 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   va_end(ap_copy);
 
   if ((size_t)str_size >= buff_size) {
-    if ((*strp = (char*)realloc(*strp, str_size + 1)) == NULL) {
+    if ((*strp = (char*)realloc(*strp, str_size + 1)) == nullptr) {
       return -1;
     }
     str_size = vsnprintf(*strp, str_size + 1, fmt, ap);

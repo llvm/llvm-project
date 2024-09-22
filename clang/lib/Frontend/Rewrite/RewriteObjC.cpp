@@ -32,6 +32,7 @@
 #if CLANG_ENABLE_OBJC_REWRITER
 
 using namespace clang;
+using llvm::RewriteBuffer;
 using llvm::utostr;
 
 namespace {
@@ -220,10 +221,9 @@ namespace {
         return;
       }
       // Get the new text.
-      std::string SStr;
-      llvm::raw_string_ostream S(SStr);
+      std::string Str;
+      llvm::raw_string_ostream S(Str);
       New->printPretty(S, nullptr, PrintingPolicy(LangOpts));
-      const std::string &Str = S.str();
 
       // If replacement succeeded or warning disabled return with no warning.
       if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, Str)) {
@@ -1701,7 +1701,7 @@ Stmt *RewriteObjC::RewriteObjCSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
   llvm::raw_string_ostream syncExprBuf(syncExprBufS);
   assert(syncExpr != nullptr && "Expected non-null Expr");
   syncExpr->printPretty(syncExprBuf, nullptr, PrintingPolicy(LangOpts));
-  syncBuf += syncExprBuf.str();
+  syncBuf += syncExprBufS;
   syncBuf += ");";
 
   buf += syncBuf;
@@ -2507,7 +2507,7 @@ Stmt *RewriteObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));
-  Preamble += prettyBuf.str();
+  Preamble += prettyBufS;
   Preamble += ",";
   Preamble += utostr(Exp->getString()->getByteLength()) + "};\n";
 
@@ -4110,9 +4110,8 @@ void RewriteObjC::RewriteBlockPointerDecl(NamedDecl *ND) {
 std::string RewriteObjC::SynthesizeByrefCopyDestroyHelper(VarDecl *VD,
                                                           int flag) {
   std::string S;
-  if (CopyDestroyCache.count(flag))
+  if (!CopyDestroyCache.insert(flag).second)
     return S;
-  CopyDestroyCache.insert(flag);
   S = "static void __Block_byref_id_object_copy_";
   S += utostr(flag);
   S += "(void *dst, void *src) {\n";

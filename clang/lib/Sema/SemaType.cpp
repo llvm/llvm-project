@@ -20,9 +20,12 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -35,6 +38,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -219,10 +223,15 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
+    // Flag to indicate that we already parsed a HLSL parameter modifier
+    // attribute. This prevents double-mutating the type.
+    bool ParsedHLSLParamMod;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
+          ParsedHLSLParamMod(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -348,6 +357,10 @@ namespace {
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
 
     bool didParseNoDeref() const { return parsedNoDeref; }
+
+    void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
+
+    bool didParseHLSLParamMod() const { return ParsedHLSLParamMod; }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -1357,6 +1370,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
 
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
   case DeclSpec::TST_error:
     Result = Context.IntTy;
     declarator.setInvalidType(true);
@@ -1423,7 +1442,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.getVectorType(Result, 128/typeSize, VecKind);
   }
 
-  // FIXME: Imaginary.
+  // _Imaginary was a feature of C99 through C23 but was never supported in
+  // Clang. The feature was removed in C2y, but we retain the unsupported
+  // diagnostic for an improved user experience.
   if (DS.getTypeSpecComplex() == DeclSpec::TSC_imaginary)
     S.Diag(DS.getTypeSpecComplexLoc(), diag::err_imaginary_not_supported);
 
@@ -1535,6 +1556,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     else
       Result = Qualified;
   }
+
+  if (S.getLangOpts().HLSL)
+    Result = S.HLSL().ProcessResourceTypeAttributes(Result);
 
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
@@ -1649,7 +1673,6 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   return BuildQualifiedType(T, Loc, Q, DS);
 }
 
-/// Build a paren type including \p T.
 QualType Sema::BuildParenType(QualType T) {
   return Context.getParenType(T);
 }
@@ -1780,19 +1803,6 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
   return PointeeType;
 }
 
-/// Build a pointer type.
-///
-/// \param T The type to which we'll be building a pointer.
-///
-/// \param Loc The location of the entity whose type involves this
-/// pointer type or, if there is no such entity, the location of the
-/// type that will have pointer type.
-///
-/// \param Entity The name of the entity that involves the pointer
-/// type, if known.
-///
-/// \returns A suitable pointer type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildPointerType(QualType T,
                                 SourceLocation Loc, DeclarationName Entity) {
   if (T->isReferenceType()) {
@@ -1845,19 +1855,6 @@ QualType Sema::BuildPointerType(QualType T,
   return Context.getPointerType(T);
 }
 
-/// Build a reference type.
-///
-/// \param T The type to which we'll be building a reference.
-///
-/// \param Loc The location of the entity whose type involves this
-/// reference type or, if there is no such entity, the location of the
-/// type that will have reference type.
-///
-/// \param Entity The name of the entity that involves the reference
-/// type, if known.
-///
-/// \returns A suitable reference type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
                                   SourceLocation Loc,
                                   DeclarationName Entity) {
@@ -1933,38 +1930,14 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   return Context.getRValueReferenceType(T);
 }
 
-/// Build a Read-only Pipe type.
-///
-/// \param T The type to which we'll be building a Pipe.
-///
-/// \param Loc We do not use it for now.
-///
-/// \returns A suitable pipe type, if there are no errors. Otherwise, returns a
-/// NULL type.
 QualType Sema::BuildReadPipeType(QualType T, SourceLocation Loc) {
   return Context.getReadPipeType(T);
 }
 
-/// Build a Write-only Pipe type.
-///
-/// \param T The type to which we'll be building a Pipe.
-///
-/// \param Loc We do not use it for now.
-///
-/// \returns A suitable pipe type, if there are no errors. Otherwise, returns a
-/// NULL type.
 QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
   return Context.getWritePipeType(T);
 }
 
-/// Build a bit-precise integer type.
-///
-/// \param IsUnsigned Boolean representing the signedness of the type.
-///
-/// \param BitWidth Size of this int type in bits, or an expression representing
-/// that.
-///
-/// \param Loc Location of the keyword.
 QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
                                SourceLocation Loc) {
   if (BitWidth->isInstantiationDependent())
@@ -2073,21 +2046,6 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
   return false;
 }
 
-/// Build an array type.
-///
-/// \param T The type of each element in the array.
-///
-/// \param ASM C99 array size modifier (e.g., '*', 'static').
-///
-/// \param ArraySize Expression describing the size of the array.
-///
-/// \param Brackets The range from the opening '[' to the closing ']'.
-///
-/// \param Entity The name of the entity that involves the array
-/// type, if known.
-///
-/// \returns A suitable array type, if there are no errors. Otherwise,
-/// returns a NULL type.
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
@@ -2427,9 +2385,6 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                VectorKind::Generic);
 }
 
-/// Build an ext-vector type.
-///
-/// Run the required checks for the extended vector type.
 QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
                                   SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
@@ -2440,7 +2395,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // on bitvectors, and we have no well-defined ABI for bitvectors, so vectors
   // of bool aren't allowed.
   //
-  // We explictly allow bool elements in ext_vector_type for C/C++.
+  // We explicitly allow bool elements in ext_vector_type for C/C++.
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
@@ -2632,6 +2587,8 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
     // Nothing interesting to check for orindary-ABI parameters.
     case ParameterABI::Ordinary:
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
       continue;
 
     // swift_indirect_result parameters must be a prefix of the function
@@ -2718,15 +2675,6 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-/// Build a member pointer type \c T Class::*.
-///
-/// \param T the type to which the member pointer refers.
-/// \param Class the class type into which the member pointer points.
-/// \param Loc the location where this type begins
-/// \param Entity the name of the entity that will have this member pointer type
-///
-/// \returns a member pointer type, if successful, or a NULL type if there was
-/// an error.
 QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
                                       SourceLocation Loc,
                                       DeclarationName Entity) {
@@ -2779,17 +2727,6 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
   return Context.getMemberPointerType(T, Class.getTypePtr());
 }
 
-/// Build a block pointer type.
-///
-/// \param T The type to which we'll be building a block pointer.
-///
-/// \param Loc The source location, used for diagnostics.
-///
-/// \param Entity The name of the entity that involves the block pointer
-/// type, if known.
-///
-/// \returns A suitable block pointer type, if there are no
-/// errors. Otherwise, returns a NULL type.
 QualType Sema::BuildBlockPointerType(QualType T,
                                      SourceLocation Loc,
                                      DeclarationName Entity) {
@@ -3283,8 +3220,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorContext::Member: {
-      if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
-          D.isFunctionDeclarator())
+      if (D.isStaticMember() || D.isFunctionDeclarator())
         break;
       bool Cxx = SemaRef.getLangOpts().CPlusPlus;
       if (isa<ObjCContainerDecl>(SemaRef.CurContext)) {
@@ -4850,6 +4786,61 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
+        auto IsClassType = [&](CXXScopeSpec &SS) {
+          // If there already was an problem with the scope, don’t issue another
+          // error about the explicit object parameter.
+          return SS.isInvalid() ||
+                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+        };
+
+        // C++23 [dcl.fct]p6:
+        //
+        // An explicit-object-parameter-declaration is a parameter-declaration
+        // with a this specifier. An explicit-object-parameter-declaration shall
+        // appear only as the first parameter-declaration of a
+        // parameter-declaration-list of one of:
+        //
+        // - a declaration of a member function or member function template
+        //   ([class.mem]), or
+        //
+        // - an explicit instantiation ([temp.explicit]) or explicit
+        //   specialization ([temp.expl.spec]) of a templated member function,
+        //   or
+        //
+        // - a lambda-declarator [expr.prim.lambda].
+        DeclaratorContext C = D.getContext();
+        ParmVarDecl *First =
+            FTI.NumParams
+                ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
+                : nullptr;
+
+        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+        if (First && First->isExplicitObjectParameter() &&
+            C != DeclaratorContext::LambdaExpr &&
+
+            // Either not a member or nested declarator in a member.
+            //
+            // Note that e.g. 'static' or 'friend' declarations are accepted
+            // here; we diagnose them later when we build the member function
+            // because it's easier that way.
+            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
+
+            // Allow out-of-line definitions of member functions.
+            !IsClassType(D.getCXXScopeSpec())) {
+          if (IsFunctionDecl)
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_nonmember)
+                << /*non-member*/ 2 << /*function*/ 0
+                << First->getSourceRange();
+          else
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_invalid)
+                << First->getSourceRange();
+
+          D.setInvalidType();
+          AreDeclaratorChunksValid = false;
+        }
+
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
         if (D.getDeclSpec().hasAutoTypeSpec() &&
@@ -5174,6 +5165,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+
+              // Reject, but continue to parse 'float(this void)' as
+              // 'float(void)'.
+              if (Param->isExplicitObjectParameter()) {
+                S.Diag(Param->getLocation(),
+                       diag::err_void_explicit_object_param);
+                Param->setExplicitObjectParameterLoc(SourceLocation());
+              }
 
               // Do not add 'void' to the list.
               break;
@@ -5675,11 +5674,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
-/// GetTypeForDeclarator - Convert the type for the specified
-/// declarator to Type instances.
-///
-/// The result of this call will never be null, but the associated
-/// type may be a null type if there's an unrecoverable error.
 TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D) {
   // Determine the type of the declarator. Not all forms of declarator
   // have a type.
@@ -5813,6 +5807,14 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
   TL.setAttr(State.takeAttrForAttributedType(TL.getTypePtr()));
 }
 
+static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
+                                              TypeProcessingState &State) {
+  HLSLAttributedResourceLocInfo LocInfo =
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr());
+  TL.setSourceRange(LocInfo.Range);
+  TL.setContainedTypeSourceInfo(LocInfo.ContainedTyInfo);
+}
+
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
                               const ParsedAttributesView &Attrs) {
   for (const ParsedAttr &AL : Attrs) {
@@ -5846,6 +5848,10 @@ namespace {
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
+    }
+    void VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL) {
+      Visit(TL.getWrappedLoc());
+      fillHLSLAttributedResourceTypeLoc(TL, State);
     }
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
@@ -6401,11 +6407,10 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
     CheckExtraCXXDefaultArguments(D);
   }
 
-  if (const AutoType *AutoT = T->getAs<AutoType>())
-    CheckConstrainedAuto(
-        AutoT,
-        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
-
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc()) {
+    const AutoType *AT = TL.getTypePtr();
+    CheckConstrainedAuto(AT, TL.getConceptNameLoc());
+  }
   return CreateParsedType(T, TInfo);
 }
 
@@ -6460,10 +6465,6 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
   return true;
 }
 
-/// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an expression
-/// is uninstantiated. If instantiated it will apply the appropriate address
-/// space to the type. This function allows dependent template variables to be
-/// used in conjunction with the address_space attribute
 QualType Sema::BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                      SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
@@ -6498,6 +6499,15 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
+  // such that it handles type attributes, and then call that from
+  // processTypeAttrs() instead of one-off checks like this.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
 
   // Check the number of attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -7102,7 +7112,7 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
     else if (Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
   } else if (PtrWidth == 64 && Attrs[attr::Ptr32]) {
-    if (Attrs[attr::UPtr])
+    if (S.Context.getTargetInfo().getTriple().isOSzOS() || Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
     else
       ASIdx = LangAS::ptr32_sptr;
@@ -8392,14 +8402,28 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
     NumElts = VecSize / S.Context.getCharWidth();
-    VecKind = VectorKind::RVVFixedLengthMask;
+    if (!NumElts) {
+      NumElts = 1;
+      switch (VecSize) {
+      case 1:
+        VecKind = VectorKind::RVVFixedLengthMask_1;
+        break;
+      case 2:
+        VecKind = VectorKind::RVVFixedLengthMask_2;
+        break;
+      case 4:
+        VecKind = VectorKind::RVVFixedLengthMask_4;
+        break;
+      }
+    } else
+      VecKind = VectorKind::RVVFixedLengthMask;
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
-  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
+  if (VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();
@@ -8524,15 +8548,19 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static void HandleHLSLParamModifierAttr(QualType &CurType,
+static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
+                                        QualType &CurType,
                                         const ParsedAttr &Attr, Sema &S) {
   // Don't apply this attribute to template dependent types. It is applied on
-  // substitution during template instantiation.
-  if (CurType->isDependentType())
+  // substitution during template instantiation. Also skip parsing this if we've
+  // already modified the type based on an earlier attribute.
+  if (CurType->isDependentType() || State.didParseHLSLParamMod())
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
-      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
-    CurType = S.getASTContext().getLValueReferenceType(CurType);
+      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
+    CurType = S.HLSL().getInoutParameterType(CurType);
+    State.setParsedHLSLParamMod(true);
+  }
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -8712,7 +8740,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
 
     case ParsedAttr::AT_HLSLParamModifier: {
-      HandleHLSLParamModifierAttr(type, attr, state.getSema());
+      HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     }
@@ -8824,6 +8852,18 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     }
+    case ParsedAttr::AT_HLSLResourceClass:
+    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLContainedType: {
+      // Only collect HLSL resource type attributes that are in
+      // decl-specifier-seq; do not collect attributes on declarations or those
+      // that get to slide after declaration name.
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(attr))
+        attr.setUsedAsTypeAttr();
+      break;
+    }
     }
 
     // Handle attributes that are defined in a macro. We do not want this to be
@@ -8914,21 +8954,6 @@ QualType Sema::getCompletedType(Expr *E) {
   return E->getType();
 }
 
-/// Ensure that the type of the given expression is complete.
-///
-/// This routine checks whether the expression \p E has a complete type. If the
-/// expression refers to an instantiable construct, that instantiation is
-/// performed as needed to complete its type. Furthermore
-/// Sema::RequireCompleteType is called for the expression's type (or in the
-/// case of a reference type, the referred-to type).
-///
-/// \param E The expression whose type is required to be complete.
-/// \param Kind Selects which completeness rules should be applied.
-/// \param Diagnoser The object that will emit a diagnostic if the type is
-/// incomplete.
-///
-/// \returns \c true if the type of \p E is incomplete and diagnosed, \c false
-/// otherwise.
 bool Sema::RequireCompleteExprType(Expr *E, CompleteTypeKind Kind,
                                    TypeDiagnoser &Diagnoser) {
   return RequireCompleteType(E->getExprLoc(), getCompletedType(E), Kind,
@@ -8940,25 +8965,6 @@ bool Sema::RequireCompleteExprType(Expr *E, unsigned DiagID) {
   return RequireCompleteExprType(E, CompleteTypeKind::Default, Diagnoser);
 }
 
-/// Ensure that the type T is a complete type.
-///
-/// This routine checks whether the type @p T is complete in any
-/// context where a complete type is required. If @p T is a complete
-/// type, returns false. If @p T is a class template specialization,
-/// this routine then attempts to perform class template
-/// instantiation. If instantiation fails, or if @p T is incomplete
-/// and cannot be completed, issues the diagnostic @p diag (giving it
-/// the type @p T) and returns true.
-///
-/// @param Loc  The location in the source that the incomplete type
-/// diagnostic should refer to.
-///
-/// @param T  The type that this routine is examining for completeness.
-///
-/// @param Kind Selects which completeness rules should be applied.
-///
-/// @returns @c true if @p T is incomplete and a diagnostic was emitted,
-/// @c false otherwise.
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
                                CompleteTypeKind Kind,
                                TypeDiagnoser &Diagnoser) {
@@ -9135,7 +9141,6 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
-/// The implementation of RequireCompleteType
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                    CompleteTypeKind Kind,
                                    TypeDiagnoser *Diagnoser) {
@@ -9327,24 +9332,6 @@ static unsigned getLiteralDiagFromTagKind(TagTypeKind Tag) {
   }
 }
 
-/// Ensure that the type T is a literal type.
-///
-/// This routine checks whether the type @p T is a literal type. If @p T is an
-/// incomplete type, an attempt is made to complete it. If @p T is a literal
-/// type, or @p AllowIncompleteType is true and @p T is an incomplete type,
-/// returns false. Otherwise, this routine issues the diagnostic @p PD (giving
-/// it the type @p T), along with notes explaining why the type is not a
-/// literal type, and returns true.
-///
-/// @param Loc  The location in the source that the non-literal type
-/// diagnostic should refer to.
-///
-/// @param T  The type that this routine is examining for literalness.
-///
-/// @param Diagnoser Emits a diagnostic if T is not a literal type.
-///
-/// @returns @c true if @p T is not a literal type and a diagnostic was emitted,
-/// @c false otherwise.
 bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
                               TypeDiagnoser &Diagnoser) {
   assert(!T->isDependentType() && "type should not be dependent");
@@ -9441,9 +9428,6 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T, unsigned DiagID) {
   return RequireLiteralType(Loc, T, Diagnoser);
 }
 
-/// Retrieve a version of the type 'T' that is elaborated by Keyword, qualified
-/// by the nested-name-specifier contained in SS, and that is (re)declared by
-/// OwnedTagDecl, which is nullptr if this is not a (re)declaration.
 QualType Sema::getElaboratedType(ElaboratedTypeKeyword Keyword,
                                  const CXXScopeSpec &SS, QualType T,
                                  TagDecl *OwnedTagDecl) {
@@ -9477,15 +9461,17 @@ BuildTypeCoupledDecls(Expr *E,
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                      Expr *CountExpr) {
+                                                      Expr *CountExpr,
+                                                      bool CountInBytes,
+                                                      bool OrNull) {
   assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);
   /// When the resulting expression is invalid, we still create the AST using
   /// the original count expression for the sake of AST dump.
-  return Context.getCountAttributedType(
-      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false, Decls);
+  return Context.getCountAttributedType(WrappedTy, CountExpr, CountInBytes,
+                                        OrNull, Decls);
 }
 
 /// getDecltypeForExpr - Given an expr, will return the decltype for

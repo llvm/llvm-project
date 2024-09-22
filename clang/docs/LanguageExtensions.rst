@@ -667,6 +667,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
  T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
+ T __builtin_elementwise_popcount(T x)       return the number of 1 bits in x                                 integer types 
  T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
  T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
  T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
@@ -1483,6 +1484,7 @@ Generic lambda expressions                   __cpp_generic_lambdas            C+
 variable templates                           __cpp_variable_templates         C++14         C++03
 Binary literals                              __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Static assert with no message                __cpp_static_assert >= 201411L   C++17         C++11
 Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
 ``if constexpr``                             __cpp_if_constexpr               C++17         C++11
 fold expressions                             __cpp_fold_expressions           C++17         C++03
@@ -1503,7 +1505,10 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
+Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
+Variadic Friends                             __cpp_variadic_friend            C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
@@ -1546,6 +1551,8 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__builtin_is_implicit_lifetime`` (C++, GNU, Microsoft)
+* ``__builtin_is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__can_pass_in_regs`` (C++)
   Returns whether a class can be passed in registers under the current
   ABI. This type can only be applied to unqualified class types.
@@ -1614,10 +1621,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_assignable`` (C++, MSVC 2013)
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
-* ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true for ``std::nullptr_t`` and false for everything else. The
-  corresponding standard library feature is ``std::is_null_pointer``, but
-  ``__is_null_pointer`` is already in use by some implementations.
 * ``__is_object`` (C++, Embarcadero)
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
@@ -3540,7 +3543,7 @@ the debugging experience.
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
-``__builtin_allow_runtime_check`` return true if the check at the current
+``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
 ``assert`` like checks which can be safely removed by optimizer.
 
@@ -3560,28 +3563,25 @@ program location should be executed. It is expected to be used to implement
 
 **Description**
 
-``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+``__builtin_allow_runtime_check`` is lowered to the `llvm.allow.runtime.check
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
-builtin.
+intrinsic.
 
-The ``__builtin_allow_runtime_check()`` is expected to be used with control
-flow conditions such as in ``if`` to guard expensive runtime checks. The
-specific rules for selecting permitted checks can differ and are controlled by
-the compiler options.
+The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+like ``if`` to guard expensive runtime checks. The return value is determined
+by the following compiler options and may differ per call site:
 
-Flags to control checks:
-* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
-cutoff in range ``[0, 999999]`` to disallow checks in hot code.
-* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
-``[0.0, 1.0]`` representation probability of keeping a check.
-* If both flags are specified, ``-lower-allow-check-random-rate`` takes
-precedence.
-* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
-``true``, allowing all checks.
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N``: Disable checks in hot
+  code marked by the profile summary with a hotness cutoff in the range
+  ``[0, 999999]`` (a larger N disables more checks).
+* ``-mllvm -lower-allow-check-random-rate=P``: Keep a check with probability P,
+  a floating point number in the range ``[0.0, 1.0]``.
+* If both options are specified, a check is disabled if either condition is satisfied.
+* If neither is specified, all checks are allowed.
 
-Parameter ``kind`` is a string literal representing a user selected kind for
-guarded check. It's unused now. It will enable kind-specific lowering in future.
-E.g. a higher hotness cutoff can be used for more expensive kind of check.
+Parameter ``kind``, currently unused, is a string literal specifying the check
+kind. Future compiler versions may use this to allow for more granular control,
+such as applying different hotness cutoffs to different check kinds.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
@@ -3977,7 +3977,10 @@ standard library ``<stdarg.h>`` header:
 
 * ``__builtin_va_list``
 
-A predefined typedef for the target-specific ``va_list`` type.
+A predefined typedef for the target-specific ``va_list`` type. It is undefined
+behavior to use a byte-wise copy of this type produced by calling ``memcpy``,
+``memmove``, or similar. Valid explicit copies are only produced by calling
+``va_copy`` or ``__builtin_va_copy``.
 
 * ``void __builtin_va_start(__builtin_va_list list, <parameter-name>)``
 
@@ -3987,7 +3990,7 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
-``__builin_va_list`` object.
+``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
 
@@ -4321,7 +4324,7 @@ an appropriate value during the emission.
 
 Note that there is no builtin matching the `llvm.coro.save` intrinsic. LLVM
 automatically will insert one if the first argument to `llvm.coro.suspend` is
-token `none`. If a user calls `__builin_suspend`, clang will insert `token none`
+token `none`. If a user calls `__builtin_suspend`, clang will insert `token none`
 as the first argument to the intrinsic.
 
 Source location builtins
@@ -5422,16 +5425,85 @@ The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
 The second parameter is the library name (without the traditional Unix prefix of
 ``lib``).  This allows you to provide an implicit link of dependent libraries.
 
-Evaluating Object Size Dynamically
-==================================
+Evaluating Object Size
+======================
 
-Clang supports the builtin ``__builtin_dynamic_object_size``, the semantics are
-the same as GCC's ``__builtin_object_size`` (which Clang also supports), but
-``__builtin_dynamic_object_size`` can evaluate the object's size at runtime.
-``__builtin_dynamic_object_size`` is meant to be used as a drop-in replacement
-for ``__builtin_object_size`` in libraries that support it.
+Clang supports the builtins ``__builtin_object_size`` and
+``__builtin_dynamic_object_size``. The semantics are compatible with GCC's
+builtins of the same names, but the details are slightly different.
 
-For instance, here is a program that ``__builtin_dynamic_object_size`` will make
+.. code-block:: c
+
+  size_t __builtin_[dynamic_]object_size(const void *ptr, int type)
+
+Returns the number of accessible bytes ``n`` past ``ptr``. The value returned
+depends on ``type``, which is required to be an integer constant between 0 and
+3:
+
+* If ``type & 2 == 0``, the least ``n`` is returned such that accesses to
+  ``(const char*)ptr + n`` and beyond are known to be out of bounds. This is
+  ``(size_t)-1`` if no better bound is known.
+* If ``type & 2 == 2``, the greatest ``n`` is returned such that accesses to
+  ``(const char*)ptr + i`` are known to be in bounds, for 0 <= ``i`` < ``n``.
+  This is ``(size_t)0`` if no better bound is known.
+
+.. code-block:: c
+
+  char small[10], large[100];
+  bool cond;
+  // Returns 100: writes of more than 100 bytes are known to be out of bounds.
+  int n100 = __builtin_object_size(cond ? small : large, 0);
+  // Returns 10: writes of 10 or fewer bytes are known to be in bounds.
+  int n10 = __builtin_object_size(cond ? small : large, 2);
+
+* If ``type & 1 == 0``, pointers are considered to be in bounds if they point
+  into the same storage as ``ptr`` -- that is, the same stack object, global
+  variable, or heap allocation.
+* If ``type & 1 == 1``, pointers are considered to be in bounds if they point
+  to the same subobject that ``ptr`` points to. If ``ptr`` points to an array
+  element, other elements of the same array, but not of enclosing arrays, are
+  considered in bounds.
+
+.. code-block:: c
+
+  struct X { char a, b, c; } x;
+  static_assert(__builtin_object_size(&x, 0) == 3);
+  static_assert(__builtin_object_size(&x.b, 0) == 2);
+  static_assert(__builtin_object_size(&x.b, 1) == 1);
+
+.. code-block:: c
+
+  char a[10][10][10];
+  static_assert(__builtin_object_size(&a, 1) == 1000);
+  static_assert(__builtin_object_size(&a[1], 1) == 900);
+  static_assert(__builtin_object_size(&a[1][1], 1) == 90);
+  static_assert(__builtin_object_size(&a[1][1][1], 1) == 9);
+
+The values returned by this builtin are a best effort conservative approximation
+of the correct answers. When ``type & 2 == 0``, the true value is less than or
+equal to the value returned by the builtin, and when ``type & 2 == 1``, the true
+value is greater than or equal to the value returned by the builtin.
+
+For ``__builtin_object_size``, the value is determined entirely at compile time.
+With optimization enabled, better results will be produced, especially when the
+call to ``__builtin_object_size`` is in a different function from the formation
+of the pointer. Unlike in GCC, enabling optimization in Clang does not allow
+more information about subobjects to be determined, so the ``type & 1 == 1``
+case will often give imprecise results when used across a function call boundary
+even when optimization is enabled.
+
+`The pass_object_size and pass_dynamic_object_size attributes <https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size>`_
+can be used to invisibly pass the object size for a pointer parameter alongside
+the pointer in a function call. This allows more precise object sizes to be
+determined both when building without optimizations and in the ``type & 1 == 1``
+case.
+
+For ``__builtin_dynamic_object_size``, the result is not limited to being a
+compile time constant. Instead, a small amount of runtime evaluation is
+permitted to determine the size of the object, in order to give a more precise
+result. ``__builtin_dynamic_object_size`` is meant to be used as a drop-in
+replacement for ``__builtin_object_size`` in libraries that support it. For
+instance, here is a program that ``__builtin_dynamic_object_size`` will make
 safer:
 
 .. code-block:: c

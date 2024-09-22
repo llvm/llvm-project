@@ -267,7 +267,6 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     return {};
 
   SmallString<256> Result(CachePath);
-  llvm::sys::fs::make_absolute(Result);
 
   if (HSOpts->DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
@@ -378,20 +377,22 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
         break;
     }
 
-    // If we've already performed the exhaustive search for module maps in this
-    // search directory, don't do it again.
-    if (Dir.haveSearchedAllModuleMaps())
-      continue;
+    if (HSOpts->AllowModuleMapSubdirectorySearch) {
+      // If we've already performed the exhaustive search for module maps in
+      // this search directory, don't do it again.
+      if (Dir.haveSearchedAllModuleMaps())
+        continue;
 
-    // Load all module maps in the immediate subdirectories of this search
-    // directory if ModuleName was from @import.
-    if (AllowExtraModuleMapSearch)
-      loadSubdirectoryModuleMaps(Dir);
+      // Load all module maps in the immediate subdirectories of this search
+      // directory if ModuleName was from @import.
+      if (AllowExtraModuleMapSearch)
+        loadSubdirectoryModuleMaps(Dir);
 
-    // Look again for the module.
-    Module = ModMap.findModule(ModuleName);
-    if (Module)
-      break;
+      // Look again for the module.
+      Module = ModMap.findModule(ModuleName);
+      if (Module)
+        break;
+    }
   }
 
   return Module;

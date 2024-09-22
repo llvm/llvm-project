@@ -224,20 +224,7 @@ protected:
                              InheritEvenIfAlreadyPresent) {}
 
 public:
-  ParameterABI getABI() const {
-    switch (getKind()) {
-    case attr::SwiftContext:
-      return ParameterABI::SwiftContext;
-    case attr::SwiftAsyncContext:
-      return ParameterABI::SwiftAsyncContext;
-    case attr::SwiftErrorResult:
-      return ParameterABI::SwiftErrorResult;
-    case attr::SwiftIndirectResult:
-      return ParameterABI::SwiftIndirectResult;
-    default:
-      llvm_unreachable("bad parameter ABI attribute kind");
-    }
-  }
+  ParameterABI getABI() const;
 
   static bool classof(const Attr *A) {
     return A->getKind() >= attr::FirstParameterABIAttr &&
@@ -372,12 +359,35 @@ public:
 static_assert(sizeof(ParamIdx) == sizeof(ParamIdx::SerialType),
               "ParamIdx does not fit its serialization type");
 
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attrs.inc" // IWYU pragma: export
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const Attr *At) {
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(At), DiagnosticsEngine::ak_attr);
   return DB;
+}
+
+inline ParameterABI ParameterABIAttr::getABI() const {
+  switch (getKind()) {
+  case attr::SwiftContext:
+    return ParameterABI::SwiftContext;
+  case attr::SwiftAsyncContext:
+    return ParameterABI::SwiftAsyncContext;
+  case attr::SwiftErrorResult:
+    return ParameterABI::SwiftErrorResult;
+  case attr::SwiftIndirectResult:
+    return ParameterABI::SwiftIndirectResult;
+  case attr::HLSLParamModifier: {
+    const auto *A = cast<HLSLParamModifierAttr>(this);
+    if (A->isOut())
+      return ParameterABI::HLSLOut;
+    if (A->isInOut())
+      return ParameterABI::HLSLInOut;
+    return ParameterABI::Ordinary;
+  }
+  default:
+    llvm_unreachable("bad parameter ABI attribute kind");
+  }
 }
 }  // end namespace clang
 

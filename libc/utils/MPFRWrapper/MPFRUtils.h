@@ -10,12 +10,13 @@
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
@@ -31,9 +32,11 @@ enum class Operation : int {
   Asinh,
   Atan,
   Atanh,
+  Cbrt,
   Ceil,
   Cos,
   Cosh,
+  Cospi,
   Erf,
   Exp,
   Exp2,
@@ -51,6 +54,7 @@ enum class Operation : int {
   Round,
   RoundEven,
   Sin,
+  Sinpi,
   Sinh,
   Sqrt,
   Tan,
@@ -70,11 +74,14 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Add,
   Atan2,
   Div,
   Fmod,
   Hypot,
+  Mul,
   Pow,
+  Sub,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -236,7 +243,8 @@ public:
   bool is_silent() const override { return silent; }
 
 private:
-  template <typename T, typename U> bool match(T in, U out) {
+  template <typename InType, typename OutType>
+  bool match(InType in, OutType out) {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
@@ -258,13 +266,14 @@ private:
                                                 rounding);
   }
 
-  template <typename T, typename U>
-  bool match(const TernaryInput<T> &in, U out) {
+  template <typename InType, typename OutType>
+  bool match(const TernaryInput<InType> &in, OutType out) {
     return compare_ternary_operation_one_output(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
-  template <typename T, typename U> void explain_error(T in, U out) {
+  template <typename InType, typename OutType>
+  void explain_error(InType in, OutType out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
@@ -286,8 +295,8 @@ private:
                                               rounding);
   }
 
-  template <typename T, typename U>
-  void explain_error(const TernaryInput<T> &in, U out) {
+  template <typename InType, typename OutType>
+  void explain_error(const TernaryInput<InType> &in, OutType out) {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -303,7 +312,9 @@ constexpr bool is_valid_operation() {
       (op == Operation::Sqrt && cpp::is_floating_point_v<InputType> &&
        cpp::is_floating_point_v<OutputType> &&
        sizeof(OutputType) <= sizeof(InputType)) ||
-      (op == Operation::Div && internal::IsBinaryInput<InputType>::VALUE &&
+      (Operation::BeginBinaryOperationsSingleOutput < op &&
+       op < Operation::EndBinaryOperationsSingleOutput &&
+       internal::IsBinaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
@@ -362,7 +373,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 // GET_MPFR_DUMMY_ARG is going to be added to the end of GET_MPFR_MACRO as a
 // simple way to avoid the compiler warning `gnu-zero-variadic-macro-arguments`.

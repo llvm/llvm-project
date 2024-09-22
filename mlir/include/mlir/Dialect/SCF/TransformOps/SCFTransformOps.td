@@ -38,6 +38,17 @@ def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySCFToControlFlowPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.scf_to_control_flow",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that lower structured control flow ops to unstructured
+    control flow.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
 
 def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",

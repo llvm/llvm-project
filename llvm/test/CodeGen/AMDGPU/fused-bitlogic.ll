@@ -4,7 +4,7 @@
 define amdgpu_kernel void @divergent_or3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_or3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 4, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -31,7 +31,7 @@ bb:
 define amdgpu_kernel void @divergent_or3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_or3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v6, 5, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[4:5], v6, s[0:1] offset:16
@@ -61,7 +61,7 @@ bb:
 define amdgpu_kernel void @divergent_and3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_and3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 4, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -89,7 +89,7 @@ bb:
 define amdgpu_kernel void @divergent_and3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_and3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v6, 5, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v6, s[0:1]
@@ -122,7 +122,7 @@ bb:
 define amdgpu_kernel void @divergent_xor3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_xor3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 4, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -149,7 +149,7 @@ bb:
 define amdgpu_kernel void @divergent_xor3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: divergent_xor3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v6, 5, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v6, s[0:1]
@@ -180,7 +180,7 @@ bb:
 define amdgpu_kernel void @uniform_or3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_or3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -205,7 +205,7 @@ bb:
 define amdgpu_kernel void @uniform_or3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_or3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -232,7 +232,7 @@ bb:
 define amdgpu_kernel void @uniform_and3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_and3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -257,7 +257,7 @@ bb:
 define amdgpu_kernel void @uniform_and3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_and3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -284,7 +284,7 @@ bb:
 define amdgpu_kernel void @uniform_xor3_b32(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_xor3_b32:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -309,7 +309,7 @@ bb:
 define amdgpu_kernel void @uniform_xor3_b64(ptr addrspace(1) %arg) {
 ; GCN-LABEL: uniform_xor3_b64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0

@@ -172,7 +172,7 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   const RISCVMCExpr *Expr = dyn_cast<RISCVMCExpr>(SrcSymbol.getExpr());
   MCRegister Link = MI.getOperand(0).getReg();
   MCRegister Dest = MI.getOperand(1).getReg();
-  MCRegister Imm = MI.getOperand(2).getImm();
+  int64_t Imm = MI.getOperand(2).getImm();
   Fixups.push_back(MCFixup::create(
       0, Expr, MCFixupKind(RISCV::fixup_riscv_tlsdesc_call), MI.getLoc()));
   MCInst Call =

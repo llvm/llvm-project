@@ -404,25 +404,24 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
             memberExpr(hasObjectExpression(canResolveToExpr(Exp)))),
       nonConstReferenceType());
   const auto NotInstantiated = unless(hasDeclaration(isInstantiated()));
-  const auto TypeDependentCallee =
-      callee(expr(anyOf(unresolvedLookupExpr(), unresolvedMemberExpr(),
-                        cxxDependentScopeMemberExpr(),
-                        hasType(templateTypeParmType()), isTypeDependent())));
 
-  const auto AsNonConstRefArg = anyOf(
-      callExpr(NonConstRefParam, NotInstantiated),
-      cxxConstructExpr(NonConstRefParam, NotInstantiated),
-      callExpr(TypeDependentCallee, hasAnyArgument(canResolveToExpr(Exp))),
-      cxxUnresolvedConstructExpr(hasAnyArgument(canResolveToExpr(Exp))),
-      // Previous False Positive in the following Code:
-      // `template <typename T> void f() { int i = 42; new Type<T>(i); }`
-      // Where the constructor of `Type` takes its argument as reference.
-      // The AST does not resolve in a `cxxConstructExpr` because it is
-      // type-dependent.
-      parenListExpr(hasDescendant(expr(canResolveToExpr(Exp)))),
-      // If the initializer is for a reference type, there is no cast for
-      // the variable. Values are cast to RValue first.
-      initListExpr(hasAnyInit(expr(canResolveToExpr(Exp)))));
+  const auto AsNonConstRefArg =
+      anyOf(callExpr(NonConstRefParam, NotInstantiated),
+            cxxConstructExpr(NonConstRefParam, NotInstantiated),
+            // If the call is type-dependent, we can't properly process any
+            // argument because required type conversions and implicit casts
+            // will be inserted only after specialization.
+            callExpr(isTypeDependent(), hasAnyArgument(canResolveToExpr(Exp))),
+            cxxUnresolvedConstructExpr(hasAnyArgument(canResolveToExpr(Exp))),
+            // Previous False Positive in the following Code:
+            // `template <typename T> void f() { int i = 42; new Type<T>(i); }`
+            // Where the constructor of `Type` takes its argument as reference.
+            // The AST does not resolve in a `cxxConstructExpr` because it is
+            // type-dependent.
+            parenListExpr(hasDescendant(expr(canResolveToExpr(Exp)))),
+            // If the initializer is for a reference type, there is no cast for
+            // the variable. Values are cast to RValue first.
+            initListExpr(hasAnyInit(expr(canResolveToExpr(Exp)))));
 
   // Captured by a lambda by reference.
   // If we're initializing a capture with 'Exp' directly then we're initializing

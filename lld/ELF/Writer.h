@@ -17,7 +17,7 @@ namespace lld::elf {
 class InputFile;
 class OutputSection;
 void copySectionsIntoPartitions();
-template <class ELFT> void writeResult();
+template <class ELFT> void writeResult(Ctx &ctx);
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be

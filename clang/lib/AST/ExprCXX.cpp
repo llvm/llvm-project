@@ -152,7 +152,7 @@ bool CXXTypeidExpr::isMostDerived(ASTContext &Context) const {
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
-    if (!Ty->isPointerType() && !Ty->isReferenceType())
+    if (!Ty->isPointerOrReferenceType())
       return true;
   }
 
@@ -402,10 +402,11 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
-    UnresolvedSetIterator End, bool KnownDependent)
+    UnresolvedSetIterator End, bool KnownDependent,
+    bool KnownInstantiationDependent)
     : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
                    TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
-                   KnownDependent, false, false),
+                   KnownDependent, KnownInstantiationDependent, false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -420,7 +421,7 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
     bool RequiresADL, UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-    bool KnownDependent) {
+    bool KnownDependent, bool KnownInstantiationDependent) {
   unsigned NumResults = End - Begin;
   unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                    TemplateArgumentLoc>(NumResults, 0, 0);
@@ -428,7 +429,8 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
   return new (Mem) UnresolvedLookupExpr(
       Context, NamingClass, QualifierLoc,
       /*TemplateKWLoc=*/SourceLocation(), NameInfo, RequiresADL,
-      /*TemplateArgs=*/nullptr, Begin, End, KnownDependent);
+      /*TemplateArgs=*/nullptr, Begin, End, KnownDependent,
+      KnownInstantiationDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
@@ -436,7 +438,8 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-    UnresolvedSetIterator End, bool KnownDependent) {
+    UnresolvedSetIterator End, bool KnownDependent,
+    bool KnownInstantiationDependent) {
   unsigned NumResults = End - Begin;
   bool HasTemplateKWAndArgsInfo = Args || TemplateKWLoc.isValid();
   unsigned NumTemplateArgs = Args ? Args->size() : 0;
@@ -444,9 +447,9 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
                                    TemplateArgumentLoc>(
       NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
-                                        TemplateKWLoc, NameInfo, RequiresADL,
-                                        Args, Begin, End, KnownDependent);
+  return new (Mem) UnresolvedLookupExpr(
+      Context, NamingClass, QualifierLoc, TemplateKWLoc, NameInfo, RequiresADL,
+      Args, Begin, End, KnownDependent, KnownInstantiationDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(
@@ -1943,4 +1946,23 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
                          alignof(CXXParenListInitExpr));
   return new (Mem) CXXParenListInitExpr(Empty, NumExprs);
+}
+
+CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
+                                SourceLocation LParenLoc, Expr *LHS,
+                                BinaryOperatorKind Opcode,
+                                SourceLocation EllipsisLoc, Expr *RHS,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> NumExpansions)
+    : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
+      EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
+      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+  // We rely on asserted invariant to distinguish left and right folds.
+  assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
+          (RHS && RHS->containsUnexpandedParameterPack())) &&
+         "Exactly one of LHS or RHS should contain an unexpanded pack");
+  SubExprs[SubExpr::Callee] = Callee;
+  SubExprs[SubExpr::LHS] = LHS;
+  SubExprs[SubExpr::RHS] = RHS;
+  setDependence(computeDependence(this));
 }

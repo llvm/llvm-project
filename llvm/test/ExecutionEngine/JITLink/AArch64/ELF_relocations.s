@@ -264,6 +264,20 @@ test_ld64_gotlo12_external:
         ldr   x0, [x0, :got_lo12:external_data]
         .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
 
+# Check R_AARCH64_LD64_GOTPAGE_LO15 handling with a reference to an external
+# symbol. Validate the reference to the GOT entry.
+# For the LDR :gotpage_lo15: instruction we have the 15-bit offset of the GOT
+# entry from the page containing the GOT.
+# jitlink-check: decode_operand(test_ld64_gotpagelo15_external, 2) = \
+# jitlink-check:     (got_addr(elf_reloc.o, external_data) - \
+# jitlink-check:     (section_addr(elf_reloc.o, $__GOT) & 0xfffffffffffff000)) \
+# jitlink-check:     [15:3]
+        .globl  test_ld64_gotpagelo15_external
+        .p2align  2
+test_ld64_gotpagelo15_external:
+        ldr   x0, [x0, :gotpage_lo15:external_data]
+        .size test_ld64_gotpagelo15_external, .-test_ld64_gotpagelo15_external
+
 # Check R_AARCH64_TSTBR14 for tbz
 #
 # jitlink-check: decode_operand(test_tstbr14_tbz, 2) = \

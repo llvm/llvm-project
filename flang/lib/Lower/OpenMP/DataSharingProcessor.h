@@ -68,10 +68,8 @@ private:
                           lower::pft::Evaluation &eval) const;
   };
 
-  bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
-  mlir::OpBuilder::InsertPoint insPt;
-  mlir::Value loopIV;
+  llvm::SmallVector<mlir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
@@ -106,12 +104,6 @@ private:
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps);
-  void defaultPrivatize(
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
-  void implicitPrivatize(
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void doPrivatize(const semantics::Symbol *sym,
                    mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
@@ -147,14 +139,17 @@ public:
   void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
   void processStep2(mlir::Operation *op, bool isLoop);
 
-  void setLoopIV(mlir::Value iv) {
-    assert(!loopIV && "Loop iteration variable already set");
-    loopIV = iv;
-  }
+  void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
+  }
+
+  llvm::ArrayRef<const semantics::Symbol *> getDelayedPrivSymbols() const {
+    return useDelayedPrivatization
+               ? allPrivatizedSymbols.getArrayRef()
+               : llvm::ArrayRef<const semantics::Symbol *>();
   }
 };
 

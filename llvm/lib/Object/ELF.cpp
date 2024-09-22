@@ -9,6 +9,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
@@ -303,6 +304,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_GROUP);
     STRINGIFY_ENUM_CASE(ELF, SHT_SYMTAB_SHNDX);
     STRINGIFY_ENUM_CASE(ELF, SHT_RELR);
+    STRINGIFY_ENUM_CASE(ELF, SHT_CREL);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_REL);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELA);
     STRINGIFY_ENUM_CASE(ELF, SHT_ANDROID_RELR);
@@ -318,6 +320,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -390,6 +393,58 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
   }
 
   return Relocs;
+}
+
+template <class ELFT>
+Expected<uint64_t>
+ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
+  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
+  Error Err = Error::success();
+  uint64_t Hdr = 0;
+  Hdr = Data.getULEB128(&Hdr, &Err);
+  if (Err)
+    return Err;
+  return Hdr;
+}
+
+template <class ELFT>
+Expected<typename ELFFile<ELFT>::RelsOrRelas>
+ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
+  std::vector<Elf_Rel> Rels;
+  std::vector<Elf_Rela> Relas;
+  size_t I = 0;
+  bool HasAddend;
+  Error Err = object::decodeCrel<ELFT::Is64Bits>(
+      Content,
+      [&](uint64_t Count, bool HasA) {
+        HasAddend = HasA;
+        if (HasAddend)
+          Relas.resize(Count);
+        else
+          Rels.resize(Count);
+      },
+      [&](Elf_Crel Crel) {
+        if (HasAddend) {
+          Relas[I].r_offset = Crel.r_offset;
+          Relas[I].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+          Relas[I++].r_addend = Crel.r_addend;
+        } else {
+          Rels[I].r_offset = Crel.r_offset;
+          Rels[I++].setSymbolAndType(Crel.r_symidx, Crel.r_type, false);
+        }
+      });
+  if (Err)
+    return std::move(Err);
+  return std::make_pair(std::move(Rels), std::move(Relas));
+}
+
+template <class ELFT>
+Expected<typename ELFFile<ELFT>::RelsOrRelas>
+ELFFile<ELFT>::crels(const Elf_Shdr &Sec) const {
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  return decodeCrel(*ContentsOrErr);
 }
 
 template <class ELFT>
@@ -926,7 +981,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
   return SecToRelocMap;
 }
 
-template class llvm::object::ELFFile<ELF32LE>;
-template class llvm::object::ELFFile<ELF32BE>;
-template class llvm::object::ELFFile<ELF64LE>;
-template class llvm::object::ELFFile<ELF64BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64BE>;

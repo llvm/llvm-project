@@ -34,6 +34,7 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
@@ -173,7 +174,8 @@ template <input_range _View, copy_constructible _Fn>
 #  endif
   requires __transform_view_constraints<_View, _Fn>
 template <bool _Const>
-class transform_view<_View, _Fn>::__iterator : public __transform_view_iterator_category_base<_View, _Fn> {
+class transform_view<_View, _Fn>::__iterator
+    : public __transform_view_iterator_category_base<_View, __maybe_const<_Const, _Fn>> {
 
   using _Parent = __maybe_const<_Const, transform_view>;
   using _Base   = __maybe_const<_Const, _View>;
@@ -190,7 +192,7 @@ public:
   iterator_t<_Base> __current_ = iterator_t<_Base>();
 
   using iterator_concept = typename __transform_view_iterator_concept<_View>::type;
-  using value_type       = remove_cvref_t<invoke_result_t<_Fn&, range_reference_t<_Base>>>;
+  using value_type       = remove_cvref_t<invoke_result_t<__maybe_const<_Const, _Fn>&, range_reference_t<_Base>>>;
   using difference_type  = range_difference_t<_Base>;
 
   _LIBCPP_HIDE_FROM_ABI __iterator()
@@ -325,13 +327,6 @@ public:
     requires sized_sentinel_for<iterator_t<_Base>, iterator_t<_Base>>
   {
     return __x.__current_ - __y.__current_;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto) iter_move(const __iterator& __i) noexcept(noexcept(*__i)) {
-    if constexpr (is_lvalue_reference_v<decltype(*__i)>)
-      return std::move(*__i);
-    else
-      return *__i;
   }
 };
 

@@ -168,6 +168,7 @@ add_llvm_component_library(LLVMSupport
   Debug.cpp
   DebugCounter.cpp
   DeltaAlgorithm.cpp
+  DeltaTree.cpp
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
@@ -187,7 +188,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hashing.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
@@ -205,18 +205,22 @@ add_llvm_component_library(LLVMSupport
   MemAlloc.cpp
   MemoryBuffer.cpp
   MemoryBufferRef.cpp
+  ModRef.cpp
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
+  OptionStrCmp.cpp
   PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
+  RewriteBuffer.cpp
+  RewriteRope.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
   RISCVISAUtils.cpp
@@ -323,8 +327,12 @@ if(LLVM_ENABLE_ZSTD)
   if(NOT zstd_library)
     get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
   endif()
-  get_library_name(${zstd_library} zstd_library)
-  set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  if (zstd_target STREQUAL zstd::libzstd_shared)
+    get_library_name(${zstd_library} zstd_library)
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  else()
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_STATIC_LIBRARY}")
+  endif()
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

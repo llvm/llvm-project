@@ -58,16 +58,7 @@ typedef double fp_t;
 #define REP_C UINT64_C
 #define significandBits 52
 
-static __inline int rep_clz(rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int rep_clz(rep_t a) { return __builtin_clzll(a); }
 
 #define loWord(a) (a & 0xffffffffU)
 #define hiWord(a) (a >> 32)
@@ -354,15 +345,6 @@ static __inline fp_t __compiler_rt_logbf(fp_t x) {
 }
 static __inline fp_t __compiler_rt_scalbnf(fp_t x, int y) {
   return __compiler_rt_scalbnX(x, y);
-}
-static __inline fp_t __compiler_rt_fmaxf(fp_t x, fp_t y) {
-#if defined(__aarch64__)
-  // Use __builtin_fmaxf which turns into an fmaxnm instruction on AArch64.
-  return __builtin_fmaxf(x, y);
-#else
-  // __builtin_fmaxf frequently turns into a libm call, so inline the function.
-  return __compiler_rt_fmaxX(x, y);
-#endif
 }
 
 #elif defined(DOUBLE_PRECISION)

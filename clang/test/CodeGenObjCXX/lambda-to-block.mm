@@ -2,11 +2,10 @@
 
 // Shouldn't crash!
 
-// CHECK: %[[CLASS_ANON:.*]] = type { %[[STRUCT_COPYABLE:.*]] }
-// CHECK: %[[STRUCT_COPYABLE]] = type { i8 }
-// CHECK: %[[CLASS_ANON_0:.*]] = type { %[[STRUCT_COPYABLE]] }
-// CHECK: %[[CLASS_ANON_1:.*]] = type { %[[STRUCT_COPYABLE]] }
-// CHECK: %[[CLASS_ANON_2:.*]] = type { %[[STRUCT_COPYABLE]] }
+// CHECK: %[[CLASS_ANON:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_0:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_1:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_2:.*]] = type { i8 }
 
 // CHECK: @[[BLOCK_DESC0:.*]] = internal constant { i64, i64, ptr, ptr, ptr, ptr } { i64 0, i64 33, ptr @[[COPY_HELPER0:.*__copy_helper_block_.*]], ptr @__destroy_helper_block{{.*}}, {{.*}}}, align 8
 // CHECK: @[[BLOCK_DESC1:.*]] = internal constant { i64, i64, ptr, ptr, ptr, ptr } { i64 0, i64 33, ptr @[[COPY_HELPER1:.*__copy_helper_block_.*]], ptr @__destroy_helper_block{{.*}}, {{.*}}}, align 8
@@ -16,9 +15,9 @@
 // CHECK: define{{.*}} void @_Z9hasLambda8Copyable(
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON]] }>, align 8
 // CHECK: %[[BLOCK1:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_0]] }>, align 8
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON]] }>, ptr %[[BLOCK]], i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON]] }>, ptr %[[BLOCK]], i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESC0]], ptr %[[BLOCK_DESCRIPTOR]], align 8
-// CHECK: %[[BLOCK_DESCRIPTOR6:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_0]] }>, ptr %[[BLOCK1]], i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR6:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_0]] }>, ptr %[[BLOCK1]], i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESC1]], ptr %[[BLOCK_DESCRIPTOR6]], align 8
 
 void takesBlock(void (^)(void));
@@ -46,11 +45,11 @@ void hasLambda(Copyable x) {
 // CHECK: call void @_Z10takesBlockU13block_pointerFvvE(ptr noundef %[[CALL2]])
 
 // CHECK: define internal noundef ptr @[[CONV_FUNC0]](
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_1]] }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_1]] }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESC2]], ptr %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK: define internal noundef ptr @[[CONV_FUNC1]](
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_2]] }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[CLASS_ANON_2]] }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESC3]], ptr %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK-LABEL: define internal void @"_ZZ9hasLambda8CopyableEN3$_0C2ERKS0_"

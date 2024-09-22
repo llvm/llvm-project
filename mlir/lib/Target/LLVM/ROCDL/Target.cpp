@@ -59,7 +59,7 @@ public:
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
-  Attribute createObject(Attribute attribute,
+  Attribute createObject(Attribute attribute, Operation *module,
                          const SmallVector<char, 0> &object,
                          const gpu::TargetOptions &options) const;
 };
@@ -150,11 +150,6 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
     return failure();
   }
 
-  // Get the ISA version.
-  StringRef isaVersion =
-      llvm::AMDGPU::getArchNameAMDGCN(llvm::AMDGPU::parseArchAMDGCN(chip));
-  isaVersion.consume_front("gfx");
-
   // Helper function for adding a library.
   auto addLib = [&](const Twine &lib) -> bool {
     auto baseSize = path.size();
@@ -175,9 +170,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
   if ((any(libs & AMDGCNLibraries::Ocml) && addLib("ocml.bc")) ||
       (any(libs & AMDGCNLibraries::Ockl) && addLib("ockl.bc")) ||
       (any(libs & AMDGCNLibraries::Hip) && addLib("hip.bc")) ||
-      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")) ||
-      (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl)) &&
-       addLib("oclc_isa_version_" + isaVersion + ".bc")))
+      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")))
     return failure();
   return success();
 }
@@ -238,9 +231,6 @@ void SerializeGPUModuleBase::addControlVariables(
     llvm::Module &module, AMDGCNLibraries libs, bool wave64, bool daz,
     bool finiteOnly, bool unsafeMath, bool fastMath, bool correctSqrt,
     StringRef abiVer) {
-  // Return if no device libraries are required.
-  if (libs == AMDGCNLibraries::None)
-    return;
   // Helper function for adding control variables.
   auto addControlVariable = [&module](StringRef name, uint32_t value,
                                       uint32_t bitwidth) {
@@ -259,6 +249,13 @@ void SerializeGPUModuleBase::addControlVariables(
     controlVariable->setAlignment(llvm::MaybeAlign(bitwidth / 8));
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
+
+  int abi = 500;
+  abiVer.getAsInteger(0, abi);
+  module.addModuleFlag(llvm::Module::Error, "amdhsa_code_object_version", abi);
+  // Return if no device libraries are required.
+  if (libs == AMDGCNLibraries::None)
+    return;
   // Add ocml related control variables.
   if (any(libs & AMDGCNLibraries::Ocml)) {
     addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath, 8);
@@ -270,8 +267,13 @@ void SerializeGPUModuleBase::addControlVariables(
   // Add ocml or ockl related control variables.
   if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
     addControlVariable("__oclc_wavefrontsize64", wave64, 8);
-    int abi = 500;
-    abiVer.getAsInteger(0, abi);
+    // Get the ISA version.
+    llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
+    // Add the ISA control variable.
+    addControlVariable("__oclc_ISA_version",
+                       isaVersion.Minor + 100 * isaVersion.Stepping +
+                           1000 * isaVersion.Major,
+                       32);
     addControlVariable("__oclc_ABI_version", abi, 32);
   }
 }
@@ -323,8 +325,7 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
   mcStreamer.reset(target->createMCObjectStreamer(
       triple, ctx, std::unique_ptr<llvm::MCAsmBackend>(mab),
       mab->createObjectWriter(os), std::unique_ptr<llvm::MCCodeEmitter>(ce),
-      *sti, mcOptions.MCRelaxAll, mcOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      *sti));
 
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));
@@ -500,19 +501,21 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
 }
 
 Attribute
-ROCDLTargetAttrImpl::createObject(Attribute attribute,
+ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();
   // If format is `fatbin` transform it to binary as `fatbin` is not yet
   // supported.
-  if (format > gpu::CompilationTarget::Binary)
+  gpu::KernelTableAttr kernels;
+  if (format > gpu::CompilationTarget::Binary) {
     format = gpu::CompilationTarget::Binary;
-
+    kernels = ROCDL::getKernelMetadata(module, object);
+  }
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
-      properties);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, kernels);
 }

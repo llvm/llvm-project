@@ -5,6 +5,11 @@
 
 // -----
 
+// expected-error@below {{'dlti.map' is expected to be a #dlti.map attribute}}
+"test.unknown_op"() { dlti.map = 42 } : () -> ()
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 
@@ -24,6 +29,14 @@
 "test.unknown_op"() { test.unknown_attr = #dlti.dl_spec<
   #dlti.dl_entry<"test.id", 42>,
   #dlti.dl_entry<"test.id", 43>
+>} : () -> ()
+
+// -----
+
+// expected-error@below {{repeated layout entry key: 'i32'}}
+"test.unknown_op"() { test.unknown_attr = #dlti.map<
+  #dlti.dl_entry<i32, 42>,
+  #dlti.dl_entry<i32, 42>
 >} : () -> ()
 
 // -----
@@ -126,7 +139,7 @@ module attributes {
   // expected-error@+2 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
   dlti.target_system_spec = #dlti.target_system_spec<
     0: #dlti.target_device_spec<
-        #dlti.dl_entry<"L1_cache_size_in_bytes", 4096: i32>> 
+        #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
   >} {}
 
 // -----

@@ -32,6 +32,7 @@ namespace llvm {
 
 class Comdat;
 class ConstantRange;
+class DataLayout;
 class Error;
 class GlobalObject;
 class Module;
@@ -42,7 +43,7 @@ typedef unsigned ID;
 
 // Choose ';' as the delimiter. ':' was used once but it doesn't work well for
 // Objective-C functions which commonly have :'s in their names.
-inline constexpr char kGlobalIdentifierDelimiter = ';';
+inline constexpr char GlobalIdentifierDelimiter = ';';
 
 class GlobalValue : public Constant {
 public:
@@ -76,9 +77,9 @@ public:
   };
 
 protected:
-  GlobalValue(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
-              LinkageTypes Linkage, const Twine &Name, unsigned AddressSpace)
-      : Constant(PointerType::get(Ty, AddressSpace), VTy, Ops, NumOps),
+  GlobalValue(Type *Ty, ValueTy VTy, AllocInfo AllocInfo, LinkageTypes Linkage,
+              const Twine &Name, unsigned AddressSpace)
+      : Constant(PointerType::get(Ty, AddressSpace), VTy, AllocInfo),
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
@@ -654,6 +655,11 @@ public:
   /// Get the module that this global value is contained inside of...
   Module *getParent() { return Parent; }
   const Module *getParent() const { return Parent; }
+
+  /// Get the data layout of the module this global belongs to.
+  ///
+  /// Requires the global to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

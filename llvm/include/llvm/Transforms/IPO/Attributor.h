@@ -123,6 +123,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -293,11 +294,16 @@ struct RangeTy {
     return *this;
   }
 
-  /// Comparison for sorting ranges by offset.
+  /// Comparison for sorting ranges.
   ///
-  /// Returns true if the offset \p L is less than that of \p R.
-  inline static bool OffsetLessThan(const RangeTy &L, const RangeTy &R) {
-    return L.Offset < R.Offset;
+  /// Returns true if the offset of \p L is less than that of \p R. If the two
+  /// offsets are same, compare the sizes instead.
+  inline static bool LessThan(const RangeTy &L, const RangeTy &R) {
+    if (L.Offset < R.Offset)
+      return true;
+    if (L.Offset == R.Offset)
+      return L.Size < R.Size;
+    return false;
   }
 
   /// Constants used to represent special offsets or sizes.
@@ -1447,7 +1453,7 @@ struct AttributorConfig {
   /// Callback function to determine if an indirect call targets should be made
   /// direct call targets (with an if-cascade).
   std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-                     Function &AssummedCallee)>
+                     Function &AssumedCallee, unsigned NumAssumedCallees)>
       IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
@@ -1717,10 +1723,11 @@ struct Attributor {
   /// Return true if we should specialize the call site \b CB for the potential
   /// callee \p Fn.
   bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
-                                         CallBase &CB, Function &Callee) {
+                                         CallBase &CB, Function &Callee,
+                                         unsigned NumAssumedCallees) {
     return Configuration.IndirectCalleeSpecializationCallback
-               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
-                                                                    CB, Callee)
+               ? Configuration.IndirectCalleeSpecializationCallback(
+                     *this, AA, CB, Callee, NumAssumedCallees)
                : true;
   }
 
@@ -1825,14 +1832,6 @@ struct Attributor {
       identifyDefaultAbstractAttributes(const_cast<Function &>(F));
     if (Configuration.InitializationCallback)
       Configuration.InitializationCallback(*this, F);
-  }
-
-  /// Helper function to remove callsite.
-  void removeCallSite(CallInst *CI) {
-    if (!CI)
-      return;
-
-    Configuration.CGUpdater.removeCallSite(*CI);
   }
 
   /// Record that \p U is to be replaces with \p NV after information was
@@ -2254,7 +2253,7 @@ public:
                             CalleeRepairCBTy &&CalleeRepairCB,
                             ACSRepairCBTy &&ACSRepairCB)
         : A(A), ReplacedFn(*Arg.getParent()), ReplacedArg(Arg),
-          ReplacementTypes(ReplacementTypes.begin(), ReplacementTypes.end()),
+          ReplacementTypes(ReplacementTypes),
           CalleeRepairCB(std::move(CalleeRepairCB)),
           ACSRepairCB(std::move(ACSRepairCB)) {}
 
@@ -5815,7 +5814,7 @@ struct AAPointerInfo : public AbstractAttribute {
     // Helpers required for std::set_difference
     using value_type = RangeTy;
     void push_back(const RangeTy &R) {
-      assert((Ranges.empty() || RangeTy::OffsetLessThan(Ranges.back(), R)) &&
+      assert((Ranges.empty() || RangeTy::LessThan(Ranges.back(), R)) &&
              "Ensure the last element is the greatest.");
       Ranges.push_back(R);
     }
@@ -5824,7 +5823,7 @@ struct AAPointerInfo : public AbstractAttribute {
     static void set_difference(const RangeList &L, const RangeList &R,
                                RangeList &D) {
       std::set_difference(L.begin(), L.end(), R.begin(), R.end(),
-                          std::back_inserter(D), RangeTy::OffsetLessThan);
+                          std::back_inserter(D), RangeTy::LessThan);
     }
 
     unsigned size() const { return Ranges.size(); }
@@ -5862,7 +5861,7 @@ struct AAPointerInfo : public AbstractAttribute {
 
     /// Insert \p R at the given iterator \p Pos, and merge if necessary.
     ///
-    /// This assumes that all ranges before \p Pos are OffsetLessThan \p R, and
+    /// This assumes that all ranges before \p Pos are LessThan \p R, and
     /// then maintains the sorted order for the suffix list.
     ///
     /// \return The place of insertion and true iff anything changed.
@@ -5874,7 +5873,7 @@ struct AAPointerInfo : public AbstractAttribute {
       }
 
       // Maintain this as a sorted vector of unique entries.
-      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::OffsetLessThan);
+      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::LessThan);
       if (LB == Ranges.end() || LB->Offset != R.Offset)
         return std::make_pair(Ranges.insert(LB, R), true);
       bool Changed = *LB != R;
@@ -6120,6 +6119,7 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator begin() const = 0;
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
+  virtual bool reachesReturn() const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6249,7 +6249,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
   /// to be called if the AA is invalid.
-  virtual int32_t getAddressSpace() const = 0;
+  virtual uint32_t getAddressSpace() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAddressSpace &createForPosition(const IRPosition &IRP,
@@ -6268,7 +6268,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   // No address space which indicates the associated value is dead.
-  static const int32_t NoAddressSpace = -1;
+  static const uint32_t NoAddressSpace = ~0U;
 
   /// Unique ID (due to the unique address)
   static const char ID;

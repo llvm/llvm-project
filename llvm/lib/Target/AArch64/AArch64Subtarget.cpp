@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
@@ -232,9 +233,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case NeoverseV2:
+    // Specialize cost for Neoverse-V2.
+    ScatterOverhead = 13;
+    LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV2:
   case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
@@ -564,14 +568,30 @@ bool AArch64Subtarget::useAA() const { return UseAA; }
 // exception on its own. Later, if the callee spills the signed LR value and
 // neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
 // the higher bits of LR thus hiding the authentication failure.
-AArch64PAuth::AuthCheckMethod
-AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
+    const MachineFunction &MF) const {
+  // TODO: Check subtarget for the scheme. Present variant is a default for
+  // pauthtest ABI.
+  if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
+      MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
+    return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
   if (AuthenticatedLRCheckMethod.getNumOccurrences())
     return AuthenticatedLRCheckMethod;
 
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+std::optional<uint16_t>
+AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
+    const Function &ParentFn) const {
+  if (!ParentFn.hasFnAttribute("ptrauth-indirect-gotos"))
+    return std::nullopt;
+  // We currently have one simple mechanism for all targets.
+  // This isn't ABI, so we can always do better in the future.
+  return getPointerAuthStableSipHash(
+      (Twine(ParentFn.getName()) + " blockaddress").str());
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

@@ -219,7 +219,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(LoadedObject.takeError(), OS);
-    report_fatal_error(Twine(OS.str()));
+    report_fatal_error(Twine(Buf));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
     Dyld.loadObject(*LoadedObject.get());
@@ -260,9 +260,7 @@ void MCJIT::finalizeObject() {
 
   // Generate code for module is going to move objects out of the 'added' list,
   // so we need to copy that out before using it:
-  SmallVector<Module*, 16> ModsToAdd;
-  for (auto *M : OwnedModules.added())
-    ModsToAdd.push_back(M);
+  SmallVector<Module *, 16> ModsToAdd(OwnedModules.added());
 
   for (auto *M : ModsToAdd)
     generateCodeForModule(M);

@@ -99,6 +99,8 @@ public:
     return BranchProbability(99, 100);
   }
 
+  InstructionCost getBranchMispredictPenalty() const { return 0; }
+
   bool hasBranchDivergence(const Function *F = nullptr) const { return false; }
 
   bool isSourceOfDivergence(const Value *V) const { return false; }
@@ -156,14 +158,23 @@ public:
     StringRef Name = F->getName();
 
     // These will all likely lower to a single selection DAG node.
+    // clang-format off
     if (Name == "copysign" || Name == "copysignf" || Name == "copysignl" ||
-        Name == "fabs" || Name == "fabsf" || Name == "fabsl" || Name == "sin" ||
-        Name == "fmin" || Name == "fminf" || Name == "fminl" ||
-        Name == "fmax" || Name == "fmaxf" || Name == "fmaxl" ||
-        Name == "sinf" || Name == "sinl" || Name == "cos" || Name == "cosf" ||
-        Name == "cosl" || Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
+        Name == "fabs"  || Name == "fabsf"  || Name == "fabsl" ||
+        Name == "fmin"  || Name == "fminf"  || Name == "fminl" ||
+        Name == "fmax"  || Name == "fmaxf"  || Name == "fmaxl" ||
+        Name == "sin"   || Name == "sinf"   || Name == "sinl"  ||
+        Name == "cos"   || Name == "cosf"   || Name == "cosl"  ||
+        Name == "tan"   || Name == "tanf"   || Name == "tanl"  ||
+        Name == "asin"  || Name == "asinf"  || Name == "asinl" ||
+        Name == "acos"  || Name == "acosf"  || Name == "acosl" ||
+        Name == "atan"  || Name == "atanf"  || Name == "atanl" ||
+        Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
+        Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
+        Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||
+        Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
       return false;
-
+    // clang-format on
     // These are all likely to be optimized into something smaller.
     if (Name == "pow" || Name == "powf" || Name == "powl" || Name == "exp2" ||
         Name == "exp2l" || Name == "exp2f" || Name == "floor" ||
@@ -238,8 +249,6 @@ public:
   }
 
   bool isNumRegsMajorCostOfLSR() const { return true; }
-
-  bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
 
   bool shouldDropLSRSolutionIfLessProfitable() const { return false; }
 
@@ -364,6 +373,10 @@ public:
 
   bool useColdCCForColdCall(Function &F) const { return false; }
 
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
@@ -457,6 +470,7 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
+  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
@@ -591,7 +605,7 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) const {
     return 1;
   }
@@ -724,6 +738,9 @@ public:
     switch (ICA.getID()) {
     default:
       break;
+    case Intrinsic::experimental_vector_histogram_add:
+      // For now, we want explicit support from the target for histograms.
+      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
@@ -830,7 +847,7 @@ public:
   Type *
   getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
                             unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                            unsigned SrcAlign, unsigned DestAlign,
+                            Align SrcAlign, Align DestAlign,
                             std::optional<uint32_t> AtomicElementSize) const {
     return AtomicElementSize ? Type::getIntNTy(Context, *AtomicElementSize * 8)
                              : Type::getInt8Ty(Context);
@@ -839,7 +856,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const {
     unsigned OpSizeInBytes = AtomicCpySize ? *AtomicCpySize : 1;
     Type *OpType = Type::getIntNTy(Context, OpSizeInBytes * 8);
@@ -913,6 +930,8 @@ public:
     return VF;
   }
 
+  bool preferFixedOverScalableIfEqualCost() const { return false; }
+
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const {
     return false;
@@ -928,6 +947,11 @@ public:
   }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
+
+  TTI::ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const {
+    return TTI::ReductionShuffle::SplitHalf;
+  }
 
   unsigned getGISelRematGlobalCost() const { return 1; }
 
@@ -1152,7 +1176,7 @@ public:
         Cost += static_cast<T *>(this)->getArithmeticInstrCost(
             Instruction::Add, GEP->getType(), CostKind,
             {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
-            std::nullopt);
+            {});
       } else {
         SmallVector<const Value *> Indices(GEP->indices());
         Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
@@ -1373,7 +1397,7 @@ public:
 
         bool IsUnary = isa<UndefValue>(Operands[1]);
         NumSubElts = VecSrcTy->getElementCount().getKnownMinValue();
-        SmallVector<int, 16> AdjustMask(Mask.begin(), Mask.end());
+        SmallVector<int, 16> AdjustMask(Mask);
 
         // Widening shuffle - widening the source(s) to the new length
         // (treated as free - see above), and then perform the adjusted

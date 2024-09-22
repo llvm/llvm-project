@@ -1227,6 +1227,14 @@ StorageSpecifierType::get(MLIRContext *ctx, SparseTensorEncodingAttr encoding) {
   return Base::get(ctx, getNormalizedEncodingForSpecifier(encoding));
 }
 
+StorageSpecifierType
+StorageSpecifierType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                 MLIRContext *ctx,
+                                 SparseTensorEncodingAttr encoding) {
+  return Base::getChecked(emitError, ctx,
+                          getNormalizedEncodingForSpecifier(encoding));
+}
+
 //===----------------------------------------------------------------------===//
 // SparseTensorDialect Operations.
 //===----------------------------------------------------------------------===//
@@ -2131,10 +2139,82 @@ static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
   printLevelRange(p, lo, hi);
 }
 
+/// Parses a list of `optional` defined list in the form of
+/// "(%val0, _, %val1, ...)", where `_` is used to annotate that the
+/// corresponding value is not defined (e.g., to represent an undefined
+/// coordinate in the sparse iteration space).
+static ParseResult parseOptionalDefinedList(
+    OpAsmParser &parser, OperationState &state, I64BitSet &definedSet,
+    SmallVectorImpl<OpAsmParser::Argument> &definedArgs,
+    unsigned maxCnt = std::numeric_limits<unsigned>::max(),
+    OpAsmParser::Delimiter delimiter = OpAsmParser::Delimiter::Paren) {
+  unsigned cnt = 0;
+  ParseResult crdList =
+      parser.parseCommaSeparatedList(delimiter, [&]() -> ParseResult {
+        if (parser.parseOptionalKeyword("_")) {
+          if (parser.parseArgument(definedArgs.emplace_back()))
+            return failure();
+          definedSet.set(cnt);
+        }
+        cnt += 1;
+        return success();
+      });
+
+  if (cnt > maxCnt)
+    return parser.emitError(parser.getNameLoc(),
+                            "parsed more value than expected.");
+
+  if (failed(crdList)) {
+    return parser.emitError(
+        parser.getNameLoc(),
+        "expecting SSA value or \"_\" for level coordinates");
+  }
+  assert(definedArgs.size() == definedSet.count());
+  return success();
+}
+
+static void printOptionalDefinedList(OpAsmPrinter &p, unsigned size,
+                                     Block::BlockArgListType blocksArgs,
+                                     I64BitSet definedSet) {
+  if (definedSet.empty())
+    return;
+
+  for (unsigned i = 0; i < size; i++) {
+    if (definedSet[i]) {
+      p << blocksArgs.front();
+      blocksArgs = blocksArgs.drop_front();
+    } else {
+      p << "_";
+    }
+    if (i != size - 1)
+      p << ", ";
+  }
+  assert(blocksArgs.empty());
+}
+
 static ParseResult
-parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
-                     SmallVectorImpl<OpAsmParser::Argument> &iterators,
-                     SmallVectorImpl<OpAsmParser::Argument> &iterArgs) {
+parseUsedCoordList(OpAsmParser &parser, OperationState &state,
+                   SmallVectorImpl<OpAsmParser::Argument> &coords) {
+  // Parse "at(%crd0, _, ...)"
+  I64BitSet crdUsedLvlSet;
+  if (succeeded(parser.parseOptionalKeyword("at")) &&
+      failed(parseOptionalDefinedList(parser, state, crdUsedLvlSet, coords)))
+    return failure();
+
+  // Always use IndexType for the coordinate.
+  for (auto &coord : coords)
+    coord.type = parser.getBuilder().getIndexType();
+
+  // Set the CrdUsedLvl bitset.
+  state.addAttribute("crdUsedLvls",
+                     parser.getBuilder().getI64IntegerAttr(crdUsedLvlSet));
+  return success();
+}
+
+static ParseResult
+parseSparseIterateLoop(OpAsmParser &parser, OperationState &state,
+                       SmallVectorImpl<OpAsmParser::Argument> &iterators,
+                       SmallVectorImpl<OpAsmParser::Argument> &blockArgs) {
   SmallVector<OpAsmParser::UnresolvedOperand> spaces;
   SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
 
@@ -2148,38 +2228,18 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
         parser.getNameLoc(),
         "mismatch in number of sparse iterators and sparse spaces");
 
-  // Parse "at(%crd0, _, ...)"
-  LevelSet crdUsedLvlSet;
-  bool hasUsedCrds = succeeded(parser.parseOptionalKeyword("at"));
-  unsigned lvlCrdCnt = 0;
-  if (hasUsedCrds) {
-    ParseResult crdList = parser.parseCommaSeparatedList(
-        OpAsmParser::Delimiter::Paren, [&]() -> ParseResult {
-          if (parser.parseOptionalKeyword("_")) {
-            if (parser.parseArgument(iterArgs.emplace_back()))
-              return failure();
-            // Always use IndexType for the coordinate.
-            crdUsedLvlSet.set(lvlCrdCnt);
-            iterArgs.back().type = parser.getBuilder().getIndexType();
-          }
-          lvlCrdCnt += 1;
-          return success();
-        });
-    if (failed(crdList)) {
-      return parser.emitError(
-          parser.getNameLoc(),
-          "expecting SSA value or \"_\" for level coordinates");
-    }
-  }
-  // Set the CrdUsedLvl bitset.
-  state.addAttribute("crdUsedLvls",
-                     parser.getBuilder().getI64IntegerAttr(crdUsedLvlSet));
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
+    return failure();
+  size_t numCrds = coords.size();
 
   // Parse "iter_args(%arg = %init, ...)"
   bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
   if (hasIterArgs)
-    if (parser.parseAssignmentList(iterArgs, initArgs))
+    if (parser.parseAssignmentList(blockArgs, initArgs))
       return failure();
+
+  blockArgs.append(coords);
 
   SmallVector<Type> iterSpaceTps;
   // parse ": sparse_tensor.iter_space -> ret"
@@ -2196,10 +2256,6 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
       return parser.emitError(parser.getNameLoc(),
                               "expected sparse_tensor.iter_space type for "
                               "iteration space operands");
-    if (hasUsedCrds && spaceTp.getSpaceDim() != lvlCrdCnt)
-      return parser.emitError(parser.getNameLoc(),
-                              "mismatch in number of iteration space dimension "
-                              "and specified coordinates");
     it.type = spaceTp.getIteratorType();
   }
 
@@ -2213,9 +2269,70 @@ parseSparseSpaceLoop(OpAsmParser &parser, OperationState &state,
     return failure();
 
   if (hasIterArgs) {
-    unsigned numCrds = crdUsedLvlSet.count();
     // Strip off leading args that used for coordinates.
-    MutableArrayRef args = MutableArrayRef(iterArgs).drop_front(numCrds);
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
+    if (args.size() != initArgs.size() || args.size() != state.types.size()) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "mismatch in number of iteration arguments and return values");
+    }
+
+    for (auto [it, init, tp] : llvm::zip_equal(args, initArgs, state.types)) {
+      it.type = tp;
+      if (parser.resolveOperand(init, tp, state.operands))
+        return failure();
+    }
+  }
+  return success();
+}
+
+static ParseResult
+parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
+                         SmallVectorImpl<Value> &spacesVals,
+                         SmallVectorImpl<OpAsmParser::Argument> &blockArgs) {
+
+  // Parse "(%spaces, ...)"
+  SmallVector<OpAsmParser::UnresolvedOperand> spaces;
+  if (parser.parseOperandList(spaces, OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
+    return failure();
+  size_t numCrds = coords.size();
+
+  // Parse "iter_args(%arg = %init, ...)"
+  SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
+  bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
+  if (hasIterArgs)
+    if (parser.parseAssignmentList(blockArgs, initArgs))
+      return failure();
+  blockArgs.append(coords);
+
+  SmallVector<Type> iterSpaceTps;
+  // parse ": (sparse_tensor.iter_space, ...) -> ret"
+  if (parser.parseColon() || parser.parseLParen() ||
+      parser.parseTypeList(iterSpaceTps) || parser.parseRParen())
+    return failure();
+
+  if (iterSpaceTps.size() != spaces.size())
+    return parser.emitError(parser.getNameLoc(),
+                            "mismatch in number of iteration space operands "
+                            "and iteration space types");
+
+  if (hasIterArgs)
+    if (parser.parseArrowTypeList(state.types))
+      return failure();
+
+  // Resolves input sparse iteration spaces.
+  if (parser.resolveOperands(spaces, iterSpaceTps, parser.getNameLoc(),
+                             spacesVals))
+    return failure();
+  state.operands.append(spacesVals);
+
+  if (hasIterArgs) {
+    // Strip off trailing args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
     if (args.size() != initArgs.size() || args.size() != state.types.size()) {
       return parser.emitError(
           parser.getNameLoc(),
@@ -2267,12 +2384,25 @@ LogicalResult ExtractIterSpaceOp::verify() {
   return success();
 }
 
+LogicalResult ExtractValOp::verify() {
+  auto stt = getSparseTensorType(getTensor());
+  auto itTp = getIterator().getType();
+
+  if (stt.getEncoding() != itTp.getEncoding())
+    return emitOpError("mismatch in tensor encoding and iterator encoding.");
+
+  if (stt.getLvlRank() != itTp.getHiLvl())
+    return emitOpError("must use last-level iterator to extract values. ");
+
+  return success();
+}
+
 struct RemoveUnusedLvlCrds : public OpRewritePattern<IterateOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(IterateOp iterateOp,
                                 PatternRewriter &rewriter) const override {
-    LevelSet newUsedLvls(0);
+    I64BitSet newUsedLvls(0);
     llvm::BitVector toRemove(iterateOp.getBody()->getNumArguments());
     for (unsigned i = 0, e = iterateOp.getSpaceDim(); i < e; i++) {
       if (auto crd = iterateOp.getLvlCrd(i)) {
@@ -2304,13 +2434,13 @@ void IterateOp::build(OpBuilder &builder, OperationState &odsState,
                       Value iterSpace, ValueRange initArgs) {
   unsigned rank = llvm::cast<IterSpaceType>(iterSpace.getType()).getSpaceDim();
   // All ones.
-  LevelSet set((1 << rank) - 1);
+  I64BitSet set((1 << rank) - 1);
   return build(builder, odsState, iterSpace, initArgs, set);
 }
 
 void IterateOp::build(OpBuilder &builder, OperationState &odsState,
                       Value iterSpace, ValueRange initArgs,
-                      LevelSet crdUsedLvls) {
+                      I64BitSet crdUsedLvls) {
   OpBuilder::InsertionGuard guard(builder);
 
   odsState.addOperands(iterSpace);
@@ -2321,18 +2451,18 @@ void IterateOp::build(OpBuilder &builder, OperationState &odsState,
   odsState.addTypes(initArgs.getTypes());
   Block *bodyBlock = builder.createBlock(bodyRegion);
 
-  // First argument, sparse iterator
-  bodyBlock->addArgument(
-      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
-      odsState.location);
+  // Starts with a list of user-provided loop arguments.
+  for (Value v : initArgs)
+    bodyBlock->addArgument(v.getType(), v.getLoc());
 
-  // Followed by a list of used coordinates.
+  // Follows by a list of used coordinates.
   for (unsigned i = 0, e = crdUsedLvls.count(); i < e; i++)
     bodyBlock->addArgument(builder.getIndexType(), odsState.location);
 
-  // Followed by a list of user-provided loop arguments.
-  for (Value v : initArgs)
-    bodyBlock->addArgument(v.getType(), v.getLoc());
+  // Ends with sparse iterator
+  bodyBlock->addArgument(
+      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
+      odsState.location);
 }
 
 ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2340,15 +2470,15 @@ ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand iterSpace;
 
   SmallVector<OpAsmParser::Argument> iters, iterArgs;
-  if (parseSparseSpaceLoop(parser, result, iters, iterArgs))
+  if (parseSparseIterateLoop(parser, result, iters, iterArgs))
     return failure();
   if (iters.size() != 1)
     return parser.emitError(parser.getNameLoc(),
                             "expected only one iterator/iteration space");
 
-  iters.append(iterArgs);
+  iterArgs.append(iters);
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, iters))
+  if (parser.parseRegion(*body, iterArgs))
     return failure();
 
   IterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
@@ -2380,49 +2510,37 @@ static void printInitializationList(OpAsmPrinter &p,
   p << ")";
 }
 
-static void printUsedCrdsList(OpAsmPrinter &p, unsigned spaceDim,
-                              Block::BlockArgListType blocksArgs,
-                              LevelSet crdUsedLvls) {
-  if (crdUsedLvls.empty())
-    return;
-
-  p << " at(";
-  for (unsigned i = 0; i < spaceDim; i++) {
-    if (crdUsedLvls[i]) {
-      p << blocksArgs.front();
-      blocksArgs = blocksArgs.drop_front();
-    } else {
-      p << "_";
-    }
-    if (i != spaceDim - 1)
-      p << ", ";
+template <typename SparseLoopOp>
+static LogicalResult verifySparseLoopOp(SparseLoopOp op) {
+  if (op.getInitArgs().size() != op.getNumResults()) {
+    return op.emitOpError(
+        "mismatch in number of loop-carried values and defined values");
   }
-  assert(blocksArgs.empty());
-  p << ")";
+  if (op.getCrdUsedLvls().max() > op.getSpaceDim())
+    return op.emitOpError("required out-of-bound coordinates");
+
+  return success();
 }
+
+LogicalResult IterateOp::verify() { return verifySparseLoopOp(*this); }
+LogicalResult CoIterateOp::verify() { return verifySparseLoopOp(*this); }
 
 void IterateOp::print(OpAsmPrinter &p) {
   p << " " << getIterator() << " in " << getIterSpace();
-  printUsedCrdsList(p, getSpaceDim(), getCrds(), getCrdUsedLvls());
+  if (!getCrdUsedLvls().empty()) {
+    p << " at(";
+    printOptionalDefinedList(p, getSpaceDim(), getCrds(), getCrdUsedLvls());
+    p << ")";
+  }
   printInitializationList(p, getRegionIterArgs(), getInitArgs(), " iter_args");
 
   p << " : " << getIterSpace().getType() << " ";
   if (!getInitArgs().empty())
-    p << "-> (" << getInitArgs().getTypes() << ") ";
+    p.printArrowTypeList(getInitArgs().getTypes());
 
+  p << " ";
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-}
-
-LogicalResult IterateOp::verify() {
-  if (getInitArgs().size() != getNumResults()) {
-    return emitOpError(
-        "mismatch in number of loop-carried values and defined values");
-  }
-  if (getCrdUsedLvls().max() > getSpaceDim())
-    return emitOpError("required out-of-bound coordinates");
-
-  return success();
 }
 
 LogicalResult IterateOp::verifyRegions() {
@@ -2465,7 +2583,7 @@ MutableArrayRef<OpOperand> IterateOp::getInitsMutable() {
 }
 
 Block::BlockArgListType IterateOp::getRegionIterArgs() {
-  return getRegion().getArguments().take_back(getNumRegionIterArgs());
+  return getRegion().getArguments().take_front(getNumRegionIterArgs());
 }
 
 std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
@@ -2482,11 +2600,162 @@ OperandRange IterateOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 
 void IterateOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
-  // Both the operation itself and the region may be branching into the body or
-  // back into the operation itself.
+  // Both the operation itself and the region may be branching into the body
+  // or back into the operation itself.
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   // It is possible for loop not to enter the body.
   regions.push_back(RegionSuccessor(getResults()));
+}
+
+void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,
+                        ValueRange iterSpaces, ValueRange initArgs,
+                        unsigned numCases) {
+  unsigned rank =
+      cast<IterSpaceType>(iterSpaces.front().getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  // Generates all-zero case bits (they only serve as placeholders), which are
+  // supposed to be overriden later. We need to preallocate all the regions as
+  // mlir::Region cannot be dynamically added later after the operation is
+  // created.
+  SmallVector<int64_t> caseBits(numCases, 0);
+  ArrayAttr cases = builder.getI64ArrayAttr(caseBits);
+  return CoIterateOp::build(builder, odsState, initArgs.getTypes(), iterSpaces,
+                            initArgs, set, cases,
+                            /*caseRegionsCount=*/numCases);
+}
+
+ParseResult CoIterateOp::parse(OpAsmParser &parser, OperationState &result) {
+
+  SmallVector<Value> spaces;
+  // The block argument list of each regions, it is arranged in the order of
+  // ([used coordinate list], [loop iterations args], [sparse iterator list]).
+  SmallVector<OpAsmParser::Argument> blockArgs;
+  if (parseSparseCoIterateLoop(parser, result, spaces, blockArgs))
+    return failure();
+
+  result.addAttribute("operandSegmentSizes",
+                      parser.getBuilder().getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(spaces.size()),
+                           static_cast<int32_t>(result.types.size())}));
+
+  SmallVector<Attribute> cases;
+  while (succeeded(parser.parseOptionalKeyword("case"))) {
+    // Parse one region per case.
+    I64BitSet definedItSet;
+    SmallVector<OpAsmParser::Argument> definedIts;
+    if (parseOptionalDefinedList(parser, result, definedItSet, definedIts,
+                                 spaces.size(), OpAsmParser::Delimiter::None))
+      return failure();
+
+    cases.push_back(parser.getBuilder().getI64IntegerAttr(definedItSet));
+
+    for (auto [i, definedIdx] : llvm::enumerate(definedItSet.bits())) {
+      // Resolve the iterator type based on the iteration space type.
+      auto spaceTp = llvm::cast<IterSpaceType>(spaces[definedIdx].getType());
+      definedIts[i].type = spaceTp.getIteratorType();
+    }
+    definedIts.insert(definedIts.begin(), blockArgs.begin(), blockArgs.end());
+    Region *body = result.addRegion();
+    if (parser.parseRegion(*body, definedIts))
+      return failure();
+
+    CoIterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
+  }
+
+  result.addAttribute("cases", ArrayAttr::get(parser.getContext(), cases));
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+void CoIterateOp::print(OpAsmPrinter &p) {
+  p << " (";
+  llvm::interleaveComma(getIterSpaces(), p, [&](auto s) { p << s; });
+  p << ")";
+
+  if (!getCrdUsedLvls().empty()) {
+    p << " at(";
+    printOptionalDefinedList(p, getSpaceDim(), getCrds(0), getCrdUsedLvls());
+    p << ")";
+  }
+
+  printInitializationList(p, getRegionIterArgs(0), getInitArgs(), " iter_args");
+
+  p << " : (" << getIterSpaces().getTypes() << ")";
+  if (!getInitArgs().empty())
+    p.printArrowTypeList(getInitArgs().getTypes());
+
+  for (unsigned idx = 0, e = getRegions().size(); idx < e; idx++) {
+    p.printNewline();
+    p << "case ";
+    printOptionalDefinedList(p, getIterSpaces().size(), getRegionIterators(idx),
+                             getRegionDefinedSpace(idx));
+    p << " ";
+    p.printRegion(getRegion(idx), /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/!getInitArgs().empty());
+  }
+}
+
+ValueRange CoIterateOp::getYieldedValues(unsigned regionIdx) {
+  return cast<sparse_tensor::YieldOp>(
+             getRegion(regionIdx).getBlocks().front().getTerminator())
+      .getResults();
+}
+
+LogicalResult CoIterateOp::verifyRegions() {
+  for (unsigned r = 0, e = getNumRegions(); r < e; r++) {
+    if (getNumRegionIterArgs() != getNumResults())
+      return emitOpError(
+          "mismatch in number of basic block args and defined values");
+
+    auto initArgs = getInitArgs();
+    auto iterArgs = getRegionIterArgs(r);
+    auto yieldVals = getYieldedValues(r);
+    auto opResults = getResults();
+    if (!llvm::all_equal({initArgs.size(), iterArgs.size(), yieldVals.size(),
+                          opResults.size()})) {
+      return emitOpError()
+             << "number mismatch between iter args and results on " << r
+             << "th region";
+    }
+
+    for (auto [i, init, iter, yield, ret] :
+         llvm::enumerate(initArgs, iterArgs, yieldVals, opResults)) {
+      if (init.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th iter operand and defined value on " << r << "th region";
+      if (iter.getType() != ret.getType())
+        return emitOpError() << "types mismatch between " << i
+                             << "th iter region arg and defined value on " << r
+                             << "th region";
+      if (yield.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th yield value and defined value on " << r << "th region";
+    }
+  }
+
+  auto cases = getRegionDefinedSpaces();
+  llvm::SmallSetVector<uint64_t, 8> set(cases.begin(), cases.end());
+  if (set.size() != getNumRegions())
+    return emitOpError("contains duplicated cases.");
+
+  return success();
+}
+
+SmallVector<Region *> CoIterateOp::getSubCasesOf(unsigned regionIdx) {
+  SmallVector<Region *> ret;
+  I64BitSet caseBit = getRegionDefinedSpace(regionIdx);
+  for (Region &r : getCaseRegions())
+    if (getRegionDefinedSpace(r.getRegionNumber()).isSubSetOf(caseBit))
+      ret.push_back(&r);
+
+  return ret;
 }
 
 //===----------------------------------------------------------------------===//

@@ -7,16 +7,16 @@ define amdgpu_kernel void @ds_swizzle(ptr addrspace(1) %out, i32 %src) #0 {
   ret void
 }
 
-; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
 define amdgpu_kernel void @v_permlane16_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
-  %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v = call i32 @llvm.amdgcn.permlane16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+; CHECK: DIVERGENT: %v = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
 define amdgpu_kernel void @v_permlanex16_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #0 {
-  %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
+  %v = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false) #0
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -213,6 +213,22 @@ bb:
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v8f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1) %addr)
+  store <8 x half> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v8bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1) %addr)
+  store <8 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 ; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1) %addr)
 define amdgpu_kernel void @global_load_tr_b64_i32(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
@@ -229,9 +245,25 @@ bb:
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v4f16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1) %addr)
+  store <4 x half> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1) %addr)
+define amdgpu_kernel void @global_load_tr_b128_v4bf16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1) %addr)
+  store <4 x bfloat> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
-declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1) #1
-declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1) #1
+declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
+declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlane16.var(i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.var(i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #1
@@ -258,8 +290,12 @@ declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8(<2 x i32>, <4 x i32
 
 declare <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))
 declare <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1))
+declare <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1))
+declare <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16(ptr addrspace(1))
 declare i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))
 declare <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))
+declare <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1))
+declare <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1))
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

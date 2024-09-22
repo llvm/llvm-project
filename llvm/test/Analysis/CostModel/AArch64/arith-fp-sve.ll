@@ -8,6 +8,7 @@ define void @fadd() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fadd <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F16 = fadd <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F16 = fadd <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V1F32 = fadd <vscale x 1 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fadd <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fadd <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fadd <vscale x 8 x float> undef, undef
@@ -19,6 +20,7 @@ define void @fadd() {
   %V8F16 = fadd <vscale x 8 x half> undef, undef
   %V16F16 = fadd <vscale x 16 x half> undef, undef
 
+  %V1F32 = fadd <vscale x 1 x float> undef, undef
   %V2F32 = fadd <vscale x 2 x float> undef, undef
   %V4F32 = fadd <vscale x 4 x float> undef, undef
   %V8F32 = fadd <vscale x 8 x float> undef, undef
@@ -34,6 +36,7 @@ define void @fsub() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F16 = fsub <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F16 = fsub <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F16 = fsub <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V1F32 = fsub <vscale x 1 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fsub <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fsub <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fsub <vscale x 8 x float> undef, undef
@@ -45,6 +48,7 @@ define void @fsub() {
   %V8F16 = fsub <vscale x 8 x half> undef, undef
   %V16F16 = fsub <vscale x 16 x half> undef, undef
 
+  %V1F32 = fsub <vscale x 1 x float> undef, undef
   %V2F32 = fsub <vscale x 2 x float> undef, undef
   %V4F32 = fsub <vscale x 4 x float> undef, undef
   %V8F32 = fsub <vscale x 8 x float> undef, undef

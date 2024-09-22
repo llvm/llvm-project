@@ -388,7 +388,7 @@ public:
   /// Create an empty Map node associated with this Document.
   MapDocNode getMapNode() {
     auto N = DocNode(&KindAndDocs[size_t(Type::Map)]);
-    Maps.push_back(std::unique_ptr<DocNode::MapTy>(new DocNode::MapTy));
+    Maps.push_back(std::make_unique<DocNode::MapTy>());
     N.Map = Maps.back().get();
     return N.getMap();
   }
@@ -396,7 +396,7 @@ public:
   /// Create an empty Array node associated with this Document.
   ArrayDocNode getArrayNode() {
     auto N = DocNode(&KindAndDocs[size_t(Type::Array)]);
-    Arrays.push_back(std::unique_ptr<DocNode::ArrayTy>(new DocNode::ArrayTy));
+    Arrays.push_back(std::make_unique<DocNode::ArrayTy>());
     N.Array = Arrays.back().get();
     return N.getArray();
   }

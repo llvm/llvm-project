@@ -71,7 +71,7 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
 
-  MCRegister SP = MRI.getDwarfRegNum(RISCV::X2, true);
+  unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
   MAI->addInitialFrameState(Inst);
 
@@ -110,10 +110,9 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return nullptr;
 }
 
-static MCTargetStreamer *createRISCVAsmTargetStreamer(MCStreamer &S,
-                                                      formatted_raw_ostream &OS,
-                                                      MCInstPrinter *InstPrint,
-                                                      bool isVerboseAsm) {
+static MCTargetStreamer *
+createRISCVAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                             MCInstPrinter *InstPrint) {
   return new RISCVTargetAsmStreamer(S, OS);
 }
 
@@ -127,16 +126,16 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   int64_t GPRState[31] = {};
   std::bitset<31> GPRValidMask;
 
-  static bool isGPR(unsigned Reg) {
+  static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
   }
 
-  static unsigned getRegIndex(unsigned Reg) {
+  static unsigned getRegIndex(MCRegister Reg) {
     assert(isGPR(Reg) && Reg != RISCV::X0 && "Invalid GPR reg");
     return Reg - RISCV::X1;
   }
 
-  void setGPRState(unsigned Reg, std::optional<int64_t> Value) {
+  void setGPRState(MCRegister Reg, std::optional<int64_t> Value) {
     if (Reg == RISCV::X0)
       return;
 
@@ -150,7 +149,7 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
     }
   }
 
-  std::optional<int64_t> getGPRState(unsigned Reg) const {
+  std::optional<int64_t> getGPRState(MCRegister Reg) const {
     if (Reg == RISCV::X0)
       return 0;
 
@@ -302,7 +301,7 @@ public:
   }
 
 private:
-  static bool maybeReturnAddress(unsigned Reg) {
+  static bool maybeReturnAddress(MCRegister Reg) {
     // X1 is used for normal returns, X5 for returns from outlined functions.
     return Reg == RISCV::X1 || Reg == RISCV::X5;
   }

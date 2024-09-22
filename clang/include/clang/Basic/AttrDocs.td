@@ -1382,6 +1382,34 @@ Sample usage:
   }];
 }
 
+def NoConvergentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute prevents a function from being treated as convergent, which
+means that optimizations can only move calls to that function to
+control-equivalent blocks. If a statement is marked as ``noconvergent`` and
+contains calls, it also prevents those calls from being treated as convergent.
+In other words, those calls are not restricted to only being moved to
+control-equivalent blocks.
+
+In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
+declarations and calls are treated as convergent by default for correctness.
+This ``noconvergent`` attribute is helpful for developers to prevent them from
+being treated as convergent when it's safe.
+
+.. code-block:: c
+
+  __device__ float bar(float);
+  __device__ float foo(float) __attribute__((noconvergent)) {}
+
+  __device__ int example(void) {
+    float x;
+    [[clang::noconvergent]] x = bar(x);
+  }
+
+  }];
+}
+
 def NoSplitStackDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1564,6 +1592,12 @@ succeeds but Clang emits a warning specifying that the function is deprecated.
 Finally, if Clang is instructed to compile code for macOS 10.7, the call
 fails because ``f()`` is no longer available.
 
+Clang is instructed to compile code for a minimum deployment version using
+the ``-target`` or ``-mtargetos`` command line arguments. For example,
+macOS 10.7 would be specified as ``-target x86_64-apple-macos10.7`` or
+``-mtargetos=macos10.7``. Variants like Mac Catalyst are specified as
+``-target arm64-apple-ios15.0-macabi`` or ``-mtargetos=ios15.0-macabi``
+
 The availability attribute is a comma-separated list starting with the
 platform name and then including clauses specifying important milestones in the
 declaration's lifetime (in any order) along with additional information. Those
@@ -1608,41 +1642,61 @@ the implicitly inferred availability attributes. If no availability attribute
 specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
-``ios``
-  Apple's iOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
-  command-line argument.
-
-``macos``
-  Apple's macOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
-  command-line argument. ``macosx`` is supported for
-  backward-compatibility reasons, but it is deprecated.
-
-``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
-  command-line argument.
-
-``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
-  command-line argument.
-
-``visionos``
-  Apple's visionOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
-  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
-  command-line argument.
-
+``iOS``
+``macOS``
+``tvOS``
+``watchOS``
+``iOSApplicationExtension``
+``macOSApplicationExtension``
+``tvOSApplicationExtension``
+``watchOSApplicationExtension``
+``macCatalyst``
+``macCatalystApplicationExtension``
+``visionOS``
+``visionOSApplicationExtension``
 ``driverkit``
-  Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the ``-target *arch*-apple-driverkit*version*``
-  command line argument.
+``swift``
+``android``
+``fuchsia``
+``ohos``
+``zos``
+``ShaderModel``
+
+Some platforms have alias names:
+
+``ios``
+``macos``
+``macosx (deprecated)``
+``tvos``
+``watchos``
+``ios_app_extension``
+``macos_app_extension``
+``macosx_app_extension (deprecated)``
+``tvos_app_extension``
+``watchos_app_extension``
+``maccatalyst``
+``maccatalyst_app_extension``
+``visionos``
+``visionos_app_extension``
+``shadermodel``
+
+Supported environment names for the ShaderModel platform:
+
+``pixel``
+``vertex``
+``geometry``
+``hull``
+``domain``
+``compute``
+``raygeneration``
+``intersection``
+``anyhit``
+``closesthit``
+``miss``
+``callable``
+``mesh``
+``amplification``
+``library``
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2317,6 +2371,25 @@ section.
   }];
 }
 
+def BPFFastCallDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Functions annotated with this attribute are likely to be inlined by BPF JIT.
+It is assumed that inlined implementation uses less caller saved registers,
+than a regular function.
+Specifically, the following registers are likely to be preserved:
+- ``R0`` if function return value is ``void``;
+- ``R2-R5` if function takes 1 argument;
+- ``R3-R5` if function takes 2 arguments;
+- ``R4-R5` if function takes 3 arguments;
+- ``R5`` if function takes 4 arguments;
+
+For such functions Clang generates code pattern that allows BPF JIT
+to recognize and remove unnecessary spills and fills of the preserved
+registers.
+  }];
+}
+
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (MIPS)";
@@ -2453,7 +2526,7 @@ For example:
   typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
   #endif
 
-Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+Creates a type ``fixed_vint8m1_t`` that is a fixed-length variant of
 ``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
 can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
@@ -5800,7 +5873,8 @@ takes precedence over the command line option ``-fpatchable-function-entry=N,M``
 ``M`` defaults to 0 if omitted.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
 
@@ -5982,6 +6056,16 @@ definition (
 For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}]; }
+
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
 }]; }
 
 def WebAssemblyExportNameDocs : Documentation {
@@ -6585,7 +6669,8 @@ like pointers to an object of type ``T``:
   private:
     int *valuePointer;
   public:
-    int *getInt() { return &valuePointer; }
+    IntPointer(const IntOwner&);
+    int *getInt() { return valuePointer; }
   };
 
 The argument ``T`` is optional and is ignored.
@@ -6601,12 +6686,8 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
 .. code-block:: c++
 
   int f() {
-    IntPointer P;
-    if (true) {
-      IntOwner O(7);
-      P = IntPointer(O); // P "points into" O
-    } // P is dangling
-    return P.get(); // error: Using a dangling Pointer.
+    IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
+    P.getInt(); // P is dangling
   }
 
 }];
@@ -6766,77 +6847,103 @@ def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 The attribute ``[[clang::unsafe_buffer_usage]]`` should be placed on functions
-that need to be avoided as they are prone to buffer overflows. It is designed to
-work together with the off-by-default compiler warning ``-Wunsafe-buffer-usage``
-to help codebases transition away from raw pointer based buffer management,
-in favor of safer abstractions such as C++20 ``std::span``. The attribute causes
-``-Wunsafe-buffer-usage`` to warn on every use of the function, and it may
-enable ``-Wunsafe-buffer-usage`` to emit automatic fix-it hints
-which would help the user replace such unsafe functions with safe
+that need to be avoided as they are prone to buffer overflows or unsafe buffer
+struct fields. It is designed to work together with the off-by-default compiler
+warning ``-Wunsafe-buffer-usage`` to help codebases transition away from raw pointer
+based buffer management, in favor of safer abstractions such as C++20 ``std::span``.
+The attribute causes ``-Wunsafe-buffer-usage`` to warn on every use of the function or
+the field it is attached to, and it may also lead to emission of automatic fix-it
+hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-The attribute does not suppress ``-Wunsafe-buffer-usage`` inside the function
-to which it is attached. These warnings still need to be addressed.
+* Attribute attached to functions: The attribute does not suppress 
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+  These warnings still need to be addressed.
 
-The attribute is warranted even if the only way a function can overflow
-the buffer is by violating the function's preconditions. For example, it
-would make sense to put the attribute on function ``foo()`` below because
-passing an incorrect size parameter would cause a buffer overflow:
+  The attribute is warranted even if the only way a function can overflow
+  the buffer is by violating the function's preconditions. For example, it
+  would make sense to put the attribute on function ``foo()`` below because
+  passing an incorrect size parameter would cause a buffer overflow:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void foo(int *buf, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-      buf[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void foo(int *buf, size_t size) {
+      for (size_t i = 0; i < size; ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-The attribute is NOT warranted when the function uses safe abstractions,
-assuming that these abstractions weren't misused outside the function.
-For example, function ``bar()`` below doesn't need the attribute,
-because assuming that the container ``buf`` is well-formed (has size that
-fits the original buffer it refers to), overflow cannot occur:
+  The attribute is NOT warranted when the function uses safe abstractions,
+  assuming that these abstractions weren't misused outside the function.
+  For example, function ``bar()`` below doesn't need the attribute,
+  because assuming that the container ``buf`` is well-formed (has size that
+  fits the original buffer it refers to), overflow cannot occur:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  void bar(std::span<int> buf) {
-    for (size_t i = 0; i < buf.size(); ++i) {
-      buf[i] = i;
+    void bar(std::span<int> buf) {
+      for (size_t i = 0; i < buf.size(); ++i) {
+        buf[i] = i;
+      }
     }
-  }
 
-In this case function ``bar()`` enables the user to keep the buffer
-"containerized" in a span for as long as possible. On the other hand,
-Function ``foo()`` in the previous example may have internal
-consistency, but by accepting a raw buffer it requires the user to unwrap
-their span, which is undesirable according to the programming model
-behind ``-Wunsafe-buffer-usage``.
+  In this case function ``bar()`` enables the user to keep the buffer
+  "containerized" in a span for as long as possible. On the other hand,
+  Function ``foo()`` in the previous example may have internal
+  consistency, but by accepting a raw buffer it requires the user to unwrap
+  their span, which is undesirable according to the programming model
+  behind ``-Wunsafe-buffer-usage``.
 
-The attribute is warranted when a function accepts a raw buffer only to
-immediately put it into a span:
+  The attribute is warranted when a function accepts a raw buffer only to
+  immediately put it into a span:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  [[clang::unsafe_buffer_usage]]
-  void baz(int *buf, size_t size) {
-    std::span<int> sp{ buf, size };
-    for (size_t i = 0; i < sp.size(); ++i) {
-      sp[i] = i;
+    [[clang::unsafe_buffer_usage]]
+    void baz(int *buf, size_t size) {
+      std::span<int> sp{ buf, size };
+      for (size_t i = 0; i < sp.size(); ++i) {
+        sp[i] = i;
+      }
     }
-  }
 
-In this case ``baz()`` does not contain any unsafe operations, but the awkward
-parameter type causes the caller to unwrap the span unnecessarily.
-Note that regardless of the attribute, code inside ``baz()`` isn't flagged
-by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
-but if ``baz()`` is on an API surface, there is no way to improve it
-to make it as safe as ``bar()`` without breaking the source and binary
-compatibility with existing users of the function. In such cases
-the proper solution would be to create a different function (possibly
-an overload of ``baz()``) that accepts a safe container like ``bar()``,
-and then use the attribute on the original ``baz()`` to help the users
-update their code to use the new function.
+  In this case ``baz()`` does not contain any unsafe operations, but the awkward
+  parameter type causes the caller to unwrap the span unnecessarily.
+  Note that regardless of the attribute, code inside ``baz()`` isn't flagged
+  by ``-Wunsafe-buffer-usage`` as unsafe. It is definitely undesirable,
+  but if ``baz()`` is on an API surface, there is no way to improve it
+  to make it as safe as ``bar()`` without breaking the source and binary
+  compatibility with existing users of the function. In such cases
+  the proper solution would be to create a different function (possibly
+  an overload of ``baz()``) that accepts a safe container like ``bar()``,
+  and then use the attribute on the original ``baz()`` to help the users
+  update their code to use the new function.
+
+* Attribute attached to fields: The attribute should only be attached to 
+  struct fields, if the fields can not be updated to a safe type with bounds 
+  check, such as std::span. In other words, the buffers prone to unsafe accesses 
+  should always be updated to use safe containers/views and attaching the attribute 
+  must be last resort when such an update is infeasible.
+
+  The attribute can be placed on individual fields or a set of them as shown below.
+
+  .. code-block:: c++
+
+    struct A {
+      [[clang::unsafe_buffer_usage]]
+      int *ptr1;
+
+      [[clang::unsafe_buffer_usage]]
+      int *ptr2, buf[10];
+
+      [[clang::unsafe_buffer_usage]]
+      size_t sz;
+    };
+
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
+
   }];
 }
 
@@ -7314,6 +7421,43 @@ flag.
   }];
 }
 
+def WaveSizeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``WaveSize`` attribute specify a wave size on a shader entry point in order
+to indicate either that a shader depends on or strongly prefers a specific wave
+size.
+There're 2 versions of the attribute: ``WaveSize`` and ``RangedWaveSize``.
+The syntax for ``WaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<numLanes>)]``
+
+The allowed wave sizes that an HLSL shader may specify are the powers of 2
+between 4 and 128, inclusive.
+In other words, the set: [4, 8, 16, 32, 64, 128].
+
+The syntax for ``RangedWaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<minWaveSize>, <maxWaveSize>, [prefWaveSize])]``
+
+Where minWaveSize is the minimum wave size supported by the shader representing
+the beginning of the allowed range, maxWaveSize is the maximum wave size
+supported by the shader representing the end of the allowed range, and
+prefWaveSize is the optional preferred wave size representing the size expected
+to be the most optimal for this shader.
+
+``WaveSize`` is available for HLSL shader model 6.6 and later.
+``RangedWaveSize`` available for HLSL shader model 6.8 and later.
+
+The full documentation is available here: https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_WaveSize.html
+and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
+  }];
+}
+
 def NumThreadsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -7343,6 +7487,100 @@ by shader target with the ``-T`` option like ``-Tps_6_1``. When compiling to a
 library target like ``lib_6_3``, the shader type attribute can help the
 compiler to identify the shader type. It is mostly used by Raytracing shaders
 where shaders must be compiled into a library and linked at runtime.
+  }];
+}
+
+def HLSLLoopHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[loop]";
+  let Content = [{
+The ``[loop]`` directive allows loop optimization hints to be
+specified for the subsequent loop. The directive allows unrolling to
+be disabled and is not compatible with [unroll(x)]. 
+
+Specifying the parameter, ``[loop]``, directs the
+unroller to not unroll the loop. 
+
+.. code-block:: hlsl
+
+  [loop]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
+def HLSLUnrollHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[unroll(x)], [unroll]";
+  let Content = [{
+Loop unrolling optimization hints can be specified with ``[unroll(x)]``
+. The attribute is placed immediately before a for, while,
+or do-while.
+Specifying the parameter, ``[unroll(_value_)]``, directs the
+unroller to unroll the loop ``_value_`` times. Note: [unroll(x)] is not compatible with [loop].
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  do {
+    ...
+  } while (...)
+
+.. code-block:: hlsl
+
+  [unroll]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
   }];
 }
 
@@ -7405,7 +7643,8 @@ b for constant buffer views (CBV).
 
 Register space is specified in the format ``space[number]`` and defaults to ``space0`` if omitted.
 Here're resource binding examples with and without space:
-.. code-block:: c++
+
+.. code-block:: hlsl
 
   RWBuffer<float> Uav : register(u3, space1);
   Buffer<float> Buf : register(t1);
@@ -7423,7 +7662,7 @@ A subcomponent is a register number, which is an integer. A component is in the 
 
 Examples:
 
-.. code-block:: c++
+.. code-block:: hlsl
 
   cbuffer A {
     float3 a : packoffset(c0.y);
@@ -8016,6 +8255,101 @@ but do not pass them to the underlying coroutine or pass them by value.
 }];
 }
 
+def CoroAwaitElidableDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_await_elidable]]`` is a class attribute which can be
+applied to a coroutine return type. It provides a hint to the compiler to apply
+Heap Allocation Elision more aggressively.
+
+When a coroutine function returns such a type, a direct call expression therein
+that returns a prvalue of a type attributed ``[[clang::coro_await_elidable]]``
+is said to be under a safe elide context if one of the following is true:
+- it is the immediate right-hand side operand to a co_await expression.
+- it is an argument to a ``[[clang::coro_await_elidable_argument]]`` parameter
+or parameter pack of another direct call expression under a safe elide context.
+
+Do note that the safe elide context applies only to the call expression itself,
+and the context does not transitively include any of its subexpressions unless
+exceptional rules of ``[[clang::coro_await_elidable_argument]]`` apply.
+
+The compiler performs heap allocation elision on call expressions under a safe
+elide context, if the callee is a coroutine.
+
+Example:
+
+.. code-block:: c++
+
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  Task foo();
+  Task bar() {
+    co_await foo(); // foo()'s coroutine frame on this line is elidable
+    auto t = foo(); // foo()'s coroutine frame on this line is NOT elidable
+    co_await t;
+  }
+
+Such elision replaces the heap allocated activation frame of the callee coroutine
+with a local variable within the enclosing braces in the caller's stack frame.
+The local variable, like other variables in coroutines, may be collected into the
+coroutine frame, which may be allocated on the heap. The behavior is undefined
+if the caller coroutine is destroyed earlier than the callee coroutine.
+
+}];
+}
+
+def CoroAwaitElidableArgumentDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+
+The ``[[clang::coro_await_elidable_argument]]`` is a function parameter attribute.
+It works in conjunction with ``[[clang::coro_await_elidable]]`` to propagate a
+safe elide context to a parameter or parameter pack if the function is called
+under a safe elide context.
+
+This is sometimes necessary on utility functions used to compose or modify the
+behavior of a callee coroutine.
+
+Example:
+
+.. code-block:: c++
+
+  template <typename T>
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  template <typename... T>
+  class [[clang::coro_await_elidable]] WhenAll { ... };
+
+  // `when_all` is a utility function that composes coroutines. It does not
+  // need to be a coroutine to propagate.
+  template <typename... T>
+  WhenAll<T...> when_all([[clang::coro_await_elidable_argument]] Task<T> tasks...);
+
+  Task<int> foo();
+  Task<int> bar();
+  Task<void> example1() {
+    // `when_all``, `foo``, and `bar` are all elide safe because `when_all` is
+    // under a safe elide context and, thanks to the [[clang::coro_await_elidable_argument]]
+    // attribute, such context is propagated to foo and bar.
+    co_await when_all(foo(), bar());
+  }
+
+  Task<void> example2() {
+    // `when_all` and `bar` are elide safe. `foo` is not elide safe.
+    auto f = foo();
+    co_await when_all(f, bar());
+  }
+
+
+  Task<void> example3() {
+    // None of the calls are elide safe.
+    auto t = when_all(foo(), bar());
+    co_await t;
+  }
+
+}];
+}
+
 def CountedByDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
@@ -8175,4 +8509,3 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
-

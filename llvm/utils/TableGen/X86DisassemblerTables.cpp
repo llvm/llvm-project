@@ -268,6 +268,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ));
   case IC_EVEX_W:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W));
   case IC_EVEX_W_XS:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
@@ -454,6 +455,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ_B));
   case IC_EVEX_W_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE_B) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_B));
   case IC_EVEX_W_XS_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
@@ -575,6 +577,31 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_W_NF:
   case IC_EVEX_W_B_NF:
     return false;
+  case IC_EVEX_B_U:
+  case IC_EVEX_XS_B_U:
+  case IC_EVEX_XD_B_U:
+  case IC_EVEX_OPSIZE_B_U:
+  case IC_EVEX_W_B_U:
+  case IC_EVEX_W_XS_B_U:
+  case IC_EVEX_W_XD_B_U:
+  case IC_EVEX_W_OPSIZE_B_U:
+  case IC_EVEX_K_B_U:
+  case IC_EVEX_XS_K_B_U:
+  case IC_EVEX_XD_K_B_U:
+  case IC_EVEX_OPSIZE_K_B_U:
+  case IC_EVEX_W_K_B_U:
+  case IC_EVEX_W_XS_K_B_U:
+  case IC_EVEX_W_XD_K_B_U:
+  case IC_EVEX_W_OPSIZE_K_B_U:
+  case IC_EVEX_KZ_B_U:
+  case IC_EVEX_XS_KZ_B_U:
+  case IC_EVEX_XD_KZ_B_U:
+  case IC_EVEX_OPSIZE_KZ_B_U:
+  case IC_EVEX_W_KZ_B_U:
+  case IC_EVEX_W_XS_KZ_B_U:
+  case IC_EVEX_W_XD_KZ_B_U:
+  case IC_EVEX_W_OPSIZE_KZ_B_U:
+    return false;
   default:
     errs() << "Unknown instruction class: "
            << stringForContext((InstructionContext)parent) << "\n";
@@ -685,7 +712,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
                                            unsigned &i1, unsigned &i2,
                                            unsigned &ModRMTableNum,
                                            ModRMDecision &decision) const {
-  static uint32_t sEntryNumber = 1;
+  static uint64_t sEntryNumber = 1;
   ModRMDecisionType dt = getDecisionType(decision);
 
   if (dt == MODRM_ONEENTRY && decision.instructionIDs[0] == 0) {
@@ -760,9 +787,9 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     break;
   }
 
-  // We assume that the index can fit into uint16_t.
-  assert(sEntryNumber < 65536U &&
-         "Index into ModRMDecision is too large for uint16_t!");
+  // We assume that the index can fit into uint32_t.
+  assert(sEntryNumber < -1U &&
+         "Index into ModRMDecision is too large for uint32_t!");
   (void)sEntryNumber;
 }
 
@@ -926,7 +953,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
       else
         o << "IC_VEX";
 
-      if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
+      if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+        ; // Ignore ATTR_VEXL and ATTR_EVEXL2 under YMM rounding.
+      else if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
         o << "_L2";
       else if (index & ATTR_VEXL)
         o << "_L";
@@ -949,6 +978,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
 
         if (index & ATTR_EVEXB)
           o << "_B";
+
+        if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+          o << "_U";
       }
     } else if ((index & ATTR_64BIT) && (index & ATTR_REX2))
       o << "IC_64BIT_REX2";
@@ -1062,11 +1094,11 @@ void DisassemblerTables::emit(raw_ostream &o) const {
   i1--;
   emitContextDecisions(o1, o2, i1, i2, ModRMTableNum);
 
-  o << o1.str();
+  o << s1;
   o << "  0x0\n";
   o << "};\n";
   o << "\n";
-  o << o2.str();
+  o << s2;
   o << "\n";
   o << "\n";
 }

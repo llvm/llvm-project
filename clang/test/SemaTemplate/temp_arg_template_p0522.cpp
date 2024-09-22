@@ -126,3 +126,21 @@ namespace GH62529 {
   template<class T4> B<A, T4> f();
   auto t = f<int>();
 } // namespace GH62529
+
+namespace GH101394 {
+  struct X {};
+  struct Y {
+    constexpr Y(const X &) {}
+  };
+
+  namespace t1 {
+    template<template<X> class> struct A {};
+    template<Y> struct B;
+    template struct A<B>;
+  } // namespace t1
+  namespace t2 {
+    template<template<Y> class> struct A {};
+    template<X> struct B;
+    template struct A<B>; // expected-error {{different template parameters}}
+  } // namespace t2
+} // namespace GH101394

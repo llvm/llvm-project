@@ -267,7 +267,7 @@ define i32 @reduction_and_or(i16 %a, i32 %b, ptr %src) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ poison, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 992, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

@@ -35,7 +35,8 @@ class Prescanner {
 public:
   Prescanner(Messages &, CookedSource &, Preprocessor &,
       common::LanguageFeatureControl);
-  Prescanner(const Prescanner &, bool isNestedInIncludeDirective);
+  Prescanner(
+      const Prescanner &, Preprocessor &, bool isNestedInIncludeDirective);
   Prescanner(const Prescanner &) = delete;
   Prescanner(Prescanner &&) = delete;
 
@@ -74,6 +75,9 @@ public:
 
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
+  // 'first' is the sentinel, 'second' is beginning of payload
+  std::optional<std::pair<const char *, const char *>>
+  IsCompilerDirectiveSentinel(const char *p) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);

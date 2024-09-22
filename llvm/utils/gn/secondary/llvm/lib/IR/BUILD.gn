@@ -73,6 +73,7 @@ static_library("IR") {
     "ProfileSummary.cpp",
     "PseudoProbe.cpp",
     "ReplaceConstant.cpp",
+    "RuntimeLibcalls.cpp",
     "SSAContext.cpp",
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",

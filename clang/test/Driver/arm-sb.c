@@ -11,6 +11,6 @@
 
 // RUN: %clang -### -target arm-none-none-eabi %s 2>&1 | FileCheck %s --check-prefix=ABSENT
 // RUN: %clang -### -target aarch64-none-elf %s 2>&1 | FileCheck %s --check-prefix=ABSENT
-// RUN: %clang -### -target aarch64-none-elf -march=armv8.5a+nosb %s 2>&1 | FileCheck %s --check-prefix=ABSENT
+// RUN: %clang -### -target aarch64-none-elf -march=armv8.5a+nosb %s 2>&1 | FileCheck %s --check-prefix=NOSB
 // ABSENT-NOT: "-target-feature" "+sb"
 // ABSENT-NOT: "-target-feature" "-sb"

@@ -498,7 +498,7 @@ public:
                ProfileSummaryInfo *PSI = nullptr,
                OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
-        PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
+        PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
         CandidateCall(Call) {}
 
   InlineResult analyze();
@@ -2644,8 +2644,6 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
       if (!GEP->isInBounds() || !accumulateGEPOffset(*GEP, Offset))
         return nullptr;
       V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         break;
@@ -2999,7 +2997,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // alloca, the inlined code would need to be adjusted to handle that the
   // argument is in the alloca address space (so it is a little bit complicated
   // to solve).
-  unsigned AllocaAS = Callee->getParent()->getDataLayout().getAllocaAddrSpace();
+  unsigned AllocaAS = Callee->getDataLayout().getAllocaAddrSpace();
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I)
     if (Call.isByValArgument(I)) {
       PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());
@@ -3248,8 +3246,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   };
   Module *M = F.getParent();
   ProfileSummaryInfo PSI(*M);
-  DataLayout DL(M);
-  TargetTransformInfo TTI(DL);
+  TargetTransformInfo TTI(M->getDataLayout());
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.

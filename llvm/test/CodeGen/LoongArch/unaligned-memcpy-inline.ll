@@ -94,4 +94,50 @@ entry:
   ret void
 }
 
+@.str = private constant [22 x i8] c"preemption imbalance \00", align 1
+
+define void @t3() {
+; LA32-LABEL: t3:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    addi.w $sp, $sp, -64
+; LA32-NEXT:    .cfi_def_cfa_offset 64
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.L.str)
+; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.L.str)
+; LA32-NEXT:    ld.h $a1, $a0, 20
+; LA32-NEXT:    ld.w $a2, $a0, 16
+; LA32-NEXT:    st.h $a1, $sp, 20
+; LA32-NEXT:    st.w $a2, $sp, 16
+; LA32-NEXT:    ld.w $a1, $a0, 12
+; LA32-NEXT:    ld.w $a2, $a0, 8
+; LA32-NEXT:    ld.w $a3, $a0, 4
+; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    st.w $a1, $sp, 12
+; LA32-NEXT:    st.w $a2, $sp, 8
+; LA32-NEXT:    st.w $a3, $sp, 4
+; LA32-NEXT:    st.w $a0, $sp, 0
+; LA32-NEXT:    addi.w $sp, $sp, 64
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: t3:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    addi.d $sp, $sp, -64
+; LA64-NEXT:    .cfi_def_cfa_offset 64
+; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.L.str)
+; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.L.str)
+; LA64-NEXT:    ld.h $a1, $a0, 20
+; LA64-NEXT:    ld.w $a2, $a0, 16
+; LA64-NEXT:    ld.d $a3, $a0, 8
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    st.h $a1, $sp, 20
+; LA64-NEXT:    st.w $a2, $sp, 16
+; LA64-NEXT:    st.d $a3, $sp, 8
+; LA64-NEXT:    st.d $a0, $sp, 0
+; LA64-NEXT:    addi.d $sp, $sp, 64
+; LA64-NEXT:    ret
+entry:
+  %msgbuf = alloca [64 x i8], align 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %msgbuf, ptr align 1 @.str, i64 22, i1 false)
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)

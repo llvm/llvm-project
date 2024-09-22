@@ -1554,7 +1554,7 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
 
       // The alignment of the symbol itself must be at least the store size.
       const GlobalValue *GV = GA->getGlobal();
-      const DataLayout &DL = GV->getParent()->getDataLayout();
+      const DataLayout &DL = GV->getDataLayout();
       if (GV->getPointerAlignment(DL).value() < StoreSize)
         return false;
     }

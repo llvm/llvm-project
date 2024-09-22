@@ -21,7 +21,7 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFO_H
 
-#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -44,7 +44,6 @@ class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
-class CallBase;
 class Function;
 class GlobalValue;
 class InstCombiner;
@@ -59,12 +58,11 @@ class ProfileSummaryInfo;
 class RecurrenceDescriptor;
 class SCEV;
 class ScalarEvolution;
+class SmallBitVector;
 class StoreInst;
 class SwitchInst;
 class TargetLibraryInfo;
 class Type;
-class User;
-class Value;
 class VPIntrinsic;
 struct KnownBits;
 
@@ -418,6 +416,12 @@ public:
   /// this factor, it is very likely to be predicted correctly.
   BranchProbability getPredictableBranchThreshold() const;
 
+  /// Returns estimated penalty of a branch misprediction in latency. Indicates
+  /// how aggressive the target wants for eliminating unpredictable branches. A
+  /// zero return value means extra optimization applied to them should be
+  /// minimal.
+  InstructionCost getBranchMispredictPenalty() const;
+
   /// Return true if branch divergence exists.
   ///
   /// Branch divergence has a significantly negative impact on GPU performance
@@ -735,11 +739,6 @@ public:
   /// cost should return false, otherwise return true.
   bool isNumRegsMajorCostOfLSR() const;
 
-  /// Return true if LSR should attempts to replace a use of an otherwise dead
-  /// primary IV in the latch condition with another IV available in the loop.
-  /// When successful, makes the primary IV dead.
-  bool shouldFoldTerminatingConditionAfterLSR() const;
-
   /// Return true if LSR should drop a found solution if it's calculated to be
   /// less profitable than the baseline.
   bool shouldDropLSRSolutionIfLessProfitable() const;
@@ -882,6 +881,8 @@ public:
   /// Return true if the input function which is cold at all call sites,
   ///  should use coldcc calling convention.
   bool useColdCCForColdCall(Function &F) const;
+
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1113,6 +1114,10 @@ public:
   /// \return the number of registers in the target-provided register class.
   unsigned getNumberOfRegisters(unsigned ClassID) const;
 
+  /// \return true if the target supports load/store that enables fault
+  /// suppression of memory operands when the source condition is false.
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
+
   /// \return the target-provided register class ID for the provided type,
   /// accounting for type promotion and other type-legalization techniques that
   /// the target might apply. However, it specifically does not account for the
@@ -1274,8 +1279,7 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr,
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr,
       const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
@@ -1298,11 +1302,12 @@ public:
   /// passed through \p Args, which helps improve the cost estimation in some
   /// cases, like in broadcast loads.
   /// NOTE: For subvector extractions Tp represents the source type.
-  InstructionCost getShuffleCost(
-      ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = std::nullopt,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
-      VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr) const;
+  InstructionCost
+  getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = {},
+                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                 int Index = 0, VectorType *SubTp = nullptr,
+                 ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1576,7 +1581,7 @@ public:
   /// \returns The type to use in a loop expansion of a memcpy call.
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize = std::nullopt) const;
 
   /// \param[out] OpsOut The operand types to copy RemainingBytes of memory.
@@ -1588,7 +1593,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize = std::nullopt) const;
 
   /// \returns True if the two functions have compatible attributes for inlining
@@ -1674,6 +1679,11 @@ public:
         false; ///< If op is an fp min/max, whether NaNs may be present.
   };
 
+  /// \returns True if the targets prefers fixed width vectorization if the
+  /// loop vectorizer's cost-model assigns an equal cost to the fixed and
+  /// scalable version of the vectorized loop.
+  bool preferFixedOverScalableIfEqualCost() const;
+
   /// \returns True if the target prefers reductions in loop.
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
@@ -1699,6 +1709,13 @@ public:
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   bool shouldExpandReduction(const IntrinsicInst *II) const;
+
+  enum struct ReductionShuffle { SplitHalf, Pairwise };
+
+  /// \returns The shuffle sequence pattern used to expand the given reduction
+  /// intrinsic.
+  ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const;
 
   /// \returns the size cost of rematerializing a GlobalValue address relative
   /// to a stack reload.
@@ -1815,6 +1832,7 @@ public:
                                              ArrayRef<const Value *> Operands,
                                              TargetCostKind CostKind) = 0;
   virtual BranchProbability getPredictableBranchThreshold() = 0;
+  virtual InstructionCost getBranchMispredictPenalty() = 0;
   virtual bool hasBranchDivergence(const Function *F = nullptr) = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
@@ -1867,7 +1885,6 @@ public:
   virtual bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
-  virtual bool shouldFoldTerminatingConditionAfterLSR() const = 0;
   virtual bool shouldDropLSRSolutionIfLessProfitable() const = 0;
   virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
@@ -1913,6 +1930,7 @@ public:
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool shouldBuildRelLookupTables() = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
+  virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) = 0;
   virtual InstructionCost getScalarizationOverhead(VectorType *Ty,
                                                    const APInt &DemandedElts,
                                                    bool Insert, bool Extract,
@@ -1956,6 +1974,7 @@ public:
   virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
+  virtual bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
@@ -2108,13 +2127,13 @@ public:
                                                    Type *ExpectedType) = 0;
   virtual Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const = 0;
 
   virtual void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
@@ -2143,6 +2162,7 @@ public:
   virtual unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
+  virtual bool preferFixedOverScalableIfEqualCost() const = 0;
   virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
@@ -2150,6 +2170,8 @@ public:
   virtual bool preferEpilogueVectorization() const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
+  virtual ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const = 0;
   virtual unsigned getGISelRematGlobalCost() const = 0;
   virtual unsigned getMinTripCountTailFoldingThreshold() const = 0;
   virtual bool enableScalableVectorization() const = 0;
@@ -2221,6 +2243,9 @@ public:
   }
   BranchProbability getPredictableBranchThreshold() override {
     return Impl.getPredictableBranchThreshold();
+  }
+  InstructionCost getBranchMispredictPenalty() override {
+    return Impl.getBranchMispredictPenalty();
   }
   bool hasBranchDivergence(const Function *F = nullptr) override {
     return Impl.hasBranchDivergence(F);
@@ -2339,9 +2364,6 @@ public:
   bool isNumRegsMajorCostOfLSR() override {
     return Impl.isNumRegsMajorCostOfLSR();
   }
-  bool shouldFoldTerminatingConditionAfterLSR() const override {
-    return Impl.shouldFoldTerminatingConditionAfterLSR();
-  }
   bool shouldDropLSRSolutionIfLessProfitable() const override {
     return Impl.shouldDropLSRSolutionIfLessProfitable();
   }
@@ -2448,7 +2470,9 @@ public:
   bool useColdCCForColdCall(Function &F) override {
     return Impl.useColdCCForColdCall(F);
   }
-
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) override {
+    return Impl.isTargetIntrinsicTriviallyScalarizable(ID);
+  }
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
@@ -2542,6 +2566,9 @@ public:
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
+  }
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const override {
+    return Impl.hasConditionalLoadStoreForType(Ty);
   }
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {
@@ -2804,7 +2831,7 @@ public:
   }
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const override {
     return Impl.getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                           DestAddrSpace, SrcAlign, DestAlign,
@@ -2813,7 +2840,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const override {
     Impl.getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                            SrcAddrSpace, DestAddrSpace,
@@ -2873,6 +2900,9 @@ public:
                                 VectorType *VecTy) const override {
     return Impl.getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
   }
+  bool preferFixedOverScalableIfEqualCost() const override {
+    return Impl.preferFixedOverScalableIfEqualCost();
+  }
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
     return Impl.preferInLoopReduction(Opcode, Ty, Flags);
@@ -2887,6 +2917,11 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return Impl.shouldExpandReduction(II);
+  }
+
+  ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const override {
+    return Impl.getPreferredExpandedReductionShuffle(II);
   }
 
   unsigned getGISelRematGlobalCost() const override {

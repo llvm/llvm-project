@@ -15,6 +15,11 @@ export namespace std {
   // [mdspan.extents.dextents], alias template dextents
   using std::dextents;
 
+#  if _LIBCPP_STD_VER >= 26
+  // [mdspan.extents.dims]
+  using std::dims;
+#  endif // _LIBCPP_STD_VER >= 26
+
   // [mdspan.layout], layout mapping
   using std::layout_left;
   using std::layout_right;

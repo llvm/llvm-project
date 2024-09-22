@@ -12,7 +12,7 @@
 #include "RISCVTargetStreamer.h"
 #include "llvm/MC/MCELFStreamer.h"
 
-using namespace llvm;
+namespace llvm {
 
 class RISCVELFStreamer : public MCELFStreamer {
   void reset() override;
@@ -22,7 +22,6 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
-  int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
 
@@ -38,8 +37,6 @@ public:
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 };
-
-namespace llvm {
 
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {
 private:
@@ -76,5 +73,6 @@ MCELFStreamer *createRISCVELFStreamer(MCContext &C,
                                       std::unique_ptr<MCAsmBackend> MAB,
                                       std::unique_ptr<MCObjectWriter> MOW,
                                       std::unique_ptr<MCCodeEmitter> MCE);
-}
-#endif
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H

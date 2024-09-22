@@ -3,7 +3,7 @@
 import os
 
 # Setup config name.
-config.name = "SafeStack"
+config.name = "SafeStack-" + config.name_suffix
 
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
@@ -33,5 +33,5 @@ if config.lto_supported:
         )
     )
 
-if config.host_os not in ["Linux", "FreeBSD", "NetBSD"]:
+if config.host_os not in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
     config.unsupported = True

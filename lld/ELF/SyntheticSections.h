@@ -523,7 +523,8 @@ public:
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
-  void addAddendOnlyRelocIfNonPreemptible(RelType dynType, GotSection &sec,
+  void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
+                                          InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
@@ -532,7 +533,7 @@ public:
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
-    if (config->writeAddends && (expr != R_ADDEND || addend != 0))
+    if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
     addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
   }
@@ -548,7 +549,9 @@ public:
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) &&
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR);
+            d->type == llvm::ELF::SHT_RELR ||
+            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
+             ctx.arg.emachine == llvm::ELF::EM_AARCH64));
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
@@ -596,15 +599,17 @@ private:
 };
 
 struct RelativeReloc {
-  uint64_t getOffset() const { return inputSec->getVA(offsetInSec); }
+  uint64_t getOffset() const {
+    return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
+  }
 
   const InputSectionBase *inputSec;
-  uint64_t offsetInSec;
+  size_t relocIdx;
 };
 
 class RelrBaseSection : public SyntheticSection {
 public:
-  RelrBaseSection(unsigned concurrency);
+  RelrBaseSection(unsigned concurrency, bool isAArch64Auth = false);
   void mergeRels();
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -622,7 +627,7 @@ template <class ELFT> class RelrSection final : public RelrBaseSection {
   using Elf_Relr = typename ELFT::Relr;
 
 public:
-  RelrSection(unsigned concurrency);
+  RelrSection(unsigned concurrency, bool isAArch64Auth = false);
 
   bool updateAllocSize() override;
   size_t getSize() const override { return relrRelocs.size() * this->entsize; }
@@ -912,8 +917,9 @@ public:
   void writeTo(uint8_t *buf) override;
 
   template <class RelTy>
-  void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
-                     llvm::DenseMap<uint32_t, uint32_t> &relocs);
+  void getNameRelocs(const InputFile &file,
+                     llvm::DenseMap<uint32_t, uint32_t> &relocs,
+                     Relocs<RelTy> rels);
 
 private:
   static void readOffsets(InputChunk &inputChunk, OutputChunk &chunk,
@@ -1184,7 +1190,7 @@ private:
 class MipsRldMapSection final : public SyntheticSection {
 public:
   MipsRldMapSection();
-  size_t getSize() const override { return config->wordsize; }
+  size_t getSize() const override { return ctx.arg.wordsize; }
   void writeTo(uint8_t *buf) override {}
 };
 
@@ -1460,57 +1466,18 @@ struct Partition {
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<RelrBaseSection> relrAuthDyn;
   std::unique_ptr<VersionDefinitionSection> verDef;
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;
 
-  unsigned getNumber() const { return this - &partitions[0] + 1; }
+  unsigned getNumber() const { return this - &ctx.partitions[0] + 1; }
 };
-
-LLVM_LIBRARY_VISIBILITY extern Partition *mainPart;
 
 inline Partition &SectionBase::getPartition() const {
   assert(isLive());
-  return partitions[partition - 1];
+  return ctx.partitions[partition - 1];
 }
-
-// Linker generated sections which can be used as inputs and are not specific to
-// a partition.
-struct InStruct {
-  std::unique_ptr<InputSection> attributes;
-  std::unique_ptr<SyntheticSection> riscvAttributes;
-  std::unique_ptr<BssSection> bss;
-  std::unique_ptr<BssSection> bssRelRo;
-  std::unique_ptr<GotSection> got;
-  std::unique_ptr<GotPltSection> gotPlt;
-  std::unique_ptr<IgotPltSection> igotPlt;
-  std::unique_ptr<RelroPaddingSection> relroPadding;
-  std::unique_ptr<SyntheticSection> armCmseSGSection;
-  std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
-  std::unique_ptr<SyntheticSection> mipsAbiFlags;
-  std::unique_ptr<MipsGotSection> mipsGot;
-  std::unique_ptr<SyntheticSection> mipsOptions;
-  std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
-  std::unique_ptr<SyntheticSection> partEnd;
-  std::unique_ptr<SyntheticSection> partIndex;
-  std::unique_ptr<PltSection> plt;
-  std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
-  std::unique_ptr<RelocationBaseSection> relaPlt;
-  // Non-SHF_ALLOC sections
-  std::unique_ptr<SyntheticSection> debugNames;
-  std::unique_ptr<GdbIndexSection> gdbIndex;
-  std::unique_ptr<StringTableSection> shStrTab;
-  std::unique_ptr<StringTableSection> strTab;
-  std::unique_ptr<SymbolTableBaseSection> symTab;
-  std::unique_ptr<SymtabShndxSection> symTabShndx;
-
-  void reset();
-};
-
-LLVM_LIBRARY_VISIBILITY extern InStruct in;
 
 } // namespace lld::elf
 

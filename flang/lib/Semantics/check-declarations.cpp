@@ -247,7 +247,18 @@ void CheckHelper::Check(
   }
 }
 
+static bool IsBlockData(const Scope &scope) {
+  return scope.kind() == Scope::Kind::BlockData;
+}
+
+static bool IsBlockData(const Symbol &symbol) {
+  return symbol.scope() && IsBlockData(*symbol.scope());
+}
+
 void CheckHelper::Check(const Symbol &symbol) {
+  if (symbol.has<UseErrorDetails>()) {
+    return;
+  }
   if (symbol.name().size() > common::maxNameLen &&
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {
@@ -397,9 +408,10 @@ void CheckHelper::Check(const Symbol &symbol) {
             messages_.Say(
                 "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
           }
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             SayWithDeclaration(*bad,
-                "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
+                "Result of pure function may not have polymorphic ALLOCATABLE potential component '%s'"_err_en_US,
                 bad.BuildResultDesignatorName());
           }
         }
@@ -463,6 +475,23 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "Automatic data object '%s' may not appear in a module"_err_en_US,
           symbol.name());
+    } else if (IsBlockData(symbol.owner())) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in a BLOCK DATA subprogram"_err_en_US,
+          symbol.name());
+    } else if (symbol.owner().kind() == Scope::Kind::MainProgram) {
+      if (context_.IsEnabled(common::LanguageFeature::AutomaticInMainProgram)) {
+        if (context_.ShouldWarn(
+                common::LanguageFeature::AutomaticInMainProgram)) {
+          messages_.Say(
+              "Automatic data object '%s' should not appear in the specification part of a main program"_port_en_US,
+              symbol.name());
+        }
+      } else {
+        messages_.Say(
+            "Automatic data object '%s' may not appear in the specification part of a main program"_err_en_US,
+            symbol.name());
+      }
     }
   }
   if (IsProcedure(symbol)) {
@@ -762,13 +791,10 @@ void CheckHelper::CheckObjectEntity(
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
       const Symbol *ownerSymbol{symbol.owner().symbol()};
-      const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
-      bool inInterface{ownerSubp && ownerSubp->isInterface()};
-      bool inExplicitInterface{
-          inInterface && !IsSeparateModuleProcedureInterface(ownerSymbol)};
-      bool inModuleProc{
-          !inInterface && ownerSymbol && IsModuleProcedure(*ownerSymbol)};
-      if (!inExplicitInterface && !inModuleProc) {
+      bool inModuleProc{ownerSymbol && IsModuleProcedure(*ownerSymbol)};
+      bool inExplicitExternalInterface{
+          InInterface() && !IsSeparateModuleProcedureInterface(ownerSymbol)};
+      if (!InInterface() && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
       }
@@ -779,7 +805,7 @@ void CheckHelper::CheckObjectEntity(
       }
       if (IsPassedViaDescriptor(symbol)) {
         if (IsAllocatableOrObjectPointer(&symbol)) {
-          if (inExplicitInterface) {
+          if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
@@ -794,7 +820,7 @@ void CheckHelper::CheckObjectEntity(
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
             }
-          } else if (inExplicitInterface) {
+          } else if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor"_warn_en_US);
@@ -884,7 +910,7 @@ void CheckHelper::CheckObjectEntity(
       if (auto *msg{messages_.Say(
               "'%s' may not be a local variable in a pure subprogram"_err_en_US,
               symbol.name())}) {
-        msg->Attach(std::move(*whyNot));
+        msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       }
     }
   }
@@ -1561,8 +1587,11 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
             } else if (!globalChars->CanBeCalledViaImplicitInterface() &&
                 context_.ShouldWarn(
                     common::UsageWarning::ExternalInterfaceMismatch)) {
-              msg = messages_.Say(
-                  "The global subprogram '%s' may not be referenced via the implicit interface '%s'"_err_en_US,
+              // TODO: This should be a hard error if the procedure has
+              // actually been called (as opposed to just being used as a
+              // procedure pointer target or passed as an actual argument).
+              msg = WarnIfNotInModuleFile(
+                  "The global subprogram '%s' should not be referenced via the implicit interface '%s'"_warn_en_US,
                   global->name(), symbol.name());
             }
           }
@@ -2490,7 +2519,7 @@ void CheckHelper::CheckProcBinding(
                 ? "A NOPASS type-bound procedure may not override a passed-argument procedure"_err_en_US
                 : "A passed-argument type-bound procedure may not override a NOPASS procedure"_err_en_US);
       } else {
-        const auto *bindingChars{Characterize(binding.symbol())};
+        const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
           if (isNopass) {
@@ -2802,10 +2831,6 @@ static bool IsSubprogramDefinition(const Symbol &symbol) {
       symbol.scope()->kind() == Scope::Kind::Subprogram;
 }
 
-static bool IsBlockData(const Symbol &symbol) {
-  return symbol.scope() && symbol.scope()->kind() == Scope::Kind::BlockData;
-}
-
 static bool IsExternalProcedureDefinition(const Symbol &symbol) {
   return IsBlockData(symbol) ||
       (IsSubprogramDefinition(symbol) &&
@@ -2922,7 +2947,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
     if (derived->sequence()) { // C1801
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have the SEQUENCE attribute"_err_en_US);
-    } else if (!derived->paramDecls().empty()) { // C1802
+    } else if (!derived->paramNameOrder().empty()) { // C1802
       msgs.Say(symbol.name(),
           "An interoperable derived type cannot have a type parameter"_err_en_US);
     } else if (const auto *parent{
@@ -2981,16 +3006,17 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
           } else {
             msgs.Annex(std::move(bad));
           }
-        } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())) {
-          auto maybeDyType{evaluate::DynamicType::From(*type)};
+        } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+                   !evaluate::IsInteroperableIntrinsicType(
+                       *dyType, &context_.languageFeatures())
+                        .value_or(false)) {
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
               msgs.Say(component.name(),
                   "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
             }
-          } else if (type->category() == DeclTypeSpec::Character &&
-              maybeDyType && maybeDyType->kind() == 1) {
+          } else if (type->category() == DeclTypeSpec::Character && dyType &&
+              dyType->kind() == 1) {
             if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
               msgs.Say(component.name(),
                   "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
@@ -3083,9 +3109,15 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
-    } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())) {
+    } else if (derived) { // type has been checked
+    } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+               evaluate::IsInteroperableIntrinsicType(*dyType,
+                   InModuleFile() ? nullptr : &context_.languageFeatures())
+                   .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
+      // N.B. Language features are not passed to IsInteroperableIntrinsicType
+      // when processing a module file, since the module file might have been
+      // compiled with CUDA while the client is not.
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&
           !InModuleFile()) {

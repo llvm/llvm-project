@@ -62,10 +62,10 @@ void matrix_struct_pointers(Matrix *a, Matrix *b) {
   // CHECK-NEXT:    store ptr %a, ptr %a.addr, align 8
   // CHECK-NEXT:    store ptr %b, ptr %b.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %a.addr, align 8
-  // CHECK-NEXT:    %Data = getelementptr inbounds %struct.Matrix, ptr %0, i32 0, i32 1
+  // CHECK-NEXT:    %Data = getelementptr inbounds nuw %struct.Matrix, ptr %0, i32 0, i32 1
   // CHECK-NEXT:    %1 = load <12 x float>, ptr %Data, align 4
   // CHECK-NEXT:    %2 = load ptr, ptr %b.addr, align 8
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %struct.Matrix, ptr %2, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %struct.Matrix, ptr %2, i32 0, i32 1
   // CHECK-NEXT:    store <12 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    ret void
   b->Data = a->Data;
@@ -79,10 +79,10 @@ void matrix_struct_reference(Matrix &a, Matrix &b) {
   // CHECK-NEXT:    store ptr %a, ptr %a.addr, align 8
   // CHECK-NEXT:    store ptr %b, ptr %b.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %a.addr, align 8
-  // CHECK-NEXT:    %Data = getelementptr inbounds %struct.Matrix, ptr %0, i32 0, i32 1
+  // CHECK-NEXT:    %Data = getelementptr inbounds nuw %struct.Matrix, ptr %0, i32 0, i32 1
   // CHECK-NEXT:    %1 = load <12 x float>, ptr %Data, align 4
   // CHECK-NEXT:    %2 = load ptr, ptr %b.addr, align 8
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %struct.Matrix, ptr %2, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %struct.Matrix, ptr %2, i32 0, i32 1
   // CHECK-NEXT:    store <12 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    ret void
   b.Data = a.Data;
@@ -103,10 +103,10 @@ void matrix_class_reference(MatrixClass &a, MatrixClass &b) {
   // CHECK-NEXT:    store ptr %a, ptr %a.addr, align 8
   // CHECK-NEXT:    store ptr %b, ptr %b.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %a.addr, align 8
-  // CHECK-NEXT:    %Data = getelementptr inbounds %class.MatrixClass, ptr %0, i32 0, i32 1
+  // CHECK-NEXT:    %Data = getelementptr inbounds nuw %class.MatrixClass, ptr %0, i32 0, i32 1
   // CHECK-NEXT:    %1 = load <12 x float>, ptr %Data, align 4
   // CHECK-NEXT:    %2 = load ptr, ptr %b.addr, align 8
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %class.MatrixClass, ptr %2, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %class.MatrixClass, ptr %2, i32 0, i32 1
   // CHECK-NEXT:    store <12 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    ret void
   b.Data = a.Data;
@@ -134,7 +134,7 @@ MatrixClassTemplate<float, 10, 15> matrix_template_reference_caller(float *Data)
   // CHECK-NEXT:    store ptr %Data, ptr %Data.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %Data.addr, align 8
   // CHECK-NEXT:    %1 = load <150 x float>, ptr %0, align 4
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %class.MatrixClassTemplate, ptr %Arg, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %class.MatrixClassTemplate, ptr %Arg, i32 0, i32 1
   // CHECK-NEXT:    store <150 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    call void @_Z25matrix_template_referenceIfLj10ELj15EEvR19MatrixClassTemplateIT_XT0_EXT1_EES3_(ptr nonnull align 8 dereferenceable(616) %Arg, ptr nonnull align 8 dereferenceable(616) %agg.result)
   // CHECK-NEXT:    ret void
@@ -146,10 +146,10 @@ MatrixClassTemplate<float, 10, 15> matrix_template_reference_caller(float *Data)
   // CHECK-NEXT:    store ptr %a, ptr %a.addr, align 8
   // CHECK-NEXT:    store ptr %b, ptr %b.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %a.addr, align 8
-  // CHECK-NEXT:    %Data = getelementptr inbounds %class.MatrixClassTemplate, ptr %0, i32 0, i32 1
+  // CHECK-NEXT:    %Data = getelementptr inbounds nuw %class.MatrixClassTemplate, ptr %0, i32 0, i32 1
   // CHECK-NEXT:    %1 = load <150 x float>, ptr %Data, align 4
   // CHECK-NEXT:    %2 = load ptr, ptr %b.addr, align 8
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %class.MatrixClassTemplate, ptr %2, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %class.MatrixClassTemplate, ptr %2, i32 0, i32 1
   // CHECK-NEXT:    store <150 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    ret void
 

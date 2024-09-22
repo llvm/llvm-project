@@ -462,4 +462,17 @@ define amdgpu_kernel void @local_sextload_v64i1_to_v64i64(ptr addrspace(3) %out,
   ret void
 }
 
+; FUNC-LABEL: {{^}}local_load_i1_misaligned:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+define amdgpu_kernel void @local_load_i1_misaligned(ptr addrspace(3) %in, ptr addrspace (3) %out) #0 {
+  %in.gep.1 = getelementptr i1, ptr addrspace(3) %in, i32 1
+  %load.1 = load <16 x i1>, ptr addrspace(3) %in.gep.1, align 4
+  %load.2 = load <8 x i1>, ptr addrspace(3) %in, align 1
+  %out.gep.1 = getelementptr i1, ptr addrspace(3) %out, i32 16
+  store <16 x i1> %load.1, ptr addrspace(3) %out
+  store <8 x i1> %load.2, ptr addrspace(3) %out.gep.1
+  ret void
+}
+
 attributes #0 = { nounwind }

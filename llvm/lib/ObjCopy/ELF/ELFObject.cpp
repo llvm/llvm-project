@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -107,12 +108,29 @@ Error ELFSectionSizer<ELFT>::visit(SymbolTableSection &Sec) {
   return Error::success();
 }
 
+template <bool Is64>
+static SmallVector<char, 0> encodeCrel(ArrayRef<Relocation> Relocations) {
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  SmallVector<char, 0> Content;
+  raw_svector_ostream OS(Content);
+  ELF::encodeCrel<Is64>(OS, Relocations, [&](const Relocation &R) {
+    uint32_t CurSymIdx = R.RelocSymbol ? R.RelocSymbol->Index : 0;
+    return ELF::Elf_Crel<Is64>{static_cast<uint>(R.Offset), CurSymIdx, R.Type,
+                               std::make_signed_t<uint>(R.Addend)};
+  });
+  return Content;
+}
+
 template <class ELFT>
 Error ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
-  Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
-  Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
-  // Align to the largest field in Elf_Rel(a).
-  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+  if (Sec.Type == SHT_CREL) {
+    Sec.Size = encodeCrel<ELFT::Is64Bits>(Sec.Relocations).size();
+  } else {
+    Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
+    Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
+    // Align to the largest field in Elf_Rel(a).
+    Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+  }
   return Error::success();
 }
 
@@ -874,6 +892,8 @@ StringRef RelocationSectionBase::getNamePrefix() const {
     return ".rel";
   case SHT_RELA:
     return ".rela";
+  case SHT_CREL:
+    return ".crel";
   default:
     llvm_unreachable("not a relocation section");
   }
@@ -966,12 +986,16 @@ static void writeRel(const RelRange &Relocations, T *Buf, bool IsMips64EL) {
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const RelocationSection &Sec) {
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  if (Sec.Type == SHT_REL)
+  if (Sec.Type == SHT_CREL) {
+    auto Content = encodeCrel<ELFT::Is64Bits>(Sec.Relocations);
+    memcpy(Buf, Content.data(), Content.size());
+  } else if (Sec.Type == SHT_REL) {
     writeRel(Sec.Relocations, reinterpret_cast<Elf_Rel *>(Buf),
              Sec.getObject().IsMips64EL);
-  else
+  } else {
     writeRel(Sec.Relocations, reinterpret_cast<Elf_Rela *>(Buf),
              Sec.getObject().IsMips64EL);
+  }
   return Error::success();
 }
 
@@ -1684,6 +1708,7 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   switch (Shdr.sh_type) {
   case SHT_REL:
   case SHT_RELA:
+  case SHT_CREL:
     if (Shdr.sh_flags & SHF_ALLOC) {
       if (Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr))
         return Obj.addSection<DynamicRelocationSection>(*Data);
@@ -1861,7 +1886,15 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
 
       const typename ELFFile<ELFT>::Elf_Shdr *Shdr =
           Sections->begin() + RelSec->Index;
-      if (RelSec->Type == SHT_REL) {
+      if (RelSec->Type == SHT_CREL) {
+        auto RelsOrRelas = ElfFile.crels(*Shdr);
+        if (!RelsOrRelas)
+          return RelsOrRelas.takeError();
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->first))
+          return Err;
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->second))
+          return Err;
+      } else if (RelSec->Type == SHT_REL) {
         Expected<typename ELFFile<ELFT>::Elf_Rel_Range> Rels =
             ElfFile.rels(*Shdr);
         if (!Rels)
@@ -2169,6 +2202,11 @@ Error Object::removeSections(
         if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get())) {
           if (auto ToRelSec = RelSec->getSection())
             return !ToRemove(*ToRelSec);
+        }
+        // Remove empty group sections.
+        if (Sec->Type == ELF::SHT_GROUP) {
+          auto GroupSec = cast<GroupSection>(Sec.get());
+          return !llvm::all_of(GroupSec->members(), ToRemove);
         }
         return true;
       });

@@ -49,9 +49,11 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMatMul = false;
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
+  bool HasSVE2p1 = false;
   bool HasSVE2AES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
+  bool HasSVEB16B16 = false;
   bool HasSVE2BitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
@@ -70,6 +72,9 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSME2 = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
+  bool HasSMEF16F16 = false;
+  bool HasSMEB16B16 = false;
+  bool HasSME2p1 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;

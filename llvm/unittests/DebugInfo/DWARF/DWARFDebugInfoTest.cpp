@@ -384,15 +384,18 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   // Test reference forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(RefAddr, toReference(DieDG.find(Attr_DW_FORM_ref_addr), 0));
-  EXPECT_EQ(Data1, toReference(DieDG.find(Attr_DW_FORM_ref1), 0));
-  EXPECT_EQ(Data2, toReference(DieDG.find(Attr_DW_FORM_ref2), 0));
-  EXPECT_EQ(Data4, toReference(DieDG.find(Attr_DW_FORM_ref4), 0));
-  EXPECT_EQ(Data8, toReference(DieDG.find(Attr_DW_FORM_ref8), 0));
+  EXPECT_EQ(RefAddr,
+            toDebugInfoReference(DieDG.find(Attr_DW_FORM_ref_addr), 0));
+  EXPECT_EQ(Data1, toRelativeReference(DieDG.find(Attr_DW_FORM_ref1), 0));
+  EXPECT_EQ(Data2, toRelativeReference(DieDG.find(Attr_DW_FORM_ref2), 0));
+  EXPECT_EQ(Data4, toRelativeReference(DieDG.find(Attr_DW_FORM_ref4), 0));
+  EXPECT_EQ(Data8, toRelativeReference(DieDG.find(Attr_DW_FORM_ref8), 0));
   if (Version >= 4) {
-    EXPECT_EQ(Data8_2, toReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
+    EXPECT_EQ(Data8_2,
+              toSignatureReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
   }
-  EXPECT_EQ(UData[0], toReference(DieDG.find(Attr_DW_FORM_ref_udata), 0));
+  EXPECT_EQ(UData[0],
+            toRelativeReference(DieDG.find(Attr_DW_FORM_ref_udata), 0));
 
   //----------------------------------------------------------------------
   // Test flag forms
@@ -420,7 +423,7 @@ void TestAllForms() {
   // Test DWARF32/DWARF64 forms
   //----------------------------------------------------------------------
   EXPECT_EQ(Dwarf32Values[0],
-            toReference(DieDG.find(Attr_DW_FORM_GNU_ref_alt), 0));
+            toSupplementaryReference(DieDG.find(Attr_DW_FORM_GNU_ref_alt), 0));
   if (Version >= 4) {
     EXPECT_EQ(Dwarf32Values[1],
               toSectionOffset(DieDG.find(Attr_DW_FORM_sec_offset), 0));
@@ -761,14 +764,14 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU1Ref1DieDG.isValid());
   EXPECT_EQ(CU1Ref1DieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU1Ref1DieDG.find(DW_AT_type), -1ULL));
+            toRelativeReference(CU1Ref1DieDG.find(DW_AT_type), -1ULL));
   // Verify the sibling is our Ref2 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
   auto CU1Ref2DieDG = CU1Ref1DieDG.getSibling();
   EXPECT_TRUE(CU1Ref2DieDG.isValid());
   EXPECT_EQ(CU1Ref2DieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU1Ref2DieDG.find(DW_AT_type), -1ULL));
+            toRelativeReference(CU1Ref2DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our Ref4 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
@@ -776,7 +779,7 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU1Ref4DieDG.isValid());
   EXPECT_EQ(CU1Ref4DieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU1Ref4DieDG.find(DW_AT_type), -1ULL));
+            toRelativeReference(CU1Ref4DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our Ref8 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
@@ -784,7 +787,7 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU1Ref8DieDG.isValid());
   EXPECT_EQ(CU1Ref8DieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU1Ref8DieDG.find(DW_AT_type), -1ULL));
+            toRelativeReference(CU1Ref8DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our RefAddr DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
@@ -792,7 +795,7 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU1RefAddrDieDG.isValid());
   EXPECT_EQ(CU1RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU1RefAddrDieDG.find(DW_AT_type), -1ULL));
+            toDebugInfoReference(CU1RefAddrDieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling of the Ref4 DIE is our RefAddr DIE and that its
   // DW_AT_type points to our base type DIE.
@@ -800,38 +803,38 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU1ToCU2RefAddrDieDG.isValid());
   EXPECT_EQ(CU1ToCU2RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU1ToCU2RefAddrDieDG.find(DW_AT_type), -1ULL));
+            toDebugInfoReference(CU1ToCU2RefAddrDieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling of the base type DIE is our Ref1 DIE and that its
   // DW_AT_type points to our base type DIE.
   auto CU2Ref1DieDG = CU2TypeDieDG.getSibling();
   EXPECT_TRUE(CU2Ref1DieDG.isValid());
   EXPECT_EQ(CU2Ref1DieDG.getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU2Ref1DieDG.find(DW_AT_type), -1ULL));
+  EXPECT_EQ(CU2TypeDieDG.getOffset() - CU2TypeDieDG.getDwarfUnit()->getOffset(),
+            toRelativeReference(CU2Ref1DieDG.find(DW_AT_type), -1ULL));
   // Verify the sibling is our Ref2 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
   auto CU2Ref2DieDG = CU2Ref1DieDG.getSibling();
   EXPECT_TRUE(CU2Ref2DieDG.isValid());
   EXPECT_EQ(CU2Ref2DieDG.getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU2Ref2DieDG.find(DW_AT_type), -1ULL));
+  EXPECT_EQ(CU2TypeDieDG.getOffset() - CU2TypeDieDG.getDwarfUnit()->getOffset(),
+            toRelativeReference(CU2Ref2DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our Ref4 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
   auto CU2Ref4DieDG = CU2Ref2DieDG.getSibling();
   EXPECT_TRUE(CU2Ref4DieDG.isValid());
   EXPECT_EQ(CU2Ref4DieDG.getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU2Ref4DieDG.find(DW_AT_type), -1ULL));
+  EXPECT_EQ(CU2TypeDieDG.getOffset() - CU2TypeDieDG.getDwarfUnit()->getOffset(),
+            toRelativeReference(CU2Ref4DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our Ref8 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
   auto CU2Ref8DieDG = CU2Ref4DieDG.getSibling();
   EXPECT_TRUE(CU2Ref8DieDG.isValid());
   EXPECT_EQ(CU2Ref8DieDG.getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU2Ref8DieDG.find(DW_AT_type), -1ULL));
+  EXPECT_EQ(CU2TypeDieDG.getOffset() - CU2TypeDieDG.getDwarfUnit()->getOffset(),
+            toRelativeReference(CU2Ref8DieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling is our RefAddr DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
@@ -839,7 +842,7 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU2RefAddrDieDG.isValid());
   EXPECT_EQ(CU2RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU2TypeDieDG.getOffset(),
-            toReference(CU2RefAddrDieDG.find(DW_AT_type), -1ULL));
+            toDebugInfoReference(CU2RefAddrDieDG.find(DW_AT_type), -1ULL));
 
   // Verify the sibling of the Ref4 DIE is our RefAddr DIE and that its
   // DW_AT_type points to our base type DIE.
@@ -847,7 +850,7 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   EXPECT_TRUE(CU2ToCU1RefAddrDieDG.isValid());
   EXPECT_EQ(CU2ToCU1RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(CU1TypeDieDG.getOffset(),
-            toReference(CU2ToCU1RefAddrDieDG.find(DW_AT_type), -1ULL));
+            toDebugInfoReference(CU2ToCU1RefAddrDieDG.find(DW_AT_type), -1ULL));
 }
 
 TEST(DWARFDebugInfo, TestDWARF32Version2Addr4References) {
@@ -1662,14 +1665,20 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   std::optional<DWARFFormValue> FormValOpt1 = DWARFFormValue();
   EXPECT_FALSE(toString(FormValOpt1).has_value());
   EXPECT_FALSE(toUnsigned(FormValOpt1).has_value());
-  EXPECT_FALSE(toReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt1).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt1).has_value());
   EXPECT_FALSE(toSigned(FormValOpt1).has_value());
   EXPECT_FALSE(toAddress(FormValOpt1).has_value());
   EXPECT_FALSE(toSectionOffset(FormValOpt1).has_value());
   EXPECT_FALSE(toBlock(FormValOpt1).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt1, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt1, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt1, InvalidU64));
   EXPECT_EQ(InvalidU64, toAddress(FormValOpt1, InvalidU64));
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt1, InvalidU64));
   EXPECT_EQ(InvalidS64, toSigned(FormValOpt1, InvalidS64));
@@ -1681,14 +1690,20 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   EXPECT_FALSE(toString(FormValOpt2).has_value());
   EXPECT_FALSE(toUnsigned(FormValOpt2).has_value());
-  EXPECT_FALSE(toReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt2).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt2).has_value());
   EXPECT_FALSE(toSigned(FormValOpt2).has_value());
   EXPECT_TRUE(toAddress(FormValOpt2).has_value());
   EXPECT_FALSE(toSectionOffset(FormValOpt2).has_value());
   EXPECT_FALSE(toBlock(FormValOpt2).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt2, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt2, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt2, InvalidU64));
   EXPECT_EQ(Address, toAddress(FormValOpt2, InvalidU64));
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt2, InvalidU64));
   EXPECT_EQ(InvalidS64, toSigned(FormValOpt2, InvalidU64));
@@ -1700,36 +1715,98 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   EXPECT_FALSE(toString(FormValOpt3).has_value());
   EXPECT_TRUE(toUnsigned(FormValOpt3).has_value());
-  EXPECT_FALSE(toReference(FormValOpt3).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt3).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt3).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt3).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt3).has_value());
   EXPECT_TRUE(toSigned(FormValOpt3).has_value());
   EXPECT_FALSE(toAddress(FormValOpt3).has_value());
   EXPECT_FALSE(toSectionOffset(FormValOpt3).has_value());
   EXPECT_FALSE(toBlock(FormValOpt3).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt3, nullptr));
   EXPECT_EQ(UData8, toUnsigned(FormValOpt3, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt3, InvalidU64));
   EXPECT_EQ(InvalidU64, toAddress(FormValOpt3, InvalidU64));
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt3, InvalidU64));
   EXPECT_EQ((int64_t)UData8, toSigned(FormValOpt3, InvalidU64));
 
-  // Test successful and unsuccessful reference decoding.
+  // Test successful and unsuccessful ref_addr decoding.
   uint32_t RefData = 0x11223344U;
-  std::optional<DWARFFormValue> FormValOpt4 =
+  std::optional<DWARFFormValue> FormValOpt4Addr =
       DWARFFormValue::createFromUValue(DW_FORM_ref_addr, RefData);
 
-  EXPECT_FALSE(toString(FormValOpt4).has_value());
-  EXPECT_FALSE(toUnsigned(FormValOpt4).has_value());
-  EXPECT_TRUE(toReference(FormValOpt4).has_value());
-  EXPECT_FALSE(toSigned(FormValOpt4).has_value());
-  EXPECT_FALSE(toAddress(FormValOpt4).has_value());
-  EXPECT_FALSE(toSectionOffset(FormValOpt4).has_value());
-  EXPECT_FALSE(toBlock(FormValOpt4).has_value());
-  EXPECT_EQ(nullptr, toString(FormValOpt4, nullptr));
-  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4, InvalidU64));
-  EXPECT_EQ(RefData, toReference(FormValOpt4, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt4, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt4, InvalidU64));
-  EXPECT_EQ(InvalidS64, toSigned(FormValOpt4, InvalidU64));
+  EXPECT_FALSE(toString(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt4Addr).has_value());
+  EXPECT_TRUE(toDebugInfoReference(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4Addr).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt4Addr).has_value());
+  EXPECT_EQ(nullptr, toString(FormValOpt4Addr, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(RefData, toDebugInfoReference(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt4Addr, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt4Addr, InvalidU64));
+
+  // Test successful and unsuccessful ref_sig8 decoding.
+  std::optional<DWARFFormValue> FormValOpt4Sig =
+      DWARFFormValue::createFromUValue(DW_FORM_ref_sig8, RefData);
+
+  EXPECT_FALSE(toString(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt4Sig).has_value());
+  EXPECT_TRUE(toSignatureReference(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4Sig).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt4Sig).has_value());
+  EXPECT_EQ(nullptr, toString(FormValOpt4Sig, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(RefData, toSignatureReference(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt4Sig, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt4Sig, InvalidU64));
+
+  // Test successful and unsuccessful ref_alt decoding.
+  // Not testing relative reference forms here, as they require a valid
+  // DWARFUnit object.
+  std::optional<DWARFFormValue> FormValOpt4Alt =
+      DWARFFormValue::createFromUValue(DW_FORM_GNU_ref_alt, RefData);
+
+  EXPECT_FALSE(toString(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toUnsigned(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt4Alt).has_value());
+  EXPECT_TRUE(toSupplementaryReference(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toSigned(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toAddress(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4Alt).has_value());
+  EXPECT_FALSE(toBlock(FormValOpt4Alt).has_value());
+  EXPECT_EQ(nullptr, toString(FormValOpt4Alt, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(RefData, toSupplementaryReference(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt4Alt, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt4Alt, InvalidU64));
 
   // Test successful and unsuccessful signed constant decoding.
   int64_t SData8 = 0x1020304050607080ULL;
@@ -1738,14 +1815,20 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   EXPECT_FALSE(toString(FormValOpt5).has_value());
   EXPECT_TRUE(toUnsigned(FormValOpt5).has_value());
-  EXPECT_FALSE(toReference(FormValOpt5).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt5).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt5).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt5).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt5).has_value());
   EXPECT_TRUE(toSigned(FormValOpt5).has_value());
   EXPECT_FALSE(toAddress(FormValOpt5).has_value());
   EXPECT_FALSE(toSectionOffset(FormValOpt5).has_value());
   EXPECT_FALSE(toBlock(FormValOpt5).has_value());
   EXPECT_EQ(nullptr, toString(FormValOpt5, nullptr));
   EXPECT_EQ((uint64_t)SData8, toUnsigned(FormValOpt5, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt5, InvalidU64));
   EXPECT_EQ(InvalidU64, toAddress(FormValOpt5, InvalidU64));
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt5, InvalidU64));
   EXPECT_EQ(SData8, toSigned(FormValOpt5, InvalidU64));
@@ -1758,7 +1841,10 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 
   EXPECT_FALSE(toString(FormValOpt6).has_value());
   EXPECT_FALSE(toUnsigned(FormValOpt6).has_value());
-  EXPECT_FALSE(toReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toRelativeReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toDebugInfoReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toSignatureReference(FormValOpt6).has_value());
+  EXPECT_FALSE(toSupplementaryReference(FormValOpt6).has_value());
   EXPECT_FALSE(toSigned(FormValOpt6).has_value());
   EXPECT_FALSE(toAddress(FormValOpt6).has_value());
   EXPECT_FALSE(toSectionOffset(FormValOpt6).has_value());
@@ -1767,7 +1853,10 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   EXPECT_EQ(*BlockOpt, Array);
   EXPECT_EQ(nullptr, toString(FormValOpt6, nullptr));
   EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt6, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toRelativeReference(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toDebugInfoReference(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSignatureReference(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSupplementaryReference(FormValOpt6, InvalidU64));
   EXPECT_EQ(InvalidU64, toAddress(FormValOpt6, InvalidU64));
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt6, InvalidU64));
   EXPECT_EQ(InvalidS64, toSigned(FormValOpt6, InvalidU64));

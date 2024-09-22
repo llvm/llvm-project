@@ -1,8 +1,8 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
-// RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-UNALIGNED-ACCESS
-// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-UNALIGNED-ACCESS
-// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -mstrict-align -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=NO-FAST-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang -mabi=lp64d --target=riscv64-linux-android -mstrict-align -mvector-strict-align -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 
 
 // CHECK: fno-signed-char
@@ -35,13 +35,23 @@
 // NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
 // DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
 
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mscalar-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: touch %t.o
 // RUN: %clang --target=riscv32-unknown-elf -### %t.o -mno-strict-align -mstrict-align
 
-// FAST-UNALIGNED-ACCESS: "-target-feature" "+unaligned-scalar-mem" "-target-feature" "+unaligned-vector-mem"
-// NO-FAST-UNALIGNED-ACCESS: "-target-feature" "-unaligned-scalar-mem" "-target-feature" "-unaligned-vector-mem"
+// FAST-SCALAR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-scalar-mem"
+// NO-FAST-SCALAR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-scalar-mem"
+
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mvector-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-strict-align -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align -mvector-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
+// FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-vector-mem"
+// NO-FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-vector-mem"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
 // RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE

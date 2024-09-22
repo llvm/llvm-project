@@ -44,6 +44,16 @@ struct FIRToLLVMPassOptions {
 
   // Force the usage of a unified tbaa tree in TBAABuilder.
   bool forceUnifiedTBAATree = false;
+
+  // If set to true, then the global variables created
+  // for the derived types have been renamed to avoid usage
+  // of special symbols that may not be supported by all targets.
+  // The renaming is done by the CompilerGeneratedNamesConversion pass.
+  // If it is true, FIR-to-LLVM pass has to use
+  // fir::NameUniquer::getTypeDescriptorAssemblyName() to take
+  // the name of the global variable corresponding to a derived
+  // type's descriptor.
+  bool typeDescriptorsRenamedForAssembly = false;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

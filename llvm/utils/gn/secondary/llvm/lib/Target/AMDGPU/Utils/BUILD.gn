@@ -34,7 +34,6 @@ static_library("Utils") {
     "AMDGPUAsmUtils.cpp",
     "AMDGPUBaseInfo.cpp",
     "AMDGPUDelayedMCExpr.cpp",
-    "AMDGPUMemoryUtils.cpp",
     "AMDGPUPALMetadata.cpp",
     "AMDKernelCodeTUtils.cpp",
   ]

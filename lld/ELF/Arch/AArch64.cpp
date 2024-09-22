@@ -239,30 +239,81 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_IRELATIVE:
   case R_AARCH64_TLS_TPREL64:
     return read64(buf);
+
+    // The following relocation types all point at instructions, and
+    // relocate an immediate field in the instruction.
+    //
+    // The general rule, from AAELF64 §5.7.2 "Addends and PC-bias",
+    // says: "If the relocation relocates an instruction the immediate
+    // field of the instruction is extracted, scaled as required by
+    // the instruction field encoding, and sign-extended to 64 bits".
+
+    // The R_AARCH64_MOVW family operates on wide MOV/MOVK/MOVZ
+    // instructions, which have a 16-bit immediate field with its low
+    // bit in bit 5 of the instruction encoding. When the immediate
+    // field is used as an implicit addend for REL-type relocations,
+    // it is treated as added to the low bits of the output value, not
+    // shifted depending on the relocation type.
+    //
+    // This allows REL relocations to express the requirement 'please
+    // add 12345 to this symbol value and give me the four 16-bit
+    // chunks of the result', by putting the same addend 12345 in all
+    // four instructions. Carries between the 16-bit chunks are
+    // handled correctly, because the whole 64-bit addition is done
+    // once per relocation.
   case R_AARCH64_MOVW_UABS_G0:
   case R_AARCH64_MOVW_UABS_G0_NC:
-    return getBits(SignExtend64<16>(read16(buf)), 0, 15);
   case R_AARCH64_MOVW_UABS_G1:
   case R_AARCH64_MOVW_UABS_G1_NC:
-    return getBits(SignExtend64<32>(read32(buf)), 16, 31);
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
-    return getBits(read64(buf), 32, 47);
   case R_AARCH64_MOVW_UABS_G3:
-    return getBits(read64(buf), 48, 63);
+    return SignExtend64<16>(getBits(read32le(buf), 5, 20));
+
+    // R_AARCH64_TSTBR14 points at a TBZ or TBNZ instruction, which
+    // has a 14-bit offset measured in instructions, i.e. shifted left
+    // by 2.
   case R_AARCH64_TSTBR14:
-    return getBits(SignExtend64<32>(read32(buf)), 2, 15);
+    return SignExtend64<16>(getBits(read32le(buf), 5, 18) << 2);
+
+    // R_AARCH64_CONDBR19 operates on the ordinary B.cond instruction,
+    // which has a 19-bit offset measured in instructions.
+    //
+    // R_AARCH64_LD_PREL_LO19 operates on the LDR (literal)
+    // instruction, which also has a 19-bit offset, measured in 4-byte
+    // chunks. So the calculation is the same as for
+    // R_AARCH64_CONDBR19.
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
-    return getBits(SignExtend64<32>(read32(buf)), 2, 20);
+    return SignExtend64<21>(getBits(read32le(buf), 5, 23) << 2);
+
+    // R_AARCH64_ADD_ABS_LO12_NC operates on ADD (immediate). The
+    // immediate can optionally be shifted left by 12 bits, but this
+    // relocation is intended for the case where it is not.
   case R_AARCH64_ADD_ABS_LO12_NC:
-    return getBits(SignExtend64<16>(read16(buf)), 0, 11);
+    return SignExtend64<12>(getBits(read32le(buf), 10, 21));
+
+    // R_AARCH64_ADR_PREL_LO21 operates on an ADR instruction, whose
+    // 21-bit immediate is split between two bits high up in the word
+    // (in fact the two _lowest_ order bits of the value) and 19 bits
+    // lower down.
+    //
+    // R_AARCH64_ADR_PREL_PG_HI21[_NC] operate on an ADRP instruction,
+    // which encodes the immediate in the same way, but will shift it
+    // left by 12 bits when the instruction executes. For the same
+    // reason as the MOVW family, we don't apply that left shift here.
+  case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
-    return getBits(SignExtend64<32>(read32(buf)), 12, 32);
+    return SignExtend64<21>((getBits(read32le(buf), 5, 23) << 2) |
+                            getBits(read32le(buf), 29, 30));
+
+    // R_AARCH64_{JUMP,CALL}26 operate on B and BL, which have a
+    // 26-bit offset measured in instructions.
   case R_AARCH64_JUMP26:
   case R_AARCH64_CALL26:
-    return getBits(SignExtend64<32>(read32(buf)), 2, 27);
+    return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
+
   default:
     internalLinkerError(getErrorLocation(buf),
                         "cannot read addend for relocation " + toString(type));
@@ -271,11 +322,11 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64(buf, in.plt->getVA());
+  write64(buf, ctx.in.plt->getVA());
 }
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64(buf, s.getVA());
 }
 
@@ -292,8 +343,8 @@ void AArch64::writePltHeader(uint8_t *buf) const {
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t got = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t got = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
@@ -366,11 +417,13 @@ static void write32AArch64Addr(uint8_t *l, uint64_t imm) {
   write32le(l, (read32le(l) & ~mask) | immLo | immHi);
 }
 
-static void or32le(uint8_t *p, int32_t v) { write32le(p, read32le(p) | v); }
+static void writeMaskedBits32le(uint8_t *p, int32_t v, uint32_t mask) {
+  write32le(p, (read32le(p) & ~mask) | v);
+}
 
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
-static void or32AArch64Imm(uint8_t *l, uint64_t imm) {
-  or32le(l, (imm & 0xFFF) << 10);
+static void write32Imm12(uint8_t *l, uint64_t imm) {
+  writeMaskedBits32le(l, (imm & 0xFFF) << 10, 0xFFF << 10);
 }
 
 // Update the immediate field in an AArch64 movk, movn or movz instruction
@@ -429,8 +482,21 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_PREL64:
     write64(loc, val);
     break;
+  case R_AARCH64_AUTH_ABS64:
+    // If val is wider than 32 bits, the relocation must have been moved from
+    // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
+    //
+    // If val fits in 32 bits, we have two potential scenarios:
+    // * True RELR: Write the 32-bit `val`.
+    // * RELA: Even if the value now fits in 32 bits, it might have been
+    //   converted from RELR during an iteration in
+    //   finalizeAddressDependentContent(). Writing the value is harmless
+    //   because dynamic linking ignores it.
+    if (isInt<32>(val))
+      write32(loc, val);
+    break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    or32AArch64Imm(loc, val);
+    write32Imm12(loc, val);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
@@ -457,28 +523,28 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     [[fallthrough]];
   case R_AARCH64_CALL26:
     checkInt(loc, val, 28, rel);
-    or32le(loc, (val & 0x0FFFFFFC) >> 2);
+    writeMaskedBits32le(loc, (val & 0x0FFFFFFC) >> 2, 0x0FFFFFFC >> 2);
     break;
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_GOT_LD_PREL19:
     checkAlignment(loc, val, 4, rel);
     checkInt(loc, val, 21, rel);
-    or32le(loc, (val & 0x1FFFFC) << 3);
+    writeMaskedBits32le(loc, (val & 0x1FFFFC) << 3, 0x1FFFFC << 3);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
-    or32AArch64Imm(loc, getBits(val, 0, 11));
+    write32Imm12(loc, getBits(val, 0, 11));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
     checkAlignment(loc, val, 2, rel);
-    or32AArch64Imm(loc, getBits(val, 1, 11));
+    write32Imm12(loc, getBits(val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
     checkAlignment(loc, val, 4, rel);
-    or32AArch64Imm(loc, getBits(val, 2, 11));
+    write32Imm12(loc, getBits(val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LD64_GOT_LO12_NC:
@@ -486,37 +552,39 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12:
     checkAlignment(loc, val, 8, rel);
-    or32AArch64Imm(loc, getBits(val, 3, 11));
+    write32Imm12(loc, getBits(val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     checkAlignment(loc, val, 16, rel);
-    or32AArch64Imm(loc, getBits(val, 4, 11));
+    write32Imm12(loc, getBits(val, 4, 11));
     break;
   case R_AARCH64_LD64_GOTPAGE_LO15:
     checkAlignment(loc, val, 8, rel);
-    or32AArch64Imm(loc, getBits(val, 3, 14));
+    write32Imm12(loc, getBits(val, 3, 14));
     break;
   case R_AARCH64_MOVW_UABS_G0:
     checkUInt(loc, val, 16, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G0_NC:
-    or32le(loc, (val & 0xFFFF) << 5);
+    writeMaskedBits32le(loc, (val & 0xFFFF) << 5, 0xFFFF << 5);
     break;
   case R_AARCH64_MOVW_UABS_G1:
     checkUInt(loc, val, 32, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G1_NC:
-    or32le(loc, (val & 0xFFFF0000) >> 11);
+    writeMaskedBits32le(loc, (val & 0xFFFF0000) >> 11, 0xFFFF0000 >> 11);
     break;
   case R_AARCH64_MOVW_UABS_G2:
     checkUInt(loc, val, 48, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G2_NC:
-    or32le(loc, (val & 0xFFFF00000000) >> 27);
+    writeMaskedBits32le(loc, (val & 0xFFFF00000000) >> 27,
+                        0xFFFF00000000 >> 27);
     break;
   case R_AARCH64_MOVW_UABS_G3:
-    or32le(loc, (val & 0xFFFF000000000000) >> 43);
+    writeMaskedBits32le(loc, (val & 0xFFFF000000000000) >> 43,
+                        0xFFFF000000000000 >> 43);
     break;
   case R_AARCH64_MOVW_PREL_G0:
   case R_AARCH64_MOVW_SABS_G0:
@@ -549,15 +617,15 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TSTBR14:
     checkInt(loc, val, 16, rel);
-    or32le(loc, (val & 0xFFFC) << 3);
+    writeMaskedBits32le(loc, (val & 0xFFFC) << 3, 0xFFFC << 3);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkUInt(loc, val, 24, rel);
-    or32AArch64Imm(loc, val >> 12);
+    write32Imm12(loc, val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:
-    or32AArch64Imm(loc, val);
+    write32Imm12(loc, val);
     break;
   case R_AARCH64_TLSDESC:
     // For R_AARCH64_TLSDESC the addend is stored in the second 64-bit word.
@@ -651,7 +719,7 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
 }
 
 AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
-  if (!config->relax)
+  if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // always appear in pairs.
@@ -681,7 +749,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   // to
   // NOP
   // ADR xn, sym
-  if (!config->relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
+  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
       addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
     return false;
   // Check if the relocations apply to consecutive instructions.
@@ -716,7 +784,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   write32le(buf + adrpRel.offset, 0xd503201f);
   // adr x_<dest_reg>
   write32le(buf + adrRel.offset, 0x10000000 | adrpDestReg);
-  target->relocate(buf + adrRel.offset, adrRel, val);
+  ctx.target->relocate(buf + adrRel.offset, adrRel, val);
   return true;
 }
 
@@ -768,7 +836,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
   // position-independent code because these instructions produce a relative
   // address.
-  if (config->isPic && !cast<Defined>(sym).section)
+  if (ctx.arg.isPic && !cast<Defined>(sym).section)
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
@@ -786,11 +854,13 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // add x_<dest reg>, x_<dest reg>
   write32le(buf + addRel.offset, 0x91000000 | adrpDestReg | (adrpDestReg << 5));
 
-  target->relocate(buf + adrpSymRel.offset, adrpSymRel,
-                   SignExtend64(getAArch64Page(sym.getVA()) -
-                                    getAArch64Page(secAddr + adrpSymRel.offset),
-                                64));
-  target->relocate(buf + addRel.offset, addRel, SignExtend64(sym.getVA(), 64));
+  ctx.target->relocate(
+      buf + adrpSymRel.offset, adrpSymRel,
+      SignExtend64(getAArch64Page(sym.getVA()) -
+                       getAArch64Page(secAddr + adrpSymRel.offset),
+                   64));
+  ctx.target->relocate(buf + addRel.offset, addRel,
+                       SignExtend64(sym.getVA(), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }
@@ -902,7 +972,7 @@ private:
 } // namespace
 
 AArch64BtiPac::AArch64BtiPac() {
-  btiHeader = (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
+  btiHeader = (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
   // A BTI (Branch Target Indicator) Plt Entry is only required if the
   // address of the PLT entry can be taken by the program, which permits an
   // indirect jump to the PLT entry. This can happen when the address
@@ -912,7 +982,7 @@ AArch64BtiPac::AArch64BtiPac() {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = config->zPacPlt;
+  pacEntry = ctx.arg.zPacPlt;
 
   if (btiHeader || pacEntry) {
     pltEntrySize = 24;
@@ -933,8 +1003,8 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   };
   const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
 
-  uint64_t got = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t got = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
 
   if (btiHeader) {
     // PltHeader is called indirectly by plt[N]. Prefix pltData with a BTI C
@@ -1004,8 +1074,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 static TargetInfo *getTargetInfo() {
-  if ((config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      config->zPacPlt) {
+  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      ctx.arg.zPacPlt) {
     static AArch64BtiPac t;
     return &t;
   }
@@ -1105,7 +1175,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // `addTaggedSymbolReferences` has already checked that we have RELA
   // relocations, the only other way to get written addends is with
   // --apply-dynamic-relocs.
-  if (!taggedSymbolReferenceCount.empty() && config->writeAddends)
+  if (!taggedSymbolReferenceCount.empty() && ctx.arg.writeAddends)
     error("--apply-dynamic-relocs cannot be used with MTE globals");
 
   // Now, `taggedSymbolReferenceCount` should only contain symbols that are

@@ -886,7 +886,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
       if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.GetFile(), sc.line_entry.line);
+            sc.line_entry.file_sp, sc.line_entry.line);
     }
   }
 }
@@ -924,7 +924,7 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
-                                 bool show_unique,
+                                 bool show_unique, bool show_hidden,
                                  const char *selected_frame_marker) {
   size_t num_frames_displayed = 0;
 
@@ -951,7 +951,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     unselected_marker = buffer.c_str();
   }
   const char *marker = nullptr;
-
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
@@ -963,12 +962,17 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
       else
         marker = unselected_marker;
     }
+
+    // Hide uninteresting frames unless it's the selected frame.
+    if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
+      continue;
+
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (INTERRUPT_REQUESTED(dbg, 
-          "Interrupted dumping stack for thread {0:hex} with {1} shown.",
-          m_thread.GetID(), num_frames_displayed))
+    if (INTERRUPT_REQUESTED(
+            dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
+            m_thread.GetID(), num_frames_displayed))
       break;
 
 

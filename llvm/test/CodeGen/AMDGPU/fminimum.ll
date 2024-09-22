@@ -174,7 +174,8 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_pk_minimum_f16 v0, s0, s2
 ; GFX12-GISEL-NEXT:    s_minimum_f16 s0, s1, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call <3 x half> @llvm.minimum.v3f16(<3 x half> %a, <3 x half> %b)
@@ -262,8 +263,8 @@ define amdgpu_kernel void @fminimumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GCN-LABEL: fminimumi_f32_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_b32 v1, v0, s[6:7] scope:SCOPE_SYS
@@ -286,8 +287,8 @@ define amdgpu_kernel void @fminimum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GCN-LABEL: fminimum_f16_move_to_valu:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_u16 v1, v0, s[6:7] scope:SCOPE_SYS

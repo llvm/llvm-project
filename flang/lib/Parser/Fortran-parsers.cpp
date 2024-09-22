@@ -1304,10 +1304,16 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(construct<CUDAAttributesStmt>(
     defaulted(
         maybe("::"_tok) >> nonemptyList("expected names"_err_en_US, name)))))
 
-// Subtle: the name includes the surrounding slashes, which avoids
+// Subtle: A structure's name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.
-TYPE_PARSER(construct<StructureStmt>(
-    "STRUCTURE" >> maybe(sourced("/" >> name / "/")), optionalList(entityDecl)))
+constexpr auto structureName{maybe(sourced("/" >> name / "/"))};
+
+// Note that Parser<StructureStmt>{} has a mandatory list of entity-decls
+// and is used only by NestedStructureStmt{}.Parse() in user-state.cpp.
+TYPE_PARSER(construct<StructureStmt>("STRUCTURE" >> structureName,
+    localRecovery(
+        "entity declarations are required on a nested structure"_err_en_US,
+        nonemptyList(entityDecl), ok)))
 
 constexpr auto nestedStructureDef{
     CONTEXT_PARSER("nested STRUCTURE definition"_en_US,
@@ -1323,7 +1329,9 @@ TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: STRUCTURE"_port_en_US,
-        construct<StructureDef>(statement(Parser<StructureStmt>{}),
+        construct<StructureDef>(
+            statement(construct<StructureStmt>(
+                "STRUCTURE" >> structureName, optionalList(entityDecl))),
             many(Parser<StructureField>{}),
             statement(construct<StructureDef::EndStructureStmt>(
                 "END STRUCTURE"_tok)))))

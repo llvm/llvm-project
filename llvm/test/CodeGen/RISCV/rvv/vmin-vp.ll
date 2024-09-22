@@ -1062,7 +1062,6 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The first vmin.vx should be able to infer that its AVL is equivalent to VLMAX.
 ; FIXME: The upper half of the operation is doing nothing but we don't catch
 ; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
 ; (the "original" %evl is the "and", due to known-bits issues with legalizing
@@ -1073,20 +1072,17 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; RV32-LABEL: vmin_vx_nxv32i32_evl_nx16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmin_vx_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    srli a2, a1, 2
-; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a2
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    srli a1, a1, 2
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v24, v0, a1
+; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma

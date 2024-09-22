@@ -32,8 +32,8 @@ add_libc_unittest(
   SRCS
     sigaction_test.cpp
   DEPENDS
-    libc.include.errno
-    libc.include.signal
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -74,7 +74,7 @@ add_libc_unittest(
   SRCS
     signal_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.types.sighandler_t
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal
@@ -119,7 +119,7 @@ add_libc_unittest(
   SRCS
     sigaltstack_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigaltstack

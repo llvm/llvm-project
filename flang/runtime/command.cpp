@@ -47,13 +47,9 @@ pid_t RTNAME(GetPID)() { return getpid(); }
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {
   std::size_t length{std::strlen(string)};
-  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
+  if (length <= std::numeric_limits<std::int64_t>::max())
     return static_cast<std::int64_t>(length);
-  } else {
-    std::size_t max{std::numeric_limits<std::int64_t>::max()};
-    return length > max ? 0 // Just fail.
-                        : static_cast<std::int64_t>(length);
-  }
+  return 0;
 }
 
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {

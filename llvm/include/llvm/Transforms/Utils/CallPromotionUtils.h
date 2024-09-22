@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
+#include "llvm/Analysis/CtxProfAnalysis.h"
 namespace llvm {
 template <typename T> class ArrayRef;
 class Constant;
@@ -55,6 +56,9 @@ CallBase &promoteCall(CallBase &CB, Function *Callee,
 /// new conditional branch.
 CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
                                     MDNode *BranchWeights = nullptr);
+
+CallBase *promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
+                                    PGOContextualProfile &CtxProf);
 
 /// This is similar to `promoteCallWithIfThenElse` except that the condition to
 /// promote a virtual call is that \p VPtr is the same as any of \p

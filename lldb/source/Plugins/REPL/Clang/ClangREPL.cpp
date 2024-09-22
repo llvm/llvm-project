@@ -51,7 +51,7 @@ lldb::REPLSP ClangREPL::CreateInstance(Status &error,
                                        const char *repl_options) {
   // Creating a dummy target if only a debugger is given isn't implemented yet.
   if (!target) {
-    error.SetErrorString("must have a target to create a REPL");
+    error = Status::FromErrorString("must have a target to create a REPL");
     return nullptr;
   }
   lldb::REPLSP result = std::make_shared<ClangREPL>(language, *target);

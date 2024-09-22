@@ -44,7 +44,6 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<bolt::MacroFusionType> AlignMacroOpFusion;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<unsigned> ExecutionCountThreshold;
@@ -1634,25 +1633,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         BC.errs() << "  " << *Function << '\n';
     } else {
       BC.errs() << " Use -v=1 to see the list.\n";
-    }
-  }
-
-  // Print information on missed macro-fusion opportunities seen on input.
-  if (BC.Stats.MissedMacroFusionPairs) {
-    BC.outs() << format(
-        "BOLT-INFO: the input contains %zu (dynamic count : %zu)"
-        " opportunities for macro-fusion optimization",
-        BC.Stats.MissedMacroFusionPairs, BC.Stats.MissedMacroFusionExecCount);
-    switch (opts::AlignMacroOpFusion) {
-    case MFT_NONE:
-      BC.outs() << ". Use -align-macro-fusion to fix.\n";
-      break;
-    case MFT_HOT:
-      BC.outs() << ". Will fix instances on a hot path.\n";
-      break;
-    case MFT_ALL:
-      BC.outs() << " that are going to be fixed\n";
-      break;
     }
   }
 

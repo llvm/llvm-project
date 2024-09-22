@@ -27,10 +27,10 @@ subroutine simd_with_if_clause(n, threshold)
   ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_if_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD IF( n .GE. threshold )
+  ! CHECK: %[[COND:.*]] = arith.cmpi sge
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
   ! CHECK: %[[UB:.*]] = fir.load %[[ARG_N]]#0
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
-  ! CHECK: %[[COND:.*]] = arith.cmpi sge
   ! CHECK: omp.simd if(%[[COND:.*]]) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
@@ -148,7 +148,7 @@ subroutine simd_with_simdlen_safelen_clause(n, threshold)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
   ! CHECK: %[[UB:.*]] = fir.load %[[ARG_N]]#0
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
-  ! CHECK: omp.simd simdlen(1) safelen(2) {
+  ! CHECK: omp.simd safelen(2) simdlen(1) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
@@ -222,4 +222,22 @@ subroutine simdloop_aligned_allocatable()
   do i = 1, 10
     A(i) = i
   end do
+end subroutine
+
+!CHECK-LABEL: func @_QPsimd_with_nontemporal_clause
+subroutine simd_with_nontemporal_clause(n)
+  !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  integer :: i, n
+  integer :: A, B, C
+  !CHECK: %[[LB:.*]] = arith.constant 1 : i32
+  !CHECK: %[[UB:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+  !CHECK: %[[STEP:.*]] = arith.constant 1 : i32
+  !CHECK: omp.simd nontemporal(%[[A_DECL]]#1, %[[C_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>) {
+  !CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+  !$OMP SIMD NONTEMPORAL(A, C)
+  do i = 1, n
+    C = A + B
+  end do
+  !$OMP END SIMD
 end subroutine

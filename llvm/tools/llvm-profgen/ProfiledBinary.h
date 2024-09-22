@@ -167,9 +167,10 @@ public:
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder);
 
   using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
-  void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
-                                  MCDecodedPseudoProbeInlineTree &ProbeNode,
-                                  ProbeFrameStack &Context);
+  void
+  trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
+                             const MCDecodedPseudoProbeInlineTree &ProbeNode,
+                             ProbeFrameStack &Context);
 
   void dump() { RootContext.dumpTree(); }
 
@@ -576,7 +577,7 @@ public:
   void getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                                 SampleContextFrameVector &InlineContextStack,
                                 bool IncludeLeaf = false) const {
-    SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
+    SmallVector<MCPseudoProbeFrameLocation, 16> ProbeInlineContext;
     ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
                                           IncludeLeaf);
     for (uint32_t I = 0; I < ProbeInlineContext.size(); I++) {

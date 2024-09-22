@@ -1,30 +1,24 @@
-; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=0
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
+; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-threshold=0
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=define %s
 
 ; 3 kernels:
 ;   - A does a direct call to HelperA
 ;   - B is storing @HelperA
 ;   - C does a direct call to HelperA
 ;
-; The helper functions will get externalized, which will force A and C into P0 as
-; external functions cannot be duplicated.
+; The helper functions will get externalized, so C/A will end up
+; in the same partition.
 
-; CHECK0: define hidden void @HelperA()
-; CHECK0: define amdgpu_kernel void @A()
-; CHECK0: declare amdgpu_kernel void @B(ptr)
-; CHECK0: define amdgpu_kernel void @C()
+; P0 is empty.
+; CHECK0: declare
 
-; CHECK1: declare hidden void @HelperA()
-; CHECK1: declare amdgpu_kernel void @A()
-; CHECK1: declare amdgpu_kernel void @B(ptr)
-; CHECK1: declare amdgpu_kernel void @C()
+; CHECK1: define amdgpu_kernel void @B(ptr %dst)
 
-; CHECK2: declare hidden void @HelperA()
-; CHECK2: declare amdgpu_kernel void @A()
-; CHECK2: define amdgpu_kernel void @B(ptr %dst)
-; CHECK2: declare amdgpu_kernel void @C()
+; CHECK2: define hidden void @HelperA()
+; CHECK2: define amdgpu_kernel void @A()
+; CHECK2: define amdgpu_kernel void @C()
 
 define internal void @HelperA() {
   ret void

@@ -9,8 +9,9 @@
 #include "src/time/time_utils.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
@@ -150,4 +151,4 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 }
 
 } // namespace time_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -28,8 +28,11 @@
 //         direct-non-list-initializes strides_[d] with as_const(s[d]).
 
 #include <mdspan>
+#include <array>
 #include <cassert>
 #include <cstdint>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 #include "../ConvertibleToIntegral.h"

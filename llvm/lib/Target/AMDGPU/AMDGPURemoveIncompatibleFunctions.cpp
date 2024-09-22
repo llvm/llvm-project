@@ -28,7 +28,7 @@ using namespace llvm;
 namespace llvm {
 extern const SubtargetFeatureKV
     AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures - 1];
-}
+} // namespace llvm
 
 namespace {
 

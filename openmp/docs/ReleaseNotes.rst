@@ -1,5 +1,5 @@
 ===========================
-OpenMP 19.0.0 Release Notes
+OpenMP 20.0.0 Release Notes
 ===========================
 
 

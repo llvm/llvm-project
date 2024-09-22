@@ -37,7 +37,7 @@ define void @pass_s1(i8 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_S1_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i8 [[X:%.*]], ptr [[TMP0]], align 1
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[VARARG_BUFFER]])
@@ -58,7 +58,7 @@ define void @pass_s2(i16 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_S2_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i16 [[X:%.*]], ptr [[TMP0]], align 2
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[VARARG_BUFFER]])
@@ -79,7 +79,7 @@ define void @pass_s3(i32 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_S3_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[VARARG_BUFFER]])
@@ -100,7 +100,7 @@ define void @pass_s4(i64 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_S4_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i64 [[X:%.*]], ptr [[TMP0]], align 8
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
@@ -121,7 +121,7 @@ define void @pass_s5(<4 x i32> %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_S5_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store <4 x i32> [[X:%.*]], ptr [[TMP0]], align 16
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[VARARG_BUFFER]])
@@ -142,9 +142,9 @@ define void @pass_int_s1(i32 %i, i8 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_INT_S1_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 5, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_INT_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_INT_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_INT_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_INT_S1_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i8 [[X:%.*]], ptr [[TMP1]], align 1
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 5, ptr [[VARARG_BUFFER]])
@@ -165,9 +165,9 @@ define void @pass_int_s2(i32 %i, i16 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_INT_S2_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 6, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_INT_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_INT_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_INT_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_INT_S2_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i16 [[X:%.*]], ptr [[TMP1]], align 2
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 6, ptr [[VARARG_BUFFER]])
@@ -188,9 +188,9 @@ define void @pass_int_s3(i32 %i, i32 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_INT_S3_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_INT_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_INT_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_INT_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_INT_S3_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
@@ -211,9 +211,9 @@ define void @pass_int_s4(i32 %i, i64 %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_INT_S4_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_INT_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_INT_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_INT_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_INT_S4_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
 ; ABI-NEXT:    store i64 [[X:%.*]], ptr [[TMP1]], align 8
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[VARARG_BUFFER]])
@@ -234,9 +234,9 @@ define void @pass_int_s5(i32 %i, <4 x i32> %x) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_INT_S5_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_INT_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_INT_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_INT_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_INT_S5_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
 ; ABI-NEXT:    store <4 x i32> [[X:%.*]], ptr [[TMP1]], align 16
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[VARARG_BUFFER]])
@@ -257,15 +257,15 @@ define void @pass_asc(i8 %x1, i16 %x2, i32 %x3, i64 %x4, <4 x i32> %x5) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_ASC_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 48, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i8 [[X1:%.*]], ptr [[TMP0]], align 1
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
 ; ABI-NEXT:    store i16 [[X2:%.*]], ptr [[TMP1]], align 2
-; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 4
+; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 4
 ; ABI-NEXT:    store i32 [[X3:%.*]], ptr [[TMP2]], align 4
-; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 6
+; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 6
 ; ABI-NEXT:    store i64 [[X4:%.*]], ptr [[TMP3]], align 8
-; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 8
+; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[PASS_ASC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 8
 ; ABI-NEXT:    store <4 x i32> [[X5:%.*]], ptr [[TMP4]], align 16
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 48, ptr [[VARARG_BUFFER]])
@@ -286,15 +286,15 @@ define void @pass_dsc(<4 x i32> %x0, i64 %x1, i32 %x2, i16 %x3, i8 %x4) {
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_DSC_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 33, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store <4 x i32> [[X0:%.*]], ptr [[TMP0]], align 16
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i64 [[X1:%.*]], ptr [[TMP1]], align 8
-; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
+; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 2
 ; ABI-NEXT:    store i32 [[X2:%.*]], ptr [[TMP2]], align 4
-; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 3
+; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 3
 ; ABI-NEXT:    store i16 [[X3:%.*]], ptr [[TMP3]], align 2
-; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 5
+; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[PASS_DSC_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 5
 ; ABI-NEXT:    store i8 [[X4:%.*]], ptr [[TMP4]], align 1
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 33, ptr [[VARARG_BUFFER]])
@@ -317,22 +317,22 @@ define void @pass_multiple(i32 %i, i8 %x1, i16 %x2, i32 %x3, i64 %x4, <4 x i32> 
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_MULTIPLE_VARARG:%.*]], align 16
 ; ABI-NEXT:    [[VARARG_BUFFER1:%.*]] = alloca [[PASS_MULTIPLE_VARARG_0:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
+; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I:%.*]], ptr [[TMP0]], align 4
-; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
+; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i16 [[X2:%.*]], ptr [[TMP1]], align 2
-; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 3
+; ABI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 3
 ; ABI-NEXT:    store i64 [[X4:%.*]], ptr [[TMP2]], align 8
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[VARARG_BUFFER1]])
-; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 0
+; ABI-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[I]], ptr [[TMP3]], align 4
-; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 1
+; ABI-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 1
 ; ABI-NEXT:    store i8 [[X1:%.*]], ptr [[TMP4]], align 1
-; ABI-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 3
+; ABI-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 3
 ; ABI-NEXT:    store i32 [[X3:%.*]], ptr [[TMP5]], align 4
-; ABI-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 5
+; ABI-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[PASS_MULTIPLE_VARARG_0]], ptr [[VARARG_BUFFER1]], i32 0, i32 5
 ; ABI-NEXT:    store <4 x i32> [[X5:%.*]], ptr [[TMP6]], align 16
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER1]])
 ; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[VARARG_BUFFER1]])

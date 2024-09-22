@@ -23,10 +23,9 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
     const typeInfo::Component &comp, const Descriptor &derivedInstance) {
   const typeInfo::Value *bounds{comp.bounds()};
   for (int dim{0}; dim < comp.rank(); ++dim) {
-    SubscriptValue lb{bounds[2 * dim].GetValue(&derivedInstance).value_or(0)};
-    SubscriptValue ub{
-        bounds[2 * dim + 1].GetValue(&derivedInstance).value_or(0)};
-    extents[dim] = ub >= lb ? ub - lb + 1 : 0;
+    auto lb{bounds[2 * dim].GetValue(&derivedInstance).value_or(0)};
+    auto ub{bounds[2 * dim + 1].GetValue(&derivedInstance).value_or(0)};
+    extents[dim] = ub >= lb ? static_cast<SubscriptValue>(ub - lb + 1) : 0;
   }
 }
 

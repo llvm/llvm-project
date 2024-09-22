@@ -59,13 +59,13 @@ _start:
 SECTIONS {
 ## LMA defaults to VMA
   OVERLAY 0x1000 : {
-    .big1 { *(.big1) }
+    ".big1" { *(".big1") }
     .small1 { *(.small1) }
   }
 ## .big2 starts at ADDR(.small2)
   OVERLAY : AT (0x2008) {
     .small2 { *(.small2) }
-    .big2 { *(.big2) }
+    ".big2" { *(.big2) }
   }
 ## .empty3 is not discarded. .small3 and .big3 share its address.
   OVERLAY . : AT (0x2014) {
@@ -92,3 +92,11 @@ SECTIONS {
     .out.aaa { *(.aaa) } > AX AT>FLASH
   }
 }
+
+#--- unclosed.lds
+SECTIONS {
+  OVERLAY 0x1000 : AT ( 0x2000 ) {
+
+# RUN: not ld.lld a.o -T unclosed.lds 2>&1 | FileCheck %s --check-prefix=UNCLOSED
+# UNCLOSED:     error: unclosed.lds:2: unexpected EOF
+# UNCLOSED-NOT: {{.}}

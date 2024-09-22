@@ -75,13 +75,20 @@ private:
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                   rel.getType(config->isMips64EL));
+  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                       rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rela &rel) {
+  return rel.r_addend;
+}
+
+// Currently, we assume all input CREL relocations have an explicit addend.
+template <class ELFT>
+static uint64_t getAddend(InputSectionBase &sec,
+                          const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
 
@@ -222,12 +229,12 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     return;
   }
 
-  markSymbol(symtab.find(config->entry));
-  markSymbol(symtab.find(config->init));
-  markSymbol(symtab.find(config->fini));
-  for (StringRef s : config->undefined)
+  markSymbol(symtab.find(ctx.arg.entry));
+  markSymbol(symtab.find(ctx.arg.init));
+  markSymbol(symtab.find(ctx.arg.fini));
+  for (StringRef s : ctx.arg.undefined)
     markSymbol(symtab.find(s));
-  for (StringRef s : script->referencedSymbols)
+  for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(symtab.find(s));
   for (auto [symName, _] : symtab.cmseSymMap) {
     markSymbol(symtab.cmseSymMap[symName].sym);
@@ -239,7 +246,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // all of them. We also want to preserve personality routines and LSDA
   // referenced by .eh_frame sections, so we scan them for that here.
   for (EhInputSection *eh : ctx.ehInputSections) {
-    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        eh->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       scanEhFrameSection(*eh, rels.rels);
     else if (rels.relas.size())
@@ -285,9 +293,9 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
-    if (isReserved(sec) || script->shouldKeep(sec)) {
+    if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
       enqueue(sec, 0);
-    } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
+    } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
@@ -309,6 +317,8 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
     for (const typename ELFT::Rel &rel : rels.rels)
       resolveReloc(sec, rel, false);
     for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Crel &rel : rels.crels)
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
@@ -354,7 +364,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 template <class ELFT> void elf::markLive() {
   llvm::TimeTraceScope timeScope("markLive");
   // If --gc-sections is not given, retain all input sections.
-  if (!config->gcSections) {
+  if (!ctx.arg.gcSections) {
     // If a DSO defines a symbol referenced in a regular object, it is needed.
     for (Symbol *sym : symtab.getSymbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
@@ -367,17 +377,17 @@ template <class ELFT> void elf::markLive() {
     sec->markDead();
 
   // Follow the graph to mark all live sections.
-  for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)
-    MarkLive<ELFT>(curPart).run();
+  for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
+    MarkLive<ELFT>(i).run();
 
   // If we have multiple partitions, some sections need to live in the main
   // partition even if they were allocated to a loadable partition. Move them
   // there now.
-  if (partitions.size() != 1)
+  if (ctx.partitions.size() != 1)
     MarkLive<ELFT>(1).moveToMain();
 
   // Report garbage-collected sections.
-  if (config->printGcSections)
+  if (ctx.arg.printGcSections)
     for (InputSectionBase *sec : ctx.inputSections)
       if (!sec->isLive())
         message("removing unused section " + toString(sec));

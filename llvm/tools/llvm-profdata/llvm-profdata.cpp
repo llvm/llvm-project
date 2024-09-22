@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -130,6 +131,23 @@ cl::opt<std::string>
                    cl::desc("For merge, use the provided unstripped bianry to "
                             "correlate the raw profile."),
                    cl::sub(MergeSubcommand));
+cl::list<std::string> DebugFileDirectory(
+    "debug-file-directory",
+    cl::desc("Directories to search for object files by build ID"));
+cl::opt<bool> DebugInfod("debuginfod", cl::init(false), cl::Hidden,
+                         cl::sub(MergeSubcommand),
+                         cl::desc("Enable debuginfod"));
+cl::opt<ProfCorrelatorKind> BIDFetcherProfileCorrelate(
+    "correlate",
+    cl::desc("Use debug-info or binary correlation to correlate profiles with "
+             "build id fetcher"),
+    cl::init(InstrProfCorrelator::NONE),
+    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
+                          "No profile correlation"),
+               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
+                          "Use debug info to correlate"),
+               clEnumValN(InstrProfCorrelator::BINARY, "binary",
+                          "Use binary to correlate")));
 cl::opt<std::string> FuncNameFilter(
     "function",
     cl::desc("Only functions matching the filter are shown in the output. For "
@@ -207,6 +225,12 @@ cl::opt<bool> GenPartialProfile(
     "gen-partial-profile", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
     cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
+cl::opt<bool> SplitLayout(
+    "split-layout", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Split the profile to two sections with one containing sample "
+             "profiles with inlined functions and the other without (only "
+             "meaningful for -extbinary)"));
 cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -290,6 +314,11 @@ cl::opt<bool> DropProfileSymbolList(
     cl::sub(MergeSubcommand),
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
+
+cl::opt<bool> KeepVTableSymbols(
+    "keep-vtable-symbols", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("If true, keep the vtable symbols in indexed profiles"));
 
 // Temporary support for writing the previous version of the format, to enable
 // some forward compatibility.
@@ -645,9 +674,11 @@ static void overlapInput(const std::string &BaseFilename,
 }
 
 /// Load an input into a writer context.
-static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-                      const InstrProfCorrelator *Correlator,
-                      const StringRef ProfiledBinary, WriterContext *WC) {
+static void
+loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
+          const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
+          WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -725,8 +756,12 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
   };
-  auto ReaderOrErr =
-      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
+
+  const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
+                                                ? *BIDFetcherCorrelatorKind
+                                                : ProfCorrelatorKind::NONE;
+  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator,
+                                             BIDFetcher, CorrelatorKind, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -767,11 +802,12 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
-  const InstrProfSymtab &symtab = Reader->getSymtab();
-  const auto &VTableNames = symtab.getVTableNames();
+  if (KeepVTableSymbols) {
+    const InstrProfSymtab &symtab = Reader->getSymtab();
+    const auto &VTableNames = symtab.getVTableNames();
 
-  for (const auto &kv : VTableNames) {
-    WC->Writer.addVTableName(kv.getKey());
+    for (const auto &kv : VTableNames)
+      WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -909,8 +945,15 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   // TODO: Maybe we should support correlation with mixture of different
   // correlation modes(w/wo debug-info/object correlation).
-  if (!DebugInfoFilename.empty() && !BinaryFilename.empty())
-    exitWithError("Expected only one of -debug-info, -binary-file");
+  if (DebugInfoFilename.empty()) {
+    if (!BinaryFilename.empty() && (DebugInfod || !DebugFileDirectory.empty()))
+      exitWithError("Expected only one of -binary-file, -debuginfod or "
+                    "-debug-file-directory");
+  } else if (!BinaryFilename.empty() || DebugInfod ||
+             !DebugFileDirectory.empty()) {
+    exitWithError("Expected only one of -debug-info, -binary-file, -debuginfod "
+                  "or -debug-file-directory");
+  }
   std::string CorrelateFilename;
   ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
   if (!DebugInfoFilename.empty()) {
@@ -928,6 +971,25 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithError(std::move(Err), CorrelateFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), CorrelateFilename);
+  }
+
+  ProfCorrelatorKind BIDFetcherCorrelateKind = ProfCorrelatorKind::NONE;
+  std::unique_ptr<object::BuildIDFetcher> BIDFetcher;
+  if (DebugInfod) {
+    llvm::HTTPClient::initialize();
+    BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
+    if (!BIDFetcherProfileCorrelate)
+      exitWithError("Expected --correlate when --debuginfod is provided");
+    BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
+  } else if (!DebugFileDirectory.empty()) {
+    BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
+    if (!BIDFetcherProfileCorrelate)
+      exitWithError("Expected --correlate when --debug-file-directory "
+                    "is provided");
+    BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
+  } else if (BIDFetcherProfileCorrelate) {
+    exitWithError("Expected --debuginfod or --debug-file-directory when "
+                  "--correlate is provided");
   }
 
   std::mutex ErrorLock;
@@ -948,7 +1010,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get());
+                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
@@ -956,7 +1018,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
       Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
-                 Contexts[Ctx].get());
+                 Contexts[Ctx].get(), BIDFetcher.get(),
+                 &BIDFetcherCorrelateKind);
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -1117,7 +1180,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
     for (auto &FilePrefix : FilePrefixes) {
-      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      std::string NamePrefix = FilePrefix + GlobalIdentifierDelimiter;
       PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
@@ -1415,7 +1478,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
+      mergeSampleProfErrors(Error,
+                            Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
@@ -1460,6 +1524,13 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
                                   sampleprof::ProfileSymbolList &WriterList,
                                   bool CompressAllSections, bool UseMD5,
                                   bool GenPartialProfile) {
+  if (SplitLayout) {
+    if (OutputFormat == PF_Binary)
+      warn("-split-layout is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseCtxSplitLayout();
+  }
+
   populateProfileSymbolList(Buffer, WriterList);
   if (WriterList.size() > 0 && OutputFormat != PF_Ext_Binary)
     warn("Profile Symbol list is not empty but the output format is not "
@@ -1536,7 +1607,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
       SampleContext FContext = Samples.getContext();
-      MergeResult(Result, ProfileMap[FContext].merge(Samples, Input.Weight));
+      mergeSampleProfErrors(Result,
+                            ProfileMap[FContext].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename,

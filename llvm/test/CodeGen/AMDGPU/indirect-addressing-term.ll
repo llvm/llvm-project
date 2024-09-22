@@ -14,7 +14,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   liveins: $vgpr0, $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY killed $vgpr0
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GCN-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   renamable $sgpr6 = COPY renamable $sgpr1
   ; GCN-NEXT:   renamable $sgpr0 = COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
   ; GCN-NEXT:   renamable $sgpr4 = S_MOV_B32 61440

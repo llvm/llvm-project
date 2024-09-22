@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -520,7 +519,7 @@ static void emitOneCEnumFromConversion(const llvm::Record *record,
   os << formatv(
       "inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM(int64_t "
       "value) {{\n",
-      cppNamespace, cppClassName, llvmClass);
+      cppNamespace, cppClassName);
   os << "  switch (value) {\n";
 
   for (const auto &enumerant : enumAttr.getAllCases()) {

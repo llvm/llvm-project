@@ -12,9 +12,9 @@
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace fma {
 
@@ -87,6 +87,6 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
 
 } // namespace fma
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_FMA_H

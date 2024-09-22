@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_STATVFS_STATVFS_H
 #define LLVM_LIBC_SRC_SYS_STATVFS_STATVFS_H
 
-#include "llvm-libc-types/struct_statvfs.h"
+#include "include/llvm-libc-types/struct_statvfs.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int statvfs(const char *__restrict path, struct statvfs *__restrict buf);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STATVFS_STATVFS_H

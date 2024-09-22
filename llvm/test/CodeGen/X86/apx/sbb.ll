@@ -114,8 +114,7 @@ define i16 @sbb16ri8(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    sbbw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i16 %a, 123
   %k = icmp ugt i16 %x, %y
@@ -171,9 +170,8 @@ define i16 @sbb16ri(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    sbbw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xdf,0x00]
-; CHECK-NEXT:    addl $-1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0x2e,0xfb,0xff,0xff]
+; CHECK-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2E
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = sub i16 %a, 1234
   %k = icmp ugt i16 %x, %y
@@ -273,8 +271,7 @@ define i16 @sbb16mi8(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    sbbw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x1f,0x00]
-; CHECK-NEXT:    addl $-123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x85]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    addw $-123, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xc0,0x85]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %s = sub i16 %a, 123
@@ -334,9 +331,8 @@ define i16 @sbb16mi(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    sbbw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x1f,0x00]
-; CHECK-NEXT:    addl $-1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0x2e,0xfb,0xff,0xff]
+; CHECK-NEXT:    addw $-1234, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x05,0x2e,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2E
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %s = sub i16 %a, 1234

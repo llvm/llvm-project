@@ -68,7 +68,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_shader_clock},
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
-};
+        {"SPV_KHR_non_semantic_info",
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,
@@ -111,4 +112,16 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
 
   Vals = std::move(EnabledExtensions);
   return false;
+}
+
+llvm::StringRef SPIRVExtensionsParser::checkExtensions(
+    const std::vector<std::string> &ExtNames,
+    std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
+  for (const auto &Ext : ExtNames) {
+    auto It = SPIRVExtensionMap.find(Ext);
+    if (It == SPIRVExtensionMap.end())
+      return Ext;
+    AllowedExtensions.insert(It->second);
+  }
+  return StringRef();
 }

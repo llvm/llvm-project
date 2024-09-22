@@ -33,8 +33,7 @@ define noundef i1 @logger(i32 noundef %logLevel, ptr %ea, ptr %pll) {
 ; CHECK-GI-NEXT:    b.hi .LBB1_2
 ; CHECK-GI-NEXT:  // %bb.1: // %land.rhs
 ; CHECK-GI-NEXT:    ldr x8, [x1]
-; CHECK-GI-NEXT:    ldrb w8, [x8]
-; CHECK-GI-NEXT:    and w0, w8, #0x1
+; CHECK-GI-NEXT:    ldrb w0, [x8]
 ; CHECK-GI-NEXT:  .LBB1_2: // %land.end
 ; CHECK-GI-NEXT:    ret
 entry:

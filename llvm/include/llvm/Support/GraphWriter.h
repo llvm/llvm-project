@@ -228,9 +228,9 @@ public:
           O << "|";
 
       if (RenderUsingHTML)
-        O << EdgeSourceLabels.str();
+        O << edgeSourceLabels;
       else
-        O << "{" << EdgeSourceLabels.str() << "}";
+        O << "{" << edgeSourceLabels << "}";
 
       if (DTraits.renderGraphFromBottomUp())
         if (!RenderUsingHTML)

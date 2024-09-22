@@ -65,6 +65,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -107,12 +108,13 @@ static std::optional<DestSourcePair> isCopyInstr(const MachineInstr &MI,
 
 class CopyTracker {
   struct CopyInfo {
-    MachineInstr *MI, *LastSeenUseInCopy;
+    MachineInstr *MI = nullptr;
+    MachineInstr *LastSeenUseInCopy = nullptr;
     SmallVector<MCRegister, 4> DefRegs;
-    bool Avail;
+    bool Avail = false;
   };
 
-  DenseMap<MCRegister, CopyInfo> Copies;
+  DenseMap<MCRegUnit, CopyInfo> Copies;
 
 public:
   /// Mark all of the given registers and their subregisters as unavailable for
@@ -239,8 +241,7 @@ public:
     // Remember source that's copied to Def. Once it's clobbered, then
     // it's no longer available for copy propagation.
     for (MCRegUnit Unit : TRI.regunits(Src)) {
-      auto I = Copies.insert({Unit, {nullptr, nullptr, {}, false}});
-      auto &Copy = I.first->second;
+      auto &Copy = Copies[Unit];
       if (!is_contained(Copy.DefRegs, Def))
         Copy.DefRegs.push_back(Def);
       Copy.LastSeenUseInCopy = MI;
@@ -251,7 +252,7 @@ public:
     return !Copies.empty();
   }
 
-  MachineInstr *findCopyForUnit(MCRegister RegUnit,
+  MachineInstr *findCopyForUnit(MCRegUnit RegUnit,
                                 const TargetRegisterInfo &TRI,
                                 bool MustBeAvailable = false) {
     auto CI = Copies.find(RegUnit);
@@ -262,7 +263,7 @@ public:
     return CI->second.MI;
   }
 
-  MachineInstr *findCopyDefViaUnit(MCRegister RegUnit,
+  MachineInstr *findCopyDefViaUnit(MCRegUnit RegUnit,
                                    const TargetRegisterInfo &TRI) {
     auto CI = Copies.find(RegUnit);
     if (CI == Copies.end())
@@ -1052,7 +1053,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands && MI.getNumOperands() == 2) {
+    if (CopyOperands) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 

@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"

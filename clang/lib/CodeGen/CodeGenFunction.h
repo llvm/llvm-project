@@ -202,7 +202,7 @@ template <> struct DominatingValue<Address> {
   }
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return Address(DominatingLLVMValue::restore(CGF, value.BasePtr),
-                   value.ElementType, value.Alignment,
+                   value.ElementType, value.Alignment, CGPointerAuthInfo(),
                    DominatingLLVMValue::restore(CGF, value.Offset));
   }
 };
@@ -611,6 +611,9 @@ public:
 
   /// True if the current statement has always_inline attribute.
   bool InAlwaysInlineAttributedStmt = false;
+
+  /// True if the current statement has noconvergent attribute.
+  bool InNoConvergentAttributedStmt = false;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -1140,17 +1143,11 @@ public:
     /// Copy all the entries in the source map over the corresponding
     /// entries in the destination, which must exist.
     static void copyInto(const DeclMapTy &Src, DeclMapTy &Dest) {
-      for (auto &Pair : Src) {
-        if (!Pair.second.isValid()) {
-          Dest.erase(Pair.first);
-          continue;
-        }
-
-        auto I = Dest.find(Pair.first);
-        if (I != Dest.end())
-          I->second = Pair.second;
+      for (auto &[Decl, Addr] : Src) {
+        if (!Addr.isValid())
+          Dest.erase(Decl);
         else
-          Dest.insert(Pair);
+          Dest.insert_or_assign(Decl, Addr);
       }
     }
   };
@@ -1310,8 +1307,8 @@ public:
                                      CodeGenFunction &CGF) {
     assert(isInConditionalBranch());
     llvm::BasicBlock *block = OutermostConditional->getStartingBlock();
-    auto store =
-        new llvm::StoreInst(value, addr.emitRawPointer(CGF), &block->back());
+    auto store = new llvm::StoreInst(value, addr.emitRawPointer(CGF),
+                                     block->back().getIterator());
     store->setAlignment(addr.getAlignment().getAsAlign());
   }
 
@@ -2453,10 +2450,20 @@ public:
 
   void InitializeVTablePointers(const CXXRecordDecl *ClassDecl);
 
+  // VTableTrapMode - whether we guarantee that loading the
+  // vtable is guaranteed to trap on authentication failure,
+  // even if the resulting vtable pointer is unused.
+  enum class VTableAuthMode {
+    Authenticate,
+    MustTrap,
+    UnsafeUbsanStrip // Should only be used for Vptr UBSan check
+  };
   /// GetVTablePtr - Return the Value of the vtable pointer member pointed
   /// to by This.
-  llvm::Value *GetVTablePtr(Address This, llvm::Type *VTableTy,
-                            const CXXRecordDecl *VTableClass);
+  llvm::Value *
+  GetVTablePtr(Address This, llvm::Type *VTableTy,
+               const CXXRecordDecl *VTableClass,
+               VTableAuthMode AuthMode = VTableAuthMode::Authenticate);
 
   enum CFITypeCheckKind {
     CFITCK_VCall,
@@ -2566,6 +2573,8 @@ public:
 
   llvm::Type *ConvertTypeForMem(QualType T);
   llvm::Type *ConvertType(QualType T);
+  llvm::Type *convertTypeForLoadStore(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
   llvm::Type *ConvertType(const TypeDecl *T) {
     return ConvertType(getContext().getTypeDeclType(T));
   }
@@ -2677,7 +2686,8 @@ public:
     if (Alignment.isZero())
       Alignment =
           CGM.getNaturalTypeAlignment(T, BaseInfo, TBAAInfo, ForPointeeType);
-    return Address(Ptr, ConvertTypeForMem(T), Alignment, nullptr,
+    return Address(Ptr, ConvertTypeForMem(T), Alignment,
+                   CGM.getPointerAuthInfoForPointeeType(T), /*Offset=*/nullptr,
                    IsKnownNonNull);
   }
 
@@ -2718,7 +2728,9 @@ public:
   /// an l-value with the natural pointee alignment of T.
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
 
-  LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T);
+  LValue
+  MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
+                             KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// Same as MakeNaturalAlignPointeeAddrLValue except that the pointer is known
   /// to be unsigned.
@@ -2908,6 +2920,11 @@ public:
                         Qualifiers Quals, bool IsInitializer);
 
   void EmitAnyExprToExn(const Expr *E, Address Addr);
+
+  /// EmitInitializationToLValue - Emit an initializer to an LValue.
+  void EmitInitializationToLValue(
+      const Expr *E, LValue LV,
+      AggValueSlot::IsZeroed_t IsZeroed = AggValueSlot::IsNotZeroed);
 
   /// EmitExprAsInit - Emits the code necessary to initialize a
   /// location in memory with the given initializer.
@@ -3132,7 +3149,8 @@ public:
                               bool ForVirtualBase, bool Delegating,
                               Address This, CallArgList &Args,
                               AggValueSlot::Overlap_t Overlap,
-                              SourceLocation Loc, bool NewPointerIsChecked);
+                              SourceLocation Loc, bool NewPointerIsChecked,
+                              llvm::CallBase **CallOrInvoke = nullptr);
 
   /// Emit assumption load for all bases. Requires to be called only on
   /// most-derived class and not under construction of the object.
@@ -3287,14 +3305,10 @@ public:
                                         const FieldDecl *FAMDecl,
                                         uint64_t &Offset);
 
-  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
-  /// \p nullptr if either the attribute or the field doesn't exist.
-  const FieldDecl *FindCountedByField(const FieldDecl *FD);
-
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
-                                      const FieldDecl *FAMDecl,
-                                      const FieldDecl *CountDecl);
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
+                                        const FieldDecl *FAMDecl,
+                                        const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -3805,8 +3819,11 @@ public:
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
+  void EmitOMPReverseDirective(const OMPReverseDirective &S);
+  void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
+  void EmitOMPScopeDirective(const OMPScopeDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
   void EmitOMPSectionDirective(const OMPSectionDirective &S);
   void EmitOMPSingleDirective(const OMPSingleDirective &S);
@@ -3884,6 +3901,7 @@ public:
   void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
   void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
+  void EmitOMPAssumeDirective(const OMPAssumeDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -4143,6 +4161,13 @@ public:
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
 
+  /// Emit an atomicrmw instruction, and applying relevant metadata when
+  /// applicable.
+  llvm::AtomicRMWInst *emitAtomicRMWInst(
+      llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+      llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::SyncScope::ID SSID = llvm::SyncScope::System);
+
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
                         bool IsVolatile);
@@ -4246,7 +4271,8 @@ public:
   LValue EmitBinaryOperatorLValue(const BinaryOperator *E);
   LValue EmitCompoundAssignmentLValue(const CompoundAssignOperator *E);
   // Note: only available for agg return types
-  LValue EmitCallExprLValue(const CallExpr *E);
+  LValue EmitCallExprLValue(const CallExpr *E,
+                            llvm::CallBase **CallOrInvoke = nullptr);
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
@@ -4256,6 +4282,7 @@ public:
   LValue EmitUnaryOpLValue(const UnaryOperator *E);
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
+  llvm::Value *EmitMatrixIndexExpr(const Expr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
@@ -4269,6 +4296,8 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
+  void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
+                          QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4356,20 +4385,27 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke, bool IsMustTail,
-                  SourceLocation Loc);
+                  llvm::CallBase **CallOrInvoke, bool IsMustTail,
+                  SourceLocation Loc,
+                  bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke = nullptr,
+                  llvm::CallBase **CallOrInvoke = nullptr,
                   bool IsMustTail = false) {
-    return EmitCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
+    return EmitCall(CallInfo, Callee, ReturnValue, Args, CallOrInvoke,
                     IsMustTail, SourceLocation());
   }
   RValue EmitCall(QualType FnType, const CGCallee &Callee, const CallExpr *E,
-                  ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr);
+                  ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr,
+                  llvm::CallBase **CallOrInvoke = nullptr);
+
+  // If a Call or Invoke instruction was emitted for this CallExpr, this method
+  // writes the pointer to `CallOrInvoke` if it's not null.
   RValue EmitCallExpr(const CallExpr *E,
-                      ReturnValueSlot ReturnValue = ReturnValueSlot());
-  RValue EmitSimpleCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue);
+                      ReturnValueSlot ReturnValue = ReturnValueSlot(),
+                      llvm::CallBase **CallOrInvoke = nullptr);
+  RValue EmitSimpleCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue,
+                            llvm::CallBase **CallOrInvoke = nullptr);
   CGCallee EmitCallee(const Expr *E);
 
   void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
@@ -4411,15 +4447,44 @@ public:
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
 
-  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
-    return Addr.getBasePointer();
-  }
-
   bool isPointerKnownNonNull(const Expr *E);
+
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
+                                                 llvm::Value *Discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
+                                        GlobalDecl SchemaDecl,
+                                        QualType SchemaType);
+
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+
+  llvm::Value *emitPointerAuthResign(llvm::Value *Pointer, QualType PointerType,
+                                     const CGPointerAuthInfo &CurAuthInfo,
+                                     const CGPointerAuthInfo &NewAuthInfo,
+                                     bool IsKnownNonNull);
+  llvm::Value *emitPointerAuthResignCall(llvm::Value *Pointer,
+                                         const CGPointerAuthInfo &CurInfo,
+                                         const CGPointerAuthInfo &NewInfo);
 
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
+                                        QualType SourceType, QualType DestType);
+  Address authPointerToPointerCast(Address Ptr, QualType SourceType,
+                                   QualType DestType);
+
+  Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
+
+  llvm::Value *getAsNaturalPointerTo(Address Addr, QualType PointeeType) {
+    return getAsNaturalAddressOf(Addr, PointeeType).getBasePointer();
+  }
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
@@ -4444,25 +4509,23 @@ public:
   void callCStructCopyAssignmentOperator(LValue Dst, LValue Src);
   void callCStructMoveAssignmentOperator(LValue Dst, LValue Src);
 
-  RValue
-  EmitCXXMemberOrOperatorCall(const CXXMethodDecl *Method,
-                              const CGCallee &Callee,
-                              ReturnValueSlot ReturnValue, llvm::Value *This,
-                              llvm::Value *ImplicitParam,
-                              QualType ImplicitParamTy, const CallExpr *E,
-                              CallArgList *RtlArgs);
+  RValue EmitCXXMemberOrOperatorCall(
+      const CXXMethodDecl *Method, const CGCallee &Callee,
+      ReturnValueSlot ReturnValue, llvm::Value *This,
+      llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *E,
+      CallArgList *RtlArgs, llvm::CallBase **CallOrInvoke);
   RValue EmitCXXDestructorCall(GlobalDecl Dtor, const CGCallee &Callee,
                                llvm::Value *This, QualType ThisTy,
                                llvm::Value *ImplicitParam,
-                               QualType ImplicitParamTy, const CallExpr *E);
+                               QualType ImplicitParamTy, const CallExpr *E,
+                               llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberCallExpr(const CXXMemberCallExpr *E,
-                               ReturnValueSlot ReturnValue);
-  RValue EmitCXXMemberOrOperatorMemberCallExpr(const CallExpr *CE,
-                                               const CXXMethodDecl *MD,
-                                               ReturnValueSlot ReturnValue,
-                                               bool HasQualifier,
-                                               NestedNameSpecifier *Qualifier,
-                                               bool IsArrow, const Expr *Base);
+                               ReturnValueSlot ReturnValue,
+                               llvm::CallBase **CallOrInvoke = nullptr);
+  RValue EmitCXXMemberOrOperatorMemberCallExpr(
+      const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
+      bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+      const Expr *Base, llvm::CallBase **CallOrInvoke);
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                           llvm::Value *memberPtr,
@@ -4470,19 +4533,21 @@ public:
                                           LValueBaseInfo *BaseInfo = nullptr,
                                           TBAAAccessInfo *TBAAInfo = nullptr);
   RValue EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
-                                      ReturnValueSlot ReturnValue);
+                                      ReturnValueSlot ReturnValue,
+                                      llvm::CallBase **CallOrInvoke);
 
   RValue EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                        const CXXMethodDecl *MD,
-                                       ReturnValueSlot ReturnValue);
+                                       ReturnValueSlot ReturnValue,
+                                       llvm::CallBase **CallOrInvoke);
   RValue EmitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *E);
 
   RValue EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
-                                ReturnValueSlot ReturnValue);
+                                ReturnValueSlot ReturnValue,
+                                llvm::CallBase **CallOrInvoke);
 
   RValue EmitNVPTXDevicePrintfCallExpr(const CallExpr *E);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
-  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
@@ -4501,7 +4566,8 @@ public:
       const analyze_os_log::OSLogBufferLayout &Layout,
       CharUnits BufferAlignment);
 
-  RValue EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue);
+  RValue EmitBlockCallExpr(const CallExpr *E, ReturnValueSlot ReturnValue,
+                           llvm::CallBase **CallOrInvoke);
 
   /// EmitTargetBuiltinExpr - Emit the given builtin call. Returns 0 if the call
   /// is unhandled by the current target.
@@ -4563,7 +4629,6 @@ public:
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
-                                    llvm::Type *ReturnType,
                                     ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
                                   llvm::Type *ReturnType,
@@ -4639,7 +4704,8 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                   ReturnValueSlot ReturnValue);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -4649,6 +4715,10 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs);
+  llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
@@ -4791,9 +4861,10 @@ public:
   void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
                             ExprValueKind SrcKind);
 
-  /// Build all the stores needed to initialize an aggregate at Dest with the
-  /// value Val.
-  void EmitAggregateStore(llvm::Value *Val, Address Dest, bool DestIsVolatile);
+  /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
+  /// to at most \arg DstSize bytes.
+  void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
+                          bool DstIsVolatile);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
@@ -4839,7 +4910,7 @@ public:
   void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::GlobalVariable *GV,
                                 bool PerformInit);
 
-  llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
+  llvm::Constant *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
 
   llvm::Function *createTLSAtExitStub(const VarDecl &VD,
@@ -5249,7 +5320,7 @@ public:
       llvm::SmallVector<StringRef, 8> Features;
 
       Conds(StringRef Arch, ArrayRef<StringRef> Feats)
-          : Architecture(Arch), Features(Feats.begin(), Feats.end()) {}
+          : Architecture(Arch), Features(Feats) {}
     } Conditions;
 
     MultiVersionResolverOption(llvm::Function *F, StringRef Arch,
@@ -5268,6 +5339,9 @@ public:
   void
   EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
                                   ArrayRef<MultiVersionResolverOption> Options);
+  void
+  EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
+                                ArrayRef<MultiVersionResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);

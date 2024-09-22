@@ -679,6 +679,12 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         break;
       }
     }
+
+    // FIXME: We can spill incoming arguments and restore at the end of the
+    // prolog.
+    if (!ScratchWaveOffsetReg)
+      report_fatal_error(
+          "could not find temporary scratch offset register in prolog");
   } else {
     ScratchWaveOffsetReg = PreloadedScratchWaveOffsetReg;
   }
@@ -823,12 +829,12 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     }
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc2)
-      .addImm(Rsrc23 & 0xffffffff)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Lo_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc3)
-      .addImm(Rsrc23 >> 32)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Hi_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
   } else if (ST.isAmdHsaOrMesa(Fn)) {
     assert(PreloadedScratchRsrcReg);
 
@@ -1337,10 +1343,14 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Allocate spill slots for WWM reserved VGPRs.
   // For chain functions, we only need to do this if we have calls to
-  // llvm.amdgcn.cs.chain.
-  bool IsChainWithoutCalls =
-      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
-  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
+  // llvm.amdgcn.cs.chain (otherwise there's no one to save them for, since
+  // chain functions do not return) and the function did not contain a call to
+  // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
+  // when entering the function).
+  bool IsChainWithoutRestores =
+      FuncInfo->isChainFunction() &&
+      (!MF.getFrameInfo().hasTailCall() || FuncInfo->hasInitWholeWave());
+  if (!FuncInfo->isEntryFunction() && !IsChainWithoutRestores) {
     for (Register Reg : FuncInfo->getWWMReservedRegs()) {
       const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
       FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),

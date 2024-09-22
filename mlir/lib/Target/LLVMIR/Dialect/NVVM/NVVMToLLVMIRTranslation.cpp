@@ -15,7 +15,6 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/IR/IRBuilder.h"
@@ -119,6 +118,41 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
       llvm_unreachable("unsupported number of matrix");
     }
   }
+}
+
+static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
+                                              NVVM::ProxyKind toProxy,
+                                              NVVM::MemScopeKind scope,
+                                              bool isRelease) {
+  if (fromProxy == NVVM::ProxyKind::GENERIC &&
+      toProxy == NVVM::ProxyKind::TENSORMAP) {
+    switch (scope) {
+    case NVVM::MemScopeKind::CTA: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_cta;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta;
+    }
+    case NVVM::MemScopeKind::CLUSTER: {
+      if (isRelease)
+        return llvm::Intrinsic::
+            nvvm_fence_proxy_tensormap_generic_release_cluster;
+      return llvm::Intrinsic::
+          nvvm_fence_proxy_tensormap_generic_acquire_cluster;
+    }
+    case NVVM::MemScopeKind::GPU: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_gpu;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu;
+    }
+    case NVVM::MemScopeKind::SYS: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_sys;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys;
+    }
+    }
+    llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
+  }
+  llvm_unreachable("Unsupported proxy kinds");
 }
 
 namespace {

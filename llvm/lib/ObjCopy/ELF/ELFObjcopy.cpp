@@ -623,6 +623,54 @@ handleUserSection(const NewSectionInfo &NewSection,
   return F(NewSection.SectionName, Data);
 }
 
+static Error verifyNoteSection(StringRef Name, endianness Endianness,
+                               ArrayRef<uint8_t> Data) {
+  // An ELF note has the following structure:
+  // Name Size: 4 bytes (integer)
+  // Desc Size: 4 bytes (integer)
+  // Type     : 4 bytes
+  // Name     : variable size, padded to a 4 byte boundary
+  // Desc     : variable size, padded to a 4 byte boundary
+
+  if (Data.empty())
+    return Error::success();
+
+  if (Data.size() < 12) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name << " data must be either empty or at least 12 bytes long";
+    return createStringError(errc::invalid_argument, msg);
+  }
+  if (Data.size() % 4 != 0) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name << " data size must be a  multiple of 4 bytes";
+    return createStringError(errc::invalid_argument, msg);
+  }
+  ArrayRef<uint8_t> NameSize = Data.slice(0, 4);
+  ArrayRef<uint8_t> DescSize = Data.slice(4, 4);
+
+  uint32_t NameSizeValue = support::endian::read32(NameSize.data(), Endianness);
+  uint32_t DescSizeValue = support::endian::read32(DescSize.data(), Endianness);
+
+  uint64_t ExpectedDataSize =
+      /*NameSize=*/4 + /*DescSize=*/4 + /*Type=*/4 +
+      /*Name=*/alignTo(NameSizeValue, 4) +
+      /*Desc=*/alignTo(DescSizeValue, 4);
+  uint64_t ActualDataSize = Data.size();
+  if (ActualDataSize != ExpectedDataSize) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name
+        << " data size is incompatible with the content of "
+           "the name and description size fields:"
+        << " expecting " << ExpectedDataSize << ", found " << ActualDataSize;
+    return createStringError(errc::invalid_argument, msg);
+  }
+
+  return Error::success();
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -631,7 +679,7 @@ handleUserSection(const NewSectionInfo &NewSection,
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
-                        Object &Obj) {
+                        ElfType OutputElfType, Object &Obj) {
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch->EMachine;
     Obj.OSABI = Config.OutputArch->OSABI;
@@ -670,17 +718,101 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  if (Config.ChangeSectionLMAValAll != 0) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.FileSize > 0) {
+        if (Config.ChangeSectionLMAValAll > 0 &&
+            Seg.PAddr > std::numeric_limits<uint64_t>::max() -
+                            Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be increased by 0x" +
+                  Twine::utohexstr(Config.ChangeSectionLMAValAll) +
+                  ". The result would overflow");
+        } else if (Config.ChangeSectionLMAValAll < 0 &&
+                   Seg.PAddr < std::numeric_limits<uint64_t>::min() -
+                                   Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be decreased by 0x" +
+                  Twine::utohexstr(std::abs(Config.ChangeSectionLMAValAll)) +
+                  ". The result would underflow");
+        }
+        Seg.PAddr += Config.ChangeSectionLMAValAll;
+      }
+    }
+  }
+
+  if (!Config.ChangeSectionAddress.empty()) {
+    if (Obj.Type != ELF::ET_REL)
+      return createStringError(
+          object_error::invalid_file_type,
+          "cannot change section address in a non-relocatable file");
+
+    StringMap<AddressUpdate> SectionsToUpdateAddress;
+    for (const SectionPatternAddressUpdate &PatternUpdate :
+         make_range(Config.ChangeSectionAddress.rbegin(),
+                    Config.ChangeSectionAddress.rend())) {
+      for (SectionBase &Sec : Obj.sections()) {
+        if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
+            SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)
+                .second) {
+          if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
+              Sec.Addr < PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be decreased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would underflow");
+          }
+          if (PatternUpdate.Update.Kind == AdjustKind::Add &&
+              Sec.Addr > std::numeric_limits<uint64_t>::max() -
+                             PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be increased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would overflow");
+          }
+
+          switch (PatternUpdate.Update.Kind) {
+          case (AdjustKind::Set):
+            Sec.Addr = PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Subtract):
+            Sec.Addr -= PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Add):
+            Sec.Addr += PatternUpdate.Update.Value;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
         Sec.Type = SHT_NOBITS;
 
+  endianness E = OutputElfType == ELFT_ELF32LE || OutputElfType == ELFT_ELF64LE
+                     ? endianness::little
+                     : endianness::big;
+
   for (const NewSectionInfo &AddedSection : Config.AddSection) {
-    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) -> Error {
       OwnedDataSection &NewSection =
           Obj.addSection<OwnedDataSection>(Name, Data);
-      if (Name.starts_with(".note") && Name != ".note.GNU-stack")
+      if (Name.starts_with(".note") && Name != ".note.GNU-stack") {
         NewSection.Type = SHT_NOTE;
+        if (ELFConfig.VerifyNoteSections)
+          return verifyNoteSection(Name, E, Data);
+      }
       return Error::success();
     };
     if (Error E = handleUserSection(AddedSection, AddSection))
@@ -813,7 +945,7 @@ Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -831,7 +963,7 @@ Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -850,7 +982,7 @@ Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
                                     ? getOutputElfType(*Config.OutputArch)
                                     : getOutputElfType(In);
 
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))

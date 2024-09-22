@@ -258,15 +258,16 @@ MainLoopPosix::ReadHandleUP
 MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
                                  const Callback &callback, Status &error) {
   if (!object_sp || !object_sp->IsValid()) {
-    error.SetErrorString("IO object is not valid.");
+    error = Status::FromErrorString("IO object is not valid.");
     return nullptr;
   }
 
   const bool inserted =
       m_read_fds.insert({object_sp->GetWaitableHandle(), callback}).second;
   if (!inserted) {
-    error.SetErrorStringWithFormat("File descriptor %d already monitored.",
-                                   object_sp->GetWaitableHandle());
+    error = Status::FromErrorStringWithFormat(
+        "File descriptor %d already monitored.",
+        object_sp->GetWaitableHandle());
     return nullptr;
   }
 

@@ -81,20 +81,17 @@ define double @bar(double %0) #0 {
 ; X64-NEXT:    #APP
 ; X64-NEXT:    ldmxcsr 0
 ; X64-NEXT:    #NO_APP
-; X64-NEXT:    wait
 ; X64-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; X64-NEXT:    movapd %xmm2, %xmm3
 ; X64-NEXT:    divsd %xmm0, %xmm3
 ; X64-NEXT:    #APP
 ; X64-NEXT:    ldmxcsr 0
 ; X64-NEXT:    #NO_APP
-; X64-NEXT:    wait
 ; X64-NEXT:    movapd %xmm2, %xmm1
 ; X64-NEXT:    divsd %xmm0, %xmm1
 ; X64-NEXT:    #APP
 ; X64-NEXT:    ldmxcsr 0
 ; X64-NEXT:    #NO_APP
-; X64-NEXT:    wait
 ; X64-NEXT:    divsd %xmm0, %xmm2
 ; X64-NEXT:    movapd %xmm3, %xmm0
 ; X64-NEXT:    callq fma@PLT
@@ -105,6 +102,7 @@ define double @bar(double %0) #0 {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    #APP
 ; X86-NEXT:    fldcw 0
 ; X86-NEXT:    #NO_APP

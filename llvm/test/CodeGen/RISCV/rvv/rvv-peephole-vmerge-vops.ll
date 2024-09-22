@@ -902,9 +902,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vmseq.vv v0, v12, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
-; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
@@ -1014,6 +1013,24 @@ define <vscale x 2 x float> @vfredusum_allones_mask(<vscale x 2 x float> %passth
   ret <vscale x 2 x float> %b
 }
 
+define <vscale x 2 x i32> @unfoldable_vredsum_allones_mask_diff_vl(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
+; CHECK-LABEL: unfoldable_vredsum_allones_mask_diff_vl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vredsum.vs v11, v9, v10
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %x,
+    <vscale x 2 x i32> %y,
+    i64 -1)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 -1), i64 1)
+  ret <vscale x 2 x i32> %b
+}
+
 declare <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16>, ptr nocapture, i64)
 declare <vscale x 32 x i8> @llvm.riscv.vssubu.mask.nxv32i8.i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i8, <vscale x 32 x i1>, i64, i64 immarg)
 declare <vscale x 32 x i1> @llvm.riscv.vmseq.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i64)
@@ -1055,9 +1072,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_same_passthru(<vscale x 2 x i32> %pa
 define <vscale x 2 x i32> @vmerge_smaller_vl_different_passthru(<vscale x 2 x i32> %pt1, <vscale x 2 x i32> %pt2, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_different_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1143,4 +1159,59 @@ define <vscale x 2 x double> @vpmerge_vfwsub.w_tied(<vscale x 2 x double> %passt
   %a = call <vscale x 2 x double> @llvm.riscv.vfwsub.w.nxv2f64.nxv2f32(<vscale x 2 x double> %passthru, <vscale x 2 x double> %passthru, <vscale x 2 x float> %y, i64 1, i64 %vl.zext)
   %b = call <vscale x 2 x double> @llvm.vp.merge.nxv2f64(<vscale x 2 x i1> %mask, <vscale x 2 x double> %a, <vscale x 2 x double> %passthru, i32 %vl)
   ret <vscale x 2 x double> %b
+}
+
+define <vscale x 2 x i32> @true_tied_dest_vmerge_implicit_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl) {
+; CHECK-LABEL: true_tied_dest_vmerge_implicit_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmacc.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vmacc.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i64 %avl, i64 0)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> poison,
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %a,
+    <vscale x 2 x i1> %m,
+    i64 %avl
+  )
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i32> @true_mask_vmerge_implicit_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl) {
+; CHECK-LABEL: true_mask_vmerge_implicit_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl, i64 0)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> poison,
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %a,
+    <vscale x 2 x i1> shufflevector(<vscale x 2 x i1> insertelement(<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer),
+    i64 %avl
+  )
+  ret <vscale x 2 x i32> %b
+}
+
+
+define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 2 x i1> %mask, i64 %avl) {
+; CHECK-LABEL: unfoldable_mismatched_sew:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, i64 %avl)
+  %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %a.bitcast,
+    <vscale x 2 x i1> splat (i1 true),
+    i64 %avl
+  )
+  ret <vscale x 2 x i32> %b
 }

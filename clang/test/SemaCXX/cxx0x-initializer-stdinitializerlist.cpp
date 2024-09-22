@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -DUNION_TEST -verify %s
 
 #ifdef UNION_TEST

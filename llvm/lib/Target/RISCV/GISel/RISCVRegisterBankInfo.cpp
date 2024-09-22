@@ -112,51 +112,6 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
-const RegisterBank &
-RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                              LLT Ty) const {
-  switch (RC.getID()) {
-  default:
-    llvm_unreachable("Register class not supported");
-  case RISCV::GPRRegClassID:
-  case RISCV::GPRF16RegClassID:
-  case RISCV::GPRF32RegClassID:
-  case RISCV::GPRNoX0RegClassID:
-  case RISCV::GPRNoX0X2RegClassID:
-  case RISCV::GPRJALRRegClassID:
-  case RISCV::GPRJALRNonX7RegClassID:
-  case RISCV::GPRTCRegClassID:
-  case RISCV::GPRTCNonX7RegClassID:
-  case RISCV::GPRC_and_GPRTCRegClassID:
-  case RISCV::GPRCRegClassID:
-  case RISCV::GPRC_and_SR07RegClassID:
-  case RISCV::SR07RegClassID:
-  case RISCV::SPRegClassID:
-  case RISCV::GPRX0RegClassID:
-    return getRegBank(RISCV::GPRBRegBankID);
-  case RISCV::FPR64RegClassID:
-  case RISCV::FPR16RegClassID:
-  case RISCV::FPR32RegClassID:
-  case RISCV::FPR64CRegClassID:
-  case RISCV::FPR32CRegClassID:
-    return getRegBank(RISCV::FPRBRegBankID);
-  case RISCV::VMRegClassID:
-  case RISCV::VRRegClassID:
-  case RISCV::VRNoV0RegClassID:
-  case RISCV::VRM2RegClassID:
-  case RISCV::VRM2NoV0RegClassID:
-  case RISCV::VRM4RegClassID:
-  case RISCV::VRM4NoV0RegClassID:
-  case RISCV::VMV0RegClassID:
-  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM8RegClassID:
-  case RISCV::VRM8NoV0RegClassID:
-  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
-    return getRegBank(RISCV::VRBRegBankID);
-  }
-}
-
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
@@ -355,10 +310,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_LOAD: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      break;
+    }
+
+    OpdsMapping[0] = GPRValueMapping;
+
     // Use FPR64 for s64 loads on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
@@ -378,10 +342,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_STORE: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = GPRValueMapping;
+    TypeSize Size = Ty.getSizeInBits();
+
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector()) {
+      OpdsMapping[0] = getVRBValueMapping(Size.getKnownMinValue());
+      break;
+    }
+
+    OpdsMapping[0] = GPRValueMapping;
+
     // Use FPR64 for s64 stores on rv32.
-    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
@@ -478,7 +451,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
 
     unsigned Size = Ty.getSizeInBits();
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);

@@ -298,7 +298,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
   SmallPtrSet<Value *, 8> LoadUsers;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (I.mayWriteToMemory())
@@ -859,7 +859,7 @@ static void cloneLoopBlocks(
       if (LatchInst && L->contains(LatchInst))
         LatchVal = VMap[LatchVal];
       PHI.addIncoming(LatchVal, cast<BasicBlock>(VMap[Edge.first]));
-      SE.forgetValue(&PHI);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PHI);
     }
 
   // LastValueMap is updated with the values for the current loop

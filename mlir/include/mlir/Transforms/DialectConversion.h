@@ -174,22 +174,22 @@ public:
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the converted type on success, an `std::nullopt` if
+  /// must return a Value of the type `T` on success, an `std::nullopt` if
   /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion may
-  /// persist after the conversion has finished.
+  /// unrecoverable failure. Materialization functions must be provided when a
+  /// type conversion may persist after the conversion has finished.
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
   /// a signature conversion of a single block argument, to a single SSA value
-  /// of a legal type.
+  /// with the old block argument type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
   /// converting a legal replacement value back to an illegal source type.
   /// This is used when some uses of the original, illegal value must persist
@@ -200,6 +200,7 @@ public:
     sourceMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
+
   /// This method registers a materialization that will be called when
   /// converting an illegal (source) value to a legal (target) type.
   template <typename FnT, typename T = typename llvm::function_traits<
@@ -1123,7 +1124,40 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion attempts to build source/target/
+  /// argument materializations through the type converter API in lieu of
+  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
+  /// at least one materialization could not be built.
+  ///
+  /// If set to "false", the dialect conversion does not build any custom
+  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
+  /// ops to ensure that the resulting IR is valid.
+  bool buildMaterializations = true;
 };
+
+//===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided).
+///
+/// This function processes cast ops in a worklist-driven fashion. For each
+/// cast op, if the chain of input casts eventually reaches a cast op where the
+/// input types match the output types of the matched op, replace the matched
+/// op with the inputs.
+///
+/// Example:
+/// %1 = unrealized_conversion_cast %0 : !A to !B
+/// %2 = unrealized_conversion_cast %1 : !B to !C
+/// %3 = unrealized_conversion_cast %2 : !C to !A
+///
+/// In the above example, %0 can be used instead of %3 and all cast ops are
+/// folded away.
+void reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

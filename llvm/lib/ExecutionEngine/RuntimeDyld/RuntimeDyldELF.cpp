@@ -220,8 +220,7 @@ RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
 RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
-  for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {
-    SID EHFrameSID = UnregisteredEHFrameSections[i];
+  for (SID EHFrameSID : UnregisteredEHFrameSections) {
     uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
     uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
     size_t EHFrameSize = Sections[EHFrameSID].getSize();
@@ -1258,7 +1257,7 @@ RuntimeDyldELF::processRelocationRef(
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     SymType = *SymTypeOrErr;
   }
@@ -1278,7 +1277,7 @@ RuntimeDyldELF::processRelocationRef(
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(SectionOrErr.takeError(), OS);
-        report_fatal_error(Twine(OS.str()));
+        report_fatal_error(Twine(Buf));
       }
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())

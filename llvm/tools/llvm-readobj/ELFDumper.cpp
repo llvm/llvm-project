@@ -378,6 +378,7 @@ protected:
 
   DynRegionInfo DynRelRegion;
   DynRegionInfo DynRelaRegion;
+  DynRegionInfo DynCrelRegion;
   DynRegionInfo DynRelrRegion;
   DynRegionInfo DynPLTRelRegion;
   std::optional<DynRegionInfo> DynSymRegion;
@@ -1683,6 +1684,16 @@ const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
   ENUM_ENT(EF_RISCV_TSO, "TSO"),
 };
 
+const EnumEntry<unsigned> ElfHeaderSPARCFlags[] = {
+    ENUM_ENT(EF_SPARC_32PLUS, "V8+ ABI"),
+    ENUM_ENT(EF_SPARC_SUN_US1, "Sun UltraSPARC I extensions"),
+    ENUM_ENT(EF_SPARC_HAL_R1, "HAL/Fujitsu R1 extensions"),
+    ENUM_ENT(EF_SPARC_SUN_US3, "Sun UltraSPARC III extensions"),
+    ENUM_ENT(EF_SPARCV9_TSO, "Total Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_PSO, "Partial Store Ordering"),
+    ENUM_ENT(EF_SPARCV9_RMO, "Relaxed Memory Ordering"),
+};
+
 const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR1),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR2),
@@ -1909,7 +1920,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> &O,
                            ScopedPrinter &Writer)
     : ObjDumper(Writer, O.getFileName()), ObjF(O), Obj(O.getELFFile()),
       FileName(O.getFileName()), DynRelRegion(O, *this),
-      DynRelaRegion(O, *this), DynRelrRegion(O, *this),
+      DynRelaRegion(O, *this), DynCrelRegion(O, *this), DynRelrRegion(O, *this),
       DynPLTRelRegion(O, *this), DynSymTabShndxRegion(O, *this),
       DynamicTable(O, *this) {
   if (!O.IsContentValid())
@@ -2068,6 +2079,9 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       DynRelaRegion.EntSize = Dyn.getVal();
       DynRelaRegion.EntSizePrintName = "DT_RELAENT value";
       break;
+    case ELF::DT_CREL:
+      DynCrelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
+      break;
     case ELF::DT_SONAME:
       SONameOffset = Dyn.getVal();
       break;
@@ -2108,6 +2122,8 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
         DynPLTRelRegion.EntSize = sizeof(Elf_Rel);
       else if (Dyn.getVal() == DT_RELA)
         DynPLTRelRegion.EntSize = sizeof(Elf_Rela);
+      else if (Dyn.getVal() == DT_CREL)
+        DynPLTRelRegion.EntSize = 1;
       else
         reportUniqueWarning(Twine("unknown DT_PLTREL value of ") +
                             Twine((uint64_t)Dyn.getVal()));
@@ -2306,7 +2322,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     const char *ConvChar =
         (opts::Output == opts::GNU) ? "0x%" PRIx64 : "0x%" PRIX64;
     OS << format(ConvChar, V);
-    return OS.str();
+    return Str;
   };
 
   auto FormatFlags = [](uint64_t V,
@@ -2314,7 +2330,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     std::string Str;
     raw_string_ostream OS(Str);
     printFlags(V, Array, OS);
-    return OS.str();
+    return Str;
   };
 
   // Handle custom printing of architecture specific tags
@@ -2427,6 +2443,8 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
       return "REL";
     if (Value == DT_RELA)
       return "RELA";
+    if (Value == DT_CREL)
+      return "CREL";
     [[fallthrough]];
   case DT_PLTGOT:
   case DT_HASH:
@@ -2441,6 +2459,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_FINI_ARRAY:
   case DT_PREINIT_ARRAY:
   case DT_DEBUG:
+  case DT_CREL:
   case DT_VERDEF:
   case DT_VERNEED:
   case DT_VERSYM:
@@ -3616,6 +3635,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+  else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                          unsigned(ELF::EF_SPARCV9_MM));
   else if (e.e_machine == EM_AVR)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderAVRFlags),
                           unsigned(ELF::EF_AVR_ARCH_MASK));
@@ -3846,14 +3868,15 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 
 template <class ELFT>
 static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
-                                   const typename ELFT::Ehdr &EHeader) {
+                                   const typename ELFT::Ehdr &EHeader,
+                                   uint64_t CrelHdr = 0) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
   if (ELFT::Is64Bits)
     OS << "    Offset             Info             Type               Symbol's "
           "Value  Symbol's Name";
   else
     OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
-  if (IsRela)
+  if (IsRela || (SType == ELF::SHT_CREL && (CrelHdr & CREL_HDR_ADDEND)))
     OS << " + Addend";
   OS << "\n";
 }
@@ -3863,7 +3886,10 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
                                                  const DynRegionInfo &Reg) {
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
-     << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
+     << utohexstr(Offset, /*LowerCase=*/true);
+  if (Type != ELF::SHT_CREL)
+    OS << " contains " << Reg.Size << " bytes";
+  OS << ":\n";
   printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
 }
 
@@ -3871,7 +3897,8 @@ template <class ELFT>
 static bool isRelocationSec(const typename ELFT::Shdr &Sec,
                             const typename ELFT::Ehdr &EHeader) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
-         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
+         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_CREL ||
+         Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
          Sec.sh_type == ELF::SHT_ANDROID_RELR ||
          (EHeader.e_machine == EM_AARCH64 &&
@@ -3895,6 +3922,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       if (!RelasOrErr)
         return RelasOrErr.takeError();
       return RelasOrErr->size();
+    }
+
+    if (Sec.sh_type == ELF::SHT_CREL) {
+      Expected<ArrayRef<uint8_t>> ContentsOrErr =
+          this->Obj.getSectionContents(Sec);
+      if (!ContentsOrErr)
+        return ContentsOrErr.takeError();
+      auto NumOrErr = this->Obj.getCrelHeader(*ContentsOrErr);
+      if (!NumOrErr)
+        return NumOrErr.takeError();
+      return *NumOrErr / 8;
     }
 
     if (PrintAsRelr(Sec)) {
@@ -3930,8 +3968,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     if (PrintAsRelr(Sec)) {
       printRelr(Sec);
     } else {
-      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
-      this->printRelocationsHelper(Sec);
+      uint64_t CrelHdr = 0;
+      // For CREL, read the header and call printRelocationsHelper only if
+      // GetEntriesNum(Sec) succeeded.
+      if (Sec.sh_type == ELF::SHT_CREL && EntriesNum != "<?>") {
+        CrelHdr = cantFail(this->Obj.getCrelHeader(
+            cantFail(this->Obj.getSectionContents(Sec))));
+      }
+      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader(),
+                                   CrelHdr);
+      if (Sec.sh_type != ELF::SHT_CREL || EntriesNum != "<?>")
+        this->printRelocationsHelper(Sec);
     }
   }
   if (!HasRelocSections)
@@ -4894,6 +4941,34 @@ void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
   const bool IsMips64EL = this->Obj.isMips64EL();
+  auto DumpCrelRegion = [&](DynRegionInfo &Region) {
+    // While the size is unknown, a valid CREL has at least one byte. We can
+    // check whether Addr is in bounds, and then decode CREL until the file
+    // end.
+    Region.Size = Region.EntSize = 1;
+    if (!Region.template getAsArrayRef<uint8_t>().empty()) {
+      const uint64_t Offset =
+          Region.Addr - reinterpret_cast<const uint8_t *>(
+                            ObjF.getMemoryBufferRef().getBufferStart());
+      const uint64_t ObjSize = ObjF.getMemoryBufferRef().getBufferSize();
+      auto RelsOrRelas =
+          Obj.decodeCrel(ArrayRef<uint8_t>(Region.Addr, ObjSize - Offset));
+      if (!RelsOrRelas) {
+        reportUniqueWarning(toString(RelsOrRelas.takeError()));
+      } else {
+        for (const Elf_Rel &R : RelsOrRelas->first)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+        for (const Elf_Rela &R : RelsOrRelas->second)
+          printDynamicReloc(Relocation<ELFT>(R, false));
+      }
+    }
+  };
+
+  if (this->DynCrelRegion.Addr) {
+    printDynamicRelocHeader(ELF::SHT_CREL, "CREL", this->DynCrelRegion);
+    DumpCrelRegion(this->DynCrelRegion);
+  }
+
   if (this->DynRelaRegion.Size > 0) {
     printDynamicRelocHeader(ELF::SHT_RELA, "RELA", this->DynRelaRegion);
     for (const Elf_Rela &Rela :
@@ -4922,6 +4997,8 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
       for (const Elf_Rela &Rela :
            this->DynPLTRelRegion.template getAsArrayRef<Elf_Rela>())
         printDynamicReloc(Relocation<ELFT>(Rela, IsMips64EL));
+    } else if (this->DynPLTRelRegion.EntSize == 1) {
+      DumpCrelRegion(this->DynPLTRelRegion);
     } else {
       printDynamicRelocHeader(ELF::SHT_REL, "PLT", this->DynPLTRelRegion);
       for (const Elf_Rel &Rel :
@@ -5220,8 +5297,16 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR] =
         "VTPtrTypeDiscrimination";
     Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI] = "InitFini";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC] =
+        "InitFiniAddressDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT] = "ELFGOT";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS] = "IndirectGotos";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR] =
+        "TypeInfoVTPtrDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR] =
+        "FPtrTypeDiscrimination";
 
-    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR ==
                       AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
                   "Update when new enum items are defined");
 
@@ -5261,7 +5346,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
   switch (Type) {
   default:
     OS << format("<application-specific type 0x%x>", Type);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_STACK_SIZE: {
     OS << "stack size: ";
     if (DataSize == sizeof(typename ELFT::uint))
@@ -5269,25 +5354,25 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                     (uint64_t)(*(const typename ELFT::Addr *)Data.data()));
     else
       OS << format("<corrupt length: 0x%x>", DataSize);
-    return OS.str();
+    return str;
   }
   case GNU_PROPERTY_NO_COPY_ON_PROTECTED:
     OS << "no copy on protected";
     if (DataSize)
       OS << format(" <corrupt length: 0x%x>", DataSize);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_AARCH64_FEATURE_1_AND:
   case GNU_PROPERTY_X86_FEATURE_1_AND:
     OS << ((Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) ? "aarch64 feature: "
                                                         : "x86 feature: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
@@ -5299,22 +5384,22 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     }
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_AARCH64_FEATURE_PAUTH:
     printAArch64PAuthABICoreInfo<ELFT>(OS, DataSize, Data);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
     OS << "x86 feature "
        << (Type == GNU_PROPERTY_X86_FEATURE_2_NEEDED ? "needed: " : "used: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_X86, "x86");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_X87, "x87");
@@ -5328,19 +5413,19 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   case GNU_PROPERTY_X86_ISA_1_NEEDED:
   case GNU_PROPERTY_X86_ISA_1_USED:
     OS << "x86 ISA "
        << (Type == GNU_PROPERTY_X86_ISA_1_NEEDED ? "needed: " : "used: ");
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
+      return str;
     }
     PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
-      return OS.str();
+      return str;
     }
     DumpBit(GNU_PROPERTY_X86_ISA_1_BASELINE, "x86-64-baseline");
     DumpBit(GNU_PROPERTY_X86_ISA_1_V2, "x86-64-v2");
@@ -5348,7 +5433,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_ISA_1_V4, "x86-64-v4");
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
+    return str;
   }
 }
 
@@ -5368,7 +5453,7 @@ static SmallVector<std::string, 4> getGNUPropertyList(ArrayRef<uint8_t> Arr) {
     raw_string_ostream OS(str);
     if (Arr.size() < PaddedSize) {
       OS << format("<corrupt type (0x%x) datasz: 0x%x>", Type, DataSize);
-      Properties.push_back(OS.str());
+      Properties.push_back(str);
       break;
     }
     Properties.push_back(
@@ -5407,7 +5492,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
   std::string str;
   raw_string_ostream ABI(str);
   ABI << Major << "." << Minor << "." << Patch;
-  return {std::string(OSName), ABI.str(), /*IsValid=*/true};
+  return {std::string(OSName), str, /*IsValid=*/true};
 }
 
 static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
@@ -5415,7 +5500,7 @@ static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
   raw_string_ostream OS(str);
   for (uint8_t B : Desc)
     OS << format_hex_no_prefix(B, 2);
-  return OS.str();
+  return str;
 }
 
 static StringRef getDescAsStringRef(ArrayRef<uint8_t> Desc) {
@@ -5585,11 +5670,11 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
     std::string FlagsStr;
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
-    if (OS.str().empty())
+    if (FlagsStr.empty())
       OS << "0x" << utohexstr(Value);
     else
       OS << "(0x" << utohexstr(Value) << ")";
-    return FreeBSDNote{"Feature flags", OS.str()};
+    return FreeBSDNote{"Feature flags", FlagsStr};
   }
   default:
     return std::nullopt;
@@ -5737,7 +5822,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       return {"", ""};
     }
     MsgPackDoc.toYAML(StrOS);
-    return {"AMDGPU Metadata", StrOS.str()};
+    return {"AMDGPU Metadata", MetadataString};
   }
   }
 }
@@ -5968,6 +6053,7 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
+    {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
@@ -6414,6 +6500,17 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
       RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec,
                 /*SymTab=*/nullptr);
+    break;
+  }
+  case ELF::SHT_CREL: {
+    if (auto RelsOrRelas = Obj.crels(Sec)) {
+      for (const Elf_Rel &R : RelsOrRelas->first)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+      for (const Elf_Rela &R : RelsOrRelas->second)
+        RelRelaFn(Relocation<ELFT>(R, false), RelNdx++, Sec, SymTab);
+    } else {
+      Warn(RelsOrRelas.takeError());
+    }
     break;
   }
   case ELF::SHT_ANDROID_REL:
@@ -7039,6 +7136,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));
+    else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderSPARCFlags),
+                   unsigned(ELF::EF_SPARCV9_MM));
     else if (E.e_machine == EM_AVR)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderAVRFlags),
                    unsigned(ELF::EF_AVR_ARCH_MASK));
@@ -7914,24 +8014,29 @@ static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
-  ListScope L(W, "Notes");
+  ListScope L(W, "NoteSections");
 
-  std::unique_ptr<DictScope> NoteScope;
+  std::unique_ptr<DictScope> NoteSectionScope;
+  std::unique_ptr<ListScope> NotesScope;
   size_t Align = 0;
   auto StartNotes = [&](std::optional<StringRef> SecName,
                         const typename ELFT::Off Offset,
                         const typename ELFT::Addr Size, size_t Al) {
     Align = std::max<size_t>(Al, 4);
-    NoteScope = std::make_unique<DictScope>(W, "NoteSection");
+    NoteSectionScope = std::make_unique<DictScope>(W, "NoteSection");
     W.printString("Name", SecName ? *SecName : "<?>");
     W.printHex("Offset", Offset);
     W.printHex("Size", Size);
+    NotesScope = std::make_unique<ListScope>(W, "Notes");
   };
 
-  auto EndNotes = [&] { NoteScope.reset(); };
+  auto EndNotes = [&] {
+    NotesScope.reset();
+    NoteSectionScope.reset();
+  };
 
   auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
-    DictScope D2(W, "Note");
+    DictScope D2(W);
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc(Align);
     Elf_Word Type = Note.getType();

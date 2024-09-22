@@ -93,7 +93,7 @@ void long_double(int n, ...) {
 // IEEE: %[[V0:[0-9a-zA-Z_.]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 16
 // IEEE: store ptr %[[V0]], ptr %[[AP]], align 8
 // IEEE: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TMP:[0-9a-zA-Z_.]+]], ptr align 16 %[[ALIGN]], i64 16, i1 false)
-// IEEE: %[[COERCE:[0-9a-zA-Z_.]+]] = getelementptr inbounds %struct.ldbl128_s, ptr %[[TMP]], i32 0, i32 0
+// IEEE: %[[COERCE:[0-9a-zA-Z_.]+]] = getelementptr inbounds nuw %struct.ldbl128_s, ptr %[[TMP]], i32 0, i32 0
 // IEEE: %[[V4:[0-9a-zA-Z_.]+]] = load fp128, ptr %[[COERCE]], align 16
 // IEEE: call void @foo_ls(fp128 inreg %[[V4]])
 // IEEE: call void @llvm.va_end.p0(ptr %[[AP]])

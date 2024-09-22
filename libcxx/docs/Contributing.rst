@@ -4,9 +4,9 @@
 Contributing to libc++
 ======================
 
-This file contains notes about various tasks and processes specific to contributing
-to libc++. If this is your first time contributing, please also read `this document
-<https://www.llvm.org/docs/Contributing.html>`__ on general rules for contributing to LLVM.
+This file contains information useful when contributing to libc++. If this is your first time contributing,
+please also read `this document <https://www.llvm.org/docs/Contributing.html>`__ on general rules for
+contributing to LLVM.
 
 If you plan on contributing to libc++, it can be useful to join the ``#libcxx`` channel
 on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.
@@ -24,16 +24,22 @@ RFCs for significant user-affecting changes
 ===========================================
 
 Before you start working on a change that can have significant impact on users of the library,
-please consider creating a RFC on `libc++'s Discourse forum <https://discourse.llvm.org/c/runtimes/libcxx>`__.
+please consider creating a RFC on the `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx>`_.
 This will ensure that you work in a direction that the project endorses and will ease reviewing your
-contribution as directional questions can be raised early. Including a WIP patch is not mandatory, but
-it can be useful to ground the discussion in something concrete.
+contribution as directional questions can be raised early. Including a WIP patch is not mandatory,
+but it can be useful to ground the discussion in something concrete.
+
+Writing tests and running the test suite
+========================================
+
+Every change in libc++ must come with appropriate tests. Libc++ has an extensive test suite that
+should be run locally by developers before submitting patches and is also run as part of our CI
+infrastructure. The documentation about writing tests and running them is :ref:`here <testing>`.
 
 Coding standards
 ================
 
-In general, libc++ follows the
-`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
+In general, libc++ follows the `LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
 There are some deviations from these standards.
 
 Libc++ uses ``__ugly_names``. These names are reserved for implementations, so
@@ -162,7 +168,7 @@ sure you don't forget anything:
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
-- If needed, did you add `_LIBCPP_PUSH_MACROS` and `_LIBCPP_POP_MACROS` to the relevant headers?
+- If needed, did you add ``_LIBCPP_PUSH_MACROS`` and ``_LIBCPP_POP_MACROS`` to the relevant headers?
 
 The review process
 ==================

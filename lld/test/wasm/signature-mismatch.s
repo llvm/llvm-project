@@ -93,7 +93,7 @@ ret32_address_main:
 # RELOC-NEXT:       - Index:           1
 # RELOC-NEXT:         Kind:            FUNCTION
 # RELOC-NEXT:         Name:            ret32
-# RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# RELOC-NEXT:         Flags:           [ ]
 # RELOC-NEXT:         Function:        2
 # RELOC-NEXT:       - Index:           2
 # RELOC-NEXT:         Kind:            DATA

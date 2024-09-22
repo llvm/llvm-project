@@ -50,7 +50,7 @@ void test_iterator_sentinel() {
   assert(s.data() == std::data(arr));
   }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
   // P3029R1: deduction from `integral_constant`
   {
     std::span s{std::begin(arr), std::integral_constant<size_t, 3>{}};

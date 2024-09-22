@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_CONDATTR_SETCLOCK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_CONDATTR_SETCLOCK_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 #include <sys/types.h> // clockid_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_CONDATTR_SETCLOCK_H

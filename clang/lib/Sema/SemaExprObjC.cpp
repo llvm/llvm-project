@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -2564,7 +2565,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   }
   else if (Method) {
     for (const auto *I : Method->specific_attrs<FormatAttr>()) {
-      if (S.GetFormatNSStringIdx(I, Idx)) {
+      if (S.ObjC().GetFormatNSStringIdx(I, Idx)) {
         Format = true;
         break;
       }
@@ -3206,9 +3207,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
     }
     if (!isDesignatedInitChain) {
       const ObjCMethodDecl *InitMethod = nullptr;
+      auto *CurMD = SemaRef.getCurMethodDecl();
+      assert(CurMD && "Current method declaration should not be null");
       bool isDesignated =
-          SemaRef.getCurMethodDecl()->isDesignatedInitializerForTheInterface(
-              &InitMethod);
+          CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
       (void)isDesignated;
       Diag(SelLoc, SuperLoc.isValid() ?

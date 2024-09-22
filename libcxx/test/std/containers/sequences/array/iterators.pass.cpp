@@ -148,6 +148,15 @@ TEST_CONSTEXPR_CXX17 bool tests()
             assert(std::rbegin(c)  != std::rend(c));
             assert(std::cbegin(c)  != std::cend(c));
             assert(std::crbegin(c) != std::crend(c));
+
+#  if TEST_STD_VER >= 20
+            // P1614 + LWG3352
+            std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
+            assert(r1 == std::strong_ordering::equal);
+
+            std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
+            assert(r2 == std::strong_ordering::equal);
+#  endif
         }
         {
             typedef std::array<int, 0> C;
@@ -189,6 +198,15 @@ TEST_CONSTEXPR_CXX17 bool tests()
             assert(std::rbegin(c)  == std::rend(c));
             assert(std::cbegin(c)  == std::cend(c));
             assert(std::crbegin(c) == std::crend(c));
+
+#  if TEST_STD_VER >= 20
+            // P1614 + LWG3352
+            std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
+            assert(r1 == std::strong_ordering::equal);
+
+            std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
+            assert(r2 == std::strong_ordering::equal);
+#  endif
         }
     }
 #endif

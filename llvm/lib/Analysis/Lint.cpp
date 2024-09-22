@@ -244,7 +244,8 @@ void Lint::visitCallBase(CallBase &I) {
             // dereferenced anyway.
             if (I.doesNotAccessMemory(ArgNo))
               continue;
-            if (AI != BI && (*BI)->getType()->isPointerTy()) {
+            if (AI != BI && (*BI)->getType()->isPointerTy() &&
+                !isa<ConstantPointerNull>(*BI)) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&
                         Result != AliasResult::PartialAlias,
@@ -290,7 +291,8 @@ void Lint::visitCallBase(CallBase &I) {
 
       // TODO: Check more intrinsics
 
-    case Intrinsic::memcpy: {
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline: {
       MemCpyInst *MCI = cast<MemCpyInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MCI),
                            MCI->getDestAlign(), nullptr, MemRef::Write);
@@ -307,23 +309,6 @@ void Lint::visitCallBase(CallBase &I) {
         if (Len->getValue().isIntN(32))
           Size = LocationSize::precise(Len->getValue().getZExtValue());
       Check(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
-                AliasResult::MustAlias,
-            "Undefined behavior: memcpy source and destination overlap", &I);
-      break;
-    }
-    case Intrinsic::memcpy_inline: {
-      MemCpyInlineInst *MCII = cast<MemCpyInlineInst>(&I);
-      const uint64_t Size = MCII->getLength()->getValue().getLimitedValue();
-      visitMemoryReference(I, MemoryLocation::getForDest(MCII),
-                           MCII->getDestAlign(), nullptr, MemRef::Write);
-      visitMemoryReference(I, MemoryLocation::getForSource(MCII),
-                           MCII->getSourceAlign(), nullptr, MemRef::Read);
-
-      // Check that the memcpy arguments don't overlap. The AliasAnalysis API
-      // isn't expressive enough for what we really want to do. Known partial
-      // overlap is not distinguished from the case where nothing is known.
-      const LocationSize LS = LocationSize::precise(Size);
-      Check(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) !=
                 AliasResult::MustAlias,
             "Undefined behavior: memcpy source and destination overlap", &I);
       break;
@@ -452,8 +437,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
       Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized())
-        BaseSize = DL->getTypeAllocSize(ATy);
+      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
+        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -470,7 +455,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Check(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+    Check(!Loc.Size.hasValue() || Loc.Size.isScalable() ||
+              BaseSize == MemoryLocation::UnknownSize ||
               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
           "Undefined behavior: Buffer overflow", &I);
 
@@ -563,22 +549,22 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
@@ -606,19 +592,20 @@ void Lint::visitIndirectBrInst(IndirectBrInst &I) {
 
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
-                                                        /*OffsetOk=*/false)))
-    Check(
-        CI->getValue().ult(
-            cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
-        "Undefined result: extractelement index out of range", &I);
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getVectorOperandType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
+          "Undefined result: extractelement index out of range", &I);
+  }
 }
 
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
-                                                        /*OffsetOk=*/false)))
-    Check(CI->getValue().ult(
-              cast<FixedVectorType>(I.getType())->getNumElements()),
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
           "Undefined result: insertelement index out of range", &I);
+  }
 }
 
 void Lint::visitUnreachableInst(UnreachableInst &I) {
@@ -709,7 +696,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
 PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);

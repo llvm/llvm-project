@@ -58,7 +58,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the :doc:`CodingStandards`. You can use the `clang-format-diff.py`_ or `git-clang-format`_ tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit (unless stacked on another Differential), up-to-date with the upstream ``origin/main`` branch, and don't have merges.
+* have a single commit, up-to-date with the upstream ``origin/main`` branch, and don't have merges.
 
 .. _format patches:
 
@@ -95,7 +95,7 @@ For more information about the workflow of using GitHub Pull Requests see our
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
-code owner (see CODE_OWNERS.txt) and other people doing work in the area your
+maintainers (see ``Maintainers.rst``) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
 people that have worked on the code before. If you are a new contributor, you
 will not be able to select reviewers in such a way, in which case you can still

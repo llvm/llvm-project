@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_SIMPLIFYQUERY_H
 #define LLVM_ANALYSIS_SIMPLIFYQUERY_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Operator.h"
 
 namespace llvm {
@@ -57,6 +58,15 @@ struct InstrInfoQuery {
   }
 };
 
+/// Evaluate query assuming this condition holds.
+struct CondContext {
+  Value *Cond;
+  bool Invert = false;
+  SmallPtrSet<Value *, 4> AffectedValues;
+
+  CondContext(Value *Cond) : Cond(Cond) {}
+};
+
 struct SimplifyQuery {
   const DataLayout &DL;
   const TargetLibraryInfo *TLI = nullptr;
@@ -64,6 +74,7 @@ struct SimplifyQuery {
   AssumptionCache *AC = nullptr;
   const Instruction *CxtI = nullptr;
   const DomConditionCache *DC = nullptr;
+  const CondContext *CC = nullptr;
 
   // Wrapper to query additional information for instructions like metadata or
   // keywords like nsw, which provides conservative results if those cannot
@@ -111,6 +122,18 @@ struct SimplifyQuery {
   SimplifyQuery getWithoutDomCondCache() const {
     SimplifyQuery Copy(*this);
     Copy.DC = nullptr;
+    return Copy;
+  }
+
+  SimplifyQuery getWithCondContext(const CondContext &CC) const {
+    SimplifyQuery Copy(*this);
+    Copy.CC = &CC;
+    return Copy;
+  }
+
+  SimplifyQuery getWithoutCondContext() const {
+    SimplifyQuery Copy(*this);
+    Copy.CC = nullptr;
     return Copy;
   }
 };

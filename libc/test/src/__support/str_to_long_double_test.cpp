@@ -1,8 +1,9 @@
+#include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
 #include "src/__support/integer_literals.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using LlvmLibcStrToLongDblTest = LlvmLibcStrToFloatTest<long double>;
 using LIBC_NAMESPACE::operator""_u128;
@@ -54,6 +55,12 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Fallback) {
   ASSERT_FALSE(internal::eisel_lemire<long double>({1, -1000}).has_value());
 }
 
+TEST_F(LlvmLibcStrToLongDblTest, ClingerFastPathFloat80Simple) {
+  clinger_fast_path_test(123, 0, 0xf600000000000000, 16389);
+  clinger_fast_path_test(1234567, 1, 0xbc61460000000000, 16406);
+  clinger_fast_path_test(12345, -5, 0xfcd35a858793dd98, 16379);
+}
+
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Simple) {
@@ -77,8 +84,17 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Fallback) {
                    .has_value());
 }
 
+TEST_F(LlvmLibcStrToLongDblTest, ClingerFastPathFloat128Simple) {
+  clinger_fast_path_test(123, 0, 0x1ec00'00000000'00000000'00000000_u128,
+                         16389);
+  clinger_fast_path_test(1234567, 1, 0x178c2'8c000000'00000000'00000000_u128,
+                         16406);
+  clinger_fast_path_test(12345, -5, 0x1f9a6'b50b0f27'bb2fec56'd5cfaace_u128,
+                         16379);
+}
+
 #else
 #error "Unknown long double type"
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

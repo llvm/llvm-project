@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.global.atomic.csub(ptr addrspace(1), i32)
 
 ; GCN-LABEL: {{^}}global_atomic_csub_rtn:
 ; PREGFX12: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9:]+}}, s{{\[[0-9]+:[0-9]+\]}} glc
-; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
+; GFX12PLUS: global_atomic_sub_clamp_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} th:TH_ATOMIC_RETURN
 define amdgpu_kernel void @global_atomic_csub_rtn(ptr addrspace(1) %ptr, i32 %data) {
 main_body:
   %ret = call i32 @llvm.amdgcn.global.atomic.csub(ptr addrspace(1) %ptr, i32 %data)
@@ -15,7 +15,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}global_atomic_csub_no_rtn:
 ; PREGFX12: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}
-; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v1, s[0:1]
+; GFX12PLUS: global_atomic_sub_clamp_u32 v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @global_atomic_csub_no_rtn(ptr addrspace(1) %ptr, i32 %data) #0 {
 main_body:
   %ret = call i32 @llvm.amdgcn.global.atomic.csub(ptr addrspace(1) %ptr, i32 %data)
@@ -24,7 +24,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}global_atomic_csub_off4_rtn:
 ; PREGFX12: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4 glc
-; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v0, v1, s[0:1] offset:4 th:TH_ATOMIC_RETURN
+; GFX12PLUS: global_atomic_sub_clamp_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4 th:TH_ATOMIC_RETURN
 define amdgpu_kernel void @global_atomic_csub_off4_rtn(ptr addrspace(1) %ptr, i32 %data) {
 main_body:
   %p = getelementptr i32, ptr addrspace(1) %ptr, i64 1
@@ -34,7 +34,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}global_atomic_csub_off4_no_rtn:
 ; PREGFX12: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4
-; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v1, s[0:1] offset:4
+; GFX12PLUS: global_atomic_sub_clamp_u32 v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:4
 define amdgpu_kernel void @global_atomic_csub_off4_no_rtn(ptr addrspace(1) %ptr, i32 %data) #0 {
 main_body:
   %p = getelementptr i32, ptr addrspace(1) %ptr, i64 1

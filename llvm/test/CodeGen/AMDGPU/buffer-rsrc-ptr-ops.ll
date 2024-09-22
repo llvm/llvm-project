@@ -5,7 +5,7 @@
 define amdgpu_kernel void @buffer_ptr_vector_ops(ptr addrspace(1) %somewhere) {
 ; GISEL-LABEL: buffer_ptr_vector_ops:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x24
 ; GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @buffer_ptr_vector_ops(ptr addrspace(1) %somewhere) {
 ;
 ; SDAG-LABEL: buffer_ptr_vector_ops:
 ; SDAG:       ; %bb.0: ; %main_body
-; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x24
+; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x24
 ; SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
@@ -60,16 +60,16 @@ main_body:
 define amdgpu_kernel void @buffer_structs(%fat_buffer_struct %arg, ptr addrspace(1) %dest) {
 ; GISEL-LABEL: buffer_structs:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_load_dword s2, s[0:1], 0x34
-; GISEL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GISEL-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
+; GISEL-NEXT:    s_load_dword s0, s[2:3], 0x34
+; GISEL-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; GISEL-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x44
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    s_ashr_i32 s3, s2, 31
-; GISEL-NEXT:    s_lshl_b64 s[0:1], s[2:3], 5
+; GISEL-NEXT:    s_ashr_i32 s1, s0, 31
+; GISEL-NEXT:    v_mov_b32_e32 v4, s0
+; GISEL-NEXT:    s_lshl_b64 s[0:1], s[0:1], 5
 ; GISEL-NEXT:    s_add_u32 s0, s8, s0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GISEL-NEXT:    v_mov_b32_e32 v4, s2
 ; GISEL-NEXT:    s_addc_u32 s1, s9, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
@@ -81,15 +81,15 @@ define amdgpu_kernel void @buffer_structs(%fat_buffer_struct %arg, ptr addrspace
 ;
 ; SDAG-LABEL: buffer_structs:
 ; SDAG:       ; %bb.0: ; %main_body
-; SDAG-NEXT:    s_load_dword s2, s[0:1], 0x34
-; SDAG-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
+; SDAG-NEXT:    s_load_dword s0, s[2:3], 0x34
+; SDAG-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x44
 ; SDAG-NEXT:    v_mov_b32_e32 v4, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    s_ashr_i32 s3, s2, 31
-; SDAG-NEXT:    s_lshl_b64 s[0:1], s[2:3], 5
+; SDAG-NEXT:    s_ashr_i32 s1, s0, 31
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-NEXT:    s_lshl_b64 s[0:1], s[0:1], 5
 ; SDAG-NEXT:    s_add_u32 s0, s8, s0
-; SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SDAG-NEXT:    s_addc_u32 s1, s9, s1
 ; SDAG-NEXT:    buffer_store_dword v0, v0, s[4:7], 0 offen
 ; SDAG-NEXT:    global_store_dword v4, v0, s[0:1] offset:16

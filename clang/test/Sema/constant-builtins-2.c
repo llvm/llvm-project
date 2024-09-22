@@ -204,6 +204,53 @@ char isfpclass_snan_1   [!__builtin_isfpclass(__builtin_nans(""), 0x0002) ? 1 : 
 char isfpclass_snan_2   [__builtin_isfpclass(__builtin_nansl(""), 0x0207) ? 1 : -1]; // ~fcFinite
 char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
 
+__extension__ _Static_assert(
+  !__builtin_signbit(1.0) && __builtin_signbit(-1.0) && !__builtin_signbit(0.0) && __builtin_signbit(-0.0) &&
+  !__builtin_signbitf(1.0f) && __builtin_signbitf(-1.0f) && !__builtin_signbitf(0.0f) && __builtin_signbitf(-0.0f) &&
+  !__builtin_signbitl(1.0L) && __builtin_signbitf(-1.0L) && !__builtin_signbitf(0.0L) && __builtin_signbitf(-0.0L) &&
+  !__builtin_signbit(1.0f) && __builtin_signbit(-1.0f) && !__builtin_signbit(0.0f) && __builtin_signbit(-0.0f) &&
+  !__builtin_signbit(1.0L) && __builtin_signbit(-1.0L) && !__builtin_signbit(0.0L) && __builtin_signbit(-0.0L) &&
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+  !__builtin_signbit(1.0q) && __builtin_signbit(-1.0q) && !__builtin_signbit(0.0q) && __builtin_signbit(-0.0q) &&
+#endif
+  1, ""
+);
+
+#define LESS(X, Y) \
+  !__builtin_isgreater(X, Y) && __builtin_isgreater(Y, X) &&             \
+  !__builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&   \
+  __builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                   \
+  __builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&         \
+  __builtin_islessgreater(X, Y) && __builtin_islessgreater(Y, X) &&      \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define EQUAL(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  __builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&    \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  __builtin_islessequal(X, Y) && __builtin_islessequal(Y, X) &&          \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define UNORDERED(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  !__builtin_isgreaterequal(X, Y) && !__builtin_isgreaterequal(Y, X) &&  \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  !__builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&        \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
+
+__extension__ _Static_assert(
+  LESS(0.0, 1.0) && EQUAL(1.0, 1.0) && EQUAL(0.0, -0.0) &&
+  UNORDERED(__builtin_nan(""), 1.0) && UNORDERED(__builtin_nan(""), __builtin_inf()) && LESS(0.0, __builtin_inf()) &&
+  LESS(0.0f, 1.0f) && EQUAL(1.0f, 1.0f) && EQUAL(0.0f, -0.0f) &&
+  UNORDERED(__builtin_nanf(""), 1.0f) && UNORDERED(__builtin_nanf(""), __builtin_inff()) && LESS(0.0f, __builtin_inff()) &&
+  LESS(0.0L, 1.0L) && EQUAL(1.0L, 1.0L) && EQUAL(0.0L, -0.0L) &&
+  UNORDERED(__builtin_nanl(""), 1.0L) && UNORDERED(__builtin_nanl(""), __builtin_infl()) && LESS(0.0L, __builtin_infl()) &&
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+  LESS(0.0q, 1.0q) && EQUAL(1.0q, 1.0q) && EQUAL(0.0q, -0.0q) &&
+#endif
+  1, ""
+);
+
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);
 //long double  g21 = __builtin_powil(2.0L, 4);
@@ -265,8 +312,8 @@ char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 :
 char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
 char clz54[__builtin_clzg((unsigned __int128)0xf) == BITSIZE(__int128) - 4 ? 1 : -1];
 char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
-char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1];
-char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1];
+char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
+char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
 #endif
 int clz58 = __builtin_clzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
 char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
@@ -274,8 +321,8 @@ char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) -
 char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
 char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
-char clz64[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1))) == 0 ? 1 : -1];
-char clz65[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1)), 42) == 0 ? 1 : -1];
+char clz64[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1))) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
+char clz65[__builtin_clzg((unsigned _BitInt(128))(1 << (BITSIZE(_BitInt(128)) - 1)), 42) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
 
 char ctz1[__builtin_ctz(1) == 0 ? 1 : -1];
 char ctz2[__builtin_ctz(8) == 3 ? 1 : -1];

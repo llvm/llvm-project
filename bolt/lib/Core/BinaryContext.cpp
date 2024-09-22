@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -72,7 +71,7 @@ PrintMemData("print-mem-data",
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",
-    cl::desc("overrides DW_AT_comp_dir, and provides an alterantive base "
+    cl::desc("overrides DW_AT_comp_dir, and provides an alternative base "
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
@@ -143,7 +142,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
       Logger(Logger), InitialDynoStats(isAArch64()) {
-  Relocation::Arch = this->TheTriple->getArch();
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
@@ -647,7 +645,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     const bool DoesBelongToFunction =
         BF.containsAddress(Value) ||
-        (TargetBF && TargetBF->isParentOrChildOf(BF));
+        (TargetBF && areRelatedFragments(TargetBF, &BF));
     if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
@@ -840,9 +838,11 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
     // Prevent associating a jump table to a specific fragment twice.
-    // This simple check arises from the assumption: no more than 2 fragments.
-    if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      assert(JT->Parents[0]->isParentOrChildOf(Function) &&
+    if (!llvm::is_contained(JT->Parents, &Function)) {
+      assert(llvm::all_of(JT->Parents,
+                          [&](const BinaryFunction *BF) {
+                            return areRelatedFragments(&Function, BF);
+                          }) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -853,8 +853,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
         JT->print(this->outs());
       }
       Function.JumpTables.emplace(Address, JT);
-      JT->Parents[0]->setHasIndirectTargetToSplitFragment(true);
-      JT->Parents[1]->setHasIndirectTargetToSplitFragment(true);
+      for (BinaryFunction *Parent : JT->Parents)
+        Parent->setHasIndirectTargetToSplitFragment(true);
     }
 
     bool IsJumpTableParent = false;
@@ -1210,12 +1210,13 @@ void BinaryContext::generateSymbolHashes() {
 }
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
-                                     BinaryFunction &Function) const {
+                                     BinaryFunction &Function) {
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
   if (TargetFunction.isChildOf(Function))
     return true;
   TargetFunction.addParentFragment(Function);
   Function.addFragment(TargetFunction);
+  FragmentClasses.unionSets(&TargetFunction, &Function);
   if (!HasRelocations) {
     TargetFunction.setSimple(false);
     Function.setSimple(false);
@@ -1337,7 +1338,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !TargetFunction->isChildOf(Function)) {
+          !areRelatedFragments(TargetFunction, &Function)) {
         this->errs()
             << "BOLT-WARNING: interprocedural reference between unrelated "
                "fragments: "
@@ -2368,10 +2369,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(VecOS);
   std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
-      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI,
-      /*RelaxAll=*/false,
-      /*IncrementalLinkerCompatible=*/false,
-      /*DWARFMustBeAtTheEnd=*/false));
+      std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
   Streamer->initSections(false, *STI);
 
@@ -2404,32 +2402,23 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     Streamer->emitLabel(SplitStartLabel);
     emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
     Streamer->emitLabel(SplitEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
-    // private
-    Streamer->emitBytes(StringRef(""));
-    Streamer->switchSection(Section);
   }
-
-  // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or
-  // MCStreamer::Finish(), which does more than we want
-  Streamer->emitBytes(StringRef(""));
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
-  MCAsmLayout Layout(Assembler);
-  Assembler.layout(Layout);
+  Assembler.layout();
 
   // Obtain fragment sizes.
   std::vector<uint64_t> FragmentSizes;
   // Main fragment size.
-  const uint64_t HotSize =
-      Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
+  const uint64_t HotSize = Assembler.getSymbolOffset(*EndLabel) -
+                           Assembler.getSymbolOffset(*StartLabel);
   FragmentSizes.push_back(HotSize);
   // Split fragment sizes.
   uint64_t ColdSize = 0;
   for (const auto &Labels : SplitLabels) {
-    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
-                    Layout.getSymbolOffset(*Labels.first);
+    uint64_t Size = Assembler.getSymbolOffset(*Labels.second) -
+                    Assembler.getSymbolOffset(*Labels.first);
     FragmentSizes.push_back(Size);
     ColdSize += Size;
   }
@@ -2439,7 +2428,8 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     BinaryBasicBlock *PrevBB = nullptr;
     for (BinaryBasicBlock *BB : FF) {
-      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      const uint64_t BBStartOffset =
+          Assembler.getSymbolOffset(*(BB->getLabel()));
       BB->setOutputStartAddress(BBStartOffset);
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBStartOffset);
@@ -2530,6 +2520,16 @@ BinaryFunction *BinaryContext::getBinaryFunctionAtAddress(uint64_t Address) {
       return BF;
   }
   return nullptr;
+}
+
+/// Deregister JumpTable registered at a given \p Address and delete it.
+void BinaryContext::deleteJumpTable(uint64_t Address) {
+  assert(JumpTables.count(Address) && "Must have a jump table at address");
+  JumpTable *JT = JumpTables.at(Address);
+  for (BinaryFunction *Parent : JT->Parents)
+    Parent->JumpTables.erase(Address);
+  JumpTables.erase(Address);
+  delete JT;
 }
 
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(

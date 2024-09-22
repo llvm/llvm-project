@@ -20,6 +20,7 @@
 // -verify-machineinstrs.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -93,6 +94,9 @@ using namespace llvm;
 namespace {
 
   struct MachineVerifier {
+    MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b)
+        : MFAM(&MFAM), Banner(b) {}
+
     MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
     MachineVerifier(const char *b, LiveVariables *LiveVars,
@@ -103,6 +107,7 @@ namespace {
 
     unsigned verify(const MachineFunction &MF);
 
+    MachineFunctionAnalysisManager *MFAM = nullptr;
     Pass *const PASS = nullptr;
     const char *Banner;
     const MachineFunction *MF = nullptr;
@@ -302,21 +307,21 @@ namespace {
     void verifyProperties(const MachineFunction &MF);
   };
 
-  struct MachineVerifierPass : public MachineFunctionPass {
+  struct MachineVerifierLegacyPass : public MachineFunctionPass {
     static char ID; // Pass ID, replacement for typeid
 
     const std::string Banner;
 
-    MachineVerifierPass(std::string banner = std::string())
-      : MachineFunctionPass(ID), Banner(std::move(banner)) {
-        initializeMachineVerifierPassPass(*PassRegistry::getPassRegistry());
-      }
+    MachineVerifierLegacyPass(std::string banner = std::string())
+        : MachineFunctionPass(ID), Banner(std::move(banner)) {
+      initializeMachineVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+    }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
-      AU.addUsedIfAvailable<LiveVariables>();
-      AU.addUsedIfAvailable<SlotIndexes>();
-      AU.addUsedIfAvailable<LiveIntervals>();
+      AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+      AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+      AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -338,13 +343,28 @@ namespace {
 
 } // end anonymous namespace
 
-char MachineVerifierPass::ID = 0;
+PreservedAnalyses
+MachineVerifierPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  // Skip functions that have known verification problems.
+  // FIXME: Remove this mechanism when all problematic passes have been
+  // fixed.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailsVerification))
+    return PreservedAnalyses::all();
+  unsigned FoundErrors = MachineVerifier(MFAM, Banner.c_str()).verify(MF);
+  if (FoundErrors)
+    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  return PreservedAnalyses::all();
+}
 
-INITIALIZE_PASS(MachineVerifierPass, "machineverifier",
+char MachineVerifierLegacyPass::ID = 0;
+
+INITIALIZE_PASS(MachineVerifierLegacyPass, "machineverifier",
                 "Verify generated machine code", false, false)
 
 FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
-  return new MachineVerifierPass(Banner);
+  return new MachineVerifierLegacyPass(Banner);
 }
 
 void llvm::verifyMachineFunction(const std::string &Banner,
@@ -428,12 +448,23 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
   if (PASS) {
-    LiveInts = PASS->getAnalysisIfAvailable<LiveIntervals>();
+    auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+    LiveInts = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     // We don't want to verify LiveVariables if LiveIntervals is available.
+    auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
-      LiveVars = PASS->getAnalysisIfAvailable<LiveVariables>();
+      LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
-    Indexes = PASS->getAnalysisIfAvailable<SlotIndexes>();
+    auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+    Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
+  }
+  if (MFAM) {
+    MachineFunction &Func = const_cast<MachineFunction &>(MF);
+    LiveInts = MFAM->getCachedResult<LiveIntervalsAnalysis>(Func);
+    if (!LiveInts)
+      LiveVars = MFAM->getCachedResult<LiveVariablesAnalysis>(Func);
+    // TODO: LiveStks = MFAM->getCachedResult<LiveStacksAnalysis>(Func);
+    Indexes = MFAM->getCachedResult<SlotIndexesAnalysis>(Func);
   }
 
   verifySlotIndexes();
@@ -1513,6 +1544,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_SCMP:
+  case TargetOpcode::G_UCMP: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
+
+    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as operands", MI);
+      break;
+    }
+
+    if (DstTy.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as a result", MI);
+      break;
+    }
+
+    if ((DstTy.isVector() != SrcTy.isVector()) ||
+        (DstTy.isVector() &&
+         DstTy.getElementCount() != SrcTy.getElementCount())) {
+      report("Generic vector scmp/ucmp must preserve number of lanes", MI);
+      break;
+    }
+
+    if (SrcTy != SrcTy2) {
+      report("Generic scmp/ucmp must have same input types", MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_EXTRACT: {
     const MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg()) {
@@ -1649,16 +1710,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT Src0Ty = MRI->getType(Src0Op.getReg());
     LLT Src1Ty = MRI->getType(Src1Op.getReg());
 
     if (!DstTy.isVector()) {
       report("Destination type must be a vector", MI);
-      break;
-    }
-
-    if (!Src0Ty.isVector()) {
-      report("First source must be a vector", MI);
       break;
     }
 
@@ -1667,23 +1722,39 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (DstTy != Src0Ty) {
-      report("Destination type must match the first source vector type", MI);
+    if (DstTy.getElementType() != Src1Ty.getElementType()) {
+      report("Element type of vectors must be the same", MI);
       break;
     }
 
-    if (Src0Ty.getElementType() != Src1Ty.getElementType()) {
-      report("Element type of source vectors must be the same", MI);
+    if (Src1Ty.isScalable() != DstTy.isScalable()) {
+      report("Vector types must both be fixed or both be scalable", MI);
       break;
     }
 
-    if (IndexOp.getImm() != 0 &&
-        Src1Ty.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+                                DstTy.getElementCount())) {
+      report("Second source must be smaller than destination vector", MI);
+      break;
+    }
+
+    uint64_t Idx = IndexOp.getImm();
+    uint64_t Src1MinLen = Src1Ty.getElementCount().getKnownMinValue();
+    if (IndexOp.getImm() % Src1MinLen != 0) {
       report("Index must be a multiple of the second source vector's "
              "minimum vector length",
              MI);
       break;
     }
+
+    uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
+    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+      report("Subvector type and index must not cause insert to overrun the "
+             "vector being inserted into",
+             MI);
+      break;
+    }
+
     break;
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
@@ -1708,7 +1779,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (!SrcTy.isVector()) {
-      report("First source must be a vector", MI);
+      report("Source must be a vector", MI);
       break;
     }
 
@@ -1717,10 +1788,30 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (IndexOp.getImm() != 0 &&
-        SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
-      report("Index must be a multiple of the source vector's minimum vector "
-             "length",
+    if (SrcTy.isScalable() != DstTy.isScalable()) {
+      report("Vector types must both be fixed or both be scalable", MI);
+      break;
+    }
+
+    if (ElementCount::isKnownGT(DstTy.getElementCount(),
+                                SrcTy.getElementCount())) {
+      report("Destination vector must be smaller than source vector", MI);
+      break;
+    }
+
+    uint64_t Idx = IndexOp.getImm();
+    uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
+    if (Idx % DstMinLen != 0) {
+      report("Index must be a multiple of the destination vector's minimum "
+             "vector length",
+             MI);
+      break;
+    }
+
+    uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
+    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+      report("Destination type and index must not cause extract to overrun the "
+             "source vector",
              MI);
       break;
     }
@@ -1774,8 +1865,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (!SrcTy.isScalar()) {
-      report("Source type must be a scalar", MI);
+    if (!SrcTy.isScalar() && !SrcTy.isPointer()) {
+      report("Source type must be a scalar or pointer", MI);
       break;
     }
 
@@ -2001,7 +2092,20 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   }
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_LROUND: {
-    verifyAllRegOpsScalar(*MI, *MRI);
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid())
+      break;
+    if (SrcTy.isPointer() || DstTy.isPointer()) {
+      StringRef Op = SrcTy.isPointer() ? "Source" : "Destination";
+      report(Twine(Op, " operand must not be a pointer type"), MI);
+    } else if (SrcTy.isScalar()) {
+      verifyAllRegOpsScalar(*MI, *MRI);
+      break;
+    } else if (SrcTy.isVector()) {
+      verifyVectorElementMatch(SrcTy, DstTy, MI);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_IS_FPCLASS: {
@@ -2064,6 +2168,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Src operand 1 must be a constant pool index", MI);
     if (!MRI->getType(MI->getOperand(0).getReg()).isPointer())
       report("Dst operand 0 must be a pointer", MI);
+    break;
+  }
+  case TargetOpcode::G_PTRAUTH_GLOBAL_VALUE: {
+    const MachineOperand &AddrOp = MI->getOperand(1);
+    if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer())
+      report("addr operand must be a pointer", &AddrOp, 1);
     break;
   }
   default:
