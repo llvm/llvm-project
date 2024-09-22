@@ -14,7 +14,10 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Debug.h"
 #include <type_traits>
+
+#define DEBUG_TYPE "omp-maps-for-privatized-symbols"
 
 namespace flangomp {
 #define GEN_PASS_DEF_MAPSFORPRIVATIZEDSYMBOLSPASS
@@ -33,29 +36,12 @@ class MapsForPrivatizedSymbolsPass
       return false;
     return true;
   }
-  void dumpPrivatizerInfo(omp::PrivateClauseOp &privatizer,
-                          mlir::Value privVar) {
-    llvm::errs() << "Found a privatizer:\n";
-    privatizer.dump();
-    llvm::errs() << "\n";
-
-    llvm::errs() << "$type = " << privatizer.getType() << "\n";
-    llvm::errs() << "privVar = ";
-    privVar.dump();
-    llvm::errs() << "\n";
-
-    llvm::errs() << "privVar.getDefiningOp() = ";
-    privVar.getDefiningOp()->dump();
-    llvm::errs() << "\n";
-    llvm::errs() << "\n";
-  }
   omp::MapInfoOp createMapInfo(mlir::Location loc, mlir::Value var,
                                OpBuilder &builder) {
-    //    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-    //    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
     uint64_t mapTypeTo = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+
     return builder.create<omp::MapInfoOp>(
         loc, var.getType(), var,
         mlir::TypeAttr::get(fir::unwrapRefType(var.getType())),
@@ -80,10 +66,6 @@ class MapsForPrivatizedSymbolsPass
     MLIRContext *context = &getContext();
     OpBuilder builder(context);
     getOperation()->walk([&](omp::TargetOp targetOp) {
-      llvm::errs() << "MapsForPrivatizedSymbolsPass::TargetOp is \n";
-      targetOp.dump();
-      llvm::errs() << "\n";
-
       if (targetOp.getPrivateVars().empty())
         return;
 
@@ -102,16 +84,12 @@ class MapsForPrivatizedSymbolsPass
         if (!privatizerNeedsMap(privatizer)) {
           return;
         }
-        llvm::errs() << "Privatizer NEEDS a map\n";
         builder.setInsertionPoint(targetOp);
-        dumpPrivatizerInfo(privatizer, privVar);
-
         mlir::Location loc = targetOp.getLoc();
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
         addMapInfoOp(targetOp, mapInfoOp);
-        llvm::errs() << __FUNCTION__ << "MapInfoOp is \n";
-        mapInfoOp.dump();
-        llvm::errs() << "\n";
+        LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
+        LLVM_DEBUG(mapInfoOp.dump());
       }
     });
   }
