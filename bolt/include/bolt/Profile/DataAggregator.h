@@ -202,8 +202,8 @@ private:
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, uint64_t From, uint64_t To,
-                         uint64_t Count = 1) const;
+  getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
+                         const LBREntry &Second, uint64_t Count = 1) const;
 
   /// Record external entry into the function \p BF.
   ///
@@ -268,8 +268,9 @@ private:
   /// Register a \p Branch.
   bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
-  /// Register a trace between two addresses.
-  bool doTrace(const uint64_t From, const uint64_t To, uint64_t Count = 1);
+  /// Register a trace between two LBR entries supplied in execution order.
+  bool doTrace(const LBREntry &First, const LBREntry &Second,
+               uint64_t Count = 1);
 
   /// Parser helpers
   /// Return false if we exhausted our parser buffer and finished parsing
