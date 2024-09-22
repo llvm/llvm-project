@@ -11775,7 +11775,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       // entire vector into the destination.
       Cost = 0;
       unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-      for (unsigned I = 0, E = VL.size(); I != E; ++I)
+      for (unsigned I : seq<unsigned>(VL.size()))
         if (!ShuffledElements[I])
           Cost += TTI->getShuffleCost(
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
