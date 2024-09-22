@@ -2,16 +2,17 @@
 // RUN: mkdir -p %t.tmp
 // RUN: %clangxx -O1 %s -o %t && %run %t %t.tmp/1 %t.tmp
 
-#define _GNU_SOURCE
-
 #include <assert.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 void test(const char *path, int flags) {
   assert(path);
   int fd = open(path, flags, 0600);
+  if (fd == -1)
+    perror ("open");
   assert(fd != -1);
   struct stat info;
   int result = fstat(fd, &info);
