@@ -587,9 +587,10 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 // matching the argument type. It is assumed that only the first argument is
 // overloaded.
 template <unsigned N>
-Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF, const CallExpr *E,
-                                        unsigned IntrinsicID,
-                                        llvm::StringRef Name = "") {
+static Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
+                                               const CallExpr *E,
+                                               unsigned IntrinsicID,
+                                               llvm::StringRef Name = "") {
   static_assert(N, "expect non-empty argument");
   SmallVector<Value *, N> Args;
   for (unsigned I = 0; I < N; ++I)
@@ -18569,7 +18570,7 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
 }
 
 // Return dot product intrinsic that corresponds to the QT scalar type
-Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   if (QT->isFloatingType())
     return RT.getFDotIntrinsic();
   if (QT->isSignedIntegerType())
