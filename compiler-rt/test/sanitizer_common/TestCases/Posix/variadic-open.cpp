@@ -1,6 +1,8 @@
 // RUN: rm -rf %t.tmp
 // RUN: mkdir -p %t.tmp
-// RUN: %clangxx -O1 %s -o %t && %run %t %t.tmp/1
+// RUN: %clangxx -O1 %s -o %t && %run %t %t.tmp/1 %t.tmp
+
+#define _GNU_SOURCE
 
 #include <assert.h>
 #include <fcntl.h>
@@ -19,6 +21,10 @@ void test(const char *path, int flags) {
 }
 
 int main(int argc, char *argv[]) {
-  assert(argc == 2);
+  assert(argc == 3);
   test(argv[1], O_RDWR | O_CREAT);
+
+#ifdef O_TMPFILE
+  test(argv[2], O_RDWR | O_TMPFILE);
+#endif
 }
