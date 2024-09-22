@@ -39,11 +39,11 @@ public:
   }
 };
 
-#define LIST_ISSUBNORMAL_TESTS(T, func)                                         \
-  using LlvmLibcIsSubnormalTest = IsSubnormalTest<T>;                            \
-  TEST_F(LlvmLibcIsSubnormalTest, SpecialNumbers) {                             \
-    auto issubnormal_func = [](T x) { return func(x); };                        \
-    testSpecialNumbers(issubnormal_func);                                       \
+#define LIST_ISSUBNORMAL_TESTS(T, func)                                        \
+  using LlvmLibcIsSubnormalTest = IsSubnormalTest<T>;                          \
+  TEST_F(LlvmLibcIsSubnormalTest, SpecialNumbers) {                            \
+    auto issubnormal_func = [](T x) { return func(x); };                       \
+    testSpecialNumbers(issubnormal_func);                                      \
   }
 
 #endif // LLVM_LIBC_TEST_INCLUDE_MATH_ISSUBNORMAL_H
