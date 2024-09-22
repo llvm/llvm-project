@@ -3851,11 +3851,11 @@ public:
   }
 
   static std::unique_ptr<ARMOperand>
-  CreateVectorListIndexed(unsigned RegNum, unsigned Count, unsigned Index,
+  CreateVectorListIndexed(MCRegister Reg, unsigned Count, unsigned Index,
                           bool isDoubleSpaced, SMLoc S, SMLoc E,
                           ARMAsmParser &Parser) {
     auto Op = std::make_unique<ARMOperand>(k_VectorListIndexed, Parser);
-    Op->VectorList.RegNum = RegNum;
+    Op->VectorList.RegNum = Reg;
     Op->VectorList.Count = Count;
     Op->VectorList.LaneIndex = Index;
     Op->VectorList.isDoubleSpaced = isDoubleSpaced;
@@ -4568,13 +4568,13 @@ ParseStatus ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
 // For register list parsing, we need to map from raw GPR register numbering
 // to the enumeration values. The enumeration values aren't sorted by
 // register number due to our using "sp", "lr" and "pc" as canonical names.
-static unsigned getNextRegister(unsigned Reg) {
+static MCRegister getNextRegister(MCRegister Reg) {
   // If this is a GPR, we need to do it manually, otherwise we can rely
   // on the sort ordering of the enumeration since the other reg-classes
   // are sane.
   if (!ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
     return Reg + 1;
-  switch(Reg) {
+  switch (Reg.id()) {
   default: llvm_unreachable("Invalid GPR number!");
   case ARM::R0:  return ARM::R1;  case ARM::R1:  return ARM::R2;
   case ARM::R2:  return ARM::R3;  case ARM::R3:  return ARM::R4;
@@ -6982,9 +6982,9 @@ bool ARMAsmParser::CDEConvertDualRegOperand(StringRef Mnemonic,
   if (!Op2.isReg())
     return Error(Op2.getStartLoc(), Op2Diag);
 
-  unsigned RNext;
-  unsigned RPair;
-  switch (Op2.getReg()) {
+  MCRegister RNext;
+  MCRegister RPair;
+  switch (Op2.getReg().id()) {
   default:
     return Error(Op2.getStartLoc(), Op2Diag);
   case ARM::R0:
@@ -7459,7 +7459,7 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
 // 'false' otherwise. If Reg is in the register list or is HiReg, set
 // 'containsReg' to true.
 static bool checkLowRegisterList(const MCInst &Inst, unsigned OpNo,
-                                 unsigned Reg, unsigned HiReg,
+                                 MCRegister Reg, MCRegister HiReg,
                                  bool &containsReg) {
   containsReg = false;
   for (unsigned i = OpNo; i < Inst.getNumOperands(); ++i) {
@@ -7475,9 +7475,9 @@ static bool checkLowRegisterList(const MCInst &Inst, unsigned OpNo,
 
 // Check if the specified regisgter is in the register list of the inst,
 // starting at the indicated operand number.
-static bool listContainsReg(const MCInst &Inst, unsigned OpNo, unsigned Reg) {
+static bool listContainsReg(const MCInst &Inst, unsigned OpNo, MCRegister Reg) {
   for (unsigned i = OpNo, e = Inst.getNumOperands(); i < e; ++i) {
-    unsigned OpReg = Inst.getOperand(i).getReg();
+    MCRegister OpReg = Inst.getOperand(i).getReg();
     if (OpReg == Reg)
       return true;
   }
@@ -8061,7 +8061,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                  .getToken() == "!");
 
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 3, Rn, 0, ListContainsBase) && !isThumbTwo())
+    if (checkLowRegisterList(Inst, 3, Rn, MCRegister(), ListContainsBase) &&
+        !isThumbTwo())
       return Error(
           Operands[getRegListInd(Operands, MnemonicOpsEndInd)]->getStartLoc(),
           "registers must be in range r0-r7");
@@ -8140,7 +8141,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   // switched to the t2 encodings in processInstruction() if necessary.
   case ARM::tPOP: {
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 2, 0, ARM::PC, ListContainsBase) &&
+    if (checkLowRegisterList(Inst, 2, MCRegister(), ARM::PC,
+                             ListContainsBase) &&
         !isThumbTwo())
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                    "registers must be in range r0-r7 or pc");
@@ -8150,7 +8152,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   }
   case ARM::tPUSH: {
     bool ListContainsBase;
-    if (checkLowRegisterList(Inst, 2, 0, ARM::LR, ListContainsBase) &&
+    if (checkLowRegisterList(Inst, 2, MCRegister(), ARM::LR,
+                             ListContainsBase) &&
         !isThumbTwo())
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                    "registers must be in range r0-r7 or lr");
@@ -10785,14 +10788,14 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // doesn't match what tLDMIA can do, we need to use the 32-bit encoding
     // instead if we're in Thumb2. Otherwise, this should have generated
     // an error in validateInstruction().
-    unsigned Rn = Inst.getOperand(0).getReg();
+    MCRegister Rn = Inst.getOperand(0).getReg();
     bool hasWritebackToken =
         (static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
              .isToken() &&
          static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1])
                  .getToken() == "!");
     bool listContainsBase;
-    if (checkLowRegisterList(Inst, 3, Rn, 0, listContainsBase) ||
+    if (checkLowRegisterList(Inst, 3, Rn, MCRegister(), listContainsBase) ||
         (!listContainsBase && !hasWritebackToken) ||
         (listContainsBase && hasWritebackToken)) {
       // 16-bit encoding isn't sufficient. Switch to the 32-bit version.
@@ -10811,9 +10814,9 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // If the register list contains any high registers, we need to use
     // the 32-bit encoding instead if we're in Thumb2. Otherwise, this
     // should have generated an error in validateInstruction().
-    unsigned Rn = Inst.getOperand(0).getReg();
+    MCRegister Rn = Inst.getOperand(0).getReg();
     bool listContainsBase;
-    if (checkLowRegisterList(Inst, 4, Rn, 0, listContainsBase)) {
+    if (checkLowRegisterList(Inst, 4, Rn, MCRegister(), listContainsBase)) {
       // 16-bit encoding isn't sufficient. Switch to the 32-bit version.
       assert(isThumbTwo());
       Inst.setOpcode(ARM::t2STMIA_UPD);
@@ -10826,7 +10829,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // If the register list contains any high registers, we need to use
     // the 32-bit encoding instead if we're in Thumb2. Otherwise, this
     // should have generated an error in validateInstruction().
-    if (!checkLowRegisterList(Inst, 2, 0, ARM::PC, listContainsBase))
+    if (!checkLowRegisterList(Inst, 2, MCRegister(), ARM::PC, listContainsBase))
       return false;
     assert(isThumbTwo());
     Inst.setOpcode(ARM::t2LDMIA_UPD);
@@ -10837,7 +10840,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
   case ARM::tPUSH: {
     bool listContainsBase;
-    if (!checkLowRegisterList(Inst, 2, 0, ARM::LR, listContainsBase))
+    if (!checkLowRegisterList(Inst, 2, MCRegister(), ARM::LR, listContainsBase))
       return false;
     assert(isThumbTwo());
     Inst.setOpcode(ARM::t2STMDB_UPD);
@@ -11224,7 +11227,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
         continue;
       }
 
-      unsigned Reg = Op.getReg();
+      MCRegister Reg = Op.getReg();
       if ((Reg == ARM::SP) && !hasV8Ops())
         return Match_RequiresV8;
       else if (Reg == ARM::PC)
