@@ -1,8 +1,12 @@
-// RUN: %clangxx -O1 %s -o %t && %run %t %t.tmp %T
+// RUN: %clangxx -O1 %s -o %t
+// RUN: %run %t 1
+// RUN: %run %t 2
 
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -19,13 +23,21 @@ void test(const char *path, int flags) {
 }
 
 int main(int argc, char *argv[]) {
-  assert(argc == 3);
-  assert(argv[1]);
-  unlink(argv[1]);
-  test(argv[1], O_RDWR | O_CREAT);
+  assert(argc == 2);
+  char buff[10000];
+  sprintf(buff, "%s.tmp", argv[0]);
+
+  if (atoi(argv[1]) == 1) {
+    unlink(buff);
+    test(buff, O_RDWR | O_CREAT);
+  }
 
 #ifdef O_TMPFILE
-assert(argv[2]);
-  test(argv[2], O_RDWR | O_TMPFILE);
+  if (atoi(argv[1]) == 2) {
+    char *last = strrchr(buff, '/');
+    assert(last);
+    *last = 0;
+    test(buff, O_RDWR | O_TMPFILE);
+  }
 #endif
 }
