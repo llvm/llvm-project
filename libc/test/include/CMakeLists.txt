@@ -82,6 +82,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  isnormal_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnormal_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  isnormalf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnormalf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  isnormall_test
+  SUITE
+    libc_include_tests
+  SRCS
+    isnormall_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
   fpclassify_test
   SUITE
     libc_include_tests
@@ -284,6 +314,21 @@ add_libc_test(
     libc_include_tests
   SRCS
     isnan_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  isnormal_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    isnormal_test.c
   COMPILE_OPTIONS
     -Wall
     -Werror
