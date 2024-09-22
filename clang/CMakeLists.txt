@@ -909,6 +909,7 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
         -instrument --instrumentation-file-append-pid
         --instrumentation-file=${BOLT_FDATA}
       COMMENT "Instrumenting clang binary with BOLT"
+      USES_TERMINAL
       VERBATIM
     )
     add_custom_target(clang-bolt-training-deps DEPENDS clang-instrumented)
@@ -917,23 +918,19 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   endif()
 
   # Optimize original (pre-bolt) Clang using the collected profile
-  set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
   add_custom_target(clang-bolt
-    DEPENDS ${CLANG_OPTIMIZED}
-  )
-  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
     DEPENDS clang-bolt-profile
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:clang> ${CLANG_PATH}.prebolt
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_PATH}.prebolt ${CLANG_PATH}++.prebolt
-    COMMAND llvm-bolt ${CLANG_PATH}
-      -o ${CLANG_OPTIMIZED}
+    COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:clang> ${CLANG_PATH}-prebolt
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_PATH}-prebolt ${CLANG_PATH}++-prebolt
+    COMMAND llvm-bolt ${CLANG_PATH}-prebolt
+      -o $<TARGET_FILE:clang>
       -data ${BOLT_FDATA}
       -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions
       -split-all-cold -split-eh -dyno-stats -use-gnu-stack
-      -split-strategy=cdsplit
+      -split-strategy=cdsplit -update-debug-sections
       ${BOLT_NO_LBR}
-    COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
     COMMENT "Optimizing Clang with BOLT"
+    USES_TERMINAL
     VERBATIM
   )
 endif()
