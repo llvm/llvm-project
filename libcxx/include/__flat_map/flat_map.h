@@ -1115,7 +1115,7 @@ private:
     __on_key_failed.__complete();
 
     auto __on_value_failed = std::__make_exception_guard([&]() noexcept {
-      if constexpr (!__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
+      if constexpr (!__container_traits<_MappedContainer>::__emplacement_has_strong_exception_safety_guarantee) {
         // we need to clear both because we don't know the state of our values anymore
         clear() /* noexcept */;
       } else {
