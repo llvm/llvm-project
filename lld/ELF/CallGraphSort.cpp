@@ -112,7 +112,7 @@ using SectionPair =
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
 CallGraphSort::CallGraphSort() {
-  MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
+  MapVector<SectionPair, uint64_t> &profile = ctx.arg.callGraphProfile;
   DenseMap<const InputSectionBase *, int> secToCluster;
 
   auto getOrCreateNode = [&](const InputSectionBase *isec) -> int {
@@ -243,11 +243,11 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
         break;
     }
   }
-  if (!config->printSymbolOrder.empty()) {
+  if (!ctx.arg.printSymbolOrder.empty()) {
     std::error_code ec;
-    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);
+    raw_fd_ostream os(ctx.arg.printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      error("cannot open " + config->printSymbolOrder + ": " + ec.message());
+      error("cannot open " + ctx.arg.printSymbolOrder + ": " + ec.message());
       return orderMap;
     }
 
@@ -294,7 +294,7 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
   };
 
   // Create the graph.
-  for (std::pair<SectionPair, uint64_t> &c : config->callGraphProfile) {
+  for (std::pair<SectionPair, uint64_t> &c : ctx.arg.callGraphProfile) {
     const InputSectionBase *fromSB = cast<InputSectionBase>(c.first.first);
     const InputSectionBase *toSB = cast<InputSectionBase>(c.first.second);
     // Ignore edges between input sections belonging to different sections.
@@ -337,7 +337,7 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
 // This first builds a call graph based on the profile data then merges sections
 // according either to the C³ or Cache-Directed-Sort ordering algorithm.
 DenseMap<const InputSectionBase *, int> elf::computeCallGraphProfileOrder() {
-  if (config->callGraphProfileSort == CGProfileSortKind::Cdsort)
+  if (ctx.arg.callGraphProfileSort == CGProfileSortKind::Cdsort)
     return computeCacheDirectedSortOrder();
   return CallGraphSort().run();
 }

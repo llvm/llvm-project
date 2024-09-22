@@ -76,7 +76,7 @@ template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
   return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                       rel.getType(config->isMips64EL));
+                                       rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT>
@@ -229,10 +229,10 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     return;
   }
 
-  markSymbol(symtab.find(config->entry));
-  markSymbol(symtab.find(config->init));
-  markSymbol(symtab.find(config->fini));
-  for (StringRef s : config->undefined)
+  markSymbol(symtab.find(ctx.arg.entry));
+  markSymbol(symtab.find(ctx.arg.init));
+  markSymbol(symtab.find(ctx.arg.fini));
+  for (StringRef s : ctx.arg.undefined)
     markSymbol(symtab.find(s));
   for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(symtab.find(s));
@@ -295,7 +295,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // script KEEP command.
     if (isReserved(sec) || ctx.script->shouldKeep(sec)) {
       enqueue(sec, 0);
-    } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
+    } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
@@ -364,7 +364,7 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 template <class ELFT> void elf::markLive() {
   llvm::TimeTraceScope timeScope("markLive");
   // If --gc-sections is not given, retain all input sections.
-  if (!config->gcSections) {
+  if (!ctx.arg.gcSections) {
     // If a DSO defines a symbol referenced in a regular object, it is needed.
     for (Symbol *sym : symtab.getSymbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
@@ -387,7 +387,7 @@ template <class ELFT> void elf::markLive() {
     MarkLive<ELFT>(1).moveToMain();
 
   // Report garbage-collected sections.
-  if (config->printGcSections)
+  if (ctx.arg.printGcSections)
     for (InputSectionBase *sec : ctx.inputSections)
       if (!sec->isLive())
         message("removing unused section " + toString(sec));

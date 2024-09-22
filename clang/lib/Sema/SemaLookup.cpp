@@ -928,8 +928,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         if (II == getASTContext().getMakeIntegerSeqName()) {
           R.addDecl(getASTContext().getMakeIntegerSeqDecl());
           return true;
-        } else if (II == getASTContext().getTypePackElementName()) {
+        }
+        if (II == getASTContext().getTypePackElementName()) {
           R.addDecl(getASTContext().getTypePackElementDecl());
+          return true;
+        }
+        if (II == getASTContext().getBuiltinCommonTypeName()) {
+          R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
           return true;
         }
       }
