@@ -321,14 +321,10 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <2 x i64> poison, i64 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT13]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x i64> [[BROADCAST_SPLAT10]], zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i64> [[BROADCAST_SPLAT10]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT14]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT14]], zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = and <2 x i1> [[TMP17]], [[TMP15]]
-; CHECK-NEXT:    [[TMP20:%.*]] = and <2 x i1> [[TMP18]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext <2 x i1> [[TMP19]] to <2 x i8>
-; CHECK-NEXT:    [[TMP22:%.*]] = zext <2 x i1> [[TMP20]] to <2 x i8>
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i8> [[TMP22]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i8> [[TMP21]], i32 1
 ; CHECK-NEXT:    store i8 [[TMP23]], ptr [[DST]], align 1, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -867,9 +863,7 @@ define void @reduction_store(ptr noalias %src, ptr %dst, i1 %x) #2 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 0, i32 -1, i32 -1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ <i32 -1, i32 -1, i32 -1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 4
 ; CHECK-NEXT:    [[TMP11]] = and <4 x i32> [[VEC_PHI]], [[TMP2]]
