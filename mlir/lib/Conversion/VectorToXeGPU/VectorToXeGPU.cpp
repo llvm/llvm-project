@@ -106,7 +106,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
       std::optional<int64_t> staticVal = getConstantIntValue(offset);
       if (!staticVal)
         dynOffsets.push_back(offset);
-      constOffsets.push_back(staticVal ? *staticVal : ShapedType::kDynamic);
+      constOffsets.push_back(staticVal.value_or(ShapedType::kDynamic));
     }
 
     SmallVector<Value> dynShapes;
