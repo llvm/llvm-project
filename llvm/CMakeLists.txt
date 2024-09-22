@@ -948,9 +948,6 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_defa
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
 
-set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
-  "Sampling profiling data file to use when compiling in order to improve runtime performance.")
-
 if(LLVM_INCLUDE_TESTS)
   # All LLVM Python files should be compatible down to this minimum version.
   set(LLVM_MINIMUM_PYTHON_VERSION 3.8)

@@ -20,7 +20,6 @@ if(LLVM_BUILD_INSTRUMENTED)
 
   add_custom_target(clear-profraw
     COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/ profraw
-    COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} perf.data
     COMMENT "Clearing old profraw data")
 
   if(NOT LLVM_PROFDATA)
@@ -40,32 +39,9 @@ if(LLVM_BUILD_INSTRUMENTED)
       # Therefor we call the generate-profraw target manually as part of this custom
       # command, which will only run if clang or ${CLANG_PGO_TRAINING_DEPS} are updated.
       COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate-profraw
-      DEPENDS clang ${CLANG_PGO_TRAINING_DEPS}
-    )
-    string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
-    if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-      set(PROFDATA_SAMPLE "--sample")
-      if(NOT LLVM_PROFGEN)
-        find_program(LLVM_PROFGEN llvm-profgen)
-      endif()
-
-      if(NOT LLVM_PROFGEN)
-        message(STATUS "To enable converting CSSPGO samples LLVM_PROFGEN has to point to llvm-profgen")
-      endif()
-
-      # Convert perf profiles into profraw
-      add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata
-        COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py perf2prof ${LLVM_PROFGEN} $<TARGET_FILE:clang> ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
-        COMMENT "Converting perf profiles into profraw"
-        APPEND
-      )
-    endif()
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata
-      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/ ${PROFDATA_SAMPLE}
+      COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
       COMMENT "Merging profdata"
-      APPEND
+      DEPENDS clang ${CLANG_PGO_TRAINING_DEPS}
     )
     add_custom_target(generate-profdata DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata)
     if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
