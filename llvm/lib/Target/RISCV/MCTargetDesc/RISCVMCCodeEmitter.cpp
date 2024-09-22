@@ -284,7 +284,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   }
 
   // Save the number fixups.
-  size_t N = Fixups.size();
+  size_t FixupStartIndex = Fixups.size();
 
   // Emit an unconditional jump to the destination.
   MCInst TmpInst =
@@ -293,7 +293,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   support::endian::write(CB, Binary, llvm::endianness::little);
 
   // Drop any fixup added so we can add the correct one.
-  Fixups.resize(N);
+  Fixups.resize(FixupStartIndex);
 
   if (SrcSymbol.isExpr()) {
     Fixups.push_back(MCFixup::create(Offset, SrcSymbol.getExpr(),
