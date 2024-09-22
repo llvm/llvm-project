@@ -8,8 +8,7 @@ declare void @llvm.fake.use(...)
 define void @one_fake_use(ptr addrspace(1) %global.ptr) {
 ; CHECK-LABEL: define void @one_fake_use(
 ; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR]] to ptr
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[CAST0]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GLOBAL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast ptr addrspace(1) %global.ptr to ptr
@@ -20,8 +19,7 @@ define void @one_fake_use(ptr addrspace(1) %global.ptr) {
 define void @one_fake_use_repeat_operands(ptr addrspace(1) %global.ptr) {
 ; CHECK-LABEL: define void @one_fake_use_repeat_operands(
 ; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR]] to ptr
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[CAST0]], ptr [[CAST0]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GLOBAL_PTR]], ptr addrspace(1) [[GLOBAL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast ptr addrspace(1) %global.ptr to ptr
@@ -32,8 +30,7 @@ define void @one_fake_use_repeat_operands(ptr addrspace(1) %global.ptr) {
 define void @one_fake_use_refers_original_ptr(ptr addrspace(1) %global.ptr) {
 ; CHECK-LABEL: define void @one_fake_use_refers_original_ptr(
 ; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR]] to ptr
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[CAST0]], ptr addrspace(1) [[GLOBAL_PTR]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GLOBAL_PTR]], ptr addrspace(1) [[GLOBAL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast ptr addrspace(1) %global.ptr to ptr
@@ -44,9 +41,7 @@ define void @one_fake_use_refers_original_ptr(ptr addrspace(1) %global.ptr) {
 define void @multiple_inferrable_fake_use(ptr addrspace(1) %global.ptr0, ptr addrspace(1) %global.ptr1) {
 ; CHECK-LABEL: define void @multiple_inferrable_fake_use(
 ; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR0:%.*]], ptr addrspace(1) [[GLOBAL_PTR1:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR0]] to ptr
-; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR1]] to ptr
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[CAST0]], ptr [[CAST1]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GLOBAL_PTR0]], ptr addrspace(1) [[GLOBAL_PTR1]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast ptr addrspace(1) %global.ptr0 to ptr
@@ -58,9 +53,8 @@ define void @multiple_inferrable_fake_use(ptr addrspace(1) %global.ptr0, ptr add
 define void @multiple_fake_use_one_inferrable(ptr %flat.ptr0, ptr addrspace(1) %global.ptr1) {
 ; CHECK-LABEL: define void @multiple_fake_use_one_inferrable(
 ; CHECK-SAME: ptr [[FLAT_PTR0:%.*]], ptr addrspace(1) [[GLOBAL_PTR1:%.*]]) {
-; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR1]] to ptr
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[FLAT_PTR0]], ptr [[CAST1]])
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[CAST1]], ptr [[FLAT_PTR0]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[FLAT_PTR0]], ptr addrspace(1) [[GLOBAL_PTR1]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GLOBAL_PTR1]], ptr [[FLAT_PTR0]])
 ; CHECK-NEXT:    ret void
 ;
   %cast1 = addrspacecast ptr addrspace(1) %global.ptr1 to ptr
@@ -72,8 +66,7 @@ define void @multiple_fake_use_one_inferrable(ptr %flat.ptr0, ptr addrspace(1) %
 define void @vector_of_pointers(<2 x ptr addrspace(1)> %global.ptr) {
 ; CHECK-LABEL: define void @vector_of_pointers(
 ; CHECK-SAME: <2 x ptr addrspace(1)> [[GLOBAL_PTR:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast <2 x ptr addrspace(1)> [[GLOBAL_PTR]] to <2 x ptr>
-; CHECK-NEXT:    call void (...) @llvm.fake.use(<2 x ptr> [[CAST0]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(<2 x ptr addrspace(1)> [[GLOBAL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast <2 x ptr addrspace(1)> %global.ptr to <2 x ptr>
@@ -83,7 +76,7 @@ define void @vector_of_pointers(<2 x ptr addrspace(1)> %global.ptr) {
 
 define void @use_global_var() {
 ; CHECK-LABEL: define void @use_global_var() {
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspacecast (ptr addrspace(3) @gv to ptr))
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(3) @gv)
 ; CHECK-NEXT:    ret void
 ;
   call void (...) @llvm.fake.use(ptr addrspacecast (ptr addrspace(3) @gv to ptr))
@@ -93,9 +86,8 @@ define void @use_global_var() {
 define void @use_gep_cast(ptr addrspace(1) %global.ptr) {
 ; CHECK-LABEL: define void @use_gep_cast(
 ; CHECK-SAME: ptr addrspace(1) [[GLOBAL_PTR:%.*]]) {
-; CHECK-NEXT:    [[CAST0:%.*]] = addrspacecast ptr addrspace(1) [[GLOBAL_PTR]] to ptr
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[CAST0]], i64 16
-; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr [[GEP]], ptr [[CAST0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[GLOBAL_PTR]], i64 16
+; CHECK-NEXT:    call void (...) @llvm.fake.use(ptr addrspace(1) [[GEP]], ptr addrspace(1) [[GLOBAL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %cast0 = addrspacecast ptr addrspace(1) %global.ptr to ptr
