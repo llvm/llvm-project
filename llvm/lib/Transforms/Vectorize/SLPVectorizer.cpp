@@ -6713,7 +6713,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
           unsigned CurrentConsecutiveDist = 1;
-          int LastDist = std::numeric_limits<int>::max();
+          int LastDist = LocalLoadsDists.front().second;
           bool AllowMaskedGather = IsMaskedGatherSupported(OriginalLoads);
           for (const std::pair<LoadInst *, int> &L : LocalLoadsDists) {
             if (getTreeEntry(L.first))
