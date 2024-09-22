@@ -348,8 +348,8 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
-  // Don't allow breaking before a closing right brace of a block-indented
-  // braced list initializer if there was not already a break.
+  // Don't allow breaking before a closing brace of a block-indented braced list
+  // initializer if there isn't already a break.
   if (Current.is(tok::r_brace) && Current.MatchingParen &&
       Current.isBlockIndentedInitRBrace(Style)) {
     return CurrentState.BreakBeforeClosingBrace;
