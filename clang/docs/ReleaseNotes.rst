@@ -123,6 +123,9 @@ C++ Language Changes
 
 - Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
+- The builtin type alias ``__builtin_common_type`` has been added to improve the
+  performance of ``std::common_type``.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
