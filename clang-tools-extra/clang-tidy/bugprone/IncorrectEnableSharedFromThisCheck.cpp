@@ -34,9 +34,8 @@ void IncorrectEnableSharedFromThisCheck::check(
         : Check(Check) {}
 
     bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
-      if (!RDecl->hasDefinition()) {
+      if (!RDecl->hasDefinition())
         return true;
-      }
 
       if (isStdEnableSharedFromThis(RDecl))
         EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
@@ -44,11 +43,11 @@ void IncorrectEnableSharedFromThisCheck::check(
       for (const auto &Base : RDecl->bases()) {
         const auto *BaseRecord =
             Base.getType()->getAsCXXRecordDecl()->getCanonicalDecl();
-        const auto isStdEnableSharedFromThisBool =
+        const auto IsStdEnableSharedFromThisBool =
             isStdEnableSharedFromThis(BaseRecord);
 
         if (EnableSharedClassSet.contains(BaseRecord) ||
-            isStdEnableSharedFromThisBool) {
+            IsStdEnableSharedFromThisBool) {
 
           if (Base.getAccessSpecifier() != clang::AS_public) {
             const SourceRange ReplacementRange = Base.getSourceRange();
@@ -61,16 +60,14 @@ void IncorrectEnableSharedFromThisCheck::check(
                 ReplacementRange, ReplacementString);
             Check.diag(RDecl->getLocation(),
                        "%2 is not publicly inheriting from "
-                       "%select{%1|'std::enable_shared_from_this',}0 "
-                       "%select{which inherits from "
-                       "'std::enable_shared_from_this', |}0 "
-                       "will cause unintended behaviour "
-                       "on 'shared_from_this'. fix this by making it public "
-                       "inheritance",
+                       "%select{%1 which inherits from "
+                       "'std::enable_shared_from_this',|'std::enable_shared_"
+                       "from_this',}0 "
+                       "which will cause unintended behaviour "
+                       "when using 'shared_from_this'; make the inheritance "
+                       "public",
                        DiagnosticIDs::Warning)
-                << isStdEnableSharedFromThisBool
-                << BaseRecord->getNameAsString() << RDecl->getNameAsString()
-                << Hint;
+                << IsStdEnableSharedFromThisBool << BaseRecord << RDecl << Hint;
           }
 
           EnableSharedClassSet.insert(RDecl->getCanonicalDecl());

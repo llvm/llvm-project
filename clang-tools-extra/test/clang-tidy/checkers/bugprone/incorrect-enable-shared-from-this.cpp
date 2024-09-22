@@ -119,3 +119,47 @@ struct PrivateTypedefStructBase : private EnableSharedFromThis {};
 struct DefaultTypedefStructBase : EnableSharedFromThis {}; 
 
 struct PublicTypedefStructBase : public EnableSharedFromThis {}; 
+
+#define PRIVATE_ESFT_CLASS(ClassName) \
+   class ClassName: private std::enable_shared_from_this<ClassName> { \
+   };
+
+PRIVATE_ESFT_CLASS(PrivateEsftClass);
+
+class EsftClass<PrivateAliasTemplateClassBase> {};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: PrivateAliasTemplateClassBase is not publicly inheriting from 'std::enable_shared_from_this', will cause unintended behaviour on 'shared_from_this'. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: class PrivateAliasTemplateClassBase : public EsftClass<PrivateAliasTemplateClassBase> {};
+
+#define DEFAULT_ESFT_CLASS(ClassName) \
+   class ClassName: std::enable_shared_from_this<ClassName> { \
+   };
+
+DEFAULT_ESFT_CLASS(DefaultEsftClass);
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: DefaultAliasTemplateClassBase is not publicly inheriting from 'std::enable_shared_from_this', will cause unintended behaviour on 'shared_from_this'. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: class DefaultAliasTemplateClassBase : public EsftClass<DefaultAliasTemplateClassBase> {};
+
+#define PUBLIC_ESFT_CLASS(ClassName) \
+   class ClassName: public std::enable_shared_from_this<ClassName> { \
+   };
+
+PUBLIC_ESFT_CLASS(PublicEsftClass);
+
+#define PRIVATE_ESFT_STRUCT(StructName) \
+   struct StructName: private std::enable_shared_from_this<StructName> { \
+   };
+
+PRIVATE_ESFT_STRUCT(PrivateEsftStruct);
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: PrivateAliasTemplateStructBase is not publicly inheriting from 'std::enable_shared_from_this', will cause unintended behaviour on 'shared_from_this'. fix this by making it public inheritance [bugprone-incorrect-enable-shared-from-this]
+// CHECK-FIXES: struct PrivateAliasTemplateStructBase : public EsftClass<PrivateAliasTemplateStructBase> {};
+
+#define DEFAULT_ESFT_STRUCT(StructName) \
+   struct StructName: std::enable_shared_from_this<StructName> { \
+   };
+
+DEFAULT_ESFT_STRUCT(PrivateEsftStruct);
+
+#define PUBLIC_ESFT_STRUCT(StructName) \
+   struct StructName: std::enable_shared_from_this<StructName> { \
+   };
+
+PUBLIC_ESFT_STRUCT(PublicEsftStruct);

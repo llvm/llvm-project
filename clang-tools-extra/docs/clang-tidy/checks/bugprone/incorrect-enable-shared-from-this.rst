@@ -3,14 +3,14 @@
 bugprone-incorrect-enable-shared-from-this
 ==========================================
 
-Checks if class/struct publicly inherits from 
-``std::enable_shared_from_this``, because otherwise when ``shared_from_this``
-is called unintended behaviour will occur.
+Checks if a class or struct publicly inherits from 
+``std::enable_shared_from_this``, because unintended behavior will 
+otherwise occur when calling ``shared_from_this``.
 
 Consider the following code:
 
 .. code-block:: c++
-    
+
     #include <memory>
 
     // private inheritance
