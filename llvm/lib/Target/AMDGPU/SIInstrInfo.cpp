@@ -2901,7 +2901,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
       .addSym(OffsetLo, MO_FAR_BRANCH_OFFSET);
-  ApplyHazardWorkarounds();
   BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
