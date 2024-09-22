@@ -242,13 +242,13 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<bool> EnableFunctionArgSnippets{
+opt<int> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
-    desc("When disabled, completions contain only parentheses for "
-         "function calls. When enabled, completions also contain "
+    desc("When disabled (0), completions contain only parentheses for "
+         "function calls. When enabled (1), completions also contain "
          "placeholders for method parameters"),
-    init(true),
+    init(-1),
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
@@ -695,8 +695,10 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    if (!EnableFunctionArgSnippets) {
-      ArgumentLists = Config::ArgumentListsPolicy::Delimiters;
+    if (EnableFunctionArgSnippets >= 0) {
+      ArgumentLists = EnableFunctionArgSnippets
+                          ? Config::ArgumentListsPolicy::FullPlaceholders
+                          : Config::ArgumentListsPolicy::Delimiters;
     }
 
     Frag = [=](const config::Params &, Config &C) {

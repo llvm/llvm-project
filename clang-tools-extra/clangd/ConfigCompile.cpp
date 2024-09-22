@@ -504,10 +504,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv(
-                 "Latency of clang-tidy check '{0}' is not known. "
-                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
-                 Str)
+             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
+                           "It will only run if ClangTidy.FastCheckFilter is "
+                           "Loose or None",
+                           Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
