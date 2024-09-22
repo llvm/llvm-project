@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
 // RUN:            -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage \
+// RUN:            -verify %s -x objective-c++
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
 // RUN:            -verify %s
 
@@ -56,6 +58,11 @@ namespace std {
 }
 
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
+  typedef FILE * _Nullable aligned_file_ptr_t __attribute__((align_value(64)));
+  typedef char * _Nullable aligned_char_ptr_t __attribute__((align_value(64)));
+  aligned_file_ptr_t fp;
+  aligned_char_ptr_t cp;
+
   memcpy();                   // expected-warning{{function 'memcpy' is unsafe}}
   std::memcpy();              // expected-warning{{function 'memcpy' is unsafe}}
   __builtin_memcpy(p, q, 64); // expected-warning{{function '__builtin_memcpy' is unsafe}}
@@ -71,9 +78,11 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   printf("%s%d", // expected-warning{{function 'printf' is unsafe}}
 	 p,    // expected-note{{string argument is not guaranteed to be null-terminated}} note attached to the unsafe argument
 	 *p);
+  printf(cp, p, *p); // expected-warning{{function 'printf' is unsafe}} // expected-note{{string argument is not guaranteed to be null-terminated}}
   sprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'sprintf' is unsafe}} expected-note{{change to 'snprintf' for explicit bounds checking}}
   swprintf(q, "%s%d", "hello", *p); // expected-warning{{function 'swprintf' is unsafe}} expected-note{{change to 'snprintf' for explicit bounds checking}}
   snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snprintf(cp, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snwprintf_s(                      // expected-warning{{function 'snwprintf_s' is unsafe}}
@@ -84,7 +93,9 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   sscanf(p, "%s%d", "hello", *p);    // expected-warning{{function 'sscanf' is unsafe}}
   sscanf_s(p, "%s%d", "hello", *p);  // expected-warning{{function 'sscanf_s' is unsafe}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  fprintf(fp, "%P%d%p%i hello world %32s", *p, *p, p, *p, p); // expected-warning{{function 'fprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   wprintf(L"hello %s", p); // expected-warning{{function 'wprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+
 
   char a[10], b[11];
   int c[10];
@@ -93,6 +104,7 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snprintf(a, sizeof(b), "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);  // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
+  fprintf(fp, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", "hello", *p); // no warn
   snprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
