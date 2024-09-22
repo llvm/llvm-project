@@ -202,7 +202,7 @@ def CallVirt : Opcode {
 }
 
 def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr];
+  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
 }
 
 def CallPtr : Opcode {

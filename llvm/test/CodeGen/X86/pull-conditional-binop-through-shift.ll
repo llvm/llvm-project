@@ -191,12 +191,11 @@ define i32 @add_signbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB6_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB6_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -220,12 +219,11 @@ define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB7_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB7_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -425,12 +423,11 @@ define i32 @add_signbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_lshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB14_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB14_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -454,12 +451,11 @@ define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_lshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB15_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB15_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $2147418112, %eax # imm = 0x7FFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -659,12 +655,11 @@ define i32 @add_signbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_signbit_select_ashr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB22_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:  .LBB22_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -688,12 +683,11 @@ define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
 ; X86-LABEL: add_nosignbit_select_ashr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB23_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    addl $2147418112, %eax # imm = 0x7FFF0000
-; X86-NEXT:  .LBB23_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $2147418112, %eax # imm = 0x7FFF0000
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
@@ -703,3 +697,185 @@ define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, ptr %dst) {
   store i32 %r, ptr %dst
   ret i32 %r
 }
+
+define i32 @shl_signbit_select_add(i32 %x, i1 %cond, ptr %dst) {
+; X64-LABEL: shl_signbit_select_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovel %edi, %eax
+; X64-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: shl_signbit_select_add:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    negb %cl
+; X86-NEXT:    andb $4, %cl
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%edx)
+; X86-NEXT:    retl
+  %t0 = shl i32 %x, 4
+  %t1 = select i1 %cond, i32 %t0, i32 %x
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+
+define i32 @shl_signbit_select_add_fail(i32 %x, i1 %cond, ptr %dst) {
+; X64-LABEL: shl_signbit_select_add_fail:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: shl_signbit_select_add_fail:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    jne .LBB25_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    shll $4, %eax
+; X86-NEXT:  .LBB25_2:
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    retl
+  %t0 = shl i32 %x, 4
+  %t1 = select i1 %cond, i32 %x, i32 %t0
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+
+define i32 @lshr_signbit_select_add(i32 %x, i1 %cond, ptr %dst, i32 %y) {
+; X64-LABEL: lshr_signbit_select_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovel %edi, %eax
+; X64-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: lshr_signbit_select_add:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    negb %cl
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    shrl %cl, %eax
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%edx)
+; X86-NEXT:    retl
+  %t0 = lshr i32 %x, %y
+  %t1 = select i1 %cond, i32 %t0, i32 %x
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+
+define i32 @ashr_signbit_select_add(i32 %x, i1 %cond, ptr %dst) {
+; X64-LABEL: ashr_signbit_select_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarl $4, %eax
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovel %edi, %eax
+; X64-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: ashr_signbit_select_add:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    negb %cl
+; X86-NEXT:    andb $4, %cl
+; X86-NEXT:    sarl %cl, %eax
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%edx)
+; X86-NEXT:    retl
+  %t0 = ashr i32 %x, 4
+  %t1 = select i1 %cond, i32 %t0, i32 %x
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+
+define i32 @and_signbit_select_add(i32 %x, i1 %cond, ptr %dst, i32 %y) {
+; X64-LABEL: and_signbit_select_add:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-NEXT:    andl %edi, %ecx
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovnel %edi, %ecx
+; X64-NEXT:    leal 123456(%rcx), %eax
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: and_signbit_select_add:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    retl
+  %t0 = and i32 %x, %y
+  %t1 = select i1 %cond, i32 %x, i32 %t0
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+
+
+define i32 @and_signbit_select_add_fail(i32 %x, i1 %cond, ptr %dst, i32 %y) {
+; X64-LABEL: and_signbit_select_add_fail:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-NEXT:    andl %edi, %ecx
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    cmovel %edi, %ecx
+; X64-NEXT:    leal 123456(%rcx), %eax
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: and_signbit_select_add_fail:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB29_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:  .LBB29_2:
+; X86-NEXT:    addl $123456, %eax # imm = 0x1E240
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    retl
+  %t0 = and i32 %x, %y
+  %t1 = select i1 %cond, i32 %t0, i32 %x
+  %r = add i32 %t1, 123456
+  store i32 %r, ptr %dst
+  ret i32 %r
+}
+

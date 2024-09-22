@@ -43,8 +43,8 @@ static void PrintRecords(const RecordKeeper &Records, raw_ostream &OS) {
   OS << Records; // No argument, dump all contents
 }
 
-static void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
-  for (Record *Rec : Records.getAllDerivedDefinitions(Class))
+static void PrintEnums(const RecordKeeper &Records, raw_ostream &OS) {
+  for (const Record *Rec : Records.getAllDerivedDefinitions(Class))
     OS << Rec->getName() << ", ";
   OS << "\n";
 }
@@ -54,7 +54,7 @@ static void PrintSets(const RecordKeeper &Records, raw_ostream &OS) {
   Sets.addFieldExpander("Set", "Elements");
   for (const Record *Rec : Records.getAllDerivedDefinitions("Set")) {
     OS << Rec->getName() << " = [";
-    const std::vector<Record *> *Elts = Sets.expand(Rec);
+    const std::vector<const Record *> *Elts = Sets.expand(Rec);
     assert(Elts && "Couldn't expand Set instance");
     for (const Record *Elt : *Elts)
       OS << ' ' << Elt->getName();

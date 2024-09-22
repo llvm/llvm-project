@@ -48,7 +48,7 @@
 #include <utility>
 #include <vector>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// Output char buffer with overflow check.
 class SPSOutputBuffer {
@@ -576,7 +576,7 @@ Expected<T> fromSPSSerializable(SPSSerializableExpected<T> BSE) {
     return make_error<StringError>(BSE.ErrMsg);
 }
 
-} // end namespace detail
+} // namespace detail
 
 /// Serialize to a SPSError from a detail::SPSSerializableError.
 template <>
@@ -684,6 +684,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_SIMPLE_PACKED_SERIALIZATION_H

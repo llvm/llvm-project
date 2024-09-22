@@ -90,10 +90,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
-  if (!S.getLangOpts().CPlusPlus)
-    return;
-
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (!S.getLangOpts().CPlusPlus) {
+    S.FFDiag(Loc);
+    return;
+  }
+
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
       !VarD->getAnyInitializer()) {
@@ -560,13 +562,25 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isWeak())
+    return true;
+
+  const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+  assert(VD);
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_var_init_weak)
+      << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at);
+
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
-
   if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -578,6 +592,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -605,6 +621,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -883,7 +901,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return diagnoseUnknownDecl(S, OpPC, D);
 
   assert(AK == AK_Assign);
-  if (S.getLangOpts().CPlusPlus11) {
+  if (S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
   }
@@ -992,6 +1010,37 @@ void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
         << llvm::toString(Value, 10) << Min.getZExtValue() << Max.getZExtValue()
         << ED;
   }
+}
+
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
+  assert(T);
+  assert(!S.getLangOpts().CPlusPlus23);
+
+  // C++1y: A constant initializer for an object o [...] may also invoke
+  // constexpr constructors for o and its subobjects even if those objects
+  // are of non-literal class types.
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+
+  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
+    return true;
+  }
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+  else
+    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1177,16 +1226,16 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
-            const CallExpr *CE) {
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
+            const CallExpr *CE, uint32_t BuiltinID) {
   if (S.checkingPotentialConstantExpression())
     return false;
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func, CE)) {
+  if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
     NewFrame.release();
     return true;
   }

@@ -54,6 +54,10 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
   }
 }
 
+static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
+  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+}
+
 template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
@@ -70,6 +74,7 @@ static RT_API_ATTRS bool EditBOZInput(
   // Count significant digits after any leading white space & zeroes
   int digits{0};
   int significantBits{0};
+  const char32_t comma{GetSeparatorChar(edit)};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -84,7 +89,7 @@ static RT_API_ATTRS bool EditBOZInput(
     } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
     } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
     } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
-    } else if (ch == ',') {
+    } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
@@ -209,6 +214,7 @@ RT_API_ATTRS bool EditIntegerInput(
   common::UnsignedInt128 value{0};
   bool any{!!sign};
   bool overflow{false};
+  const char32_t comma{GetSeparatorChar(edit)};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -221,9 +227,23 @@ RT_API_ATTRS bool EditIntegerInput(
     int digit{0};
     if (ch >= '0' && ch <= '9') {
       digit = ch - '0';
-    } else if (ch == ',') {
+    } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
+      if (edit.modes.inNamelist && ch == GetRadixPointChar(edit)) {
+        // Ignore any fractional part that might appear in NAMELIST integer
+        // input, like a few other Fortran compilers do.
+        // TODO: also process exponents?  Some compilers do, but they obviously
+        // can't just be ignored.
+        while ((next = io.NextInField(remaining, edit))) {
+          if (*next < '0' || *next > '9') {
+            break;
+          }
+        }
+        if (!next || *next == comma) {
+          break;
+        }
+      }
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in INTEGER input field", ch);
       return false;

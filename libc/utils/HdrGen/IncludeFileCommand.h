@@ -23,7 +23,7 @@ public:
   static const char Name[];
 
   void run(llvm::raw_ostream &OS, const ArgVector &Args,
-           llvm::StringRef StdHeader, llvm::RecordKeeper &Records,
+           llvm::StringRef StdHeader, const llvm::RecordKeeper &Records,
            const Command::ErrorReporter &Reporter) const override;
 };
 

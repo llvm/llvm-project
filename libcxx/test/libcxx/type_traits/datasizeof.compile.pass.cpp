@@ -26,6 +26,10 @@ struct Empty {};
 
 static_assert(std::__datasizeof_v<Empty> == 0, "");
 
+struct FinalEmpty final {};
+
+static_assert(std::__datasizeof_v<FinalEmpty> == 0, "");
+
 struct OneBytePadding final {
   OneBytePadding() {}
 

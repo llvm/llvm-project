@@ -133,7 +133,7 @@ public:
   bool VisitVectorBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
-  bool VisitBuiltinCallExpr(const CallExpr *E);
+  bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
@@ -409,8 +409,12 @@ protected:
   /// Switch case mapping.
   CaseMap CaseLabels;
 
+  /// Scope to cleanup until when we see a break statement.
+  VariableScope<Emitter> *BreakVarScope = nullptr;
   /// Point to break to.
   OptLabelTy BreakLabel;
+  /// Scope to cleanup until when we see a continue statement.
+  VariableScope<Emitter> *ContinueVarScope = nullptr;
   /// Point to continue to.
   OptLabelTy ContinueLabel;
   /// Default case label.
@@ -531,7 +535,7 @@ public:
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
-    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+    for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;

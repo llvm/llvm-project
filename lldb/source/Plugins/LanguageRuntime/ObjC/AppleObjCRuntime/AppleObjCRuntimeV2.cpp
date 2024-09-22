@@ -2685,7 +2685,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   }
   os << ". This will likely reduce debugging performance.\n";
 
-  Debugger::ReportWarning(os.str(), debugger.GetID(),
+  Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
 }
 
