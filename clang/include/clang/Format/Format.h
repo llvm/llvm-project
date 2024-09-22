@@ -238,7 +238,6 @@ struct FormatStyle {
     ///   void f2(void);
     ///   size_t f3(void);
     /// \endcode
-    /// \version 20
     bool AlignFunctionDeclarations;
     /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     /// aligned.

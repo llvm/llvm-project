@@ -392,8 +392,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -550,8 +549,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -708,8 +706,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -867,8 +864,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -1145,8 +1141,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -1301,8 +1296,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
@@ -1457,8 +1451,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionDeclarations`` :versionbadge:`clang-format 20`
-  Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     are aligned.
 
     .. code-block:: c++
