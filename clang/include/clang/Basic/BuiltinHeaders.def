@@ -38,6 +38,7 @@ HEADER(STRING_H, "string.h")
 HEADER(UNISTD_H, "unistd.h")
 HEADER(UTILITY, "utility")
 HEADER(WCHAR_H, "wchar.h")
+HEADER(WINBASE_H, "winbase.h")
 HEADER(XMMINTRIN_H, "xmmintrin.h")
 
 #undef HEADER

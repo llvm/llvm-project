@@ -201,6 +201,8 @@ public:
     for (char c : Builtin->getValueAsString("Header")) {
       if (std::islower(c))
         HeaderName += static_cast<char>(std::toupper(c));
+      else if (std::isupper(c))
+        HeaderName += c;
       else if (c == '.' || c == '_' || c == '/' || c == '-')
         HeaderName += '_';
       else

@@ -106,7 +106,7 @@ static const CallExpr *getStrlenExpr(const MatchFinder::MatchResult &Result) {
     if (const Decl *D = StrlenExpr->getCalleeDecl())
       if (const FunctionDecl *FD = D->getAsFunction())
         if (const IdentifierInfo *II = FD->getIdentifier())
-          if (II->isStr("strlen") || II->isStr("wcslen"))
+          if (II->isStr("strlen") || II->isStr("lstrlenA") || II->isStr("lstrlenW") || II->isStr("wcslen"))
             return StrlenExpr;
 
   return nullptr;
