@@ -1377,6 +1377,8 @@ void clang::EmitBackendOutput(
     }
   }
 
+  M->setDefaultSubtargetInfo(TOpts.CPU, llvm::join(TOpts.Features, ","));
+
   EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M, VFS);
   AsmHelper.EmitAssembly(Action, std::move(OS), BC);
 

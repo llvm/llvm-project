@@ -1062,6 +1062,24 @@ public:
 
   /// Set the target variant version build SDK version metadata.
   void setDarwinTargetVariantSDKVersion(VersionTuple Version);
+
+  /// Get the current "default" target CPU (target-cpu function
+  /// attribute). The intent is that compiler frontends will set this to a value
+  /// that reflects the attribute that a function would get "by default" without
+  /// any specific function attributes, and compiler passes will attach the
+  /// attribute to newly created functions that are not associated with a
+  /// particular function, such as global initializers.
+  /// Function::createWithDefaultAttr() will create functions with this
+  /// attribute. This function should only be called by passes that run at
+  /// compile time and not by the backend or LTO passes.
+  StringRef getDefaultTargetCPU();
+
+  /// Similar to getDefaultTargetCPU() but for default target-features.
+  StringRef getDefaultTargetFeatures();
+
+  /// Set the data returned by getDefaultTargetCPU() and
+  /// getDefaultTargetFeatures().
+  void setDefaultSubtargetInfo(StringRef CPU, StringRef Features);
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

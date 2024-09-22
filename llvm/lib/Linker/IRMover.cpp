@@ -1240,11 +1240,22 @@ void IRLinker::linkNamedMDNodes() {
     if (IsPerformingImport && NMD.getName() == "llvm.stats")
       continue;
 
+    // Default subtarget info is only intended to be used before LTO and
+    // shouldn't be present after merging because the default subtargets may be
+    // different. Even if they were the same we wouldn't want to keep them to
+    // avoid introducing bugs that would only occur when merging modules with
+    // different subtarget info.
+    if (NMD.getName() == "llvm.subtarget.info")
+      continue;
+      
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
       DestNMD->addOperand(Mapper.mapMDNode(*Op));
   }
+
+  if (auto *NMD = DstM.getNamedMetadata("llvm.subtarget.info"))
+    DstM.eraseNamedMetadata(NMD);
 }
 
 /// Merge the linker flags in Src into the Dest module.

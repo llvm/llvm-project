@@ -44,6 +44,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -879,4 +880,38 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+void Module::setDefaultSubtargetInfo(StringRef CPU, StringRef Features) {
+  auto *MD = getOrInsertNamedMetadata("llvm.subtarget.info");
+  MD->clearOperands();
+  MD->addOperand(
+      MDNode::get(getContext(), {MDString::get(getContext(), CPU),
+                                 MDString::get(getContext(), Features)}));
+}
+
+StringRef Module::getDefaultTargetCPU() {
+  auto *MD = getNamedMetadata("llvm.subtarget.info");
+  // FIXME: This function is only meant to be called pre-LTO, but the AMDGPU and
+  // NVPTX backends end up calling this function in their CtorDtorLowering
+  // passes. For now we just return an empty string to avoid breaking them.
+  if (!MD) {
+    Triple T(getTargetTriple());
+    if (T.isAMDGPU() || T.isNVPTX())
+      return "";
+    report_fatal_error("Invalid call to getDefaultTargetCPU()");
+  }
+  return cast<MDString>(MD->getOperand(0)->getOperand(0))->getString();
+}
+
+StringRef Module::getDefaultTargetFeatures() {
+  auto *MD = getNamedMetadata("llvm.subtarget.info");
+  // FIXME: See getDefaultTargetCPU().
+  if (!MD) {
+    Triple T(getTargetTriple());
+    if (T.isAMDGPU() || T.isNVPTX())
+      return "";
+    report_fatal_error("Invalid call to getDefaultTargetFeatures()");
+  }
+  return cast<MDString>(MD->getOperand(0)->getOperand(1))->getString();
 }
