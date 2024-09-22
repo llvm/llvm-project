@@ -522,10 +522,11 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
 
   auto ModId = M.getModuleIdentifier();
   for (auto &[Hash, SFS] : FunctionMap->getFunctionMap()) {
-    // assert(SFS.size() >= 2);
-    // No finalized merge info might have a single function candidate.
+    // No interest if the number of candidates are less than 2.
     if (SFS.size() < 2)
       continue;
+    // Compute the parameter locations based on the unique hash sequences
+    // across the candidates.
     auto ParamLocsVec = computeParamInfo(SFS);
     LLVM_DEBUG({
       dbgs() << "[GlobalMergeFunc] Merging hash: " << Hash << " with Params "
@@ -698,7 +699,7 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
     Triple TT(M.getTargetTriple());
     embedBufferInModule(
         M, *Buffer.get(),
-        getCodeGenDataSectionName(CG_merge, TT.getObjectFormat()));
+        getCodeGenDataSectionName(CG_merge, TT.getObjectFormat()), Align(4));
   }
 }
 

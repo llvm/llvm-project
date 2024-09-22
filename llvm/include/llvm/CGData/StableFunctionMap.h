@@ -132,7 +132,7 @@ public:
   size_t size(SizeType Type = UniqueHashCount) const;
 
   /// Finalize the stable function mape by trimming content.
-  bool finalize();
+  void finalize();
 };
 
 } // namespace llvm

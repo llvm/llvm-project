@@ -117,20 +117,11 @@ static void removeIdenticalIndexPair(
       SF->IndexOperandHashMap->erase(Pair);
 }
 
-bool StableFunctionMap::finalize() {
-  // TODO: Add an option for finalization.
-  return false;
-
-  bool Changed = false;
+void StableFunctionMap::finalize() {
+  Finalized = true;
 
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
     auto &[StableHash, SFS] = *It;
-    // No interest if there is no common stable function globally.
-    if (SFS.size() < 2) {
-      HashToFuncs.erase(It);
-      Changed = true;
-      continue;
-    }
 
     // Group stable functions by ModuleIdentifier.
     std::stable_sort(SFS.begin(), SFS.end(),
@@ -166,7 +157,6 @@ bool StableFunctionMap::finalize() {
     }
     if (!IsValid) {
       HashToFuncs.erase(It);
-      Changed = true;
       continue;
     }
 
@@ -174,7 +164,4 @@ bool StableFunctionMap::finalize() {
     // stable functions.
     removeIdenticalIndexPair(SFS);
   }
-  Finalized = true;
-
-  return Changed;
 }

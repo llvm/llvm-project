@@ -115,6 +115,8 @@ void StableFunctionMapRecord::serialize(raw_ostream &OS) const {
 }
 
 void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
+  // Assert that Ptr is 4-byte aligned
+  assert(((uintptr_t)Ptr % 4) == 0);
   // Read Names.
   auto NumNames =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
