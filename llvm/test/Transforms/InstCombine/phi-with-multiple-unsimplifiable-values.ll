@@ -139,7 +139,7 @@ define i1 @icmp_of_phi_of_scmp_with_constant_one_user_two_uses(i8 %c, i16 %x, i1
 ; CHECK-LABEL: define i1 @icmp_of_phi_of_scmp_with_constant_one_user_two_uses(
 ; CHECK-SAME: i8 [[C:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]], i8 [[FALSE_VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i16(i16 [[X]], i16 [[Y]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i16 [[X]], [[Y]]
 ; CHECK-NEXT:    switch i8 [[C]], label %[[BB_2:.*]] [
 ; CHECK-NEXT:      i8 0, label %[[BB:.*]]
 ; CHECK-NEXT:      i8 1, label %[[BB]]
@@ -147,8 +147,7 @@ define i1 @icmp_of_phi_of_scmp_with_constant_one_user_two_uses(i8 %c, i16 %x, i1
 ; CHECK:       [[BB_2]]:
 ; CHECK-NEXT:    br label %[[BB]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ [[CMP]], %[[ENTRY]] ], [ [[CMP]], %[[ENTRY]] ], [ 0, %[[BB_2]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[PHI]], 0
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP0]], %[[ENTRY]] ], [ false, %[[BB_2]] ]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:

@@ -1830,7 +1830,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // optimization is profitable, but also to avoid creating a potentially
     // invalid phi node when we have a multi-edge in the CFG.
     const APInt *Ignored;
-    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUse() &&
+    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUser() &&
         match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
       OpsToMoveUseToIncomingBB.push_back(i);
       NewPhiValues.push_back(nullptr);
@@ -1868,18 +1868,25 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
 
   // Clone the instruction that uses the phi node and move it into the incoming
   // BB because we know that the next iteration of InstCombine will simplify it.
+  SmallDenseMap<BasicBlock *, Instruction *> Clones;
   for (auto OpIndex : OpsToMoveUseToIncomingBB) {
     Value *Op = PN->getIncomingValue(OpIndex);
     BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
 
-    Instruction *Clone = I.clone();
-    for (Use &U : Clone->operands()) {
-      if (U == PN)
-        U = Op;
-      else
-        U = U->DoPHITranslation(PN->getParent(), OpBB);
+    auto CloneIt = Clones.find(OpBB);
+    if (CloneIt == Clones.end()) {
+      Instruction *Clone = I.clone();
+      for (Use &U : Clone->operands()) {
+        if (U == PN)
+          U = Op;
+        else
+          U = U->DoPHITranslation(PN->getParent(), OpBB);
+      }
+      Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
+      CloneIt = Clones.insert(std::make_pair(OpBB, Clone)).first;
     }
-    Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
+
+    Instruction *Clone = CloneIt->second;
     NewPhiValues[OpIndex] = Clone;
   }
 
