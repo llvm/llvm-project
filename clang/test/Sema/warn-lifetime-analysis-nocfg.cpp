@@ -769,4 +769,11 @@ const int& test12(Span<int> a) {
   return a.getFieldNoLB(); // OK.
 }
 
+void test13() {
+  // FIXME: RHS is Owner<Pointer>, we skip this case to avoid false positives.
+  std::optional<Span<int*>> abc = std::vector<int*>{};
+
+  std::optional<Span<int>> t = std::vector<int> {}; // expected-warning {{object backing the pointer will be destroyed}}
+}
+
 } // namespace GH100526

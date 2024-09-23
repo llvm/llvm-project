@@ -290,15 +290,15 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
   return false;
 }
 static bool isContainerOfOwner(const RecordDecl *Container) {
-  if (const auto *CTSD =
-          dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container)) {
-    if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
-      return false;
-    const auto &TAs = CTSD->getTemplateArgs();
-    return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-           isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
-  }
-  return false;
+  const auto *CTSD =
+      dyn_cast_if_present<ClassTemplateSpecializationDecl>(Container);
+  if (!CTSD)
+    return false;
+  if (!CTSD->hasAttr<OwnerAttr>()) // Container must be a GSL owner type.
+    return false;
+  const auto &TAs = CTSD->getTemplateArgs();
+  return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
+         isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
 }
 
 // Returns true if the given Record is `std::initializer_list<pointer>`.
@@ -383,7 +383,7 @@ static bool isCopyLikeConstructor(const CXXConstructorDecl *Ctor) {
   if (!ParamRefType)
     return false;
 
-  // Check if the first parameter type "Owner<U>".
+  // Check if the first parameter type is "Owner<U>".
   if (const auto *TST =
           ParamRefType->getPointeeType()->getAs<TemplateSpecializationType>())
     return TST->getTemplateName()
