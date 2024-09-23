@@ -2508,6 +2508,9 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
             })) {
           ++NumPHIInsts;
           // Do not separate a load/store from the gep producing the address.
+          // The gep can likely be folded into the load/store as an addressing
+          // mode. Additionally, a load of a gep is easier to analyze than a
+          // load of a phi.
           if (IsMemOperand(U) &&
               any_of(It->second, [](Value *V) { return isa<GEPOperator>(V); }))
             return false;

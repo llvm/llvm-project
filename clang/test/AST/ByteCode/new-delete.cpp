@@ -592,7 +592,8 @@ namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}}
+      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}} \
+                                                        // #alloc
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
@@ -731,6 +732,30 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
+
+
+#if __LP64__
+  template <typename T>
+  struct S {
+      constexpr S(unsigned long long N)
+      : data(nullptr){
+          data = alloc.allocate(N); // both-note {{in call to 'this->alloc.allocate(18446744073709551615)}}
+      }
+      constexpr T operator[](std::size_t i) const {
+        return data[i];
+      }
+
+      constexpr ~S() {
+          alloc.deallocate(data);
+      }
+      std::allocator<T> alloc;
+      T* data;
+  };
+
+  constexpr std::size_t s = S<std::size_t>(~0UL)[42]; // both-error {{constexpr variable 's' must be initialized by a constant expression}} \
+                                                      // both-note@#alloc {{cannot allocate array; evaluated array bound 2305843009213693951 is too large}} \
+                                                      // both-note {{in call to}}
+#endif
 }
 
 #else

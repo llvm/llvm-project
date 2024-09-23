@@ -2175,8 +2175,8 @@ static uint64_t computeFlags(uint64_t flags) {
 template <class ELFT>
 SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   SmallVector<PhdrEntry *, 0> ret;
-  auto addHdr = [&](unsigned type, unsigned flags) -> PhdrEntry * {
-    ret.push_back(make<PhdrEntry>(type, flags));
+  auto addHdr = [&, &ctx = ctx](unsigned type, unsigned flags) -> PhdrEntry * {
+    ret.push_back(make<PhdrEntry>(ctx, type, flags));
     return ret.back();
   };
 
@@ -2215,7 +2215,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   // read-only by dynamic linker after processing relocations.
   // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
   // an error message if more than one PT_GNU_RELRO PHDR is required.
-  PhdrEntry *relRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
+  PhdrEntry *relRo = make<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R);
   bool inRelroPhdr = false;
   OutputSection *relroEnd = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
@@ -2292,7 +2292,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   }
 
   // Add a TLS segment if any.
-  PhdrEntry *tlsHdr = make<PhdrEntry>(PT_TLS, PF_R);
+  PhdrEntry *tlsHdr = make<PhdrEntry>(ctx, PT_TLS, PF_R);
   for (OutputSection *sec : ctx.outputSections)
     if (sec->partition == partNo && sec->flags & SHF_TLS)
       tlsHdr->add(sec);
@@ -2377,7 +2377,7 @@ void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
   if (i == ctx.outputSections.end())
     return;
 
-  PhdrEntry *entry = make<PhdrEntry>(pType, pFlags);
+  PhdrEntry *entry = make<PhdrEntry>(ctx, pType, pFlags);
   entry->add(*i);
   part.phdrs.push_back(entry);
 }
