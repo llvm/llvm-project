@@ -1,0 +1,67 @@
+{
+  "version": "1",
+  "groups": [
+    {
+      "name": "public_headers",
+      "pathRoot": "clang",
+      "headerDirectories": [
+        "*"
+      ],
+      "excludedDirectories": [
+        "Testing",
+        "DirectoryWatcher"
+      ],
+      "ignoredFiles": [
+        "AST/TypeLoc.h"
+      ]
+    },
+    {
+      "name": "typeloc_members",
+      "headerFiles": [ "clang/AST/TypeLoc.h" ],
+      "exportMembers": true,
+      "comment":  "Its simpler to export individual members than solve the complex template errors from MSVC instantiating all members when the class is dll exported",
+      "ignoredTypes": [
+      ]
+    },
+    {
+      "name": "internal_headers",
+      "pathRoot": "../lib",
+      "headerFiles": [
+        "Format/MatchFilePath.h",
+        "AST/ByteCode/Program.h",
+        "AST/ByteCode/Pointer.h",
+        "AST/ByteCode/MemberPointer.h",
+        "AST/ByteCode/FunctionPointer.h",
+        "Format/FormatTokenLexer.h",
+        "Format/TokenAnnotator.h",
+        "Format/Macros.h",
+        "Format/QualifierAlignmentFixer.h",
+        "Format/UnwrappedLineParser.h",
+        "Format/FormatToken.h",
+        "ASTMatchers/ASTMatchersInternal.cpp"
+      ]
+    },
+    {
+      "name": "source_files",
+      "pathRoot": "../lib",
+      "sourceDirectories": [
+        "*"
+      ],
+      "excludedDirectories": [
+        "Testing"
+      ],
+      "exportGlobalVariableDefs": true
+    }
+  ],
+  "exportMacroHeader": "clang/Support/Compiler.h",
+  "exportMacro": "CLANG_ABI",
+  "externTemplateMacro": "CLANG_TEMPLATE_ABI",
+  "exportTemplateMacro": "CLANG_EXPORT_TEMPLATE",
+  "externCMacro": "CLANG_C_ABI",
+  "otherExportMacros": [
+    "CLANG_ABI_EXPORT",
+    "CLANG_ABI_NOT_EXPORTED"
+  ],
+  "isGeneratingMacro": "CLANG_ABI_GENERATING_ANNOTATIONS",
+  "clangFormatFile": "../.clang-format"
+}
