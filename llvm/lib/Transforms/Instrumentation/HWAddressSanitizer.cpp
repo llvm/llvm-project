@@ -64,7 +64,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <cstdint>
 #include <optional>
 #include <random>
 
@@ -417,7 +416,7 @@ private:
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
     bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
-    bool isInifunc() const { return Kind == OffsetKind::kIfunc; }
+    bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
     bool isInTls() const { return Kind == OffsetKind::kTls; }
     bool isFixed() const { return Kind == OffsetKind::kFixed; }
     uint8_t scale() const { return Scale; };
@@ -831,7 +830,7 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
                  ConstantInt::get(IntptrTy, Mapping.offset()), PtrTy));
   }
 
-  if (Mapping.isInifunc())
+  if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
   Value *GlobalDynamicAddress =

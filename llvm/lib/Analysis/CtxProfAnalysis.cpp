@@ -254,6 +254,15 @@ InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   return nullptr;
 }
 
+InstrProfIncrementInstStep *
+CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
+  Instruction *Prev = &SI;
+  while ((Prev = Prev->getPrevNode()))
+    if (auto *Step = dyn_cast<InstrProfIncrementInstStep>(Prev))
+      return Step;
+  return nullptr;
+}
+
 template <class ProfilesTy, class ProfTy>
 static void preorderVisit(ProfilesTy &Profiles,
                           function_ref<void(ProfTy &)> Visitor,

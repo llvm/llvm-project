@@ -2015,6 +2015,7 @@ public:
   ///
   /// If no module is given via \p M, it is take from the insertion point basic
   /// block.
+  LLVM_DEPRECATED("Use CreateGlobalString instead", "CreateGlobalString")
   Constant *CreateGlobalStringPtr(StringRef Str, const Twine &Name = "",
                                   unsigned AddressSpace = 0,
                                   Module *M = nullptr, bool AddNull = true) {

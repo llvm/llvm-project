@@ -3075,13 +3075,13 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPlan &Plan,
       VPWidenPHIRecipe *VPPhi = dyn_cast<VPWidenPHIRecipe>(&P);
       if (!VPPhi)
         continue;
-      PHINode *NewPhi = cast<PHINode>(State.get(VPPhi, 0));
+      PHINode *NewPhi = cast<PHINode>(State.get(VPPhi));
       // Make sure the builder has a valid insert point.
       Builder.SetInsertPoint(NewPhi);
       for (unsigned Idx = 0; Idx < VPPhi->getNumOperands(); ++Idx) {
         VPValue *Inc = VPPhi->getIncomingValue(Idx);
         VPBasicBlock *VPBB = VPPhi->getIncomingBlock(Idx);
-        NewPhi->addIncoming(State.get(Inc, 0), State.CFG.VPBB2IRBB[VPBB]);
+        NewPhi->addIncoming(State.get(Inc), State.CFG.VPBB2IRBB[VPBB]);
       }
     }
   }
@@ -5207,7 +5207,9 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
 
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
-    if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty))
+    if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
+        (VF.isScalable() &&
+         !TTICapture.isElementTypeLegalForScalableVector(Ty)))
       return 0;
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
@@ -9445,7 +9447,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
             VectorType::get(UI->getType(), State.VF));
-        State.set(this, Poison, State.Instance->Part);
+        State.set(this, Poison);
       }
       State.packScalarIntoVectorValue(this, *State.Instance);
     }
@@ -9792,11 +9794,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasSpeculativeEarlyExit()) {
-    reportVectorizationFailure(
-        "Auto-vectorization of early exit loops is not yet supported.",
-        "Auto-vectorization of early exit loops is not yet supported.",
-        "EarlyExitLoopsUnsupported", ORE, L);
+  if (LVL.hasUncountableEarlyExit()) {
+    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                               "early exit is not yet supported",
+                               "Auto-vectorization of loops with uncountable "
+                               "early exit is not yet supported",
+                               "UncountableEarlyExitLoopsUnsupported", ORE, L);
     return false;
   }
 
