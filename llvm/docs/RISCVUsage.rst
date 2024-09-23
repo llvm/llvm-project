@@ -289,8 +289,9 @@ Supported
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 .. _riscv-zacas-note:
-The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler. The extension will be left as experimental until `an ABI issue <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/444>`__ is resolved.
 
+``Zacas``
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler. The extension will be left as experimental until `an ABI issue <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/444>`__ is resolved.
 
 Atomics ABIs
 ============
