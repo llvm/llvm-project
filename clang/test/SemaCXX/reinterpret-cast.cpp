@@ -363,4 +363,16 @@ void top() {
   cast_one_tmpl_arg_instantiated_well<float>();
 }
 
+template<typename T, typename U>
+void cast_template_dependent_type_noninstantiated(T** x)
+{
+    (void)*reinterpret_cast<U**>(x);
+}
+
+template<typename T, typename U>
+void cast_template_dependent_member_type_noninstantiated(typename T::X x)
+{
+    (void)*reinterpret_cast<typename U::Y>(x);
+}
+
 } // namespace templated

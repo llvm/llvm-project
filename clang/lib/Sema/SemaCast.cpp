@@ -2092,7 +2092,7 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
-  if (SrcTy->isTemplateTypeParmType() || DestTy->isTemplateTypeParmType()) {
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
     return;
   }
 
