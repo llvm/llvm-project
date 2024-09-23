@@ -11,16 +11,17 @@
 ! potentially be something different, just check that whatever is printed to
 ! stderr looks like timing information.
 
-! RUN: %flang -time -c -O3 -o /dev/null %s 2>&1 \
+! RUN: %flang -time -c -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
 ! RUN: %flang -time -S -emit-llvm -O3 -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-! RUN: %flang -time -S -O3 -o /dev/null %s 2>&1 \
+! RUN: %flang -time -S -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-! RUN: %flang -time -O3 -o /dev/null %s 2>&1 \
+! RUN: %flang -time -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-AND-LINK
 
 ! COMPILE-ONLY: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
+! COMPILE-ONLY-NOT: {{.}}
 
 ! COMPILE-AND-LINK: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
 ! COMPILE-AND-LINK: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
