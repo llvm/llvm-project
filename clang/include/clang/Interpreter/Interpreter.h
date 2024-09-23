@@ -95,8 +95,7 @@ class Interpreter {
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalParser> DeviceParser;
 
-  /// List containing every information about every incrementally parsed piece
-  /// of code.
+  /// List containing information about each incrementally parsed piece of code.
   std::list<PartialTranslationUnit> PTUs;
 
   unsigned InitPTUSize = 0;

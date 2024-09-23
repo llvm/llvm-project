@@ -49,7 +49,7 @@ protected:
   llvm::SmallString<1024> PTXCode;
   llvm::SmallVector<char, 1024> FatbinContent;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
-  CodeGenOptions &CodeGenOpts; // intentionally a reference.
+  CodeGenOptions &CodeGenOpts; // Intentionally a reference.
   const TargetOptions &TargetOpts;
 };
 

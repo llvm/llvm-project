@@ -302,22 +302,15 @@ public:
                 CI.getFrontendOpts().ProgramAction);
             return Act;
           case frontend::ASTDump:
-            [[fallthrough]];
           case frontend::ASTPrint:
-            [[fallthrough]];
           case frontend::ParseSyntaxOnly:
             Act = CreateFrontendAction(CI);
             break;
           case frontend::PluginAction:
-            [[fallthrough]];
           case frontend::EmitAssembly:
-            [[fallthrough]];
           case frontend::EmitBC:
-            [[fallthrough]];
           case frontend::EmitObj:
-            [[fallthrough]];
           case frontend::PrintPreprocessedInput:
-            [[fallthrough]];
           case frontend::EmitLLVMOnly:
             Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
             break;
