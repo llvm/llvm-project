@@ -330,7 +330,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   }
   }
 
-  if (SegmentReg != 0)
+  if (SegmentReg)
     return X86::getSegmentOverridePrefixForReg(SegmentReg);
 
   if (STI.hasFeature(X86::Is64Bit))
