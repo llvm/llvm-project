@@ -4514,7 +4514,6 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
         // of vcc was already added during the initial BuildMI, but we
         // 1) may need to change vcc to vcc_lo to preserve the original register
         // 2) have to preserve the original flags.
-        fixImplicitOperands(*Inst32);
         copyFlagsToImplicitVCC(*Inst32, *Src2);
         continue;
       }
@@ -4524,7 +4523,7 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
   }
 
   // FIXME: Losing implicit operands
-
+  fixImplicitOperands(*Inst32);
   return Inst32;
 }
 

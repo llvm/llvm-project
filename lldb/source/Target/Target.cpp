@@ -77,6 +77,80 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
+
+struct ExecutableInstaller {
+
+  ExecutableInstaller(PlatformSP platform, ModuleSP module)
+      : m_platform{platform}, m_module{module},
+        m_local_file{m_module->GetFileSpec()},
+        m_remote_file{m_module->GetRemoteInstallFileSpec()} {}
+
+  void setupRemoteFile() const { m_module->SetPlatformFileSpec(m_remote_file); }
+
+  PlatformSP m_platform;
+  ModuleSP m_module;
+  const FileSpec m_local_file;
+  const FileSpec m_remote_file;
+};
+
+struct MainExecutableInstaller {
+
+  MainExecutableInstaller(PlatformSP platform, ModuleSP module, TargetSP target,
+                          ProcessLaunchInfo &launch_info)
+      : m_platform{platform}, m_module{module},
+        m_local_file{m_module->GetFileSpec()},
+        m_remote_file{
+            getRemoteFileSpec(m_platform, target, m_module, m_local_file)},
+        m_launch_info{launch_info} {}
+
+  void setupRemoteFile() const {
+    m_module->SetPlatformFileSpec(m_remote_file);
+    m_launch_info.SetExecutableFile(m_remote_file,
+                                    /*add_exe_file_as_first_arg=*/false);
+    m_platform->SetFilePermissions(m_remote_file, 0700 /*-rwx------*/);
+  }
+
+  PlatformSP m_platform;
+  ModuleSP m_module;
+  const FileSpec m_local_file;
+  const FileSpec m_remote_file;
+
+private:
+  static FileSpec getRemoteFileSpec(PlatformSP platform, TargetSP target,
+                                    ModuleSP module,
+                                    const FileSpec &local_file) {
+    FileSpec remote_file = module->GetRemoteInstallFileSpec();
+    if (remote_file || !target->GetAutoInstallMainExecutable())
+      return remote_file;
+
+    if (!local_file)
+      return {};
+
+    remote_file = platform->GetRemoteWorkingDirectory();
+    remote_file.AppendPathComponent(local_file.GetFilename().GetCString());
+
+    return remote_file;
+  }
+
+  ProcessLaunchInfo &m_launch_info;
+};
+} // namespace
+
+template <typename Installer>
+static Status installExecutable(const Installer &installer) {
+  if (!installer.m_local_file || !installer.m_remote_file)
+    return Status();
+
+  Status error = installer.m_platform->Install(installer.m_local_file,
+                                               installer.m_remote_file);
+  if (error.Fail())
+    return error;
+
+  installer.setupRemoteFile();
+  return Status();
+}
+
 constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
 
 Target::Arch::Arch(const ArchSpec &spec)
@@ -3077,48 +3151,28 @@ TargetProperties &Target::GetGlobalProperties() {
 Status Target::Install(ProcessLaunchInfo *launch_info) {
   Status error;
   PlatformSP platform_sp(GetPlatform());
-  if (platform_sp) {
-    if (platform_sp->IsRemote()) {
-      if (platform_sp->IsConnected()) {
-        // Install all files that have an install path when connected to a
-        // remote platform. If target.auto-install-main-executable is set then
-        // also install the main executable even if it does not have an explicit
-        // install path specified.
-        const ModuleList &modules = GetImages();
-        const size_t num_images = modules.GetSize();
-        for (size_t idx = 0; idx < num_images; ++idx) {
-          ModuleSP module_sp(modules.GetModuleAtIndex(idx));
-          if (module_sp) {
-            const bool is_main_executable = module_sp == GetExecutableModule();
-            FileSpec local_file(module_sp->GetFileSpec());
-            if (local_file) {
-              FileSpec remote_file(module_sp->GetRemoteInstallFileSpec());
-              if (!remote_file) {
-                if (is_main_executable && GetAutoInstallMainExecutable()) {
-                  // Automatically install the main executable.
-                  remote_file = platform_sp->GetRemoteWorkingDirectory();
-                  remote_file.AppendPathComponent(
-                      module_sp->GetFileSpec().GetFilename().GetCString());
-                }
-              }
-              if (remote_file) {
-                error = platform_sp->Install(local_file, remote_file);
-                if (error.Success()) {
-                  module_sp->SetPlatformFileSpec(remote_file);
-                  if (is_main_executable) {
-                    platform_sp->SetFilePermissions(remote_file, 0700);
-                    if (launch_info)
-                      launch_info->SetExecutableFile(remote_file, false);
-                  }
-                } else
-                  break;
-              }
-            }
-          }
-        }
-      }
+  if (!platform_sp || !platform_sp->IsRemote() || !platform_sp->IsConnected())
+    return error;
+
+  // Install all files that have an install path when connected to a
+  // remote platform. If target.auto-install-main-executable is set then
+  // also install the main executable even if it does not have an explicit
+  // install path specified.
+
+  for (auto module_sp : GetImages().Modules()) {
+    if (module_sp == GetExecutableModule()) {
+      MainExecutableInstaller installer{platform_sp, module_sp,
+                                        shared_from_this(), *launch_info};
+      error = installExecutable(installer);
+    } else {
+      ExecutableInstaller installer{platform_sp, module_sp};
+      error = installExecutable(installer);
     }
+
+    if (error.Fail())
+      return error;
   }
+
   return error;
 }
 

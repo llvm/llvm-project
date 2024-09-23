@@ -204,6 +204,7 @@ Changes to the C API
   * ``LLVMGetNextDbgRecord``
   * ``LLVMGetPreviousDbgRecord``
 
+* Added ``LLVMAtomicRMWBinOpUSubCond`` and ``LLVMAtomicRMWBinOpUSubSat`` to ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
