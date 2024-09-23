@@ -4699,11 +4699,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // (X | Y) ^ M -> (Y ^ M) ^ X
   if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
                         m_Value(M)))) {
-    if (Value *XorAC =
-            simplifyBinOp(Instruction::Xor, X, M, SQ.getWithInstruction(&I)))
+    if (Value *XorAC = simplifyXorInst(X, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorAC, Y);
 
-    if (Value *XorBC = simplifyBinOp(Instruction::Xor, Y, M, SQ))
+    if (Value *XorBC = simplifyXorInst(Y, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorBC, X);
   }
 
