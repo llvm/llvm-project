@@ -48,9 +48,7 @@ public:
   bool useIntegratedAs() const override { return true; }
   bool isPICDefault() const override { return false; }
   llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
-    if (this->HostTC.getTriple().isWindowsMSVCEnvironment())
-      return this->HostTC.getDefaultDebugFormat();
-    return ToolChain::getDefaultDebugFormat();
+    return this->HostTC.getDefaultDebugFormat();
   }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
     return false;
@@ -69,8 +67,8 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
+private:
   const ToolChain &HostTC;
-
   SYCLInstallationDetector SYCLInstallation;
 };
 

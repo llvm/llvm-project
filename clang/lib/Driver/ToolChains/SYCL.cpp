@@ -7,18 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "CommonArgs.h"
-#include "clang/Driver/Action.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
-#include "llvm/Option/Option.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
-#include <sstream>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -64,32 +53,29 @@ void SYCLInstallationDetector::print(llvm::raw_ostream &OS) const {
   }
 }
 
-// Unsupported options for SYCL device compilation
-//  -fcf-protection, -fsanitize, -fprofile-generate, -fprofile-instr-generate
-//  -ftest-coverage, -fcoverage-mapping, -fcreate-profile, -fprofile-arcs
-//  -fcs-profile-generate -forder-file-instrumentation, --coverage
-static std::vector<OptSpecifier> getUnsupportedOpts(void) {
+// Unsupported options for SYCL device compilation.
+static std::vector<OptSpecifier> getUnsupportedOpts() {
   std::vector<OptSpecifier> UnsupportedOpts = {
-      options::OPT_fsanitize_EQ,
-      options::OPT_fcf_protection_EQ,
+      options::OPT_fsanitize_EQ, // -fsanitize
+      options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
       options::OPT_fprofile_generate_EQ,
-      options::OPT_fno_profile_generate,
+      options::OPT_fno_profile_generate, // -f[no-]profile-generate
       options::OPT_ftest_coverage,
-      options::OPT_fno_test_coverage,
+      options::OPT_fno_test_coverage, // -f[no-]test-coverage
       options::OPT_fcoverage_mapping,
-      options::OPT_fno_coverage_mapping,
-      options::OPT_coverage,
+      options::OPT_fno_coverage_mapping, // -f[no-]coverage-mapping
+      options::OPT_coverage, // --coverage
       options::OPT_fprofile_instr_generate,
       options::OPT_fprofile_instr_generate_EQ,
+      options::OPT_fno_profile_instr_generate, // -f[no-]profile-instr-generate
       options::OPT_fprofile_arcs,
-      options::OPT_fno_profile_arcs,
-      options::OPT_fno_profile_instr_generate,
-      options::OPT_fcreate_profile,
+      options::OPT_fno_profile_arcs, // -f[no-]profile-arcs
+      options::OPT_fcreate_profile, // -fcreate-profile
       options::OPT_fprofile_instr_use,
-      options::OPT_fprofile_instr_use_EQ,
-      options::OPT_forder_file_instrumentation,
-      options::OPT_fcs_profile_generate,
+      options::OPT_fprofile_instr_use_EQ, // -fprofile-instr-use
+      options::OPT_forder_file_instrumentation, // -forder-file-instrumentation
+      options::OPT_fcs_profile_generate, // -fcs-profile-generate
       options::OPT_fcs_profile_generate_EQ};
   return UnsupportedOpts;
 }
@@ -105,7 +91,7 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
   for (OptSpecifier Opt : getUnsupportedOpts()) {
     if (const Arg *A = Args.getLastArg(Opt)) {
       // All sanitizer options are not currently supported, except
-      // AddressSanitizer
+      // AddressSanitizer.
       if (A->getOption().getID() == options::OPT_fsanitize_EQ &&
           A->getValues().size() == 1) {
         std::string SanitizeVal = A->getValue();
