@@ -737,7 +737,7 @@ void ScheduleDAGSDNodes::VerifyScheduledSequence(bool isBottomUp) {
 static void
 ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
                    SmallVectorImpl<std::pair<unsigned, MachineInstr*> > &Orders,
-                   SmallDenseMap<SDValue, Register, 16> &VRBaseMap, unsigned Order) {
+                   InstrEmitter::VRBaseMapType &VRBaseMap, unsigned Order) {
   if (!N->getHasDebugValue())
     return;
 
@@ -782,7 +782,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 // instructions in the right order.
 static void
 ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
-                  SmallDenseMap<SDValue, Register, 16> &VRBaseMap,
+                  InstrEmitter::VRBaseMapType &VRBaseMap,
                   SmallVectorImpl<std::pair<unsigned, MachineInstr *>> &Orders,
                   SmallSet<Register, 8> &Seen, MachineInstr *NewInsn) {
   unsigned Order = N->getIROrder();
@@ -851,7 +851,7 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit*, Register, 16> &VRBaseMap,
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  SmallDenseMap<SDValue, Register, 16> VRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
   SmallDenseMap<SUnit*, Register, 16> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;
   SmallSet<Register, 8> Seen;
@@ -861,7 +861,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   // Zero, one, or multiple instructions can be created when emitting a node.
   auto EmitNode =
       [&](SDNode *Node, bool IsClone, bool IsCloned,
-          SmallDenseMap<SDValue, Register, 16> &VRBaseMap) -> MachineInstr * {
+          InstrEmitter::VRBaseMapType &VRBaseMap) -> MachineInstr * {
     // Fetch instruction prior to this, or end() if nonexistant.
     auto GetPrevInsn = [&](MachineBasicBlock::iterator I) {
       if (I == BB->begin())

@@ -30,8 +30,10 @@ class TargetLowering;
 class TargetMachine;
 
 class LLVM_LIBRARY_VISIBILITY InstrEmitter {
+public:
   using VRBaseMapType = SmallDenseMap<SDValue, Register, 16>;
 
+private:
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
