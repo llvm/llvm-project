@@ -48,7 +48,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     Similar to the builtin tensor, it also provides an optinal attribute to encoding
     the following information via the TensorDescAttr object:
-    * memory_space (xegpu::MemorySpace): [optional] where the data is located,
+    * memory_scope (xegpu::MemoryScope): [optional] where the data is located,
                 global memory or shared memory. It is default to Global.
     * array_length (int): [optional] The number of contiguous blocks with size as `shape`,
                that will be loaded by block load at a time. It is default to 1.
@@ -63,7 +63,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
+    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
     ```
 
     Examples:
@@ -76,7 +76,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     xegpu.tensor_desc<8x16xf32>
 
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
-    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
+    xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_scope = slm>>
     ```
   }];
 
@@ -88,14 +88,11 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
+      CArg<"bool", "false">: $scattered,
       CArg<"int", "1">: $array_length,
-      CArg<"bool", "true">: $boundary_check,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
-    TypeBuilderWithInferredContext<(ins
-      "llvm::ArrayRef<int64_t>": $shape,
-      "mlir::Type": $elementType,
-      CArg<"int", "1">: $chunk_size,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
+      CArg<"bool", "true">: $boundary_check
+    )>
   ];
 
   let extraClassDeclaration = [{
@@ -113,58 +110,40 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
     }
 
-    BlockTensorDescAttr getEncodingAsBlockTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<BlockTensorDescAttr>(getEncoding());
+    TensorDescAttr getEncodingAsTensorDescAttr() const {
+      return llvm::dyn_cast_if_present<TensorDescAttr>(getEncoding());
     }
 
-    ScatterTensorDescAttr getEncodingAsScatterTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
-    }
-
-    xegpu::MemorySpace getMemorySpace() const {
-      auto block_attr = getEncodingAsBlockTensorDescAttr();
-      if (block_attr && block_attr.getMemorySpace())
-        return block_attr.getMemorySpace().getValue();
-
-      auto scatter_attr = getEncodingAsScatterTensorDescAttr();
-      if (scatter_attr && scatter_attr.getMemorySpace())
-        return scatter_attr.getMemorySpace().getValue();
-
+    xegpu::MemoryScope getMemoryScope() const {
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getMemoryScope())
+        return attr.getMemoryScope().getValue();
       // return default value
-      return MemorySpace::Global;
+      return MemoryScope::Global;
     }
 
     int getArrayLength() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getArrayLength())
-        return block_attr.getArrayLength().getInt();
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getArrayLength())
+        return attr.getArrayLength().getInt();
       // return default value
       return 1;
     }
 
     bool getBoundaryCheck() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getBoundaryCheck())
-        return block_attr.getBoundaryCheck().getValue();
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getBoundaryCheck())
+        return attr.getBoundaryCheck().getValue();
       // return default value
       return true;
     }
 
-    bool isScattered() {
-      return bool(getEncodingAsScatterTensorDescAttr());
-    }
-
-    int getChunkSize() {
-      auto attr = getEncoding();
-      auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
-      assert((!attr || scatter_attr) && "invalid on non ScatterTensorDescAttr.");
-      if (scatter_attr && scatter_attr.getChunkSize())
-        return scatter_attr.getChunkSize().getInt();
-      return 1;
+    bool getScattered() {
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getScattered())
+        return attr.getScattered().getValue();
+      // return default value
+      return false;
     }
   }];
 
