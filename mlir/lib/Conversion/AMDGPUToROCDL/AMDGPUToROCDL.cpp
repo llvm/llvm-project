@@ -290,15 +290,23 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
     if (requiresInlineAsm) {
       auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                       LLVM::AsmDialect::AD_ATT);
+      Location loc = op->getLoc();
+      // Ensure the inlineAsm is guarded with a scheduling region
+      // So it will not interfere with backend compilation more than
+      // it needs.
+      rewriter.create<amdgpu::SchedBarrierOp>(
+          loc, amdgpu::sched_barrier_opt_enum::none);
       const char *asmStr =
           ";;;WARNING: BREAKS DEBUG WATCHES\ns_waitcnt lgkmcnt(0)\ns_barrier";
       const char *constraints = "";
-      rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
-          op,
+      rewriter.create<LLVM::InlineAsmOp>(
+          loc,
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
+      rewriter.replaceOpWithNewOp<amdgpu::SchedBarrierOp>(
+          op, amdgpu::sched_barrier_opt_enum::none);
       return success();
     }
     if (chipset.majorVersion < 12) {

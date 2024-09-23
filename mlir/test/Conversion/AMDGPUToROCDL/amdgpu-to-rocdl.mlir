@@ -239,14 +239,18 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_v2f16(%src : vector<2xf16>, %cmp : v
 
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
+  // GFX908: rocdl.sched.barrier 0
   // GFX908: llvm.inline_asm has_side_effects asm_dialect = att
   // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
+  // GFX908: rocdl.sched.barrier 0
   // GFX90A: rocdl.waitcnt -7937
   // GFX90A-NEXT: rocdl.s.barrier
   // GFX10:  rocdl.waitcnt -16129
   // GFX10-NEXT: rocdl.s.barrier
+  // GFX11: rocdl.sched.barrier 0
   // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
   // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
+  // GFX11: rocdl.sched.barrier 0
   // GFX12:  rocdl.s.wait.dscnt 0
   // GFX12-NEXT: rocdl.s.barrier.signal -1
   // GFX12-NEXT: rocdl.s.barrier.wait -1
