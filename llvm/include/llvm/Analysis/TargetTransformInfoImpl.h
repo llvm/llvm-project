@@ -968,6 +968,10 @@ public:
     return false;
   }
 
+  bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return TargetTransformInfo::VPLegalization(

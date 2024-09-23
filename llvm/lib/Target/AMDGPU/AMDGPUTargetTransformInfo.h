@@ -237,6 +237,8 @@ public:
                                  ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr);
 
+  bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
+
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
