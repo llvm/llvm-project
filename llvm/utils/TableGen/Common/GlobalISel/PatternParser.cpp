@@ -117,7 +117,7 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =
                  getDagWithOperatorOfSubClass(Arg, "Intrinsic")) {
-    Record *TheDef = IP->getOperatorAsDef(DiagLoc);
+    const Record *TheDef = IP->getOperatorAsDef(DiagLoc);
     const CodeGenIntrinsic *Intrin = &CGT.getIntrinsic(TheDef);
     const CodeGenInstruction &Instr = getInstrForIntrinsic(CGT, Intrin);
     Pat =
@@ -169,7 +169,7 @@ PatternParser::parseWipMatchOpcodeMatcher(const Init &Arg, StringRef Name) {
   // Each argument is an opcode that can match.
   auto Result = std::make_unique<AnyOpcodePattern>(insertStrRef(Name));
   for (const auto &Arg : Matcher->getArgs()) {
-    Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
+    const Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
     if (OpcodeDef) {
       Result->addOpcode(&CGT.getInstruction(OpcodeDef));
       continue;
