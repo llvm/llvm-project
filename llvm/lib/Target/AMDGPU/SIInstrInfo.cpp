@@ -6094,7 +6094,7 @@ Register SIInstrInfo::readlaneVGPRToSGPR(
   const TargetRegisterClass *VRC = MRI.getRegClass(SrcReg);
   const TargetRegisterClass *SRC = RI.getEquivalentSGPRClass(VRC);
   if (DstRC)
-    SRC = ST.getRegisterInfo()->getCommonSubClass(SRC, DstRC);
+    SRC = RI.getCommonSubClass(SRC, DstRC);
 
   Register DstReg = MRI.createVirtualRegister(SRC);
   unsigned SubRegs = RI.getRegSizeInBits(*VRC) / 32;
