@@ -1838,7 +1838,7 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (LangOpts.CPlusPlus20) {
+    if (LangOpts.Char8 || LangOpts.CPlusPlus20) {
       Results.AddResult(Result("char8_t", CCP_Type));
     }
   } else
@@ -2197,6 +2197,45 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         Results.AddResult(Result(Builder.TakeString()));
       } else {
         Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
+      }
+
+      if (SemaRef.getLangOpts().CPlusPlus20 &&
+          SemaRef.getLangOpts().CPlusPlusModules) {
+        // export
+        Results.AddResult(Result("export", CodeCompletionResult::RK_Keyword));
+
+        if (SemaRef.CurContext->isTranslationUnit()) {
+          // module;
+          Builder.AddTypedTextChunk("module");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+          Results.AddResult(Result(Builder.TakeString()));
+
+          // module: private;
+          Builder.AddTypedTextChunk("module");
+          Builder.AddChunk(CodeCompletionString::CK_Colon);
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddTypedTextChunk("private");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+          Results.AddResult(Result(Builder.TakeString()));
+
+          // module name;
+          Builder.AddTypedTextChunk("module");
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddPlaceholderChunk("name");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+          Results.AddResult(Result(Builder.TakeString()));
+
+          // import module;
+          Builder.AddTypedTextChunk("import");
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddPlaceholderChunk("module");
+          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+          Results.AddResult(Result(Builder.TakeString()));
+        }
       }
     }
 
