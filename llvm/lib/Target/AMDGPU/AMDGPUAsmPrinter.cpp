@@ -34,6 +34,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -443,10 +444,13 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         RI.getSymbol(F.getName(), RIK::RIK_NumAGPR, OutContext);
     uint64_t NumVgpr, NumAgpr;
 
-    if (NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
+    MachineModuleInfo &MMI =
+        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineFunction *MF = MMI.getMachineFunction(F);
+    if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
         TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
-      SIMachineFunctionInfo MFI(F, &STM);
+      const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
           getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
@@ -1639,6 +1643,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AMDGPUResourceUsageAnalysis>();
   AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
+  AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
 }
 
