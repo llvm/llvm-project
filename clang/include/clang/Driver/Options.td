@@ -1894,6 +1894,18 @@ def fprofile_selected_function_group :
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<i>">,
   HelpText<"Partition functions into N groups using -fprofile-function-groups and select only functions in group i to be instrumented. The valid range is 0 to N-1 inclusive">,
   MarshallingInfoInt<CodeGenOpts<"ProfileSelectedFunctionGroup">>;
+def fcodegen_data_generate_EQ : Joined<["-"], "fcodegen-data-generate=">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<path>">,
+    HelpText<"Emit codegen data into the object file. LLD for MachO (currently) merges them into the specified <path>.">;
+def fcodegen_data_generate : Flag<["-"], "fcodegen-data-generate">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, Alias<fcodegen_data_generate_EQ>, AliasArgs<["default.cgdata"]>,
+    HelpText<"Emit codegen data into the object file. LLD for MachO (currently) merges them into default.cgdata.">;
+def fcodegen_data_use_EQ : Joined<["-"], "fcodegen-data-use=">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<path>">,
+    HelpText<"Use codegen data read from the specified <path>.">;
+def fcodegen_data_use : Flag<["-"], "fcodegen-data-use">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, Alias<fcodegen_data_use_EQ>, AliasArgs<["default.cgdata"]>,
+    HelpText<"Use codegen data read from default.cgdata to optimize the binary">;
 def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Group<f_Group>,
     Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption]>,
@@ -3162,6 +3174,12 @@ def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+
+def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Embed the contents of all files read by this compilation into "
+           "the produced module file.">,
+  MarshallingInfoFlag<FrontendOpts<"ModulesEmbedAllFiles">>;
 
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,
@@ -5560,7 +5578,8 @@ def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
-def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
+def nodefaultlibs : Flag<["-"], "nodefaultlibs">,
+  Visibility<[ClangOption, FlangOption, CLOption, DXCOption]>;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
@@ -5580,7 +5599,9 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Visibility<[ClangOption, CC1Option]>
   Group<IncludePath_Group>,
   HelpText<"Disable standard #include directories for the C++ standard library">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseStandardCXXIncludes">>;
-def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
+def nostdlib : Flag<["-"], "nostdlib">,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
+  Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
 def o : JoinedOrSeparate<["-"], "o">,
@@ -6331,8 +6352,10 @@ def mcx16 : Flag<["-"], "mcx16">, Group<m_x86_Features_Group>;
 def mno_cx16 : Flag<["-"], "mno-cx16">, Group<m_x86_Features_Group>;
 def menqcmd : Flag<["-"], "menqcmd">, Group<m_x86_Features_Group>;
 def mno_enqcmd : Flag<["-"], "mno-enqcmd">, Group<m_x86_Features_Group>;
-def mevex512 : Flag<["-"], "mevex512">, Group<m_x86_Features_Group>;
-def mno_evex512 : Flag<["-"], "mno-evex512">, Group<m_x86_Features_Group>;
+def mevex512 : Flag<["-"], "mevex512">, Group<m_x86_Features_Group>,
+               Visibility<[ClangOption, CLOption, FlangOption]>;
+def mno_evex512 : Flag<["-"], "mno-evex512">, Group<m_x86_Features_Group>,
+                  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mf16c : Flag<["-"], "mf16c">, Group<m_x86_Features_Group>;
 def mno_f16c : Flag<["-"], "mno-f16c">, Group<m_x86_Features_Group>;
 def mfma : Flag<["-"], "mfma">, Group<m_x86_Features_Group>;
@@ -7668,10 +7691,6 @@ def fmodules_embed_file_EQ : Joined<["-"], "fmodules-embed-file=">,
   HelpText<"Embed the contents of the specified file into the module file "
            "being compiled.">,
   MarshallingInfoStringVector<FrontendOpts<"ModulesEmbedFiles">>;
-def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
-  HelpText<"Embed the contents of all files read by this compilation into "
-           "the produced module file.">,
-  MarshallingInfoFlag<FrontendOpts<"ModulesEmbedAllFiles">>;
 defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
   FrontendOpts<"BuildingImplicitModuleUsesLock">, DefaultTrue,
   NegFlag<SetFalse>,
@@ -8914,7 +8933,7 @@ def dxc_hlsl_version : Option<["/", "-"], "HV", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Visibility<[DXCOption]>,
                      HelpText<"HLSL Version">,
-                     Values<"2016, 2017, 2018, 2021, 202x">;
+                     Values<"2016, 2017, 2018, 2021, 202x, 202y">;
 def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,

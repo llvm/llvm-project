@@ -113,9 +113,8 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.ends_with(".o"))
+  if (!s.consume_back(".o"))
     return false;
-  s = s.drop_back(2);
   if (s.ends_with("crtend"))
     return true;
   return !s.empty() && s.drop_back().ends_with("crtend");
@@ -2448,6 +2447,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_iat_copy", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
     ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);

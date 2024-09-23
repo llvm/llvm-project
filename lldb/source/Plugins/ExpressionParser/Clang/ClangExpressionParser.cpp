@@ -984,7 +984,6 @@ private:
           ToInsert += "(";
         raw_string_ostream OS(Description);
         F->print(OS, m_desc_policy, false);
-        OS.flush();
       } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
         Description = V->getType().getAsString(m_desc_policy);
       } else if (const FieldDecl *F = dyn_cast<FieldDecl>(D)) {
@@ -1358,7 +1357,6 @@ bool ClangExpressionParser::RewriteExpression(
   llvm::raw_string_ostream out_stream(fixed_expression);
 
   main_file_buffer.write(out_stream);
-  out_stream.flush();
   diagnostic_manager.SetFixedExpression(fixed_expression);
 
   return true;

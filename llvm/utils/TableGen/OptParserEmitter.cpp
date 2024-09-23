@@ -255,10 +255,10 @@ static void EmitOptParser(const RecordKeeper &Records, raw_ostream &OS) {
   ArrayRef<const Record *> Groups =
       Records.getAllDerivedDefinitions("OptionGroup");
   std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
+  llvm::sort(Opts, IsOptionRecordsLess);
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
-  llvm::sort(Opts, CompareOptionRecords);
   // Generate prefix groups.
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, std::string> PrefixesT;

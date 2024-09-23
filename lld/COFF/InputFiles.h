@@ -349,7 +349,7 @@ public:
   MachineTypes getMachineType() const override;
 
   DefinedImportData *impSym = nullptr;
-  Symbol *thunkSym = nullptr;
+  Defined *thunkSym = nullptr;
   ImportThunkChunkARM64EC *impchkThunk = nullptr;
   std::string dllName;
 
@@ -362,10 +362,12 @@ public:
   const coff_import_header *hdr;
   Chunk *location = nullptr;
 
-  // Auxiliary IAT symbol and chunk on ARM64EC.
+  // Auxiliary IAT symbols and chunks on ARM64EC.
   DefinedImportData *impECSym = nullptr;
   Chunk *auxLocation = nullptr;
-  Symbol *auxThunkSym = nullptr;
+  Defined *auxThunkSym = nullptr;
+  DefinedImportData *auxImpCopySym = nullptr;
+  Chunk *auxCopyLocation = nullptr;
 
   // We want to eliminate dllimported symbols if no one actually refers to them.
   // These "Live" bits are used to keep track of which import library members

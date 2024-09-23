@@ -22,6 +22,14 @@ cl::opt<bool>
     PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
                       cl::desc("Prints the pass pipeline and returns."));
 
+/// A magic string for the default pass pipeline.
+const char *DefaultPipelineMagicStr = "*";
+
+cl::opt<std::string> UserDefinedPassPipeline(
+    "sbvec-passes", cl::init(DefaultPipelineMagicStr), cl::Hidden,
+    cl::desc("Comma-separated list of vectorizer passes. If not set "
+             "we run the predefined pipeline."));
+
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   TTI = &AM.getResult<TargetIRAnalysis>(F);
@@ -53,20 +61,26 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
   // Create the passes and register them with the PassRegistry.
   sandboxir::PassRegistry PR;
-  auto &PM = static_cast<sandboxir::FunctionPassManager &>(
-      PR.registerPass(std::make_unique<sandboxir::FunctionPassManager>("pm")));
   auto &BottomUpVecPass = static_cast<sandboxir::FunctionPass &>(
       PR.registerPass(std::make_unique<sandboxir::BottomUpVec>()));
 
-  // Create the default pass pipeline.
-  PM.addPass(&BottomUpVecPass);
+  sandboxir::FunctionPassManager *PM = nullptr;
+  if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
+    // Create the default pass pipeline.
+    PM = &static_cast<sandboxir::FunctionPassManager &>(PR.registerPass(
+        std::make_unique<sandboxir::FunctionPassManager>("pm")));
+    PM->addPass(&BottomUpVecPass);
+  } else {
+    // Create the user-defined pipeline.
+    PM = &PR.parseAndCreatePassPipeline(UserDefinedPassPipeline);
+  }
 
   if (PrintPassPipeline) {
-    PM.printPipeline(outs());
+    PM->printPipeline(outs());
     return false;
   }
 
   // Run the pass pipeline.
-  bool Change = PM.runOnFunction(F);
+  bool Change = PM->runOnFunction(F);
   return Change;
 }

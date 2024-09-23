@@ -498,7 +498,7 @@ TEST(CopyCountAttr, PrintStripped) {
   os << "|" << res << "|";
   res.printStripped(os << "[");
   os << "]";
-  EXPECT_EQ(os.str(), "|#test.copy_count<hello>|[copy_count<hello>]");
+  EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
 } // namespace

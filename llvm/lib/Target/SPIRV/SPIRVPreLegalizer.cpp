@@ -744,78 +744,138 @@ static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
     MI->eraseFromParent();
 }
 
-// Find basic blocks of the switch and replace registers in spv_switch() by its
-// MBB equivalent.
-static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                            MachineIRBuilder MIB) {
-  DenseMap<const BasicBlock *, MachineBasicBlock *> BB2MBB;
-  SmallVector<std::pair<MachineInstr *, SmallVector<MachineInstr *, 8>>>
-      Switches;
+// LLVM allows the switches to use registers as cases, while SPIR-V required
+// those to be immediate values. This function replaces such operands with the
+// equivalent immediate constant.
+static void processSwitchesConstants(MachineFunction &MF,
+                                     SPIRVGlobalRegistry *GR,
+                                     MachineIRBuilder MIB) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   for (MachineBasicBlock &MBB : MF) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-    BB2MBB[MBB.getBasicBlock()] = &MBB;
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_switch))
         continue;
-      // Calls to spv_switch intrinsics representing IR switches.
-      SmallVector<MachineInstr *, 8> NewOps;
-      for (unsigned i = 2; i < MI.getNumOperands(); ++i) {
+
+      SmallVector<MachineOperand, 8> NewOperands;
+      NewOperands.push_back(MI.getOperand(0)); // Opcode
+      NewOperands.push_back(MI.getOperand(1)); // Condition
+      NewOperands.push_back(MI.getOperand(2)); // Default
+      for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
-        if (i % 2 == 1) {
-          MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
-          NewOps.push_back(ConstInstr);
-        } else {
-          MachineInstr *BuildMBB = MRI.getVRegDef(Reg);
-          assert(BuildMBB &&
-                 BuildMBB->getOpcode() == TargetOpcode::G_BLOCK_ADDR &&
-                 BuildMBB->getOperand(1).isBlockAddress() &&
-                 BuildMBB->getOperand(1).getBlockAddress());
-          NewOps.push_back(BuildMBB);
-        }
+        MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
+        NewOperands.push_back(
+            MachineOperand::CreateCImm(ConstInstr->getOperand(1).getCImm()));
+
+        NewOperands.push_back(MI.getOperand(i + 1));
       }
-      Switches.push_back(std::make_pair(&MI, NewOps));
+
+      assert(MI.getNumOperands() == NewOperands.size());
+      while (MI.getNumOperands() > 0)
+        MI.removeOperand(0);
+      for (auto &MO : NewOperands)
+        MI.addOperand(MO);
+    }
+  }
+}
+
+// Some instructions are used during CodeGen but should never be emitted.
+// Cleaning up those.
+static void cleanupHelperInstructions(MachineFunction &MF) {
+  SmallVector<MachineInstr *, 8> ToEraseMI;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_track_constant) ||
+          MI.getOpcode() == TargetOpcode::G_BRINDIRECT)
+        ToEraseMI.push_back(&MI);
     }
   }
 
-  SmallPtrSet<MachineInstr *, 8> ToEraseMI;
-  SmallPtrSet<MachineBasicBlock *, 8> ClearAddressTaken;
-  for (auto &SwIt : Switches) {
-    MachineInstr &MI = *SwIt.first;
-    MachineBasicBlock *MBB = MI.getParent();
-    SmallVector<MachineInstr *, 8> &Ins = SwIt.second;
-    SmallVector<MachineOperand, 8> NewOps;
-    for (unsigned i = 0; i < Ins.size(); ++i) {
-      if (Ins[i]->getOpcode() == TargetOpcode::G_BLOCK_ADDR) {
-        BasicBlock *CaseBB =
-            Ins[i]->getOperand(1).getBlockAddress()->getBasicBlock();
-        auto It = BB2MBB.find(CaseBB);
-        if (It == BB2MBB.end())
-          report_fatal_error("cannot find a machine basic block by a basic "
-                             "block in a switch statement");
-        MachineBasicBlock *Succ = It->second;
-        ClearAddressTaken.insert(Succ);
-        NewOps.push_back(MachineOperand::CreateMBB(Succ));
-        if (!llvm::is_contained(MBB->successors(), Succ))
-          MBB->addSuccessor(Succ);
-        ToEraseMI.insert(Ins[i]);
-      } else {
-        NewOps.push_back(
-            MachineOperand::CreateCImm(Ins[i]->getOperand(1).getCImm()));
-      }
+  for (MachineInstr *MI : ToEraseMI)
+    MI->eraseFromParent();
+}
+
+// Find all usages of G_BLOCK_ADDR in our intrinsics and replace those
+// operands/registers by the actual MBB it references.
+static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                             MachineIRBuilder MIB) {
+  // Gather the reverse-mapping BB -> MBB.
+  DenseMap<const BasicBlock *, MachineBasicBlock *> BB2MBB;
+  for (MachineBasicBlock &MBB : MF)
+    BB2MBB[MBB.getBasicBlock()] = &MBB;
+
+  // Gather instructions requiring patching. For now, only those can use
+  // G_BLOCK_ADDR.
+  SmallVector<MachineInstr *, 8> InstructionsToPatch;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_switch) ||
+          isSpvIntrinsic(MI, Intrinsic::spv_loop_merge) ||
+          isSpvIntrinsic(MI, Intrinsic::spv_selection_merge))
+        InstructionsToPatch.push_back(&MI);
     }
-    for (unsigned i = MI.getNumOperands() - 1; i > 1; --i)
-      MI.removeOperand(i);
+  }
+
+  // For each instruction to fix, we replace all the G_BLOCK_ADDR operands by
+  // the actual MBB it references. Once those references have been updated, we
+  // can cleanup remaining G_BLOCK_ADDR references.
+  SmallPtrSet<MachineBasicBlock *, 8> ClearAddressTaken;
+  SmallPtrSet<MachineInstr *, 8> ToEraseMI;
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (MachineInstr *MI : InstructionsToPatch) {
+    SmallVector<MachineOperand, 8> NewOps;
+    for (unsigned i = 0; i < MI->getNumOperands(); ++i) {
+      // The operand is not a register, keep as-is.
+      if (!MI->getOperand(i).isReg()) {
+        NewOps.push_back(MI->getOperand(i));
+        continue;
+      }
+
+      Register Reg = MI->getOperand(i).getReg();
+      MachineInstr *BuildMBB = MRI.getVRegDef(Reg);
+      // The register is not the result of G_BLOCK_ADDR, keep as-is.
+      if (!BuildMBB || BuildMBB->getOpcode() != TargetOpcode::G_BLOCK_ADDR) {
+        NewOps.push_back(MI->getOperand(i));
+        continue;
+      }
+
+      assert(BuildMBB && BuildMBB->getOpcode() == TargetOpcode::G_BLOCK_ADDR &&
+             BuildMBB->getOperand(1).isBlockAddress() &&
+             BuildMBB->getOperand(1).getBlockAddress());
+      BasicBlock *BB =
+          BuildMBB->getOperand(1).getBlockAddress()->getBasicBlock();
+      auto It = BB2MBB.find(BB);
+      if (It == BB2MBB.end())
+        report_fatal_error("cannot find a machine basic block by a basic block "
+                           "in a switch statement");
+      MachineBasicBlock *ReferencedBlock = It->second;
+      NewOps.push_back(MachineOperand::CreateMBB(ReferencedBlock));
+
+      ClearAddressTaken.insert(ReferencedBlock);
+      ToEraseMI.insert(BuildMBB);
+    }
+
+    // Replace the operands.
+    assert(MI->getNumOperands() == NewOps.size());
+    while (MI->getNumOperands() > 0)
+      MI->removeOperand(0);
     for (auto &MO : NewOps)
-      MI.addOperand(MO);
-    if (MachineInstr *Next = MI.getNextNode()) {
+      MI->addOperand(MO);
+
+    if (MachineInstr *Next = MI->getNextNode()) {
       if (isSpvIntrinsic(*Next, Intrinsic::spv_track_constant)) {
         ToEraseMI.insert(Next);
-        Next = MI.getNextNode();
+        Next = MI->getNextNode();
       }
       if (Next && Next->getOpcode() == TargetOpcode::G_BRINDIRECT)
         ToEraseMI.insert(Next);
     }
   }
+
+  // BlockAddress operands were used to keep information between passes,
+  // let's undo the "address taken" status to reflect that Succ doesn't
+  // actually correspond to an IR-level basic block.
+  for (MachineBasicBlock *Succ : ClearAddressTaken)
+    Succ->setAddressTakenIRBlock(nullptr);
 
   // If we just delete G_BLOCK_ADDR instructions with BlockAddress operands,
   // this leaves their BasicBlock counterparts in a "address taken" status. This
@@ -835,12 +895,6 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     BlockAddrI->eraseFromParent();
   }
-
-  // BlockAddress operands were used to keep information between passes,
-  // let's undo the "address taken" status to reflect that Succ doesn't
-  // actually correspond to an IR-level basic block.
-  for (MachineBasicBlock *Succ : ClearAddressTaken)
-    Succ->setAddressTakenIRBlock(nullptr);
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
@@ -891,7 +945,11 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   foldConstantsIntoIntrinsics(MF, TrackedConstRegs);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
-  processSwitches(MF, GR, MIB);
+
+  processSwitchesConstants(MF, GR, MIB);
+  processBlockAddr(MF, GR, MIB);
+  cleanupHelperInstructions(MF);
+
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
   insertSpirvDecorations(MF, MIB);
