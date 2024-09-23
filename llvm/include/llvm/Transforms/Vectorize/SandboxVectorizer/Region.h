@@ -59,7 +59,7 @@ class Region {
   /// MDNode that we'll use to mark instructions as being part of the region.
   MDNode *RegionMDN;
   static constexpr const char *MDKind = "sandboxvec";
-  static constexpr const char *RegionStr = "region";
+  static constexpr const char *RegionStr = "sandboxregion";
 
   Context &Ctx;
 
