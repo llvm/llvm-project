@@ -3,8 +3,8 @@
 // CHECK: define {{.*}}test_scalar{{.*}}(double {{.*}} [[VAL1:%.*]], i32 {{.*}} [[VAL2:%.*]], i32 {{.*}} [[VAL3:%.*]]){{.*}} 
 // CHECK: [[VALD:%.*]] = load double, ptr [[VAL1]].addr{{.*}}
 // CHECK: call { i32, i32 } @llvm.dx.asuint.splitdouble.{{.*}}(double [[VALD]])
-float fn(double D) {
-  uint A, B;
+float2 fn(double2 D) {
+  uint2 A, B;
   asuint(D, A, B);
   return A + B;
 }

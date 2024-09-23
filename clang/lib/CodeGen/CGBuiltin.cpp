@@ -34,12 +34,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -67,6 +69,7 @@
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 #include <sstream>
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -18971,29 +18974,60 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     const HLSLOutArgExpr *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
     const HLSLOutArgExpr *OutArg2 = dyn_cast<HLSLOutArgExpr>(E->getArg(2));
 
+    auto emitSplitDouble =
+        [](CGBuilderTy *Builder, llvm::Value *arg,
+           llvm::Type *retType) -> std::pair<Value *, Value *> {
+      CallInst *CI = Builder->CreateIntrinsic(
+          retType, llvm::Intrinsic::dx_asuint_splitdouble, {arg}, nullptr,
+          "hlsl.asuint");
+
+      Value *arg0 = Builder->CreateExtractValue(CI, 0);
+      Value *arg1 = Builder->CreateExtractValue(CI, 1);
+
+      return std::make_pair(arg0, arg1);
+    };
+
     CallArgList Args;
-    LValue Op1TmpLValue = EmitHLSLOutArgExpr(OutArg1, Args, OutArg1->getType());
-    LValue Op2TmpLValue = EmitHLSLOutArgExpr(OutArg2, Args, OutArg2->getType());
+    auto [Op1BaseLValue, Op1TmpLValue] =
+        EmitHLSLOutArgExpr(OutArg1, Args, OutArg1->getType());
+    auto [Op2BaseLValue, Op2TmpLValue] =
+        EmitHLSLOutArgExpr(OutArg2, Args, OutArg2->getType());
 
     llvm::Type *retType = llvm::StructType::get(Int32Ty, Int32Ty);
-    if (Op0->getType()->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
 
-      llvm::VectorType *i32VecTy = llvm::VectorType::get(
-          Int32Ty, ElementCount::getFixed(XVecTy->getNumElements()));
+    if (!Op0->getType()->isVectorTy()) {
+      auto [arg0, arg1] = emitSplitDouble(&Builder, Op0, retType);
 
-      retType = llvm::StructType::get(i32VecTy, i32VecTy);
+      Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
+      auto *s = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+
+      EmitWritebacks(*this, Args);
+      return s;
     }
 
-    CallInst *CI =
-        Builder.CreateIntrinsic(retType, llvm::Intrinsic::dx_asuint_splitdouble,
-                                {Op0}, nullptr, "hlsl.asuint");
+    auto *Op0VecTy = E->getArg(0)->getType()->getAs<VectorType>();
 
-    Value *arg0 = Builder.CreateExtractValue(CI, 0);
-    Value *arg1 = Builder.CreateExtractValue(CI, 1);
+    llvm::VectorType *i32VecTy = llvm::VectorType::get(
+        Int32Ty, ElementCount::getFixed(Op0VecTy->getNumElements()));
 
-    Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
-    auto *s = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+    std::pair<Value *, Value *> inserts = std::make_pair(nullptr, nullptr);
+
+    for (uint64_t idx = 0; idx < Op0VecTy->getNumElements(); idx++) {
+      Value *op = Builder.CreateExtractElement(Op0, idx);
+
+      auto [arg0, arg1] = emitSplitDouble(&Builder, op, retType);
+
+      if (idx == 0) {
+        inserts.first = Builder.CreateInsertElement(i32VecTy, arg0, idx);
+        inserts.second = Builder.CreateInsertElement(i32VecTy, arg1, idx);
+      } else {
+        inserts.first = Builder.CreateInsertElement(inserts.first, arg0, idx);
+        inserts.second = Builder.CreateInsertElement(inserts.second, arg0, idx);
+      }
+    }
+
+    Builder.CreateStore(inserts.first, Op1TmpLValue.getAddress());
+    auto *s = Builder.CreateStore(inserts.second, Op2TmpLValue.getAddress());
     EmitWritebacks(*this, Args);
     return s;
   }

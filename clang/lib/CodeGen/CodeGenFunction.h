@@ -4299,8 +4299,8 @@ public:
 
   std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
                                                   QualType Ty);
-  LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                            QualType Ty);
+  std::pair<LValue, LValue> EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                               CallArgList &Args, QualType Ty);
 
   Address EmitExtVectorElementLValue(LValue V);
 
