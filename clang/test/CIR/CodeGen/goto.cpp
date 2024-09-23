@@ -272,3 +272,19 @@ void flatLoopWithNoTerminatorInFront(int* ptr) {
 // CHECK:    cir.return
 // CHECK:  }
 // CHECK:}
+
+struct S {};
+struct S get();
+void bar(struct S);
+
+void foo() {
+  { 
+    label:      
+      bar(get());
+  }   
+}
+
+// NOFLAT: cir.func  @_Z3foov()
+// NOFLAT:   cir.scope {
+// NOFLAT:     cir.label "label"
+// NOFLAT:     %0 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["agg.tmp0"]
