@@ -1334,11 +1334,17 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     // we restrict this to loads; stores are more complicated due to
     // concurrency restrictions.
     ScalarEvolution &SE = *PSE.getSE();
+    SmallVector<const SCEVPredicate *, 4> Predicates;
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
+      // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
+      // that it will consider loops that need guarding by SCEV checks. The
+      // vectoriser will generate these checks if we decide to vectorise.
       if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC))
+          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
+                                            &Predicates))
         SafePointers.insert(LI->getPointerOperand());
+      Predicates.clear();
     }
   }
 
@@ -1564,7 +1570,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
          "Expected latch predecessor to be the early exiting block");
 
   // TODO: Handle loops that may fault.
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC)) {
+  Predicates.clear();
+  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
+                                     &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
         "Cannot vectorize potentially faulting early exit loop",

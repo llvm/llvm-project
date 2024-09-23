@@ -803,10 +803,11 @@ Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
-  if (Mapping.Offset != kDynamicShadowSentinel)
+  if (Mapping.Offset != kDynamicShadowSentinel) {
     return getOpaqueNoopCast(
         IRB, ConstantExpr::getIntToPtr(
                  ConstantInt::get(IntptrTy, Mapping.Offset), PtrTy));
+  }
 
   if (Mapping.InGlobal)
     return getDynamicShadowIfunc(IRB);
@@ -1013,7 +1014,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
         static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.Offset;
   }
 
-  if (UseFixedShadowIntrinsic)
+  if (UseFixedShadowIntrinsic) {
     IRB.CreateCall(
         Intrinsic::getDeclaration(
             M, UseShortGranules
@@ -1021,12 +1022,13 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
                    : Intrinsic::hwasan_check_memaccess_fixedshadow),
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.Offset)});
-  else
+  } else {
     IRB.CreateCall(Intrinsic::getDeclaration(
                        M, UseShortGranules
                               ? Intrinsic::hwasan_check_memaccess_shortgranules
                               : Intrinsic::hwasan_check_memaccess),
                    {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  }
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,

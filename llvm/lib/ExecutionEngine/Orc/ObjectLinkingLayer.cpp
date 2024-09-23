@@ -275,24 +275,22 @@ public:
 
       // First check that there aren't any missing symbols.
       size_t NumMaterializationSideEffectsOnlySymbols = 0;
-      SymbolNameVector ExtraSymbols;
       SymbolNameVector MissingSymbols;
-      for (auto &KV : MR->getSymbols()) {
+      for (auto &[Sym, Flags] : MR->getSymbols()) {
 
-        auto I = InternedResult.find(KV.first);
+        auto I = InternedResult.find(Sym);
 
         // If this is a materialization-side-effects only symbol then bump
-        // the counter and make sure it's *not* defined, otherwise make
-        // sure that it is defined.
-        if (KV.second.hasMaterializationSideEffectsOnly()) {
+        // the counter and remove in from the result, otherwise make sure that
+        // it's defined.
+        if (Flags.hasMaterializationSideEffectsOnly()) {
           ++NumMaterializationSideEffectsOnlySymbols;
-          if (I != InternedResult.end())
-            ExtraSymbols.push_back(KV.first);
+          InternedResult.erase(Sym);
           continue;
         } else if (I == InternedResult.end())
-          MissingSymbols.push_back(KV.first);
+          MissingSymbols.push_back(Sym);
         else if (Layer.OverrideObjectFlags)
-          I->second.setFlags(KV.second);
+          I->second.setFlags(Flags);
       }
 
       // If there were missing symbols then report the error.
@@ -303,6 +301,7 @@ public:
 
       // If there are more definitions than expected, add them to the
       // ExtraSymbols vector.
+      SymbolNameVector ExtraSymbols;
       if (InternedResult.size() >
           MR->getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
         for (auto &KV : InternedResult)

@@ -123,6 +123,9 @@ C++ Language Changes
 
 - Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
+- The builtin type alias ``__builtin_common_type`` has been added to improve the
+  performance of ``std::common_type``.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -265,6 +268,11 @@ Attribute Changes in Clang
 - Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
   to propagate safe elide context to arguments if such function is also under a safe elide context.
 
+- The documentation of the ``[[clang::musttail]]`` attribute was updated to
+  note that the lifetimes of all local variables end before the call. This does
+  not change the behaviour of the compiler, as this was true for previous
+  versions.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -320,6 +328,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnose when importing module implementation partition units in module interface units.
 
 - Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+
+- The ``-Wreturn-stack-address`` warning now also warns about addresses of
+  local variables passed to function calls using the ``[[clang::musttail]]``
+  attribute.
 
 Improvements to Clang's time-trace
 ----------------------------------
