@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __rtsan;
@@ -49,7 +50,21 @@ static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
     IncrementTotalErrorCount();
 
-    PrintDiagnostics(info);
+    BufferedStackTrace stack;
+    stack.Unwind(info.pc, info.bp, nullptr,
+                 /*request_fast*/ true);
+
+    StackDepotHandle handle = StackDepotPut_WithHandle(stack);
+
+    const bool is_stack_novel = handle.use_count() == 0;
+    if (UNLIKELY(is_stack_novel)) {
+      IncrementUniqueErrorCount();
+
+      PrintDiagnostics(info);
+      stack.Print();
+
+      handle.inc_use_count_unsafe();
+    }
 
     if (flags().halt_on_error)
       Die();
