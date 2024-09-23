@@ -1707,13 +1707,14 @@ void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   VisitRedeclarable(D);
 
-  Record.push_back(D->isMemberSpecialization());
-
   // Emit data to initialize CommonOrPrev before VisitTemplateDecl so that
   // getCommonPtr() can be used while this is still initializing.
-  if (D->isFirstDecl())
+  if (D->isFirstDecl()) {
     // This declaration owns the 'common' pointer, so serialize that data now.
     Record.AddDeclRef(D->getInstantiatedFromMemberTemplate());
+    if (D->getInstantiatedFromMemberTemplate())
+      Record.push_back(D->isMemberSpecialization());
+  }
 
   VisitTemplateDecl(D);
   Record.push_back(D->getIdentifierNamespace());
@@ -1787,10 +1788,11 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
 
   VisitClassTemplateSpecializationDecl(D);
 
-  Record.push_back(D->isMemberSpecialization());
   // These are read/set from/to the first declaration.
-  if (D->isFirstDecl())
+  if (D->getPreviousDecl() == nullptr) {
     Record.AddDeclRef(D->getInstantiatedFromMember());
+    Record.push_back(D->isMemberSpecialization());
+  }
 
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -1854,11 +1856,12 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Record.AddTemplateParameterList(D->getTemplateParameters());
 
   VisitVarTemplateSpecializationDecl(D);
-  Record.push_back(D->isMemberSpecialization());
 
   // These are read/set from/to the first declaration.
-  if (D->isFirstDecl())
+  if (D->getPreviousDecl() == nullptr) {
     Record.AddDeclRef(D->getInstantiatedFromMember());
+    Record.push_back(D->isMemberSpecialization());
+  }
 
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
