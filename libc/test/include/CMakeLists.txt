@@ -82,16 +82,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  stdckdint_test
-  SUITE
-    libc_include_tests
-  SRCS
-    stdckdint_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.stdckdint_macros
-)
-
-add_libc_test(
   issignaling_test
   SUITE
     libc_include_tests
@@ -107,6 +97,16 @@ add_libc_test(
     libc_include_tests
   SRCS
     issignalingf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  issignalingl_test
+  SUITE
+    libc_include_tests
+  SRCS
+    issignalingl_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
 )
