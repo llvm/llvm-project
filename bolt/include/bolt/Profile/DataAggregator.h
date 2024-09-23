@@ -426,7 +426,12 @@ private:
   /// the base load address. External addresses, i.e. addresses that do not
   /// correspond to the binary allocated address space, are adjusted to avoid
   /// conflicts.
-  void adjustAddress(uint64_t &Address, const MMapInfo &MMI) const {
+  void adjustAddress(uint64_t &Address, const MMapInfo &MMI,
+                     int64_t CustomOffset) const {
+    if (CustomOffset) {
+      Address += CustomOffset;
+      return;
+    }
     if (Address >= MMI.MMapAddress && Address < MMI.MMapAddress + MMI.Size) {
       Address -= MMI.BaseAddress;
     } else if (Address < MMI.Size) {
@@ -436,9 +441,10 @@ private:
   }
 
   /// Adjust addresses in \p LBR entry.
-  void adjustLBR(LBREntry &LBR, const MMapInfo &MMI) const {
-    adjustAddress(LBR.From, MMI);
-    adjustAddress(LBR.To, MMI);
+  void adjustLBR(LBREntry &LBR, const MMapInfo &MMI,
+                 int64_t CustomOffset) const {
+    adjustAddress(LBR.From, MMI, CustomOffset);
+    adjustAddress(LBR.To, MMI, CustomOffset);
   }
 
   /// Ignore kernel/user transition LBR if requested
