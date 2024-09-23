@@ -1340,25 +1340,79 @@ static bool isSupportedInstr(const MachineInstr &MI) {
     return false;
 
   switch (RVV->BaseInstr) {
+  // 11.1. Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
   case RISCV::VADD_VX:
+  case RISCV::VSUB_VV:
+  case RISCV::VSUB_VX:
+  case RISCV::VRSUB_VI:
+  case RISCV::VRSUB_VX:
+  // 11.2. Vector Widening Integer Add/Subtract
+  case RISCV::VWADDU_VV:
+  case RISCV::VWADDU_VX:
+  case RISCV::VWSUBU_VV:
+  case RISCV::VWSUBU_VX:
+  case RISCV::VWADD_VV:
+  case RISCV::VWADD_VX:
+  case RISCV::VWSUB_VV:
+  case RISCV::VWSUB_VX:
+  case RISCV::VWADDU_WV:
+  case RISCV::VWADDU_WX:
+  case RISCV::VWSUBU_WV:
+  case RISCV::VWSUBU_WX:
+  case RISCV::VWADD_WV:
+  case RISCV::VWADD_WX:
+  case RISCV::VWSUB_WV:
+  case RISCV::VWSUB_WX:
+  // 11.3. Vector Integer Extension
+  case RISCV::VZEXT_VF2:
+  case RISCV::VSEXT_VF2:
+  case RISCV::VZEXT_VF4:
+  case RISCV::VSEXT_VF4:
+  case RISCV::VZEXT_VF8:
+  case RISCV::VSEXT_VF8:
+  // 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  // FIXME: Add support for 11.4 instructions
+  // 11.5. Vector Bitwise Logical Instructions
+  // FIXME: Add support for 11.5 instructions
+  // 11.6. Vector Single-Width Shift Instructions
+  // FIXME: Add support for 11.6 instructions
+  case RISCV::VSLL_VI:
+  // 11.7. Vector Narrowing Integer Right Shift Instructions
+  // FIXME: Add support for 11.7 instructions
+  case RISCV::VNSRL_WI:
+  // 11.8 Vector Integer Compare Instructions
+  // FIXME: Add support for 11.8 instructions
+  // 11.9. Vector Integer Min/Max Instructions
+  // FIXME: Add support for 11.9 instructions
+  // 11.10. Vector Single-Width Integer Multiply Instructions
   case RISCV::VMUL_VV:
   case RISCV::VMUL_VX:
-  case RISCV::VSLL_VI:
-  case RISCV::VSEXT_VF2:
-  case RISCV::VSEXT_VF4:
-  case RISCV::VSEXT_VF8:
-  case RISCV::VZEXT_VF2:
-  case RISCV::VZEXT_VF4:
-  case RISCV::VZEXT_VF8:
-  case RISCV::VMV_V_I:
-  case RISCV::VMV_V_X:
-  case RISCV::VNSRL_WI:
-  case RISCV::VWADD_VV:
-  case RISCV::VWADDU_VV:
+  case RISCV::VMULH_VV:
+  case RISCV::VMULH_VX:
+  case RISCV::VMULHU_VV:
+  case RISCV::VMULHU_VX:
+  case RISCV::VMULHSU_VV:
+  case RISCV::VMULHSU_VX:
+  // 11.11. Vector Integer Divide Instructions
+  // FIXME: Add support for 11.11 instructions
+  // 11.12. Vector Widening Integer Multiply Instructions
+  // FIXME: Add support for 11.12 instructions
+  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
+  // FIXME: Add support for 11.13 instructions
+  // 11.14. Vector Widening Integer Multiply-Add Instructions
+  // FIXME: Add support for 11.14 instructions
   case RISCV::VWMACC_VX:
   case RISCV::VWMACCU_VX:
+  // 11.15. Vector Integer Merge Instructions
+  // FIXME: Add support for 11.15 instructions
+  // 11.16. Vector Integer Move Instructions
+  // FIXME: Add support for 11.16 instructions
+  case RISCV::VMV_V_I:
+  case RISCV::VMV_V_X:
+
+  // Vector Crypto
   case RISCV::VWSLL_VI:
     return true;
   }
