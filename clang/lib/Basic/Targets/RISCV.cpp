@@ -486,3 +486,15 @@ bool RISCVTargetInfo::validateCpuSupports(StringRef Feature) const {
 bool RISCVTargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::RISCVISAInfo::isSupportedExtensionFeature(Name);
 }
+
+bool RISCVTargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if (RegName == "ra" || RegName == "sp" || RegName == "gp" ||
+      RegName == "tp" || RegName.starts_with("x") || RegName.starts_with("a") ||
+      RegName.starts_with("s") || RegName.starts_with("t")) {
+    unsigned XLen = getTriple().isArch64Bit() ? 64 : 32;
+    HasSizeMismatch = RegSize != XLen;
+    return true;
+  }
+  return false;
+}
