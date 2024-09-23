@@ -2106,7 +2106,7 @@ static uint64_t getCommonPageSize(Ctx &ctx, opt::InputArgList &args) {
 
 // Parses --image-base option.
 static std::optional<uint64_t> getImageBase(Ctx &ctx, opt::InputArgList &args) {
-  // Because we are using "Config->maxPageSize" here, this function has to be
+  // Because we are using `ctx.arg.maxPageSize` here, this function has to be
   // called after the variable is initialized.
   auto *arg = args.getLastArg(OPT_image_base);
   if (!arg)
