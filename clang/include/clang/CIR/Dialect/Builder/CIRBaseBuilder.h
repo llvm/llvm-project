@@ -538,14 +538,14 @@ public:
   // ----------------------
   //
   OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
-    auto lastAlloca =
+    auto last =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
-          return mlir::isa<mlir::cir::AllocaOp>(&op);
+          return mlir::isa<mlir::cir::AllocaOp, mlir::cir::LabelOp>(&op);
         });
 
-    if (lastAlloca != block->rend())
+    if (last != block->rend())
       return OpBuilder::InsertPoint(block,
-                                    ++mlir::Block::iterator(&*lastAlloca));
+                                    ++mlir::Block::iterator(&*last));
     return OpBuilder::InsertPoint(block, block->begin());
   };
 
