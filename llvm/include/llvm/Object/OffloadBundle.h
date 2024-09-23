@@ -1,11 +1,10 @@
-//===--- OffloadBundle.h - Utilities for handling offloading code -*- C++
-//-*-===//
+//===- OffloadBundle.h - Utilities for offload bundles---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===------------------------------------------------------------------------===//
+//===-------------------------------------------------------------------------===//
 //
 // This file contains the binary format used for budingling device metadata with
 // an associated device image. The data can then be stored inside a host object
@@ -13,7 +12,7 @@
 // thin wrapper around the image itself. If this format becomes sufficiently
 // complex it should be moved to a standard binary format like msgpack or ELF.
 //
-//===------------------------------------------------------------------------===//
+//===-------------------------------------------------------------------------===//
 
 #ifndef LLVM_OBJECT_OFFLOADBUNDLE_H
 #define LLVM_OBJECT_OFFLOADBUNDLE_H
