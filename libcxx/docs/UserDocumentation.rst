@@ -371,6 +371,10 @@ To also show those implementation details, use ``thread backtrace -u``.
 Alternatively, to disable those compact backtraces, use ``frame recognizer list``
 and ``frame recognizer disable`` on the "libc++ frame recognizer".
 
+Futhermore, stepping into libc++ functions is disabled by default. This is controlled via the
+setting ``target.process.thread.step-avoid-regexp`` which defaults to ``^std::`` and can be
+disabled using ``settings set target.process.thread.step-avoid-regexp ""``.
+
 GDB Pretty printers for libc++
 ------------------------------
 

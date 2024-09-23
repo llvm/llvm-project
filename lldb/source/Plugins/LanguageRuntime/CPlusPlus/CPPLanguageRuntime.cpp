@@ -81,19 +81,26 @@ public:
 
     // Check if we have a regex match
     bool matches_regex = false;
-    for (RegularExpression &r : m_hidden_regex)
+    for (RegularExpression &r : m_hidden_regex) {
       if (r.Execute(sc.function->GetNameNoArguments())) {
         matches_regex = true;
         break;
       }
+    }
 
     if (matches_regex) {
       // Only hide this frame if the immediate caller is also within libc++.
-      lldb::StackFrameSP parent_frame =
-          frame_sp->GetThread()->GetStackFrameAtIndex(
+      lldb::ThreadSP thread_sp = frame_sp->GetThread();
+      if (!thread_sp)
+         return {};
+      lldb::StackFrameSP parent_frame_sp = thread_sp->GetStackFrameAtIndex(
               frame_sp->GetFrameIndex() + 1);
+      if (!parent_frame_sp)
+         return {};
       const auto &parent_sc =
-          parent_frame->GetSymbolContext(lldb::eSymbolContextFunction);
+          parent_frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+      if (!parent_sc.function)
+         return {};
       if (parent_sc.function->GetNameNoArguments().GetStringRef().starts_with(
               "std::")) {
         return m_hidden_frame;
