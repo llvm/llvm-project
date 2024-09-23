@@ -460,7 +460,11 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
 
   Value *VecOp;
   ConstantInt *Cst;
-  if (!match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst)))))
+  const APInt *ShiftAmount = nullptr;
+  if (!match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst)))) &&
+      !match(Src,
+             m_OneUse(m_LShr(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst)),
+                             m_APInt(ShiftAmount)))))
     return nullptr;
 
   auto *VecOpTy = cast<VectorType>(VecOp->getType());
@@ -469,10 +473,23 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
   uint64_t VecOpIdx = Cst->getZExtValue();
   uint64_t NewIdx = IC.getDataLayout().isBigEndian()
-                        ? (VecOpIdx + 1) * TruncRatio - 1
+                        ? (VecOpIdx * TruncRatio) + (TruncRatio - 1)
                         : VecOpIdx * TruncRatio;
+
+  // Adjust index by the whole number of truncated elements.
+  if (ShiftAmount) {
+    // Check shift amount is in range and shifts a whole number of truncated
+    // elements.
+    if (ShiftAmount->uge(SrcBits) || ShiftAmount->urem(DstBits) != 0)
+      return nullptr;
+
+    uint64_t IdxOfs = ShiftAmount->udiv(DstBits).getZExtValue();
+    NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
+                                              : (NewIdx + IdxOfs);
+  }
+
   assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-         "overflow 32-bits");
+         NewIdx <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
 
   auto *BitCastTo =
       VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());
