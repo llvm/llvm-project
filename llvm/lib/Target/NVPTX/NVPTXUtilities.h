@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
 #include <set>
 #include <string>
@@ -86,7 +87,7 @@ bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
 
-inline std::string OrderingToCString(Ordering Order) {
+inline std::string OrderingToString(Ordering Order) {
   switch (Order) {
   case Ordering::NotAtomic:
     return "NotAtomic";
@@ -96,7 +97,8 @@ inline std::string OrderingToCString(Ordering Order) {
     return "Acquire";
   case Ordering::Release:
     return "Release";
-  // case Ordering::AcquireRelease: return "AcquireRelease";
+  case Ordering::AcquireRelease:
+    return "AcquireRelease";
   case Ordering::SequentiallyConsistent:
     return "SequentiallyConsistent";
   case Ordering::Volatile:
@@ -104,11 +106,58 @@ inline std::string OrderingToCString(Ordering Order) {
   case Ordering::RelaxedMMIO:
     return "RelaxedMMIO";
   }
-  report_fatal_error("unknown ordering");
+  report_fatal_error(formatv("Unknown NVPTX::Ordering \"{}\".",
+                             static_cast<OrderingUnderlyingType>(Order)));
 }
 
 inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
-  O << OrderingToCString(Order);
+  O << OrderingToString(Order);
+  return O;
+}
+
+inline std::string ScopeToString(Scope S) {
+  switch (S) {
+  case Scope::Thread:
+    return "Thread";
+  case Scope::System:
+    return "System";
+  case Scope::Block:
+    return "Block";
+  case Scope::Cluster:
+    return "Cluster";
+  case Scope::Device:
+    return "Device";
+  }
+  report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
+                             static_cast<ScopeUnderlyingType>(S)));
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, Scope S) {
+  O << ScopeToString(S);
+  return O;
+}
+
+inline std::string AddressSpaceToString(AddressSpace A) {
+  switch (A) {
+  case AddressSpace::Generic:
+    return "generic";
+  case AddressSpace::Global:
+    return "global";
+  case AddressSpace::Const:
+    return "const";
+  case AddressSpace::Shared:
+    return "shared";
+  case AddressSpace::Param:
+    return "param";
+  case AddressSpace::Local:
+    return "local";
+  }
+  report_fatal_error(formatv("Unknown NVPTX::AddressSpace \"{}\".",
+                             static_cast<AddressSpaceUnderlyingType>(A)));
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
+  O << AddressSpaceToString(A);
   return O;
 }
 
