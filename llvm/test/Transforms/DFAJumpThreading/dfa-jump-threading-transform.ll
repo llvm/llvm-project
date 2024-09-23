@@ -301,236 +301,125 @@ end:
   ret void
 }
 
-@a = external dso_local global ptr, align 8
-@b = external dso_local global i32, align 4
-@c = external dso_local global i64, align 8
-@d = external dso_local global i16, align 2
-@e = external dso_local global i64, align 8
-@f = external dso_local global i32, align 4
-@g = external dso_local global i64, align 8
-@h = external dso_local global i32, align 4
-@i = external dso_local global ptr, align 8
-
-define void @pr106083_invalidBBarg_fold() {
+define void @pr106083_invalidBBarg_fold(i1 %cmp1, i1 %cmp2, i1 %not, ptr %d) {
 ; CHECK-LABEL: @pr106083_invalidBBarg_fold(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @h, align 4
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[D_PROMOTED3:%.*]] = load i16, ptr @d, align 1
-; CHECK-NEXT:    br i1 [[DOTNOT2]], label [[BB0:%.*]], label [[DOT_SI_UNFOLD_FALSE:%.*]]
-; CHECK:       BB0.loopexit:
-; CHECK-NEXT:    [[D_PROMOTED41:%.*]] = phi i16 [ [[D_PROMOTED4_JT2:%.*]], [[BB7_JT2:%.*]] ], [ [[D_PROMOTED4:%.*]], [[BB7:%.*]] ]
-; CHECK-NEXT:    br label [[BB0]]
-; CHECK:       ..si.unfold.false:
-; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI:%.*]] = phi i32 [ 6, [[TMP0:%.*]] ]
-; CHECK-NEXT:    br label [[BB0]]
-; CHECK:       BB0:
-; CHECK-NEXT:    [[D_PROMOTED6:%.*]] = phi i16 [ [[D_PROMOTED3]], [[TMP0]] ], [ [[D_PROMOTED41]], [[BB0_LOOPEXIT:%.*]] ], [ [[D_PROMOTED3]], [[DOT_SI_UNFOLD_FALSE]] ]
-; CHECK-NEXT:    [[DOT_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[DOT_SI_UNFOLD_PHI]], [[BB0_LOOPEXIT]] ], [ 0, [[TMP0]] ], [ [[DOTSI_UNFOLD_PHI]], [[DOT_SI_UNFOLD_FALSE]] ]
-; CHECK-NEXT:    br label [[BB1_JT2:%.*]]
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[BB1:%.*]], label [[SEL_SI_UNFOLD_FALSE:%.*]]
+; CHECK:       sel.si.unfold.false:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI1:%.*]] = phi i32 [ 1, [[BB:%.*]] ]
+; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       BB1:
-; CHECK-NEXT:    [[D_PROMOTED5:%.*]] = phi i16 [ [[D_PROMOTED4]], [[BB1_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i16 [ [[TMP10:%.*]], [[BB1_BACKEDGE]] ]
-; CHECK-NEXT:    [[DOT1:%.*]] = phi i32 [ [[DOT3:%.*]], [[BB1_BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @f, align 4
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[BB7]], label [[BB2:%.*]]
-; CHECK:       BB1.jt2:
-; CHECK-NEXT:    [[D_PROMOTED5_JT2:%.*]] = phi i16 [ [[D_PROMOTED6]], [[BB0]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i16 [ [[D_PROMOTED6]], [[BB0]] ]
-; CHECK-NEXT:    [[DOT1_JT2:%.*]] = phi i32 [ 2, [[BB0]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = load volatile i32, ptr @f, align 4
-; CHECK-NEXT:    [[DOTNOT_JT2:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_JT2]], label [[BB7_JT2]], label [[BB2_JT2:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i16 [ 0, [[BB1_BACKEDGE:%.*]] ], [ 0, [[BB]] ], [ 1, [[BB7:%.*]] ], [ 0, [[SEL_SI_UNFOLD_FALSE]] ], [ 1, [[BB7_JT0:%.*]] ]
+; CHECK-NEXT:    [[SEL_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[SEL_SI_UNFOLD_PHI]], [[BB1_BACKEDGE]] ], [ [[SEL_SI_UNFOLD_PHI]], [[BB7]] ], [ 0, [[BB]] ], [ [[DOTSI_UNFOLD_PHI1]], [[SEL_SI_UNFOLD_FALSE]] ], [ [[SEL_SI_UNFOLD_PHI]], [[BB7_JT0]] ]
+; CHECK-NEXT:    br i1 [[NOT:%.*]], label [[BB7_JT0]], label [[BB2:%.*]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i16 [[TMP2]], 1
-; CHECK-NEXT:    store i16 [[TMP6]], ptr @d, align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = load volatile i64, ptr @g, align 8
-; CHECK-NEXT:    [[DOTNOT1:%.*]] = icmp eq i64 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT1]], label [[BB7]], label [[SPEC_SELECT_SI_UNFOLD_FALSE:%.*]]
-; CHECK:       BB2.jt2:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[TMP4]], 1
-; CHECK-NEXT:    store i16 [[TMP8]], ptr @d, align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = load volatile i64, ptr @g, align 8
-; CHECK-NEXT:    [[DOTNOT1_JT2:%.*]] = icmp eq i64 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT1_JT2]], label [[BB7]], label [[SPEC_SELECT_SI_UNFOLD_FALSE_JT2:%.*]]
+; CHECK-NEXT:    store i16 0, ptr [[D:%.*]], align 2
+; CHECK-NEXT:    br i1 [[CMP2:%.*]], label [[BB7]], label [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0:%.*]]
 ; CHECK:       spec.select.si.unfold.false:
-; CHECK-NEXT:    [[DOT1_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[DOT1]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[BB7]]
-; CHECK:       spec.select.si.unfold.false.jt2:
-; CHECK-NEXT:    [[DOT1_SI_UNFOLD_PHI_JT2:%.*]] = phi i32 [ [[DOT1_JT2]], [[BB2_JT2]] ]
-; CHECK-NEXT:    br label [[BB7_JT2]]
+; CHECK:       spec.select.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ 0, [[BB2]] ]
+; CHECK-NEXT:    br label [[BB7_JT0]]
 ; CHECK:       BB7:
-; CHECK-NEXT:    [[D_PROMOTED4]] = phi i16 [ [[D_PROMOTED5]], [[BB1:%.*]] ], [ [[TMP6]], [[BB2]] ], [ [[TMP6]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ], [ [[TMP8]], [[BB2_JT2]] ]
-; CHECK-NEXT:    [[TMP10]] = phi i16 [ [[TMP2]], [[BB1]] ], [ [[TMP6]], [[BB2]] ], [ [[TMP6]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ], [ [[TMP8]], [[BB2_JT2]] ]
-; CHECK-NEXT:    [[DOT3]] = phi i32 [ [[DOT1]], [[BB1]] ], [ [[DOT_SI_UNFOLD_PHI]], [[BB2]] ], [ [[DOT1_SI_UNFOLD_PHI]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ], [ [[DOT_SI_UNFOLD_PHI]], [[BB2_JT2]] ]
-; CHECK-NEXT:    switch i32 [[DOT3]], label [[BB9:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB1_BACKEDGE]]
-; CHECK-NEXT:      i32 7, label [[BB1_BACKEDGE]]
-; CHECK-NEXT:      i32 6, label [[BB8:%.*]]
-; CHECK-NEXT:      i32 2, label [[BB0_LOOPEXIT]]
+; CHECK-NEXT:    [[D_PROMOTED4:%.*]] = phi i16 [ 1, [[BB2]] ], [ 1, [[SPEC_SELECT_SI_UNFOLD_FALSE:%.*]] ]
+; CHECK-NEXT:    [[_3:%.*]] = phi i32 [ [[SEL_SI_UNFOLD_PHI]], [[BB2]] ], [ poison, [[SPEC_SELECT_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    switch i32 [[_3]], label [[BB1_BACKEDGE]] [
+; CHECK-NEXT:      i32 0, label [[BB1]]
+; CHECK-NEXT:      i32 1, label [[BB8:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       BB7.jt2:
-; CHECK-NEXT:    [[D_PROMOTED4_JT2]] = phi i16 [ [[D_PROMOTED5_JT2]], [[BB1_JT2]] ], [ [[TMP8]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT2]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i16 [ [[TMP4]], [[BB1_JT2]] ], [ [[TMP8]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT2]] ]
-; CHECK-NEXT:    [[DOT3_JT2:%.*]] = phi i32 [ [[DOT1_JT2]], [[BB1_JT2]] ], [ [[DOT1_SI_UNFOLD_PHI_JT2]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT2]] ]
-; CHECK-NEXT:    br label [[BB0_LOOPEXIT]]
+; CHECK:       BB7.jt0:
+; CHECK-NEXT:    [[D_PROMOTED4_JT0:%.*]] = phi i16 [ 0, [[BB1]] ], [ 1, [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    [[_3_JT0:%.*]] = phi i32 [ 0, [[BB1]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       BB1.backedge:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       BB8:
 ; CHECK-NEXT:    ret void
-; CHECK:       BB9:
-; CHECK-NEXT:    unreachable
 ;
-  %1 = load i32, ptr @h, align 4
-  %.not2 = icmp eq i32 %1, 0
-  %. = select i1 %.not2, i32 0, i32 6
-  %d.promoted3 = load i16, ptr @d, align 1
-  br label %BB0
-
-BB0.loopexit:                                     ; preds = %BB7
-  br label %BB0
-
-BB0:                                              ; preds = %BB0.loopexit, %0
-  %d.promoted6 = phi i16 [ %d.promoted3, %0 ], [ %d.promoted4, %BB0.loopexit ]
+bb:
+  %sel = select i1 %cmp1, i32 0, i32 1
   br label %BB1
 
-BB1:                                              ; preds = %BB1.backedge, %BB0
-  %d.promoted5 = phi i16 [ %d.promoted6, %BB0 ], [ %d.promoted4, %BB1.backedge ]
-  %2 = phi i16 [ %d.promoted6, %BB0 ], [ %6, %BB1.backedge ]
-  %.1 = phi i32 [ 2, %BB0 ], [ %.3, %BB1.backedge ]
-  %3 = load volatile i32, ptr @f, align 4
-  %.not = icmp eq i32 %3, 0
-  br i1 %.not, label %BB7, label %BB2
+BB1:                                              ; preds = %BB1.backedge, %BB7, %bb
+  %i = phi i16 [ 0, %BB1.backedge ], [ 0, %bb ], [ 1, %BB7 ]
+  br i1 %not, label %BB7, label %BB2
 
 BB2:                                              ; preds = %BB1
-  %4 = add i16 %2, 1
-  store i16 %4, ptr @d, align 2
-  %5 = load volatile i64, ptr @g, align 8
-  %.not1 = icmp eq i64 %5, 0
-  %spec.select = select i1 %.not1, i32 %., i32 %.1
+  store i16 0, ptr %d, align 2
+  %spec.select = select i1 %cmp2, i32 %sel, i32 0
   br label %BB7
 
 BB7:                                              ; preds = %BB2, %BB1
-  %d.promoted4 = phi i16 [ %d.promoted5, %BB1 ], [ %4, %BB2 ]
-  %6 = phi i16 [ %2, %BB1 ], [ %4, %BB2 ]
-  %.3 = phi i32 [ %.1, %BB1 ], [ %spec.select, %BB2 ]
-  switch i32 %.3, label %BB9 [
-  i32 0, label %BB1.backedge
-  i32 7, label %BB1.backedge
-  i32 6, label %BB8
-  i32 2, label %BB0.loopexit
+  %d.promoted4 = phi i16 [ 0, %BB1 ], [ 1, %BB2 ]
+  %_3 = phi i32 [ 0, %BB1 ], [ %spec.select, %BB2 ]
+  switch i32 %_3, label %BB1.backedge [
+  i32 0, label %BB1
+  i32 1, label %BB8
   ]
 
-BB1.backedge:                                     ; preds = %BB7, %BB7
+BB1.backedge:                                     ; preds = %BB7
   br label %BB1
 
 BB8:                                              ; preds = %BB7
   ret void
-
-BB9:                                              ; preds = %BB7
-  unreachable
 }
 
-
-define void @pr106083_select_dead_uses() {
+define void @pr106083_select_dead_uses(i1 %cmp1, i1 %not, ptr %p) {
 ; CHECK-LABEL: @pr106083_select_dead_uses(
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr @i, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @c, align 8
-; CHECK-NEXT:    [[DOTNOT3:%.*]] = icmp eq i64 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT3]], label [[DOTLOOPEXIT6:%.*]], label [[SPEC_SELECT_SI_UNFOLD_FALSE:%.*]]
-; CHECK:       .loopexit6.loopexit:
-; CHECK-NEXT:    br label [[DOTLOOPEXIT6]]
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[DOTLOOPEXIT6:%.*]], label [[SPEC_SELECT_SI_UNFOLD_FALSE:%.*]]
 ; CHECK:       spec.select.si.unfold.false:
-; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI:%.*]] = phi i32 [ 2, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI1:%.*]] = phi i32 [ 1, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[DOTLOOPEXIT6]]
 ; CHECK:       .loopexit6:
-; CHECK-NEXT:    [[SPEC_SELECT_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[SPEC_SELECT_SI_UNFOLD_PHI]], [[DOTLOOPEXIT6_LOOPEXIT:%.*]] ], [ 0, [[TMP0]] ], [ [[DOTSI_UNFOLD_PHI]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ]
-; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    [[DOT1:%.*]] = phi i32 [ [[DOT21:%.*]], [[DOTBACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[SELECT_UNFOLD_JT0:%.*]], label [[TMP8:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    [[DOT1_JT2:%.*]] = phi i32 [ 2, [[DOTLOOPEXIT6]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[DOTNOT_JT2:%.*]] = icmp eq i32 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT_JT2]], label [[SELECT_UNFOLD_JT0]], label [[TMP10:%.*]]
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[DOTNOT2:%.*]] = icmp eq i32 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT2]], label [[SELECT_UNFOLD:%.*]], label [[SPEC_SELECT7_SI_UNFOLD_FALSE:%.*]]
-; CHECK:       10:
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[DOTNOT2_JT2:%.*]] = icmp eq i32 [[TMP11]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT2_JT2]], label [[SELECT_UNFOLD]], label [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT2:%.*]]
+; CHECK-NEXT:    [[SPEC_SELECT_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[SPEC_SELECT_SI_UNFOLD_PHI]], [[SELECT_UNFOLD:%.*]] ], [ 0, [[BB]] ], [ [[DOTSI_UNFOLD_PHI1]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    br i1 [[NOT:%.*]], label [[SELECT_UNFOLD_JT0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[NOT2:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    br i1 [[NOT2]], label [[SELECT_UNFOLD]], label [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT0:%.*]]
 ; CHECK:       spec.select7.si.unfold.false:
-; CHECK-NEXT:    [[DOT1_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[DOT1]], [[TMP8]] ]
 ; CHECK-NEXT:    br label [[SELECT_UNFOLD]]
-; CHECK:       spec.select7.si.unfold.false.jt2:
-; CHECK-NEXT:    [[DOT1_SI_UNFOLD_PHI_JT2:%.*]] = phi i32 [ [[DOT1_JT2]], [[TMP10]] ]
-; CHECK-NEXT:    br label [[SELECT_UNFOLD_JT2:%.*]]
+; CHECK:       spec.select7.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ 0, [[BB1]] ]
+; CHECK-NEXT:    br label [[SELECT_UNFOLD_JT0]]
 ; CHECK:       select.unfold:
-; CHECK-NEXT:    [[DOT2:%.*]] = phi i32 [ [[SPEC_SELECT_SI_UNFOLD_PHI]], [[TMP8]] ], [ [[DOT1_SI_UNFOLD_PHI]], [[SPEC_SELECT7_SI_UNFOLD_FALSE]] ], [ [[SPEC_SELECT_SI_UNFOLD_PHI]], [[TMP10]] ]
-; CHECK-NEXT:    switch i32 [[DOT2]], label [[TMP12:%.*]] [
+; CHECK-NEXT:    [[_2:%.*]] = phi i32 [ [[SPEC_SELECT_SI_UNFOLD_PHI]], [[BB1]] ], [ poison, [[SPEC_SELECT7_SI_UNFOLD_FALSE:%.*]] ]
+; CHECK-NEXT:    switch i32 [[_2]], label [[BB2:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[DOTPREHEADER_PREHEADER:%.*]]
-; CHECK-NEXT:      i32 2, label [[DOTLOOPEXIT6_LOOPEXIT]]
+; CHECK-NEXT:      i32 1, label [[DOTLOOPEXIT6]]
 ; CHECK-NEXT:    ]
-; CHECK:       select.unfold.jt2:
-; CHECK-NEXT:    [[DOT2_JT2:%.*]] = phi i32 [ [[DOT1_SI_UNFOLD_PHI_JT2]], [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT2]] ]
-; CHECK-NEXT:    br label [[DOTLOOPEXIT6_LOOPEXIT]]
 ; CHECK:       select.unfold.jt0:
-; CHECK-NEXT:    [[DOT2_JT0:%.*]] = phi i32 [ 0, [[TMP4:%.*]] ], [ 0, [[TMP6]] ]
+; CHECK-NEXT:    [[_2_JT0:%.*]] = phi i32 [ 0, [[DOTLOOPEXIT6]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    br label [[DOTPREHEADER_PREHEADER]]
 ; CHECK:       .preheader.preheader:
-; CHECK-NEXT:    [[DOT21]] = phi i32 [ [[DOT2_JT0]], [[SELECT_UNFOLD_JT0]] ], [ [[DOT2]], [[SELECT_UNFOLD]] ]
-; CHECK-NEXT:    store i32 0, ptr @b, align 4
-; CHECK-NEXT:    br label [[DOTBACKEDGE]]
-; CHECK:       .backedge:
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       12:
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
 ;
-  %1 = load ptr, ptr @a, align 8
-  %2 = load ptr, ptr @i, align 8
-  %3 = load i64, ptr @c, align 8
-  %.not3 = icmp eq i64 %3, 0
-  %spec.select = select i1 %.not3, i32 0, i32 2
+bb:
+  %spec.select = select i1 %cmp1, i32 0, i32 1
   br label %.loopexit6
 
-.loopexit6.loopexit:                              ; preds = %select.unfold
-  br label %.loopexit6
+.loopexit6:                                       ; preds = %select.unfold, %bb
+  br i1 %not, label %select.unfold, label %bb1
 
-.loopexit6:                                       ; preds = %.loopexit6.loopexit, %0
-  br label %4
-
-4:                                                ; preds = %.backedge, %.loopexit6
-  %.1 = phi i32 [ 2, %.loopexit6 ], [ %.2, %.backedge ]
-  %5 = load i32, ptr %1, align 4
-  %.not = icmp eq i32 %5, 0
-  br i1 %.not, label %select.unfold, label %6
-
-6:                                                ; preds = %4
-  %7 = load i32, ptr %2, align 4
-  %.not2 = icmp eq i32 %7, 0
-  %spec.select7 = select i1 %.not2, i32 %spec.select, i32 %.1
+bb1:                                              ; preds = %.loopexit6
+  %i = load i32, ptr %p, align 4
+  %not2 = icmp eq i32 0, 0
+  %spec.select7 = select i1 %not2, i32 %spec.select, i32 0
   br label %select.unfold
 
-select.unfold:                                    ; preds = %6, %4
-  %.2 = phi i32 [ 0, %4 ], [ %spec.select7, %6 ]
-  switch i32 %.2, label %8 [
+select.unfold:                                    ; preds = %bb1, %.loopexit6
+  %_2 = phi i32 [ 0, %.loopexit6 ], [ %spec.select7, %bb1 ]
+  switch i32 %_2, label %bb2 [
   i32 0, label %.preheader.preheader
-  i32 2, label %.loopexit6.loopexit
+  i32 1, label %.loopexit6
   ]
 
 .preheader.preheader:                             ; preds = %select.unfold
-  store i32 0, ptr @b, align 4
-  br label %.backedge
+  ret void
 
-.backedge:                                        ; preds = %.preheader.preheader
-  br label %4
-
-8:                                                ; preds = %select.unfold
+bb2:                                              ; preds = %select.unfold
   unreachable
 }
