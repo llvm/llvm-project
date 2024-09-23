@@ -74,10 +74,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
   if (MI->isConvertibleTo3Addr() || MI->isRegSequence() || MI->isInsertSubreg())
     return false;
-  // TODO-GFX13 Temporarily disallow bundles without a CoreMI
-  if (MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
-      MI->getOpcode() == AMDGPU::V_STORE_IDX)
-    return false;
   for (auto &Def : MI->defs()) {
     if (!Def.isReg())
       continue;
@@ -85,8 +81,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     if (Def.isTied())
       return false;
     Register DefReg = Def.getReg();
-    // TODO-GFX13 duplicate MI if used in multiple insts. Depends on replacement
-    // with staging registers
     if (!MRI->hasOneNonDBGUse(DefReg))
       continue;
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
@@ -136,12 +130,12 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineInstr *UseMI = MRI->getVRegDef(UseReg);
     if (UseMI->getOpcode() != AMDGPU::V_LOAD_IDX)
       continue;
-    // TODO-GFX13 duplicate MI if used in multiple insts. Depends on replacement
-    // with staging registers
-    if (!MRI->hasOneNonDBGUse(UseReg))
-      continue;
     // TODO-GFX13 handle load_idx in different block.
     if (UseMI->getParent() != MBB)
+      continue;
+    // TODO-GFX13 duplicate V_LOAD_IDX if it is used in multiple insts. Depends
+    // on replacement with staging registers
+    if (!MRI->hasOneNonDBGUse(UseReg))
       continue;
     MachineOperand *IdxOp = STI->getNamedOperand(*UseMI, AMDGPU::OpName::idx);
 
