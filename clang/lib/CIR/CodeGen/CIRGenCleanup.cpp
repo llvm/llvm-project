@@ -80,9 +80,12 @@ Address CIRGenFunction::createCleanupActiveFlag() {
 }
 
 DominatingValue<RValue>::saved_type
-DominatingValue<RValue>::saved_type::save(CIRGenFunction &CGF, RValue rv) {
+DominatingValue<RValue>::saved_type::save(CIRGenFunction &cgf, RValue rv) {
   if (rv.isScalar()) {
-    llvm_unreachable("scalar NYI");
+    mlir::Value val = rv.getScalarVal();
+    return saved_type(DominatingCIRValue::save(cgf, val),
+                      DominatingCIRValue::needsSaving(val) ? ScalarAddress
+                                                           : ScalarLiteral);
   }
 
   if (rv.isComplex()) {
@@ -90,6 +93,26 @@ DominatingValue<RValue>::saved_type::save(CIRGenFunction &CGF, RValue rv) {
   }
 
   llvm_unreachable("aggregate NYI");
+}
+
+/// Given a saved r-value produced by SaveRValue, perform the code
+/// necessary to restore it to usability at the current insertion
+/// point.
+RValue DominatingValue<RValue>::saved_type::restore(CIRGenFunction &CGF) {
+  switch (K) {
+  case ScalarLiteral:
+  case ScalarAddress:
+    return RValue::get(DominatingCIRValue::restore(CGF, Vals.first));
+  case AggregateLiteral:
+  case AggregateAddress:
+    return RValue::getAggregate(
+        DominatingValue<Address>::restore(CGF, AggregateAddr));
+  case ComplexAddress: {
+    llvm_unreachable("NYI");
+  }
+  }
+
+  llvm_unreachable("bad saved r-value kind");
 }
 
 /// Deactive a cleanup that was created in an active state.

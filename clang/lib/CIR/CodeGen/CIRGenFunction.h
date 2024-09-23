@@ -2334,20 +2334,29 @@ template <> struct DominatingValue<RValue> {
       AggregateAddress,
       ComplexAddress
     };
-
-    llvm::Value *Value;
-    llvm::Type *ElementType;
+    union {
+      struct {
+        DominatingCIRValue::saved_type first, second;
+      } Vals;
+      DominatingValue<Address>::saved_type AggregateAddr;
+    };
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
-    unsigned Align : 29;
-    saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
-        : Value(v), ElementType(e), K(k), Align(a) {}
+
+    saved_type(DominatingCIRValue::saved_type Val1, unsigned K)
+        : Vals{Val1, DominatingCIRValue::saved_type()}, K(K) {}
+
+    saved_type(DominatingCIRValue::saved_type Val1,
+               DominatingCIRValue::saved_type Val2)
+        : Vals{Val1, Val2}, K(ComplexAddress) {}
+
+    saved_type(DominatingValue<Address>::saved_type AggregateAddr, unsigned K)
+        : AggregateAddr(AggregateAddr), K(K) {}
 
   public:
     static bool needsSaving(RValue value);
     static saved_type save(CIRGenFunction &CGF, RValue value);
-    RValue restore(CIRGenFunction &CGF) { llvm_unreachable("NYI"); }
-
-    // implementations in CGCleanup.cpp
+    RValue restore(CIRGenFunction &CGF);
   };
 
   static bool needsSaving(type value) { return saved_type::needsSaving(value); }
