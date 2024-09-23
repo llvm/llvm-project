@@ -1660,7 +1660,7 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 /// \endcode
 ///
 /// So we need to turn hoisted load/store into cload/cstore.
-static void hoistConditionalLoadsStores(
+static bool hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
     std::optional<bool> Invert) {
@@ -1742,6 +1742,7 @@ static void hoistConditionalLoadsStores(
     MaskedLoadStore->copyMetadata(*I);
     I->eraseFromParent();
   }
+  return true;
 }
 
 static bool isSafeCheapLoadStore(const Instruction *I,
@@ -1803,8 +1804,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     }
 
     if (!SpeculatedConditionalLoadsStores.empty())
-      hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                  std::nullopt);
+      return hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
+                                         std::nullopt);
   }
 
   // The second of pair is a SkipFlags bitmask.
