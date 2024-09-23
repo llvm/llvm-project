@@ -13860,7 +13860,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     // enclosing class.
     // FIXME: We should also explain why the candidates found by name lookup
     // were not viable.
-    if (SemaRef.DiagnoseDependentMemberLookup(R))
+    if (SemaRef.DiagnoseDependentMemberLookup(R, ExplicitTemplateArgs))
       return ExprError();
   } else {
     // We had viable candidates and couldn't recover; let the caller diagnose

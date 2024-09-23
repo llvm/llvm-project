@@ -2385,7 +2385,15 @@ static void emitEmptyLookupTypoDiagnostic(
                          SemaRef.PDiag(NoteID));
 }
 
-bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
+bool Sema::DiagnoseDependentMemberLookup(
+    const LookupResult &R, TemplateArgumentListInfo *ExplicitTemplateArgs) {
+  auto IsTemplated = [](NamedDecl *D) { return D->isTemplated(); };
+  if (ExplicitTemplateArgs && !llvm::all_of(R, IsTemplated)) {
+    Diag(R.getNameLoc(), diag::err_non_template_in_template_id)
+        << R.getLookupName();
+    return true;
+  }
+
   // During a default argument instantiation the CurContext points
   // to a CXXMethodDecl; but we can't apply a this-> fixit inside a
   // function parameter list, hence add an explicit check.
@@ -2487,7 +2495,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
           R.resolveKind();
         }
 
-        return DiagnoseDependentMemberLookup(R);
+        return DiagnoseDependentMemberLookup(R, ExplicitTemplateArgs);
       }
 
       R.clear();
