@@ -1,4 +1,8 @@
 // RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -verify %s \
+// RUN:   -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection,unix.Malloc \
 // RUN:   -verify %s \
 // RUN:   -Wno-undefined-bool-conversion
@@ -860,9 +864,9 @@ namespace alloca_region_pointer {
 void callee(char **pptr) {
   char local;
   *pptr = &local;
-}
+} // no crash
 
-void top_alloca_no_crash() {
+void top_alloca_no_crash_fn() {
   char **pptr = (char**)__builtin_alloca(sizeof(char*));
   callee(pptr);
 }
