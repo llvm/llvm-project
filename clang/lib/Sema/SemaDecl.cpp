@@ -6058,6 +6058,10 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
 
+  if (Dcl) {
+    CheckExternDecl(Dcl);
+  }
+
   if (!Bases.empty())
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
                                                                         Bases);
@@ -20353,4 +20357,34 @@ bool Sema::diagnoseConflictingFunctionEffect(
   }
 
   return false;
+}
+
+void Sema::CheckExternDecl(Decl *D) {
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    SourceLocation Loc = FD->getLocation();
+    SourceManager &SM = Context.getSourceManager();
+
+    // Only consider extern function declarations (not definitions) in the main
+    // file
+    if (FD->isExternC() && !FD->isImplicit() && !FD->getBuiltinID() &&
+        !FD->hasBody() && !FD->isThisDeclarationADefinition() &&
+        FD->isFirstDecl() && SM.isInMainFile(Loc)) {
+      // Defer the warning check until the end of the translation unit
+      ExternFuncDecls.push_back(FD);
+    }
+  }
+}
+
+void Sema::CheckDeferredExternDecls() {
+  SourceManager &SM = Context.getSourceManager();
+  for (FunctionDecl *FD : ExternFuncDecls) {
+    // Check if there's a definition in the same file
+    const FunctionDecl *Definition = FD->getDefinition();
+    if (!Definition || !SM.isInMainFile(Definition->getLocation())) {
+      SourceLocation Loc = FD->getLocation();
+      Diag(Loc, diag::warn_extern_func_not_in_header)
+          << FD->getName() << SM.getFilename(Loc);
+    }
+  }
+  ExternFuncDecls.clear();
 }

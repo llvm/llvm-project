@@ -12614,4 +12614,10 @@ def err_acc_loop_spec_conflict
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
+
+// SemaExternWarning diagnostics
+def warn_extern_func_not_in_header : Warning<
+  "extern function '%0' declared in main file '%1' instead of a header">,
+  InGroup<ExternalDeclaration>, DefaultIgnore;
+
 } // end of sema component.
