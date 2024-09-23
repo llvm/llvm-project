@@ -3061,11 +3061,13 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
     llvm::SmallVector<StringRef, 8> AttrStrs;
     AttrStr.split(AttrStrs, ';');
 
+    bool HasArch = false;
     bool HasPriority = false;
     bool IsDefault = false;
     for (auto &AttrStr : AttrStrs) {
       // Only support arch=+ext,... syntax.
       if (AttrStr.starts_with("arch=+")) {
+        HasArch = true;
         ParsedTargetAttr TargetAttr =
             Context.getTargetInfo().parseTargetAttr(AttrStr);
 
@@ -3089,7 +3091,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       }
     }
 
-    if (HasPriority && IsDefault)
+    if ((HasPriority || HasArch) && IsDefault)
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << AttrStr << TargetVersion;
 

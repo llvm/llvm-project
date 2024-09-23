@@ -51,3 +51,15 @@ __attribute__((target_version("default;priority=2"))) int UnsupportDefaultPriori
 __attribute__((target_version("arch=+c,zbb"))) int WithoutAddSign(void) { return 2;}
 // expected-error@+1 {{redefinition of 'WithoutAddSign'}}
 __attribute__((target_version("default"))) int WithoutAddSign(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'arch=+c;default' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("arch=+c;default"))) int DefaultInVersion(void) { return 2;}
+// expected-error@+1 {{redefinition of 'DefaultInVersion'}}
+__attribute__((target_version("default"))) int DefaultInVersion(void) { return 2; }
+
+// expected-warning@+2 {{unsupported '' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("arch=+c;"))) int EmptyVersionAfterSemiColon(void) { return 2;}
+// expected-error@+1 {{redefinition of 'EmptyVersionAfterSemiColon'}}
+__attribute__((target_version("default"))) int EmptyVersionAfterSemiColon(void) { return 2; }
