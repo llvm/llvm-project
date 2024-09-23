@@ -346,6 +346,7 @@ protected:
   friend class NoCFIValue;            // For `Val`.
   friend class ConstantPtrAuth;       // For `Val`.
   friend class ConstantExpr;          // For `Val`.
+  friend class Utils;                 // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
