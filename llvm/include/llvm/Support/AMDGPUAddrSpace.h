@@ -95,7 +95,7 @@ inline bool isExtendedGlobalAddrSpace(unsigned AS) {
 }
 
 inline bool isConstantAddressSpace(unsigned AS) {
-  switch(AS) {
+  switch (AS) {
     using namespace AMDGPUAS;
   case CONSTANT_ADDRESS:
   case CONSTANT_ADDRESS_32BIT:

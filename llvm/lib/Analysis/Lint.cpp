@@ -103,6 +103,8 @@ class Lint : public InstVisitor<Lint> {
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
   void visitStoreInst(StoreInst &I);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  void visitAtomicRMWInst(AtomicRMWInst &I);
   void visitXor(BinaryOperator &I);
   void visitSub(BinaryOperator &I);
   void visitLShr(BinaryOperator &I);
@@ -122,6 +124,7 @@ class Lint : public InstVisitor<Lint> {
   Value *findValue(Value *V, bool OffsetOk) const;
   Value *findValueImpl(Value *V, bool OffsetOk,
                        SmallPtrSetImpl<Value *> &Visited) const;
+
 public:
   Module *Mod;
   Triple TT;
@@ -136,9 +139,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())),
-	DL(DL), AA(AA), AC(AC), DT(DT), TLI(TLI),
-        MessagesStr(Messages) {}
+      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
+        AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
@@ -404,8 +406,9 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
   if (Flags & MemRef::Write) {
     if (TT.isAMDGPU())
-      Check(!AMDGPU::isConstantAddressSpace(UnderlyingObject->getType()->getPointerAddressSpace()),
-        "Undefined behavior: Write to const memory", &I);
+      Check(!AMDGPU::isConstantAddressSpace(
+                UnderlyingObject->getType()->getPointerAddressSpace()),
+            "Undefined behavior: Write to memory in const addrspace", &I);
 
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
       Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
@@ -482,6 +485,16 @@ void Lint::visitLoadInst(LoadInst &I) {
 }
 
 void Lint::visitStoreInst(StoreInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicRMWInst(AtomicRMWInst &I) {
   visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
                        I.getOperand(0)->getType(), MemRef::Write);
 }
