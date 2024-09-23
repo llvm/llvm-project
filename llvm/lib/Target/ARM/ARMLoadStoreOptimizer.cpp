@@ -3289,7 +3289,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
         continue;
 
       Register Base = MI.getOperand(BaseOp).getReg();
-      if (!Base.isVirtual() || Visited.count(Base))
+      if (!Base.isVirtual())
         continue;
 
       Visited.insert(Base);

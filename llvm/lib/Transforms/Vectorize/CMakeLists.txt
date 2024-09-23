@@ -16,6 +16,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanRecipes.cpp
   VPlanSLP.cpp
   VPlanTransforms.cpp
+  VPlanUnroll.cpp
   VPlanVerifier.cpp
   VPlanUtils.cpp
 

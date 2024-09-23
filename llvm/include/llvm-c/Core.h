@@ -395,6 +395,9 @@ typedef enum {
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
                                the input value when decremented below zero */
+  LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
+                                 overflow */
+  LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -4523,6 +4526,9 @@ LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  const char *Name);
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
                                    const char *Name);
+/**
+ * Deprecated: Use LLVMBuildGlobalString instead, which has identical behavior.
+ */
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name);
 LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);

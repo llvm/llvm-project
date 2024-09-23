@@ -7892,6 +7892,13 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
       return Context.TypePackElementDecl;
     NewLoaded = Context.getTypePackElementDecl();
     break;
+
+  case PREDEF_DECL_COMMON_TYPE_ID:
+    if (Context.BuiltinCommonTypeDecl)
+      return Context.BuiltinCommonTypeDecl;
+    NewLoaded = Context.getBuiltinCommonTypeDecl();
+    break;
+
   case NUM_PREDEF_DECL_IDS:
     llvm_unreachable("Invalid decl ID");
     break;
@@ -9969,8 +9976,7 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->setCommonPtr(
-          RTD->getCommonPtrInternal());
+      cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
   }
   PendingDefinitions.clear();
 

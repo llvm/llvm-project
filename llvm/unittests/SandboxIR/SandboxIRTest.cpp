@@ -14,6 +14,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -1142,6 +1143,61 @@ define void @foo() {
   EXPECT_EQ(NoCFI->getType(), F.getType());
 }
 
+TEST_F(SandboxIRTest, ConstantPtrAuth) {
+  parseIR(C, R"IR(
+define ptr @foo() {
+  ret ptr ptrauth (ptr @foo, i32 2, i64 1234)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto *LLVMRet = cast<llvm::ReturnInst>(&*LLVMBB->begin());
+  auto *LLVMPtrAuth = cast<llvm::ConstantPtrAuth>(LLVMRet->getReturnValue());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  auto *PtrAuth = cast<sandboxir::ConstantPtrAuth>(Ret->getReturnValue());
+  // Check get(), getKey(), getDiscriminator(), getAddrDiscriminator().
+  auto *NewPtrAuth = sandboxir::ConstantPtrAuth::get(
+      &F, PtrAuth->getKey(), PtrAuth->getDiscriminator(),
+      PtrAuth->getAddrDiscriminator());
+  EXPECT_EQ(NewPtrAuth, PtrAuth);
+  // Check hasAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasAddressDiscriminator(),
+            LLVMPtrAuth->hasAddressDiscriminator());
+  // Check hasSpecialAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasSpecialAddressDiscriminator(0u),
+            LLVMPtrAuth->hasSpecialAddressDiscriminator(0u));
+  // Check isKnownCompatibleWith().
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_TRUE(PtrAuth->isKnownCompatibleWith(PtrAuth->getKey(),
+                                             PtrAuth->getDiscriminator(), DL));
+  // Check getWithSameSchema().
+  EXPECT_EQ(PtrAuth->getWithSameSchema(&F), PtrAuth);
+}
+
+TEST_F(SandboxIRTest, ConstantExpr) {
+  parseIR(C, R"IR(
+define i32 @foo() {
+  ret i32 ptrtoint (ptr @foo to i32)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  [[maybe_unused]] auto *ConstExpr =
+      cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -1336,6 +1392,8 @@ OperandNo: 0
   EXPECT_TRUE(I0->hasNUses(1u));
   EXPECT_FALSE(I0->hasNUses(2u));
 
+  // Check Value.getExpectedType
+
   // Check User.setOperand().
   Ret->setOperand(0, Arg0);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
@@ -1399,13 +1457,74 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   Replaced = Ret->replaceUsesOfWith(I0, Arg0);
   EXPECT_TRUE(Replaced);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
-
   // Check RAUW on constant.
   auto *Glob0 = cast<sandboxir::Constant>(I1->getOperand(0));
   auto *Glob1 = cast<sandboxir::Constant>(I2->getOperand(0));
   auto *Glob0Op = Glob0->getOperand(0);
   Glob0->replaceUsesOfWith(Glob0Op, Glob1);
   EXPECT_EQ(Glob0->getOperand(0), Glob1);
+}
+
+TEST_F(SandboxIRTest, GetExpected) {
+  parseIR(C, R"IR(
+define float @foo(float %v, ptr %ptr) {
+  %add = fadd float %v, %v
+  store float %v, ptr %ptr
+  ret float %v
+}
+define void @bar(float %v, ptr %ptr) {
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  Ctx.createFunction(&Foo);
+  auto *FooBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Foo.begin()));
+  auto FooIt = FooBB->begin();
+  auto Add = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *S0 = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *RetF = cast<sandboxir::Instruction>(&*FooIt++);
+  // getExpectedValue
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(Add), Add);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(S0),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand());
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue());
+  // getExpectedType
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(Add), Add->getType());
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(S0),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand()->getType());
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue()->getType());
+
+  // getExpectedValue for void returns
+  llvm::Function &Bar = *M->getFunction("bar");
+  Ctx.createFunction(&Bar);
+  auto *BarBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Bar.begin()));
+  auto BarIt = BarBB->begin();
+  auto *RetV = cast<sandboxir::Instruction>(&*BarIt++);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetV), nullptr);
+}
+
+TEST_F(SandboxIRTest, GetNumBits) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
+bb0:
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+  const DataLayout &DL = M->getDataLayout();
+  // getNumBits for scalars
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
 }
 
 TEST_F(SandboxIRTest, RAUW_RUWIf) {
