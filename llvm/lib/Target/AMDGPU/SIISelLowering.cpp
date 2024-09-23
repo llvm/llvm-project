@@ -912,6 +912,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
+  if (Subtarget->hasBF16ConversionInsts()) {
+    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
+  }
+
   if (Subtarget->hasBF16PackedInsts()) {
     setOperationAction(
         {ISD::FADD, ISD::FMUL, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMA},
