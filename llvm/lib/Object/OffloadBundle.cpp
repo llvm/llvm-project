@@ -1,11 +1,10 @@
-//===- OffloadBundle.cpp - Utilities for handling offloading code  -*- C++
-//-*-===//
+//===- OffloadBundle.cpp - Utilities for offload bundles---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------===//
 
 #include "llvm/Object/OffloadBundle.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -79,9 +78,8 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
 
   // Read the Magic String first.
   StringRef Magic;
-  if (auto EC = Reader.readFixedString(Magic, 24)) {
+  if (auto EC = Reader.readFixedString(Magic, 24))
     return errorCodeToError(object_error::parse_failed);
-  }
 
   // Read the number of Code Objects (Entries) in the current Bundle.
   if (auto EC = Reader.readInteger(NumOfEntries))
@@ -108,9 +106,8 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
     if (auto EC = Reader.readFixedString(EntryID, EntryIDSize))
       return errorCodeToError(object_error::parse_failed);
 
-    // create a Bundle Entry object:
-    auto Entry = new OffloadBundleEntry(EntryOffset + SectionOffset, EntrySize,
-                                        EntryIDSize, EntryID);
+    auto Entry = std::make_unique<OffloadBundleEntry>(
+        EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID);
 
     Entries.push_back(*Entry);
   }
@@ -142,15 +139,16 @@ Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {
   // This will extract all entries in the Bundle
   for (OffloadBundleEntry &Entry : Entries) {
 
-    if (Entry.Size > 0) {
-      // create output file name. Which should be
-      // <fileName>-offset<Offset>-size<Size>.co"
-      std::string Str = getFileName().str() + "-offset" + itostr(Entry.Offset) +
-                        "-size" + itostr(Entry.Size) + ".co";
-      if (Error Err = object::extractCodeObject(Source, Entry.Offset,
-                                                Entry.Size, StringRef(Str)))
-        return Err;
-    }
+    if (Entry.Size == 0)
+      continue;
+
+    // create output file name. Which should be
+    // <fileName>-offset<Offset>-size<Size>.co"
+    std::string Str = getFileName().str() + "-offset" + itostr(Entry.Offset) +
+                      "-size" + itostr(Entry.Size) + ".co";
+    if (Error Err = object::extractCodeObject(Source, Entry.Offset, Entry.Size,
+                                              StringRef(Str)))
+      return Err;
   }
 
   return Error::success();
@@ -160,7 +158,7 @@ Error object::extractOffloadBundleFatBinary(
     const ObjectFile &Obj, SmallVectorImpl<OffloadBundleFatBin> &Bundles) {
   assert((Obj.isELF() || Obj.isCOFF()) && "Invalid file type");
 
-  // iterate through Sections until we find an offload_bundle section.
+  // Iterate through Sections until we find an offload_bundle section.
   for (SectionRef Sec : Obj.sections()) {
     Expected<StringRef> Buffer = Sec.getContents();
     if (!Buffer)
@@ -174,11 +172,9 @@ Error object::extractOffloadBundleFatBinary(
       uint64_t SectionOffset = 0;
       if (Obj.isELF()) {
         SectionOffset = ELFSectionRef(Sec).getOffset();
-      } else if (Obj.isCOFF()) {
-        if (const COFFObjectFile *COFFObj = dyn_cast<COFFObjectFile>(&Obj)) {
-          const coff_section *CoffSection = COFFObj->getCOFFSection(Sec);
-        }
-      }
+      } else if (Obj.isCOFF()) // TODO: add COFF Support
+        return createStringError(object_error::parse_failed,
+                                 "COFF object files not supported.\n");
 
       MemoryBufferRef Contents(*Buffer, Obj.getFileName());
 
@@ -341,7 +337,7 @@ CompressedOffloadBundle::decompress(llvm::MemoryBufferRef &Input,
     double DecompressionTimeSeconds =
         DecompressTimer.getTotalTime().getWallTime();
 
-    // Recalculate MD5 hash for integrity check
+    // Recalculate MD5 hash for integrity check.
     llvm::Timer HashRecalcTimer("Hash Recalculation Timer",
                                 "Hash recalculation time",
                                 OffloadBundlerTimerGroup);
