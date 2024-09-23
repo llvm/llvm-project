@@ -9,10 +9,21 @@
 ; Per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
 ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
+; TODO: generate PTX that preserves Concurrent Forward Progress
+;       for atomic operations to local statespace
+;       by generating atomic or volatile operations.
+
+; TODO: design exposure for atomic operations on vector types.
+
+; TODO: add weak,atomic,volatile,atomic volatile tests
+;       for .const and .param statespaces.
+
+; TODO: optimize .sys.shared into .cta.shared or .cluster.shared .
+
 ; generic statespace
 
-; CHECK-LABEL: generic_plain
-define void @generic_plain(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
+; CHECK-LABEL: generic_weak
+define void @generic_weak(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
   ; CHECK: ld.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load i8, ptr %a
   %a.add = add i8 %a.load, 1
@@ -238,102 +249,8 @@ define void @generic_volatile(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr
   ret void
 }
 
-; CHECK-LABEL: generic_monotonic
-define void @generic_monotonic(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-  ; SM60: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic i8, ptr %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; SM60: st.volatile.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i8 %a.add, ptr %a monotonic, align 1
-
-  ; SM60: ld.volatile.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic i16, ptr %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; SM60: st.volatile.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i16 %b.add, ptr %b monotonic, align 2
-
-  ; SM60: ld.volatile.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic i32, ptr %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; SM60: st.volatile.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  ; SM70: st.relaxed.sys.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic i32 %c.add, ptr %c monotonic, align 4
-
-  ; SM60: ld.volatile.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic i64, ptr %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; SM60: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic i64 %d.add, ptr %d monotonic, align 8
-
-  ; SM60: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic float, ptr %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; SM60: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  ; SM70: st.relaxed.sys.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic float %e.add, ptr %e monotonic, align 4
-
-  ; SM60: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic double, ptr %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; SM60: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic double %f.add, ptr %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: generic_monotonic_volatile
-define void @generic_monotonic_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-  ; CHECK: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic volatile i8, ptr %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; CHECK: st.volatile.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i8 %a.add, ptr %a monotonic, align 1
-
-  ; CHECK: ld.volatile.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic volatile i16, ptr %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; CHECK: st.volatile.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i16 %b.add, ptr %b monotonic, align 2
-
-  ; CHECK: ld.volatile.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic volatile i32, ptr %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; CHECK: st.volatile.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic volatile i32 %c.add, ptr %c monotonic, align 4
-
-  ; CHECK: ld.volatile.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic volatile i64, ptr %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; CHECK: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic volatile i64 %d.add, ptr %d monotonic, align 8
-
-  ; CHECK: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic volatile float, ptr %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; CHECK: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic volatile float %e.add, ptr %e monotonic, align 4
-
-  ; CHECK: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic volatile double, ptr %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; CHECK: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic volatile double %f.add, ptr %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: generic_unordered
-define void @generic_unordered(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_sys
+define void @generic_unordered_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
   ; SM60: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   ; SM70: ld.relaxed.sys.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr %a unordered, align 1
@@ -385,8 +302,8 @@ define void @generic_unordered(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unn
   ret void
 }
 
-; CHECK-LABEL: generic_unordered_volatile
-define void @generic_unordered_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys
+define void @generic_unordered_volatile_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
   ; CHECK: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -426,10 +343,104 @@ define void @generic_unordered_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) 
   ret void
 }
 
+; CHECK-LABEL: generic_monotonic_sys
+define void @generic_monotonic_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
+  ; SM60: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic i8, ptr %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; SM60: st.volatile.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i8 %a.add, ptr %a monotonic, align 1
+
+  ; SM60: ld.volatile.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic i16, ptr %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; SM60: st.volatile.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i16 %b.add, ptr %b monotonic, align 2
+
+  ; SM60: ld.volatile.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic i32, ptr %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; SM60: st.volatile.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM70: st.relaxed.sys.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic i32 %c.add, ptr %c monotonic, align 4
+
+  ; SM60: ld.volatile.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic i64, ptr %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; SM60: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic i64 %d.add, ptr %d monotonic, align 8
+
+  ; SM60: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, ptr %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; SM60: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM70: st.relaxed.sys.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, ptr %e monotonic, align 4
+
+  ; SM60: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; SM60: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr %e monotonic, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: generic_monotonic_volatile_sys
+define void @generic_monotonic_volatile_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
+  ; CHECK: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic volatile i8, ptr %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; CHECK: st.volatile.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i8 %a.add, ptr %a monotonic, align 1
+
+  ; CHECK: ld.volatile.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic volatile i16, ptr %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; CHECK: st.volatile.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i16 %b.add, ptr %b monotonic, align 2
+
+  ; CHECK: ld.volatile.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic volatile i32, ptr %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; CHECK: st.volatile.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic volatile i32 %c.add, ptr %c monotonic, align 4
+
+  ; CHECK: ld.volatile.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic volatile i64, ptr %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; CHECK: st.volatile.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic volatile i64 %d.add, ptr %d monotonic, align 8
+
+  ; CHECK: ld.volatile.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic volatile float, ptr %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.volatile.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic volatile float %e.add, ptr %e monotonic, align 4
+
+  ; CHECK: ld.volatile.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic volatile double, ptr %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.volatile.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic volatile double %f.add, ptr %e monotonic, align 8
+
+  ret void
+}
+
 ;; global statespace
 
-; CHECK-LABEL: global_plain
-define void @global_plain(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d) local_unnamed_addr {
+; CHECK-LABEL: global_weak
+define void @global_weak(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d) local_unnamed_addr {
   ; CHECK: ld.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load i8, ptr addrspace(1) %a
   %a.add = add i8 %a.load, 1
@@ -630,114 +641,8 @@ define void @global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrs
   ret void
 }
 
-; CHECK-LABEL: global_monotonic
-define void @global_monotonic(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-  ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic i8, ptr addrspace(1) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; SM60: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i8 %a.add, ptr addrspace(1) %a monotonic, align 1
-
-  ; SM60: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic i16, ptr addrspace(1) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; SM60: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i16 %b.add, ptr addrspace(1) %b monotonic, align 2
-
-  ; SM60: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic i32, ptr addrspace(1) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; SM60: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic i32 %c.add, ptr addrspace(1) %c monotonic, align 4
-
-  ; SM60: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic i64, ptr addrspace(1) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; SM60: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic i64 %d.add, ptr addrspace(1) %d monotonic, align 8
-
-  ; SM60: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic float, ptr addrspace(1) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; SM60: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic float %e.add, ptr addrspace(1) %e monotonic, align 4
-
-  ; SM60: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic double, ptr addrspace(1) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; SM60: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic double %f.add, ptr addrspace(1) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: global_monotonic_volatile
-define void @global_monotonic_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-  ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic volatile i8, ptr addrspace(1) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; SM60: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i8 %a.add, ptr addrspace(1) %a monotonic, align 1
-
-  ; SM60: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic volatile i16, ptr addrspace(1) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; SM60: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i16 %b.add, ptr addrspace(1) %b monotonic, align 2
-
-  ; SM60: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic volatile i32, ptr addrspace(1) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; SM60: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic volatile i32 %c.add, ptr addrspace(1) %c monotonic, align 4
-
-  ; SM60: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic volatile i64, ptr addrspace(1) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; SM60: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic volatile i64 %d.add, ptr addrspace(1) %d monotonic, align 8
-
-  ; SM60: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic volatile float, ptr addrspace(1) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; SM60: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic volatile float %e.add, ptr addrspace(1) %e monotonic, align 4
-
-  ; SM60: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.mmio.relaxed.sys.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic volatile double, ptr addrspace(1) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; SM60: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  ; SM70: st.mmio.relaxed.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic volatile double %f.add, ptr addrspace(1) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: global_unordered
-define void @global_unordered(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
+; CHECK-LABEL: global_unordered_sys
+define void @global_unordered_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
   ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   ; SM70: ld.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr addrspace(1) %a unordered, align 1
@@ -789,8 +694,8 @@ define void @global_unordered(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addr
   ret void
 }
 
-; CHECK-LABEL: global_unordered_volatile
-define void @global_unordered_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
+; CHECK-LABEL: global_unordered_volatile_sys
+define void @global_unordered_volatile_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
   ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   ; SM70: ld.mmio.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(1) %a unordered, align 1
@@ -842,10 +747,116 @@ define void @global_unordered_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b,
   ret void
 }
 
+; CHECK-LABEL: global_monotonic_sys
+define void @global_monotonic_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
+  ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic i8, ptr addrspace(1) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; SM60: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i8 %a.add, ptr addrspace(1) %a monotonic, align 1
+
+  ; SM60: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic i16, ptr addrspace(1) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; SM60: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i16 %b.add, ptr addrspace(1) %b monotonic, align 2
+
+  ; SM60: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic i32, ptr addrspace(1) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; SM60: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic i32 %c.add, ptr addrspace(1) %c monotonic, align 4
+
+  ; SM60: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic i64, ptr addrspace(1) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; SM60: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic i64 %d.add, ptr addrspace(1) %d monotonic, align 8
+
+  ; SM60: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, ptr addrspace(1) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; SM60: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, ptr addrspace(1) %e monotonic, align 4
+
+  ; SM60: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr addrspace(1) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; SM60: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr addrspace(1) %e monotonic, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: global_monotonic_volatile_sys
+define void @global_monotonic_volatile_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
+  ; SM60: ld.volatile.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic volatile i8, ptr addrspace(1) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; SM60: st.volatile.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i8 %a.add, ptr addrspace(1) %a monotonic, align 1
+
+  ; SM60: ld.volatile.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic volatile i16, ptr addrspace(1) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; SM60: st.volatile.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i16 %b.add, ptr addrspace(1) %b monotonic, align 2
+
+  ; SM60: ld.volatile.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic volatile i32, ptr addrspace(1) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; SM60: st.volatile.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic volatile i32 %c.add, ptr addrspace(1) %c monotonic, align 4
+
+  ; SM60: ld.volatile.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic volatile i64, ptr addrspace(1) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; SM60: st.volatile.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic volatile i64 %d.add, ptr addrspace(1) %d monotonic, align 8
+
+  ; SM60: ld.volatile.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic volatile float, ptr addrspace(1) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; SM60: st.volatile.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic volatile float %e.add, ptr addrspace(1) %e monotonic, align 4
+
+  ; SM60: ld.volatile.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.mmio.relaxed.sys.global.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic volatile double, ptr addrspace(1) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; SM60: st.volatile.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM70: st.mmio.relaxed.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic volatile double %f.add, ptr addrspace(1) %e monotonic, align 8
+
+  ret void
+}
+
 ;; shared statespace
 
-; CHECK-LABEL: shared_plain
-define void @shared_plain(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) local_unnamed_addr {
+; CHECK-LABEL: shared_weak
+define void @shared_weak(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) local_unnamed_addr {
   ; CHECK: ld.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load i8, ptr addrspace(3) %a
   %a.add = add i8 %a.load, 1
@@ -1046,106 +1057,8 @@ define void @shared_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrs
   ret void
 }
 
-; CHECK-LABEL: shared_monotonic
-define void @shared_monotonic(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-  ; TODO: optimize .sys.shared to .cta.shared or .cluster.shared.
-
-  ; SM60: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic i8, ptr addrspace(3) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; SM60: st.volatile.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i8 %a.add, ptr addrspace(3) %a monotonic, align 1
-
-  ; SM60: ld.volatile.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic i16, ptr addrspace(3) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; SM60: st.volatile.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i16 %b.add, ptr addrspace(3) %b monotonic, align 2
-
-  ; SM60: ld.volatile.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic i32, ptr addrspace(3) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; SM60: st.volatile.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic i32 %c.add, ptr addrspace(3) %c monotonic, align 4
-
-  ; SM60: ld.volatile.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic i64, ptr addrspace(3) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; SM60: st.volatile.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic i64 %d.add, ptr addrspace(3) %d monotonic, align 8
-
-  ; SM60: ld.volatile.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic float, ptr addrspace(3) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; SM60: st.volatile.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic float %e.add, ptr addrspace(3) %e monotonic, align 4
-
-  ; SM60: ld.volatile.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  ; SM70: ld.relaxed.sys.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic double, ptr addrspace(3) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; SM60: st.volatile.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  ; SM70: st.relaxed.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic double %f.add, ptr addrspace(3) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: shared_monotonic_volatile
-define void @shared_monotonic_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-  ; CHECK: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic volatile i8, ptr addrspace(3) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; CHECK: st.volatile.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i8 %a.add, ptr addrspace(3) %a monotonic, align 1
-
-  ; CHECK: ld.volatile.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic volatile i16, ptr addrspace(3) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; CHECK: st.volatile.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i16 %b.add, ptr addrspace(3) %b monotonic, align 2
-
-  ; CHECK: ld.volatile.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic volatile i32, ptr addrspace(3) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; CHECK: st.volatile.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic volatile i32 %c.add, ptr addrspace(3) %c monotonic, align 4
-
-  ; CHECK: ld.volatile.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic volatile i64, ptr addrspace(3) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; CHECK: st.volatile.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic volatile i64 %d.add, ptr addrspace(3) %d monotonic, align 8
-
-  ; CHECK: ld.volatile.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic volatile float, ptr addrspace(3) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; CHECK: st.volatile.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic volatile float %e.add, ptr addrspace(3) %e monotonic, align 4
-
-  ; CHECK: ld.volatile.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic volatile double, ptr addrspace(3) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; CHECK: st.volatile.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic volatile double %f.add, ptr addrspace(3) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: shared_unordered
-define void @shared_unordered(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-  ; TODO: optimize .sys.shared to .cta.shared or .cluster.shared.
-
+; CHECK-LABEL: shared_unordered_sys
+define void @shared_unordered_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
   ; SM60: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   ; SM70: ld.relaxed.sys.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr addrspace(3) %a unordered, align 1
@@ -1197,8 +1110,8 @@ define void @shared_unordered(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addr
   ret void
 }
 
-; CHECK-LABEL: shared_unordered_volatile
-define void @shared_unordered_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys
+define void @shared_unordered_volatile_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
   ; CHECK: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(3) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -1238,10 +1151,104 @@ define void @shared_unordered_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b,
   ret void
 }
 
+; CHECK-LABEL: shared_monotonic_sys
+define void @shared_monotonic_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
+  ; SM60: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic i8, ptr addrspace(3) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; SM60: st.volatile.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i8 %a.add, ptr addrspace(3) %a monotonic, align 1
+
+  ; SM60: ld.volatile.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic i16, ptr addrspace(3) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; SM60: st.volatile.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i16 %b.add, ptr addrspace(3) %b monotonic, align 2
+
+  ; SM60: ld.volatile.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic i32, ptr addrspace(3) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; SM60: st.volatile.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic i32 %c.add, ptr addrspace(3) %c monotonic, align 4
+
+  ; SM60: ld.volatile.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic i64, ptr addrspace(3) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; SM60: st.volatile.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic i64 %d.add, ptr addrspace(3) %d monotonic, align 8
+
+  ; SM60: ld.volatile.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, ptr addrspace(3) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; SM60: st.volatile.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, ptr addrspace(3) %e monotonic, align 4
+
+  ; SM60: ld.volatile.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  ; SM70: ld.relaxed.sys.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr addrspace(3) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; SM60: st.volatile.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  ; SM70: st.relaxed.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr addrspace(3) %e monotonic, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: shared_monotonic_volatile_sys
+define void @shared_monotonic_volatile_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
+  ; CHECK: ld.volatile.shared.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic volatile i8, ptr addrspace(3) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; CHECK: st.volatile.shared.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i8 %a.add, ptr addrspace(3) %a monotonic, align 1
+
+  ; CHECK: ld.volatile.shared.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic volatile i16, ptr addrspace(3) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; CHECK: st.volatile.shared.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i16 %b.add, ptr addrspace(3) %b monotonic, align 2
+
+  ; CHECK: ld.volatile.shared.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic volatile i32, ptr addrspace(3) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; CHECK: st.volatile.shared.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic volatile i32 %c.add, ptr addrspace(3) %c monotonic, align 4
+
+  ; CHECK: ld.volatile.shared.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic volatile i64, ptr addrspace(3) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; CHECK: st.volatile.shared.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic volatile i64 %d.add, ptr addrspace(3) %d monotonic, align 8
+
+  ; CHECK: ld.volatile.shared.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic volatile float, ptr addrspace(3) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.volatile.shared.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic volatile float %e.add, ptr addrspace(3) %e monotonic, align 4
+
+  ; CHECK: ld.volatile.shared.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic volatile double, ptr addrspace(3) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.volatile.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic volatile double %f.add, ptr addrspace(3) %e monotonic, align 8
+
+  ret void
+}
+
 ;; local statespace
 
-; CHECK-LABEL: local_plain
-define void @local_plain(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d) local_unnamed_addr {
+; CHECK-LABEL: local_weak
+define void @local_weak(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d) local_unnamed_addr {
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
@@ -1343,9 +1350,6 @@ define void @local_plain(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace
 
 ; CHECK-LABEL: local_volatile
 define void @local_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d) local_unnamed_addr {
-  ; TODO: generate PTX that preserves Concurrent Forward Progress
-  ;       by using volatile operations.
-
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load volatile i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
@@ -1445,96 +1449,8 @@ define void @local_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrsp
   ret void
 }
 
-; CHECK-LABEL: local_monotonic
-define void @local_monotonic(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: generate PTX that preserves Concurrent Forward Progress
-  ;       by using PTX atomic operations.
-
-  ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic i8, ptr addrspace(5) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; CHECK: st.local.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i8 %a.add, ptr addrspace(5) %a monotonic, align 1
-
-  ; CHECK: ld.local.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic i16, ptr addrspace(5) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; CHECK: st.local.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic i16 %b.add, ptr addrspace(5) %b monotonic, align 2
-
-  ; CHECK: ld.local.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic i32, ptr addrspace(5) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; CHECK: st.local.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic i32 %c.add, ptr addrspace(5) %c monotonic, align 4
-
-  ; CHECK: ld.local.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic i64, ptr addrspace(5) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; CHECK: st.local.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic i64 %d.add, ptr addrspace(5) %d monotonic, align 8
-
-  ; CHECK: ld.local.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic float, ptr addrspace(5) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; CHECK: st.local.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic float %e.add, ptr addrspace(5) %e monotonic, align 4
-
-  ; CHECK: ld.local.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic double, ptr addrspace(5) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic double %f.add, ptr addrspace(5) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: local_monotonic_volatile
-define void @local_monotonic_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: generate PTX that preserves Concurrent Forward Progress
-  ;       by generating atomic or volatile operations
-
-  ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %a.load = load atomic volatile i8, ptr addrspace(5) %a monotonic, align 1
-  %a.add = add i8 %a.load, 1
-  ; CHECK: st.local.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i8 %a.add, ptr addrspace(5) %a monotonic, align 1
-
-  ; CHECK: ld.local.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %b.load = load atomic volatile i16, ptr addrspace(5) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  ; CHECK: st.local.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
-  store atomic volatile i16 %b.add, ptr addrspace(5) %b monotonic, align 2
-
-  ; CHECK: ld.local.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %c.load = load atomic volatile i32, ptr addrspace(5) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  ; CHECK: st.local.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
-  store atomic volatile i32 %c.add, ptr addrspace(5) %c monotonic, align 4
-
-  ; CHECK: ld.local.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %d.load = load atomic volatile i64, ptr addrspace(5) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  ; CHECK: st.local.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
-  store atomic volatile i64 %d.add, ptr addrspace(5) %d monotonic, align 8
-
-  ; CHECK: ld.local.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %e.load = load atomic volatile float, ptr addrspace(5) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.0
-  ; CHECK: st.local.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
-  store atomic volatile float %e.add, ptr addrspace(5) %e monotonic, align 4
-
-  ; CHECK: ld.local.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
-  %f.load = load atomic volatile double, ptr addrspace(5) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
-  store atomic volatile double %f.add, ptr addrspace(5) %e monotonic, align 8
-
-  ret void
-}
-
-; CHECK-LABEL: local_unordered
-define void @local_unordered(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys
+define void @local_unordered_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -1574,8 +1490,8 @@ define void @local_unordered(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrs
   ret void
 }
 
-; CHECK-LABEL: local_unordered_volatile
-define void @local_unordered_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys
+define void @local_unordered_volatile_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -1615,5 +1531,84 @@ define void @local_unordered_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, 
   ret void
 }
 
-; TODO: add plain,atomic,volatile,atomic volatile tests
-;       for .const and .param statespaces
+; CHECK-LABEL: local_monotonic_sys
+define void @local_monotonic_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
+  ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic i8, ptr addrspace(5) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; CHECK: st.local.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i8 %a.add, ptr addrspace(5) %a monotonic, align 1
+
+  ; CHECK: ld.local.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic i16, ptr addrspace(5) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; CHECK: st.local.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i16 %b.add, ptr addrspace(5) %b monotonic, align 2
+
+  ; CHECK: ld.local.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic i32, ptr addrspace(5) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; CHECK: st.local.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic i32 %c.add, ptr addrspace(5) %c monotonic, align 4
+
+  ; CHECK: ld.local.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic i64, ptr addrspace(5) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; CHECK: st.local.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic i64 %d.add, ptr addrspace(5) %d monotonic, align 8
+
+  ; CHECK: ld.local.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, ptr addrspace(5) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.local.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, ptr addrspace(5) %e monotonic, align 4
+
+  ; CHECK: ld.local.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr addrspace(5) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr addrspace(5) %e monotonic, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: local_monotonic_volatile
+define void @local_monotonic_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
+  ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic volatile i8, ptr addrspace(5) %a monotonic, align 1
+  %a.add = add i8 %a.load, 1
+  ; CHECK: st.local.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i8 %a.add, ptr addrspace(5) %a monotonic, align 1
+
+  ; CHECK: ld.local.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic volatile i16, ptr addrspace(5) %b monotonic, align 2
+  %b.add = add i16 %b.load, 1
+  ; CHECK: st.local.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic volatile i16 %b.add, ptr addrspace(5) %b monotonic, align 2
+
+  ; CHECK: ld.local.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic volatile i32, ptr addrspace(5) %c monotonic, align 4
+  %c.add = add i32 %c.load, 1
+  ; CHECK: st.local.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic volatile i32 %c.add, ptr addrspace(5) %c monotonic, align 4
+
+  ; CHECK: ld.local.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic volatile i64, ptr addrspace(5) %d monotonic, align 8
+  %d.add = add i64 %d.load, 1
+  ; CHECK: st.local.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic volatile i64 %d.add, ptr addrspace(5) %d monotonic, align 8
+
+  ; CHECK: ld.local.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic volatile float, ptr addrspace(5) %e monotonic, align 4
+  %e.add = fadd float %e.load, 1.
+  ; CHECK: st.local.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic volatile float %e.add, ptr addrspace(5) %e monotonic, align 4
+
+  ; CHECK: ld.local.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic volatile double, ptr addrspace(5) %e monotonic, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic volatile double %f.add, ptr addrspace(5) %e monotonic, align 8
+
+  ret void
+}
