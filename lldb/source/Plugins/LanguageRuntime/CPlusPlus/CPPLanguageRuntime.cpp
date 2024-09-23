@@ -92,15 +92,15 @@ public:
       // Only hide this frame if the immediate caller is also within libc++.
       lldb::ThreadSP thread_sp = frame_sp->GetThread();
       if (!thread_sp)
-         return {};
-      lldb::StackFrameSP parent_frame_sp = thread_sp->GetStackFrameAtIndex(
-              frame_sp->GetFrameIndex() + 1);
+        return {};
+      lldb::StackFrameSP parent_frame_sp =
+          thread_sp->GetStackFrameAtIndex(frame_sp->GetFrameIndex() + 1);
       if (!parent_frame_sp)
-         return {};
+        return {};
       const auto &parent_sc =
           parent_frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
       if (!parent_sc.function)
-         return {};
+        return {};
       if (parent_sc.function->GetNameNoArguments().GetStringRef().starts_with(
               "std::")) {
         return m_hidden_frame;
