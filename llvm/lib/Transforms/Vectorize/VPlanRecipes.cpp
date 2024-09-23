@@ -276,14 +276,6 @@ static Instruction *getInstructionForCost(const VPRecipeBase *R) {
     return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
   if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
     return IG->getInsertPos();
-  // Currently the legacy cost model only calculates the instruction cost with
-  // underlying instruction. Removing the WidenMem here will prevent
-  // force-target-instruction-cost overwriting the cost of recipe with
-  // underlying instruction which is inconsistent with the legacy model.
-  // TODO: Remove WidenMem from this function when we don't need to compare to
-  // the legacy model.
-  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
-    return &WidenMem->getIngredient();
   return nullptr;
 }
 
@@ -293,9 +285,13 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     return 0;
 
   InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-      RecipeCost.isValid())
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      (RecipeCost.isValid() && RecipeCost != InstructionCost::getMax()))
     RecipeCost = InstructionCost(ForceTargetInstructionCost);
+  // Max cost is used as a sentinel value to detect recipes without underlying
+  // instructions for which no forced target instruction cost should be applied.
+  if (RecipeCost == InstructionCost::getMax())
+    RecipeCost = 0;
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
@@ -315,7 +311,9 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
     // transform, avoid computing their cost multiple times for now.
     Ctx.SkipCostComputation.insert(UI);
   }
-  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
+  // Max cost is used as a sentinel value to detect recipes without underlying
+  // instructions for which no forced target instruction cost should be applied.
+  return UI ? Ctx.getLegacyCost(UI, VF) : InstructionCost::getMax();
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {

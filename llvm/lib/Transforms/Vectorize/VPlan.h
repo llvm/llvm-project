@@ -844,7 +844,9 @@ public:
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
-  /// instructions.
+  /// instructions. Returns InstructionCost::max() if the cost of this recipe
+  /// should be ignored. Forced target instruction cost is not applied for such
+  /// recipes.
   virtual InstructionCost computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const;
 };
