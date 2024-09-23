@@ -1,4 +1,4 @@
-// RUN: fir-opt --lower-workshare --allow-unregistered-dialect %s 2>&1 | FileCheck %s
+// RUN: %not_todo_cmd fir-opt --lower-workshare --allow-unregistered-dialect %s 2>&1 | FileCheck %s
 
 // CHECK: not yet implemented: omp workshare with unstructured control flow
 
