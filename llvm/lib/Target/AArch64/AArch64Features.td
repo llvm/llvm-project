@@ -501,7 +501,7 @@ def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FE
   "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
-  "Enable Scalable Matrix Extension (SME) LUTv2 instructions">;
+  "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
 
 def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F32",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
