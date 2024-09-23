@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=NOPAIR
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -verify-machineinstrs -force-streaming < %s | FileCheck %s --check-prefixes=PAIR
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2p1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=PAIR
-
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -mattr=+sve2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=NOPAIR
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2  -mattr=+sve2 -verify-machineinstrs -force-streaming < %s | FileCheck %s --check-prefixes=PAIR
 
 declare void @my_func()
 
