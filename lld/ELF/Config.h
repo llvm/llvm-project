@@ -44,6 +44,7 @@ class InputSectionBase;
 class EhInputSection;
 class Defined;
 class Symbol;
+class SymbolTable;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
@@ -71,7 +72,6 @@ class StringTableSection;
 class SymbolTableBaseSection;
 class SymtabShndxSection;
 class SyntheticSection;
-class SymbolTable;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
