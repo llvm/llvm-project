@@ -3065,6 +3065,25 @@ as follows:
     address space 0, this property only affects the default value to be used
     when creating globals without additional contextual information (e.g. in
     LLVM passes).
+``T<address space>``
+    Specifies the 'flat' address space for a target. Some targets may have an
+    address space that allows access to multiple memory segments, each with
+    distinct address spaces. Accessing memory through a pointer in this address
+    space is valid but may be slower than using a pointer with a more specific
+    address space. When a pointer is converted to this address space,
+    optimizations can attempt to replace the access with one using the original
+    address space. This is the 'flat' address space. It is intended for targets
+    with varying pointer representations, which can be converted using the
+    addrspacecast instruction. It is important to note that the flat address
+    space is not always equivalent to address space 0, which LLVM commonly
+    refers to as the generic address space. For instance, in SPIR and SPIR-V,
+    address space 4 is designated as the flat address space. Additionally, the
+    flat address space must correspond to an existing address space of the
+    target. Specifying an address space as 'flat' address space does not change
+    any inherent characteristics of the original address spaces, nor does it
+    guarantee any additional properties. If this specification is absent, it
+    indicates that the target does not support a flat address space for
+    optimization.
 
 .. _alloca_addrspace:
 

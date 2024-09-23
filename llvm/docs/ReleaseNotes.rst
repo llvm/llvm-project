@@ -56,6 +56,9 @@ Changes to the LLVM IR
 
 * Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
 
+* Added ``T<address space>`` to data layout to represent flat address space if a
+  target has it.
+
 Changes to LLVM infrastructure
 ------------------------------
 
