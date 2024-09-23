@@ -106,6 +106,44 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_THAT(Regions[1]->insts(), testing::UnorderedElementsAre(T1, T2));
 }
 
+TEST_F(RegionTest, DumpedMetadata) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1
+  %t2 = add i8 %t1, %v1
+  ret i8 %t1
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  [[maybe_unused]] auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *T2 = cast<sandboxir::Instruction>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::Instruction>(&*It++);
+  sandboxir::Region Rgn(Ctx);
+  Rgn.add(T0);
+  sandboxir::Region Rgn2(Ctx);
+  Rgn2.add(T2);
+
+  std::string output;
+  llvm::raw_string_ostream RSO(output);
+  M->print(RSO, nullptr, /*ShouldPreserveUseListOrder=*/true,
+           /*IsForDebug=*/true);
+
+  // Check that the dumped IR contains two `distinct !{!"region"}` nodes.
+  std::string RegionString = "distinct !{!\"region\"}";
+  auto Pos = output.find(RegionString);
+  EXPECT_NE(output.npos, Pos);
+  Pos = output.find(RegionString, Pos + 1);
+  EXPECT_NE(output.npos, Pos);
+  Pos = output.find(RegionString, Pos + 1);
+  EXPECT_EQ(output.npos, Pos);
+}
+
 TEST_F(RegionTest, MetadataRoundTrip) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {
