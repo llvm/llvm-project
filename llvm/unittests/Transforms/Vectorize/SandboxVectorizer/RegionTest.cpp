@@ -134,6 +134,8 @@ define i8 @foo(i8 %v0, i8 %v1) {
   M->print(RSO, nullptr, /*ShouldPreserveUseListOrder=*/true,
            /*IsForDebug=*/true);
 
+  // TODO: Replace this with a lit test, which is more suitable for this kind
+  // of IR comparison.
   std::string expected = R"(; ModuleID = '<string>'
 source_filename = "<string>"
 
