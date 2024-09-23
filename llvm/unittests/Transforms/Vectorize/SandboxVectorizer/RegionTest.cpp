@@ -134,14 +134,20 @@ define i8 @foo(i8 %v0, i8 %v1) {
   M->print(RSO, nullptr, /*ShouldPreserveUseListOrder=*/true,
            /*IsForDebug=*/true);
 
-  // Check that the dumped IR contains two `distinct !{!"region"}` nodes.
-  std::string RegionString = "distinct !{!\"region\"}";
-  auto Pos = output.find(RegionString);
-  EXPECT_NE(output.npos, Pos);
-  Pos = output.find(RegionString, Pos + 1);
-  EXPECT_NE(output.npos, Pos);
-  Pos = output.find(RegionString, Pos + 1);
-  EXPECT_EQ(output.npos, Pos);
+  std::string expected = R"(; ModuleID = '<string>'
+source_filename = "<string>"
+
+define i8 @foo(i8 %v0, i8 %v1) {
+  %t0 = add i8 %v0, 1, !sbvec !0
+  %t1 = add i8 %t0, %v1
+  %t2 = add i8 %t1, %v1, !sbvec !1
+  ret i8 %t1
+}
+
+!0 = distinct !{!"region"}
+!1 = distinct !{!"region"}
+)";
+  EXPECT_EQ(expected, output);
 }
 
 TEST_F(RegionTest, MetadataRoundTrip) {
