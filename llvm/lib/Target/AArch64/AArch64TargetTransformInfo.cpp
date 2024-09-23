@@ -334,9 +334,9 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
   return ((K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable()) ||
+           ST->isNeonAvailable()) ||
           (K == TargetTransformInfo::RGK_ScalableVector &&
-          ST->isSVEorStreamingSVEAvailable()));
+           ST->isSVEorStreamingSVEAvailable()));
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
