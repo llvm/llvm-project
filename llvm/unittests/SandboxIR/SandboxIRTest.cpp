@@ -1755,17 +1755,31 @@ bb0:
 
 TEST_F(SandboxIRTest, Instruction) {
   parseIR(C, R"IR(
-define void @foo(i8 %v1) {
+define void @foo(i8 %v1, ptr %ptr) {
+bb0:
   %add0 = add i8 %v1, %v1
   %sub1 = sub i8 %add0, %v1
+  ret void
+
+bb1:
+  %add1 = add i8 %v1, %v1
+  %sub2 = sub i8 %add1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %ld0, ptr %ptr
+  store volatile i8 %ld0, ptr %ptr
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %v1 acquire
+  %udiv = udiv i8 %ld0, %v1
+  call void @foo()
   ret void
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB1 = getBasicBlockByName(*LLVMF, "bb1");
   sandboxir::Context Ctx(C);
   sandboxir::Function *F = Ctx.createFunction(LLVMF);
   auto *Arg = F->getArg(0);
-  auto *BB = &*F->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(*LLVMF, "bb0")));
   auto It = BB->begin();
   auto *I0 = &*It++;
   auto *I1 = &*It++;
@@ -1844,6 +1858,42 @@ define void @foo(i8 %v1) {
   I1->eraseFromParent();
   EXPECT_EQ(I0->getNumUses(), 0u);
   EXPECT_EQ(I0->getNextNode(), Ret);
+
+  for (auto &LLVMI : *LLVMBB1) {
+    auto &I = cast<sandboxir::Instruction>(*Ctx.getValue(&LLVMI));
+    // Check isAssociative().
+    EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
+    // Check isCommutative().
+    EXPECT_EQ(LLVMI.isCommutative(), I.isCommutative());
+    // Check isIdempotent().
+    EXPECT_EQ(LLVMI.isIdempotent(), I.isIdempotent());
+    // Check isNilpotent().
+    EXPECT_EQ(LLVMI.isNilpotent(), I.isNilpotent());
+    // Check mayWriteToMemory().
+    EXPECT_EQ(LLVMI.mayWriteToMemory(), I.mayWriteToMemory());
+    // Check mayReadFromMemory().
+    EXPECT_EQ(LLVMI.mayReadFromMemory(), I.mayReadFromMemory());
+    // Check mayReadOrWriteMemory().
+    EXPECT_EQ(LLVMI.mayReadOrWriteMemory(), I.mayReadOrWriteMemory());
+    // Check isAtomic().
+    EXPECT_EQ(LLVMI.isAtomic(), I.isAtomic());
+    if (I.isAtomic()) {
+      // Check hasAtomicLoad().
+      EXPECT_EQ(LLVMI.hasAtomicLoad(), I.hasAtomicLoad());
+      // Check hasAtomicStore().
+      EXPECT_EQ(LLVMI.hasAtomicStore(), I.hasAtomicStore());
+    }
+    // Check isVolatile().
+    EXPECT_EQ(LLVMI.isVolatile(), I.isVolatile());
+    // Check getAccessType().
+    EXPECT_EQ(Ctx.getType(LLVMI.getAccessType()), I.getAccessType());
+    // Check mayThrow().
+    EXPECT_EQ(LLVMI.mayThrow(), I.mayThrow());
+    // Check isFenceLike().
+    EXPECT_EQ(LLVMI.isFenceLike(), I.isFenceLike());
+    // Check mayHaveSideEffects().
+    EXPECT_EQ(LLVMI.mayHaveSideEffects(), I.mayHaveSideEffects());
+  }
 }
 
 TEST_F(SandboxIRTest, Instruction_isStackSaveOrRestoreIntrinsic) {

@@ -1272,6 +1272,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
             Name == "f2i" || Name == "i2f" || Name == "ll2d" || Name == "d2ll";
+      else if (Name.consume_front("rotate."))
+        // nvvm.rotate.{b32,b64,right.b64}
+        Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
       else
         Expand = false;
 
@@ -2256,6 +2259,108 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
       (Pos = AsmStr->find("# marker")) != std::string::npos) {
     AsmStr->replace(Pos, 1, ";");
   }
+}
+
+static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
+                                       Function *F, IRBuilder<> &Builder) {
+  Value *Rep = nullptr;
+
+  if (Name == "abs.i" || Name == "abs.ll") {
+    Value *Arg = CI->getArgOperand(0);
+    Value *Neg = Builder.CreateNeg(Arg, "neg");
+    Value *Cmp = Builder.CreateICmpSGE(
+        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+  } else if (Name.starts_with("atomic.load.add.f32.p") ||
+             Name.starts_with("atomic.load.add.f64.p")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
+                                  AtomicOrdering::SequentiallyConsistent);
+  } else if (Name.consume_front("max.") &&
+             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+              Name == "ui" || Name == "ull")) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    Value *Cmp = Name.starts_with("u")
+                     ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
+                     : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
+  } else if (Name.consume_front("min.") &&
+             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+              Name == "ui" || Name == "ull")) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    Value *Cmp = Name.starts_with("u")
+                     ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
+                     : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
+  } else if (Name == "clz.ll") {
+    // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
+    Value *Arg = CI->getArgOperand(0);
+    Value *Ctlz = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
+                                  {Arg->getType()}),
+        {Arg, Builder.getFalse()}, "ctlz");
+    Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
+  } else if (Name == "popc.ll") {
+    // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
+    // i64.
+    Value *Arg = CI->getArgOperand(0);
+    Value *Popc = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
+                                  {Arg->getType()}),
+        Arg, "ctpop");
+    Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
+  } else if (Name == "h2f") {
+    Rep = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::convert_from_fp16,
+                                  {Builder.getFloatTy()}),
+        CI->getArgOperand(0), "h2f");
+  } else if (Name.consume_front("bitcast.") &&
+             (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
+              Name == "d2ll")) {
+    Rep = Builder.CreateBitCast(CI->getArgOperand(0), CI->getType());
+  } else if (Name == "rotate.b32") {
+    Value *Arg = CI->getOperand(0);
+    Value *ShiftAmt = CI->getOperand(1);
+    Rep = Builder.CreateIntrinsic(Builder.getInt32Ty(), Intrinsic::fshl,
+                                  {Arg, Arg, ShiftAmt});
+  } else if (Name == "rotate.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
+                                  {Arg, Arg, ZExtShiftAmt});
+  } else if (Name == "rotate.right.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
+                                  {Arg, Arg, ZExtShiftAmt});
+  } else {
+    Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
+    if (IID != Intrinsic::not_intrinsic &&
+        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+      rename(F);
+      Function *NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+      SmallVector<Value *, 2> Args;
+      for (size_t I = 0; I < NewFn->arg_size(); ++I) {
+        Value *Arg = CI->getArgOperand(I);
+        Type *OldType = Arg->getType();
+        Type *NewType = NewFn->getArg(I)->getType();
+        Args.push_back(
+            (OldType->isIntegerTy() && NewType->getScalarType()->isBFloatTy())
+                ? Builder.CreateBitCast(Arg, NewType)
+                : Arg);
+      }
+      Rep = Builder.CreateCall(NewFn, Args);
+      if (F->getReturnType()->isIntegerTy())
+        Rep = Builder.CreateBitCast(Rep, F->getReturnType());
+    }
+  }
+
+  return Rep;
 }
 
 static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
@@ -4208,85 +4313,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (!IsX86 && Name == "stackprotectorcheck") {
       Rep = nullptr;
-    } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
-      Value *Arg = CI->getArgOperand(0);
-      Value *Neg = Builder.CreateNeg(Arg, "neg");
-      Value *Cmp = Builder.CreateICmpSGE(
-          Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
-    } else if (IsNVVM && (Name.starts_with("atomic.load.add.f32.p") ||
-                          Name.starts_with("atomic.load.add.f64.p"))) {
-      Value *Ptr = CI->getArgOperand(0);
-      Value *Val = CI->getArgOperand(1);
-      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                    AtomicOrdering::SequentiallyConsistent);
-    } else if (IsNVVM && Name.consume_front("max.") &&
-               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-                Name == "ui" || Name == "ull")) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("u")
-                       ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
-                       : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
-    } else if (IsNVVM && Name.consume_front("min.") &&
-               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-                Name == "ui" || Name == "ull")) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("u")
-                       ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
-                       : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
-    } else if (IsNVVM && Name == "clz.ll") {
-      // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
-      Value *Arg = CI->getArgOperand(0);
-      Value *Ctlz = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                    {Arg->getType()}),
-          {Arg, Builder.getFalse()}, "ctlz");
-      Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
-    } else if (IsNVVM && Name == "popc.ll") {
-      // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
-      // i64.
-      Value *Arg = CI->getArgOperand(0);
-      Value *Popc = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
-                                    {Arg->getType()}),
-          Arg, "ctpop");
-      Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
     } else if (IsNVVM) {
-      if (Name == "h2f") {
-        Rep =
-            Builder.CreateCall(Intrinsic::getDeclaration(
-                                   F->getParent(), Intrinsic::convert_from_fp16,
-                                   {Builder.getFloatTy()}),
-                               CI->getArgOperand(0), "h2f");
-      } else if (Name.consume_front("bitcast.") &&
-                 (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
-                  Name == "d2ll")) {
-        Rep = Builder.CreateBitCast(CI->getArgOperand(0), CI->getType());
-      } else {
-        Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic &&
-            !F->getReturnType()->getScalarType()->isBFloatTy()) {
-          rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
-          SmallVector<Value *, 2> Args;
-          for (size_t I = 0; I < NewFn->arg_size(); ++I) {
-            Value *Arg = CI->getArgOperand(I);
-            Type *OldType = Arg->getType();
-            Type *NewType = NewFn->getArg(I)->getType();
-            Args.push_back((OldType->isIntegerTy() &&
-                            NewType->getScalarType()->isBFloatTy())
-                               ? Builder.CreateBitCast(Arg, NewType)
-                               : Arg);
-          }
-          Rep = Builder.CreateCall(NewFn, Args);
-          if (F->getReturnType()->isIntegerTy())
-            Rep = Builder.CreateBitCast(Rep, F->getReturnType());
-        }
-      }
+      Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsX86) {
       Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
     } else if (IsARM) {
