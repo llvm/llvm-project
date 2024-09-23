@@ -260,7 +260,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   std::unique_ptr<MCCodeEmitter> MCE(
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
   if (!MCE)
-      return true;
+    return true;
   MCAsmBackend *MAB =
       getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
   if (!MAB)
