@@ -22,6 +22,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <optional>
 #include <utility>
@@ -40,6 +41,30 @@ private:
   /// Whether we are inside of a compute construct, and should add loops to the
   /// above collection.
   bool InsideComputeConstruct = false;
+
+  /// The 'collapse' clause requires quite a bit of checking while
+  /// parsing/instantiating its body, so this structure/object keeps all of the
+  /// necessary information as we do checking.  This should rarely be directly
+  /// modified, and typically should be controlled by the RAII objects.
+  ///
+  /// Collapse has an 'N' count that makes it apply to a number of loops 'below'
+  /// it.
+  struct CollapseCheckingInfo {
+    OpenACCCollapseClause *ActiveCollapse = nullptr;
+
+    /// This is a value that maintains the current value of the 'N' on the
+    /// current collapse, minus the depth that has already been traversed. When
+    /// there is not an active collapse, or a collapse whose depth we don't know
+    /// (for example, if it is a dependent value), this should be `nullopt`,
+    /// else it should be 'N' minus the current depth traversed.
+    std::optional<llvm::APSInt> CurCollapseCount;
+
+    /// Records whether we've seen the top level 'for'. We already diagnose
+    /// later that the 'top level' is a for loop, so we use this to suppress the
+    /// 'collapse inner loop not a 'for' loop' diagnostic.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TopLevelLoopSeen : 1;
+  } CollapseInfo{nullptr, std::nullopt, false};
 
 public:
   // Redeclaration of the version in OpenACCClause.h.
@@ -411,6 +436,17 @@ public:
 
   SemaOpenACC(Sema &S);
 
+  // Called when we encounter a 'while' statement, before looking at its 'body'.
+  void ActOnWhileStmt(SourceLocation WhileLoc);
+  // Called when we encounter a 'do' statement, before looking at its 'body'.
+  void ActOnDoStmt(SourceLocation DoLoc);
+  // Called when we encounter a 'for' statement, before looking at its 'body'.
+  void ActOnForStmtBegin(SourceLocation ForLoc);
+  // Called when we encounter a 'for' statement, after we've consumed/checked
+  // the body. This is necessary for a number of checks on the contents of the
+  // 'for' statement.
+  void ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body);
+
   /// Called after parsing an OpenACC Clause so that it can be checked.
   OpenACCClause *ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
                              OpenACCParsedClause &Clause);
@@ -474,6 +510,18 @@ public:
   /// Checks the loop depth value for a collapse clause.
   ExprResult CheckCollapseLoopCount(Expr *LoopCount);
 
+  /// Helper type to restore the state of various 'loop' constructs when we run
+  /// into a loop (for, etc) inside the construct.
+  class LoopInConstructRAII {
+    SemaOpenACC &SemaRef;
+    CollapseCheckingInfo OldCollapseInfo;
+
+  public:
+    LoopInConstructRAII(SemaOpenACC &SemaRef)
+        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo) {}
+    ~LoopInConstructRAII() { SemaRef.CollapseInfo = OldCollapseInfo; }
+  };
+
   /// Helper type for the registration/assignment of constructs that need to
   /// 'know' about their parent constructs and hold a reference to them, such as
   /// Loop needing its parent construct.
@@ -482,9 +530,15 @@ public:
     bool WasInsideComputeConstruct;
     OpenACCDirectiveKind DirKind;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
+    LoopInConstructRAII LoopRAII;
 
   public:
-    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind);
+    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind,
+                       ArrayRef<const OpenACCClause *>,
+                       ArrayRef<OpenACCClause *>);
+    void SetCollapseInfoBeforeAssociatedStmt(
+        ArrayRef<const OpenACCClause *> UnInstClauses,
+        ArrayRef<OpenACCClause *> Clauses);
     ~AssociatedStmtRAII();
   };
 };
