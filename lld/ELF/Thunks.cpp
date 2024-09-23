@@ -1351,7 +1351,7 @@ static Thunk *addThunkAArch64(RelType type, Symbol &s, int64_t a) {
       type != R_AARCH64_PLT32)
     fatal("unrecognized relocation type");
   bool mayNeedLandingPad =
-      (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
+      (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
       !isAArch64BTILandingPad(s, a);
   if (ctx.arg.picThunk)
     return make<AArch64ADRPThunk>(s, a, mayNeedLandingPad);
@@ -1571,7 +1571,7 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
 }
 
 Thunk *elf::addLandingPadThunk(Symbol &s, int64_t a) {
-  switch (config->emachine) {
+  switch (ctx.arg.emachine) {
   case EM_AARCH64:
     return make<AArch64BTILandingPadThunk>(s, a);
   default:
