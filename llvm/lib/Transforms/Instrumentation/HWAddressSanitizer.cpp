@@ -1924,12 +1924,16 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
                                              bool InstrumentWithCalls) {
+  // Start with defaults.
   Scale = kDefaultShadowScale;
+  Kind = OffsetKind::kTls;
+  WithFrameRecord = true;
+
+  // Tune for the target.
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
     SetFixed(0);
-    WithFrameRecord = true;
   } else if (ClMappingOffset.getNumOccurrences() > 0) {
     SetFixed(ClMappingOffset);
     WithFrameRecord = false;
@@ -1939,10 +1943,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   } else if (ClWithIfunc) {
     Kind = OffsetKind::kIfunc;
     WithFrameRecord = false;
-  } else if (ClWithTls) {
-    Kind = OffsetKind::kTls;
-    WithFrameRecord = true;
-  } else {
+  } else if (!ClWithTls) {
     Kind = OffsetKind::kGlobal;
     WithFrameRecord = false;
   }
