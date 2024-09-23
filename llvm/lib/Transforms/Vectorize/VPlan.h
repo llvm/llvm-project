@@ -267,8 +267,7 @@ struct VPTransformState {
     // vector value in the map.
     DenseMap<VPValue *, Value *> VPV2Vector;
 
-    using ScalarsPerPartValuesTy = SmallVector<SmallVector<Value *, 4>, 2>;
-    DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
+    DenseMap<VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
@@ -281,13 +280,11 @@ struct VPTransformState {
   bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
 
   bool hasScalarValue(VPValue *Def, VPIteration Instance) {
-    auto I = Data.PerPartScalars.find(Def);
-    if (I == Data.PerPartScalars.end())
+    auto I = Data.VPV2Scalars.find(Def);
+    if (I == Data.VPV2Scalars.end())
       return false;
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    return Instance.Part < I->second.size() &&
-           CacheIdx < I->second[Instance.Part].size() &&
-           I->second[Instance.Part][CacheIdx];
+    return CacheIdx < I->second.size() && I->second[CacheIdx];
   }
 
   /// Set the generated vector Value for a given VPValue, if \p
@@ -310,11 +307,8 @@ struct VPTransformState {
 
   /// Set the generated scalar \p V for \p Def and the given \p Instance.
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.insert({Def, {}});
-    auto &PerPartVec = Iter.first->second;
-    if (PerPartVec.size() <= Instance.Part)
-      PerPartVec.resize(Instance.Part + 1);
-    auto &Scalars = PerPartVec[Instance.Part];
+    auto Iter = Data.VPV2Scalars.insert({Def, {}});
+    auto &Scalars = Iter.first->second;
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
@@ -324,15 +318,13 @@ struct VPTransformState {
 
   /// Reset an existing scalar value for \p Def and a given \p Instance.
   void reset(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.find(Def);
-    assert(Iter != Data.PerPartScalars.end() &&
-           "need to overwrite existing value");
-    assert(Instance.Part < Iter->second.size() &&
+    auto Iter = Data.VPV2Scalars.find(Def);
+    assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    assert(CacheIdx < Iter->second[Instance.Part].size() &&
+    assert(CacheIdx < Iter->second.size() &&
            "need to overwrite existing value");
-    Iter->second[Instance.Part][CacheIdx] = V;
+    Iter->second[CacheIdx] = V;
   }
 
   /// Add additional metadata to \p To that was not present on \p Orig.
