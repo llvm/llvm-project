@@ -4,6 +4,7 @@
 // RUN: %run %t 2
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,8 +14,11 @@
 
 void test(const char *path, int flags) {
   int fd = open(path, flags, 0600);
-  if (fd == -1)
+  if (fd == -1) {
     perror(path);
+    if (errno == EOPNOTSUPP)
+      return;
+  }
   assert(fd != -1);
   struct stat info;
   int result = fstat(fd, &info);
