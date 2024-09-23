@@ -42866,9 +42866,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Don't bother broadcasting if we just need the 0'th element.
     if (DemandedElts == 1) {
       if (!SrcVT.isVector())
-        return TLO.CombineTo(
-            Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(Op), VT, Src));
-      if (Src.getValueType() != VT)
+        Src = TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(Op), VT, Src);
+      else if (Src.getValueType() != VT)
         Src = widenSubVector(VT.getSimpleVT(), Src, false, Subtarget, TLO.DAG,
                              SDLoc(Op));
       return TLO.CombineTo(Op, Src);
