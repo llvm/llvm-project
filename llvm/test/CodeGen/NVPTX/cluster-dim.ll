@@ -1,7 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_90 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_90 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_90 | %ptxas-verify %}
+; RUN: %if ptxas-12.0 %{ llc < %s -march=nvptx64 -mcpu=sm_90 | %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: .entry kernel_func_clusterxyz
 define void @kernel_func_clusterxyz() {

@@ -583,15 +583,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
       O << ".explicitcluster\n";
       if (ClusterX.value_or(1) != 0) {
         assert(ClusterY.value_or(1) && ClusterZ.value_or(1) &&
-               "clusterx != 0 implies clustery and clusterz should be non-zero "
-               "as well");
+               "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
+               "should be non-zero as well");
 
         O << ".reqnctapercluster " << ClusterX.value_or(1) << ", "
           << ClusterY.value_or(1) << ", " << ClusterZ.value_or(1) << "\n";
       } else {
-        assert(
-            !ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
-            "clusterx == 0 implies clustery and clusterz should be 0 as well");
+        assert(!ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
+               "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
+               "should be 0 as well");
       }
     }
     if (const auto Maxclusterrank = getMaxClusterRank(F))
