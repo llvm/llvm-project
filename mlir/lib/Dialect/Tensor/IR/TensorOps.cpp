@@ -3987,6 +3987,12 @@ SmallVector<int64_t> PackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
 }
 
+ArrayRef<int64_t> PackOp::getAllOuterDims() {
+  ShapedType inputType = getSourceType();
+  int64_t inputRank = inputType.getRank();
+  return getDestType().getShape().take_front(inputRank);
+}
+
 SmallVector<int64_t> PackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
   auto destShape = getDestType().getShape();
@@ -4420,6 +4426,12 @@ SmallVector<OpFoldResult> UnPackOp::getMixedTiles() {
 
 SmallVector<int64_t> UnPackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
+}
+
+ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
+  ShapedType destType = getDestType();
+  int64_t destRank = destType.getRank();
+  return getSourceType().getShape().take_front(destRank);
 }
 
 SmallVector<int64_t> UnPackOp::getTiledOuterDims() {

@@ -1854,15 +1854,14 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
 
     /// Retrieve all outer dims for this Pack/UnPack Op, i.e. all the leading
     /// dims excluding the trailing dims corresponding to `innerTiles`. Note
-    /// that this will include both tiled and non-tiled dimensions.
-    ArrayRef<int64_t> getAllOuterDims() {
-      ShapedType inputType = getSourceType();
-      int64_t inputRank = inputType.getRank();
-      return getDestType().getShape().take_front(inputRank);
-    }
+    /// that this will include both tiled and non-tiled dimensions. The order
+    /// of the output dimensions is consistent with the shape of the packed
+    /// tensor.
+    ArrayRef<int64_t> getAllOuterDims();
 
     /// Similar to `getAllOuterDims`, but only retrieve the outer dims that
-    /// have been tiled.
+    /// have been tiled. Also, the order of the output dimensions is consistent
+    /// with `inner_dims_pos` rather than the packed tensor.
     SmallVector<int64_t> getTiledOuterDims();
   }];
 
