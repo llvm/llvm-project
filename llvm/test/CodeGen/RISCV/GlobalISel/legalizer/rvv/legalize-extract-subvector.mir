@@ -407,12 +407,12 @@ body:             |
     PseudoRET implicit $v8
 ...
 ---
-name:            extract_subvector_subregidx
+name:            extract_subvector_subregidx_zero
 legalized:       false
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    ; RV32-LABEL: name: extract_subvector_subregidx
+    ; RV32-LABEL: name: extract_subvector_subregidx_zero
     ; RV32: [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
     ; RV32-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<vscale x 16 x s32>), 0
     ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(s32) = G_READ_VLENB
@@ -425,7 +425,7 @@ body:             |
     ; RV32-NEXT: $v8 = COPY [[EXTRACT_SUBVECTOR1]](<vscale x 1 x s32>)
     ; RV32-NEXT: PseudoRET implicit $v8
     ;
-    ; RV64-LABEL: name: extract_subvector_subregidx
+    ; RV64-LABEL: name: extract_subvector_subregidx_zero
     ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
     ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<vscale x 16 x s32>), 0
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
@@ -439,6 +439,42 @@ body:             |
     ; RV64-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
     %1:_(<vscale x 1 x s32>) = G_EXTRACT_SUBVECTOR %0(<vscale x 16 x s32>), 1
+    $v8 = COPY %1(<vscale x 1 x s32>)
+    PseudoRET implicit $v8
+...
+---
+name:            extract_subvector_subregidx
+legalized:       false
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    ; RV32-LABEL: name: extract_subvector_subregidx
+    ; RV32: [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
+    ; RV32-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<vscale x 16 x s32>), 2
+    ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(s32) = G_READ_VLENB
+    ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+    ; RV32-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[READ_VLENB]], [[C]](s32)
+    ; RV32-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
+    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    ; RV32-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 2 x s32>) = G_VSLIDEDOWN_VL [[DEF1]], [[EXTRACT_SUBVECTOR]], [[LSHR]](s32), [[VMSET_VL]](<vscale x 1 x s1>), $x0, 3
+    ; RV32-NEXT: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 1 x s32>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 2 x s32>), 0
+    ; RV32-NEXT: $v8 = COPY [[EXTRACT_SUBVECTOR1]](<vscale x 1 x s32>)
+    ; RV32-NEXT: PseudoRET implicit $v8
+    ;
+    ; RV64-LABEL: name: extract_subvector_subregidx
+    ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
+    ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]](<vscale x 16 x s32>), 2
+    ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; RV64-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[READ_VLENB]], [[C]](s64)
+    ; RV64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
+    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    ; RV64-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 2 x s32>) = G_VSLIDEDOWN_VL [[DEF1]], [[EXTRACT_SUBVECTOR]], [[LSHR]](s64), [[VMSET_VL]](<vscale x 1 x s1>), $x0, 3
+    ; RV64-NEXT: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 1 x s32>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 2 x s32>), 0
+    ; RV64-NEXT: $v8 = COPY [[EXTRACT_SUBVECTOR1]](<vscale x 1 x s32>)
+    ; RV64-NEXT: PseudoRET implicit $v8
+    %0:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
+    %1:_(<vscale x 1 x s32>) = G_EXTRACT_SUBVECTOR %0(<vscale x 16 x s32>), 3
     $v8 = COPY %1(<vscale x 1 x s32>)
     PseudoRET implicit $v8
 ...

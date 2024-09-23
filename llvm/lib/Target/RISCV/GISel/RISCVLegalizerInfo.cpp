@@ -971,11 +971,8 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       BigTy = LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8);
       LitTy = LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
       Vec = MIB.buildBitcast(BigTy, Vec).getReg(0);
-      auto E = MIB.buildExtractSubvector(LitTy, Vec, Idx);
-      if (LitTy != MRI.getType(Dst))
-        MIB.buildBitcast(Dst, E);
-      else
-        E->getOperand(0).setReg(Dst);
+      auto Extract = MIB.buildExtractSubvector(LitTy, Vec, Idx);
+      MIB.buildBitcast(Dst, Extract);
       MI.eraseFromParent();
       return true;
     } else {
@@ -1049,15 +1046,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
 
   // Now the vector is in the right position, extract our final subvector. This
   // should resolve to a COPY.
-  auto Extract = MIB.buildExtractSubvector(LitTy, Slidedown, 0);
-
-  // We might have bitcast from a mask type: cast back to the original type if
-  // required.
-  if (TypeSize::isKnownLT(LitTy.getSizeInBits(),
-                          MRI.getType(Dst).getSizeInBits()))
-    MIB.buildBitcast(Dst, Extract);
-  else
-    Extract->getOperand(0).setReg(Dst);
+  MIB.buildExtractSubvector(Dst, Slidedown, 0);
 
   MI.eraseFromParent();
   return true;
