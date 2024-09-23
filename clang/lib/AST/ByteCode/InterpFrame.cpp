@@ -102,14 +102,26 @@ static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
   V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
 }
 
+static bool shouldSkipInBacktrace(const Function *F) {
+  if (F->isBuiltin())
+    return true;
+  if (F->isLambdaStaticInvoker())
+    return true;
+
+  const FunctionDecl *FD = F->getDecl();
+  if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
+      FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
+    return true;
+  return false;
+}
+
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
   // We create frames for builtin functions as well, but we can't reliably
   // diagnose them. The 'in call to' diagnostics for them add no value to the
   // user _and_ it doesn't generally work since the argument types don't always
   // match the function prototype. Just ignore them.
   // Similarly, for lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction();
-      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
+  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());

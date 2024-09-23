@@ -287,12 +287,12 @@ uint32_t TypeUnit::addFileNameIntoLinetable(StringEntry *Dir,
   }
 
   uint32_t FileIdx = 0;
-  FilenamesMapTy::iterator FileEntry = FileNamesMap.find({FileName, DirIdx});
-  if (FileEntry == FileNamesMap.end()) {
+  auto [FileEntry, Inserted] = FileNamesMap.try_emplace({FileName, DirIdx});
+  if (Inserted) {
     // We currently do not support more than UINT32_MAX files.
     assert(LineTable.Prologue.FileNames.size() < UINT32_MAX);
     FileIdx = LineTable.Prologue.FileNames.size();
-    FileNamesMap.insert({{FileName, DirIdx}, FileIdx});
+    FileEntry->second = FileIdx;
     LineTable.Prologue.FileNames.push_back(DWARFDebugLine::FileNameEntry());
     LineTable.Prologue.FileNames.back().Name = DWARFFormValue::createFromPValue(
         dwarf::DW_FORM_string, FileName->getKeyData());

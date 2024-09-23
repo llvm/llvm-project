@@ -2327,7 +2327,7 @@ SymtabShndxSection::SymtabShndxSection()
 
 void SymtabShndxSection::writeTo(uint8_t *buf) {
   // We write an array of 32 bit values, where each value has 1:1 association
-  // with an entry in .ctx.symtab-> If the corresponding entry contains
+  // with an entry in ctx.in.symTab if the corresponding entry contains
   // SHN_XINDEX, we need to write actual index, otherwise, we must write
   // SHN_UNDEF(0).
   buf += 4; // Ignore .symtab[0] entry.

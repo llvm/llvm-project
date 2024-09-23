@@ -2947,6 +2947,17 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// Check if the initializer and storage types of a placement-new expression
+/// match.
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize = std::nullopt);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
+  const auto &Size = S.Stk.pop<T>();
+  return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
+}
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

@@ -1263,7 +1263,7 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 void elf::processArmCmseSymbols() {
   if (!ctx.arg.cmseImplib)
     return;
-  // Only symbols with external linkage end up in symtab, so no need to do
+  // Only symbols with external linkage end up in ctx.symtab, so no need to do
   // linkage checks. Only check symbol type.
   for (Symbol *acleSeSym : ctx.symtab->getSymbols()) {
     if (!acleSeSym->getName().starts_with(ACLESESYM_PREFIX))
