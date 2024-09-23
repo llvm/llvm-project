@@ -4,9 +4,8 @@ LLDB has been architected to make it straightforward to add support for a
 programming language. Only a small enum in core LLDB needs to be modified to
 make LLDB aware of a new programming language. Everything else can be supplied
 in derived classes that need not even be present in the core LLDB repository.
-This makes it convenient for developers adding language support either in
-branches or downstream repositories since it practically eliminates the
-potential for merge conflicts.
+This makes it convenient for developers adding language support in downstream
+repositories since it practically eliminates the potential for merge conflicts.
 
 The basic steps are:
 * Add the language to the `LanguageType` enum.
@@ -90,6 +89,6 @@ These tasks are covered by two plugins:
 * a `LanguageRuntime` plugin, which provides LLDB with a dynamic view of your
   language; this plugin answers questions that require a live process to acquire
   information (for example dynamic type resolution).
-* a `Language plugin`, which provides LLDB with a static view of your language;
-  questions that are statically knoawble and do not require a process are
+* a `Language` plugin, which provides LLDB with a static view of your language;
+  questions that are statically knowable and do not require a process are
   answered by this plugin (for example data formatters).
