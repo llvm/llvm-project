@@ -181,7 +181,6 @@ private:
                                      ResourceKey SrcKey) override {}
 
   private:
-
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
