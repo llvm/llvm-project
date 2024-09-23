@@ -4358,21 +4358,21 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
     for (unsigned i = 0; i < InnerBlockDeclRefs.size(); i++) {
       DeclRefExpr *Exp = InnerBlockDeclRefs[i];
       ValueDecl *VD = Exp->getDecl();
-      if (!VD->hasAttr<BlocksAttr>() && !BlockByCopyDeclsPtrSet.count(VD)) {
+      if (!VD->hasAttr<BlocksAttr>() &&
+          BlockByCopyDeclsPtrSet.insert(VD).second) {
         // We need to save the copied-in variables in nested
         // blocks because it is needed at the end for some of the API
         // generations. See SynthesizeBlockLiterals routine.
         InnerDeclRefs.push_back(Exp);
         countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByCopyDeclsPtrSet.insert(VD);
         BlockByCopyDecls.push_back(VD);
       }
-      if (VD->hasAttr<BlocksAttr>() && !BlockByRefDeclsPtrSet.count(VD)) {
+      if (VD->hasAttr<BlocksAttr>() &&
+          BlockByRefDeclsPtrSet.insert(VD).second) {
         InnerDeclRefs.push_back(Exp);
         countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByRefDeclsPtrSet.insert(VD);
         BlockByRefDecls.push_back(VD);
       }
     }
