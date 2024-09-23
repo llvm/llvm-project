@@ -404,6 +404,8 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   ProfileSummaryInfo *PSI = nullptr;
 
+  TargetPassConfig *PassConfig = nullptr;
+
   /// Duplicator used to duplicate tails during placement.
   ///
   /// Placement decisions can open up new tail duplication opportunities, but
@@ -413,6 +415,8 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// Partial tail duplication threshold.
   BlockFrequency DupThreshold;
+
+  unsigned TailDupSize;
 
   /// True:  use block profile count to compute tail duplication cost.
   /// False: use block frequency to compute tail duplication cost.
@@ -458,7 +462,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// Scale the DupThreshold according to basic block size.
   BlockFrequency scaleThreshold(MachineBasicBlock *BB);
-  void initDupThreshold();
+  void initTailDupThreshold();
 
   /// Decrease the UnscheduledPredecessors count for all blocks in chain, and
   /// if the count goes to 0, add them to the appropriate work list.
@@ -2936,12 +2940,16 @@ void MachineBlockPlacement::alignBlocks() {
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
   // loop rotations done during this layout pass.
-  if (F->getFunction().hasMinSize() ||
-      (F->getFunction().hasOptSize() && !TLI->alignLoopsWithOptSize()))
-    return;
+  if (!AlignAllBlock && !AlignAllNonFallThruBlocks) {
+    if (F->getFunction().hasMinSize() ||
+        (F->getFunction().hasOptSize() && !TLI->alignLoopsWithOptSize()))
+      return;
+  }
+
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
+  // Empty chain.
   if (FunctionChain.begin() == FunctionChain.end())
-    return; // Empty chain.
+    return;
 
   const BranchProbability ColdProb(1, 5); // 20%
   BlockFrequency EntryFreq = MBFI->getBlockFreq(&F->front());
@@ -3035,6 +3043,33 @@ void MachineBlockPlacement::alignBlocks() {
     if (LayoutEdgeFreq <= (Freq * ColdProb)) {
       ChainBB->setAlignment(LoopAlign);
       DetermineMaxAlignmentPadding();
+    }
+  }
+
+  const bool HasMaxBytesOverride =
+      MaxBytesForAlignmentOverride.getNumOccurrences() > 0;
+
+  if (AlignAllBlock)
+    // Align all of the blocks in the function to a specific alignment.
+    for (MachineBasicBlock &MBB : *F) {
+      if (HasMaxBytesOverride)
+        MBB.setAlignment(Align(1ULL << AlignAllBlock),
+                         MaxBytesForAlignmentOverride);
+      else
+        MBB.setAlignment(Align(1ULL << AlignAllBlock));
+    }
+  else if (AlignAllNonFallThruBlocks) {
+    // Align all of the blocks that have no fall-through predecessors to a
+    // specific alignment.
+    for (auto MBI = std::next(F->begin()), MBE = F->end(); MBI != MBE; ++MBI) {
+      auto LayoutPred = std::prev(MBI);
+      if (!LayoutPred->isSuccessor(&*MBI)) {
+        if (HasMaxBytesOverride)
+          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
+                            MaxBytesForAlignmentOverride);
+        else
+          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
+      }
     }
   }
 }
@@ -3390,31 +3425,53 @@ void MachineBlockPlacement::findDuplicateCandidates(
   }
 }
 
-void MachineBlockPlacement::initDupThreshold() {
+void MachineBlockPlacement::initTailDupThreshold() {
   DupThreshold = BlockFrequency(0);
-  if (!F->getFunction().hasProfileData())
-    return;
+  if (F->getFunction().hasProfileData()) {
+    // We prefer to use prifile count.
+    uint64_t HotThreshold = PSI->getOrCompHotCountThreshold();
+    if (HotThreshold != UINT64_MAX) {
+      UseProfileCount = true;
+      DupThreshold =
+          BlockFrequency(HotThreshold * TailDupProfilePercentThreshold / 100);
+    } else {
+      // Profile count is not available, we can use block frequency instead.
+      BlockFrequency MaxFreq = BlockFrequency(0);
+      for (MachineBasicBlock &MBB : *F) {
+        BlockFrequency Freq = MBFI->getBlockFreq(&MBB);
+        if (Freq > MaxFreq)
+          MaxFreq = Freq;
+      }
 
-  // We prefer to use prifile count.
-  uint64_t HotThreshold = PSI->getOrCompHotCountThreshold();
-  if (HotThreshold != UINT64_MAX) {
-    UseProfileCount = true;
-    DupThreshold =
-        BlockFrequency(HotThreshold * TailDupProfilePercentThreshold / 100);
-    return;
+      BranchProbability ThresholdProb(TailDupPlacementPenalty, 100);
+      DupThreshold = BlockFrequency(MaxFreq * ThresholdProb);
+      UseProfileCount = false;
+    }
   }
 
-  // Profile count is not available, we can use block frequency instead.
-  BlockFrequency MaxFreq = BlockFrequency(0);
-  for (MachineBasicBlock &MBB : *F) {
-    BlockFrequency Freq = MBFI->getBlockFreq(&MBB);
-    if (Freq > MaxFreq)
-      MaxFreq = Freq;
+  TailDupSize = TailDupPlacementThreshold;
+  // If only the aggressive threshold is explicitly set, use it.
+  if (TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0 &&
+      TailDupPlacementThreshold.getNumOccurrences() == 0)
+    TailDupSize = TailDupPlacementAggressiveThreshold;
+
+  // For aggressive optimization, we can adjust some thresholds to be less
+  // conservative.
+  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
+    // At O3 we should be more willing to copy blocks for tail duplication. This
+    // increases size pressure, so we only do it at O3
+    // Do this unless only the regular threshold is explicitly set.
+    if (TailDupPlacementThreshold.getNumOccurrences() == 0 ||
+        TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0)
+      TailDupSize = TailDupPlacementAggressiveThreshold;
   }
 
-  BranchProbability ThresholdProb(TailDupPlacementPenalty, 100);
-  DupThreshold = BlockFrequency(MaxFreq * ThresholdProb);
-  UseProfileCount = false;
+  // If there's no threshold provided through options, query the target
+  // information for a threshold instead.
+  if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
+      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
+       TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
+    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
 }
 
 bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
@@ -3434,8 +3491,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TLI = MF.getSubtarget().getTargetLowering();
   MPDT = nullptr;
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-
-  initDupThreshold();
+  PassConfig = &getAnalysis<TargetPassConfig>();
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
   // there are no MachineLoops.
@@ -3446,38 +3502,17 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   assert(ComputedEdges.empty() &&
          "Computed Edge map should be empty before starting placement.");
 
-  unsigned TailDupSize = TailDupPlacementThreshold;
-  // If only the aggressive threshold is explicitly set, use it.
-  if (TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0 &&
-      TailDupPlacementThreshold.getNumOccurrences() == 0)
-    TailDupSize = TailDupPlacementAggressiveThreshold;
+  // Initialize tail duplication thresholds.
+  initTailDupThreshold();
 
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
-  // For aggressive optimization, we can adjust some thresholds to be less
-  // conservative.
-  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
-    // At O3 we should be more willing to copy blocks for tail duplication. This
-    // increases size pressure, so we only do it at O3
-    // Do this unless only the regular threshold is explicitly set.
-    if (TailDupPlacementThreshold.getNumOccurrences() == 0 ||
-        TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0)
-      TailDupSize = TailDupPlacementAggressiveThreshold;
-  }
-
-  // If there's no threshold provided through options, query the target
-  // information for a threshold instead.
-  if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
-      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
-       TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
-    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
-
+  // Apply tail duplication.
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     bool OptForSize = MF.getFunction().hasOptSize() ||
                       llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
     if (OptForSize)
       TailDupSize = 1;
-    bool PreRegAlloc = false;
+    const bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, MBFI.get(), PSI,
                    /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
@@ -3488,12 +3523,12 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // Changing the layout can create new tail merging opportunities.
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structured CFG.
-  bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
-                         PassConfig->getEnableTailMerge() &&
-                         BranchFoldPlacement;
+  const bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
+                               PassConfig->getEnableTailMerge() &&
+                               BranchFoldPlacement && MF.size() > 3;
   // No tail merging opportunities if the block number is less than four.
-  if (MF.size() > 3 && EnableTailMerge) {
-    unsigned TailMergeSize = TailDupSize + 1;
+  if (EnableTailMerge) {
+    const unsigned TailMergeSize = TailDupSize + 1;
     BranchFolder BF(/*DefaultEnableTailMerge=*/true, /*CommonHoist=*/false,
                     *MBFI, *MBPI, PSI, TailMergeSize);
 
@@ -3528,32 +3563,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   ComputedEdges.clear();
   ChainAllocator.DestroyAll();
 
-  bool HasMaxBytesOverride =
-      MaxBytesForAlignmentOverride.getNumOccurrences() > 0;
-
-  if (AlignAllBlock)
-    // Align all of the blocks in the function to a specific alignment.
-    for (MachineBasicBlock &MBB : MF) {
-      if (HasMaxBytesOverride)
-        MBB.setAlignment(Align(1ULL << AlignAllBlock),
-                         MaxBytesForAlignmentOverride);
-      else
-        MBB.setAlignment(Align(1ULL << AlignAllBlock));
-    }
-  else if (AlignAllNonFallThruBlocks) {
-    // Align all of the blocks that have no fall-through predecessors to a
-    // specific alignment.
-    for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
-      auto LayoutPred = std::prev(MBI);
-      if (!LayoutPred->isSuccessor(&*MBI)) {
-        if (HasMaxBytesOverride)
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
-                            MaxBytesForAlignmentOverride);
-        else
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
-      }
-    }
-  }
+  // View the function.
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction().getName() == ViewBlockFreqFuncName)) {
