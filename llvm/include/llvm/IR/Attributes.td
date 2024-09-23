@@ -22,6 +22,37 @@ def ParamAttr : AttrProperty;
 /// Can be used as return attribute.
 def RetAttr : AttrProperty;
 
+
+
+/// Intersection rules. Used for example in sinking/hoisting two
+/// callbases to find a set of attributes that apply to both.
+/// If no rule is specified, the assumed rule is that the attrs
+/// must be equal, otherwise the intersection will fail. Having
+/// any rule implies that it is legal to drop the attribute.
+/// Note, there are some attributes we can (probably) legally drop
+/// but are intentionally excluded as of now. Those include:
+///     - initializes
+///     - allockind
+///     - allocsize
+///     - minsize
+///     - optsize
+///     - optnone
+///     - optdebug
+///     - optforfuzzing    
+///
+/// When intersecting take the AND of the two attrs.
+/// Invalid for Int/ConstantRange/ConstantRangeList attrs.
+def IntersectAnd : AttrProperty;
+
+/// When intersecting take the min value of the two attrs.
+/// Only valid for Int attrs.
+def IntersectMin : AttrProperty;
+
+/// When intersecting rely on some user defined code.
+def IntersectCustom : AttrProperty;
+
+    
+
 /// Attribute base class.
 class Attr<string S, list<AttrProperty> P> {
   // String representation of this attribute in the IR.
@@ -54,17 +85,17 @@ class ConstantRangeListAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
 /// 0 means unaligned (different from align(1)).
-def Alignment : IntAttr<"align", [ParamAttr, RetAttr]>;
+def Alignment : IntAttr<"align", [ParamAttr, RetAttr, IntersectCustom]>;
 
 /// Parameter of a function that tells us the alignment of an allocation, as in
 /// aligned_alloc and aligned ::operator::new.
-def AllocAlign: EnumAttr<"allocalign", [ParamAttr]>;
+def AllocAlign: EnumAttr<"allocalign", [ParamAttr, IntersectAnd]>;
 
 /// Describes behavior of an allocator function in terms of known properties.
 def AllocKind: IntAttr<"allockind", [FnAttr]>;
 
 /// Parameter is the pointer to be manipulated by the allocator function.
-def AllocatedPointer : EnumAttr<"allocptr", [ParamAttr]>;
+def AllocatedPointer : EnumAttr<"allocptr", [ParamAttr, IntersectAnd]>;
 
 /// The result of the function is guaranteed to point to a number of bytes that
 /// we can determine if we know the value of the function's arguments.
@@ -84,23 +115,23 @@ def ByVal : TypeAttr<"byval", [ParamAttr]>;
 def ByRef : TypeAttr<"byref", [ParamAttr]>;
 
 /// Parameter or return value may not contain uninitialized or poison bits.
-def NoUndef : EnumAttr<"noundef", [ParamAttr, RetAttr]>;
+def NoUndef : EnumAttr<"noundef", [ParamAttr, RetAttr, IntersectAnd]>;
 
 /// Marks function as being in a cold path.
-def Cold : EnumAttr<"cold", [FnAttr]>;
+def Cold : EnumAttr<"cold", [FnAttr, IntersectAnd]>;
 
 /// Can only be moved to control-equivalent blocks.
-def Convergent : EnumAttr<"convergent", [FnAttr]>;
+def Convergent : EnumAttr<"convergent", [FnAttr, IntersectAnd]>;
 
 /// Marks function as being in a hot path and frequently called.
-def Hot: EnumAttr<"hot", [FnAttr]>;
+def Hot: EnumAttr<"hot", [FnAttr, IntersectAnd]>;
 
 /// Pointer is known to be dereferenceable.
-def Dereferenceable : IntAttr<"dereferenceable", [ParamAttr, RetAttr]>;
+def Dereferenceable : IntAttr<"dereferenceable", [ParamAttr, RetAttr, IntersectMin]>;
 
 /// Pointer is either null or dereferenceable.
 def DereferenceableOrNull : IntAttr<"dereferenceable_or_null",
-                                    [ParamAttr, RetAttr]>;
+                                    [ParamAttr, RetAttr, IntersectMin]>;
 
 /// Do not instrument function with sanitizers.
 def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", [FnAttr]>;
@@ -122,7 +153,7 @@ def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
 def Initializes : ConstantRangeListAttr<"initializes", [ParamAttr]>;
 
 /// Source said inlining was desirable.
-def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;
+def InlineHint : EnumAttr<"inlinehint", [FnAttr, IntersectAnd]>;
 
 /// Force argument to be passed in register.
 def InReg : EnumAttr<"inreg", [ParamAttr, RetAttr]>;
@@ -131,10 +162,10 @@ def InReg : EnumAttr<"inreg", [ParamAttr, RetAttr]>;
 def JumpTable : EnumAttr<"jumptable", [FnAttr]>;
 
 /// Memory effects of the function.
-def Memory : IntAttr<"memory", [FnAttr]>;
+def Memory : IntAttr<"memory", [FnAttr, IntersectCustom]>;
 
 /// Forbidden floating-point classes.
-def NoFPClass : IntAttr<"nofpclass", [ParamAttr, RetAttr]>;
+def NoFPClass : IntAttr<"nofpclass", [ParamAttr, RetAttr, IntersectCustom]>;
 
 /// Function must be optimized for size first.
 def MinSize : EnumAttr<"minsize", [FnAttr]>;
@@ -146,16 +177,16 @@ def Naked : EnumAttr<"naked", [FnAttr]>;
 def Nest : EnumAttr<"nest", [ParamAttr]>;
 
 /// Considered to not alias after call.
-def NoAlias : EnumAttr<"noalias", [ParamAttr, RetAttr]>;
+def NoAlias : EnumAttr<"noalias", [ParamAttr, RetAttr, IntersectAnd]>;
 
 /// Callee isn't recognized as a builtin.
 def NoBuiltin : EnumAttr<"nobuiltin", [FnAttr]>;
 
 /// Function cannot enter into caller's translation unit.
-def NoCallback : EnumAttr<"nocallback", [FnAttr]>;
+def NoCallback : EnumAttr<"nocallback", [FnAttr, IntersectAnd]>;
 
 /// Function creates no aliases of pointer.
-def NoCapture : EnumAttr<"nocapture", [ParamAttr]>;
+def NoCapture : EnumAttr<"nocapture", [ParamAttr, IntersectAnd]>;
 
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
@@ -164,10 +195,10 @@ def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
 def NoExt : EnumAttr<"noext", [ParamAttr, RetAttr]>;
 
 /// Function does not deallocate memory.
-def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
+def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr, IntersectAnd]>;
 
 /// Argument is dead if the call unwinds.
-def DeadOnUnwind : EnumAttr<"dead_on_unwind", [ParamAttr]>;
+def DeadOnUnwind : EnumAttr<"dead_on_unwind", [ParamAttr, IntersectAnd]>;
 
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", [FnAttr]>;
@@ -182,19 +213,19 @@ def NonLazyBind : EnumAttr<"nonlazybind", [FnAttr]>;
 def NoMerge : EnumAttr<"nomerge", [FnAttr]>;
 
 /// Pointer is known to be not null.
-def NonNull : EnumAttr<"nonnull", [ParamAttr, RetAttr]>;
+def NonNull : EnumAttr<"nonnull", [ParamAttr, RetAttr, IntersectAnd]>;
 
 /// The function does not recurse.
-def NoRecurse : EnumAttr<"norecurse", [FnAttr]>;
+def NoRecurse : EnumAttr<"norecurse", [FnAttr, IntersectAnd]>;
 
 /// Disable redzone.
 def NoRedZone : EnumAttr<"noredzone", [FnAttr]>;
 
 /// Mark the function as not returning.
-def NoReturn : EnumAttr<"noreturn", [FnAttr]>;
+def NoReturn : EnumAttr<"noreturn", [FnAttr, IntersectAnd]>;
 
 /// Function does not synchronize.
-def NoSync : EnumAttr<"nosync", [FnAttr]>;
+def NoSync : EnumAttr<"nosync", [FnAttr, IntersectAnd]>;
 
 /// Disable Indirect Branch Tracking.
 def NoCfCheck : EnumAttr<"nocf_check", [FnAttr]>;
@@ -207,7 +238,7 @@ def NoProfile : EnumAttr<"noprofile", [FnAttr]>;
 def SkipProfile : EnumAttr<"skipprofile", [FnAttr]>;
 
 /// Function doesn't unwind stack.
-def NoUnwind : EnumAttr<"nounwind", [FnAttr]>;
+def NoUnwind : EnumAttr<"nounwind", [FnAttr, IntersectAnd]>;
 
 /// No SanitizeBounds instrumentation.
 def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
@@ -234,16 +265,16 @@ def OptimizeNone : EnumAttr<"optnone", [FnAttr]>;
 def Preallocated : TypeAttr<"preallocated", [FnAttr, ParamAttr]>;
 
 /// Parameter or return value is within the specified range.
-def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr]>;
+def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr, IntersectCustom]>;
 
 /// Function does not access memory.
-def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
+def ReadNone : EnumAttr<"readnone", [ParamAttr, IntersectAnd]>;
 
 /// Function only reads from memory.
-def ReadOnly : EnumAttr<"readonly", [ParamAttr]>;
+def ReadOnly : EnumAttr<"readonly", [ParamAttr, IntersectAnd]>;
 
 /// Return value is always equal to this argument.
-def Returned : EnumAttr<"returned", [ParamAttr]>;
+def Returned : EnumAttr<"returned", [ParamAttr, IntersectAnd]>;
 
 /// Parameter is required to be a trivial constant.
 def ImmArg : EnumAttr<"immarg", [ParamAttr]>;
@@ -265,7 +296,7 @@ def SExt : EnumAttr<"signext", [ParamAttr, RetAttr]>;
 def StackAlignment : IntAttr<"alignstack", [FnAttr, ParamAttr]>;
 
 /// Function can be speculated.
-def Speculatable : EnumAttr<"speculatable", [FnAttr]>;
+def Speculatable : EnumAttr<"speculatable", [FnAttr, IntersectAnd]>;
 
 /// Stack protection.
 def StackProtect : EnumAttr<"ssp", [FnAttr]>;
@@ -332,19 +363,19 @@ def UWTable : IntAttr<"uwtable", [FnAttr]>;
 def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;
 
 /// Function always comes back to callsite.
-def WillReturn : EnumAttr<"willreturn", [FnAttr]>;
+def WillReturn : EnumAttr<"willreturn", [FnAttr, IntersectAnd]>;
 
 /// Pointer argument is writable.
-def Writable : EnumAttr<"writable", [ParamAttr]>;
+def Writable : EnumAttr<"writable", [ParamAttr, IntersectAnd]>;
 
 /// Function only writes to memory.
-def WriteOnly : EnumAttr<"writeonly", [ParamAttr]>;
+def WriteOnly : EnumAttr<"writeonly", [ParamAttr, IntersectAnd]>;
 
 /// Zero extended before/after call.
 def ZExt : EnumAttr<"zeroext", [ParamAttr, RetAttr]>;
 
 /// Function is required to make Forward Progress.
-def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
+def MustProgress : EnumAttr<"mustprogress", [FnAttr, IntersectAnd]>;
 
 /// Function is a presplit coroutine.
 def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;

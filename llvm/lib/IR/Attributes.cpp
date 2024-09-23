@@ -727,6 +727,9 @@ enum AttributeProperty {
   FnAttr = (1 << 0),
   ParamAttr = (1 << 1),
   RetAttr = (1 << 2),
+  IntersectAnd = (1 << 3),
+  IntersectMin = (1 << 4),
+  IntersectCustom = (1 << 5),
 };
 
 #define GET_ATTR_PROP_TABLE
@@ -749,6 +752,16 @@ bool Attribute::canUseAsParamAttr(AttrKind Kind) {
 
 bool Attribute::canUseAsRetAttr(AttrKind Kind) {
   return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
+}
+
+bool Attribute::intersectWithAnd(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::IntersectAnd);
+}
+bool Attribute::intersectWithMin(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::IntersectMin);
+}
+bool Attribute::intersectWithCustom(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::IntersectCustom);
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,6 +914,98 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
 
   B.remove(Attrs);
   return get(C, B);
+}
+
+std::optional<AttributeSet>
+AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
+  if (*this == Other)
+    return *this;
+  AttrBuilder Intersected(C);
+  // Get common set of all attributes then handle each attr according to its
+  // intersect rule.
+  AttributeSet Merged = addAttributes(C, Other);
+  for (Attribute Attr : Merged) {
+    // Only supporting enum attrs for now.
+    if (!Attr.hasKindAsEnum())
+      return std::nullopt;
+
+    Attribute::AttrKind Kind = Attr.getKindAsEnum();
+    std::optional<Attribute> Attr0, Attr1;
+    if (hasAttribute(Kind))
+      Attr0 = getAttribute(Kind);
+    if (Other.hasAttribute(Kind))
+      Attr1 = Other.getAttribute(Kind);
+
+    auto IntersectEq = [&]() {
+      if (!Attr0 || !Attr1)
+        return false;
+      if (*Attr0 != *Attr1)
+        return false;
+      Intersected.addAttribute(Attr);
+      return true;
+    };
+
+    // Attribute we can intersect with "and"
+    if (Attribute::intersectWithAnd(Kind)) {
+      assert(Attribute::isEnumAttrKind(Kind) &&
+             "Invalid attr type of intersectAnd");
+      if (Attr0 && Attr1)
+        Intersected.addAttribute(Kind);
+      continue;
+    }
+    bool BothValid = Attr0 && Attr1 && Attr0->isValid() && Attr1->isValid();
+
+    // Attribute we can intersect with "min"
+    if (Attribute::intersectWithMin(Kind)) {
+      assert(Attribute::isIntAttrKind(Kind) &&
+             "Invalid attr type of intersectMin");
+      if (!BothValid)
+        continue;
+
+      uint64_t NewVal = std::min(getAttribute(Kind).getValueAsInt(),
+                                 Other.getAttribute(Kind).getValueAsInt());
+      Intersected.addRawIntAttr(Kind, NewVal);
+      continue;
+    }
+    // Attribute we can intersect but need a custom rule for.
+    if (Attribute::intersectWithCustom(Kind)) {
+      switch (Kind) {
+      case Attribute::Alignment:
+        if (BothValid)
+          Intersected.addAlignmentAttr(std::min(
+              getAlignment().valueOrOne(), Other.getAlignment().valueOrOne()));
+        break;
+      case Attribute::Memory:
+        if (BothValid)
+          Intersected.addMemoryAttr(getMemoryEffects() |
+                                    Other.getMemoryEffects());
+        break;
+      case Attribute::NoFPClass:
+        if (BothValid)
+          Intersected.addNoFPClassAttr(getNoFPClass() & Other.getNoFPClass());
+        break;
+      case Attribute::Range:
+        if (BothValid) {
+          ConstantRange Range0 = getAttribute(Kind).getRange();
+          ConstantRange Range1 = Other.getAttribute(Kind).getRange();
+          ConstantRange NewRange = Range0.unionWith(Range1);
+          if (!NewRange.isFullSet())
+            Intersected.addRangeAttr(NewRange);
+        }
+        break;
+      default:
+        llvm_unreachable("Unknown attribute with custom intersection rule");
+      }
+      continue;
+    }
+
+    // Attributes with no intersection rule. Only intersect if they are equal.
+    // Otherwise fail.
+    if (!IntersectEq())
+      return std::nullopt;
+  }
+
+  return get(C, Intersected);
 }
 
 unsigned AttributeSet::getNumAttributes() const {
@@ -1612,6 +1717,31 @@ AttributeList AttributeList::addAllocSizeParamAttr(
   AttrBuilder B(C);
   B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
   return addParamAttributes(C, Index, B);
+}
+
+std::optional<AttributeList>
+AttributeList::intersectAttributes(LLVMContext &C, AttributeList Other) const {
+  // Trivial case, the two lists are equal.
+  if (*this == Other)
+    return *this;
+
+  // At least for now, only intersect lists with same number of params.
+  if (getNumAttrSets() != Other.getNumAttrSets())
+    return std::nullopt;
+
+  AttributeList IntersectedAttrs{};
+  for (unsigned Idx : indexes()) {
+    auto IntersectedAB =
+        getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
+    // If any index fails to intersect, fail.
+    if (!IntersectedAB)
+      return std::nullopt;
+
+    IntersectedAttrs =
+        IntersectedAttrs.setAttributesAtIndex(C, Idx, *IntersectedAB);
+  }
+
+  return IntersectedAttrs;
 }
 
 //===----------------------------------------------------------------------===//
