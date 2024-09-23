@@ -82,14 +82,14 @@ define i8 @foo(i8 %v0, i8 %v1) {
 TEST_F(RegionTest, MetadataFromIR) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {
-  %t0 = add i8 %v0, 1, !sbvec !0
-  %t1 = add i8 %t0, %v1, !sbvec !1
-  %t2 = add i8 %t1, %v1, !sbvec !1
+  %t0 = add i8 %v0, 1, !sandboxvec !0
+  %t1 = add i8 %t0, %v1, !sandboxvec !1
+  %t2 = add i8 %t1, %v1, !sandboxvec !1
   ret i8 %t2
 }
 
-!0 = distinct !{!"region"}
-!1 = distinct !{!"region"}
+!0 = distinct !{!"sandboxregion"}
+!1 = distinct !{!"sandboxregion"}
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
@@ -140,14 +140,14 @@ define i8 @foo(i8 %v0, i8 %v1) {
 source_filename = "<string>"
 
 define i8 @foo(i8 %v0, i8 %v1) {
-  %t0 = add i8 %v0, 1, !sbvec !0
+  %t0 = add i8 %v0, 1, !sandboxvec !0
   %t1 = add i8 %t0, %v1
-  %t2 = add i8 %t1, %v1, !sbvec !1
+  %t2 = add i8 %t1, %v1, !sandboxvec !1
   ret i8 %t1
 }
 
-!0 = distinct !{!"region"}
-!1 = distinct !{!"region"}
+!0 = distinct !{!"sandboxregion"}
+!1 = distinct !{!"sandboxregion"}
 )";
   EXPECT_EQ(expected, output);
 }
