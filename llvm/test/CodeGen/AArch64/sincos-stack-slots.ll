@@ -23,7 +23,7 @@ entry:
   ret { float, float } %ret_1
 }
 
-define void @sincos_f32_ptr_return(float %x, ptr %out_sin, ptr %out_cos) {
+define void @sincos_f32_ptr_return(float %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; CHECK-LABEL: sincos_f32_ptr_return:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -81,7 +81,7 @@ entry:
   ret { double, double } %ret_1
 }
 
-define void @sincos_f64_ptr_return(double %x, ptr %out_sin, ptr %out_cos) {
+define void @sincos_f64_ptr_return(double %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; CHECK-LABEL: sincos_f64_ptr_return:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -116,8 +116,55 @@ entry:
   ret double %cos
 }
 
+; Here %out_sin and %out_cos may alias so we can't replace both stores with the
+; call to sincosf (as the order of stores in sincosf is not defined).
+define void @sincos_may_alias(float %x, ptr %out_sin, ptr %out_cos) {
+; CHECK-LABEL: sincos_may_alias:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    add x1, sp, #12
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr s0, [sp, #12]
+; CHECK-NEXT:    str s0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+entry:
+  %sin = tail call float @llvm.sin.f32(float %x)
+  %cos = tail call float @llvm.cos.f32(float %x)
+  store float %sin, ptr %out_sin, align 4
+  store float %cos, ptr %out_cos, align 4
+  ret void
+}
+
+; Here %out is used for both sin and cos (with the final value stored being cos).
+define float @sincos_multiple_uses(float %x, ptr %out) {
+; CHECK-LABEL: sincos_multiple_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov x1, x0
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr s0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %sin = call float @llvm.sin.f32(float %x)
+  store float %sin, ptr %out, align 4
+  %reload = load float, ptr %out, align 4
+  %cos = call float @llvm.cos.f32(float %x)
+  store float %cos, ptr %out, align 4
+  ret float %reload
+}
+
 ; Negative test. We can't fold volatile stores into the library call.
-define void @sincos_volatile_result_stores(float %x, ptr %out_sin, ptr %out_cos) {
+define void @sincos_volatile_result_stores(float %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; CHECK-LABEL: sincos_volatile_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
@@ -146,7 +193,7 @@ entry:
 }
 
 ; Negative test. We can't fold atomic stores into the library call.
-define void @sincos_atomic_result_stores(float %x, ptr %out_sin, ptr %out_cos) {
+define void @sincos_atomic_result_stores(float %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; CHECK-LABEL: sincos_atomic_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
@@ -176,7 +223,7 @@ entry:
 }
 
 ; Negative test. We can't fold misaligned stores into the library call.
-define void @sincos_misaligned_result_stores(double %x, ptr %out_sin, ptr %out_cos) {
+define void @sincos_misaligned_result_stores(double %x, ptr noalias %out_sin, ptr noalias %out_cos) {
 ; CHECK-LABEL: sincos_misaligned_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48

@@ -2353,28 +2353,22 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   RTLIB::Libcall LC = RTLIB::getFSINCOS(VT);
 
-  // Find users of the node that store the results. The destination pointers
-  // can be used instead of creating stack allocations.
+  // Find users of the node that store the results (and share input chains). The
+  // destination pointers can be used instead of creating stack allocations.
+  SDValue StoresInChain{};
   std::array<StoreSDNode *, 2> ResultStores = {nullptr};
   for (SDNode *User : Node->uses()) {
     if (!ISD::isNormalStore(User))
       continue;
     auto *ST = cast<StoreSDNode>(User);
     if (!ST->isSimple() || ST->getAddressSpace() != 0 ||
-        ST->getAlign() < DAG.getDataLayout().getABITypeAlign(Ty))
+        ST->getAlign() < DAG.getDataLayout().getABITypeAlign(Ty) ||
+        (StoresInChain && ST->getChain() != StoresInChain) ||
+        Node->isPredecessorOf(ST->getChain().getNode()))
       continue;
     ResultStores[ST->getValue().getResNo()] = ST;
+    StoresInChain = ST->getChain();
   }
-
-  // Collect input chains (and avoid chains referring to one of the stores).
-  SmallVector<SDValue, 2> InChains;
-  for (auto [ResNum, ST] : llvm::enumerate(ResultStores)) {
-    unsigned OtherResNum = ResNum == 0 ? 1 : 0;
-    if (ST && ST->getChain().getNode() != ResultStores[OtherResNum])
-      InChains.push_back(ST->getChain());
-  }
-  if (InChains.empty())
-    InChains.push_back(DAG.getEntryNode());
 
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry{};
@@ -2395,9 +2389,7 @@ void SelectionDAGLegalize::ExpandSinCosLibCall(
   }
 
   SDLoc DL(Node);
-
-  // Combine any input chains from the stores.
-  SDValue InChain = DAG.getTokenFactor(DL, InChains);
+  SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
                                          TLI.getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
