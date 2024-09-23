@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/Todo.h"
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
@@ -416,8 +417,18 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
 
   parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc, di);
 
+  // FIXME Currently, we only support workshare constructs with structured
+  // control flow. The transformation itself supports CFG, however, once we
+  // transform the MLIR region in the omp.workshare, we need to inline that
+  // region in the parent block. We have no guarantees at this point of the
+  // pipeline that the parent op supports CFG (e.g. fir.if), thus this is not
+  // generally possible.  The alternative is to put the lowered region in an
+  // operation akin to scf.execute_region, which will get lowered at the same
+  // time when fir ops get lowered to CFG. However, SCF is not registered in
+  // flang so we cannot use it. Remove this requirement once we have
+  // scf.execute_region or an alternative operation available.
   if (wsOp.getRegion().getBlocks().size() != 1)
-    return failure();
+    TODO(wsOp->getLoc(), "omp workshare with unstructured control flow");
 
   // Inline the contents of the placeholder workshare op into its parent block.
   Block *theBlock = &newOp.getRegion().front();
