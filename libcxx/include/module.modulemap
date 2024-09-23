@@ -412,7 +412,6 @@ module std [system] {
     module find_if                                { header "__algorithm/find_if.h" }
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
     module find                                   { header "__algorithm/find.h" }
-    module fold                                   { header "__algorithm/fold.h" }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
     module for_each                               { header "__algorithm/for_each.h" }
@@ -529,6 +528,7 @@ module std [system] {
     module ranges_find_if                         { header "__algorithm/ranges_find_if.h" }
     module ranges_find_last                       { header "__algorithm/ranges_find_last.h" }
     module ranges_find                            { header "__algorithm/ranges_find.h" }
+    module ranges_fold                            { header "__algorithm/ranges_fold.h" }
     module ranges_for_each_n {
       header "__algorithm/ranges_for_each_n.h"
       export std.algorithm.in_fun_result
