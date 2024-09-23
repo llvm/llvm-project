@@ -703,6 +703,45 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   }
 }
 
+void SemaCUDA::checkTargetMacroUse(const Token &Tok) {
+  assert(SemaRef.LangOpts.HIP);
+
+  // Currently, we check only for the AMDGCN_WAVEFRONT_SIZE macros, which should
+  // only be used in device compilation.
+  if (SemaRef.LangOpts.CUDAIsDevice)
+    return;
+
+  auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  // If we are not in a FunctionDecl and we have no other meaningful way of
+  // determining the compilation mode, avoid potentially spurious warnings.
+  if (!FD && SemaRef.CUDA().CurCUDATargetCtx.Kind == SemaCUDA::CTCK_Unknown)
+    return;
+
+  auto Target = SemaRef.CUDA().IdentifyTarget(FD);
+  if (Target != CUDAFunctionTarget::HostDevice &&
+      Target != CUDAFunctionTarget::Host)
+    return;
+
+  const auto &Loc = Tok.getLocation();
+  if (!Loc.isMacroID())
+    return;
+
+  // Get the location of the innermost macro that contributed the token.
+  const auto &SM = SemaRef.getSourceManager();
+  const auto &IMCLoc = SM.getImmediateMacroCallerLoc(Loc);
+  const auto &SpellingLoc = SM.getSpellingLoc(IMCLoc);
+
+  SmallString<16> buffer;
+  auto MacroName = SemaRef.getPreprocessor().getSpelling(SpellingLoc, buffer);
+  if (MacroName == "__AMDGCN_WAVEFRONT_SIZE" ||
+      MacroName == "__AMDGCN_WAVEFRONT_SIZE__") {
+    // Only report the actual use of the macro, not its builtin definition.
+    auto UseLoc = SM.getExpansionLoc(Tok.getLocation());
+    SemaRef.Diag(UseLoc, diag::warn_ref_device_macro_on_host)
+        << MacroName << llvm::to_underlying(SemaRef.CUDA().CurrentTarget());
+  }
+}
+
 void SemaCUDA::RecordImplicitHostDeviceFuncUsedByDevice(
     const FunctionDecl *Callee) {
   FunctionDecl *Caller = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);

@@ -9109,6 +9109,8 @@ def warn_offload_incompatible_redeclare : Warning<
   "new declaration is %select{__device__|__global__|__host__|__host__ __device__}0 function, "
   "old declaration is %select{__device__|__global__|__host__|__host__ __device__}1 function">,
   InGroup<DiagGroup<"nvcc-compat">>, DefaultIgnore;
+def warn_ref_device_macro_on_host : Warning<
+  "device-specific macro %0 is not available in a %select{__device__|__global__|__host__|__host__ __device__}1 context">, InGroup<DiagGroup<"hip-wavefrontsize">>;
 
 def err_cuda_device_builtin_surftex_cls_template : Error<
     "illegal device builtin %select{surface|texture}0 reference "
