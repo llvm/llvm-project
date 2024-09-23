@@ -1826,9 +1826,6 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // If the only use of phi is comparing it with a constant then we can
     // put this comparison in the incoming BB directly after a ucmp/scmp call
     // because we know that it will simplify to a single icmp.
-    // NOTE: the single-use check here is not only to ensure that the
-    // optimization is profitable, but also to avoid creating a potentially
-    // invalid phi node when we have a multi-edge in the CFG.
     const APInt *Ignored;
     if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUser() &&
         match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
@@ -1873,9 +1870,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     Value *Op = PN->getIncomingValue(OpIndex);
     BasicBlock *OpBB = PN->getIncomingBlock(OpIndex);
 
-    auto CloneIt = Clones.find(OpBB);
-    if (CloneIt == Clones.end()) {
-      Instruction *Clone = I.clone();
+    Instruction *Clone = Clones.lookup(OpBB);
+    if (!Clone) {
+      Clone = I.clone();
       for (Use &U : Clone->operands()) {
         if (U == PN)
           U = Op;
@@ -1883,10 +1880,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
           U = U->DoPHITranslation(PN->getParent(), OpBB);
       }
       Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
-      CloneIt = Clones.insert(std::make_pair(OpBB, Clone)).first;
+      Clones.insert({OpBB, Clone});
     }
 
-    Instruction *Clone = CloneIt->second;
     NewPhiValues[OpIndex] = Clone;
   }
 
