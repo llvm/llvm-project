@@ -29,3 +29,15 @@ bool2 builtin_cross_int2_to_float2_promotion(int2 p1)
   return __builtin_hlsl_cross(p1, p1);
   // expected-error@-1 {{passing 'int2' (aka 'vector<int, 2>') to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values)}}
 }
+
+float2 builtin_cross_float2(float2 p1, float2 p2)
+{
+  return __builtin_hlsl_cross(p1, p2);
+  // expected-error@-1 {{expected vector size of '2', but vector size is '3'}}
+}
+
+float3  builtin_cross_float3_int3(float3 p1, int3 p2)
+{
+  return __builtin_hlsl_cross(p1, p2);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_cross' must have the same type}}
+}

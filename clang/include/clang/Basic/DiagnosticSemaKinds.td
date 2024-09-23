@@ -312,6 +312,8 @@ def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
 def err_invalid_vector_complex_decl_spec : Error<
   "cannot use '_Complex' with '__vector'">;
+def err_invalid_vector_size : Error<
+  "expected vector size of '%0', but vector size is '%1'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 

@@ -1711,6 +1711,21 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
       return true;
+    // ensure both args have 3 elements
+    int NumElementsArg1 =
+        TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    int NumElementsArg2 =
+        TheCall->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+    if (NumElementsArg1 != 3) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_invalid_vector_size)
+          << NumElementsArg1 << 3;
+      return true;
+    }
+    if (NumElementsArg2 != 3) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_invalid_vector_size)
+          << NumElementsArg2 << 3;
+      return true;
+    }
 
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
