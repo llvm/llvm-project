@@ -109,6 +109,7 @@ void Ctx::reset() {
 
   in.reset();
   sym = ElfSym{};
+  symtab = std::make_unique<SymbolTable>();
 
   memoryBuffers.clear();
   objectFiles.clear();
@@ -155,7 +156,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   context->e.cleanupCallback = []() {
     elf::ctx.reset();
     elf::ctx.partitions.emplace_back();
-    symtab = SymbolTable();
 
     SharedFile::vernauxNum = 0;
   };
@@ -167,6 +167,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.symAux.emplace_back();
+  ctx.symtab = std::make_unique<SymbolTable>();
 
   ctx.partitions.clear();
   ctx.partitions.emplace_back();
@@ -2194,7 +2195,7 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
   // Calling sym->extract() in the loop is not safe because it may add new
   // symbols to the symbol table, invalidating the current iterator.
   SmallVector<Symbol *, 0> syms;
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     if (!sym->isPlaceholder() && pat->match(sym->getName()))
       syms.push_back(sym);
 
@@ -2203,7 +2204,7 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
 }
 
 static void handleLibcall(Ctx &ctx, StringRef name) {
-  Symbol *sym = symtab.find(name);
+  Symbol *sym = ctx.symtab->find(name);
   if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
     if (!ctx.arg.whyExtract.empty())
       ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
@@ -2390,7 +2391,7 @@ template <class ELFT>
 static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   for (auto *arg : args.filtered(OPT_keep_unique)) {
     StringRef name = arg->getValue();
-    auto *d = dyn_cast_or_null<Defined>(symtab.find(name));
+    auto *d = dyn_cast_or_null<Defined>(ctx.symtab->find(name));
     if (!d || !d->section) {
       warn("could not find symbol " + name + " to keep unique");
       continue;
@@ -2405,7 +2406,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
 
   // Symbols in the dynsym could be address-significant in other executables
   // or DSOs, so we conservatively mark them as address-significant.
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->includeInDynsym())
       markAddrsig(sym);
 
@@ -2574,24 +2575,24 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!seen.insert(name).second)
       continue;
 
-    Symbol *sym = symtab.find(name);
+    Symbol *sym = ctx.symtab->find(name);
     if (!sym)
       continue;
 
-    Symbol *wrap =
-        symtab.addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
+    Symbol *wrap = ctx.symtab->addUnusedUndefined(
+        saver().save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
-    if (Symbol *real = symtab.find(realName)) {
-      symtab.addUnusedUndefined(name, sym->binding);
+    if (Symbol *real = ctx.symtab->find(realName)) {
+      ctx.symtab->addUnusedUndefined(name, sym->binding);
       // Update sym's binding, which will replace real's later in
       // SymbolTable::wrap.
       sym->binding = real->binding;
     }
 
-    Symbol *real = symtab.addUnusedUndefined(realName);
+    Symbol *real = ctx.symtab->addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -2626,7 +2627,7 @@ static void combineVersionedSymbol(Symbol &sym,
   //
   // * There is a definition of foo@v1 and foo@@v1.
   // * There is a definition of foo@v1 and foo.
-  Defined *sym2 = dyn_cast_or_null<Defined>(symtab.find(sym.getName()));
+  Defined *sym2 = dyn_cast_or_null<Defined>(ctx.symtab->find(sym.getName()));
   if (!sym2)
     return;
   const char *suffix2 = sym2->getVersionSuffix();
@@ -2681,7 +2682,7 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   // symbols with a non-default version (foo@v1) and check whether it should be
   // combined with foo or foo@@v1.
   if (ctx.arg.versionDefinitions.size() > 2)
-    for (Symbol *sym : symtab.getSymbols())
+    for (Symbol *sym : ctx.symtab->getSymbols())
       if (sym->hasVersionSuffix)
         combineVersionedSymbol(*sym, map);
 
@@ -2697,7 +2698,7 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 
   // Update pointers in the symbol table.
   for (const WrappedSymbol &w : wrapped)
-    symtab.wrap(w.sym, w.real, w.wrap);
+    ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
 static void reportMissingFeature(StringRef config, const Twine &report) {
@@ -2861,14 +2862,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
-    symtab.insert(arg->getValue())->traced = true;
+    ctx.symtab->insert(arg->getValue())->traced = true;
 
   ctx.internalFile = createInternalFile("<internal>");
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : ctx.arg.undefined)
-    symtab.addUnusedUndefined(name)->referenced = true;
+    ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
   parseFiles(files, armCmseImpLib);
 
@@ -2876,7 +2877,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
-  if (Symbol *sym = symtab.find(ctx.arg.entry))
+  if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
     handleUndefined(ctx, sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
@@ -2890,13 +2891,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Prevent LTO from removing any definition referenced by -u.
   for (StringRef name : ctx.arg.undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+    if (Defined *sym = dyn_cast_or_null<Defined>(ctx.symtab->find(name)))
       sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
-  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(ctx.arg.init)))
+  if (Symbol *sym = dyn_cast_or_null<Defined>(ctx.symtab->find(ctx.arg.init)))
     sym->isUsedInRegularObj = true;
-  if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(ctx.arg.fini)))
+  if (Symbol *sym = dyn_cast_or_null<Defined>(ctx.symtab->find(ctx.arg.fini)))
     sym->isUsedInRegularObj = true;
 
   // If any of our inputs are bitcode files, the LTO code generator may create
@@ -2977,7 +2978,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // name "foo@ver1") rather do harm, so we don't call this if -r is given.
   if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
-    symtab.scanVersionScript();
+    ctx.symtab->scanVersionScript();
   }
 
   // Skip the normal linked output if some LTO options are specified.

@@ -1581,7 +1581,7 @@ Expr ScriptParser::readPrimary() {
     // script, it must happen before this DEFINED.
     auto order = ctx.scriptSymOrderCounter++;
     return [=, &ctx = this->ctx] {
-      Symbol *s = symtab.find(name);
+      Symbol *s = ctx.symtab->find(name);
       return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
                                                                          : 0;
     };
