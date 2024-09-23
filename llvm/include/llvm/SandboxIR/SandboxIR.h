@@ -135,6 +135,7 @@ class GlobalVariable;
 class GlobalAlias;
 class NoCFIValue;
 class ConstantPtrAuth;
+class ConstantExpr;
 class Context;
 class Function;
 class Instruction;
@@ -344,6 +345,7 @@ protected:
   friend class GlobalAlias;           // For `Val`.
   friend class NoCFIValue;            // For `Val`.
   friend class ConstantPtrAuth;       // For `Val`.
+  friend class ConstantExpr;          // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1661,6 +1663,19 @@ public:
   }
 };
 
+class ConstantExpr : public Constant {
+  ConstantExpr(llvm::ConstantExpr *C, Context &Ctx)
+      : Constant(ClassID::ConstantExpr, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantExpr;
+  }
+  // TODO: Missing functions.
+};
+
 class BlockAddress final : public Constant {
   BlockAddress(llvm::BlockAddress *C, Context &Ctx)
       : Constant(ClassID::BlockAddress, C, Ctx) {}
@@ -2041,6 +2056,61 @@ public:
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
   void copyFastMathFlags(FastMathFlags FMF);
+
+  bool isAssociative() const {
+    return cast<llvm::Instruction>(Val)->isAssociative();
+  }
+
+  bool isCommutative() const {
+    return cast<llvm::Instruction>(Val)->isCommutative();
+  }
+
+  bool isIdempotent() const {
+    return cast<llvm::Instruction>(Val)->isIdempotent();
+  }
+
+  bool isNilpotent() const {
+    return cast<llvm::Instruction>(Val)->isNilpotent();
+  }
+
+  bool mayWriteToMemory() const {
+    return cast<llvm::Instruction>(Val)->mayWriteToMemory();
+  }
+
+  bool mayReadFromMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadFromMemory();
+  }
+  bool mayReadOrWriteMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadOrWriteMemory();
+  }
+
+  bool isAtomic() const { return cast<llvm::Instruction>(Val)->isAtomic(); }
+
+  bool hasAtomicLoad() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicLoad();
+  }
+
+  bool hasAtomicStore() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicStore();
+  }
+
+  bool isVolatile() const { return cast<llvm::Instruction>(Val)->isVolatile(); }
+
+  Type *getAccessType() const;
+
+  bool mayThrow(bool IncludePhaseOneUnwind = false) const {
+    return cast<llvm::Instruction>(Val)->mayThrow(IncludePhaseOneUnwind);
+  }
+
+  bool isFenceLike() const {
+    return cast<llvm::Instruction>(Val)->isFenceLike();
+  }
+
+  bool mayHaveSideEffects() const {
+    return cast<llvm::Instruction>(Val)->mayHaveSideEffects();
+  }
+
+  // TODO: Missing functions.
 
   bool isStackSaveOrRestoreIntrinsic() const {
     auto *I = cast<llvm::Instruction>(Val);
