@@ -5125,36 +5125,35 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Arg *SYCLStdArg = Args.getLastArg(options::OPT_sycl_std_EQ);
 
-  if (IsSYCLDevice) {
-    // Host triple is needed when doing SYCL device compilations.
-    llvm::Triple AuxT = C.getDefaultToolChain().getTriple();
-    std::string NormalizedTriple = AuxT.normalize();
-    CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
-
-    // We want to compile sycl kernels.
-    CmdArgs.push_back("-fsycl-is-device");
-
-    // Set O2 optimization level by default
-    if (!Args.getLastArg(options::OPT_O_Group))
-      CmdArgs.push_back("-O2");
-  }
-
   if (IsSYCL) {
-    // Set options for both host and device
+    if (IsSYCLDevice) {
+      // Host triple is needed when doing SYCL device compilations.
+      llvm::Triple AuxT = C.getDefaultToolChain().getTriple();
+      std::string NormalizedTriple = AuxT.normalize();
+      CmdArgs.push_back("-aux-triple");
+      CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+
+      // We want to compile sycl kernels.
+      CmdArgs.push_back("-fsycl-is-device");
+
+      // Set O2 optimization level by default
+      if (!Args.getLastArg(options::OPT_O_Group))
+        CmdArgs.push_back("-O2");
+    } else {
+      // Add any options that are needed specific to SYCL offload while
+      // performing the host side compilation.
+
+      // Let the front-end host compilation flow know about SYCL offload
+      // compilation.
+      CmdArgs.push_back("-fsycl-is-host");
+    }
+
+    // Set options for both host and device.
     if (SYCLStdArg) {
       SYCLStdArg->render(Args, CmdArgs);
     } else {
       // Ensure the default version in SYCL mode is 2020.
       CmdArgs.push_back("-sycl-std=2020");
-    }
-
-    // Add any options that are needed specific to SYCL offload while
-    // performing the host side compilation.
-    if (!IsSYCLDevice) {
-      // Let the front-end host compilation flow know about SYCL offload
-      // compilation.
-      CmdArgs.push_back("-fsycl-is-host");
     }
   }
 
