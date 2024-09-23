@@ -52,6 +52,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinpif16_test.cpp
+  DEPENDS
+    libc.src.math.sinpif16
+    libc.src.errno.errno
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits  
+)
+
+add_fp_unittest(
   sincosf_test
   SUITE
     libc-math-smoke-tests
