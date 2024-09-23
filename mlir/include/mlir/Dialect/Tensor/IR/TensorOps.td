@@ -1861,7 +1861,7 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
       return getDestType().getShape().take_front(inputRank);
     }
 
-    /// Similar to `getAllOuterDims`, but only retrieve the outer dims  that
+    /// Similar to `getAllOuterDims`, but only retrieve the outer dims that
     /// have been tiled.
     SmallVector<int64_t> getTiledOuterDims();
   }];
