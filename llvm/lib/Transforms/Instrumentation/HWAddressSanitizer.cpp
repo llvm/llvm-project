@@ -408,7 +408,7 @@ private:
     bool isInGlobal() const {
       return !InGlobal && !InTls && Offset == kDynamicShadowSentinel;
     }
-    bool isInifunc() const {
+    bool isInIfunc() const {
       assert(!InGlobal || !InTls);
       assert(!InGlobal || Offset == kDynamicShadowSentinel);
       return InGlobal;
@@ -834,7 +834,7 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
                  ConstantInt::get(IntptrTy, Mapping.offset()), PtrTy));
   }
 
-  if (Mapping.isInifunc())
+  if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
   Value *GlobalDynamicAddress =
