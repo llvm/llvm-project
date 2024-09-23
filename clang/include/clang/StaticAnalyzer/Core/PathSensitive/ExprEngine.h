@@ -121,6 +121,25 @@ struct EvalCallOptions {
   EvalCallOptions() {}
 };
 
+/// Simple control flow statements like `if` only produce a single state split,
+/// so the fact that they are included in the source code implies that both
+/// branches are possible (at least under some conditions) and the analyzer can
+/// freely assume either of them. (This is not entirely true, because there may
+/// be unmarked logical correlations between `if` statements, but is a good
+/// enough heuristic and the analyzer strongly relies on it.)
+/// On the other hand, in a loop the state may be split repeatedly at each
+/// evaluation of the loop condition, and this can lead to following "weak"
+/// assumptions even though the code does not imply that they're valid and the
+/// programmer intended to cover them.
+/// This function is called to mark the `State` when the engine makes an
+/// assumption which is weak. Checkers may use this heuristical mark to discard
+/// result and reduce the amount of false positives.
+ProgramStateRef recordWeakLoopAssumption(ProgramStateRef State);
+
+/// Returns true if `recordWeakLoopAssumption()` was called on the execution
+/// path which produced `State`.
+bool seenWeakLoopAssumption(ProgramStateRef State);
+
 class ExprEngine {
   void anchor();
 
@@ -323,12 +342,13 @@ public:
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition,
-                     NodeBuilderContext& BuilderCtx,
-                     ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+  /// If the branch condition is a loop condition, IterationsFinishedInLoop is
+  /// the number of already finished iterations (0, 1, 2...); otherwise it's
+  /// std::nullopt.
+  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                     const CFGBlock *DstT, const CFGBlock *DstF,
+                     std::optional<unsigned> IterationsFinishedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -583,11 +603,12 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeBinOpBifurcation - Given the nodes in 'Src', eagerly assume symbolic
-  ///  expressions of the form 'x != 0' and generate new nodes (stored in Dst)
-  ///  with those assumptions.
-  void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
-                         const Expr *Ex);
+  /// evalEagerlyAssumeOpBifurcation - Given the nodes in 'Src', eagerly assume
+  /// symbolic
+  ///  expressions of the form 'x != 0' or '!x' and generate new nodes (stored
+  ///  in Dst) with those assumptions.
+  void evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
+                                      ExplodedNodeSet &Src, const Expr *Ex);
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();

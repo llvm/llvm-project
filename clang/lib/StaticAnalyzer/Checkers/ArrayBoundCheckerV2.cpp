@@ -697,6 +697,11 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
                                     ProgramStateRef ErrorState, Messages Msgs,
                                     NonLoc Offset, std::optional<NonLoc> Extent,
                                     bool IsTaintBug /*=false*/) const {
+  // Suppress results found through execution paths where in some loop the
+  // analyzer arbitrarily assumed either that the loop is skipped (0 iterations)
+  // or that 3 or more iterations are executed.
+  if (seenWeakLoopAssumption(ErrorState))
+    return;
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
   if (!ErrorNode)

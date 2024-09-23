@@ -441,10 +441,33 @@ void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
 void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
                                 const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
+
+  const LocationContext *LC = Pred->getLocationContext();
+  BlockCounter Counter = WList->getBlockCounter();
+  unsigned BlockCount =
+      Counter.getNumVisited(LC->getStackFrame(), B->getBlockID());
+  std::optional<unsigned> IterationsFinishedInLoop = std::nullopt;
+  if (isa<ForStmt, WhileStmt, CXXForRangeStmt>(Term)) {
+    // FIXME: This code approximates the number of finished iteration based on
+    // the block count, i.e. the number of evaluations of the terminator block
+    // on the current execution path (which includes the current evaluation, so
+    // is always at least 1). This is probably acceptable for the
+    // checker-specific false positive suppression that currently uses this
+    // value, but it would be better to calcuate an accurate count of
+    // iterations.
+    assert(BlockCount >= 1);
+    IterationsFinishedInLoop = BlockCount - 1;
+  } else if (isa<DoStmt>(Term)) {
+    // FIXME: The fixme note in the previous branch also applies here.
+    // In a do-while loop one iteration happens before the first evaluation of
+    // the loop condition, so we don't subtract one from the block count.
+    IterationsFinishedInLoop = BlockCount;
+  }
+
   NodeBuilderContext Ctx(*this, B, Pred);
   ExplodedNodeSet Dst;
   ExprEng.processBranch(Cond, Ctx, Pred, Dst, *(B->succ_begin()),
-                       *(B->succ_begin() + 1));
+                        *(B->succ_begin() + 1), IterationsFinishedInLoop);
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }
