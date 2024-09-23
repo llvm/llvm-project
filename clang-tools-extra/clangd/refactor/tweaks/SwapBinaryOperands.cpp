@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ParsedAST.h"
+#include "Protocol.h"
+#include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
@@ -13,13 +15,14 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
+#include <string>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -29,11 +32,10 @@ namespace {
 /// while keeping the meaning intact, whereas comparison operators, mathematical
 /// operators, etc. are often desired to be swappable for readability, avoiding
 /// bugs by assigning to nullptr when comparison was desired, etc.
-auto isOpSwappable(const BinaryOperatorKind Opcode) -> bool {
+bool isOpSwappable(const BinaryOperatorKind Opcode) {
   switch (Opcode) {
   case BinaryOperatorKind::BO_Mul:
   case BinaryOperatorKind::BO_Add:
-  case BinaryOperatorKind::BO_Cmp:
   case BinaryOperatorKind::BO_LT:
   case BinaryOperatorKind::BO_GT:
   case BinaryOperatorKind::BO_LE:
@@ -53,6 +55,8 @@ auto isOpSwappable(const BinaryOperatorKind Opcode) -> bool {
   case BinaryOperatorKind::BO_Shl:
   case BinaryOperatorKind::BO_Shr:
   case BinaryOperatorKind::BO_Rem:
+  // <=> is noncommutative
+  case BinaryOperatorKind::BO_Cmp:
   // Member access:
   case BinaryOperatorKind::BO_PtrMemD:
   case BinaryOperatorKind::BO_PtrMemI:
@@ -77,20 +81,20 @@ auto isOpSwappable(const BinaryOperatorKind Opcode) -> bool {
 /// operands
 /// @param[out] Opcode the opcode to potentially swap
 /// If the opcode does not need to be swapped or is not swappable, does nothing
-void swapOperator(BinaryOperatorKind &Opcode) {
+BinaryOperatorKind swapOperator(const BinaryOperatorKind Opcode) {
   switch (Opcode) {
   case BinaryOperatorKind::BO_LT:
-    Opcode = BinaryOperatorKind::BO_GT;
-    return;
+    return BinaryOperatorKind::BO_GT;
+
   case BinaryOperatorKind::BO_GT:
-    Opcode = BinaryOperatorKind::BO_LT;
-    return;
+    return BinaryOperatorKind::BO_LT;
+
   case BinaryOperatorKind::BO_LE:
-    Opcode = BinaryOperatorKind::BO_GE;
-    return;
+    return BinaryOperatorKind::BO_GE;
+
   case BinaryOperatorKind::BO_GE:
-    Opcode = BinaryOperatorKind::BO_LE;
-    return;
+    return BinaryOperatorKind::BO_LE;
+
   case BinaryOperatorKind::BO_Mul:
   case BinaryOperatorKind::BO_Add:
   case BinaryOperatorKind::BO_Cmp:
@@ -120,7 +124,7 @@ void swapOperator(BinaryOperatorKind &Opcode) {
   case BinaryOperatorKind::BO_AndAssign:
   case BinaryOperatorKind::BO_XorAssign:
   case BinaryOperatorKind::BO_OrAssign:
-    return;
+    return Opcode;
   }
 }
 
@@ -154,7 +158,10 @@ REGISTER_TWEAK(SwapBinaryOperands)
 bool SwapBinaryOperands::prepare(const Selection &Inputs) {
   for (const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
        N && !Op; N = N->Parent) {
-    // Stop once we hit a block, e.g. a lambda in the if condition.
+    // Stop once we hit a block, e.g. a lambda in one of the operands.
+    // This makes sure that the selection point is in the 'scope' of the binary
+    // operator, not from somewhere inside a lambda for example
+    // (5 < [](){ ^return 1; })
     if (llvm::isa_and_nonnull<CompoundStmt>(N->ASTNode.get<Stmt>()))
       return false;
     Op = dyn_cast_or_null<BinaryOperator>(N->ASTNode.get<Stmt>());
@@ -167,27 +174,27 @@ bool SwapBinaryOperands::prepare(const Selection &Inputs) {
 }
 
 Expected<Tweak::Effect> SwapBinaryOperands::apply(const Selection &Inputs) {
-  auto &Ctx = Inputs.AST->getASTContext();
-  auto &SrcMgr = Inputs.AST->getSourceManager();
+  const auto &Ctx = Inputs.AST->getASTContext();
+  const auto &SrcMgr = Inputs.AST->getSourceManager();
 
-  auto LHSRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
-                                    Op->getLHS()->getSourceRange());
+  const auto LHSRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
+                                          Op->getLHS()->getSourceRange());
   if (!LHSRng)
     return error(
         "Could not obtain range of the 'lhs' of the operator. Macros?");
-  auto RHSRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
-                                    Op->getRHS()->getSourceRange());
+  const auto RHSRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
+                                          Op->getRHS()->getSourceRange());
   if (!RHSRng)
     return error(
         "Could not obtain range of the 'rhs' of the operator. Macros?");
-  auto OpRng =
+  const auto OpRng =
       toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(), Op->getOperatorLoc());
   if (!OpRng)
     return error("Could not obtain range of the operator itself. Macros?");
 
-  auto LHSCode = toSourceCode(SrcMgr, *LHSRng);
-  auto RHSCode = toSourceCode(SrcMgr, *RHSRng);
-  auto OperatorCode = toSourceCode(SrcMgr, *OpRng);
+  const auto LHSCode = toSourceCode(SrcMgr, *LHSRng);
+  const auto RHSCode = toSourceCode(SrcMgr, *RHSRng);
+  const auto OperatorCode = toSourceCode(SrcMgr, *OpRng);
 
   tooling::Replacements Result;
   if (auto Err = Result.add(tooling::Replacement(
@@ -196,8 +203,7 @@ Expected<Tweak::Effect> SwapBinaryOperands::apply(const Selection &Inputs) {
   if (auto Err = Result.add(tooling::Replacement(
           Ctx.getSourceManager(), RHSRng->getBegin(), RHSCode.size(), LHSCode)))
     return std::move(Err);
-  auto SwappedOperator = Op->getOpcode();
-  swapOperator(SwappedOperator);
+  const auto SwappedOperator = swapOperator(Op->getOpcode());
   if (auto Err = Result.add(tooling::Replacement(
           Ctx.getSourceManager(), OpRng->getBegin(), OperatorCode.size(),
           Op->getOpcodeStr(SwappedOperator))))
