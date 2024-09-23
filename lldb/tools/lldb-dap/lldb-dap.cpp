@@ -4435,9 +4435,6 @@ void request_readMemory(const llvm::json::Object &request) {
   addr_int += GetSigned(arguments, "offset", 0);
   const uint64_t count_requested = GetUnsigned(arguments, "count", 0);
 
-  lldb::SBAddress addr =
-      g_dap.target.ResolveLoadAddress(addr_int);
-
   // We also need support reading 0 bytes
   // VS Code sends those requests to check if a `memoryReference`
   // can be dereferenced.
@@ -4445,6 +4442,7 @@ void request_readMemory(const llvm::json::Object &request) {
   std::vector<uint8_t> buf;
   buf.resize(count_read);
   lldb::SBError error;
+  lldb::SBAddress addr{addr_int, g_dap.target};
   size_t count_result =
       g_dap.target.ReadMemory(addr, buf.data(), count_read, error);
   if (error.Fail()) {
