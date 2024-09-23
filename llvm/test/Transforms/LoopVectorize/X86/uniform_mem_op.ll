@@ -207,9 +207,6 @@ define void @uniform_store_varying_value(ptr align(4) %addr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 12
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 13
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP0]], 14

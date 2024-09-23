@@ -116,8 +116,10 @@ void PredicateExpander::expandCheckRegOperandSimple(raw_ostream &OS,
 
 void PredicateExpander::expandCheckInvalidRegOperand(raw_ostream &OS,
                                                      int OpIndex) {
+  if (!shouldNegate())
+    OS << "!";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
-     << ").getReg() " << (shouldNegate() ? "!= " : "== ") << "0";
+     << ").getReg().isValid()";
 }
 
 void PredicateExpander::expandCheckSameRegOperand(raw_ostream &OS, int First,

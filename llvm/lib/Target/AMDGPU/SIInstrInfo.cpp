@@ -2958,9 +2958,20 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // blocks.
   Register PCReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
 
+  // Note: as this is used after hazard recognizer we need to apply some hazard
+  // workarounds directly.
+  const bool FlushSGPRWrites = (ST.isWave64() && ST.hasVALUMaskWriteHazard()) ||
+                               ST.hasVALUReadSGPRHazard();
+  auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
+    if (FlushSGPRWrites)
+      BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+  };
+
   // We need to compute the offset relative to the instruction immediately after
   // s_getpc_b64. Insert pc arithmetic code before last terminator.
   MachineInstr *GetPC = BuildMI(MBB, I, DL, get(AMDGPU::S_GETPC_B64), PCReg);
+  ApplyHazardWorkarounds();
 
   MCSymbol *PostGetPCLabel =
       MCCtx.createTempSymbol("post_getpc", /*AlwaysAddSuffix=*/true);
@@ -2978,6 +2989,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
       .addSym(OffsetHi, MO_FAR_BRANCH_OFFSET);
+  ApplyHazardWorkarounds();
 
   // Insert the indirect branch after the other terminator.
   BuildMI(&MBB, DL, get(AMDGPU::S_SETPC_B64))
@@ -4601,7 +4613,6 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
         // of vcc was already added during the initial BuildMI, but we
         // 1) may need to change vcc to vcc_lo to preserve the original register
         // 2) have to preserve the original flags.
-        fixImplicitOperands(*Inst32);
         copyFlagsToImplicitVCC(*Inst32, *Src2);
         continue;
       }
@@ -4611,7 +4622,7 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
   }
 
   // FIXME: Losing implicit operands
-
+  fixImplicitOperands(*Inst32);
   return Inst32;
 }
 

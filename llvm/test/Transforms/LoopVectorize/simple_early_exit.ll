@@ -1621,12 +1621,12 @@ loop.end:
 
 
 ; The form of the induction variables requires SCEV predicates.
-; TODO: We should fix isDereferenceableAndAlignedInLoop and
-; getSmallConstantMaxTripCount to cope with SCEV predicates when
-; requesting the small constant max trip count.
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
-; DEBUG:       LV: Not vectorizing: Loop may fault.
+; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
+; DEBUG-NEXT:  LV: Found speculative backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
+; DEBUG-NEXT:  LV: We can vectorize this loop!
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
 ; CHECK-LABEL: define i32 @diff_exit_block_needs_scev_check(
 ; CHECK-SAME: i32 [[END:%.*]]) {
 ; CHECK-NEXT:  entry:
