@@ -60,19 +60,17 @@ define void @test_no_stackslot_scavenging_with_fp(float %f, i64 %n) #0 "frame-po
 ; CHECK-NEXT:    stp x24, x19, [sp, #112] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    lsl x9, x0, #3
-; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    addvl x8, x19, #1
-; CHECK-NEXT:    add x9, x9, #15
-; CHECK-NEXT:    str s0, [x8, #92] // 4-byte Folded Spill
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    str s0, [x29, #28] // 4-byte Folded Spill
+; CHECK-NEXT:    add x9, x9, #15
 ; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    addvl x8, x19, #1
-; CHECK-NEXT:    ldr s0, [x8, #92] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [x29, #28] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl use_f
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    sub sp, x29, #64
