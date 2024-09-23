@@ -10319,10 +10319,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
-  if (Context.getTargetInfo().getTriple().isRISCV()) {
-    // RISC-V doesn't support fmv feature.
-  } else if (NewTVA && !NewTVA->isDefaultVersion() &&
-             !Context.getTargetInfo().hasFeature("fmv")) {
+  if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
+      !NewTVA->isDefaultVersion() &&
+      !Context.getTargetInfo().hasFeature("fmv")) {
     // Don't add to scope fmv functions declarations if fmv disabled
     AddToScope = false;
     return NewFD;
@@ -15511,10 +15510,9 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
   if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
-    if (Context.getTargetInfo().getTriple().isRISCV()) {
-      // RISC-V doesn't support fmv feature.
-    } else if (!Context.getTargetInfo().hasFeature("fmv") &&
-               !Attr->isDefaultVersion()) {
+    if (Context.getTargetInfo().getTriple().isAArch64() &&
+        !Context.getTargetInfo().hasFeature("fmv") &&
+        !Attr->isDefaultVersion()) {
       // If function multi versioning disabled skip parsing function body
       // defined with non-default target_version attribute
       if (SkipBody)
