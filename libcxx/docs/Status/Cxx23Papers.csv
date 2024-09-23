@@ -100,7 +100,7 @@
 "`P2396R1 <https://wg21.link/P2396R1>`__","Concurrency TS 2 fixes ","2022-11 (Kona)","","",""
 "`P2505R5 <https://wg21.link/P2505R5>`__","Monadic Functions for ``std::expected``","2022-11 (Kona)","|Complete|","17.0",""
 "`P2539R4 <https://wg21.link/P2539R4>`__","Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?","2022-11 (Kona)","|Complete|","18.0",""
-"`P2602R2 <https://wg21.link/P2602R2>`__","Poison Pills are Too Toxic","2022-11 (Kona)","|Complete|","19.0",""
+"`P2602R2 <https://wg21.link/P2602R2>`__","Poison Pills are Too Toxic","2022-11 (Kona)","|Complete|","19.0","Implemented as a DR in C++20"
 "`P2708R1 <https://wg21.link/P2708R1>`__","No Further Fundamentals TSes","2022-11 (Kona)","|Nothing To Do|","",""
 "","","","","",""
 "`P0290R4 <https://wg21.link/P0290R4>`__","``apply()`` for ``synchronized_value<T>``","2023-02 (Issaquah)","","",""

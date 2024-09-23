@@ -651,7 +651,7 @@
 # DEBUG-NEXT: G_INSERT_SUBVECTOR (opcode {{[0-9]+}}): 2 type indices, 1 imm index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_EXTRACT_SUBVECTOR (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: G_EXTRACT_SUBVECTOR (opcode {{[0-9]+}}): 2 type indices, 1 imm index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_INSERT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices, 0 imm indices

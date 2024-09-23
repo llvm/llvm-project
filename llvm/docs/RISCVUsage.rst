@@ -429,6 +429,7 @@ Global Pointer (GP) Relaxation and the Small Data Limit
 Some of the RISC-V psABI variants reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
 
 To use this functionality, you need to be doing all of the following:
+
 * Use the ``medlow`` (aka ``small``) code model;
 * Not use the ``gp`` register for any other uses (some platforms use it for the shadow stack and others as a temporary -- as denoted by the ``Tag_RISCV_x3_reg_usage`` build attribute);
 * Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects (this is the default, but ``-mno-relax`` disables these relaxation annotations);

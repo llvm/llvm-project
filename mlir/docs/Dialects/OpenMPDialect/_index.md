@@ -238,6 +238,55 @@ corresponding operation, except if it is explicitly skipped as described
 tablegen failure while processing OpenMP dialect operations, earlier messages
 triggered by that pass can point to a likely solution.
 
+### Operand Structures
+
+One consequence of basing the representation of operations on the set of values
+and attributes defined for each clause applicable to the corresponding OpenMP
+directive is that operation argument lists tend to be long. This has the effect
+of making C++ operation builders difficult to work with and easy to mistakenly
+pass arguments in the wrong order, which may sometimes introduce hard to detect
+problems.
+
+A solution provided to this issue are operand structures. The main idea behind
+them is that there is one defined for each clause, holding a set of fields that
+contain the data needed to initialize each of the arguments associated with that
+clause. Clause operand structures are aggregated into operation operand
+structures via class inheritance. Then, a custom builder is defined for each
+operation taking the corresponding operand structure as a parameter. Since each
+argument is a named member of the structure, it becomes much simpler to set up
+the desired arguments to create a new operation.
+
+Ad-hoc operand structures available for use within the ODS definition of custom
+operation builders might be defined in
+[OpenMPClauseOperands.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/OpenMP/OpenMPClauseOperands.h).
+However, this is generally not needed for clause-based operation definitions.
+The `-gen-openmp-clause-ops` tablegen backend, triggered when building the 'omp'
+dialect, will automatically produce structures in the following way:
+
+- It will create a `<Name>ClauseOps` structure for each `OpenMP_Clause`
+definition with one field per argument.
+- The name of each field will match the tablegen name of the corresponding
+argument, except for replacing snake case with camel case.
+- The type of the field will be obtained from the corresponding tablegen
+argument's type:
+  - Values are represented with `mlir::Value`, except for `Variadic`, which
+  makes it an `llvm::SmallVector<mlir::Value>`.
+  - `OptionalAttr` is represented by the translation of its `baseAttr`.
+  - `TypedArrayAttrBase`-based attribute types are represented by wrapping the
+  translation of their `elementAttr` in an `llvm::SmallVector`. The only
+  exception for this case is if the `elementAttr` is a "scalar" (i.e. non
+  array-like) attribute type, in which case the more generic `mlir::Attribute`
+  will be used in place of its `storageType`.
+  - For `ElementsAttrBase`-based attribute types a best effort is attempted to
+  obtain an element type (`llvm::APInt`, `llvm::APFloat` or
+  `DenseArrayAttrBase`'s `returnType`) to be wrapped in an `llvm::SmallVector`.
+  If it cannot be obtained, which will happen with non-builtin direct subclasses
+  of `ElementsAttrBase`, a warning will be emitted and the `storageType` (i.e.
+  specific `mlir::Attribute` subclass) will be used instead.
+  - Other attribute types will be represented with their `storageType`.
+- It will create `<Name>Operands` structure for each operation, which is an
+empty structure subclassing all operand structures defined for the corresponding `OpenMP_Op`'s clauses.
+
 ## Loop-Associated Directives
 
 Loop-associated OpenMP constructs are represented in the dialect as loop wrapper

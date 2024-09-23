@@ -889,29 +889,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-    int FPImm = static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(
-        APF, VT);
-    if (FPImm >= 0) {
-      unsigned Opc;
-      switch (VT.SimpleTy) {
-      default:
-        llvm_unreachable("Unexpected size");
-      case MVT::f16:
-        Opc = RISCV::FLI_H;
-        break;
-      case MVT::f32:
-        Opc = RISCV::FLI_S;
-        break;
-      case MVT::f64:
-        Opc = RISCV::FLI_D;
-        break;
-      }
-      SDNode *Res = CurDAG->getMachineNode(
-          Opc, DL, VT, CurDAG->getTargetConstant(FPImm, DL, XLenVT));
-
-      ReplaceNode(Node, Res);
-      return;
-    }
 
     bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
     SDValue Imm;
@@ -3551,13 +3528,6 @@ bool RISCVDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
     return false;
 
   MVT VT = CFP->getSimpleValueType(0);
-
-  // Even if this FPImm requires an additional FNEG (i.e. the second element of
-  // the returned pair is true) we still prefer FLI + FNEG over immediate
-  // materialization as the latter might generate a longer instruction sequence.
-  if (static_cast<const RISCVTargetLowering *>(TLI)->getLegalZfaFPImm(APF,
-                                                                      VT) >= 0)
-    return false;
 
   MVT XLenVT = Subtarget->getXLenVT();
   if (VT == MVT::f64 && !Subtarget->is64Bit()) {

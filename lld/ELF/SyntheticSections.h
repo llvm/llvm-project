@@ -533,7 +533,7 @@ public:
                 RelType addendRelType) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
-    if (config->writeAddends && (expr != R_ADDEND || addend != 0))
+    if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
     addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
   }
@@ -551,7 +551,7 @@ public:
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
             d->type == llvm::ELF::SHT_RELR ||
             (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
-             config->emachine == llvm::ELF::EM_AARCH64));
+             ctx.arg.emachine == llvm::ELF::EM_AARCH64));
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
@@ -1190,7 +1190,7 @@ private:
 class MipsRldMapSection final : public SyntheticSection {
 public:
   MipsRldMapSection();
-  size_t getSize() const override { return config->wordsize; }
+  size_t getSize() const override { return ctx.arg.wordsize; }
   void writeTo(uint8_t *buf) override {}
 };
 
