@@ -1076,14 +1076,12 @@ KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
   // The sign bit is the LHS's sign bit, except when the result of the
   // remainder is zero. The magnitude of the result should be less than or
   // equal to the magnitude of either operand.
-  if (LHS.isNegative() && Known.isNonZero()) {
+  if (LHS.isNegative() && Known.isNonZero())
     Known.One.setHighBits(
         std::max(LHS.countMinLeadingOnes(), RHS.countMinSignBits()));
-  } else if (LHS.isNonNegative()) {
-    unsigned Lead =
-        std::max(LHS.countMinLeadingZeros(), RHS.countMinLeadingZeros());
-    Known.Zero.setHighBits(std::max(Lead + 1, RHS.countMinLeadingOnes()) - 1);
-  }
+  else if (LHS.isNonNegative())
+    Known.Zero.setHighBits(
+        std::max(LHS.countMinLeadingZeros(), RHS.countMinSignBits()));
   return Known;
 }
 
