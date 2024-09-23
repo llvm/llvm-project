@@ -247,8 +247,11 @@ public:
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<DXILResourceMDWrapper>();
+    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
   }
   static char ID; // Pass identification.
 };
