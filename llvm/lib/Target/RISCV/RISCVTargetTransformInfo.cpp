@@ -1116,6 +1116,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
         UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
+  case Intrinsic::vp_select: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    assert(FOp.has_value());
+    return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
