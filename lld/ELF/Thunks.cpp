@@ -106,7 +106,6 @@ public:
 
   uint32_t size() override { return getMayUseShortThunk() ? 4 : 8; }
   void addSymbols(ThunkSection &isec) override;
-  InputSection *getTargetInputSection() const override;
   void writeTo(uint8_t *buf) override;
 
 private:
@@ -628,11 +627,6 @@ void AArch64BTILandingPadThunk::addSymbols(ThunkSection &isec) {
   addSymbol("$x", STT_NOTYPE, 0, isec);
 }
 
-InputSection *AArch64BTILandingPadThunk::getTargetInputSection() const {
-  auto &dr = cast<Defined>(destination);
-  return dyn_cast<InputSection>(dr.section);
-}
-
 void AArch64BTILandingPadThunk::writeTo(uint8_t *buf) {
   if (!getMayUseShortThunk()) {
     writeLong(buf);
@@ -645,14 +639,18 @@ void AArch64BTILandingPadThunk::writeTo(uint8_t *buf) {
 bool AArch64BTILandingPadThunk::getMayUseShortThunk() {
   if (!mayUseShortThunk)
     return false;
-  // If the target is the following instruction then
-  // we can fall through without the indirect branch.
+  // If the target is the following instruction then we can fall
+  // through without the indirect branch.
   uint64_t s = destination.getVA(addend);
   uint64_t p = getThunkTargetSym()->getVA();
-  // <= 4 as Thunks start off with the same offset
-  // within the section as the destination, so
-  // s - p == 0 until addresses are assigned.
-  mayUseShortThunk = (s - p <= 4);
+  // This function is called before addresses are stable.  We need to
+  // work out the range from the thunk to the next section but the
+  // address of the start of the next section depends on the size of
+  // the thunks in the previous pass.  s - p + offset == 0 represents
+  // the first pass where the Thunk and following section are assigned
+  // the same offset.  s - p <= 4 is the last Thunk in the Thunk
+  // Section.
+  mayUseShortThunk = (s - p + offset == 0 || s - p <= 4);
   return mayUseShortThunk;
 }
 

@@ -37,25 +37,26 @@ bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
   if (s.isInPlt())
     return true;
-  Defined *d = dyn_cast_or_null<Defined>(&s);
-  if (d == nullptr || d->section == nullptr ||
-      d->section->kind() != InputSectionBase::Regular)
+  Defined *d = dyn_cast<Defined>(&s);
+  if (!isa_and_nonnull<InputSection>(d->section))
     // All places that we cannot disassemble are responsible for making
     // the target a BTI landing pad.
     return true;
   InputSection *isec = cast<InputSection>(d->section);
-  int64_t off = d->value + a;
+  uint64_t off = d->value + a;
   // Likely user error, but protect ourselves against out of bounds
   // access.
-  if (off < 0 || static_cast<uint64_t>(off) >= isec->getSize())
+  if (off >= isec->getSize())
     return true;
   const uint8_t *buf = isec->content().begin();
   const uint32_t instr = read32le(buf + off);
-  if (instr == 0xd503233f || // PACIASP.
-      instr == 0xd503237f || // PACIBSP.
-      instr == 0xd503245f || // BTI C.
-      instr == 0xd503249f || // BTI J.
-      instr == 0xd50324df)   // BTI JC.
+  // All BTI instructions are HINT instructions which all have same encoding
+  // apart from bits [11:5]
+  if ((instr & 0xd503201f) == 0xd503201f &&
+      is_contained({/*PACIASP*/ 0xd503233f, /*PACIBSP*/ 0xd503237f,
+                    /*BTI C*/ 0xd503245f, /*BTI J*/ 0xd503249f,
+                    /*BTI JC*/ 0xd50324df},
+                   instr))
     return true;
   return false;
 }

@@ -2259,10 +2259,12 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
 std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
                                                               int64_t a) {
-  Thunk *lp = landingPadsBySectionAndAddend[{{d.section, d.value}, a}];
-  if (lp)
-    return std::make_pair(lp, false);
-  return std::make_pair(addLandingPadThunk(d, a), true);
+  auto res = landingPadsBySectionAndAddend.try_emplace(
+      {{d.section, d.value}, a}, nullptr);
+  if (res.second)
+    res.first->second = addLandingPadThunk(d, a);
+  ;
+  return std::make_pair(res.first->second, res.second);
 }
 
 // Return true if the relocation target is an in range Thunk.
@@ -2357,7 +2359,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
                 auto &dr = cast<Defined>(t->destination);
                 std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
                 if (isNew) {
-                  InputSection *targetsec = dyn_cast<InputSection>(dr.section);
+                  InputSection *targetsec = cast<InputSection>(dr.section);
                   ts = getISThunkSec(targetsec);
                   ts->addThunk(lpt);
                 }
