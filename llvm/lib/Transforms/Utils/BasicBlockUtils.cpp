@@ -1160,10 +1160,7 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
       // Split block expects NewBB to have a non-empty set of predecessors.
       SmallVector<DominatorTree::UpdateType, 8> Updates;
       SmallPtrSet<BasicBlock *, 8> UniquePreds;
-      if (OldBB->getSinglePredecessor()) {
-        assert(OldBB->getSinglePredecessor() == NewBB);
-        Updates.push_back({DominatorTree::Insert, NewBB, OldBB});
-      }
+      Updates.push_back({DominatorTree::Insert, NewBB, OldBB});
       Updates.reserve(Updates.size() + 2 * Preds.size());
       for (auto *Pred : Preds)
         if (UniquePreds.insert(Pred).second) {
