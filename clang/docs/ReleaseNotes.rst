@@ -513,12 +513,7 @@ New features
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 - Function effects (the ``nonblocking`` and ``nonallocating`` "performance constraint" attributes)
-  are now verified. Functions with the attribute are checked for language constructs which allocate
-  memory or block, such as using exceptions, static local or thread-local variables, or Objective-C
-  methods or properties. Implicit and explicit function calls are also checked. Called functions
-  must either have the required attribute, or have inline implementations which can be themselves
-  verified. The warnings are controlled by ``-Wfunction-effects``, which is now 
-  disabled by default.
+  are now verified.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

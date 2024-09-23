@@ -206,7 +206,6 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
   case Builtin::ID::BIvscanf:
   case Builtin::ID::BIvfscanf:
   case Builtin::ID::BIvsscanf:
-
     Result.insert(FunctionEffect(FunctionEffect::Kind::Blocking));
     break;
   }
@@ -318,7 +317,7 @@ public:
       return nullptr;
 
     auto *Iter =
-        std::find_if(Impl->begin(), Impl->end(),
+        llvm::find_if(*Impl,
                      [&](const auto &Item) { return Item.Effect == Key; });
     return Iter != Impl->end() ? &*Iter : nullptr;
   }
@@ -417,8 +416,7 @@ public:
 
   ArrayRef<Violation> getSortedViolationsForExplicitEffects(SourceManager &SM) {
     if (!ViolationsForExplicitEffects.empty())
-      std::sort(ViolationsForExplicitEffects.begin(),
-                ViolationsForExplicitEffects.end(),
+      llvm::sort(ViolationsForExplicitEffects,
                 [&SM](const Violation &LHS, const Violation &RHS) {
                   return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
                 });
@@ -527,9 +525,9 @@ class Analyzer {
         CallableInfo CI(*item.first);
         const auto AP = item.second;
         OS << item.first << " " << CI.name(SemaRef) << " : ";
-        if (AP.isNull())
+        if (AP.isNull()) {
           OS << "null\n";
-        else if (isa<CompleteFunctionAnalysis *>(AP)) {
+        } else if (isa<CompleteFunctionAnalysis *>(AP)) {
           auto *CFA = AP.get<CompleteFunctionAnalysis *>();
           OS << CFA << " ";
           CFA->dump(OS);
