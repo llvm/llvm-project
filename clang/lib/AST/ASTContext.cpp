@@ -440,12 +440,26 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   }
 
   // Any redeclarations of D that we haven't checked for comments yet?
-  // We can't use DenseMap::iterator directly since it'd get invalid.
-  auto LastCheckedRedecl = [this, CanonicalD]() -> const Decl * {
-    return CommentlessRedeclChains.lookup(CanonicalD);
+  const Decl *LastCheckedRedecl = [&]() {
+    const Decl *LastChecked = CommentlessRedeclChains.lookup(CanonicalD);
+    bool CanUseCommentlessCache = false;
+    if (LastChecked) {
+      for (auto *Redecl : CanonicalD->redecls()) {
+        if (Redecl == D) {
+          CanUseCommentlessCache = true;
+          break;
+        }
+        if (Redecl == LastChecked)
+          break;
+      }
+    }
+    // FIXME: This could be improved so that even if CanUseCommentlessCache
+    // is false, once we've traversed past CanonicalD we still skip ahead
+    // LastChecked.
+    return CanUseCommentlessCache ? LastChecked : nullptr;
   }();
 
-  for (const auto Redecl : D->redecls()) {
+  for (const Decl *Redecl : D->redecls()) {
     assert(Redecl);
     // Skip all redeclarations that have been checked previously.
     if (LastCheckedRedecl) {
@@ -1168,6 +1182,13 @@ ASTContext::getTypePackElementDecl() const {
     TypePackElementDecl = buildBuiltinTemplateDecl(BTK__type_pack_element,
                                                    getTypePackElementName());
   return TypePackElementDecl;
+}
+
+BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
+  if (!BuiltinCommonTypeDecl)
+    BuiltinCommonTypeDecl = buildBuiltinTemplateDecl(
+        BTK__builtin_common_type, getBuiltinCommonTypeName());
+  return BuiltinCommonTypeDecl;
 }
 
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,

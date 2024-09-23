@@ -144,6 +144,10 @@ struct UnaryRecipe_match {
     return DefR && match(DefR);
   }
 
+  bool match(const VPSingleDefRecipe *R) {
+    return match(static_cast<const VPRecipeBase *>(R));
+  }
+
   bool match(const VPRecipeBase *R) {
     if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
       return false;

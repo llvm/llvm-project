@@ -78,22 +78,23 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-ConfigWrapper elf::config;
 Ctx elf::ctx;
 
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
 void elf::errorOrWarn(const Twine &msg) {
-  if (config->noinhibitExec)
+  if (ctx.arg.noinhibitExec)
     warn(msg);
   else
     error(msg);
 }
 
-Ctx::Ctx() : arg(config.c), driver(*this) {}
+Ctx::Ctx() : driver(*this) {}
 
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   driver.~LinkerDriver();
   new (&driver) LinkerDriver(*this);
   script = nullptr;
@@ -148,32 +149,31 @@ namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *ctx = new CommonLinkerContext;
+  auto *context = new CommonLinkerContext;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() {
+  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  context->e.cleanupCallback = []() {
     elf::ctx.reset();
     elf::ctx.partitions.emplace_back();
     symtab = SymbolTable();
 
     SharedFile::vernauxNum = 0;
   };
-  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
-                                 "--error-limit=0 to see all errors)";
+  context->e.logName = args::getFilenameWithoutExe(args[0]);
+  context->e.errorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "--error-limit=0 to see all errors)";
 
-  config = ConfigWrapper();
+  LinkerScript script(ctx);
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
 
-  LinkerScript script;
-  elf::ctx.script = &script;
-  elf::ctx.symAux.emplace_back();
+  ctx.partitions.clear();
+  ctx.partitions.emplace_back();
 
-  elf::ctx.partitions.clear();
-  elf::ctx.partitions.emplace_back();
+  ctx.arg.progName = args[0];
 
-  config->progName = args[0];
-
-  elf::ctx.driver.linkerMain(args);
+  ctx.driver.linkerMain(args);
 
   return errorCount() == 0;
 }
@@ -292,7 +292,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::unknown:
-    readLinkerScript(mbref);
+    readLinkerScript(ctx, mbref);
     return;
   case file_magic::archive: {
     auto members = getArchiveMembers(mbref);
@@ -852,7 +852,7 @@ static ICFLevel getICF(opt::InputArgList &args) {
 static StripPolicy getStrip(opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
-  if (!config->zSectionHeader)
+  if (!ctx.arg.zSectionHeader)
     return StripPolicy::All;
 
   auto *arg = args.getLastArg(OPT_strip_all, OPT_strip_debug);
@@ -866,8 +866,7 @@ static StripPolicy getStrip(opt::InputArgList &args) {
 static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
                                     const opt::Arg &arg) {
   uint64_t va = 0;
-  if (s.starts_with("0x"))
-    s = s.drop_front(2);
+  s.consume_front("0x");
   if (!to_integer(s, va, 16))
     error("invalid argument: " + arg.getAsString(args));
   return va;
@@ -963,7 +962,7 @@ static void readCallGraph(MemoryBufferRef mb) {
   auto findSection = [&](StringRef name) -> InputSectionBase * {
     Symbol *sym = map.lookup(name);
     if (!sym) {
-      if (config->warnSymbolOrdering)
+      if (ctx.arg.warnSymbolOrdering)
         warn(mb.getBufferIdentifier() + ": no such symbol: " + name);
       return nullptr;
     }
@@ -986,7 +985,7 @@ static void readCallGraph(MemoryBufferRef mb) {
 
     if (InputSectionBase *from = findSection(fields[0]))
       if (InputSectionBase *to = findSection(fields[1]))
-        config->callGraphProfile[std::make_pair(from, to)] += count;
+        ctx.arg.callGraphProfile[std::make_pair(from, to)] += count;
   }
 }
 
@@ -1024,14 +1023,14 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
         for (const typename ELFT::Rela &rel : relas)
-          symbolIndices.push_back(rel.getSymbol(config->isMips64EL));
+          symbolIndices.push_back(rel.getSymbol(ctx.arg.isMips64EL));
         break;
       }
       if (sec.sh_type == SHT_REL) {
         ArrayRef<typename ELFT::Rel> rels =
             CHECK(obj.rels(sec), "could not retrieve cg profile rel section");
         for (const typename ELFT::Rel &rel : rels)
-          symbolIndices.push_back(rel.getSymbol(config->isMips64EL));
+          symbolIndices.push_back(rel.getSymbol(ctx.arg.isMips64EL));
         break;
       }
     }
@@ -1064,7 +1063,7 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
       auto *from = dyn_cast_or_null<InputSectionBase>(fromSym->section);
       auto *to = dyn_cast_or_null<InputSectionBase>(toSym->section);
       if (from && to)
-        config->callGraphProfile[{from, to}] += cgpe.cgp_weight;
+        ctx.arg.callGraphProfile[{from, to}] += cgpe.cgp_weight;
     }
   }
 }
@@ -1187,7 +1186,7 @@ getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
 static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
   SetVector<StringRef, SmallVector<StringRef, 0>> names;
   for (StringRef s : args::getLines(mb))
-    if (!names.insert(s) && config->warnSymbolOrdering)
+    if (!names.insert(s) && ctx.arg.warnSymbolOrdering)
       warn(mb.getBufferIdentifier() + ": duplicate ordered symbol: " + s);
 
   return names.takeVector();
@@ -1197,7 +1196,7 @@ static bool getIsRela(opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
   bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
                             EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
-                           config->emachine);
+                           ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
@@ -1216,7 +1215,7 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   std::string err;
   raw_string_ostream os(err);
 
-  const char *argv[] = {config->progName.data(), opt.data()};
+  const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
@@ -1236,9 +1235,9 @@ static bool remapInputs(StringRef line, const Twine &location) {
     return true;
   }
   if (!hasWildcard(fields[0]))
-    config->remapInputs[fields[0]] = fields[1];
+    ctx.arg.remapInputs[fields[0]] = fields[1];
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
-    config->remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
+    ctx.arg.remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
     error(location + ": " + toString(pat.takeError()) + ": " + fields[0]);
     return true;
@@ -1809,12 +1808,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   for (auto *arg :
        args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-      readDynamicList(*buffer);
+      readDynamicList(ctx, *buffer);
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (std::optional<std::string> path = searchScript(arg->getValue())) {
       if (std::optional<MemoryBufferRef> buffer = readFile(*path))
-        readVersionScript(*buffer);
+        readVersionScript(ctx, *buffer);
     } else {
       error(Twine("cannot find version script ") + arg->getValue());
     }
@@ -1942,7 +1941,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
+      readDefsym(ctx, MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -1952,7 +1951,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
           if (arg->getOption().matches(OPT_default_script)) {
             defaultScript = mb;
           } else {
-            readLinkerScript(*mb);
+            readLinkerScript(ctx, *mb);
             hasScript = true;
           }
         }
@@ -2038,7 +2037,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   }
 
   if (defaultScript && !hasScript)
-    readLinkerScript(*defaultScript);
+    readLinkerScript(ctx, *defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
@@ -2092,20 +2091,20 @@ static uint64_t getCommonPageSize(Ctx &ctx, opt::InputArgList &args) {
     error("common-page-size: value isn't a power of 2");
     return ctx.target->defaultCommonPageSize;
   }
-  if (config->nmagic || config->omagic) {
+  if (ctx.arg.nmagic || ctx.arg.omagic) {
     if (val != ctx.target->defaultCommonPageSize)
       warn("-z common-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
   // commonPageSize can't be larger than maxPageSize.
-  if (val > config->maxPageSize)
-    val = config->maxPageSize;
+  if (val > ctx.arg.maxPageSize)
+    val = ctx.arg.maxPageSize;
   return val;
 }
 
 // Parses --image-base option.
 static std::optional<uint64_t> getImageBase(Ctx &ctx, opt::InputArgList &args) {
-  // Because we are using "Config->maxPageSize" here, this function has to be
+  // Because we are using `ctx.arg.maxPageSize` here, this function has to be
   // called after the variable is initialized.
   auto *arg = args.getLastArg(OPT_image_base);
   if (!arg)
@@ -2380,7 +2379,7 @@ static void markAddrsig(Symbol *s) {
     if (d->section)
       // We don't need to keep text sections unique under --icf=all even if they
       // are address-significant.
-      if (config->icf == ICFLevel::Safe || !(d->section->flags & SHF_EXECINSTR))
+      if (ctx.arg.icf == ICFLevel::Safe || !(d->section->flags & SHF_EXECINSTR))
         d->section->keepUnique = true;
 }
 
@@ -2476,10 +2475,10 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   if (ctx.script->hasPhdrsCommands())
     error(toString(s->file) +
           ": partitions cannot be used with the PHDRS command");
-  if (!config->sectionStartMap.empty())
+  if (!ctx.arg.sectionStartMap.empty())
     error(toString(s->file) + ": partitions cannot be used with "
                               "--section-start, -Ttext, -Tdata or -Tbss");
-  if (config->emachine == EM_MIPS)
+  if (ctx.arg.emachine == EM_MIPS)
     error(toString(s->file) + ": partitions cannot be used on this target");
 
   // Impose a limit of no more than 254 partitions. This limit comes from the
@@ -2527,7 +2526,7 @@ template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile bitcode files and replace bitcode symbols.
-  lto.reset(new BitcodeCompiler);
+  lto.reset(new BitcodeCompiler(ctx));
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
@@ -2650,7 +2649,7 @@ static void combineVersionedSymbol(Symbol &sym,
     sym.isUsedInRegularObj = false;
   } else if (auto *sym1 = dyn_cast<Defined>(&sym)) {
     if (sym2->versionId > VER_NDX_GLOBAL
-            ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
+            ? ctx.arg.versionDefinitions[sym2->versionId].name == suffix1 + 1
             : sym1->section == sym2->section && sym1->value == sym2->value) {
       // Due to an assembler design flaw, if foo is defined, .symver foo,
       // foo@v1 defines both foo and foo@v1. Unless foo is bound to a
@@ -2727,14 +2726,14 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 // match. Missing info for some object files with matching info for remaining
 // ones can be allowed (see -z pauth-report).
 static void readSecurityNotes() {
-  if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
-      config->emachine != EM_AARCH64)
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
+      ctx.arg.emachine != EM_AARCH64)
     return;
 
-  config->andFeatures = -1;
+  ctx.arg.andFeatures = -1;
 
   StringRef referenceFileName;
-  if (config->emachine == EM_AARCH64) {
+  if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
       return !f->aarch64PauthAbiCoreInfo.empty();
     });
@@ -2748,49 +2747,49 @@ static void readSecurityNotes() {
     uint32_t features = f->andFeatures;
 
     checkAndReportMissingFeature(
-        config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
+        ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
         toString(f) + ": -z bti-report: file does not have "
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
 
     checkAndReportMissingFeature(
-        config->zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
         toString(f) + ": -z gcs-report: file does not have "
                       "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
 
     checkAndReportMissingFeature(
-        config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
+        ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_IBT property");
 
     checkAndReportMissingFeature(
-        config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
+        ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
         toString(f) + ": -z cet-report: file does not have "
                       "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
 
-    if (config->zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
+    if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (config->zBtiReport == "none")
+      if (ctx.arg.zBtiReport == "none")
         warn(toString(f) + ": -z force-bti: file does not have "
                            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
-    } else if (config->zForceIbt &&
+    } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-      if (config->zCetReport == "none")
+      if (ctx.arg.zCetReport == "none")
         warn(toString(f) + ": -z force-ibt: file does not have "
                            "GNU_PROPERTY_X86_FEATURE_1_IBT property");
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
-    if (config->zPacPlt && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
+    if (ctx.arg.zPacPlt && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
       warn(toString(f) + ": -z pac-plt: file does not have "
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
-    config->andFeatures &= features;
+    ctx.arg.andFeatures &= features;
 
     if (ctx.aarch64PauthAbiCoreInfo.empty())
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      reportMissingFeature(config->zPauthReport,
+      reportMissingFeature(ctx.arg.zPauthReport,
                            toString(f) +
                                ": -z pauth-report: file does not have AArch64 "
                                "PAuth core info while '" +
@@ -2807,14 +2806,14 @@ static void readSecurityNotes() {
   }
 
   // Force enable Shadow Stack.
-  if (config->zShstk)
-    config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+  if (ctx.arg.zShstk)
+    ctx.arg.andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
   // Force enable/disable GCS
-  if (config->zGcs == GcsPolicy::Always)
-    config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
-  else if (config->zGcs == GcsPolicy::Never)
-    config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  if (ctx.arg.zGcs == GcsPolicy::Always)
+    ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  else if (ctx.arg.zGcs == GcsPolicy::Never)
+    ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2868,7 +2867,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
-  for (StringRef name : config->undefined)
+  for (StringRef name : ctx.arg.undefined)
     symtab.addUnusedUndefined(name)->referenced = true;
 
   parseFiles(files, armCmseImpLib);
@@ -3209,5 +3208,5 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Write the result to the file.
-  writeResult<ELFT>();
+  writeResult<ELFT>(ctx);
 }
