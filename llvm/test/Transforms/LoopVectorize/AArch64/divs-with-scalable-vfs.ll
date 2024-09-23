@@ -34,21 +34,11 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP12]], [[TMP22]]
-; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP17]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP25]] to i32
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP26]]
-; CHECK-NEXT:    [[TMP31:%.*]] = add i32 [[TMP28]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sext i32 [[TMP30]] to i64
-; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP31]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[TMP34]], i32 0
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 2

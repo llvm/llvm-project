@@ -19,6 +19,7 @@
 #define fpclassify(x)                                                          \
   __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, x)
 #define isnormal(x) __builtin_isnormal(x)
+#define issubnormal(x) (fpclassify(x) == FP_SUBNORMAL)
 #ifdef __cplusplus
 #define issignaling(x)                                                         \
   _Generic((x),                                                                \
