@@ -1215,7 +1215,7 @@ private:
                                     uint64_t &ErrorInfo,
                                     bool MatchingInlineAsm);
 
-  bool omitRegisterFromClobberLists(unsigned RegNo) override;
+  bool omitRegisterFromClobberLists(MCRegister Reg) override;
 
   /// Parses AVX512 specific operand primitives: masked registers ({%k<NUM>}, {z})
   /// and memory broadcasting ({1to<NUM>}) primitives, updating Operands vector if required.
@@ -4659,8 +4659,8 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
                MatchingInlineAsm);
 }
 
-bool X86AsmParser::omitRegisterFromClobberLists(unsigned RegNo) {
-  return X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(RegNo);
+bool X86AsmParser::omitRegisterFromClobberLists(MCRegister Reg) {
+  return X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(Reg);
 }
 
 bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
