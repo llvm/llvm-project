@@ -9309,7 +9309,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    StoreInst *IntermediateStore = RdxDesc.IntermediateStore;
     // If tail is folded by masking, introduce selects between the phi
     // and the live-out instruction of each reduction, at the beginning of the
     // dedicated latch block.
@@ -9376,13 +9375,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // also modeled in VPlan.
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
-    FinalReductionResult->insertBefore(*MiddleVPBB, IP);
-     auto *FinalReductionResult = new VPInstruction( 
-        VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult, [](VPUser &User, unsigned) {
-        auto *Parent = cast<VPRecipeBase>(&User)->getParent();
+          auto *Parent = cast<VPRecipeBase>(&User)->getParent();
           return Parent && !Parent->getParent();
         });
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
