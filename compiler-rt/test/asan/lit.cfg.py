@@ -153,10 +153,14 @@ if config.asan_dynamic:
 if platform.system() == "Windows":
     # MSVC-specific tests might also use the clang-cl.exe driver.
     if target_is_msvc:
-        clang_cl_cxxflags = [
-            "-WX",
-            "-D_HAS_EXCEPTIONS=0",
-        ] + config.debug_info_flags + target_cflags
+        clang_cl_cxxflags = (
+            [
+                "-WX",
+                "-D_HAS_EXCEPTIONS=0",
+            ]
+            + config.debug_info_flags
+            + target_cflags
+        )
         if config.compiler_id != "MSVC":
             clang_cl_cxxflags = ["-Wno-deprecated-declarations"] + clang_cl_cxxflags
         clang_cl_asan_cxxflags = ["-fsanitize=address"] + clang_cl_cxxflags
