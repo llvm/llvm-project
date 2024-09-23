@@ -1634,7 +1634,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.value_or(PF_R));
+    PhdrEntry *phdr = make<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
       phdr->add(ctx.out.elfHeader);
