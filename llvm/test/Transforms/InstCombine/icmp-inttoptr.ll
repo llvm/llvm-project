@@ -5,9 +5,7 @@ declare void @use_ptr(ptr)
 
 define i1 @inttoptr(i64 %x, i64 %y) {
 ; CHECK-LABEL: @inttoptr(
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr i64 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[YPTR:%.*]] = inttoptr i64 [[Y:%.*]] to ptr
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[XPTR]], [[YPTR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xptr = inttoptr i64 %x to ptr
@@ -18,8 +16,7 @@ define i1 @inttoptr(i64 %x, i64 %y) {
 
 define i1 @inttoptr_constant(i64 %x) {
 ; CHECK-LABEL: @inttoptr_constant(
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr i64 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[XPTR]], inttoptr (i64 42 to ptr)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X:%.*]], 42
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xptr = inttoptr i64 %x to ptr
@@ -29,9 +26,7 @@ define i1 @inttoptr_constant(i64 %x) {
 
 define <2 x i1> @inttoptr_vector(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @inttoptr_vector(
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr <2 x i64> [[X:%.*]] to <2 x ptr>
-; CHECK-NEXT:    [[YPTR:%.*]] = inttoptr <2 x i64> [[Y:%.*]] to <2 x ptr>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[XPTR]], [[YPTR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %xptr = inttoptr <2 x i64> %x to <2 x ptr>
@@ -42,8 +37,7 @@ define <2 x i1> @inttoptr_vector(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i1> @inttoptr_vector_constant(<2 x i64> %x) {
 ; CHECK-LABEL: @inttoptr_vector_constant(
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr <2 x i64> [[X:%.*]] to <2 x ptr>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[XPTR]], <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 123 to ptr)>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[X:%.*]], <i64 42, i64 123>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %xptr = inttoptr <2 x i64> %x to <2 x ptr>
@@ -54,9 +48,7 @@ define <2 x i1> @inttoptr_vector_constant(<2 x i64> %x) {
 define i1 @inttoptr_size_mismatch(i200 %x, i64 %y) {
 ; CHECK-LABEL: @inttoptr_size_mismatch(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i200 [[X:%.*]] to i64
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    [[YPTR:%.*]] = inttoptr i64 [[Y:%.*]] to ptr
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[XPTR]], [[YPTR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xptr = inttoptr i200 %x to ptr
@@ -67,8 +59,7 @@ define i1 @inttoptr_size_mismatch(i200 %x, i64 %y) {
 
 define <2 x i1> @inttoptr_vector_constant_size_mismatch(<2 x i64> %x) {
 ; CHECK-LABEL: @inttoptr_vector_constant_size_mismatch(
-; CHECK-NEXT:    [[XPTR:%.*]] = inttoptr <2 x i64> [[X:%.*]] to <2 x ptr>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[XPTR]], <ptr inttoptr (i9 42 to ptr), ptr inttoptr (i9 123 to ptr)>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[X:%.*]], <i64 42, i64 123>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %xptr = inttoptr <2 x i64> %x to <2 x ptr>
@@ -93,7 +84,7 @@ define i1 @inttoptr_used(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[YPTR:%.*]] = inttoptr i64 [[Y:%.*]] to ptr
 ; CHECK-NEXT:    call void @use_ptr(ptr [[XPTR]])
 ; CHECK-NEXT:    call void @use_ptr(ptr [[YPTR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[XPTR]], [[YPTR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xptr = inttoptr i64 %x to ptr
