@@ -417,7 +417,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   DstMRI->freezeReservedRegs();
 
-  DstMF->verify(nullptr, "", /*AbortOnError=*/true);
+  DstMF->verify(nullptr, "", &errs(), /*AbortOnError=*/true);
   return DstMF;
 }
 
@@ -453,8 +453,8 @@ bool ReducerWorkItem::verify(raw_fd_ostream *OS) const {
       // With the current state of quality, most reduction attempts fail the
       // machine verifier. Avoid spamming large function dumps on nearly every
       // attempt until the situation is better.
-      if (!MF->verify(nullptr, "", /*AbortOnError=*/false,
-                      /*PrintFuncOnError=*/false))
+      if (!MF->verify(nullptr, "", /*OS=*/nullptr,
+                      /*AbortOnError=*/false))
         return true;
     }
   }

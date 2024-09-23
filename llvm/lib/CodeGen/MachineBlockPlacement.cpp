@@ -3705,7 +3705,7 @@ void MachineBlockPlacement::assignBlockOrder(
 
 #ifndef NDEBUG
   // Make sure we correctly constructed all branches.
-  F->verify(this, "After optimized block reordering");
+  F->verify(this, "After optimized block reordering", &errs());
 #endif
 }
 

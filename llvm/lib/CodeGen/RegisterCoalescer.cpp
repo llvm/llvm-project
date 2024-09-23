@@ -4240,7 +4240,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   JoinSplitEdges = EnableJoinSplits;
 
   if (VerifyCoalescing)
-    MF->verify(this, "Before register coalescing");
+    MF->verify(this, "Before register coalescing", &errs());
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
@@ -4300,7 +4300,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   LLVM_DEBUG(dump());
   if (VerifyCoalescing)
-    MF->verify(this, "After register coalescing");
+    MF->verify(this, "After register coalescing", &errs());
   return true;
 }
 
