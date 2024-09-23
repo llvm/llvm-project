@@ -178,7 +178,7 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  void computeFunctionProperties(MachineFunction &MF,
+  bool computeFunctionProperties(MachineFunction &MF,
                                  const yaml::MachineFunction &YamlMF);
 
   void setupDebugValueTracking(MachineFunction &MF,
@@ -374,7 +374,7 @@ static bool isSSA(const MachineFunction &MF) {
   return true;
 }
 
-void MIRParserImpl::computeFunctionProperties(
+bool MIRParserImpl::computeFunctionProperties(
     MachineFunction &MF, const yaml::MachineFunction &YamlMF) {
   MachineFunctionProperties &Properties = MF.getProperties();
 
@@ -401,25 +401,60 @@ void MIRParserImpl::computeFunctionProperties(
     }
   }
 
-  // Don't overwrite NoPHIs if the input MIR explicitly set it to false
-  if (YamlMF.NoPHIs && !HasPHI)
-    Properties.set(MachineFunctionProperties::Property::NoPHIs);
+  // Helper function to sanity-check and set properties that are computed, but
+  // may be explicitly set from the input MIR
+  auto ComputedPropertyHelper =
+      [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
+                    MachineFunctionProperties::Property P) -> bool {
+    // Prefer whatever is set explicitly by the input MIR
+    if (ExplicitProp.has_value()) {
+      if (*ExplicitProp) {
+        // Check for conflicts with the computed value
+        if (!ComputedProp)
+          return true;
+
+        Properties.set(P);
+      } else
+        Properties.reset(P);
+
+      return false;
+    }
+
+    // No explicit value given, so use computed value
+    if (ComputedProp)
+      Properties.set(P);
+    else
+      Properties.reset(P);
+
+    return false;
+  };
+
+  if (ComputedPropertyHelper(YamlMF.NoPHIs, !HasPHI,
+                             MachineFunctionProperties::Property::NoPHIs)) {
+    return error(MF.getName() +
+                 " has explicit property NoPhi, but contains at least one PHI");
+  }
 
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
     Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
-  // Don't overwrite IsSSA if the input MIR explicitly set it to false
-  if (YamlMF.IsSSA && isSSA(MF))
-    Properties.set(MachineFunctionProperties::Property::IsSSA);
-  else
-    Properties.reset(MachineFunctionProperties::Property::IsSSA);
+  if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
+                             MachineFunctionProperties::Property::IsSSA)) {
+    return error(MF.getName() +
+                 " has explicit property IsSSA, but is not valid SSA");
+  }
 
-  // Don't overwrite NoVRegs if the input MIR explicitly set it to false
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (YamlMF.NoVRegs && MRI.getNumVirtRegs() == 0)
-    Properties.set(MachineFunctionProperties::Property::NoVRegs);
+  if (ComputedPropertyHelper(YamlMF.NoVRegs, MRI.getNumVirtRegs() == 0,
+                             MachineFunctionProperties::Property::NoVRegs)) {
+    return error(
+        MF.getName() +
+        " has explicit property NoVRegs, but contains virtual registers");
+  }
+
+  return false;
 }
 
 bool MIRParserImpl::initializeCallSiteInfo(
@@ -602,7 +637,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.freezeReservedRegs();
 
-  computeFunctionProperties(MF, YamlMF);
+  if (computeFunctionProperties(MF, YamlMF))
+    return false;
 
   if (initializeCallSiteInfo(PFS, YamlMF))
     return false;

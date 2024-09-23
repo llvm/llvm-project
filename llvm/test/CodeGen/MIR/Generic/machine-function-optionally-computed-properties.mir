@@ -1,9 +1,6 @@
 # RUN: llc -run-pass none -o - %s | FileCheck %s
-# Test that we can disable certain properties that are normally computed. This
-# override is a soft-override (only allows overriding when it relaxes the
-# property). Therefore, a conflicting override (e.g. setting noPhis to true in
-# the presence of PHI nodes) should not result in an error, but instead should
-# use the computed property instead (noPhis = false in the mentioned example).
+
+# Test that we can disable certain properties that are normally computed
 
 ---
 # CHECK-LABEL: name: TestNoPhis
@@ -26,21 +23,6 @@ name:            TestNoPhisOverrideTrue
 noPhis: true
 ...
 ---
-# CHECK-LABEL: name: TestNoPhisOverrideConflict
-# CHECK: noPhis: false
-# CHECK: ...
-name:            TestNoPhisOverrideConflict
-noPhis: true
-tracksRegLiveness: true
-body: |
-  bb.0:
-    %0:_(s32) = IMPLICIT_DEF
-
-  bb.1:
-    %1:_(s32) = PHI %0, %bb.0, %0, %bb.1
-    G_BR %bb.1
-...
----
 # CHECK-LABEL: name: TestIsSSA
 # CHECK: isSSA: true
 # CHECK: ...
@@ -61,17 +43,6 @@ name:            TestIsSSAOverrideTrue
 isSSA: true
 ...
 ---
-# CHECK-LABEL: name: TestIsSSAOverrideConflict
-# CHECK: isSSA: false
-# CHECK: ...
-name:            TestIsSSAOverrideConflict
-isSSA: true
-body: |
-  bb.0:
-    %0:_(s32) = IMPLICIT_DEF
-    %0:_(s32) = IMPLICIT_DEF
-...
----
 # CHECK-LABEL: name: TestNoVRegs
 # CHECK: noVRegs: true
 # CHECK: ...
@@ -90,14 +61,4 @@ noVRegs: false
 # CHECK: ...
 name:            TestNoVRegsOverrideTrue
 noVRegs: true
-...
----
-# CHECK-LABEL: name: TestNoVRegsOverrideConflict
-# CHECK: noVRegs: false
-# CHECK: ...
-name:            TestNoVRegsOverrideConflict
-noVRegs: true
-body: |
-  bb.0:
-    %0:_(s32) = IMPLICIT_DEF
 ...
