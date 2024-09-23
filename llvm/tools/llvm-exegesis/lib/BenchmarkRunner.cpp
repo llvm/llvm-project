@@ -412,7 +412,7 @@ private:
 
     // Check (if assertions are enabled) that we are actually running on the
     // CPU that was specified by the user.
-    unsigned int CurrentCPU;
+    [[maybe_unused]] unsigned int CurrentCPU;
     assert(getcpu(&CurrentCPU, nullptr) == 0 &&
            "Expected getcpu call to succeed.");
     assert(static_cast<int>(CurrentCPU) == CPUToUse &&
