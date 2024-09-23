@@ -2253,7 +2253,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
                                     CostKind, OpInfo, &Ingredient);
   }
-  if (!Reverse)
+  // If the store value is a live-in scalar value which is uniform, we don't
+  // need to calculate the reverse cost.
+  if (!Reverse || (isa<StoreInst>(Ingredient) && getOperand(1)->isLiveIn()))
     return Cost;
 
   return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
