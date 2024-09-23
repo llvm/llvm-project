@@ -108,8 +108,15 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if(NOT ARG_SHARED AND NOT ARG_STATIC)
-    target_compile_definitions("obj.${name}" PRIVATE CLANG_EXPORTS)
+  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
+    # Make sure all consumers also turn off visibility macros so there not trying to dllimport symbols.
+    target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
+    if(TARGET "obj.${name}")
+      target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
+    endif()
+  elseif(NOT ARG_SHARED AND NOT ARG_STATIC)
+    # Clang component libraries linked in to clang-cpp are declared without SHARED or STATIC
+    target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
   endif()
 
   set(libs ${name})
