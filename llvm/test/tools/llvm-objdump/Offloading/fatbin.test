@@ -1,28 +1,49 @@
-// Skip running on Windows.
-#if !defined(_WIN32)
+## Test that --offloading with a fatbin works correctly
 
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/OffloadBinary.h"
-#include "llvm/Object/OffloadBundle.h"
-#include "llvm/ObjectYAML/yaml2obj.h"
-#include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/YAMLTraits.h"
-#include "llvm/Testing/Support/Error.h"
-#include "gtest/gtest.h"
-#include <random>
+# REQUIRES: target={{.*-linux.*}}
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-objdump --offloading %t.elf 
+# RUN: llvm-objdump -d %t.elf:0.hipv4-amdgcn-amd-amdhsa--gfx908 | FileCheck %s 
 
-using namespace llvm;
-using namespace llvm::object;
 
-StringRef simpleAdd = R"(
+# CHECK:         s_load_dword s7, s[4:5], 0x24
+# CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+# CHECK-NEXT:    v_mov_b32_e32 v1, 0
+# CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+# CHECK-NEXT:    s_and_b32 s4, s7, 0xffff
+# CHECK-NEXT:    s_mul_i32 s6, s6, s4
+# CHECK-NEXT:    v_add_u32_e32 v0, s6, v0
+# CHECK-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+# CHECK-NEXT:    v_mov_b32_e32 v3, s3
+# CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
+# CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v1, vcc
+# CHECK-NEXT:    global_load_dword v2, v[2:3], off
+# CHECK-NEXT:    v_mov_b32_e32 v3, s1
+# CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
+# CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+# CHECK-NEXT:    global_load_dword v3, v[0:1], off
+# CHECK-NEXT:    s_waitcnt vmcnt(0)
+# CHECK-NEXT:    v_add_u32_e32 v2, v3, v2
+# CHECK-NEXT:    global_store_dword v[0:1], v2, off
+# CHECK-NEXT:    s_endpgm
+
 --- !ELF
 FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_X86_64
   Entry:           0x2041B0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x200040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+    Offset:          0x0
 Sections:
   - Name:            .hip_fatbin
     Type:            SHT_PROGBITS
@@ -36,54 +57,4 @@ Sections:
     Address:         0x202FD0
     AddressAlign:    0x8
     Content:         '465049480100000000102000000000000000000000000000'
-)";
-
-// ELF Object creation
-static Expected<std::unique_ptr<ObjectFile>>
-toBinary(SmallVectorImpl<char> &Storage, StringRef Yaml) {
-  raw_svector_ostream OS(Storage);
-  yaml::Input YIn(Yaml);
-  if (!yaml::convertYAML(YIn, OS, [](const Twine &Msg) {}))
-    return createStringError(std::errc::invalid_argument,
-                             "unable to convert YAML");
-  return object::ObjectFile::createELFObjectFile(
-      MemoryBufferRef(OS.str(), "dummyELF"));
-}
-
-TEST(OffloadingBundleTest, checkExtractOffloadBundleFatBinary) {
-
-  // create a Memory Buffer with a fatbin offloading section
-  MemoryBufferRef mbuf;
-  StringRef FileName;
-  SmallVector<OffloadBundleEntry>();
-  SmallString<0> Storage;
-  // Expected<ELFObjectFile<ELF64LE>> ObjOrErr = toBinary<ELF64LE>(Storage, R"(
-  Expected<std::unique_ptr<ObjectFile>> ObjOrErr = toBinary(Storage, simpleAdd);
-
-  ASSERT_THAT_EXPECTED(ObjOrErr, Succeeded());
-
-  SmallVector<llvm::object::OffloadBundleFatBin> Bundles;
-  Error Err = extractOffloadBundleFatBinary(**ObjOrErr, Bundles);
-  EXPECT_FALSE(errorToBool(std::move(Err)));
-}
-
-TEST(OffloadingBundleTest, checkExtractCodeObject) {
-  // create a Memory Buffer with a fatbin offloading section
-  MemoryBufferRef mbuf;
-  StringRef FileName;
-  SmallVector<OffloadBundleEntry>();
-  SmallString<0> Storage;
-  // Expected<ELFObjectFile<ELF64LE>> ObjOrErr = toBinary<ELF64LE>(Storage, R"(
-  Expected<std::unique_ptr<ObjectFile>> ObjOrErr = toBinary(Storage, simpleAdd);
-
-  ASSERT_THAT_EXPECTED(ObjOrErr, Succeeded());
-
-  int64_t Offset = 8192;
-  int64_t Size = 4048;
-
-  Error Err = extractCodeObject(**ObjOrErr, Offset, Size,
-                                StringRef("checkExtractCodeObject.co"));
-  EXPECT_FALSE(errorToBool(std::move(Err)));
-}
-
-#endif
+...
