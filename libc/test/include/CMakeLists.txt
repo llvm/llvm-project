@@ -82,6 +82,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  issubnormal_test
+  SUITE
+    libc_include_tests
+  SRCS
+    issubnormal_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  issubnormalf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    issubnormalf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  issubnormall_test
+  SUITE
+    libc_include_tests
+  SRCS
+    issubnormall_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
   isnormal_test
   SUITE
     libc_include_tests
@@ -359,6 +389,21 @@ add_libc_test(
     libc_include_tests
   SRCS
     isfinite_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  issubnormal_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    issubnormal_test.c
   COMPILE_OPTIONS
     -Wall
     -Werror
