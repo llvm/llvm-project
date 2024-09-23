@@ -1184,24 +1184,32 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
   return &MDie;
 }
 
+DIE *DwarfUnit::getOrCreateSubprogramContextDIE(const DISubprogram *SP,
+                                                bool Minimal) {
+  if (Minimal || SP->getDeclaration())
+    return &getUnitDie();
+  return getOrCreateContextDIE(SP->getScope());
+}
+
 DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
   // Construct the context before querying for the existence of the DIE in case
   // such construction creates the DIE (as is the case for member function
   // declarations).
-  DIE *ContextDIE =
-      Minimal ? &getUnitDie() : getOrCreateContextDIE(SP->getScope());
+  DIE *ContextDIE = getOrCreateSubprogramContextDIE(SP, Minimal);
 
   if (DIE *SPDie = getDIE(SP))
     return SPDie;
 
-  if (auto *SPDecl = SP->getDeclaration()) {
-    if (!Minimal) {
-      // Add subprogram definitions to the CU die directly.
-      ContextDIE = &getUnitDie();
+  if (auto *SPDecl = SP->getDeclaration())
+    if (!Minimal)
       // Build the decl now to ensure it precedes the definition.
       getOrCreateSubprogramDIE(SPDecl);
-    }
-  }
+
+  // Try to find the abstract origin if the subprogram is not concrete.
+  if (auto *ContextCU = DD->lookupCU(ContextDIE->getUnitDie()))
+    if (!ContextCU->DD->isConcrete(SP))
+      if (auto *SPDie = ContextCU->getAbstractScopeDIEs().lookup(SP))
+        return SPDie;
 
   // DW_TAG_inlined_subroutine may refer to this DIE.
   DIE &SPDie = createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, SP);

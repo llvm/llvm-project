@@ -250,6 +250,7 @@ public:
 
   DIE *getOrCreateNameSpace(const DINamespace *NS);
   DIE *getOrCreateModule(const DIModule *M);
+  DIE *getOrCreateSubprogramContextDIE(const DISubprogram *SP, bool Minimal);
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal = false);
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
