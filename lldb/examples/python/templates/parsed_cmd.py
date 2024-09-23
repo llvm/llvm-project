@@ -4,7 +4,8 @@ lldb parsed commands more Pythonic.
 The way to use it is to make a class for your command that inherits from ParsedCommandBase.
 That will make an LLDBOptionValueParser which you will use for your
 option definition, and to fetch option values for the current invocation
-of your command.  Access to the OV parser is through:
+of your command.  For concision, I'll call this the `OVParser`.  
+Access to the `OVParser` is through:
 
 ParsedCommandBase.get_parser()
 
@@ -60,16 +61,16 @@ def handle_option_argument_completion(self, long_option, cursor_pos):
 The line to be completed will be parsed up to the option containint the cursor position, 
 and the values will be set in the OptionValue parser object.  long_option will be
 the option name containing the cursor, and cursor_pos will be the position of the cursor
-in that option's value.  You can call the OVParser.dest_for_option(long_option) to get the
-value for that option.  The other options that came before the cursor in the command
-line will also be set in the OV Parser when the completion handler is called.
+in that option's value.  You can call the `OVParser` method: `dest_for_option(long_option)` 
+to get the value for that option.  The other options that came before the cursor in the command
+line will also be set in the `OVParser` when the completion handler is called.
 
 For argument values, define:
 
 def handle_argument_completion(self, args, arg_pos, cursor_pos):
 
 Again, the command line will be parsed up to the cursor position, and all the options
-before the cursor pose will be set in the OVParser.  args is a python list of the
+before the cursor pose will be set in the `OVParser`.  args is a python list of the
 arguments, arg_pos is the index of the argument with the cursor, and cursor_pos is
 the position of the cursor in the argument.
 
