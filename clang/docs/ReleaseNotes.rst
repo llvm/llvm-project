@@ -273,6 +273,9 @@ Attribute Changes in Clang
   not change the behaviour of the compiler, as this was true for previous
   versions.
 
+- Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
+  ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
