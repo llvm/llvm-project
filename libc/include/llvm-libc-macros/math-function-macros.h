@@ -21,7 +21,7 @@
 #define isnormal(x) __builtin_isnormal(x)
 #define issubnormal(x) (fpclassify(x) == FP_SUBNORMAL)
 #if defined(__clang__) && __clang_major__ >= 18
-  #define issignaling(x) __builtin_issignaling(x)
+#define issignaling(x) __builtin_issignaling(x)
 #endif
 
 #endif // LLVM_LIBC_MACROS_MATH_FUNCTION_MACROS_H
