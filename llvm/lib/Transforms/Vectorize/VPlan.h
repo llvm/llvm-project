@@ -263,72 +263,52 @@ struct VPTransformState {
   std::optional<VPIteration> Instance;
 
   struct DataState {
-    /// A type for vectorized values in the new loop. Each value from the
-    /// original loop, when vectorized, is represented by UF vector values in
-    /// the new unrolled loop, where UF is the unroll factor.
-    typedef SmallVector<Value *, 2> PerPartValuesTy;
+    // Each value from the original loop, when vectorized, is represented by a
+    // vector value in the map.
+    DenseMap<VPValue *, Value *> VPV2Vector;
 
-    DenseMap<VPValue *, PerPartValuesTy> PerPartOutput;
-
-    using ScalarsPerPartValuesTy = SmallVector<SmallVector<Value *, 4>, 2>;
-    DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
+    DenseMap<VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
-  /// Get the generated vector Value for a given VPValue \p Def and a given \p
-  /// Part if \p IsScalar is false, otherwise return the generated scalar
-  /// for \p Part. \See set.
-  Value *get(VPValue *Def, unsigned Part, bool IsScalar = false);
+  /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
+  /// is false, otherwise return the generated scalar. \See set.
+  Value *get(VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(VPValue *Def, const VPIteration &Instance);
 
-  bool hasVectorValue(VPValue *Def, unsigned Part) {
-    auto I = Data.PerPartOutput.find(Def);
-    return I != Data.PerPartOutput.end() && Part < I->second.size() &&
-           I->second[Part];
-  }
+  bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
 
   bool hasScalarValue(VPValue *Def, VPIteration Instance) {
-    auto I = Data.PerPartScalars.find(Def);
-    if (I == Data.PerPartScalars.end())
+    auto I = Data.VPV2Scalars.find(Def);
+    if (I == Data.VPV2Scalars.end())
       return false;
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    return Instance.Part < I->second.size() &&
-           CacheIdx < I->second[Instance.Part].size() &&
-           I->second[Instance.Part][CacheIdx];
+    return CacheIdx < I->second.size() && I->second[CacheIdx];
   }
 
-  /// Set the generated vector Value for a given VPValue and a given Part, if \p
-  /// IsScalar is false. If \p IsScalar is true, set the scalar in (Part, 0).
-  void set(VPValue *Def, Value *V, unsigned Part, bool IsScalar = false) {
+  /// Set the generated vector Value for a given VPValue, if \p
+  /// IsScalar is false. If \p IsScalar is true, set the scalar in lane 0.
+  void set(VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
-      set(Def, V, VPIteration(Part, 0));
+      set(Def, V, VPIteration(0, 0));
       return;
     }
     assert((VF.isScalar() || V->getType()->isVectorTy()) &&
-           "scalar values must be stored as (Part, 0)");
-    if (!Data.PerPartOutput.count(Def)) {
-      DataState::PerPartValuesTy Entry(1);
-      Data.PerPartOutput[Def] = Entry;
-    }
-    Data.PerPartOutput[Def][Part] = V;
+           "scalar values must be stored as (0, 0)");
+    Data.VPV2Vector[Def] = V;
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(VPValue *Def, Value *V, unsigned Part) {
-    auto Iter = Data.PerPartOutput.find(Def);
-    assert(Iter != Data.PerPartOutput.end() &&
-           "need to overwrite existing value");
-    Iter->second[Part] = V;
+  void reset(VPValue *Def, Value *V) {
+    assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
+    Data.VPV2Vector[Def] = V;
   }
 
   /// Set the generated scalar \p V for \p Def and the given \p Instance.
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.insert({Def, {}});
-    auto &PerPartVec = Iter.first->second;
-    if (PerPartVec.size() <= Instance.Part)
-      PerPartVec.resize(Instance.Part + 1);
-    auto &Scalars = PerPartVec[Instance.Part];
+    auto Iter = Data.VPV2Scalars.insert({Def, {}});
+    auto &Scalars = Iter.first->second;
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
@@ -338,15 +318,13 @@ struct VPTransformState {
 
   /// Reset an existing scalar value for \p Def and a given \p Instance.
   void reset(VPValue *Def, Value *V, const VPIteration &Instance) {
-    auto Iter = Data.PerPartScalars.find(Def);
-    assert(Iter != Data.PerPartScalars.end() &&
-           "need to overwrite existing value");
-    assert(Instance.Part < Iter->second.size() &&
+    auto Iter = Data.VPV2Scalars.find(Def);
+    assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
     unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
-    assert(CacheIdx < Iter->second[Instance.Part].size() &&
+    assert(CacheIdx < Iter->second.size() &&
            "need to overwrite existing value");
-    Iter->second[Instance.Part][CacheIdx] = V;
+    Iter->second[CacheIdx] = V;
   }
 
   /// Add additional metadata to \p To that was not present on \p Orig.
