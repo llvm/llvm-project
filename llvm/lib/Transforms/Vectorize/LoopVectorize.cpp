@@ -9377,17 +9377,15 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
+     auto *FinalReductionResult = new VPInstruction( 
+        VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+    // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [IntermediateStore](VPUser &User, unsigned) {
-          return match(&User, m_Binary<VPInstruction::ExtractFromEnd>(
-                                  m_VPValue(), m_VPValue())) ||
-                 (isa<VPReplicateRecipe>(&User) &&
-                  cast<VPReplicateRecipe>(&User)->getUnderlyingValue() ==
-                      IntermediateStore &&
-                  cast<VPReplicateRecipe>(&User)
-                      ->getOperand(1)
-                      ->isDefinedOutsideVectorRegions());
+        FinalReductionResult, [](VPUser &User, unsigned) {
+        auto *Parent = cast<VPRecipeBase>(&User)->getParent();
+          return Parent && !Parent->getParent();
         });
+    FinalReductionResult->insertBefore(*MiddleVPBB, IP);
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
