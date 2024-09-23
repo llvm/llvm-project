@@ -793,20 +793,6 @@ void ELFNixPlatform::ELFNixPlatformPlugin::modifyPassConfig(
         [this](LinkGraph &G) { return bootstrapPipelineEnd(G); });
 }
 
-ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
-ELFNixPlatform::ELFNixPlatformPlugin::getSyntheticSymbolDependencies(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  auto I = InitSymbolDeps.find(&MR);
-  if (I != InitSymbolDeps.end()) {
-    SyntheticSymbolDependenciesMap Result;
-    Result[MR.getInitializerSymbol()] = std::move(I->second);
-    InitSymbolDeps.erase(&MR);
-    return Result;
-  }
-  return SyntheticSymbolDependenciesMap();
-}
-
 void ELFNixPlatform::ELFNixPlatformPlugin::addDSOHandleSupportPasses(
     MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
 

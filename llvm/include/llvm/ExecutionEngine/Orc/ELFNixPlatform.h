@@ -181,15 +181,10 @@ private:
                                      ResourceKey SrcKey) override {}
 
   private:
-    using InitSymbolDepMap =
-        DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
-
-    void addInitializerSupportPasses(MaterializationResponsibility &MR,
-                                     jitlink::PassConfiguration &Config);
 
     void addDSOHandleSupportPasses(MaterializationResponsibility &MR,
                                    jitlink::PassConfiguration &Config);
