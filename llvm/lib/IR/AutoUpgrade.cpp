@@ -5463,12 +5463,12 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
 
   if (T.isSPARC()) {
     // Add "-i128:128"
+    std::string I64 = "-i64:64";
     std::string I128 = "-i128:128";
     if (StringRef Ref = Res; !Ref.contains(I128)) {
-      SmallVector<StringRef, 4> Groups;
-      Regex R("^([Ee](-[mpi][^-]*)*)((-[^mpi][^-]*)*)$");
-      if (R.match(Res, &Groups))
-        Res = (Groups[1] + I128 + Groups[3]).str();
+      size_t Pos = Res.find(I64);
+      assert(Pos != size_t(-1) && "no i64 data layout found!");
+      Res.insert(Pos + I64.size(), I128);
     }
     return Res;
   }
