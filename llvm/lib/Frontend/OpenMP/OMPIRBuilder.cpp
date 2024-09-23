@@ -886,8 +886,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
-    SrcLocStr = Builder.CreateGlobalStringPtr(LocStr, /* Name */ "",
-                                              /* AddressSpace */ 0, &M);
+    SrcLocStr = Builder.CreateGlobalString(LocStr, /* Name */ "",
+                                           /* AddressSpace */ 0, &M);
   }
   return SrcLocStr;
 }

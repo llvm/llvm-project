@@ -13649,7 +13649,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     else
       InitValStr = std::to_string(InitVal.getZExtValue());
     std::string EnumStr = Enumerator->getNameAsString() + ":" + InitValStr;
-    Value *EnumStrVal = Builder.CreateGlobalStringPtr(EnumStr);
+    Value *EnumStrVal = Builder.CreateGlobalString(EnumStr);
 
     ConstantInt *Flag = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
