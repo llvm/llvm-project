@@ -25,6 +25,13 @@
 using namespace llvm;
 using namespace std;
 
+// The argument index of the <numArgs> parameter of
+// llvm.experimental.patchpoint.*
+//
+// We need this later to know where arguments to __ykrt_control_point stop, and
+// where live variables to include in the stackmap entry start.
+const int PPArgIdxNumTargetArgs = 3;
+
 #include <sstream>
 
 namespace {
@@ -577,18 +584,29 @@ private:
   void serialiseStackmapCall(CallInst *I, FuncLowerCtxt &FLCtxt) {
     assert(I);
     assert(I->getCalledFunction()->isIntrinsic());
-    assert(I->getIntrinsicID() == Intrinsic::experimental_stackmap);
+    assert(I->getIntrinsicID() == Intrinsic::experimental_stackmap ||
+           I->getIntrinsicID() == Intrinsic::experimental_patchpoint_void);
     // stackmap ID:
     Value *Op = I->getOperand(0);
     assert(isa<ConstantInt>(Op));
     uint64_t SMId = (cast<ConstantInt>(Op))->getZExtValue();
     OutStreamer.emitInt64(SMId);
 
+    int Skip = 0;
+    if (I->getIntrinsicID() == Intrinsic::experimental_stackmap) {
+      // Skip the following arguments: ID, shadow.
+      Skip = 2;
+    } else if (I->getIntrinsicID() == Intrinsic::experimental_patchpoint_void) {
+      // Skip the following arguments: ID, shadow, target, target arguments.
+      Skip = 4 + cast<ConstantInt>(I->getOperand(PPArgIdxNumTargetArgs))
+                     ->getZExtValue();
+    }
+
     // num_lives:
-    OutStreamer.emitInt32(I->arg_size() - 2);
+    OutStreamer.emitInt32(I->arg_size() - Skip);
 
     // lives:
-    for (unsigned OI = 2; OI < I->arg_size(); OI++) {
+    for (unsigned OI = Skip; OI < I->arg_size(); OI++) {
       serialiseOperand(I, FLCtxt, I->getOperand(OI));
     }
   }
@@ -759,13 +777,32 @@ private:
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
       serialiseOperand(I, FLCtxt, I->getOperand(OI));
     }
-    bool IsCtrlPointCall =
-        I->getCalledFunction()->getName() == YK_NEW_CONTROL_POINT;
+    bool IsCtrlPointCall = I->getCalledFunction()->getName() == CP_PPNAME;
     if (!I->getCalledFunction()->isDeclaration() || IsCtrlPointCall) {
       // The next instruction will be the stackmap entry
       // has_safepoint = 1:
       OutStreamer.emitInt8(1);
-      CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
+      CallInst *SMI = nullptr;
+
+      // The control point is special. We use a patchpoint to perform the
+      // call, so the stackmap is associated with the patchpoint itself.
+      //
+      // We'd love to be able to do the same for ALL calls that need a
+      // stackmap, but patchpoints can only return void or i64, which isn't
+      // general enough for any given call we may encounter in the IR.
+      //
+      // For non-control-point calls, we instead place a stackmap instruction
+      // after the call and rely on a pass (FixStackmapsSpillReloads) to "patch
+      // up" the MIR later. This is necessary because we want the live
+      // locations at the point of the call, but when you place stackmap
+      // instruction after the call, you don't generally get that: LLVM often
+      // inserts instructions between the call and the stackmap instruction
+      // which is (for us, undesirably) reflected in the stackmap entry.
+      if (IsCtrlPointCall) {
+        SMI = dyn_cast<CallInst>(I);
+      } else {
+        SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
+      }
       serialiseStackmapCall(SMI, FLCtxt);
     } else {
       // has_safepoint = 0:

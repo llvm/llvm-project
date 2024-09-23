@@ -14,6 +14,9 @@
 // right instruction in AOT from where to continue.
 #define YK_RECONSTRUCT_FRAMES "__ykrt_reconstruct_frames"
 
+// The name of the patchpoint intrinsic we use for the control point.
+#define CP_PPNAME "llvm.experimental.patchpoint.void"
+
 namespace llvm {
 ModulePass *createYkControlPointPass();
 } // namespace llvm

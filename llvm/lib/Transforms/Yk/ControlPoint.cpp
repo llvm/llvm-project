@@ -1,4 +1,4 @@
-//===- ControlPoint.cpp - Synthesise the yk control point -----------------===//
+//===- ControlPoint.cpp - Patch the yk control point -----------------===//
 //
 // This pass finds the user's call to the dummy control point and replaces it
 // with a call to a new control point that implements the necessary logic to
@@ -19,29 +19,21 @@
 // }
 // ```
 //
-// Into one that looks like this (note that this transformation happens at the
-// IR level):
+// Into one that looks like this:
 //
 // ```
-// // The YkCtrlPointStruct contains one member for each live LLVM variable
-// // just before the call to the control point.
-// struct YkCtrlPointStruct {
-//     size_t pc;
-// }
-//
-// struct YkCtrlPointStruct cp_vars;
 // pc = 0;
 // while (...) {
-//     // Now we call the patched control point.
-//     cp_vars.pc = pc;
-//     __ykrt__control_point(mt, loc, &cp_vars);
-//     pc = cp_vars.pc;
+//     llvm.experimental.patchpoint.void(..., __ykrt_control_point, ...)
 //     bc = program[pc];
 //     switch (bc) {
 //         // bytecode handlers here.
 //     }
 // }
 // ```
+//
+// A patchpoint is used to capture the locations of live variables immediately
+// before a call to __ykrt_control_point.
 //
 // Note that this transformation occurs at the LLVM IR level. The above example
 // is shown as C code for easy comprehension.
@@ -58,6 +50,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Yk/LivenessAnalysis.h"
 
 #define DEBUG_TYPE "yk-control-point"
 
@@ -67,6 +60,29 @@
 #define YK_CONTROL_POINT_ARG_LOC_IDX 1
 #define YK_CONTROL_POINT_ARG_VARS_IDX 2
 #define YK_CONTROL_POINT_NUM_ARGS 3
+
+// Stackmap ID zero is reserved for the control point.
+//
+// This will need to change when we support >1 control point.
+const unsigned CPStackMapID = 0;
+
+// The number of shadow bytes required for the control point's patchpoint.
+//
+// This must be large enough to accommodate the call to patchpoint target
+// function and if you use a too-big value LLVM will pad the space with NOP
+// bytes.
+//
+// This early in the pipeline we have no idea how the backend will choose the
+// encode this call, so for now we use the exact size of the observed
+// instruction at the time of writing, as determined by disassembling the binary
+// and eyeballing it.
+//
+// The good news is that LLVM will assert fail if you use a too small value.
+#if defined(__x86_64__) || defined(_M_X64)
+const unsigned CPShadow = 13;
+#else
+#error "unknown control point shadow size for this arch"
+#endif
 
 using namespace llvm;
 
@@ -128,7 +144,7 @@ public:
     }
 
     // The old control point should be of the form:
-    //    control_point(YkMT*, YkLocation*)
+    //    yk_mt_control_point(YkMT*, YkLocation*)
     assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
     Type *YkMTTy =
         OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)->getType();
@@ -136,26 +152,47 @@ public:
         OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)
             ->getType();
 
-    // Create the new control point, which is of the form:
-    //   void new_control_point(YkMT*, YkLocation*, i64)
+    // Create a call to the "new" (patched) control point, but do so via a
+    // patchpoint so that we can capture the live variables at exactly the
+    // moment before the call.
     Type *Int64Ty = Type::getInt64Ty(Context);
     FunctionType *FType = FunctionType::get(Type::getVoidTy(Context),
                                             {YkMTTy, YkLocTy, Int64Ty}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
-    // At the top of the function, instantiate a `YkCtrlPointStruct` to pass in
-    // to the control point. We do so on the stack, so that we can pass the
-    // struct by pointer.
     IRBuilder<> Builder(OldCtrlPointCall);
 
-    // Insert call to the new control point. The last argument is the stackmap
-    // id belonging to the control point. This is temporarily set to INT_MAX
-    // and overwritten by the stackmap pass.
-    Builder.CreateCall(
-        NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
-             OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-             Builder.getInt64(UINT64_MAX)});
+    const Intrinsic::ID SMFuncID = Function::lookupIntrinsicID(CP_PPNAME);
+    if (SMFuncID == Intrinsic::not_intrinsic) {
+      Context.emitError("can't find stackmap()");
+      return false;
+    }
+    Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
+    assert(SMFunc != nullptr);
+
+    // Get live variables.
+    LivenessAnalysis LA(Caller);
+    auto Lives = LA.getLiveVarsBefore(OldCtrlPointCall);
+
+    Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), CPStackMapID);
+    Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), CPShadow);
+    std::vector<Value *> Args = {
+        SMID,
+        Shadow,
+        NF,
+        ConstantInt::get(Type::getInt32Ty(Context), 3),
+        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
+        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
+        SMID,
+    };
+
+    for (auto *Live : Lives) {
+      Args.push_back(Live);
+    }
+
+    Builder.CreateCall(SMFunc->getFunctionType(), SMFunc,
+                       ArrayRef<Value *>(Args));
 
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();

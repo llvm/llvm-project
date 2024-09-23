@@ -1982,10 +1982,18 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
 
+        // So that the ykpt decoder can work without disasembling instructions
+        // to find call-sites and sucessor blocks, we encode that info
+        // statically into the blockmap at AOT compile time.
+        //
+        // Some things that look like calls in IR don't actually emit a
+        // call into the binary. Namely a stackmap intrinsic.
+        //
+        // Note that patchpoint and statepoint intrinsics, although similar to
+        // the stackmap intrinsic, do actually emit a call in the binary, so we
+        // DO need to include those callsites.
         if (YkExtendedLLVMBBAddrMapSection && MI.isCall() &&
-            (MI.getOpcode() != TargetOpcode::STACKMAP) &&
-            (MI.getOpcode() != TargetOpcode::PATCHPOINT) &&
-            (MI.getOpcode() != TargetOpcode::STATEPOINT)) {
+            (MI.getOpcode() != TargetOpcode::STACKMAP)) {
           // Record the address of the call instruction itself.
           MCSymbol *YkPreCallSym =
               MF->getContext().createTempSymbol("yk_precall", true);

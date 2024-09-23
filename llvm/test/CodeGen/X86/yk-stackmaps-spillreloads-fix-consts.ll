@@ -1,5 +1,5 @@
 ; RUN: llc -stop-after fix-stackmaps-spill-reloads --yk-insert-stackmaps --yk-stackmap-spillreloads-fix < %s  | FileCheck %s
-; CHECK: STACKMAP 1, 0, 0, $rbp, -8, 3, implicit-def dead early-clobber $r11
+; CHECK: STACKMAP 2, 0, 0, $rbp, -8, 3, implicit-def dead early-clobber $r11
 @hash_search_j = dso_local global i64 0, align 8
 
 ; Function Attrs: noinline nounwind optnone uwtable
