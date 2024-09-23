@@ -1908,8 +1908,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
-  // On zvfhmin, f16 vectors may be promoted to f32.
-  // FIXME: nxv32f16 will be custom lowered and split.
+  // f16 with zvfhmin and bf16 will be promoted to f32.
+  // FIXME: nxv32[b]f16 will be custom lowered and split.
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (TLI->getOperationAction(ISDOpcode, LT.second) ==
       TargetLoweringBase::LegalizeAction::Promote)
