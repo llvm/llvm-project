@@ -220,6 +220,8 @@ private:
   bool selectPhi(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
+  bool selectExtInst(Register ResVReg, const SPIRVType *RestType,
+		     MachineInstr &I, GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, CL::OpenCLExtInst CLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
@@ -767,6 +769,14 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   default:
     return false;
   }
+}
+
+bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
+					     const SPIRVType *ResType,
+					     MachineInstr &I,
+					     GL::GLSLExtInst GLInst) const {
+  return selectExtInst(ResVReg, ResType, I,
+		       {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
@@ -2666,6 +2676,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
+  case Intrinsic::spv_firstbituhigh:
+    return selectExtInst(ResVReg, ResType, I, GL::FindUMsb);
+  case Intrinsic::spv_firstbitshigh:
+    return selectExtInst(ResVReg, ResType, I, GL::FindSMsb);
   case Intrinsic::spv_group_memory_barrier_with_group_sync: {
     Register MemSemReg =
         buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
