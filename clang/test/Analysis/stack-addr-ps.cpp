@@ -14,6 +14,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 template <typename T>
 void clang_analyzer_dump(T x);
 
+using size_t = decltype(sizeof(int));
+void * malloc(size_t size);
+void free(void*);
+
 const int& g() {
   int s;
   return s; // expected-warning{{Address of stack memory associated with local variable 's' returned}} expected-warning{{reference to stack memory associated with local variable 's' returned}}
@@ -855,10 +859,6 @@ void top(char **p) {
   foo(); // no-warning FIXME: p binding is reclaimed before the function end
 }
 } // namespace early_reclaim_dead_limitation
-
-using size_t = decltype(sizeof(int));
-void * malloc(size_t size);
-void free(void*);
 
 namespace alloca_region_pointer {
 void callee(char **pptr) {
