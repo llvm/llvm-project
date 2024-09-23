@@ -6248,9 +6248,8 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   if (moveFlatAddrToVGPR(MI))
     return;
 
-  const TargetRegisterClass *DeclaredRC =
-      getRegClass(MI.getDesc(), SAddr->getOperandNo(),
-                  MRI.getTargetRegisterInfo(), *MI.getParent()->getParent());
+  const TargetRegisterClass *DeclaredRC = getRegClass(
+      MI.getDesc(), SAddr->getOperandNo(), &RI, *MI.getParent()->getParent());
 
   Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);
