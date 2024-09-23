@@ -9,20 +9,17 @@
 #ifndef LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <optional>
 
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class Function;
-class Module;
-class Triple;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -287,12 +284,12 @@ class TargetLibraryInfo {
 
   /// Support for -fno-builtin* options as function attributes, overrides
   /// information in global TargetLibraryInfoImpl.
-  BitVector OverrideAsUnavailable;
+  std::bitset<NumLibFuncs> OverrideAsUnavailable;
 
 public:
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
                              std::optional<const Function *> F = std::nullopt)
-      : Impl(&Impl), OverrideAsUnavailable(NumLibFuncs) {
+      : Impl(&Impl) {
     if (!F)
       return;
     if ((*F)->hasFnAttribute("no-builtins"))
@@ -329,7 +326,7 @@ public:
       return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
     // We can inline if the callee's nobuiltin attributes are no stricter than
     // the caller's.
-    return !CalleeTLI.OverrideAsUnavailable.test(OverrideAsUnavailable);
+    return (CalleeTLI.OverrideAsUnavailable & ~OverrideAsUnavailable).none();
   }
 
   /// Return true if the function type FTy is valid for the library function
@@ -373,10 +370,12 @@ public:
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) LLVM_ATTRIBUTE_UNUSED {
+    assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     OverrideAsUnavailable.set(F);
   }
 
   TargetLibraryInfoImpl::AvailabilityState getState(LibFunc F) const {
+    assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     if (OverrideAsUnavailable[F])
       return TargetLibraryInfoImpl::Unavailable;
     return Impl->getState(F);
@@ -414,6 +413,12 @@ public:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
+    case LibFunc_asin:         case LibFunc_asinf:      case LibFunc_asinl:
+    case LibFunc_acos:         case LibFunc_acosf:      case LibFunc_acosl:
+    case LibFunc_atan:         case LibFunc_atanf:      case LibFunc_atanl:
+    case LibFunc_sinh:         case LibFunc_sinhf:      case LibFunc_sinhl:
+    case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
+    case LibFunc_tanh:         case LibFunc_tanhf:      case LibFunc_tanhl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:

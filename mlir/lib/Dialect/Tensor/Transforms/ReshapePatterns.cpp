@@ -140,6 +140,76 @@ struct FoldPaddingExpandIntoInsert : public OpRewritePattern<OpTy> {
     return success();
   }
 };
+
+/// Pattern to bubble up a tensor.expand_shape op through a producer
+/// tensor.collapse_shape op that has non intersecting reassociations.
+struct BubbleUpExpandThroughParallelCollapse
+    : public OpRewritePattern<tensor::ExpandShapeOp> {
+  using OpRewritePattern<tensor::ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    auto collapseOp =
+        expandOp.getSrc().getDefiningOp<tensor::CollapseShapeOp>();
+    if (!collapseOp)
+      return failure();
+    auto expandReInds = expandOp.getReassociationIndices();
+    auto collapseReInds = collapseOp.getReassociationIndices();
+
+    // Reshapes are parallel to each other if none of the reassociation indices
+    // have greater than 1 index for both reshapes.
+    for (auto [expandReassociation, collapseReassociation] :
+         llvm::zip_equal(expandReInds, collapseReInds)) {
+      if (collapseReassociation.size() != 1 && expandReassociation.size() != 1)
+        return failure();
+    }
+
+    // Compute new reassociation indices and expanded/collaped shapes.
+    SmallVector<ReassociationIndices> newExpandReInds, newCollapseReInds;
+    Location loc = expandOp->getLoc();
+    SmallVector<OpFoldResult> collapseSizes =
+        tensor::getMixedSizes(rewriter, loc, collapseOp.getSrc());
+    SmallVector<OpFoldResult> expandSizes(getMixedValues(
+        expandOp.getStaticOutputShape(), expandOp.getOutputShape(), rewriter));
+    SmallVector<OpFoldResult> newExpandSizes;
+    int64_t index = 0, expandIndex = 0, collapseIndex = 0;
+    for (auto [idx, collapseReassociation] : llvm::enumerate(collapseReInds)) {
+      if (collapseReassociation.size() != 1) {
+        ReassociationIndices newCollapseReassociation;
+        for (size_t i = 0; i < collapseReassociation.size(); ++i) {
+          newCollapseReassociation.push_back(index);
+          newExpandReInds.push_back({index++});
+          newExpandSizes.push_back(collapseSizes[collapseIndex++]);
+        }
+        newCollapseReInds.push_back(newCollapseReassociation);
+        expandIndex++;
+        continue;
+      }
+      ReassociationIndices newExpandReassociation;
+      auto expandReassociation = expandReInds[idx];
+      for (size_t i = 0; i < expandReassociation.size(); ++i) {
+        newExpandReassociation.push_back(index);
+        newCollapseReInds.push_back({index++});
+        newExpandSizes.push_back(expandSizes[expandIndex++]);
+      }
+      newExpandReInds.push_back(newExpandReassociation);
+      collapseIndex++;
+    }
+
+    // Swap reshape order.
+    SmallVector<Value> dynamicSizes;
+    SmallVector<int64_t> staticSizes;
+    dispatchIndexOpFoldResults(newExpandSizes, dynamicSizes, staticSizes);
+    auto expandResultType = expandOp.getResultType().clone(staticSizes);
+    auto newExpand = rewriter.create<tensor::ExpandShapeOp>(
+        loc, expandResultType, collapseOp.getSrc(), newExpandReInds,
+        newExpandSizes);
+    rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
+        expandOp, newExpand.getResult(), newCollapseReInds);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
@@ -151,4 +221,9 @@ void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
            FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
            FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
           patterns.getContext());
+}
+
+void mlir::tensor::populateBubbleUpExpandShapePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<BubbleUpExpandThroughParallelCollapse>(patterns.getContext());
 }

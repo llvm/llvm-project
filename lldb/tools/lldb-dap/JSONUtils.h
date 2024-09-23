@@ -131,6 +131,13 @@ int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
 ///     \b True if the key exists in the \a obj, \b False otherwise.
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
 
+/// Encodes a memory reference
+std::string EncodeMemoryReference(lldb::addr_t addr);
+
+/// Decodes a memory reference
+std::optional<lldb::addr_t>
+DecodeMemoryReference(llvm::StringRef memoryReference);
+
 /// Extract an array of strings for the specified key from an object.
 ///
 /// String values in the array will be extracted without any quotes
@@ -284,14 +291,24 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 
 /// Create a "Source" JSON object as described in the debug adaptor definition.
 ///
+/// \param[in] file
+///     The SBFileSpec to use when populating out the "Source" object
+///
+/// \return
+///     A "Source" JSON object that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateSource(const lldb::SBFileSpec &file);
+
+/// Create a "Source" JSON object as described in the debug adaptor definition.
+///
 /// \param[in] line_entry
 ///     The LLDB line table to use when populating out the "Source"
 ///     object
 ///
 /// \return
-///     A "Source" JSON object with that follows the formal JSON
+///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
+llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 
 /// Create a "Source" object for a given source path.
 ///
@@ -321,6 +338,36 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateStackFrame(lldb::SBFrame &frame);
+
+/// Create a "StackFrame" label object for a LLDB thread.
+///
+/// This function will fill in the following keys in the returned
+/// object:
+///   "id" - the thread ID as an integer
+///   "name" - the thread name as a string which combines the LLDB
+///            thread index ID along with the string name of the thread
+///            from the OS if it has a name.
+///   "presentationHint" - "label"
+///
+/// \param[in] thread
+///     The LLDB thread to use when populating out the "Thread"
+///     object.
+///
+/// \return
+///     A "StackFrame" JSON object with that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread);
+
+/// Create a "instruction" object for a LLDB disassemble object as described in
+/// the Visual Studio Code debug adaptor definition.
+///
+/// \param[in] bp
+///     The LLDB instruction object used to populate the disassembly
+///     instruction.
+/// \return
+///     A "Scope" JSON object with that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateInstructionBreakpoint(BreakpointBase *ibp);
 
 /// Create a "Thread" object for a LLDB thread object.
 ///
@@ -433,15 +480,10 @@ struct VariableDescription {
 ///     The LLDB value to use when populating out the "Variable"
 ///     object.
 ///
-/// \param[in] variablesReference
-///     The variable reference. Zero if this value isn't structured
-///     and has no children, non-zero if it does have children and
-///     might be asked to expand itself.
-///
-/// \param[in] varID
-///     A unique variable identifier to help in properly identifying
-///     variables with the same name. This is an extension to the
-///     VS protocol.
+/// \param[in] var_ref
+///     The variable reference. Used to identify the value, e.g.
+///     in the `variablesReference` or `declarationLocationReference`
+///     properties.
 ///
 /// \param[in] format_hex
 ///     It set to true the variable will be formatted as hex in
@@ -462,8 +504,8 @@ struct VariableDescription {
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex,
+llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
+                                 bool format_hex,
                                  bool is_name_duplicated = false,
                                  std::optional<std::string> custom_name = {});
 

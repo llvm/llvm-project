@@ -97,7 +97,7 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
     if (const auto *TD = TT->getDecl())
       if (const auto *CA = TD->getAttr<CapabilityAttr>())
         return ClassifyDiagnostic(CA);
-  } else if (VDT->isPointerType() || VDT->isReferenceType())
+  } else if (VDT->isPointerOrReferenceType())
     return ClassifyDiagnostic(VDT->getPointeeType());
 
   return "mutex";

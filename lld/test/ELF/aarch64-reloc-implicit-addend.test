@@ -11,14 +11,24 @@ REQUIRES: aarch64
 ## .reloc directives containing no addend, this succeeds.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
+
 # RUN: llvm-mc -filetype=obj -triple=aarch64 relocs.s -o rela.o
 # RUN: obj2yaml rela.o -o rela.yaml
 # RUN: sed "s/\.rela/\.rel/;s/SHT_RELA/SHT_REL/" rela.yaml > rel.yaml
 # RUN: yaml2obj rel.yaml -o rel.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 symbols.s -o symbols.o
 # RUN: ld.lld rel.o symbols.o -o a.out --section-start=.data=0x100000 --section-start=.text=0x200000
-# RUN: llvm-objdump -s a.out | FileCheck %s --check-prefix=DATA
+# RUN: llvm-objdump -s a.out | FileCheck %s --check-prefix=DATALE
 # RUN: llvm-objdump -d a.out | FileCheck %s --check-prefix=CODE
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64_be relocs.s -o rela_be.o
+# RUN: obj2yaml rela_be.o -o rela_be.yaml
+# RUN: sed "s/\.rela/\.rel/;s/SHT_RELA/SHT_REL/" rela_be.yaml > rel_be.yaml
+# RUN: yaml2obj rel_be.yaml -o rel_be.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64_be symbols.s -o symbols_be.o
+# RUN: ld.lld -EB rel_be.o symbols_be.o -o be.out --section-start=.data=0x100000 --section-start=.text=0x200000
+# RUN: llvm-objdump -s be.out | FileCheck %s --check-prefix=DATABE
+# RUN: llvm-objdump -d be.out | FileCheck %s --check-prefix=CODE
 
 #--- symbols.s
 
@@ -53,7 +63,8 @@ REQUIRES: aarch64
 // Source file containing the test instructions and their relocations, with the
 // FileCheck comments interleaved.
 
-// DATA: Contents of section .data:
+// DATALE: Contents of section .data:
+// DATABE: Contents of section .data:
 .data
 
 // First test absolute data relocations. For each one I show the expected
@@ -72,7 +83,8 @@ REQUIRES: aarch64
         .reloc ., R_AARCH64_ABS16, abs16
         .hword 0x1234
 
-        // DATA-NEXT:  100000 98badcfe efcdab89 a9cbbc9a cdab
+        // DATALE-NEXT:  100000 98badcfe efcdab89 a9cbbc9a cdab
+        // DATABE-NEXT:  100000 89abcdef fedcba98 9abccba9 abcd
 
         .balign 16
 
@@ -91,7 +103,8 @@ REQUIRES: aarch64
         .reloc ., R_AARCH64_PREL16, data
         .hword 0x1234
 
-        // DATA-NEXT:  100010 11436587 78563412 09433412 1812
+        // DATALE-NEXT:  100010 11436587 78563412 09433412 1812
+        // DATABE-NEXT:  100010 12345678 87654311 12344309 1218
 
 // CODE: 0000000000200000 <_start>:
 .text
@@ -123,7 +136,7 @@ _start:
 
         .reloc ., R_AARCH64_MOVW_UABS_G0_NC, big64
         movz x0, #0x1234
-        // CODE-NEXT:  200010: d2823560      mov     x0, #0x11ab            
+        // CODE-NEXT:  200010: d2823560      mov     x0, #0x11ab
         .reloc ., R_AARCH64_MOVW_UABS_G1_NC, big64
         movk x0, #0x1234, lsl #16
         // CODE-NEXT:  200014: f2a00000      movk    x0, #0x0, lsl #16

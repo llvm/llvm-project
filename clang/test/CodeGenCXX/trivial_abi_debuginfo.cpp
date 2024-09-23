@@ -23,7 +23,7 @@ struct __attribute__((trivial_abi)) Trivial {
 // CHECK-NEXT:    call void @_ZN7TrivialD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR1]], !dbg [[DBG22]]
 // CHECK-NEXT:    br label [[NRVO_SKIPDTOR]], !dbg [[DBG22]]
 // CHECK:       nrvo.skipdtor:
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_TRIVIAL]], ptr [[RETVAL]], i32 0, i32 0, !dbg [[DBG22]]
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIVIAL]], ptr [[RETVAL]], i32 0, i32 0, !dbg [[DBG22]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4, !dbg [[DBG22]]
 // CHECK-NEXT:    ret i32 [[TMP0]], !dbg [[DBG22]]
 //

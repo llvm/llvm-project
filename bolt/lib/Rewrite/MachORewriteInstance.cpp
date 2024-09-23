@@ -72,6 +72,7 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
                                            StringRef ToolPath, Error &Err)
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
+  Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       InputFile->makeTriple(), InputFile->getFileName(), nullptr,
       /* IsPIC */ true, DWARFContext::create(*InputFile),

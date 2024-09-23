@@ -114,18 +114,3 @@ let Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba] in {
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
 } // Predicates = [HasStdExtZmmul, IsRV64, NotHasStdExtZba]
-
-//===----------------------------------------------------------------------===//
-// Experimental RV64 i32 legalization patterns.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZmmul, IsRV64] in {
-def : PatGprGpr<mul, MULW, i32, i32>;
-}
-
-let Predicates = [HasStdExtM, IsRV64] in {
-def : PatGprGpr<sdiv, DIVW, i32, i32>;
-def : PatGprGpr<udiv, DIVUW, i32, i32>;
-def : PatGprGpr<srem, REMW, i32, i32>;
-def : PatGprGpr<urem, REMUW, i32, i32>;
-}

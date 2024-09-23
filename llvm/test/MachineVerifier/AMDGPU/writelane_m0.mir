@@ -1,0 +1,16 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
+
+---
+
+name: writelane_m0
+body: |
+  bb.0:
+    ; CHECK: $vgpr0 = V_WRITELANE_B32 $sgpr0, $m0, $vgpr0
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, $m0, $vgpr0

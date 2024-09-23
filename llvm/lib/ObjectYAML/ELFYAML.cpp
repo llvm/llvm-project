@@ -135,6 +135,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
+  ECase(NT_ARM_FPMR);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);
@@ -545,6 +546,20 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_RISCV_FLOAT_ABI_QUAD, EF_RISCV_FLOAT_ABI);
     BCase(EF_RISCV_RVE);
     BCase(EF_RISCV_TSO);
+    break;
+  case ELF::EM_SPARC32PLUS:
+    BCase(EF_SPARC_32PLUS);
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    break;
+  case ELF::EM_SPARCV9:
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    BCaseMask(EF_SPARCV9_RMO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_PSO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_TSO, EF_SPARCV9_MM);
     break;
   case ELF::EM_XTENSA:
     BCase(EF_XTENSA_XT_INSN);

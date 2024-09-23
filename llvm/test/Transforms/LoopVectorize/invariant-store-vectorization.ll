@@ -27,8 +27,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[B]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -101,8 +101,8 @@ define void @inv_val_store_to_inv_address(ptr %a, i64 %n, ptr %b) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[B]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -176,8 +176,8 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[B]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[A]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -360,7 +360,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[J_022]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[J_022]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[ITR]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[ITR]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP6]], 3
@@ -369,12 +369,12 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[VAR2]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[J_022]], -1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[ITR]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[ITR]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i64 [[TMP4]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP13]], 2
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 [[TMP14]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP3]], [[VAR1]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[VAR1]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -414,7 +414,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    store i32 [[TMP22]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[ITR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ITR]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY3]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       for.inc8.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC8_LOOPEXIT]]
@@ -424,7 +424,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[J_1_LCSSA]] = phi i32 [ [[J_022]], [[FOR_COND1_PREHEADER]] ], [ [[ITR]], [[FOR_INC8_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT24]] = add nuw nsw i64 [[INDVARS_IV23]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV25:%.*]] = trunc i64 [[INDVARS_IV_NEXT24]] to i32
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[LFTR_WIDEIV25]], [[ITR]]
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[ITR]], [[LFTR_WIDEIV25]]
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR_END10_LOOPEXIT:%.*]], label [[FOR_COND1_PREHEADER]]
 ; CHECK:       for.end10.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END10]]
@@ -507,7 +507,7 @@ define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocaptu
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[ITR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ITR]], [[LFTR_WIDEIV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[FOR_BODY3]]
 ; CHECK:       for.inc8.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC8]]
@@ -515,7 +515,7 @@ define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocaptu
 ; CHECK-NEXT:    [[J_1_LCSSA]] = phi i32 [ [[J_022]], [[FOR_COND1_PREHEADER]] ], [ [[ITR]], [[FOR_INC8_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT24]] = add nuw nsw i64 [[INDVARS_IV23]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV25:%.*]] = trunc i64 [[INDVARS_IV_NEXT24]] to i32
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[LFTR_WIDEIV25]], [[ITR]]
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[ITR]], [[LFTR_WIDEIV25]]
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR_END10_LOOPEXIT:%.*]], label [[FOR_COND1_PREHEADER]]
 ; CHECK:       for.end10.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END10]]
@@ -589,7 +589,7 @@ define void @unsafe_dep_uniform_load_store(i32 %arg, i32 %arg1, i64 %arg2, ptr %
 ; CHECK-NEXT:    [[I13:%.*]] = add nsw i32 [[I12]], [[I9]]
 ; CHECK-NEXT:    [[I14:%.*]] = trunc i32 [[I13]] to i16
 ; CHECK-NEXT:    [[I15:%.*]] = trunc i64 [[I8]] to i32
-; CHECK-NEXT:    [[I16:%.*]] = add i32 [[I15]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I16:%.*]] = add i32 [[ARG:%.*]], [[I15]]
 ; CHECK-NEXT:    [[I17:%.*]] = zext i32 [[I16]] to i64
 ; CHECK-NEXT:    [[I18:%.*]] = getelementptr inbounds i16, ptr [[I6]], i64 [[I17]]
 ; CHECK-NEXT:    store i16 [[I14]], ptr [[I18]], align 2

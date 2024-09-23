@@ -24,15 +24,32 @@ add_object_library(
     libc.hdr.types.off_t
 )
 
-add_object_library(
-  pid
-  SRCS
-    pid.cpp
+add_header_library(
+  vdso_sym
   HDRS
-    ../pid.h
+    vdso_sym.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
     libc.src.__support.common
-    libc.hdr.types.pid_t
-    libc.include.sys_syscall
+)
+
+add_object_library(
+  vdso
+  HDRS
+    vdso.h
+  SRCS
+    vdso.cpp
+  DEPENDS
+    .${LIBC_TARGET_ARCHITECTURE}.vdso
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.threads.callonce
+    libc.src.__support.threads.linux.futex_word_type
+    libc.hdr.types.struct_timeval
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.clockid_t
+    libc.hdr.types.time_t
+    libc.hdr.link_macros
+    libc.src.errno.errno
+    libc.src.sys.auxv.getauxval
 )

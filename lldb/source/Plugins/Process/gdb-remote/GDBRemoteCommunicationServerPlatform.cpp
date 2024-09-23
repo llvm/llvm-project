@@ -149,7 +149,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_interrupt,
                         [](StringExtractorGDBRemote packet, Status &error,
                            bool &interrupt, bool &quit) {
-                          error.SetErrorString("interrupt received");
+                          error = Status::FromErrorString("interrupt received");
                           interrupt = true;
                           return PacketResult::Success;
                         });
@@ -167,7 +167,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     if (available_port)
       port = *available_port;
     else
-      return Status(available_port.takeError());
+      return Status::FromError(available_port.takeError());
   }
 
   // Spawn a new thread to accept the port that gets bound after binding to
@@ -208,8 +208,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     port_ptr = nullptr;
   }
 
-  Status error = StartDebugserverProcess(
-      url.str().c_str(), nullptr, debugserver_launch_info, port_ptr, &args, -1);
+  Status error = StartDebugserverProcess(url.str().c_str(), nullptr,
+                                         debugserver_launch_info, port_ptr,
+                                         &args, SharedSocket::kInvalidFD);
 
   pid = debugserver_launch_info.GetProcessID();
   if (pid != LLDB_INVALID_PROCESS_ID) {
@@ -527,8 +528,8 @@ void GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
 
 Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
   if (!m_process_launch_info.GetArguments().GetArgumentCount())
-    return Status("%s: no process command line specified to launch",
-                  __FUNCTION__);
+    return Status::FromErrorStringWithFormat(
+        "%s: no process command line specified to launch", __FUNCTION__);
 
   // specify the process monitor if not already set.  This should generally be
   // what happens since we need to reap started processes.

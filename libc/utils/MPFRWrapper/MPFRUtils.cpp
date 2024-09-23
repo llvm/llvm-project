@@ -1081,11 +1081,18 @@ void explain_ternary_operation_one_output_error(
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<double> &, float, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, double, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<long double> &, float, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<long double> &, double, double, RoundingMode);
 template void
 explain_ternary_operation_one_output_error(Operation,
                                            const TernaryInput<long double> &,
                                            long double, double, RoundingMode);
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float16, double, RoundingMode);
@@ -1265,12 +1272,20 @@ template bool compare_ternary_operation_one_output(Operation,
                                                    float, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<double> &,
+                                                   float, double, RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<double> &,
                                                    double, double,
                                                    RoundingMode);
+template bool compare_ternary_operation_one_output(
+    Operation, const TernaryInput<long double> &, float, double, RoundingMode);
+template bool compare_ternary_operation_one_output(
+    Operation, const TernaryInput<long double> &, double, double, RoundingMode);
 template bool
 compare_ternary_operation_one_output(Operation,
                                      const TernaryInput<long double> &,
                                      long double, double, RoundingMode);
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,

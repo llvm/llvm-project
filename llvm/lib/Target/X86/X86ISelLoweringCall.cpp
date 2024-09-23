@@ -524,8 +524,9 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 unsigned X86TargetLowering::getAddressSpace() const {
   if (Subtarget.is64Bit())
-    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? 256 : 257;
-  return 256;
+    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? X86AS::GS
+                                                                    : X86AS::FS;
+  return X86AS::GS;
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
@@ -1435,14 +1436,14 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     // in their paired GPR.  So we only need to save the GPR to their home
     // slots.
     // TODO: __vectorcall will change this.
-    return std::nullopt;
+    return {};
   }
 
   bool isSoftFloat = Subtarget.useSoftFloat();
   if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
-    return std::nullopt;
+    return {};
 
   static const MCPhysReg XMMArgRegs64Bit[] = {
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
@@ -1903,7 +1904,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2426,7 +2427,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(DAG.getTargetConstant(FPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -2449,6 +2451,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
+
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getFramePtr())) {
+    X86Info->setFPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setFPClobberedByInvoke(true);
+  }
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getBaseRegister())) {
+    X86Info->setBPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setBPClobberedByInvoke(true);
+  }
 
   // If this is an invoke in a 32-bit function using a funclet-based
   // personality, assume the function clobbers all registers. If an exception

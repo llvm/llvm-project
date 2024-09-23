@@ -3294,7 +3294,7 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
     if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, std::nullopt, Val,
+        SetValue(CurRec, ValLoc, DeclName, {}, Val,
                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown.  This is so that we can
       // continue to make some progress, even without the value having been
@@ -4460,8 +4460,13 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
 
   if (CurRec)
     CurRec->addDump(Loc, Message);
-  else
-    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
+  else {
+    HasReferenceResolver resolver{nullptr};
+    resolver.setFinal(true);
+    // force a resolution with a dummy resolver
+    Init *ResolvedMessage = Message->resolveReferences(resolver);
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, ResolvedMessage));
+  }
 
   return false;
 }

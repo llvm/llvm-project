@@ -19,6 +19,8 @@ config.bolt_clang = "@BOLT_CLANG_EXE@"
 config.bolt_lld = "@BOLT_LLD_EXE@"
 config.targets_to_build = "@BOLT_TARGETS_TO_BUILD@"
 config.gnu_ld = "@GNU_LD_EXECUTABLE@"
+config.libbolt_rt_instr = "@LIBBOLT_RT_INSTR@"
+config.libbolt_rt_hugify = "@LIBBOLT_RT_HUGIFY@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

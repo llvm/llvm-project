@@ -58,6 +58,11 @@ void MultiplexASTDeserializationListener::DeclRead(GlobalDeclID ID,
     Listeners[i]->DeclRead(ID, D);
 }
 
+void MultiplexASTDeserializationListener::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->PredefinedDeclBuilt(ID, D);
+}
+
 void MultiplexASTDeserializationListener::SelectorRead(
     serialization::SelectorID ID, Selector Sel) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)

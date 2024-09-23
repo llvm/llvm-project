@@ -98,8 +98,7 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     emitDiagnosticMessage(Loc, PresumedLoc(), Level, Message, Ranges, D);
   else {
     // Get the ranges into a local array we can hack on.
-    SmallVector<CharSourceRange, 20> MutableRanges(Ranges.begin(),
-                                                   Ranges.end());
+    SmallVector<CharSourceRange, 20> MutableRanges(Ranges);
 
     SmallVector<FixItHint, 8> MergedFixits;
     if (!FixItHints.empty()) {

@@ -294,11 +294,11 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
 // CHECK1-NEXT:    [[ADD16:%.*]] = fadd double [[TMP14]], 1.000000e+00
 // CHECK1-NEXT:    store double [[ADD16]], ptr [[ARRAYIDX15]], align 8
-// CHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_TT:%.*]], ptr [[TMP7]], i32 0, i32 0
+// CHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT:%.*]], ptr [[TMP7]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i64, ptr [[X]], align 8
 // CHECK1-NEXT:    [[ADD17:%.*]] = add nsw i64 [[TMP15]], 1
 // CHECK1-NEXT:    store i64 [[ADD17]], ptr [[X]], align 8
-// CHECK1-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TT]], ptr [[TMP7]], i32 0, i32 1
+// CHECK1-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[TMP7]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i8, ptr [[Y]], align 8
 // CHECK1-NEXT:    [[CONV18:%.*]] = sext i8 [[TMP16]] to i32
 // CHECK1-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
@@ -322,7 +322,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_TT:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    ret ptr [[X]]
 //
 //
@@ -393,9 +393,9 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    store double [[ADD]], ptr [[A]], align 8
-// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP6:%.*]] = load double, ptr [[A3]], align 8
 // CHECK1-NEXT:    [[INC:%.*]] = fadd double [[TMP6]], 1.000000e+00
 // CHECK1-NEXT:    store double [[INC]], ptr [[A3]], align 8
@@ -404,10 +404,10 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP3]], i64 [[TMP7]]
 // CHECK1-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i64 1
 // CHECK1-NEXT:    store i16 [[CONV4]], ptr [[ARRAYIDX5]], align 2
-// CHECK1-NEXT:    [[A6:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[A6:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP8:%.*]] = load double, ptr [[A6]], align 8
 // CHECK1-NEXT:    [[CONV7:%.*]] = fptosi double [[TMP8]] to i32
-// CHECK1-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[A8:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], ptr nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR10]]
 // CHECK1-NEXT:    call void @__kmpc_target_deinit()
 // CHECK1-NEXT:    ret void
@@ -680,11 +680,11 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX15]], align 8
 // CHECK2-NEXT:    [[ADD16:%.*]] = fadd double [[TMP14]], 1.000000e+00
 // CHECK2-NEXT:    store double [[ADD16]], ptr [[ARRAYIDX15]], align 8
-// CHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_TT:%.*]], ptr [[TMP7]], i32 0, i32 0
+// CHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT:%.*]], ptr [[TMP7]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[X]], align 8
 // CHECK2-NEXT:    [[ADD17:%.*]] = add nsw i64 [[TMP15]], 1
 // CHECK2-NEXT:    store i64 [[ADD17]], ptr [[X]], align 8
-// CHECK2-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TT]], ptr [[TMP7]], i32 0, i32 1
+// CHECK2-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[TMP7]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i8, ptr [[Y]], align 8
 // CHECK2-NEXT:    [[CONV18:%.*]] = sext i8 [[TMP16]] to i32
 // CHECK2-NEXT:    [[ADD19:%.*]] = add nsw i32 [[CONV18]], 1
@@ -708,7 +708,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK2-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_TT:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    ret ptr [[X]]
 //
 //
@@ -779,9 +779,9 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
 // CHECK2-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
-// CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK2-NEXT:    store double [[ADD]], ptr [[A]], align 8
-// CHECK2-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK2-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP6:%.*]] = load double, ptr [[A3]], align 8
 // CHECK2-NEXT:    [[INC:%.*]] = fadd double [[TMP6]], 1.000000e+00
 // CHECK2-NEXT:    store double [[INC]], ptr [[A3]], align 8
@@ -790,10 +790,10 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP3]], i32 [[TMP7]]
 // CHECK2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i32 1
 // CHECK2-NEXT:    store i16 [[CONV4]], ptr [[ARRAYIDX5]], align 2
-// CHECK2-NEXT:    [[A6:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK2-NEXT:    [[A6:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP8:%.*]] = load double, ptr [[A6]], align 8
 // CHECK2-NEXT:    [[CONV7:%.*]] = fptosi double [[TMP8]] to i32
-// CHECK2-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
+// CHECK2-NEXT:    [[A8:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[TMP0]], i32 0, i32 0
 // CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_Z3baziRd(i32 [[CONV7]], ptr nonnull align 8 dereferenceable(8) [[A8]]) #[[ATTR10]]
 // CHECK2-NEXT:    call void @__kmpc_target_deinit()
 // CHECK2-NEXT:    ret void

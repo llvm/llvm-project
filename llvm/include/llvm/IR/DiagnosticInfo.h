@@ -65,6 +65,7 @@ enum DiagnosticKind {
   DK_Lowering,
   DK_DebugMetadataVersion,
   DK_DebugMetadataInvalid,
+  DK_Instrumentation,
   DK_ISelFallback,
   DK_SampleProfile,
   DK_OptimizationRemark,
@@ -947,6 +948,22 @@ public:
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MIRParser;
+  }
+};
+
+/// Diagnostic information for IR instrumentation reporting.
+class DiagnosticInfoInstrumentation : public DiagnosticInfo {
+  const Twine &Msg;
+
+public:
+  DiagnosticInfoInstrumentation(const Twine &DiagMsg,
+                                DiagnosticSeverity Severity = DS_Warning)
+      : DiagnosticInfo(DK_Instrumentation, Severity), Msg(DiagMsg) {}
+
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Instrumentation;
   }
 };
 

@@ -1371,8 +1371,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
         return dyn_cast<MDTuple>(DstValue);
       ArrayRef<MDOperand> DstOperands = DstValue->operands();
       MDTuple *New = MDTuple::getDistinct(
-          DstM.getContext(),
-          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
+          DstM.getContext(), SmallVector<Metadata *, 4>(DstOperands));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
       MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);

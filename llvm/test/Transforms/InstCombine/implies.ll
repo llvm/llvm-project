@@ -137,7 +137,7 @@ F:
 define i1 @src_or_distjoint_implies_sle_fail(i8 %x, i8 %y, i1 %other) {
 ; CHECK-LABEL: @src_or_distjoint_implies_sle_fail(
 ; CHECK-NEXT:    [[X2:%.*]] = or disjoint i8 [[X:%.*]], 24
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp slt i8 [[X2]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp sgt i8 [[Y:%.*]], [[X2]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    [[X1:%.*]] = or disjoint i8 [[X]], 23
@@ -268,7 +268,7 @@ F:
 define i1 @src_or_implies_ule(i8 %x, i8 %y, i8 %z, i1 %other) {
 ; CHECK-LABEL: @src_or_implies_ule(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ugt i8 [[OR]], [[Z:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i8 [[Z:%.*]], [[OR]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i1 true

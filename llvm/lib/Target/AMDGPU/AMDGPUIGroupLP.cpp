@@ -955,10 +955,9 @@ private:
           return false;
       }
 
-      auto Reaches = (std::any_of(
-          Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *TargetSU) {
-            return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
-          }));
+      auto Reaches = any_of(*Cache, [&SU, &DAG](SUnit *TargetSU) {
+        return DAG->IsReachable(TargetSU, const_cast<SUnit *>(SU));
+      });
 
       return Reaches;
     }
@@ -1430,19 +1429,16 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   if (!(TempExp && TempMFMA))
     return false;
 
-  HasChainBetweenCvt =
-      std::find_if((*TempExp)->Succs.begin(), (*TempExp)->Succs.end(),
-                   [&isCvt](SDep &Succ) {
-                     return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
-                   }) == (*TempExp)->Succs.end();
+  HasChainBetweenCvt = none_of((*TempExp)->Succs, [&isCvt](SDep &Succ) {
+    return isCvt(Succ.getSUnit()->getInstr()->getOpcode());
+  });
 
   // Count the number of MFMAs that are reached by an EXP
   for (auto &SuccSU : MFMAPipeCands) {
     if (MFMAPipeSUs.size() &&
-        std::find_if(MFMAPipeSUs.begin(), MFMAPipeSUs.end(),
-                     [&SuccSU](SUnit *PotentialMatch) {
-                       return PotentialMatch->NodeNum == SuccSU->NodeNum;
-                     }) != MFMAPipeSUs.end())
+        any_of(MFMAPipeSUs, [&SuccSU](SUnit *PotentialMatch) {
+          return PotentialMatch->NodeNum == SuccSU->NodeNum;
+        }))
       continue;
 
     for (auto &PredSU : ExpPipeCands) {
@@ -1480,10 +1476,9 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
     if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
-    if (!std::any_of(MFMAPipeSU->Preds.begin(), MFMAPipeSU->Preds.end(),
-                     [&TII](SDep &Succ) {
-                       return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-                     })) {
+    if (none_of(MFMAPipeSU->Preds, [&TII](SDep &Succ) {
+          return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
+        })) {
       MFMAChainSeeds.push_back(MFMAPipeSU);
       ++MFMAChains;
     }
@@ -1942,14 +1937,10 @@ private:
         return true;
 
       // Does the previous VALU have this DS_Write as a successor
-      return (std::any_of(OtherGroup->Collection.begin(),
-                          OtherGroup->Collection.end(), [&SU](SUnit *Elt) {
-                            return std::any_of(Elt->Succs.begin(),
-                                               Elt->Succs.end(),
-                                               [&SU](SDep &Succ) {
-                                                 return Succ.getSUnit() == SU;
-                                               });
-                          }));
+      return any_of(OtherGroup->Collection, [&SU](SUnit *Elt) {
+        return any_of(Elt->Succs,
+                      [&SU](SDep &Succ) { return Succ.getSUnit() == SU; });
+      });
     }
     IsSuccOfPrevGroup(const SIInstrInfo *TII, unsigned SGID,
                       bool NeedsCache = false)

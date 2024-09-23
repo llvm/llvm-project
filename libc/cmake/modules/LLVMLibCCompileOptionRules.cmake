@@ -40,6 +40,17 @@ function(_get_compile_options_from_flags output_var)
     endif()
     if(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_MISC_MATH_BASIC_OPS_OPT")
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAX_FMIN")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAXF16_FMINF16")
+      endif()
+      if("FullFP16" IN_LIST LIBC_CPU_FEATURES AND
+         CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        list(APPEND compile_options
+             "SHELL:-Xclang -target-feature -Xclang +fullfp16")
+      endif()
     endif()
   elseif(MSVC)
     if(ADD_FMA_FLAG)
@@ -58,6 +69,14 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_QSORT_IMPL)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
+    list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
+  endif()
+
+  if(LIBC_ADD_NULL_CHECKS)
+    list(APPEND config_options "-DLIBC_ADD_NULL_CHECKS")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
@@ -104,16 +123,7 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    # Builtin recognition causes issues when trying to implement the builtin
-    # functions themselves. The GPU backends do not use libcalls so we disable
-    # the known problematic ones. This allows inlining during LTO linking.
-    if(LIBC_TARGET_OS_IS_GPU)
-      set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
-                        memset strcmp strstr)
-      foreach(builtin ${libc_builtins})
-        list(APPEND compile_options "-fno-builtin-${builtin}")
-      endforeach()
-    else()
+    if(NOT LIBC_TARGET_OS_IS_GPU)
       list(APPEND compile_options "-fno-builtin")
     endif()
 
@@ -182,7 +192,10 @@ endfunction()
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
+      ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+      ${compile_flags})
 
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -226,9 +239,12 @@ function(_get_common_test_compile_options output_var c_test flags)
 endfunction()
 
 function(_get_hermetic_test_compile_options output_var flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  list(APPEND compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags}
-       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti)
+  _get_common_test_compile_options(compile_options "" "${flags}")
+
+  list(APPEND compile_options "-fpie")
+  list(APPEND compile_options "-ffreestanding")
+  list(APPEND compile_options "-fno-exceptions")
+  list(APPEND compile_options "-fno-rtti")
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
@@ -242,9 +258,5 @@ function(_get_hermetic_test_compile_options output_var flags)
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
 
-  if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND compile_options "-DLIBC_FULL_BUILD")
-  endif()
-  
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

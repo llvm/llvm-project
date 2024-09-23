@@ -295,6 +295,10 @@ public:
                                       StringList *matches = nullptr,
                                       StringList *descriptions = nullptr) const;
 
+  CommandObject *
+  GetAliasCommandObject(llvm::StringRef cmd, StringList *matches = nullptr,
+                        StringList *descriptions = nullptr) const;
+
   /// Determine whether a root level, built-in command with this name exists.
   bool CommandExists(llvm::StringRef cmd) const;
 

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/fallible_iterator.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
@@ -82,13 +83,26 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
-  /// Returns the contents of the Exception stream.  An error is returned if the
-  /// file does not contain this stream, or the stream is smaller than the size
-  /// of the ExceptionStream structure.  The internal consistency of the stream
-  /// is not checked in any way.
+  /// Returns the contents of the Exception stream. An error is returned if the
+  /// associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
+  Expected<const minidump::ExceptionStream &>
+  getExceptionStream(minidump::Directory Directory) const {
+    if (Directory.Type != minidump::StreamType::Exception) {
+      return createError("Not an exception stream");
+    }
+
+    return getStreamFromDirectory<minidump::ExceptionStream>(Directory);
+  }
+
+  /// Returns the first exception stream in the file. An error is returned if
+  /// the associated stream is smaller than the size of the ExceptionStream
+  /// structure. Or the directory supplied is not of kind exception stream.
   Expected<const minidump::ExceptionStream &> getExceptionStream() const {
-    return getStream<minidump::ExceptionStream>(
-        minidump::StreamType::Exception);
+    auto it = getExceptionStreams();
+    if (it.begin() == it.end())
+      return createError("No exception streams");
+    return *it.begin();
   }
 
   /// Returns the list of descriptors embedded in the MemoryList stream. The
@@ -101,6 +115,13 @@ public:
   Expected<ArrayRef<minidump::MemoryDescriptor>> getMemoryList() const {
     return getListStream<minidump::MemoryDescriptor>(
         minidump::StreamType::MemoryList);
+  }
+
+  /// Returns the header to the memory 64 list stream. An error is returned if
+  /// the file does not contain this stream.
+  Expected<minidump::Memory64ListHeader> getMemoryList64Header() const {
+    return getStream<minidump::Memory64ListHeader>(
+        minidump::StreamType::Memory64List);
   }
 
   class MemoryInfoIterator
@@ -132,6 +153,126 @@ public:
     size_t Stride;
   };
 
+  /// Class the provides an iterator over the memory64 memory ranges. Only the
+  /// the first descriptor is validated as readable beforehand.
+  class Memory64Iterator {
+  public:
+    static Memory64Iterator
+    begin(ArrayRef<uint8_t> Storage,
+          ArrayRef<minidump::MemoryDescriptor_64> Descriptors) {
+      return Memory64Iterator(Storage, Descriptors);
+    }
+
+    static Memory64Iterator end() { return Memory64Iterator(); }
+
+    bool operator==(const Memory64Iterator &R) const {
+      return IsEnd == R.IsEnd;
+    }
+
+    bool operator!=(const Memory64Iterator &R) const { return !(*this == R); }
+
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> &
+    operator*() {
+      return Current;
+    }
+
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> *
+    operator->() {
+      return &Current;
+    }
+
+    Error inc() {
+      if (Descriptors.empty()) {
+        IsEnd = true;
+        return Error::success();
+      }
+
+      // Drop front gives us an array ref, so we need to call .front() as well.
+      const minidump::MemoryDescriptor_64 &Descriptor = Descriptors.front();
+      if (Descriptor.DataSize > Storage.size()) {
+        IsEnd = true;
+        return make_error<GenericBinaryError>(
+            "Memory64 Descriptor exceeds end of file.",
+            object_error::unexpected_eof);
+      }
+
+      ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
+      Current = std::make_pair(Descriptor, Content);
+
+      Storage = Storage.drop_front(Descriptor.DataSize);
+      Descriptors = Descriptors.drop_front();
+
+      return Error::success();
+    }
+
+  private:
+    // This constructor expects that the first descriptor is readable.
+    Memory64Iterator(ArrayRef<uint8_t> Storage,
+                     ArrayRef<minidump::MemoryDescriptor_64> Descriptors)
+        : Storage(Storage), Descriptors(Descriptors), IsEnd(false) {
+      assert(!Descriptors.empty() &&
+             Storage.size() >= Descriptors.front().DataSize);
+      minidump::MemoryDescriptor_64 Descriptor = Descriptors.front();
+      ArrayRef<uint8_t> Content = Storage.take_front(Descriptor.DataSize);
+      Current = std::make_pair(Descriptor, Content);
+      this->Descriptors = Descriptors.drop_front();
+      this->Storage = Storage.drop_front(Descriptor.DataSize);
+    }
+
+    Memory64Iterator()
+        : Storage(ArrayRef<uint8_t>()),
+          Descriptors(ArrayRef<minidump::MemoryDescriptor_64>()), IsEnd(true) {}
+
+    std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Current;
+    ArrayRef<uint8_t> Storage;
+    ArrayRef<minidump::MemoryDescriptor_64> Descriptors;
+    bool IsEnd;
+  };
+
+  class ExceptionStreamsIterator {
+  public:
+    ExceptionStreamsIterator(ArrayRef<minidump::Directory> Streams,
+                             const MinidumpFile *File)
+        : Streams(Streams), File(File) {}
+
+    bool operator==(const ExceptionStreamsIterator &R) const {
+      return Streams.size() == R.Streams.size();
+    }
+
+    bool operator!=(const ExceptionStreamsIterator &R) const {
+      return !(*this == R);
+    }
+
+    Expected<const minidump::ExceptionStream &> operator*() {
+      return File->getExceptionStream(Streams.front());
+    }
+
+    ExceptionStreamsIterator &operator++() {
+      if (!Streams.empty())
+        Streams = Streams.drop_front();
+
+      return *this;
+    }
+
+  private:
+    ArrayRef<minidump::Directory> Streams;
+    const MinidumpFile *File;
+  };
+
+  using FallibleMemory64Iterator = llvm::fallible_iterator<Memory64Iterator>;
+
+  /// Returns an iterator that reads each exception stream independently. The
+  /// contents of the exception strema are not validated before being read, an
+  /// error will be returned if the stream is not large enough to contain an
+  /// exception stream, or if the stream points beyond the end of the file.
+  iterator_range<ExceptionStreamsIterator> getExceptionStreams() const;
+
+  /// Returns an iterator that pairs each descriptor with it's respective
+  /// content from the Memory64List stream. An error is returned if the file
+  /// does not contain a Memory64List stream, or if the descriptor data is
+  /// unreadable.
+  iterator_range<FallibleMemory64Iterator> getMemory64List(Error &Err) const;
+
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions
   /// of memory at the time the minidump was taken. An error is returned if the
@@ -152,25 +293,33 @@ private:
   }
 
   /// Return a slice of the given data array, with bounds checking.
-  static Expected<ArrayRef<uint8_t>> getDataSlice(ArrayRef<uint8_t> Data,
-                                                  size_t Offset, size_t Size);
+  static Expected<ArrayRef<uint8_t>>
+  getDataSlice(ArrayRef<uint8_t> Data, uint64_t Offset, uint64_t Size);
 
   /// Return the slice of the given data array as an array of objects of the
   /// given type. The function checks that the input array is large enough to
   /// contain the correct number of objects of the given type.
   template <typename T>
   static Expected<ArrayRef<T>> getDataSliceAs(ArrayRef<uint8_t> Data,
-                                              size_t Offset, size_t Count);
+                                              uint64_t Offset, uint64_t Count);
 
   MinidumpFile(MemoryBufferRef Source, const minidump::Header &Header,
                ArrayRef<minidump::Directory> Streams,
-               DenseMap<minidump::StreamType, std::size_t> StreamMap)
+               DenseMap<minidump::StreamType, std::size_t> StreamMap,
+               std::vector<minidump::Directory> ExceptionStreams)
       : Binary(ID_Minidump, Source), Header(Header), Streams(Streams),
-        StreamMap(std::move(StreamMap)) {}
+        StreamMap(std::move(StreamMap)),
+        ExceptionStreams(std::move(ExceptionStreams)) {}
 
   ArrayRef<uint8_t> getData() const {
     return arrayRefFromStringRef(Data.getBuffer());
   }
+
+  /// Return the stream of the given type, cast to the appropriate type. Checks
+  /// that the stream is large enough to hold an object of this type.
+  template <typename T>
+  Expected<const T &>
+  getStreamFromDirectory(minidump::Directory Directory) const;
 
   /// Return the stream of the given type, cast to the appropriate type. Checks
   /// that the stream is large enough to hold an object of this type.
@@ -185,7 +334,17 @@ private:
   const minidump::Header &Header;
   ArrayRef<minidump::Directory> Streams;
   DenseMap<minidump::StreamType, std::size_t> StreamMap;
+  std::vector<minidump::Directory> ExceptionStreams;
 };
+
+template <typename T>
+Expected<const T &>
+MinidumpFile::getStreamFromDirectory(minidump::Directory Directory) const {
+  ArrayRef<uint8_t> Stream = getRawStream(Directory);
+  if (Stream.size() >= sizeof(T))
+    return *reinterpret_cast<const T *>(Stream.data());
+  return createEOFError();
+}
 
 template <typename T>
 Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {
@@ -199,15 +358,16 @@ Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {
 
 template <typename T>
 Expected<ArrayRef<T>> MinidumpFile::getDataSliceAs(ArrayRef<uint8_t> Data,
-                                                   size_t Offset,
-                                                   size_t Count) {
+                                                   uint64_t Offset,
+                                                   uint64_t Count) {
   // Check for overflow.
-  if (Count > std::numeric_limits<size_t>::max() / sizeof(T))
+  if (Count > std::numeric_limits<uint64_t>::max() / sizeof(T))
     return createEOFError();
   Expected<ArrayRef<uint8_t>> Slice =
       getDataSlice(Data, Offset, sizeof(T) * Count);
   if (!Slice)
     return Slice.takeError();
+
   return ArrayRef<T>(reinterpret_cast<const T *>(Slice->data()), Count);
 }
 

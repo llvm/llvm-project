@@ -58,6 +58,33 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
         "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
+
+/// Fortran procedure attributes (F2023 15.6.2.1). BIND attribute (18.3.7)
+/// is also tracked in the same enum. Recursive (resp. Impure) attribute
+/// is implied by the absence of opposite NonRecursive (resp. Pure) attribute.
+def FIRfuncNoAttributes  : I32BitEnumAttrCaseNone<"none">;
+def FIRfuncElemental     : I32BitEnumAttrCaseBit<"elemental", 0>;
+def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;
+def FIRfuncNonRecursive  : I32BitEnumAttrCaseBit<"non_recursive", 2>;
+def FIRfuncSimple        : I32BitEnumAttrCaseBit<"simple", 3>;
+def FIRfuncBind_c        : I32BitEnumAttrCaseBit<"bind_c", 4>;
+
+def fir_FortranProcedureFlagsEnum : I32BitEnumAttr<
+    "FortranProcedureFlagsEnum",
+    "Fortran procedure attributes",
+    [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure, FIRfuncNonRecursive,
+     FIRfuncSimple, FIRfuncBind_c]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_FortranProcedureFlagsAttr :
+    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
     [
@@ -110,5 +137,18 @@ def fir_LowerBoundModifierAttribute : I32EnumAttr<
     ]> {
   let cppNamespace = "::fir";
 }
+
+def fir_LocationKind : I32EnumAttr<"LocationKind", "Flang location kind",
+  [
+    I32EnumAttrCase<"Base", 0, "base">,
+    I32EnumAttrCase<"Inclusion", 1, "inclusion">,
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">;
+
+def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
+    "loc_kind_array", "LocationKindAttr">;
 
 #endif // FIR_DIALECT_FIR_ATTRS

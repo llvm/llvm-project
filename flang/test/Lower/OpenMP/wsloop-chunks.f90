@@ -20,7 +20,7 @@ do i=1, 9
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 9 : i32
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 1 : i32
-! CHECK:         omp.wsloop schedule(static = %[[VAL_2]] : i32) nowait {
+! CHECK:         omp.wsloop nowait schedule(static = %[[VAL_2]] : i32) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG0:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
 ! CHECK:             fir.store %[[ARG0]] to %[[STORE_IV:.*]]#1 : !fir.ref<i32>
 ! CHECK:             %[[LOAD_IV:.*]] = fir.load %[[STORE_IV]]#0 : !fir.ref<i32>
@@ -41,7 +41,7 @@ do i=1, 9
 ! CHECK:         %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_16:.*]] = arith.constant 9 : i32
 ! CHECK:         %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:         omp.wsloop schedule(static = %[[VAL_14]] : i32) nowait {
+! CHECK:         omp.wsloop nowait schedule(static = %[[VAL_14]] : i32) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG1:.*]]) : i32 = (%[[VAL_15]]) to (%[[VAL_16]]) inclusive step (%[[VAL_17]]) {
 ! CHECK:             fir.store %[[ARG1]] to %[[STORE_IV1:.*]]#1 : !fir.ref<i32>
 ! CHECK:             %[[VAL_24:.*]] = arith.constant 2 : i32
@@ -68,7 +68,7 @@ end do
 ! CHECK:         %[[VAL_30:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_31:.*]] = arith.constant 9 : i32
 ! CHECK:         %[[VAL_32:.*]] = arith.constant 1 : i32
-! CHECK:         omp.wsloop schedule(static = %[[VAL_29]] : i32) nowait {
+! CHECK:         omp.wsloop nowait schedule(static = %[[VAL_29]] : i32) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG2:.*]]) : i32 = (%[[VAL_30]]) to (%[[VAL_31]]) inclusive step (%[[VAL_32]]) {
 ! CHECK:             fir.store %[[ARG2]] to %[[STORE_IV2:.*]]#1 : !fir.ref<i32>
 ! CHECK:             %[[VAL_39:.*]] = arith.constant 3 : i32

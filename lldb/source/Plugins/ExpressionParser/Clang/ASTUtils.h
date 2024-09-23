@@ -14,6 +14,8 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/Casting.h"
 #include <optional>
 
 namespace clang {
@@ -24,13 +26,15 @@ class Module;
 
 namespace lldb_private {
 
-/// Wraps an ExternalASTSource into an ExternalSemaSource. Doesn't take
-/// ownership of the provided source.
+/// Wraps an ExternalASTSource into an ExternalSemaSource.
+///
+/// Assumes shared ownership of the underlying source.
 class ExternalASTSourceWrapper : public clang::ExternalSemaSource {
-  ExternalASTSource *m_Source;
+  llvm::IntrusiveRefCntPtr<ExternalASTSource> m_Source;
 
 public:
-  ExternalASTSourceWrapper(ExternalASTSource *Source) : m_Source(Source) {
+  explicit ExternalASTSourceWrapper(ExternalASTSource *Source)
+      : m_Source(Source) {
     assert(m_Source && "Can't wrap nullptr ExternalASTSource");
   }
 
@@ -134,6 +138,24 @@ public:
           &VirtualBaseOffsets) override {
     return m_Source->layoutRecordType(Record, Size, Alignment, FieldOffsets,
                                       BaseOffsets, VirtualBaseOffsets);
+  }
+
+  /// This gets called when Sema is reconciling undefined but used decls.
+  /// For LLDB's use-case, we never provide Clang with function definitions,
+  /// instead we rely on linkage names and symbol resolution to call the
+  /// correct funcitons during JITting. So this implementation clears
+  /// any "undefined" FunctionDecls that Clang found while parsing.
+  ///
+  /// \param[in,out] Undefined A set of used decls for which Clang has not
+  ///                          been provided a definition with.
+  ///
+  void ReadUndefinedButUsed(
+      llvm::MapVector<clang::NamedDecl *, clang::SourceLocation> &Undefined)
+      override {
+    Undefined.remove_if([](auto const &decl_loc_pair) {
+      const clang::NamedDecl *ND = decl_loc_pair.first;
+      return llvm::isa_and_present<clang::FunctionDecl>(ND);
+    });
   }
 };
 
@@ -256,17 +278,21 @@ public:
   /// Construct a SemaSourceWithPriorities with a 'high quality' source that
   /// has the higher priority and a 'low quality' source that will be used
   /// as a fallback.
-  SemaSourceWithPriorities(clang::ExternalSemaSource &high_quality_source,
-                           clang::ExternalSemaSource &low_quality_source) {
-    Sources.push_back(&high_quality_source);
-    Sources.push_back(&low_quality_source);
+  ///
+  /// This class assumes shared ownership of the sources provided to it.
+  SemaSourceWithPriorities(clang::ExternalSemaSource *high_quality_source,
+                           clang::ExternalSemaSource *low_quality_source) {
+    assert(high_quality_source);
+    assert(low_quality_source);
+
+    high_quality_source->Retain();
+    low_quality_source->Retain();
+
+    Sources.push_back(high_quality_source);
+    Sources.push_back(low_quality_source);
   }
 
   ~SemaSourceWithPriorities() override;
-
-  void addSource(clang::ExternalSemaSource &source) {
-    Sources.push_back(&source);
-  }
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.

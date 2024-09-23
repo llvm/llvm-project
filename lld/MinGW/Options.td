@@ -243,6 +243,9 @@ defm: EqNoHelp<"sysroot">;
 def: F<"sort-common">;
 def: F<"start-group">;
 
+// Ignored options, that produce warnings
+defm rpath: EqNoHelp<"rpath">;
+
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support
 // GCC LTO, but GCC collect2 passes these options even in non-LTO mode.
 def: J<"plugin-opt=-fresolution=">;

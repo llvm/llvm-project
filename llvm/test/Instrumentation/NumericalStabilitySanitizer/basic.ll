@@ -4,6 +4,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
+declare float @declaration_only(float %a) sanitize_numerical_stability
+
 ; Tests with simple control flow.
 
 @float_const = private unnamed_addr constant float 0.5
@@ -737,6 +739,29 @@ entry:
   ret void
 }
 
+define void @freeze_vector_insert(<2 x float> %vec, i32 %idx, float %scalar) sanitize_numerical_stability {
+; CHECK-LABEL: @freeze_vector_insert(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__nsan_shadow_args_tag, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], ptrtoint (ptr @freeze_vector_insert to i64)
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @__nsan_shadow_args_ptr, align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[VEC:%.*]] to <2 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 16), align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fpext float [[SCALAR:%.*]] to double
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], double [[TMP5]], double [[TMP6]]
+; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[VEC]], float [[SCALAR]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP4]], double [[TMP7]], i32 [[IDX]]
+; CHECK-NEXT:    [[FROZEN:%.*]] = freeze <2 x float> [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <2 x double> [[TMP9]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = insertelement <2 x float> %vec, float %scalar, i32 %idx
+  %frozen = freeze <2 x float> %1
+  ret void
+}
 
 define void @vector_shuffle(<2 x float> %0) sanitize_numerical_stability {
 ; CHECK-LABEL: @vector_shuffle(

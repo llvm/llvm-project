@@ -13,7 +13,8 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -ffinite-math-only -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
+// RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefix=FINITEONLY %s
 
 // DEFAULT-LABEL: @test_fma_f16(
@@ -85,4 +86,23 @@ extern "C" __device__ float test_sin_f32(float x) {
 //
 extern "C" __device__ float test_cos_f32(float x) {
   return cos(x);
+}
+
+// Check user defined type which can be converted to float and double but not
+// specializes __numeric_type will not cause ambiguity diagnostics.
+struct user_bfloat16 {
+  __host__ __device__ user_bfloat16(float);
+  operator float();
+  operator double();
+};
+
+namespace user_namespace {
+  __device__ user_bfloat16 fma(const user_bfloat16 a, const user_bfloat16 b, const user_bfloat16 c) {
+    return a;
+  }
+
+  __global__ void test_fma() {
+    user_bfloat16 a = 1.0f, b = 2.0f;
+    fma(a, b, b);
+  }
 }

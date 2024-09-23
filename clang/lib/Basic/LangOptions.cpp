@@ -34,8 +34,8 @@ void LangOptions::resetNonModularOptions() {
   // invocations that cannot be round-tripped to arguments.
   // FIXME: we should derive this automatically from ImpliedBy in tablegen.
   AllowFPReassoc = UnsafeFPMath;
-  NoHonorNaNs = FiniteMathOnly;
-  NoHonorInfs = FiniteMathOnly;
+  NoHonorInfs = FastMath;
+  NoHonorNaNs = FastMath;
 
   // These options do not affect AST generation.
   NoSanitizeFiles.clear();
@@ -159,6 +159,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
   else if (LangStd == LangStandard::lang_hlsl202x)
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
+  else if (LangStd == LangStandard::lang_hlsl202y)
+    Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {

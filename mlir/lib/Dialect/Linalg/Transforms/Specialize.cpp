@@ -227,9 +227,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   auto c =
       matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
 
-  if (llvm::any_of(ArrayRef<IndexMatchResult>{a, b, c}, [](IndexMatchResult r) {
-        return r == IndexMatchResult::Mismatch;
-      }))
+  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
   if (c != IndexMatchResult::Match ||

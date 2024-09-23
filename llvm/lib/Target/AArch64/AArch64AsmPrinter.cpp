@@ -113,6 +113,8 @@ public:
 
   void emitFunctionEntryLabel() override;
 
+  void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
+
   void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerHardenedBRJumpTable(const MachineInstr &MI);
@@ -160,8 +162,7 @@ public:
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -1281,6 +1282,23 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
   }
 }
 
+void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
+                                       const Constant *CV) {
+  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
+    if (CPA->hasAddressDiscriminator() &&
+        !CPA->hasSpecialAddressDiscriminator(
+            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
+      report_fatal_error(
+          "unexpected address discrimination value for ctors/dtors entry, only "
+          "'ptr inttoptr (i64 1 to ptr)' is allowed");
+  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
+  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
+  // actual address discrimination value and only checks
+  // hasAddressDiscriminator(), so it's OK to leave special address
+  // discrimination value here.
+  AsmPrinter::emitXXStructor(DL, CV);
+}
+
 void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
                                         const GlobalAlias &GA) {
   if (auto F = dyn_cast_or_null<Function>(GA.getAliasee())) {
@@ -1292,6 +1310,13 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
       StringRef ExpStr = cast<MDString>(Node->getOperand(0))->getString();
       MCSymbol *ExpSym = MMI->getContext().getOrCreateSymbol(ExpStr);
       MCSymbol *Sym = MMI->getContext().getOrCreateSymbol(GA.getName());
+
+      OutStreamer->beginCOFFSymbolDef(ExpSym);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
+
       OutStreamer->beginCOFFSymbolDef(Sym);
       OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
       OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
@@ -2316,8 +2341,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   if (MI->getOpcode() == AArch64::ADRP) {
     for (auto &Opd : MI->operands()) {
@@ -2483,11 +2510,12 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned DiscReg = AddrDisc;
     if (Disc) {
       if (AddrDisc != AArch64::NoRegister) {
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
-                                         .addReg(ScratchReg)
-                                         .addReg(AArch64::XZR)
-                                         .addReg(AddrDisc)
-                                         .addImm(0));
+        if (ScratchReg != AddrDisc)
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                           .addReg(ScratchReg)
+                                           .addReg(AArch64::XZR)
+                                           .addReg(AddrDisc)
+                                           .addImm(0));
         EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
                                          .addReg(ScratchReg)
                                          .addReg(ScratchReg)

@@ -1034,7 +1034,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax")) {
+          Name.starts_with("ds.fmax") ||
+          Name.starts_with("global.atomic.fadd") ||
+          Name.starts_with("flat.atomic.fadd")) {
         // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
         // declaration.
         NewFn = nullptr;
@@ -1165,6 +1167,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'expermental.vector.reduce.*'.
       }
       break; // No other 'experimental.vector.*'.
+    }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
     }
     break; // No other 'e*'.
   case 'f':
@@ -4042,7 +4051,9 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("ds.fmin", AtomicRMWInst::FMin)
           .StartsWith("ds.fmax", AtomicRMWInst::FMax)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
-          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
+          .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4097,8 +4108,10 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
   if (PtrTy->getAddressSpace() != 3) {
-    RMW->setMetadata("amdgpu.no.fine.grained.memory",
-                     MDNode::get(F->getContext(), {}));
+    MDNode *EmptyMD = MDNode::get(F->getContext(), {});
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+    if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
+      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
   }
 
   if (IsVolatile)
@@ -4317,7 +4330,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
              "Must have same number of elements");
 
       SmallVector<Value *> Args(CI->args());
-      Value *NewCI = Builder.CreateCall(NewFn, Args);
+      CallInst *NewCI = Builder.CreateCall(NewFn, Args);
+      NewCI->setAttributes(CI->getAttributes());
       Value *Res = PoisonValue::get(OldST);
       for (unsigned Idx = 0; Idx < OldST->getNumElements(); ++Idx) {
         Value *Elem = Builder.CreateExtractValue(NewCI, Idx);
@@ -4886,7 +4900,25 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
-  unsigned Version = getDebugMetadataVersionFromModule(M);
+  // We need to get metadata before the module is verified (i.e., getModuleFlag
+  // makes assumptions that we haven't verified yet). Carefully extract the flag
+  // from the metadata.
+  unsigned Version = 0;
+  if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
+      if (Flag->getNumOperands() < 3)
+        return false;
+      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
+        return K->getString() == "Debug Info Version";
+      return false;
+    });
+    if (OpIt != ModFlags->op_end()) {
+      const MDOperand &ValOp = (*OpIt)->getOperand(2);
+      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
+        Version = CI->getZExtValue();
+    }
+  }
+
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))
@@ -5254,6 +5286,22 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
     Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
+
+/// Replace "amdgpu-unsafe-fp-atomics" metadata with atomicrmw metadata
+struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
+    : public InstVisitor<AMDGPUUnsafeFPAtomicsUpgradeVisitor> {
+  AMDGPUUnsafeFPAtomicsUpgradeVisitor() = default;
+
+  void visitAtomicRMWInst(AtomicRMWInst &RMW) {
+    if (!RMW.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(RMW.getContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
+};
 } // namespace
 
 void llvm::UpgradeFunctionAttributes(Function &F) {
@@ -5275,6 +5323,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
     F.removeFnAttr("implicit-section-name");
+  }
+
+  if (!F.empty()) {
+    // For some reason this is called twice, and the first time is before any
+    // instructions are loaded into the body.
+
+    if (Attribute A = F.getFnAttribute("amdgpu-unsafe-fp-atomics");
+        A.isValid()) {
+
+      if (A.getValueAsBool()) {
+        AMDGPUUnsafeFPAtomicsUpgradeVisitor Visitor;
+        Visitor.visit(F);
+      }
+
+      // We will leave behind dead attribute uses on external declarations, but
+      // clang never added these to declarations anyway.
+      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+    }
   }
 }
 

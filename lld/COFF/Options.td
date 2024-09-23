@@ -295,6 +295,8 @@ def wrap : P_priv<"wrap">;
 
 def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
 
+def show_timing : F<"time">,
+    HelpText<"Print the time spent in each phase of linking">;
 def time_trace_eq: Joined<["--"], "time-trace=">, MetaVarName<"<file>">,
   HelpText<"Record time trace to <file>">;
 def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
@@ -315,7 +317,6 @@ def map : F<"map">;
 def map_file : P_priv<"map">;
 def map_info : P<"mapinfo", "Include the specified information in a map file">;
 def print_search_paths : F<"print-search-paths">;
-def show_timing : F<"time">;
 def summary : F<"summary">;
 
 //==============================================================================

@@ -25,7 +25,7 @@
 
 ############ Test merging swift category into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o MyBaseClassSwiftExtension.o MyBaseClassSwiftExtension.s
-# RUN: %lld -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
+# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_swift_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE_SWIFT
 
 #### Check merge categories enabled ###
@@ -37,14 +37,14 @@ MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass(Category01|Category02)
 MERGE_CATS-NEXT:   name {{.*}} Category01|Category02
 MERGE_CATS:       instanceMethods
-MERGE_CATS-NEXT:  24
-MERGE_CATS-NEXT:  2
+MERGE_CATS-NEXT:  entsize 12 (relative)
+MERGE_CATS-NEXT:  count 2
 MERGE_CATS-NEXT:   name {{.*}} cat01_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 MERGE_CATS-NEXT:   name {{.*}} cat02_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 MERGE_CATS-NEXT:         classMethods 0x0
 MERGE_CATS-NEXT:            protocols 0x0
 MERGE_CATS-NEXT:   instanceProperties 0x0
@@ -69,17 +69,17 @@ YES_MERGE_INTO_BASE-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 YES_MERGE_INTO_BASE: _OBJC_CLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE-NEXT: _OBJC_METACLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE: baseMethods
-YES_MERGE_INTO_BASE-NEXT: entsize 24
+YES_MERGE_INTO_BASE-NEXT: entsize 12 (relative)
 YES_MERGE_INTO_BASE-NEXT: count 3
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat01_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat02_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} baseInstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass baseInstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass baseInstanceMethod]
 
 
 #### Check merge swift category into base class ###

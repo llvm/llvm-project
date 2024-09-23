@@ -705,7 +705,6 @@ TEST(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
   }
 
@@ -769,7 +768,6 @@ No successors
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    OS.flush();
     EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
   }
 
@@ -777,7 +775,6 @@ No successors
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    OS.flush();
     EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
   }
 }
@@ -1140,7 +1137,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                              &VecOp, false);
     VPValue EVL;
-    VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
@@ -1495,7 +1492,7 @@ TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
                            &VecOp, false);
   VPValue EVL;
-  VPReductionEVLRecipe EVLRecipe(&Recipe, &EVL, &CondOp);
+  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
   VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

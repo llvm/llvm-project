@@ -14,6 +14,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
@@ -1021,6 +1022,8 @@ void Sema::CompleteLambdaCallOperator(
       getGenericLambdaTemplateParameterList(LSI, *this);
 
   DeclContext *DC = Method->getLexicalDeclContext();
+  // DeclContext::addDecl() assumes that the DeclContext we're adding to is the
+  // lexical context of the Method. Do so.
   Method->setLexicalDeclContext(LSI->Lambda);
   if (TemplateParams) {
     FunctionTemplateDecl *TemplateMethod =
@@ -1105,6 +1108,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
   LSI->CallOperator = Method;
+  // Temporarily set the lexical declaration context to the current
+  // context, so that the Scope stack matches the lexical nesting.
   Method->setLexicalDeclContext(CurContext);
 
   PushDeclContext(CurScope, Method);
@@ -1318,7 +1323,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     if (C->Init.isUsable()) {
       addInitCapture(LSI, cast<VarDecl>(Var), C->Kind == LCK_ByRef);
-      PushOnScopeChains(Var, CurScope, false);
     } else {
       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef
                                                  : TryCapture_ExplicitByVal;
@@ -2389,11 +2393,10 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   if (!FDPattern)
     return;
 
-  SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
-
   if (!ShouldAddDeclsFromParentScope)
     return;
 
+  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
       ParentInstantiations;
   while (true) {
@@ -2417,5 +2420,11 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
     SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
     SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
+
+    if (isLambdaCallOperator(FD))
+      SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
   }
+
+  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
+                                         MLTAL);
 }

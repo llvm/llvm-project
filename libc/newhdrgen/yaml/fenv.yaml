@@ -7,101 +7,101 @@ enums: []
 objects: []
 functions:
   - name: feclearexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
-  - name: fetestexcept
-    standards: 
-      - stdc
+  - name: fedisableexcept
+    standards:
+      - GNUExtensions
     return_type: int
     arguments:
       - type: int
-  - name: fetestexceptflag
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: const fexcept_t *
-      - type: int
-  - name: feraiseexcept
-    standards: 
-      - stdc
+    guard: null
+  - name: feenableexcept
+    standards:
+      - GNUExtensions
     return_type: int
     arguments:
       - type: int
-  - name: fesetround
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: int
-  - name: fegetround
-    standards: 
-      - stdc
-    return_type: int
-    arguments: []
+    attributes: []
   - name: fegetenv
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: fenv_t *
-  - name: fesetenv
-    standards: 
-      - stdc
+  - name: fegetexcept
+    standards:
+      - GNUExtensions
     return_type: int
-    arguments:
-      - type: const fenv_t *
+    arguments: []
   - name: fegetexceptflag
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: fexcept_t *
       - type: int
+  - name: fegetround
+    standards:
+      - stdc
+    return_type: int
+    arguments: []
+  - name: feholdexcept
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: fenv_t *
+  - name: feraiseexcept
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: int
+  - name: fesetenv
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const fenv_t *
   - name: fesetexcept
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: fesetexceptflag
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fexcept_t *
       - type: int
-  - name: feholdexcept
-    standards: 
+  - name: fesetround
+    standards:
       - stdc
     return_type: int
     arguments:
-      - type: fenv_t *
+      - type: int
+  - name: fetestexcept
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: int
+  - name: fetestexceptflag
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const fexcept_t *
+      - type: int
   - name: feupdateenv
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const fenv_t *
-  - name: fedisableexcept
-    standards: 
-      - GNUExtensions
-    return_type: int 
-    arguments: 
-      - type: int 
-    guard: null
-  - name: feenableexcept
-    standards: 
-      - GNUExtensions
-    return_type: int 
-    arguments:
-      - type: int
-    attributes: []
-  - name: fegetexcept
-    standards: 
-      - GNUExtensions
-    return_type: int
-    arguments: []

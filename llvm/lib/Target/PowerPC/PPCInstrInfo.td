@@ -1931,12 +1931,14 @@ def POPCNTB : XForm_11<31, 122, (outs gprc:$RA), (ins gprc:$RST),
                        [(set i32:$RA, (int_ppc_popcntb i32:$RST))]>;
 
 def CDTBCD : XForm_11<31, 282, (outs gprc:$RA), (ins gprc:$RST),
-                      "cdtbcd $RA, $RST", IIC_IntGeneral, []>;
+                      "cdtbcd $RA, $RST", IIC_IntGeneral,
+                       [(set i32:$RA, (int_ppc_cdtbcd i32:$RST))]>;
 def CBCDTD : XForm_11<31, 314, (outs gprc:$RA), (ins gprc:$RST),
-                      "cbcdtd $RA, $RST", IIC_IntGeneral, []>;
-
+                      "cbcdtd $RA, $RST", IIC_IntGeneral,
+                       [(set i32:$RA, (int_ppc_cbcdtd i32:$RST))]>;
 def ADDG6S : XOForm_1<31, 74, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
-                      "addg6s $RT, $RA, $RB", IIC_IntGeneral, []>;
+                      "addg6s $RT, $RA, $RB", IIC_IntGeneral,
+                       [(set i32:$RT, (int_ppc_addg6s i32:$RA, i32:$RB))]>;
 
 //===----------------------------------------------------------------------===//
 // PPC32 Load Instructions.
@@ -5286,13 +5288,13 @@ def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
-          (STWCX gprc:$A, ForceXForm:$dst)>;
+          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
-          (STWCX gprc:$A, ForceXForm:$dst)>;
+          (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
-          (STBCX gprc:$A, ForceXForm:$dst)>;
+          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
-          (STBCX gprc:$A, ForceXForm:$dst)>;
+          (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 
 def : Pat<(int_ppc_fcfid f64:$A),
         (XSCVSXDDP $A)>;
@@ -5322,9 +5324,9 @@ def : Pat<(int_ppc_mtmsr gprc:$RS),
 
 let Predicates = [IsISA2_07] in {
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
-            (STHCX gprc:$A, ForceXForm:$dst)>;
+            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
   def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),
-            (STHCX gprc:$A, ForceXForm:$dst)>;
+            (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 }
 def : Pat<(int_ppc_dcbtstt ForceXForm:$dst),
           (DCBTST 16, ForceXForm:$dst)>;

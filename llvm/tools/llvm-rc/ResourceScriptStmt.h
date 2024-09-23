@@ -875,7 +875,7 @@ public:
     VersionInfoFixed() : IsTypePresent(FtNumTypes, false) {}
 
     void setValue(VersionInfoFixedType Type, ArrayRef<uint32_t> Value) {
-      FixedInfo[Type] = SmallVector<uint32_t, 4>(Value.begin(), Value.end());
+      FixedInfo[Type] = SmallVector<uint32_t, 4>(Value);
       IsTypePresent[Type] = true;
     }
 

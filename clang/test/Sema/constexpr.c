@@ -357,3 +357,13 @@ void infsNaNs() {
   constexpr double db5 = LD_SNAN; // expected-error {{constexpr initializer evaluates to nan which is not exactly representable in type 'const double'}}
   constexpr double db6 = INF;
 }
+
+constexpr struct S9 s9 = {  }; // expected-error {{variable has incomplete type 'const struct S9'}} \
+                               // expected-note {{forward declaration of 'struct S9'}}
+
+struct S10 {
+  signed long long i : 8;
+};
+constexpr struct S10 c = { 255 };
+// FIXME-expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in 'long long' bit-field with width 8}}
+// See: GH#101299

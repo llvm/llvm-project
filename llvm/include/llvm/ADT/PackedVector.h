@@ -143,6 +143,7 @@ public:
   }
 
   const BitVectorTy &raw_bits() const { return Bits; }
+  BitVectorTy &raw_bits() { return Bits; }
 };
 
 // Leave BitNum=0 undefined.

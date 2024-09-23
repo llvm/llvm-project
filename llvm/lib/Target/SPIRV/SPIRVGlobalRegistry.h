@@ -255,11 +255,7 @@ public:
 
   // Add a record about forward function call.
   void addForwardCall(const Function *F, MachineInstr *MI) {
-    auto It = ForwardCalls.find(F);
-    if (It == ForwardCalls.end())
-      ForwardCalls[F] = {MI};
-    else
-      It->second.insert(MI);
+    ForwardCalls[F].insert(MI);
   }
 
   // Map a Function to the vector of machine instructions that represents
@@ -430,7 +426,7 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
+  std::tuple<Register, ConstantInt *, bool, unsigned> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
@@ -439,8 +435,8 @@ private:
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,
-                                   const SPIRVInstrInfo &TII,
-                                   unsigned BitWidth);
+                                   const SPIRVInstrInfo &TII, unsigned BitWidth,
+                                   bool ZeroAsNull);
   Register getOrCreateCompositeOrNull(Constant *Val, MachineInstr &I,
                                       SPIRVType *SpvType,
                                       const SPIRVInstrInfo &TII, Constant *CA,
@@ -455,7 +451,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType = nullptr, bool EmitIR = true);
+                            SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
@@ -550,6 +546,9 @@ public:
   SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
+
+  const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
+  LLT getRegType(SPIRVType *SpvType) const;
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

@@ -50,6 +50,18 @@ unsigned clang_equalLocations(CXSourceLocation loc1, CXSourceLocation loc2) {
           loc1.int_data == loc2.int_data);
 }
 
+unsigned clang_isBeforeInTranslationUnit(CXSourceLocation loc1,
+                                         CXSourceLocation loc2) {
+  const SourceLocation Loc1 = SourceLocation::getFromRawEncoding(loc1.int_data);
+  const SourceLocation Loc2 = SourceLocation::getFromRawEncoding(loc2.int_data);
+
+  const SourceManager &SM =
+      *static_cast<const SourceManager *>(loc1.ptr_data[0]);
+  // Use the appropriate SourceManager method here rather than operator< because
+  // ordering is meaningful only if LHS and RHS have the same FileID.
+  return SM.isBeforeInTranslationUnit(Loc1, Loc2);
+}
+
 CXSourceRange clang_getNullRange() {
   CXSourceRange Result = { { nullptr, nullptr }, 0, 0 };
   return Result;

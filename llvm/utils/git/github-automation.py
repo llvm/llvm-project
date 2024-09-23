@@ -226,18 +226,13 @@ class PRGreeter:
 {PRGreeter.COMMENT_TAG}
 Thank you for submitting a Pull Request (PR) to the LLVM Project!
 
-This PR will be automatically labeled and the relevant teams will be
-notified.
+This PR will be automatically labeled and the relevant teams will be notified.
 
 If you wish to, you can add reviewers by using the "Reviewers" section on this page.
 
-If this is not working for you, it is probably because you do not have write
-permissions for the repository. In which case you can instead tag reviewers by
-name in a comment by using `@` followed by their GitHub username.
+If this is not working for you, it is probably because you do not have write permissions for the repository. In which case you can instead tag reviewers by name in a comment by using `@` followed by their GitHub username.
 
-If you have received no comments on your PR for a week, you can request a review
-by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate
-is once a week. Please remember that you are asking for valuable time from other developers.
+If you have received no comments on your PR for a week, you can request a review by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate is once a week. Please remember that you are asking for valuable time from other developers.
 
 If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
 
@@ -281,18 +276,13 @@ class PRBuildbotInformation:
 {PRBuildbotInformation.COMMENT_TAG}
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
-Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
+Your changes will be combined with recent changes from other authors, then tested by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
 
-Please check whether problems have been caused by your change specifically, as
-the builds can include changes from many authors. It is not uncommon for your
-change to be included in a build that fails due to someone else's changes, or
-infrastructure issues.
+Please check whether problems have been caused by your change specifically, as the builds can include changes from many authors. It is not uncommon for your change to be included in a build that fails due to someone else's changes, or infrastructure issues.
 
 How to do this, and the rest of the post-merge process, is covered in detail [here](https://llvm.org/docs/MyFirstTypoFix.html#myfirsttypofix-issues-after-landing-your-pr).
 
-If your change does cause a problem, it may be reverted, or you can revert it yourself.
-This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
+If your change does cause a problem, it may be reverted, or you can revert it yourself. This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
 
 If you don't get any reports, no action is required from you. Your changes are working as expected, well done!
 """

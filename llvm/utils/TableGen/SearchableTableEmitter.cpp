@@ -31,17 +31,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "searchable-table-emitter"
 
-namespace {
-
-int64_t getAsInt(Init *B) {
-  return cast<IntInit>(
-             B->convertInitializerTo(IntRecTy::get(B->getRecordKeeper())))
-      ->getValue();
+static int64_t getAsInt(const Init *B) {
+  if (const BitsInit *BI = dyn_cast<BitsInit>(B))
+    return *BI->convertInitializerToInt();
+  if (const IntInit *II = dyn_cast<IntInit>(B))
+    return II->getValue();
+  llvm_unreachable("Unexpected initializer");
 }
-int64_t getInt(Record *R, StringRef Field) {
+
+static int64_t getInt(const Record *R, StringRef Field) {
   return getAsInt(R->getValueInit(Field));
 }
 
+namespace {
 struct GenericEnum {
   using Entry = std::pair<StringRef, int64_t>;
 
@@ -94,7 +96,7 @@ struct GenericTable {
 class SearchableTableEmitter {
   RecordKeeper &Records;
   std::unique_ptr<CodeGenTarget> Target;
-  DenseMap<Init *, std::unique_ptr<CodeGenIntrinsic>> Intrinsics;
+  std::unique_ptr<CodeGenIntrinsicMap> Intrinsics;
   std::vector<std::unique_ptr<GenericEnum>> Enums;
   DenseMap<Record *, GenericEnum *> EnumMap;
   std::set<std::string> PreprocessorGuards;
@@ -125,7 +127,7 @@ private:
     else if (BitInit *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
     else if (Field.IsIntrinsic)
-      return "Intrinsic::" + getIntrinsic(I).EnumName;
+      return "Intrinsic::" + getIntrinsic(I).EnumName.str();
     else if (Field.IsInstruction)
       return I->getAsString();
     else if (Field.Enum) {
@@ -139,18 +141,15 @@ private:
                              "'; expected: bit, bits, string, or code");
   }
 
-  bool isIntrinsic(Init *I) {
-    if (DefInit *DI = dyn_cast<DefInit>(I))
+  bool isIntrinsic(const Init *I) {
+    if (const DefInit *DI = dyn_cast<DefInit>(I))
       return DI->getDef()->isSubClassOf("Intrinsic");
     return false;
   }
 
-  CodeGenIntrinsic &getIntrinsic(Init *I) {
-    std::unique_ptr<CodeGenIntrinsic> &Intr = Intrinsics[I];
-    if (!Intr)
-      Intr = std::make_unique<CodeGenIntrinsic>(cast<DefInit>(I)->getDef(),
-                                                std::vector<Record *>());
-    return *Intr;
+  const CodeGenIntrinsic &getIntrinsic(const Init *I) {
+    const Record *Def = cast<DefInit>(I)->getDef();
+    return Target->getIntrinsic(Def);
   }
 
   bool compareBy(Record *LHS, Record *RHS, const SearchIndex &Index);
@@ -247,8 +246,8 @@ bool SearchableTableEmitter::compareBy(Record *LHS, Record *RHS,
       if (LHSi > RHSi)
         return false;
     } else if (Field.IsIntrinsic) {
-      CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
-      CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
+      const CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
+      const CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
       if (std::tie(LHSi.TargetPrefix, LHSi.Name) <
           std::tie(RHSi.TargetPrefix, RHSi.Name))
         return true;
@@ -714,7 +713,10 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   // Emit tables in a deterministic order to avoid needless rebuilds.
   SmallVector<std::unique_ptr<GenericTable>, 4> Tables;
   DenseMap<Record *, GenericTable *> TableMap;
-  if (!Records.getAllDerivedDefinitionsIfDefined("Instruction").empty())
+  bool NeedsTarget =
+      !Records.getAllDerivedDefinitionsIfDefined("Instruction").empty() ||
+      !Records.getAllDerivedDefinitionsIfDefined("Intrinsic").empty();
+  if (NeedsTarget)
     Target = std::make_unique<CodeGenTarget>(Records);
 
   // Collect all definitions first.

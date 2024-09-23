@@ -10,7 +10,7 @@
 // a correct traceback when the function raising the signal does not save
 // the link register or does not store the stack back chain.
 
-// REQUIRES: target=powerpc{{(64)?}}-ibm-aix
+// REQUIRES: target={{.+}}-aix{{.*}}
 
 // Test when the function raising the signal does not save the link register
 // RUN: %{cxx} -x c++ %s -o %t.exe -DCXX_CODE %{flags} %{compile_flags}

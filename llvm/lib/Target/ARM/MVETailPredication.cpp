@@ -205,8 +205,8 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   if (!L->makeLoopInvariant(ElemCount, Changed))
     return nullptr;
 
-  auto *EC= SE->getSCEV(ElemCount);
-  auto *TC = SE->getSCEV(TripCount);
+  const SCEV *EC = SE->getSCEV(ElemCount);
+  const SCEV *TC = SE->getSCEV(TripCount);
   int VectorWidth =
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
   if (VectorWidth != 2 && VectorWidth != 4 && VectorWidth != 8 &&
@@ -228,7 +228,7 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   // different counter. Using SCEV, we check that the induction is of the
   // form i = i + 4, where the increment must be equal to the VectorWidth.
   auto *IV = ActiveLaneMask->getOperand(0);
-  auto *IVExpr = SE->getSCEV(IV);
+  const SCEV *IVExpr = SE->getSCEV(IV);
   auto *AddExpr = dyn_cast<SCEVAddRecExpr>(IVExpr);
 
   if (!AddExpr) {
@@ -291,14 +291,16 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     //
     // which what we will be using here.
     //
-    auto *VW = SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
+    const SCEV *VW =
+        SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
     // ElementCount + (VW-1):
-    auto *Start = AddExpr->getStart();
-    auto *ECPlusVWMinus1 = SE->getAddExpr(EC,
+    const SCEV *Start = AddExpr->getStart();
+    const SCEV *ECPlusVWMinus1 = SE->getAddExpr(
+        EC,
         SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
 
     // Ceil = ElementCount + (VW-1) / VW
-    auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
+    const SCEV *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
 
     // Prevent unused variable warnings with TC
     (void)TC;

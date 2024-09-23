@@ -64,6 +64,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
@@ -618,7 +619,10 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    return ppc::getPPCTargetCPU(D, Args, T);
+    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+      return std::string(
+          llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
+    return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
 
   case llvm::Triple::csky:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
@@ -654,7 +658,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
     return getLanaiTargetCPU(Args);
 
   case llvm::Triple::systemz:
-    return systemz::getSystemZTargetCPU(Args);
+    return systemz::getSystemZTargetCPU(Args, T);
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -1123,10 +1127,27 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   addMachineOutlinerArgs(D, Args, CmdArgs, ToolChain.getEffectiveTriple(),
                          /*IsLTO=*/true, PluginOptPrefix);
 
+  bool IsELF = Triple.isOSBinFormatELF();
+  bool Crel = false;
+  bool ImplicitMapSyms = false;
   for (const Arg *A : Args.filtered(options::OPT_Wa_COMMA)) {
-    bool Crel = false;
     for (StringRef V : A->getValues()) {
-      if (V == "--crel")
+      auto Equal = V.split('=');
+      auto checkArg = [&](bool ValidTarget,
+                          std::initializer_list<const char *> Set) {
+        if (!ValidTarget) {
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << (Twine("-Wa,") + Equal.first + "=").str()
+              << Triple.getTriple();
+        } else if (!llvm::is_contained(Set, Equal.second)) {
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << (Twine("-Wa,") + Equal.first + "=").str() << Equal.second;
+        }
+      };
+      if (Equal.first == "-mmapsyms") {
+        ImplicitMapSyms = Equal.second == "implicit";
+        checkArg(IsELF && Triple.isAArch64(), {"default", "implicit"});
+      } else if (V == "--crel")
         Crel = true;
       else if (V == "--no-crel")
         Crel = false;
@@ -1134,51 +1155,18 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         continue;
       A->claim();
     }
-    if (Crel) {
-      if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
-        CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
-      } else {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << "-Wa,--crel" << D.getTargetTriple();
-      }
+  }
+  if (Crel) {
+    if (IsELF && !Triple.isMIPS()) {
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "-crel"));
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--crel" << D.getTargetTriple();
     }
   }
-}
-
-/// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
-/// LLVM C library for GPUs.
-static void addOpenMPDeviceLibC(const Compilation &C, const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
-    return;
-
-  // Check the resource directory for the LLVM libc GPU declarations. If it's
-  // found we can assume that LLVM was built with support for the GPU libc.
-  SmallString<256> LibCDecls(C.getDriver().ResourceDir);
-  llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
-                          "llvm-libc-decls");
-  bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
-                 llvm::sys::fs::is_directory(LibCDecls);
-  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
-    return;
-
-  SmallVector<const ToolChain *> ToolChains;
-  auto TCRange = C.getOffloadToolChains(Action::OFK_OpenMP);
-  for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
-    ToolChains.push_back(TI->second);
-
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isAMDGPU();
-      })) {
-    CmdArgs.push_back("-lcgpu-amdgpu");
-    CmdArgs.push_back("-lmgpu-amdgpu");
-  }
-  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
-        return TC->getTriple().isNVPTX();
-      })) {
-    CmdArgs.push_back("-lcgpu-nvptx");
-    CmdArgs.push_back("-lmgpu-nvptx");
-  }
+  if (ImplicitMapSyms)
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-implicit-mapsyms"));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1215,8 +1203,13 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                              bool ForceStaticHostRuntime, bool IsOffloadingHost,
                              bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                    options::OPT_fno_openmp, false))
+                    options::OPT_fno_openmp, false)) {
+    // We need libomptarget (liboffload) if it's the choosen offloading runtime.
+    if (Args.hasFlag(options::OPT_foffload_via_llvm,
+                     options::OPT_fno_offload_via_llvm, false))
+      CmdArgs.push_back("-lomptarget");
     return false;
+  }
 
   Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
 
@@ -1253,13 +1246,30 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
     CmdArgs.push_back("-lomptarget.devicertl");
 
-  if (IsOffloadingHost)
-    addOpenMPDeviceLibC(C, Args, CmdArgs);
-
   addArchSpecificRPath(TC, Args, CmdArgs);
+
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
 
   return true;
+}
+
+void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
+                                        const JobAction &JA,
+                                        const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs) {
+  if (!JA.isHostOffloading(Action::OFK_OpenMP))
+    return;
+
+  // For all the host OpenMP offloading compile jobs we need to pass the targets
+  // information using -fopenmp-targets= option.
+  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+
+  SmallVector<std::string> Triples;
+  auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+  std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                 [](auto TC) { return TC.second->getTripleString(); });
+  CmdArgs.push_back(
+      Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
 }
 
 /// Add Fortran runtime libs
@@ -1430,6 +1440,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared))
         HelperStaticRuntimes.push_back("hwasan-preinit");
     }
+    if (SanArgs.needsRtsanRt() && SanArgs.linkRuntimes())
+      SharedRuntimes.push_back("rtsan");
   }
 
   // The stats_client library is also statically linked into DSOs.
@@ -1454,6 +1466,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
+
+  if (!SanArgs.needsSharedRt() && SanArgs.needsRtsanRt() &&
+      SanArgs.linkRuntimes())
+    StaticRuntimes.push_back("rtsan");
 
   if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt()) {
     StaticRuntimes.push_back("memprof");
@@ -1975,8 +1991,8 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
-// `-falign-functions` indicates that the functions should be aligned to a
-// 16-byte boundary.
+// `-falign-functions` indicates that the functions should be aligned to the
+// backend's preferred alignment.
 //
 // `-falign-functions=1` is the same as `-fno-align-functions`.
 //
@@ -2721,6 +2737,25 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
+
+  auto *CodeGenDataGenArg =
+      Args.getLastArg(options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use_EQ);
+
+  // We only allow one of them to be specified.
+  if (CodeGenDataGenArg && CodeGenDataUseArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataUseArg->getAsString(Args);
+
+  // For codegen data gen, the output file is passed to the linker
+  // while a boolean flag is passed to the LLVM backend.
+  if (CodeGenDataGenArg)
+    addArg(Twine("-codegen-data-generate"));
+
+  // For codegen data use, the input file is passed to the LLVM backend.
+  if (CodeGenDataUseArg)
+    addArg(Twine("-codegen-data-use-path=") + CodeGenDataUseArg->getValue());
 }
 
 void tools::addOpenMPDeviceRTL(const Driver &D,
@@ -2870,11 +2905,16 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
     } else if (Triple.isPPC64() || Triple.isOSAIX()) {
       Ok = CM == "small" || CM == "medium" || CM == "large";
     } else if (Triple.isRISCV()) {
+      // Large code model is disallowed to be used with PIC code model.
+      if (CM == "large" && RelocationModel != llvm::Reloc::Static)
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fpic";
       if (CM == "medlow")
         CM = "small";
       else if (CM == "medany")
         CM = "medium";
-      Ok = CM == "small" || CM == "medium";
+      Ok = CM == "small" || CM == "medium" ||
+           (CM == "large" && Triple.isRISCV64());
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);

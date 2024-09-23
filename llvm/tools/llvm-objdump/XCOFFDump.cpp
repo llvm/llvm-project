@@ -20,7 +20,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -30,10 +32,87 @@ using namespace llvm::support;
 
 namespace {
 class XCOFFDumper : public objdump::Dumper {
+  const XCOFFObjectFile &Obj;
+  unsigned Width;
+
 public:
-  XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O) {}
-  void printPrivateHeaders() override {}
+  XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O), Obj(O) {}
+
+private:
+  void printPrivateHeaders() override;
+  void printFileHeader();
+  FormattedString formatName(StringRef Name);
+  void printHex(StringRef Name, uint64_t Value);
+  void printNumber(StringRef Name, uint64_t Value);
+  void printStrHex(StringRef Name, StringRef Str, uint64_t Value);
+  void setWidth(unsigned W) { Width = W; };
 };
+
+void XCOFFDumper::printPrivateHeaders() { printFileHeader(); }
+
+FormattedString XCOFFDumper::formatName(StringRef Name) {
+  return FormattedString(Name, Width, FormattedString::JustifyLeft);
+}
+
+void XCOFFDumper::printHex(StringRef Name, uint64_t Value) {
+  outs() << formatName(Name) << format_hex(Value, 0) << "\n";
+}
+
+void XCOFFDumper::printNumber(StringRef Name, uint64_t Value) {
+  outs() << formatName(Name) << format_decimal(Value, 0) << "\n";
+}
+
+void XCOFFDumper::printStrHex(StringRef Name, StringRef Str, uint64_t Value) {
+  outs() << formatName(Name) << Str << " (" << format_decimal(Value, 0)
+         << ")\n";
+}
+
+void XCOFFDumper::printFileHeader() {
+  setWidth(20);
+  outs() << "\n---File Header:\n";
+  printHex("Magic:", Obj.getMagic());
+  printNumber("NumberOfSections:", Obj.getNumberOfSections());
+
+  int32_t Timestamp = Obj.getTimeStamp();
+  if (Timestamp > 0) {
+    // This handling of the timestamp assumes that the host system's time_t is
+    // compatible with AIX time_t. If a platform is not compatible, the lit
+    // tests will let us know.
+    time_t TimeDate = Timestamp;
+
+    char FormattedTime[20] = {};
+
+    size_t BytesFormatted = std::strftime(FormattedTime, sizeof(FormattedTime),
+                                          "%F %T", std::gmtime(&TimeDate));
+    assert(BytesFormatted && "The size of the buffer FormattedTime is less "
+                             "than the size of the date/time string.");
+    (void)BytesFormatted;
+    printStrHex("Timestamp:", FormattedTime, Timestamp);
+  } else {
+    // Negative timestamp values are reserved for future use.
+    printStrHex("Timestamp:", Timestamp == 0 ? "None" : "Reserved Value",
+                Timestamp);
+  }
+
+  // The number of symbol table entries is an unsigned value in 64-bit objects
+  // and a signed value (with negative values being 'reserved') in 32-bit
+  // objects.
+  if (Obj.is64Bit()) {
+    printHex("SymbolTableOffset:", Obj.getSymbolTableOffset64());
+    printNumber("SymbolTableEntries:", Obj.getNumberOfSymbolTableEntries64());
+  } else {
+    printHex("SymbolTableOffset:", Obj.getSymbolTableOffset32());
+    int32_t SymTabEntries = Obj.getRawNumberOfSymbolTableEntries32();
+    if (SymTabEntries >= 0)
+      printNumber("SymbolTableEntries:", SymTabEntries);
+    else
+      printStrHex("SymbolTableEntries:", "Reserved Value", SymTabEntries);
+  }
+
+  printHex("OptionalHeaderSize:", Obj.getOptionalHeaderSize());
+  printHex("Flags:", Obj.getFlags());
+}
+
 } // namespace
 
 std::unique_ptr<objdump::Dumper>

@@ -6,7 +6,6 @@
 // CHECK-NEXT:     Architecture Feature(s)                                Description
 // CHECK-NEXT:     FEAT_AES, FEAT_PMULL                                   Enable AES support
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
-// CHECK-NEXT:     FEAT_CCIDX                                             Enable Armv8.3-A Extend of the CCSIDR number of sets
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_DPB                                               Enable Armv8.2-A data Cache Clean to Point of Persistence
 // CHECK-NEXT:     FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support

@@ -23,6 +23,7 @@
 namespace mlir {
 class DataLayout;
 class DataLayoutEntryInterface;
+class DLTIQueryInterface;
 class TargetDeviceSpecInterface;
 class TargetSystemSpecInterface;
 using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;

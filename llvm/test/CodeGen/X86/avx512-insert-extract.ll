@@ -298,10 +298,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) nounwind {
 define i16 @test15(ptr%addr) nounwind {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpb $0, (%rdi)
-; CHECK-NEXT:    movl $65535, %eax ## imm = 0xFFFF
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %x = load i1 , ptr %addr, align 1

@@ -91,17 +91,14 @@ define void @multiple_truncated_ivs_with_wide_uses(i1 %c, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], <i16 4, i16 4, i16 4, i16 4>
 ; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <4 x i32> [[VEC_IND3]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C]], <4 x i16> [[VEC_IND]], <4 x i16> <i16 10, i16 10, i16 10, i16 10>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C]], <4 x i16> [[STEP_ADD]], <4 x i16> <i16 10, i16 10, i16 10, i16 10>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[TMP4]], i32 4
 ; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[TMP6]], align 2, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[TMP7]], align 2, !alias.scope [[META4]], !noalias [[META7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP8]], i32 4
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND3]], ptr [[TMP10]], align 4, !alias.scope [[META7]]
@@ -164,9 +161,7 @@ define void @truncated_ivs_with_wide_and_scalar_uses(i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i16> [[VEC_IND]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C]], <8 x i16> [[VEC_IND]], <8 x i16> <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], <8 x i16> [[STEP_ADD]], <8 x i16> <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[TMP3]], i32 0
@@ -450,9 +445,6 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 24
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
@@ -466,9 +458,6 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc <8 x i64> [[TMP12]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <8 x i64> [[TMP13]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc <8 x i64> [[TMP14]] to <8 x i32>
@@ -650,7 +639,77 @@ exit:
   ret void
 }
 
+define void @wombat(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc = trunc i64 %mul3 to i32
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @wombat2(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc.1, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc.0 = trunc i64 %mul3 to i60
+  %trunc.1 = trunc i60 %trunc.0 to i32
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+define void @with_dead_use(i32 %arg, ptr %dst) #1 {
+entry:
+  %mul = mul i32 %arg, 3
+  %zext = zext i32 %arg to i64
+  br label %loop
+
+loop:
+  %phi = phi i64 [ 4, %entry ], [ %add, %loop ]
+  %phi2 = phi i32 [ %mul, %entry ], [ %trunc, %loop ]
+  %getelementptr = getelementptr i32, ptr %dst, i64 %phi
+  %and = and i32 %phi2, 12
+  store i32 %and, ptr %getelementptr, align 4
+  %mul3 = mul i64 %phi, %zext
+  %add = add i64 %phi, 1
+  %icmp = icmp ugt i64 %phi, 65
+  %trunc = trunc i64 %mul3 to i32
+  %dead.and = and i32 %trunc, 123
+  br i1 %icmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "min-legal-vector-width"="0" "target-cpu"="skylake-avx512" }
+attributes #1 = { "target-cpu"="skylake-avx512" "target-features"="-avx512f" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

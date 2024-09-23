@@ -37,7 +37,7 @@ Convert `perf` profile into a format suitable for BOLT passing the `vmlinux` bin
 
 
 ```bash
-$ sudo chwon $USER perf.data
+$ sudo chown $USER perf.data
 $ perf2bolt -p perf.data -o perf.fdata vmlinux
 ```
 

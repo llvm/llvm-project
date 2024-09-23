@@ -16,7 +16,7 @@
 namespace std {
 
 template<ptrdiff_t least_max_value = implementation-defined>
-class counting_semaphore
+class counting_semaphore                          // since C++20
 {
 public:
 static constexpr ptrdiff_t max() noexcept;
@@ -39,7 +39,7 @@ private:
 ptrdiff_t counter; // exposition only
 };
 
-using binary_semaphore = counting_semaphore<1>;
+using binary_semaphore = counting_semaphore<1>; // since C++20
 
 }
 
@@ -68,7 +68,7 @@ using binary_semaphore = counting_semaphore<1>;
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if _LIBCPP_STD_VER >= 14
+#  if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -124,7 +124,7 @@ private:
 };
 
 template <ptrdiff_t __least_max_value = _LIBCPP_SEMAPHORE_MAX>
-class _LIBCPP_DEPRECATED_ATOMIC_SYNC counting_semaphore {
+class counting_semaphore {
   __atomic_semaphore_base __semaphore_;
 
 public:
@@ -169,13 +169,11 @@ public:
   }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-using binary_semaphore _LIBCPP_DEPRECATED_ATOMIC_SYNC = counting_semaphore<1>;
-_LIBCPP_SUPPRESS_DEPRECATED_POP
+using binary_semaphore = counting_semaphore<1>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // _LIBCPP_STD_VER >= 14
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
@@ -185,4 +183,4 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #endif
 
-#endif //_LIBCPP_SEMAPHORE
+#endif // _LIBCPP_SEMAPHORE

@@ -18,15 +18,14 @@ using namespace llvm;
 
 StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
-HwMode::HwMode(Record *R) {
+HwMode::HwMode(const Record *R) {
   Name = R->getName();
   Features = std::string(R->getValueAsString("Features"));
 
-  std::vector<Record *> PredicateRecs = R->getValueAsListOfDefs("Predicates");
   SmallString<128> PredicateCheck;
   raw_svector_ostream OS(PredicateCheck);
   ListSeparator LS(" && ");
-  for (Record *Pred : PredicateRecs) {
+  for (const Record *Pred : R->getValueAsListOfDefs("Predicates")) {
     StringRef CondString = Pred->getValueAsString("CondString");
     if (CondString.empty())
       continue;
@@ -39,7 +38,7 @@ HwMode::HwMode(Record *R) {
 LLVM_DUMP_METHOD
 void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
-HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
+HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
   std::vector<Record *> Modes = R->getValueAsListOfDefs("Modes");
   std::vector<Record *> Objects = R->getValueAsListOfDefs("Objects");
   if (Modes.size() != Objects.size()) {
@@ -64,8 +63,8 @@ void HwModeSelect::dump() const {
   dbgs() << " }\n";
 }
 
-CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
-  for (Record *R : Records.getAllDerivedDefinitions("HwMode")) {
+CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
+  for (const Record *R : Records.getAllDerivedDefinitions("HwMode")) {
     // The default mode needs a definition in the .td sources for TableGen
     // to accept references to it. We need to ignore the definition here.
     if (R->getName() == DefaultModeName)
@@ -76,14 +75,14 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
 
   assert(Modes.size() <= 32 && "number of HwModes exceeds maximum of 32");
 
-  for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
+  for (const Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
     auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
     assert(P.second);
     (void)P;
   }
 }
 
-unsigned CodeGenHwModes::getHwModeId(Record *R) const {
+unsigned CodeGenHwModes::getHwModeId(const Record *R) const {
   if (R->getName() == DefaultModeName)
     return DefaultMode;
   auto F = ModeIds.find(R);
@@ -91,7 +90,7 @@ unsigned CodeGenHwModes::getHwModeId(Record *R) const {
   return F->second;
 }
 
-const HwModeSelect &CodeGenHwModes::getHwModeSelect(Record *R) const {
+const HwModeSelect &CodeGenHwModes::getHwModeSelect(const Record *R) const {
   auto F = ModeSelects.find(R);
   assert(F != ModeSelects.end() && "Record is not a \"mode select\"");
   return F->second;

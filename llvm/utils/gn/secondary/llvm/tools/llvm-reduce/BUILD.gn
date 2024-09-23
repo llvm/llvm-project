@@ -23,6 +23,7 @@ executable("llvm-reduce") {
     "deltas/ReduceBasicBlocks.cpp",
     "deltas/ReduceDIMetadata.cpp",
     "deltas/ReduceDbgRecords.cpp",
+    "deltas/ReduceDistinctMetadata.cpp",
     "deltas/ReduceFunctionBodies.cpp",
     "deltas/ReduceFunctions.cpp",
     "deltas/ReduceGlobalObjects.cpp",

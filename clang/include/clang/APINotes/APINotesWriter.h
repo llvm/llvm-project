@@ -86,6 +86,14 @@ public:
   void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                     const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
 
+  /// Add information about a specific C record field.
+  ///
+  /// \param CtxID The context in which this field resides, i.e. a C/C++ tag.
+  /// \param Name The name of the field.
+  /// \param Info Information about this field.
+  void addField(ContextID CtxID, llvm::StringRef Name, const FieldInfo &Info,
+                llvm::VersionTuple SwiftVersion);
+
   /// Add information about a global variable.
   ///
   /// \param Name The name of this global variable.

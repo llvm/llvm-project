@@ -232,7 +232,7 @@ protected:
   /// insertEdge/deleteEdge or is unnecessary in the batch update.
   bool isUpdateValid(typename DomTreeT::UpdateType Update) const;
 
-  /// Erase Basic Block node that has been unlinked from Function
+  /// Erase Basic Block node before it is unlinked from Function
   /// in the DomTree and PostDomTree.
   void eraseDelBBNode(BasicBlockT *DelBB);
 

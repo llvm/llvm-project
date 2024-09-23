@@ -273,7 +273,7 @@ struct LIFeatureComponents {
   double RW = 0;
   double IndVarUpdates = 0;
   double HintWeights = 0.0;
-  int64_t NrDefsAndUses = 0;
+  int64_t NumDefsAndUses = 0;
   float HottestBlockFreq = 0.0;
   bool IsRemat = false;
 };
@@ -327,7 +327,7 @@ private:
 
   void extractFeatures(const SmallVectorImpl<const LiveInterval *> &Intervals,
                        llvm::SmallVectorImpl<float> &Largest, size_t Pos,
-                       int64_t IsHint, int64_t LocalIntfsCount, float NrUrgent,
+                       int64_t IsHint, int64_t LocalIntfsCount, float NumUrgent,
                        SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const;
 
   // Point-in-time: we didn't learn this, so we always delegate to the
@@ -609,7 +609,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
 
   const bool IsLocal = LIS->intervalIsInOneMBB(VirtReg);
   int64_t LocalIntfs = 0;
-  float NrUrgent = 0.0f;
+  float NumUrgent = 0.0f;
 
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
@@ -649,7 +649,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
-        ++NrUrgent;
+        ++NumUrgent;
       }
 
       LocalIntfs += (IsLocal && LIS->intervalIsInOneMBB(*Intf) &&
@@ -659,7 +659,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // OK, so if we made it this far, this LR is an eviction candidate, load its
   // features.
   extractFeatures(InterferingIntervals, Largest, Pos, IsHint, LocalIntfs,
-                  NrUrgent, LRPosInfo);
+                  NumUrgent, LRPosInfo);
   return true;
 }
 
@@ -731,7 +731,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     extractFeatures(SmallVector<const LiveInterval *, 1>(1, &VirtReg), Largest,
                     CandidateVirtRegPos, /*IsHint*/ 0,
                     /*LocalIntfsCount*/ 0,
-                    /*NrUrgent*/ 0.0, LRPosInfo);
+                    /*NumUrgent*/ 0.0, LRPosInfo);
   assert(InitialQSize > 0.0 && "We couldn't have gotten here if we had "
                                "nothing to allocate initially.");
 #ifdef LLVM_HAVE_TFLITE
@@ -809,7 +809,7 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
        I != E;) {
     MachineInstr *MI = &*(I++);
 
-    ++Ret.NrDefsAndUses;
+    ++Ret.NumDefsAndUses;
     if (!Visited.insert(MI).second)
       continue;
 
@@ -846,10 +846,10 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
 void MLEvictAdvisor::extractFeatures(
     const SmallVectorImpl<const LiveInterval *> &Intervals,
     llvm::SmallVectorImpl<float> &Largest, size_t Pos, int64_t IsHint,
-    int64_t LocalIntfsCount, float NrUrgent,
+    int64_t LocalIntfsCount, float NumUrgent,
     SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const {
-  int64_t NrDefsAndUses = 0;
-  int64_t NrBrokenHints = 0;
+  int64_t NumDefsAndUses = 0;
+  int64_t NumBrokenHints = 0;
   double R = 0.0;
   double W = 0.0;
   double RW = 0.0;
@@ -858,7 +858,7 @@ void MLEvictAdvisor::extractFeatures(
   float StartBBFreq = 0.0;
   float EndBBFreq = 0.0;
   float HottestBlockFreq = 0.0;
-  int32_t NrRematerializable = 0;
+  int32_t NumRematerializable = 0;
   float TotalWeight = 0.0;
 
   SlotIndex EndSI = LIS->getSlotIndexes()->getZeroIndex();
@@ -882,9 +882,9 @@ void MLEvictAdvisor::extractFeatures(
     if (LI.endIndex() > EndSI)
       EndSI = LI.endIndex();
     const LIFeatureComponents &LIFC = getLIFeatureComponents(LI);
-    NrBrokenHints += VRM->hasPreferredPhys(LI.reg());
+    NumBrokenHints += VRM->hasPreferredPhys(LI.reg());
 
-    NrDefsAndUses += LIFC.NrDefsAndUses;
+    NumDefsAndUses += LIFC.NumDefsAndUses;
     HottestBlockFreq = std::max(HottestBlockFreq, LIFC.HottestBlockFreq);
     R += LIFC.R;
     W += LIFC.W;
@@ -893,7 +893,7 @@ void MLEvictAdvisor::extractFeatures(
     IndVarUpdates += LIFC.IndVarUpdates;
 
     HintWeights += LIFC.HintWeights;
-    NrRematerializable += LIFC.IsRemat;
+    NumRematerializable += LIFC.IsRemat;
 
     if (EnableDevelopmentFeatures) {
       for (auto CurrentSegment : LI) {
@@ -922,12 +922,12 @@ void MLEvictAdvisor::extractFeatures(
   } while (false)
   SET(mask, int64_t, 1);
   SET(is_free, int64_t, Intervals.empty());
-  SET(nr_urgent, float, NrUrgent);
-  SET(nr_broken_hints, float, NrBrokenHints);
+  SET(nr_urgent, float, NumUrgent);
+  SET(nr_broken_hints, float, NumBrokenHints);
   SET(is_hint, int64_t, IsHint);
   SET(is_local, int64_t, LocalIntfsCount);
-  SET(nr_rematerializable, float, NrRematerializable);
-  SET(nr_defs_and_uses, float, NrDefsAndUses);
+  SET(nr_rematerializable, float, NumRematerializable);
+  SET(nr_defs_and_uses, float, NumDefsAndUses);
   SET(weighed_reads_by_max, float, R);
   SET(weighed_writes_by_max, float, W);
   SET(weighed_read_writes_by_max, float, RW);
@@ -943,7 +943,7 @@ void MLEvictAdvisor::extractFeatures(
 #undef SET
 }
 
-void extractInstructionFeatures(
+void llvm::extractInstructionFeatures(
     SmallVectorImpl<LRStartEndInfo> &LRPosInfo, MLModelRunner *RegallocRunner,
     function_ref<int(SlotIndex)> GetOpcode,
     function_ref<float(SlotIndex)> GetMBBFreq,
@@ -1060,13 +1060,12 @@ void extractInstructionFeatures(
   }
 }
 
-void extractMBBFrequency(const SlotIndex CurrentIndex,
-                         const size_t CurrentInstructionIndex,
-                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
-                         function_ref<float(SlotIndex)> GetMBBFreq,
-                         MachineBasicBlock *CurrentMBBReference,
-                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
-                         const int MBBMappingIndex) {
+void llvm::extractMBBFrequency(
+    const SlotIndex CurrentIndex, const size_t CurrentInstructionIndex,
+    std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    MachineBasicBlock *CurrentMBBReference, MLModelRunner *RegallocRunner,
+    const int MBBFreqIndex, const int MBBMappingIndex) {
   size_t CurrentMBBIndex = VisitedMBBs[CurrentMBBReference];
   float CurrentMBBFreq = GetMBBFreq(CurrentIndex);
   if (CurrentMBBIndex < ModelMaxSupportedMBBCount) {

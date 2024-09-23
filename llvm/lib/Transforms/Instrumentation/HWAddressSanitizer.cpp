@@ -59,6 +59,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -315,6 +316,7 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void removeFnAttributes(Function *F);
 
   void initializeCallbacks(Module &M);
 
@@ -455,6 +457,9 @@ private:
 
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_hwaddress module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_hwaddress"))
+    return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   auto TargetTriple = llvm::Triple(M.getTargetTriple());
   if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
@@ -587,12 +592,55 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
+void HWAddressSanitizer::removeFnAttributes(Function *F) {
+  // Remove memory attributes that are invalid with HWASan.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  //
+  // This is not only true for sanitized functions, because AttrInfer can
+  // infer those attributes on libc functions, which is not true if those
+  // are instrumented (Android) or intercepted.
+  //
+  // We might want to model HWASan shadow memory more opaquely to get rid of
+  // this problem altogether, by hiding the shadow memory write in an
+  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
+  // for another day.
+
+  // The API is weird. `onlyReadsMemory` actually means "does not write", and
+  // `onlyWritesMemory` actually means "does not read". So we reconstruct
+  // "accesses memory" && "does not read" <=> "writes".
+  bool Changed = false;
+  if (!F->doesNotAccessMemory()) {
+    bool WritesMemory = !F->onlyReadsMemory();
+    bool ReadsMemory = !F->onlyWritesMemory();
+    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
+      F->removeFnAttr(Attribute::Memory);
+      Changed = true;
+    }
+  }
+  for (Argument &A : F->args()) {
+    if (A.hasAttribute(Attribute::WriteOnly)) {
+      A.removeAttr(Attribute::WriteOnly);
+      Changed = true;
+    }
+  }
+  if (Changed) {
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F->addFnAttr(Attribute::NoBuiltin);
+  }
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
+
+  for (Function &F : M.functions())
+    removeFnAttributes(&F);
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -755,10 +803,11 @@ Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
-  if (Mapping.Offset != kDynamicShadowSentinel)
+  if (Mapping.Offset != kDynamicShadowSentinel) {
     return getOpaqueNoopCast(
         IRB, ConstantExpr::getIntToPtr(
                  ConstantInt::get(IntptrTy, Mapping.Offset), PtrTy));
+  }
 
   if (Mapping.InGlobal)
     return getDynamicShadowIfunc(IRB);
@@ -951,7 +1000,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  bool useFixedShadowIntrinsic = false;
+  bool UseFixedShadowIntrinsic = false;
   // The memaccess fixed shadow intrinsic is only supported on AArch64,
   // which allows a 16-bit immediate to be left-shifted by 32.
   // Since kShadowBaseAlignment == 32, and Linux by default will not
@@ -960,11 +1009,12 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   // In particular, an offset of 4TB (1024 << 32) is representable, and
   // ought to be good enough for anybody.
   if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
-    uint16_t offset_shifted = Mapping.Offset >> 32;
-    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+    uint16_t OffsetShifted = Mapping.Offset >> 32;
+    UseFixedShadowIntrinsic =
+        static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.Offset;
   }
 
-  if (useFixedShadowIntrinsic)
+  if (UseFixedShadowIntrinsic) {
     IRB.CreateCall(
         Intrinsic::getDeclaration(
             M, UseShortGranules
@@ -972,12 +1022,13 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
                    : Intrinsic::hwasan_check_memaccess_fixedshadow),
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.Offset)});
-  else
+  } else {
     IRB.CreateCall(Intrinsic::getDeclaration(
                        M, UseShortGranules
                               ? Intrinsic::hwasan_check_memaccess_shortgranules
                               : Intrinsic::hwasan_check_memaccess),
                    {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  }
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -1528,11 +1579,7 @@ static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  bool Skip = [&]() {
-    if (ClRandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(ClRandomSkipRate);
-      return !D(*Rng);
-    }
+  auto SkipHot = [&]() {
     if (!ClHotPercentileCutoff.getNumOccurrences())
       return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -1544,7 +1591,16 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     }
     return PSI->isFunctionHotInCallGraphNthPercentile(
         ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
-  }();
+  };
+
+  auto SkipRandom = [&]() {
+    if (!ClRandomSkipRate.getNumOccurrences())
+      return false;
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    return !D(*Rng);
+  };
+
+  bool Skip = SkipRandom() || SkipHot();
   emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
   return Skip;
 }
@@ -1552,6 +1608,10 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
 void HWAddressSanitizer::sanitizeFunction(Function &F,
                                           FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
+    return;
+
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
     return;
 
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
@@ -1577,10 +1637,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction *, 8> LandingPadVec;
   const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (auto &Inst : instructions(F)) {
     if (InstrumentStack) {
-      SIB.visit(Inst);
+      SIB.visit(ORE, Inst);
     }
 
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
@@ -1612,14 +1672,6 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
-
-  // Remove memory attributes that are about to become invalid.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  F.removeFnAttr(llvm::Attribute::Memory);
-  for (auto &A : F.args())
-    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

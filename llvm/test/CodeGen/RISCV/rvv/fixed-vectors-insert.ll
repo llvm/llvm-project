@@ -47,7 +47,6 @@ define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
   ret <32 x i32> %b
 }
 
-; FIXME: Should only require an m2 slideup
 define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_4:
 ; CHECK:       # %bb.0:

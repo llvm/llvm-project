@@ -1,3 +1,6 @@
+// We try to create options similar to lld's.  That way, options passed to clang
+// -Xoffload-linker can be the same whether offloading to nvptx or amdgpu.
+
 include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
@@ -12,9 +15,9 @@ def verbose : Flag<["-"], "v">, HelpText<"Print verbose information">;
 def version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 
-def cuda_path_EQ : Joined<["--"], "cuda-path=">,
+def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
-def ptxas_path_EQ : Joined<["--"], "ptxas-path=">,
+def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
@@ -35,6 +38,9 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
   Alias<library_path>;
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
+
+def plugin : JoinedOrSeparate<["--", "-"], "plugin">,
+  Flags<[HelpHidden, WrapperOnlyOption]>;
 
 def arch : Separate<["--", "-"], "arch">,
   HelpText<"Specify the 'sm_' name of the target architecture.">;
@@ -70,8 +76,17 @@ def plugin_opt : Joined<["--", "-"], "plugin-opt=">, Flags<[WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--plugin-opt=--help' for a list of options.">;
 
+def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Passes to run during LTO">;
+def lto_debug_pass_manager : Flag<["--"], "lto-debug-pass-manager">,
+  Flags<[WrapperOnlyOption]>,   HelpText<"Debug new pass manager">;
+
 def save_temps : Flag<["--", "-"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
+
+def relocatable : Flag<["--", "-"], "relocatable">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Perform a relocatable link (LTO only)">;
+def r : Flag<["-"], "r">, Flags<[WrapperOnlyOption]>, Alias<relocatable>;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">,
   Flags<[WrapperOnlyOption, HelpHidden]>;
@@ -83,8 +98,7 @@ def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Arguments passed to LLVM, including Clang invocations, for which "
            "the '-mllvm' prefix is preserved. Use '-mllvm --help' for a list "
            "of options.">;
-def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>,
-  Alias<mllvm>;
+def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>, Alias<mllvm>;
 
 def dry_run : Flag<["--", "-"], "dry-run">, Flags<[WrapperOnlyOption]>,
   HelpText<"Print generated commands without running.">;

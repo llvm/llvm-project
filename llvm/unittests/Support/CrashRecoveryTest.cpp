@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -110,8 +111,7 @@ TEST(CrashRecoveryTest, LimitedStackTrace) {
   std::string Res;
   llvm::raw_string_ostream RawStream(Res);
   PrintStackTrace(RawStream, 1);
-  std::string Str = RawStream.str();
-  EXPECT_EQ(std::string::npos, Str.find("#1"));
+  EXPECT_EQ(std::string::npos, Res.find("#1"));
 }
 
 #ifdef _WIN32

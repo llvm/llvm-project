@@ -37,6 +37,11 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
     DeallocationOptions options = DeallocationOptions());
 
+/// Creates a pass that finds all temporary allocations
+/// and attempts to move the deallocation after the last user/dependency 
+/// of the allocation, thereby optimizing allocation liveness.
+std::unique_ptr<Pass> createOptimizeAllocationLivenessPass();
+
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
 /// static alias analysis.

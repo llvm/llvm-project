@@ -44,6 +44,12 @@ using namespace clang;
 // TemplateParameterList Implementation
 //===----------------------------------------------------------------------===//
 
+template <class TemplateParam>
+static bool
+DefaultTemplateArgumentContainsUnexpandedPack(const TemplateParam &P) {
+  return P.hasDefaultArgument() &&
+         P.getDefaultArgument().getArgument().containsUnexpandedParameterPack();
+}
 
 TemplateParameterList::TemplateParameterList(const ASTContext& C,
                                              SourceLocation TemplateLoc,
@@ -61,27 +67,30 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
 
     bool IsPack = P->isTemplateParameterPack();
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
-      if (!IsPack && NTTP->getType()->containsUnexpandedParameterPack())
+      if (!IsPack && (NTTP->getType()->containsUnexpandedParameterPack() ||
+                      DefaultTemplateArgumentContainsUnexpandedPack(*NTTP)))
         ContainsUnexpandedParameterPack = true;
       if (NTTP->hasPlaceholderTypeConstraint())
         HasConstrainedParameters = true;
     } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
       if (!IsPack &&
-          TTP->getTemplateParameters()->containsUnexpandedParameterPack())
+          (TTP->getTemplateParameters()->containsUnexpandedParameterPack() ||
+           DefaultTemplateArgumentContainsUnexpandedPack(*TTP))) {
         ContainsUnexpandedParameterPack = true;
+      }
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
-      if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
-        if (TC->getImmediatelyDeclaredConstraint()
-            ->containsUnexpandedParameterPack())
-          ContainsUnexpandedParameterPack = true;
+      if (!IsPack && DefaultTemplateArgumentContainsUnexpandedPack(*TTP)) {
+        ContainsUnexpandedParameterPack = true;
+      } else if (const TypeConstraint *TC = TTP->getTypeConstraint();
+                 TC && TC->getImmediatelyDeclaredConstraint()
+                           ->containsUnexpandedParameterPack()) {
+        ContainsUnexpandedParameterPack = true;
       }
       if (TTP->hasTypeConstraint())
         HasConstrainedParameters = true;
     } else {
       llvm_unreachable("unexpected template parameter type");
     }
-    // FIXME: If a default argument contains an unexpanded parameter pack, the
-    // template parameter list does too.
   }
 
   if (HasRequiresClause) {
@@ -1599,6 +1608,60 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
                                        nullptr);
 }
 
+static TemplateParameterList *createBuiltinCommonTypeList(const ASTContext &C,
+                                                          DeclContext *DC) {
+  // class... Args
+  auto *Args =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/true);
+
+  // <class... Args>
+  auto *BaseTemplateList = TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(), Args, SourceLocation(), nullptr);
+
+  // template <class... Args> class BaseTemplate
+  auto *BaseTemplate = TemplateTemplateParmDecl::Create(
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/0,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
+      /*Typename=*/false, BaseTemplateList);
+
+  // class TypeMember
+  auto *TypeMember =
+      TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
+                                   /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+                                   /*Typename=*/false, /*ParameterPack=*/false);
+
+  // <class TypeMember>
+  auto *HasTypeMemberList =
+      TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
+                                    TypeMember, SourceLocation(), nullptr);
+
+  // template <class TypeMember> class HasTypeMember
+  auto *HasTypeMember = TemplateTemplateParmDecl::Create(
+      C, DC, SourceLocation(), /*Depth=*/0, /*Position=*/1,
+      /*ParameterPack=*/false, /*Id=*/nullptr,
+      /*Typename=*/false, HasTypeMemberList);
+
+  // class HasNoTypeMember
+  auto *HasNoTypeMember = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/0, /*Position=*/2, /*Id=*/nullptr,
+      /*Typename=*/false, /*ParameterPack=*/false);
+
+  // class... Ts
+  auto *Ts = TemplateTypeParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), /*Depth=*/0, /*Position=*/3,
+      /*Id=*/nullptr, /*Typename=*/false, /*ParameterPack=*/true);
+
+  // template <template <class... Args> class BaseTemplate,
+  //   template <class TypeMember> class HasTypeMember, class HasNoTypeMember,
+  //   class... Ts>
+  return TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(),
+      {BaseTemplate, HasTypeMember, HasNoTypeMember, Ts}, SourceLocation(),
+      nullptr);
+}
+
 static TemplateParameterList *createBuiltinTemplateParameterList(
     const ASTContext &C, DeclContext *DC, BuiltinTemplateKind BTK) {
   switch (BTK) {
@@ -1606,6 +1669,8 @@ static TemplateParameterList *createBuiltinTemplateParameterList(
     return createMakeIntegerSeqParameterList(C, DC);
   case BTK__type_pack_element:
     return createTypePackElementParameterList(C, DC);
+  case BTK__builtin_common_type:
+    return createBuiltinCommonTypeList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");

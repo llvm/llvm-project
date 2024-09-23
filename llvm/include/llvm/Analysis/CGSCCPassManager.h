@@ -99,7 +99,6 @@
 namespace llvm {
 
 class Function;
-class Value;
 template <typename T, unsigned int N> class SmallPriorityWorklist;
 struct CGSCCUpdateResult;
 

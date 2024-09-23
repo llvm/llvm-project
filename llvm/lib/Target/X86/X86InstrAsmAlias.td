@@ -124,19 +124,31 @@ def : InstAlias<"ccmp"#Cond#"{q} $dcf\t{$src2, $src1|$src1, $src2}",
 defm : CCMP_Aliases<"o" ,  0>;
 defm : CCMP_Aliases<"no",  1>;
 defm : CCMP_Aliases<"b" ,  2>;
+defm : CCMP_Aliases<"c" ,  2>;
+defm : CCMP_Aliases<"nae", 2>;
+defm : CCMP_Aliases<"nb",  3>;
+defm : CCMP_Aliases<"nc",  3>;
 defm : CCMP_Aliases<"ae",  3>;
 defm : CCMP_Aliases<"e" ,  4>;
+defm : CCMP_Aliases<"z" ,  4>;
 defm : CCMP_Aliases<"ne",  5>;
+defm : CCMP_Aliases<"nz",  5>;
 defm : CCMP_Aliases<"be",  6>;
+defm : CCMP_Aliases<"na",  6>;
+defm : CCMP_Aliases<"nbe", 7>;
 defm : CCMP_Aliases<"a" ,  7>;
 defm : CCMP_Aliases<"s" ,  8>;
 defm : CCMP_Aliases<"ns",  9>;
 defm : CCMP_Aliases<"t" , 10>;
 defm : CCMP_Aliases<"f", 11>;
 defm : CCMP_Aliases<"l" , 12>;
+defm : CCMP_Aliases<"nge",12>;
+defm : CCMP_Aliases<"nl", 13>;
 defm : CCMP_Aliases<"ge", 13>;
 defm : CCMP_Aliases<"le", 14>;
+defm : CCMP_Aliases<"ng", 14>;
 defm : CCMP_Aliases<"g" , 15>;
+defm : CCMP_Aliases<"nle",15>;
 
 // CTEST Instructions Alias
 multiclass CTEST_Aliases<string Cond, int CC> {
@@ -156,6 +168,14 @@ def : InstAlias<"ctest"#Cond#"{w} $dcf\t{$src2, $src1|$src1, $src2}",
 def : InstAlias<"ctest"#Cond#"{l} $dcf\t{$src2, $src1|$src1, $src2}",
                 (CTEST32mr i32mem:$src1, GR32:$src2, cflags:$dcf, CC), 0>;
 def : InstAlias<"ctest"#Cond#"{q} $dcf\t{$src2, $src1|$src1, $src2}",
+                (CTEST64mr i64mem:$src1, GR64:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{b} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST8mr  i8mem:$src1,  GR8:$src2,  cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{w} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST16mr i16mem:$src1, GR16:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{l} $dcf\t{$src1, $src2|$src2, $src1}",
+                (CTEST32mr i32mem:$src1, GR32:$src2, cflags:$dcf, CC), 0>;
+def : InstAlias<"ctest"#Cond#"{q} $dcf\t{$src1, $src2|$src2, $src1}",
                 (CTEST64mr i64mem:$src1, GR64:$src2, cflags:$dcf, CC), 0>;
 def : InstAlias<"ctest"#Cond#"{b} $dcf\t{$src2, $src1|$src1, $src2}",
                 (CTEST8ri  GR8:$src1,  i8imm:$src2,  cflags:$dcf, CC), 0>;
@@ -178,19 +198,31 @@ def : InstAlias<"ctest"#Cond#"{q} $dcf\t{$src2, $src1|$src1, $src2}",
 defm : CTEST_Aliases<"o" ,  0>;
 defm : CTEST_Aliases<"no",  1>;
 defm : CTEST_Aliases<"b" ,  2>;
+defm : CTEST_Aliases<"c" ,  2>;
+defm : CTEST_Aliases<"nae", 2>;
+defm : CTEST_Aliases<"nb",  3>;
+defm : CTEST_Aliases<"nc",  3>;
 defm : CTEST_Aliases<"ae",  3>;
 defm : CTEST_Aliases<"e" ,  4>;
+defm : CTEST_Aliases<"z" ,  4>;
 defm : CTEST_Aliases<"ne",  5>;
+defm : CTEST_Aliases<"nz",  5>;
 defm : CTEST_Aliases<"be",  6>;
+defm : CTEST_Aliases<"na",  6>;
+defm : CTEST_Aliases<"nbe", 7>;
 defm : CTEST_Aliases<"a" ,  7>;
 defm : CTEST_Aliases<"s" ,  8>;
 defm : CTEST_Aliases<"ns",  9>;
 defm : CTEST_Aliases<"t" , 10>;
 defm : CTEST_Aliases<"f", 11>;
 defm : CTEST_Aliases<"l" , 12>;
+defm : CTEST_Aliases<"nge",12>;
+defm : CTEST_Aliases<"nl", 13>;
 defm : CTEST_Aliases<"ge", 13>;
 defm : CTEST_Aliases<"le", 14>;
+defm : CTEST_Aliases<"ng", 14>;
 defm : CTEST_Aliases<"g" , 15>;
+defm : CTEST_Aliases<"nle",15>;
 
 //===----------------------------------------------------------------------===//
 // Assembler Mnemonic Aliases
@@ -200,13 +232,9 @@ defm : CMPCCXADD_Aliases<"o" ,  0>;
 defm : CMPCCXADD_Aliases<"no",  1>;
 defm : CMPCCXADD_Aliases<"b" ,  2>;
 defm : CMPCCXADD_Aliases<"ae",  3>;
-defm : CMPCCXADD_Aliases<"nb",  3>;
 defm : CMPCCXADD_Aliases<"e" ,  4>;
-defm : CMPCCXADD_Aliases<"z" ,  4>;
 defm : CMPCCXADD_Aliases<"ne",  5>;
-defm : CMPCCXADD_Aliases<"nz",  5>;
 defm : CMPCCXADD_Aliases<"be",  6>;
-defm : CMPCCXADD_Aliases<"nbe", 7>;
 defm : CMPCCXADD_Aliases<"a",   7>;
 defm : CMPCCXADD_Aliases<"s" ,  8>;
 defm : CMPCCXADD_Aliases<"ns",  9>;
@@ -214,10 +242,8 @@ defm : CMPCCXADD_Aliases<"p" , 10>;
 defm : CMPCCXADD_Aliases<"np", 11>;
 defm : CMPCCXADD_Aliases<"l" , 12>;
 defm : CMPCCXADD_Aliases<"ge", 13>;
-defm : CMPCCXADD_Aliases<"nl", 13>;
 defm : CMPCCXADD_Aliases<"le", 14>;
 defm : CMPCCXADD_Aliases<"g",  15>;
-defm : CMPCCXADD_Aliases<"nle",15>;
 
 
 def : MnemonicAlias<"call", "callw", "att">, Requires<[In16BitMode]>;
@@ -395,6 +421,7 @@ multiclass IntegerCondCodeMnemonicAlias<string Prefix, string Suffix,
 
 // Aliases for set<CC>
 defm : IntegerCondCodeMnemonicAlias<"set", "">;
+defm : IntegerCondCodeMnemonicAlias<"setzu", "">;
 // Aliases for j<CC>
 defm : IntegerCondCodeMnemonicAlias<"j", "">;
 // Aliases for cmov<CC>{w,l,q}
@@ -410,6 +437,9 @@ defm : IntegerCondCodeMnemonicAlias<"cfcmov", "l", "att">;
 defm : IntegerCondCodeMnemonicAlias<"cfcmov", "q", "att">;
 // No size suffix for intel-style asm.
 defm : IntegerCondCodeMnemonicAlias<"cfcmov", "", "intel">;
+
+// Aliases for cmp<CC>xadd
+defm : IntegerCondCodeMnemonicAlias<"cmp", "xadd", "">;
 //===----------------------------------------------------------------------===//
 // Assembler Instruction Aliases
 //===----------------------------------------------------------------------===//

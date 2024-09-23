@@ -57,10 +57,8 @@ except ImportError:
         raise
 
 # Automatic anchors for markdown titles
-from llvm_slug import make_slug
-
 myst_heading_anchors = 6
-myst_heading_slug_func = make_slug
+myst_heading_slug_func = "llvm_slug.make_slug"
 
 autodoc_default_options = {"special-members": True}
 
@@ -166,7 +164,11 @@ html_theme = "furo"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+html_theme_options = {
+    "source_repository": "https://github.com/llvm/llvm-project",
+    "source_branch": "main",
+    "source_directory": "lldb/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []

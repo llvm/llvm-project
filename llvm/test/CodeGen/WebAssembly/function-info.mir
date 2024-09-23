@@ -61,12 +61,12 @@ body:             |
 
   bb.2 (landing-pad):
     successors: %bb.1, %bb.3
-    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
     CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     BR %bb.1, implicit-def $arguments
 
   bb.3 (landing-pad):
-    CATCH_ALL implicit-def $arguments
+    CATCH_ALL_LEGACY implicit-def $arguments
     RETHROW 0, implicit-def $arguments
 ...
 

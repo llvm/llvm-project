@@ -83,8 +83,8 @@ public:
 };
 } // namespace
 
-ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
-  auto &Aliases = RegAliasesCache[R];
+ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCRegister R) const {
+  auto &Aliases = RegAliasesCache[R.id()];
   if (!Aliases.empty())
     return Aliases;
 
@@ -99,7 +99,7 @@ ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
   // Always put "self" at the end, so the iterator can choose to ignore it.
   // For registers without aliases, it also serves as a sentinel value that
   // tells us to not recompute the alias set.
-  Aliases.push_back(R);
+  Aliases.push_back(R.id());
   Aliases.shrink_to_fit();
   return Aliases;
 }
@@ -154,8 +154,8 @@ int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   return I->ToReg;
 }
 
-std::optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
-                                                      bool isEH) const {
+std::optional<MCRegister> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
+                                                        bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHDwarf2LRegs : Dwarf2LRegs;
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
@@ -164,7 +164,7 @@ std::optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
   DwarfLLVMRegPair Key = { RegNum, 0 };
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I != M + Size && I->FromReg == RegNum)
-    return I->ToReg;
+    return MCRegister::from(I->ToReg);
   return std::nullopt;
 }
 
@@ -177,7 +177,7 @@ int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
   // a corresponding LLVM register number at all.  So if we can't map the
   // EH register number to an LLVM register number, assume it's just a
   // valid DWARF register number as is.
-  if (std::optional<unsigned> LRegNum = getLLVMRegNum(RegNum, true)) {
+  if (std::optional<MCRegister> LRegNum = getLLVMRegNum(RegNum, true)) {
     int DwarfRegNum = getDwarfRegNum(*LRegNum, false);
     if (DwarfRegNum == -1)
       return RegNum;

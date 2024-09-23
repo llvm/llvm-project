@@ -92,22 +92,18 @@ public:
       StructuredData::GenericSP implementor_sp) override;
 
   StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data,
-                         Status &error) override;
-
-  bool ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                                  ExecutionContext &exc_ctx,
-                                  lldb::StreamSP stream_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  bool ShouldHide(const StructuredData::ObjectSP &implementor,
+                  lldb::StackFrameSP frame_sp) override;
+
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
+
+  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 

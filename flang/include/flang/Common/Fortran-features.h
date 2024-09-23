@@ -51,7 +51,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
-    UndefinableAsynchronousOrVolatileActual)
+    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
+    SavedLocalInSpecExpr)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -70,7 +71,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IgnoredIntrinsicFunctionType, PreviousScalarUse,
     RedeclaredInaccessibleComponent, ImplicitShared, IndexVarRedefinition,
     IncompatibleImplicitInterfaces, BadTypeForTarget,
-    VectorSubscriptFinalization)
+    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -144,6 +145,10 @@ public:
     warnUsage_.set(UsageWarning::IncompatibleImplicitInterfaces);
     warnUsage_.set(UsageWarning::BadTypeForTarget);
     warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
+    warnUsage_.set(UsageWarning::UndefinedFunctionResult);
+    warnUsage_.set(UsageWarning::UselessIomsg);
+    // New warnings, on by default
+    warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
 

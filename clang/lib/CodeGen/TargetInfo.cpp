@@ -209,13 +209,37 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) {
-  llvm::AttrBuilder FuncAttrs(F.getContext());
-  setBranchProtectionFnAttributes(BPI, FuncAttrs);
-  F.addFnAttrs(FuncAttrs);
+  // Called on already created and initialized function where attributes already
+  // set from command line attributes but some might need to be removed as the
+  // actual BPI is different.
+  if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+    F.addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
+    F.addFnAttr("sign-return-address-key", BPI.getSignKeyStr());
+  } else {
+    if (F.hasFnAttribute("sign-return-address"))
+      F.removeFnAttr("sign-return-address");
+    if (F.hasFnAttribute("sign-return-address-key"))
+      F.removeFnAttr("sign-return-address-key");
+  }
+
+  auto AddRemoveAttributeAsSet = [&](bool Set, const StringRef &ModAttr) {
+    if (Set)
+      F.addFnAttr(ModAttr);
+    else if (F.hasFnAttribute(ModAttr))
+      F.removeFnAttr(ModAttr);
+  };
+
+  AddRemoveAttributeAsSet(BPI.BranchTargetEnforcement,
+                          "branch-target-enforcement");
+  AddRemoveAttributeAsSet(BPI.BranchProtectionPAuthLR,
+                          "branch-protection-pauth-lr");
+  AddRemoveAttributeAsSet(BPI.GuardedControlStack, "guarded-control-stack");
 }
 
-void TargetCodeGenInfo::setBranchProtectionFnAttributes(
+void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI, llvm::AttrBuilder &FuncAttrs) {
+  // Only used for initializing attributes in the AttrBuilder, which will not
+  // contain any of these attributes so no need to remove anything.
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
     FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());

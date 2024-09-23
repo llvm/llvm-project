@@ -401,6 +401,36 @@ namespace cwg2083 { // cwg2083: partial
 #endif
 }
 
+namespace cwg2091 { // cwg2091: 10
+template<int &> struct X;
+template<int &N> void f(X<N>&);
+int n;
+void g(X<n> &x) { f(x); }
+
+namespace GH42233 {
+enum E { I };
+
+class AA { };
+E EV[1] = {I};
+
+template<class ENUM, const ENUM* const VALUES>
+struct S
+{
+  template< class E, const E* const V>
+    friend AA& operator<<( AA& os, const S<E,V>& e );
+};
+
+int f()
+{
+  S< E, EV > x;
+
+  AA a;
+  a << x;
+  return 0;
+}
+} // namespace GH42233
+} // namespace cwg2091 
+
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };
   struct B { volatile int n; };

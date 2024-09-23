@@ -799,6 +799,23 @@ OMPTaskyieldDirective *OMPTaskyieldDirective::CreateEmpty(const ASTContext &C,
   return new (C) OMPTaskyieldDirective();
 }
 
+OMPAssumeDirective *OMPAssumeDirective::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses,
+                                               Stmt *AStmt) {
+  return createDirective<OMPAssumeDirective>(C, Clauses, AStmt,
+                                             /*NumChildren=*/0, StartLoc,
+                                             EndLoc);
+}
+
+OMPAssumeDirective *OMPAssumeDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    EmptyShell) {
+  return createEmptyDirective<OMPAssumeDirective>(C, NumClauses,
+                                                  /*HasAssociatedStmt=*/true);
+}
+
 OMPErrorDirective *OMPErrorDirective::Create(const ASTContext &C,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc,

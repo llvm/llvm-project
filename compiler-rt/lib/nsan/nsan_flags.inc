@@ -46,4 +46,7 @@ NSAN_FLAG(bool, enable_loadtracking_stats, false,
           "If true, compute load tracking stats, i.e. for each load from "
           "memory, the number of times nsan resumed from the original value "
           "due to invalid or unknown types.")
+NSAN_FLAG(bool, poison_in_free, true, "")
 NSAN_FLAG(bool, print_stats_on_exit, false, "If true, print stats on exit.")
+NSAN_FLAG(bool, check_nan, false,
+          "If true, check the floating-point number is nan")

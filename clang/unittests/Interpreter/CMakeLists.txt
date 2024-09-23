@@ -13,6 +13,8 @@ add_clang_unittest(ClangReplInterpreterTests
   InterpreterTest.cpp
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
+
+  EXPORT_SYMBOLS
   )
 target_link_libraries(ClangReplInterpreterTests PUBLIC
   clangAST
@@ -27,8 +29,6 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
 endif()
-
-export_executable_symbols(ClangReplInterpreterTests)
 
 if(MSVC)
   set_target_properties(ClangReplInterpreterTests PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)

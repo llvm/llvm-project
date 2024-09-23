@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/LoopGeneratorsGOMP.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
 
@@ -108,21 +109,20 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   Function *SubFn = createSubFnDefinition();
   LLVMContext &Context = SubFn->getContext();
 
-  // Store the previous basic block.
-  BasicBlock *PrevBB = Builder.GetInsertBlock();
-
   // Create basic blocks.
   BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.par.setup", SubFn);
+  SubFnDT = std::make_unique<DominatorTree>(*SubFn);
+  SubFnLI = std::make_unique<LoopInfo>(*SubFnDT);
+
   BasicBlock *ExitBB = BasicBlock::Create(Context, "polly.par.exit", SubFn);
   BasicBlock *CheckNextBB =
       BasicBlock::Create(Context, "polly.par.checkNext", SubFn);
   BasicBlock *PreHeaderBB =
       BasicBlock::Create(Context, "polly.par.loadIVBounds", SubFn);
 
-  DT.addNewBlock(HeaderBB, PrevBB);
-  DT.addNewBlock(ExitBB, HeaderBB);
-  DT.addNewBlock(CheckNextBB, HeaderBB);
-  DT.addNewBlock(PreHeaderBB, HeaderBB);
+  SubFnDT->addNewBlock(ExitBB, HeaderBB);
+  SubFnDT->addNewBlock(CheckNextBB, HeaderBB);
+  SubFnDT->addNewBlock(PreHeaderBB, HeaderBB);
 
   // Fill up basic block HeaderBB.
   Builder.SetInsertPoint(HeaderBB);
@@ -155,8 +155,8 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
   BasicBlock *AfterBB;
   Value *IV =
-      createLoop(LB, UB, Stride, Builder, LI, DT, AfterBB, ICmpInst::ICMP_SLE,
-                 nullptr, true, /* UseGuard */ false);
+      createLoop(LB, UB, Stride, Builder, *SubFnLI, *SubFnDT, AfterBB,
+                 ICmpInst::ICMP_SLE, nullptr, true, /* UseGuard */ false);
 
   BasicBlock::iterator LoopBody = Builder.GetInsertPoint();
 
@@ -166,6 +166,10 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   Builder.CreateRetVoid();
 
   Builder.SetInsertPoint(&*LoopBody);
+
+  // FIXME: Call SubFnDT->verify() and SubFnLI->verify() to check that the
+  // DominatorTree/LoopInfo has been created correctly. Alternatively, recreate
+  // from scratch since it is not needed here directly.
 
   return std::make_tuple(IV, SubFn);
 }

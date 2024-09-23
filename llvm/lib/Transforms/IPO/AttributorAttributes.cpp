@@ -107,6 +107,7 @@ static cl::opt<int> MaxPotentialValuesIterations(
     cl::init(64));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
+STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
 
 // Some helper macros to deal with statistics tracking.
 //
@@ -826,6 +827,7 @@ struct AA::PointerInfo::State : public AbstractState {
     AccessList = R.AccessList;
     OffsetBins = R.OffsetBins;
     RemoteIMap = R.RemoteIMap;
+    ReachesReturn = R.ReachesReturn;
     return *this;
   }
 
@@ -836,6 +838,7 @@ struct AA::PointerInfo::State : public AbstractState {
     std::swap(AccessList, R.AccessList);
     std::swap(OffsetBins, R.OffsetBins);
     std::swap(RemoteIMap, R.RemoteIMap);
+    std::swap(ReachesReturn, R.ReachesReturn);
     return *this;
   }
 
@@ -877,11 +880,16 @@ protected:
   AAPointerInfo::OffsetBinsTy OffsetBins;
   DenseMap<const Instruction *, SmallVector<unsigned>> RemoteIMap;
 
+  /// Flag to determine if the underlying pointer is reaching a return statement
+  /// in the associated function or not. Returns in other functions cause
+  /// invalidation.
+  bool ReachesReturn = false;
+
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
       AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
-    if (!isValidState())
+    if (!isValidState() || ReachesReturn)
       return false;
 
     for (const auto &It : OffsetBins) {
@@ -903,7 +911,7 @@ protected:
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
       AA::RangeTy &Range) const {
-    if (!isValidState())
+    if (!isValidState() || ReachesReturn)
       return false;
 
     auto LocalList = RemoteIMap.find(&I);
@@ -1070,7 +1078,8 @@ struct AAPointerInfoImpl
     return std::string("PointerInfo ") +
            (isValidState() ? (std::string("#") +
                               std::to_string(OffsetBins.size()) + " bins")
-                           : "<invalid>");
+                           : "<invalid>") +
+           (ReachesReturn ? " (returned)" : "");
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -1082,6 +1091,14 @@ struct AAPointerInfoImpl
   virtual const_bin_iterator end() const override { return State::end(); }
   virtual int64_t numOffsetBins() const override {
     return State::numOffsetBins();
+  }
+  virtual bool reachesReturn() const override { return ReachesReturn; }
+  ChangeStatus setReachesReturn(bool Val) {
+    if (ReachesReturn == Val)
+      return ChangeStatus::UNCHANGED;
+
+    ReachesReturn = Val;
+    return ChangeStatus::CHANGED;
   }
 
   bool forallInterferingAccesses(
@@ -1325,20 +1342,20 @@ struct AAPointerInfoImpl
 
         const auto *FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+        if (FnReachabilityAA) {
+          // Without going backwards in the call tree, can we reach the access
+          // from the least dominating write. Do not allow to pass the
+          // instruction itself either.
+          bool Inserted = ExclusionSet.insert(&I).second;
 
-        // Without going backwards in the call tree, can we reach the access
-        // from the least dominating write. Do not allow to pass the instruction
-        // itself either.
-        bool Inserted = ExclusionSet.insert(&I).second;
+          if (!FnReachabilityAA->instructionCanReach(
+                  A, *LeastDominatingWriteInst,
+                  *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+            WriteChecked = true;
 
-        if (!FnReachabilityAA ||
-            !FnReachabilityAA->instructionCanReach(
-                A, *LeastDominatingWriteInst,
-                *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
-          WriteChecked = true;
-
-        if (Inserted)
-          ExclusionSet.erase(&I);
+          if (Inserted)
+            ExclusionSet.erase(&I);
+        }
       }
 
       if (ReadChecked && WriteChecked)
@@ -1370,11 +1387,12 @@ struct AAPointerInfoImpl
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
 
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
     bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
+    Changed |= setReachesReturn(OtherAAImpl.ReachesReturn);
 
     // Combine the accesses bin by bin.
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &State = OtherAAImpl.getState();
     for (const auto &It : State) {
       for (auto Index : It.getSecond()) {
@@ -1396,7 +1414,8 @@ struct AAPointerInfoImpl
   }
 
   ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
-                                    const OffsetInfo &Offsets, CallBase &CB) {
+                                    const OffsetInfo &Offsets, CallBase &CB,
+                                    bool IsMustAcc) {
     using namespace AA::PointerInfo;
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
@@ -1409,6 +1428,8 @@ struct AAPointerInfoImpl
     for (const auto &It : State) {
       for (auto Index : It.getSecond()) {
         const auto &RAcc = State.getAccess(Index);
+        if (!IsMustAcc && RAcc.isAssumption())
+          continue;
         for (auto Offset : Offsets) {
           auto NewRanges = Offset == AA::RangeTy::Unknown
                                ? AA::RangeTy::getUnknown()
@@ -1416,9 +1437,11 @@ struct AAPointerInfoImpl
           if (!NewRanges.isUnknown()) {
             NewRanges.addToAllOffsets(Offset);
           }
-          Changed |=
-              addAccess(A, NewRanges, CB, RAcc.getContent(), RAcc.getKind(),
-                        RAcc.getType(), RAcc.getRemoteInst());
+          AccessKind AK = RAcc.getKind();
+          if (!IsMustAcc)
+            AK = AccessKind((AK & ~AK_MUST) | AK_MAY);
+          Changed |= addAccess(A, NewRanges, CB, RAcc.getContent(), AK,
+                               RAcc.getType(), RAcc.getRemoteInst());
         }
       }
     }
@@ -1628,6 +1651,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
                       << "\n");
     assert(OffsetInfoMap.count(CurPtr) &&
            "The current pointer offset should have been seeded!");
+    assert(!OffsetInfoMap[CurPtr].isUnassigned() &&
+           "Current pointer should be assigned");
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
@@ -1658,8 +1683,15 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     }
     if (isa<PtrToIntInst>(Usr))
       return false;
-    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
+    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
+    // Returns are allowed if they are in the associated functions. Users can
+    // then check the call site return. Returns from other functions can't be
+    // tracked and are cause for invalidation.
+    if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+      Changed |= setReachesReturn(RI->getFunction() == getAssociatedFunction());
+      return ReachesReturn;
+    }
 
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
@@ -1890,14 +1922,37 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
             DepClassTy::REQUIRED);
         if (!CSArgPI)
           return false;
-        Changed =
-            translateAndAddState(A, *CSArgPI, OffsetInfoMap[CurPtr], *CB) |
-            Changed;
+        bool IsArgMustAcc = (getUnderlyingObject(CurPtr) == &AssociatedValue);
+        Changed = translateAndAddState(A, *CSArgPI, OffsetInfoMap[CurPtr], *CB,
+                                       IsArgMustAcc) |
+                  Changed;
+        if (!CSArgPI->reachesReturn())
+          return isValidState();
+
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee || Callee->arg_size() <= ArgNo)
+          return false;
+        bool UsedAssumedInformation = false;
+        auto ReturnedValue = A.getAssumedSimplified(
+            IRPosition::returned(*Callee), *this, UsedAssumedInformation,
+            AA::ValueScope::Intraprocedural);
+        auto *ReturnedArg =
+            dyn_cast_or_null<Argument>(ReturnedValue.value_or(nullptr));
+        auto *Arg = Callee->getArg(ArgNo);
+        if (ReturnedArg && Arg != ReturnedArg)
+          return true;
+        bool IsRetMustAcc = IsArgMustAcc && (ReturnedArg == Arg);
+        const auto *CSRetPI = A.getAAFor<AAPointerInfo>(
+            *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
+        if (!CSRetPI)
+          return false;
+        Changed = translateAndAddState(A, *CSRetPI, OffsetInfoMap[CurPtr], *CB,
+                                       IsRetMustAcc) |
+                  Changed;
         return isValidState();
       }
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
                         << "\n");
-      // TODO: Allow some call uses
       return false;
     }
 
@@ -1906,6 +1961,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
   };
   auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
     assert(OffsetInfoMap.count(OldU) && "Old use should be known already!");
+    assert(!OffsetInfoMap[OldU].isUnassigned() && "Old use should be assinged");
     if (OffsetInfoMap.count(NewU)) {
       LLVM_DEBUG({
         if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
@@ -1916,8 +1972,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       });
       return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
     }
-    OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
-    return true;
+    bool Unused;
+    return HandlePassthroughUser(NewU.get(), OldU.get(), Unused);
   };
   if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
                          /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
@@ -2327,13 +2383,15 @@ struct AANoFreeFloating : AANoFreeImpl {
             DepClassTy::REQUIRED, IsKnown);
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
-          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+      if (isa<GetElementPtrInst>(UserI) || isa<PHINode>(UserI) ||
+          isa<SelectInst>(UserI)) {
         Follow = true;
         return true;
       }
-      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI) ||
-          isa<ReturnInst>(UserI))
+      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI))
+        return true;
+
+      if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;
 
       // Unknown user.
@@ -11506,9 +11564,21 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
           return false;
         if (!AddValues)
           continue;
-        for (const AA::ValueAndContext &VAC : Values)
+
+        bool AllInterAreIntra = false;
+        if (S == AA::Interprocedural)
+          AllInterAreIntra =
+              llvm::all_of(Values, [&](const AA::ValueAndContext &VAC) {
+                return AA::isValidInScope(*VAC.getValue(), AnchorScope);
+              });
+
+        for (const AA::ValueAndContext &VAC : Values) {
           addValue(A, getState(), *VAC.getValue(),
-                   VAC.getCtxI() ? VAC.getCtxI() : CtxI, S, AnchorScope);
+                   VAC.getCtxI() ? VAC.getCtxI() : CtxI,
+                   AllInterAreIntra ? AA::AnyScope : S, AnchorScope);
+        }
+        if (AllInterAreIntra)
+          break;
       }
       return true;
     };
@@ -11535,16 +11605,6 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
 
     return (AssumedBefore == getAssumed()) ? ChangeStatus::UNCHANGED
                                            : ChangeStatus::CHANGED;
-  }
-
-  void addValue(Attributor &A, StateType &State, Value &V,
-                const Instruction *CtxI, AA::ValueScope S,
-                Function *AnchorScope) const override {
-    Function *F = getAssociatedFunction();
-    if (auto *CB = dyn_cast<CallBase>(&V))
-      if (CB->getCalledOperand() == F)
-        return;
-    Base::addValue(A, State, V, CtxI, S, AnchorScope);
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -11641,64 +11701,39 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
                          UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
-    SmallVector<AA::ValueAndContext> Values;
-    if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
-                                      Values, AA::Intraprocedural,
-                                      UsedAssumedInformation))
-      return indicatePessimisticFixpoint();
-
     Function *Caller = CB->getCaller();
 
-    bool AnyNonLocal = false;
-    for (auto &It : Values) {
-      Value *V = It.getValue();
-      std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
-          V, *CB, *this, UsedAssumedInformation);
-      if (!CallerV.has_value()) {
-        // Nothing to do as long as no value was determined.
-        continue;
-      }
-      V = *CallerV ? *CallerV : V;
-      if (AA::isDynamicallyUnique(A, *this, *V) &&
-          AA::isValidInScope(*V, Caller)) {
-        if (*CallerV) {
-          SmallVector<AA::ValueAndContext> ArgValues;
-          IRPosition IRP = IRPosition::value(*V);
-          if (auto *Arg = dyn_cast<Argument>(V))
-            if (Arg->getParent() == CB->getCalledOperand())
-              IRP = IRPosition::callsite_argument(*CB, Arg->getArgNo());
-          if (recurseForValue(A, IRP, AA::AnyScope))
-            continue;
-        }
-        addValue(A, getState(), *V, CB, AA::AnyScope, getAnchorScope());
-      } else {
-        AnyNonLocal = true;
-        break;
-      }
-    }
-    if (AnyNonLocal) {
-      Values.clear();
+    auto AddScope = [&](AA::ValueScope S) {
+      SmallVector<AA::ValueAndContext> Values;
       if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
-                                        Values, AA::Interprocedural,
-                                        UsedAssumedInformation))
-        return indicatePessimisticFixpoint();
-      AnyNonLocal = false;
-      getState() = PotentialLLVMValuesState::getBestState();
+                                        Values, S, UsedAssumedInformation))
+        return false;
+
       for (auto &It : Values) {
         Value *V = It.getValue();
-        if (!AA::isDynamicallyUnique(A, *this, *V))
-          return indicatePessimisticFixpoint();
-        if (AA::isValidInScope(*V, Caller)) {
-          addValue(A, getState(), *V, CB, AA::AnyScope, getAnchorScope());
-        } else {
-          AnyNonLocal = true;
-          addValue(A, getState(), *V, CB, AA::Interprocedural,
-                   getAnchorScope());
+        std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
+            V, *CB, *this, UsedAssumedInformation);
+        if (!CallerV.has_value()) {
+          // Nothing to do as long as no value was determined.
+          continue;
         }
+        V = *CallerV ? *CallerV : V;
+        if (*CallerV && AA::isDynamicallyUnique(A, *this, *V)) {
+          if (recurseForValue(A, IRPosition::value(*V), S))
+            continue;
+        }
+        if (S == AA::Intraprocedural && !AA::isValidInScope(*V, Caller)) {
+          giveUpOnIntraprocedural(A);
+          return true;
+        }
+        addValue(A, getState(), *V, CB, S, getAnchorScope());
       }
-      if (AnyNonLocal)
-        giveUpOnIntraprocedural(A);
-    }
+      return true;
+    };
+    if (!AddScope(AA::Intraprocedural))
+      return indicatePessimisticFixpoint();
+    if (!AddScope(AA::Interprocedural))
+      return indicatePessimisticFixpoint();
     return (AssumedBefore == getAssumed()) ? ChangeStatus::UNCHANGED
                                            : ChangeStatus::CHANGED;
   }
@@ -11874,14 +11909,24 @@ struct AAUnderlyingObjectsImpl
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
-    return std::string("UnderlyingObjects ") +
-           (isValidState()
-                ? (std::string("inter #") +
-                   std::to_string(InterAssumedUnderlyingObjects.size()) +
-                   " objs" + std::string(", intra #") +
-                   std::to_string(IntraAssumedUnderlyingObjects.size()) +
-                   " objs")
-                : "<invalid>");
+    if (!isValidState())
+      return "<invalid>";
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << "underlying objects: inter " << InterAssumedUnderlyingObjects.size()
+       << " objects, intra " << IntraAssumedUnderlyingObjects.size()
+       << " objects.\n";
+    if (!InterAssumedUnderlyingObjects.empty()) {
+      OS << "inter objects:\n";
+      for (auto *Obj : InterAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    if (!IntraAssumedUnderlyingObjects.empty()) {
+      OS << "intra objects:\n";
+      for (auto *Obj : IntraAssumedUnderlyingObjects)
+        OS << *Obj << '\n';
+    }
+    return Str;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -11891,9 +11936,9 @@ struct AAUnderlyingObjectsImpl
   ChangeStatus updateImpl(Attributor &A) override {
     auto &Ptr = getAssociatedValue();
 
+    bool UsedAssumedInformation = false;
     auto DoUpdate = [&](SmallSetVector<Value *, 8> &UnderlyingObjects,
                         AA::ValueScope Scope) {
-      bool UsedAssumedInformation = false;
       SmallPtrSet<Value *, 8> SeenObjects;
       SmallVector<AA::ValueAndContext> Values;
 
@@ -11907,31 +11952,43 @@ struct AAUnderlyingObjectsImpl
         auto &VAC = Values[I];
         auto *Obj = VAC.getValue();
         Value *UO = getUnderlyingObject(Obj);
-        if (UO && UO != VAC.getValue() && SeenObjects.insert(UO).second) {
+        if (!SeenObjects.insert(UO ? UO : Obj).second)
+          continue;
+        if (UO && UO != Obj) {
+          if (isa<AllocaInst>(UO) || isa<GlobalValue>(UO)) {
+            Changed |= UnderlyingObjects.insert(UO);
+            continue;
+          }
+
           const auto *OtherAA = A.getAAFor<AAUnderlyingObjects>(
               *this, IRPosition::value(*UO), DepClassTy::OPTIONAL);
-          auto Pred = [&Values](Value &V) {
-            Values.emplace_back(V, nullptr);
+          auto Pred = [&](Value &V) {
+            if (&V == UO)
+              Changed |= UnderlyingObjects.insert(UO);
+            else
+              Values.emplace_back(V, nullptr);
             return true;
           };
 
           if (!OtherAA || !OtherAA->forallUnderlyingObjects(Pred, Scope))
             llvm_unreachable(
                 "The forall call should not return false at this position");
-
+          UsedAssumedInformation |= !OtherAA->getState().isAtFixpoint();
           continue;
         }
 
         if (isa<SelectInst>(Obj)) {
-          Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope);
+          Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope,
+                                    UsedAssumedInformation);
           continue;
         }
         if (auto *PHI = dyn_cast<PHINode>(Obj)) {
           // Explicitly look through PHIs as we do not care about dynamically
           // uniqueness.
           for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
-            Changed |= handleIndirect(A, *PHI->getIncomingValue(u),
-                                      UnderlyingObjects, Scope);
+            Changed |=
+                handleIndirect(A, *PHI->getIncomingValue(u), UnderlyingObjects,
+                               Scope, UsedAssumedInformation);
           }
           continue;
         }
@@ -11945,7 +12002,8 @@ struct AAUnderlyingObjectsImpl
     bool Changed = false;
     Changed |= DoUpdate(IntraAssumedUnderlyingObjects, AA::Intraprocedural);
     Changed |= DoUpdate(InterAssumedUnderlyingObjects, AA::Interprocedural);
-
+    if (!UsedAssumedInformation)
+      indicateOptimisticFixpoint();
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -11970,7 +12028,7 @@ private:
   /// as a phi node or a select instruction.
   bool handleIndirect(Attributor &A, Value &V,
                       SmallSetVector<Value *, 8> &UnderlyingObjects,
-                      AA::ValueScope Scope) {
+                      AA::ValueScope Scope, bool &UsedAssumedInformation) {
     bool Changed = false;
     const auto *AA = A.getAAFor<AAUnderlyingObjects>(
         *this, IRPosition::value(V), DepClassTy::OPTIONAL);
@@ -11981,6 +12039,7 @@ private:
     if (!AA || !AA->forallUnderlyingObjects(Pred, Scope))
       llvm_unreachable(
           "The forall call should not return false at this position");
+    UsedAssumedInformation |= !AA->getState().isAtFixpoint();
     return Changed;
   }
 
@@ -12307,7 +12366,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     bool CBIsVoid = CB->getType()->isVoidTy();
     BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
-    SmallVector<Value *> CSArgs(CB->arg_begin(), CB->arg_end());
+    SmallVector<Value *> CSArgs(CB->args());
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).
@@ -12323,6 +12382,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       auto *NewCallee = AssumedCallees.front();
       if (isLegalToPromote(*CB, NewCallee)) {
         promoteCall(*CB, NewCallee, nullptr);
+        NumIndirectCallsPromoted++;
         return ChangeStatus::CHANGED;
       }
       Instruction *NewCall =
@@ -12347,7 +12407,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     SmallVector<Function *, 8> SkippedAssumedCallees;
     SmallVector<std::pair<CallInst *, Instruction *>> NewCalls;
     for (Function *NewCallee : AssumedCallees) {
-      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee)) {
+      if (!A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
+                                               AssumedCallees.size())) {
         SkippedAssumedCallees.push_back(NewCallee);
         SpecializedForAllCallees = false;
         continue;
@@ -12378,6 +12439,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         auto *CBClone = cast<CallBase>(CB->clone());
         CBClone->insertBefore(ThenTI);
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
+        NumIndirectCallsPromoted++;
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                                    CB->getName(), ThenTI->getIterator());
@@ -12478,11 +12540,38 @@ private:
 
 /// ------------------------ Address Space  ------------------------------------
 namespace {
+
+template <typename InstType>
+static bool makeChange(Attributor &A, InstType *MemInst, const Use &U,
+                       Value *OriginalValue, PointerType *NewPtrTy,
+                       bool UseOriginalValue) {
+  if (U.getOperandNo() != InstType::getPointerOperandIndex())
+    return false;
+
+  if (MemInst->isVolatile()) {
+    auto *TTI = A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+        *MemInst->getFunction());
+    unsigned NewAS = NewPtrTy->getPointerAddressSpace();
+    if (!TTI || !TTI->hasVolatileVariant(MemInst, NewAS))
+      return false;
+  }
+
+  if (UseOriginalValue) {
+    A.changeUseAfterManifest(const_cast<Use &>(U), *OriginalValue);
+    return true;
+  }
+
+  Instruction *CastInst = new AddrSpaceCastInst(OriginalValue, NewPtrTy);
+  CastInst->insertBefore(MemInst);
+  A.changeUseAfterManifest(const_cast<Use &>(U), *CastInst);
+  return true;
+}
+
 struct AAAddressSpaceImpl : public AAAddressSpace {
   AAAddressSpaceImpl(const IRPosition &IRP, Attributor &A)
       : AAAddressSpace(IRP, A) {}
 
-  int32_t getAddressSpace() const override {
+  uint32_t getAddressSpace() const override {
     assert(isValidState() && "the AA is invalid");
     return AssumedAddressSpace;
   }
@@ -12491,10 +12580,12 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   void initialize(Attributor &A) override {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
+    if (getAssociatedType()->getPointerAddressSpace())
+      indicateOptimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    int32_t OldAddressSpace = AssumedAddressSpace;
+    uint32_t OldAddressSpace = AssumedAddressSpace;
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
     auto Pred = [&](Value &Obj) {
@@ -12515,28 +12606,15 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     Value *AssociatedValue = &getAssociatedValue();
     Value *OriginalValue = peelAddrspacecast(AssociatedValue);
     if (getAddressSpace() == NoAddressSpace ||
-        static_cast<uint32_t>(getAddressSpace()) ==
-            getAssociatedType()->getPointerAddressSpace())
+        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
-    Type *NewPtrTy = PointerType::get(getAssociatedType()->getContext(),
-                                      static_cast<uint32_t>(getAddressSpace()));
+    PointerType *NewPtrTy =
+        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() ==
-        static_cast<uint32_t>(getAddressSpace());
+        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
 
     bool Changed = false;
-
-    auto MakeChange = [&](Instruction *I, Use &U) {
-      Changed = true;
-      if (UseOriginalValue) {
-        A.changeUseAfterManifest(U, *OriginalValue);
-        return;
-      }
-      Instruction *CastInst = new AddrSpaceCastInst(OriginalValue, NewPtrTy);
-      CastInst->insertBefore(cast<Instruction>(I));
-      A.changeUseAfterManifest(U, *CastInst);
-    };
 
     auto Pred = [&](const Use &U, bool &) {
       if (U.get() != AssociatedValue)
@@ -12548,12 +12626,18 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
       // CGSCC if the AA is run on CGSCC instead of the entire module.
       if (!A.isRunOn(Inst->getFunction()))
         return true;
-      if (isa<LoadInst>(Inst))
-        MakeChange(Inst, const_cast<Use &>(U));
-      if (isa<StoreInst>(Inst)) {
-        // We only make changes if the use is the pointer operand.
-        if (U.getOperandNo() == 1)
-          MakeChange(Inst, const_cast<Use &>(U));
+      if (auto *LI = dyn_cast<LoadInst>(Inst)) {
+        Changed |=
+            makeChange(A, LI, U, OriginalValue, NewPtrTy, UseOriginalValue);
+      } else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+        Changed |=
+            makeChange(A, SI, U, OriginalValue, NewPtrTy, UseOriginalValue);
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
+        Changed |=
+            makeChange(A, RMW, U, OriginalValue, NewPtrTy, UseOriginalValue);
+      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
+        Changed |=
+            makeChange(A, CmpX, U, OriginalValue, NewPtrTy, UseOriginalValue);
       }
       return true;
     };
@@ -12578,9 +12662,9 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
 private:
-  int32_t AssumedAddressSpace = NoAddressSpace;
+  uint32_t AssumedAddressSpace = NoAddressSpace;
 
-  bool takeAddressSpace(int32_t AS) {
+  bool takeAddressSpace(uint32_t AS) {
     if (AssumedAddressSpace == NoAddressSpace) {
       AssumedAddressSpace = AS;
       return true;
@@ -12701,7 +12785,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     if (!PI)
       return indicatePessimisticFixpoint();
 
-    if (!PI->getState().isValidState())
+    if (!PI->getState().isValidState() || PI->reachesReturn())
       return indicatePessimisticFixpoint();
 
     const DataLayout &DL = A.getDataLayout();

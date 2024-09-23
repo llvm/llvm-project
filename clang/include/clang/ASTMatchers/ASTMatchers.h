@@ -6027,7 +6027,7 @@ AST_POLYMORPHIC_MATCHER_P2(
     internal::Matcher<Expr>, Matcher1, internal::Matcher<Expr>, Matcher2) {
   return internal::VariadicDynCastAllOfMatcher<Stmt, NodeType>()(
              anyOf(allOf(hasLHS(Matcher1), hasRHS(Matcher2)),
-                   allOf(hasLHS(Matcher2), hasRHS(Matcher1))))
+                   allOf(hasRHS(Matcher1), hasLHS(Matcher2))))
       .matches(Node, Finder, Builder);
 }
 

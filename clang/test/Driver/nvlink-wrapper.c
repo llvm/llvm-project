@@ -63,3 +63,25 @@ int baz() { return y + x; }
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LTO
 // LTO: ptxas{{.*}} -m64 -c [[PTX:.+]].s -O3 -arch sm_52 -o [[CUBIN:.+]].cubin
 // LTO: nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin {{.*}}-y-{{.*}}.cubin
+
+//
+// Check that we don't forward some arguments.
+//
+// RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a \
+// RUN:   -arch sm_52 --cuda-path/opt/cuda -o a.out 2>&1 | FileCheck %s --check-prefix=PATH
+// PATH-NOT: --cuda-path=/opt/cuda
+
+//
+// Check that passes can be specified and debugged.
+//
+// RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a \
+// RUN:   --lto-debug-pass-manager --lto-newpm-passes=forceattrs \
+// RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=PASSES
+// PASSES: Running pass: ForceFunctionAttrsPass
+
+//
+// Check that '-plugin` is ingored like in `ld.lld`
+//
+// RUN: clang-nvlink-wrapper --dry-run %t.o -plugin foo.so -arch sm_52 -o a.out \
+// RUN:   2>&1 | FileCheck %s --check-prefix=PLUGIN
+// PLUGIN-NOT: -plugin

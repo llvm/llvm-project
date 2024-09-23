@@ -1210,7 +1210,7 @@ define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i32 [[Z:%.*]], i32 0
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[Y:%.*]], [[ADD]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %c = icmp eq i32 %x, 0
