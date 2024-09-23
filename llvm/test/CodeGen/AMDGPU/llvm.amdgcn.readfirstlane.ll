@@ -27,6 +27,29 @@ define void @test_readfirstlane_i1(ptr addrspace(1) %out, i1 %src) {
   ret void
 }
 
+define void @test_readfirstlane_i1_inreg(ptr addrspace(1) %out, i1 inreg %src) {
+; CHECK-SDAG-LABEL: test_readfirstlane_i1_inreg:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    s_and_b32 s4, s6, 1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-SDAG-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readfirstlane_i1_inreg:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    s_and_b32 s4, s6, 1
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-GISEL-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %readfirstlane = call i1 @llvm.amdgcn.readfirstlane.i1(i1 %src)
+  store i1 %readfirstlane, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %src1) {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i1_select:
 ; CHECK-SDAG:       ; %bb.0:
@@ -57,6 +80,36 @@ define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %
   %readfirstlane = call i1 @llvm.amdgcn.readfirstlane.i1(i1 %cmp)
   %sel = select i1 %readfirstlane, i32 %src, i32 %src1
   store i32 %sel, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @test_readfirstlane_i1_load(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; CHECK-SDAG-LABEL: test_readfirstlane_i1_load:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    flat_load_ubyte v2, v[2:3]
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-SDAG-NEXT:    s_and_b32 s4, s4, 1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-SDAG-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readfirstlane_i1_load:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    flat_load_ubyte v2, v[2:3]
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-GISEL-NEXT:    s_and_b32 s4, s4, 1
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-GISEL-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %load = load i1, ptr addrspace(1) %in
+  %readfirstlane = call i1 @llvm.amdgcn.readfirstlane.i1(i1 %load)
+  store i1 %readfirstlane, ptr addrspace(1) %out, align 4
   ret void
 }
 
