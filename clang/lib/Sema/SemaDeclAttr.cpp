@@ -3061,7 +3061,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
     llvm::SmallVector<StringRef, 8> AttrStrs;
     AttrStr.split(AttrStrs, ';');
 
-    bool IsPriority = false;
+    bool HasPriority = false;
     bool IsDefault = false;
     for (auto &AttrStr : AttrStrs) {
       // Only support arch=+ext,... syntax.
@@ -3078,7 +3078,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       } else if (AttrStr.starts_with("default")) {
         IsDefault = true;
       } else if (AttrStr.consume_front("priority=")) {
-        IsPriority = true;
+        HasPriority = true;
         int Digit;
         if (AttrStr.getAsInteger(0, Digit))
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
@@ -3089,7 +3089,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       }
     }
 
-    if (IsPriority && IsDefault)
+    if (HasPriority && IsDefault)
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << AttrStr << TargetVersion;
 
