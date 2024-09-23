@@ -1964,6 +1964,8 @@ let Predicates = [HasPAuth] in {
   }
 
   // Size 16: 4 fixed + 8 variable, to compute discriminator.
+  // The size returned by getInstSizeInBytes() is incremented according
+  // to the variant of LR check.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
       Uses = [SP] in {
     def AUTH_TCRETURN
