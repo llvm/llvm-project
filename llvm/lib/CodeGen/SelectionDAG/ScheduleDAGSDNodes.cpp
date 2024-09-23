@@ -808,7 +808,7 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 }
 
 void ScheduleDAGSDNodes::
-EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit*, Register, 16> &VRBaseMap,
+EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
                 MachineBasicBlock::iterator InsertPos) {
   for (const SDep &Pred : SU->Preds) {
     if (Pred.isCtrl())
@@ -852,7 +852,7 @@ MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   InstrEmitter::VRBaseMapType VRBaseMap;
-  SmallDenseMap<SUnit*, Register, 16> CopyVRBaseMap;
+  SmallDenseMap<SUnit *, Register, 16> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;
   SmallSet<Register, 8> Seen;
   bool HasDbg = DAG->hasDebugValues();

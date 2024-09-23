@@ -265,8 +265,8 @@ namespace {
     void InitRegPressure(MachineBasicBlock *BB);
 
     SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
-                                             bool ConsiderSeen,
-                                             bool ConsiderUnseenAsDef);
+                                                  bool ConsiderSeen,
+                                                  bool ConsiderUnseenAsDef);
 
     void UpdateRegPressure(const MachineInstr *MI,
                            bool ConsiderUnseenAsDef = false);
@@ -1248,7 +1248,7 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// Visit BBs from header to current BB, check if hoisting an instruction of the
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
-    const SmallDenseMap<unsigned, int>& Cost, bool CheapInstr) {
+    const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
   for (const auto &RPIdAndCost : Cost) {
     if (RPIdAndCost.second <= 0)
       continue;

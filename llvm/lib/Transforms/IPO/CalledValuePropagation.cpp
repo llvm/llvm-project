@@ -169,7 +169,8 @@ public:
   /// just a few kinds of instructions since we're only propagating values that
   /// can be called.
   void ComputeInstructionState(
-      Instruction &I, SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
+      Instruction &I,
+      SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
       SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) override {
     switch (I.getOpcode()) {
     case Instruction::Call:
@@ -238,9 +239,10 @@ private:
 
   /// Handle return instructions. The function's return state is the merge of
   /// the returned value state and the function's return state.
-  void visitReturn(ReturnInst &I,
-                   SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
-                   SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
+  void
+  visitReturn(ReturnInst &I,
+              SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
+              SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
     Function *F = I.getParent()->getParent();
     if (F->getReturnType()->isVoidTy())
       return;
@@ -254,9 +256,10 @@ private:
   /// the merge of the argument state with the call sites corresponding actual
   /// argument state. The call site state is the merge of the call site state
   /// with the returned value state of the called function.
-  void visitCallBase(CallBase &CB,
-                     SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
-                     SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
+  void
+  visitCallBase(CallBase &CB,
+                SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
+                SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
     Function *F = CB.getCalledFunction();
     auto RegI = CVPLatticeKey(&CB, IPOGrouping::Register);
 
@@ -298,9 +301,10 @@ private:
 
   /// Handle select instructions. The select instruction state is the merge the
   /// true and false value states.
-  void visitSelect(SelectInst &I,
-                   SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
-                   SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
+  void
+  visitSelect(SelectInst &I,
+              SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
+              SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
     auto RegI = CVPLatticeKey(&I, IPOGrouping::Register);
     auto RegT = CVPLatticeKey(I.getTrueValue(), IPOGrouping::Register);
     auto RegF = CVPLatticeKey(I.getFalseValue(), IPOGrouping::Register);
@@ -327,9 +331,10 @@ private:
   /// Handle store instructions. If the pointer operand of the store is a
   /// global variable, we attempt to track the value. The global variable state
   /// is the merge of the stored value state with the global variable state.
-  void visitStore(StoreInst &I,
-                  SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
-                  SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
+  void
+  visitStore(StoreInst &I,
+             SmallDenseMap<CVPLatticeKey, CVPLatticeVal, 16> &ChangedValues,
+             SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
     auto *GV = dyn_cast<GlobalVariable>(I.getPointerOperand());
     if (!GV)
       return;

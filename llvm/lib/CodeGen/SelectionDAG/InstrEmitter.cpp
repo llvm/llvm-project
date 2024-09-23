@@ -82,8 +82,7 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
 /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
 /// implicit physical register output.
 void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
-                                   Register SrcReg,
-                                   VRBaseMapType &VRBaseMap) {
+                                   Register SrcReg, VRBaseMapType &VRBaseMap) {
   Register VRBase;
   if (SrcReg.isVirtual()) {
     // Just use the input register directly!
@@ -265,8 +264,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
 
 /// getVR - Return the virtual register corresponding to the specified result
 /// of the specified node.
-Register InstrEmitter::getVR(SDValue Op,
-                             VRBaseMapType &VRBaseMap) {
+Register InstrEmitter::getVR(SDValue Op, VRBaseMapType &VRBaseMap) {
   if (Op.isMachineOpcode() &&
       Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF) {
     // Add an IMPLICIT_DEF instruction before every use.
@@ -395,12 +393,10 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
 /// AddOperand - Add the specified operand to the specified machine instr.  II
 /// specifies the instruction information for the node, and IIOpNum is the
 /// operand number (in the II) that we are adding.
-void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
-                              SDValue Op,
-                              unsigned IIOpNum,
-                              const MCInstrDesc *II,
-                              VRBaseMapType &VRBaseMap,
-                              bool IsDebug, bool IsClone, bool IsCloned) {
+void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
+                              unsigned IIOpNum, const MCInstrDesc *II,
+                              VRBaseMapType &VRBaseMap, bool IsDebug,
+                              bool IsClone, bool IsCloned) {
   if (Op.isMachineOpcode()) {
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
                        IsDebug, IsClone, IsCloned);
@@ -499,8 +495,7 @@ Register InstrEmitter::ConstrainForSubReg(Register VReg, unsigned SubIdx,
 
 /// EmitSubregNode - Generate machine code for subreg nodes.
 ///
-void InstrEmitter::EmitSubregNode(SDNode *Node,
-                                  VRBaseMapType &VRBaseMap,
+void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
                                   bool IsClone, bool IsCloned) {
   Register VRBase;
   unsigned Opc = Node->getMachineOpcode();
@@ -653,9 +648,8 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
 
 /// EmitRegSequence - Generate machine code for REG_SEQUENCE nodes.
 ///
-void InstrEmitter::EmitRegSequence(SDNode *Node,
-                                  VRBaseMapType &VRBaseMap,
-                                  bool IsClone, bool IsCloned) {
+void InstrEmitter::EmitRegSequence(SDNode *Node, VRBaseMapType &VRBaseMap,
+                                   bool IsClone, bool IsCloned) {
   unsigned DstRCIdx = Node->getConstantOperandVal(0);
   const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
   Register NewVReg = MRI->createVirtualRegister(TRI->getAllocatableClass(RC));

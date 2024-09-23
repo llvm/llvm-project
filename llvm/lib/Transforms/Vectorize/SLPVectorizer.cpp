@@ -17726,7 +17726,8 @@ public:
       for (Value *V : Candidates)
         TrackedVals.try_emplace(V, V);
 
-    auto At = [](SmallMapVector<Value *, unsigned, 16> &MV, Value *V) -> unsigned & {
+    auto At = [](SmallMapVector<Value *, unsigned, 16> &MV,
+                 Value *V) -> unsigned & {
       auto *It = MV.find(V);
       assert(It != MV.end() && "Unable to find given key.");
       return It->second;
@@ -18424,10 +18425,10 @@ private:
 
   /// Emits actual operation for the scalar identity values, found during
   /// horizontal reduction analysis.
-  Value *emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
-                       BoUpSLP &R,
-                       const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
-                       const DenseMap<Value *, Value *> &TrackedToOrig) {
+  Value *
+  emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
+                const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
+                const DenseMap<Value *, Value *> &TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");

@@ -87,10 +87,9 @@ public:
   /// ComputeInstructionState - Compute the LatticeKeys that change as a result
   /// of executing instruction \p I. Their associated LatticeVals are store in
   /// \p ChangedValues.
-  virtual void
-  ComputeInstructionState(Instruction &I,
-                          SmallDenseMap<LatticeKey, LatticeVal, 16> &ChangedValues,
-                          SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
+  virtual void ComputeInstructionState(
+      Instruction &I, SmallDenseMap<LatticeKey, LatticeVal, 16> &ChangedValues,
+      SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
   /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
   virtual void PrintLatticeVal(LatticeVal LV, raw_ostream &OS);
