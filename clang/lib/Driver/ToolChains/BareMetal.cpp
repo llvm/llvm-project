@@ -172,6 +172,13 @@ static bool isPPCBareMetal(const llvm::Triple &Triple) {
 static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
                                   StringRef MultilibPath, const ArgList &Args,
                                   DetectedMultilibs &Result) {
+  if (Arg *ConfigFileArg = Args.getLastArg(options::OPT_multi_lib_config)) {
+    MultilibPath = ConfigFileArg->getValue();
+    if (!D.getVFS().exists(MultilibPath)) {
+      D.Diag(clang::diag::err_drv_no_such_file) << MultilibPath.str();
+      return;
+    }
+  }
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
       D.getVFS().getBufferForFile(MultilibPath);
   if (!MB)
