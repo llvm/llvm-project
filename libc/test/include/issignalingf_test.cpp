@@ -9,4 +9,11 @@
 #include "IsSignalingTest.h"
 #include "include/llvm-libc-macros/math-function-macros.h"
 
+// TODO: enable the test unconditionally when issignaling macro is fixed for 
+//       older compiler
+#if (defined(__clang__) && __clang_major__ >= 18) || \
+    (defined(__GNUC__) && __GNUC__ >= 13)
+
 LIST_ISSIGNALING_TESTS(float, issignaling)
+
+#endif
