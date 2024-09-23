@@ -241,12 +241,10 @@ namespace std {
 
 
 
-/// FIXME: The new interpreter produces the wrong diagnostic.
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{this placement new expression is not supported in constant expressions before C++2c}} \
-                     // expected-note {{subexpression not valid in a constant expression}}
+    new (c) int{12}; // both-note {{this placement new expression is not supported in constant expressions before C++2c}}
     return 0;
   }
 }
@@ -305,31 +303,28 @@ namespace placement_new_delete {
   }
   static_assert(ok());
 
-  /// FIXME: Diagnosting placement new.
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // ref-note {{this placement new expression is not supported in constant expressions}} \
-                                            // expected-note {{subexpression not valid in a constant expression}}
+      delete new (placement_new_arg{}) int; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
 
     case 1:
-      delete new ClassSpecificNew; // ref-note {{call to class-specific 'operator new'}}
+      delete new ClassSpecificNew; // both-note {{call to class-specific 'operator new'}}
       break;
 
     case 2:
-      delete new ClassSpecificDelete; // ref-note {{call to class-specific 'operator delete'}}
+      delete new ClassSpecificDelete; // both-note {{call to class-specific 'operator delete'}}
       break;
 
     case 3:
-      delete new DestroyingDelete; // ref-note {{call to class-specific 'operator delete'}}
+      delete new DestroyingDelete; // both-note {{call to class-specific 'operator delete'}}
       break;
 
     case 4:
       // FIXME: This technically follows the standard's rules, but it seems
       // unreasonable to expect implementations to support this.
-      delete new (std::align_val_t{64}) Overaligned; // ref-note {{this placement new expression is not supported in constant expressions}} \
-                                                     // expected-note {{subexpression not valid in a constant expression}}
+      delete new (std::align_val_t{64}) Overaligned; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
     }
 
@@ -337,9 +332,9 @@ namespace placement_new_delete {
   }
   static_assert(bad(0)); // both-error {{constant expression}} \
                          // both-note {{in call}}
-  static_assert(bad(1)); // ref-error {{constant expression}} ref-note {{in call}}
-  static_assert(bad(2)); // ref-error {{constant expression}} ref-note {{in call}}
-  static_assert(bad(3)); // ref-error {{constant expression}} ref-note {{in call}}
+  static_assert(bad(1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(bad(2)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(bad(3)); // both-error {{constant expression}} both-note {{in call}}
   static_assert(bad(4)); // both-error {{constant expression}} \
                          // both-note {{in call}}
 }
@@ -586,7 +581,6 @@ constexpr void use_after_free_2() { // both-error {{never produces a constant ex
   p->f(); // both-note {{member call on heap allocated object that has been deleted}}
 }
 
-
 /// std::allocator definition
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -756,6 +750,18 @@ namespace Limits {
                                                       // both-note@#alloc {{cannot allocate array; evaluated array bound 2305843009213693951 is too large}} \
                                                       // both-note {{in call to}}
 #endif
+}
+
+/// Just test that we reject placement-new expressions before C++2c.
+/// Tests for successful expressions are in placement-new.cpp
+namespace Placement {
+  consteval auto ok1() { // both-error {{never produces a constant expression}}
+    bool b;
+    new (&b) bool(true); // both-note 2{{this placement new expression is not supported in constant expressions before C++2c}}
+    return b;
+  }
+  static_assert(ok1()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
 }
 
 #else
