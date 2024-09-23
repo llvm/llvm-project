@@ -1671,21 +1671,26 @@ static void hoistConditionalLoadsStores(
   BasicBlock *BB = BI->getParent();
   IRBuilder<> Builder(Invert ? SpeculatedConditionalLoadsStores.back() : BI);
   Value *Mask = nullptr;
-  Value *Mask0 = nullptr;
-  Value *Mask1 = nullptr;
+  Value *MaskFalse = nullptr;
+  Value *MaskTrue = nullptr;
   if (Invert) {
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
   } else {
-    Mask0 = Builder.CreateBitCast(
+    MaskFalse = Builder.CreateBitCast(
         Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
-    Mask1 = Builder.CreateBitCast(Cond, VCondTy);
+    MaskTrue = Builder.CreateBitCast(Cond, VCondTy);
   }
+  auto PeekThroughBitcasts = [](Value *V) {
+    while (auto *BitCast = dyn_cast<BitCastInst>(V))
+      V = BitCast->getOperand(0);
+    return V;
+  };
   for (auto *I : SpeculatedConditionalLoadsStores) {
     IRBuilder<> Builder(Invert ? I : BI);
-    if (!Invert)
-      Mask = I->getParent() == BI->getSuccessor(0) ? Mask1 : Mask0;
+    if (!Mask)
+      Mask = I->getParent() == BI->getSuccessor(0) ? MaskTrue : MaskFalse;
     // We currently assume conditional faulting load/store is supported for
     // scalar types only when creating new instructions. This can be easily
     // extended for vector types in the future.
@@ -1699,8 +1704,9 @@ static void hoistConditionalLoadsStores(
       Value *PassThru = nullptr;
       for (User *U : I->users())
         if ((PN = dyn_cast<PHINode>(U))) {
-          PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
-                                           FixedVectorType::get(Ty, 1));
+          PassThru = Builder.CreateBitCast(
+              PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
+              FixedVectorType::get(Ty, 1));
           break;
         }
       MaskedLoadStore = Builder.CreateMaskedLoad(
@@ -1711,8 +1717,8 @@ static void hoistConditionalLoadsStores(
       I->replaceAllUsesWith(NewLoadStore);
     } else {
       // Handle Store.
-      auto *StoredVal =
-          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
+      auto *StoredVal = Builder.CreateBitCast(
+          PeekThroughBitcasts(Op0), FixedVectorType::get(Op0->getType(), 1));
       MaskedLoadStore = Builder.CreateMaskedStore(
           StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
     }
