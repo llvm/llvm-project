@@ -568,7 +568,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   // We want to visit children before parents. We will enqueue all the parents
   // before their children in the worklist and process the worklist in reverse
   // order.
-  SmallVector<BasicBlock *, 16> Worklist = collectChildrenInLoop(DT, N, CurLoop);
+  SmallVector<BasicBlock *, 16> Worklist =
+      collectChildrenInLoop(DT, N, CurLoop);
 
   bool Changed = false;
   for (BasicBlock *BB : reverse(Worklist)) {
