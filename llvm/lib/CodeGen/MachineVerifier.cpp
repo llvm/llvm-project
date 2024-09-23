@@ -96,22 +96,22 @@ namespace {
   struct MachineVerifier {
     MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
                     raw_ostream *OS)
-        : MFAM(&MFAM), OS(OS ? OS : &nulls()), Banner(b) {}
+        : MFAM(&MFAM), OS(OS ? *OS : nulls()), Banner(b) {}
 
     MachineVerifier(Pass *pass, const char *b, raw_ostream *OS)
-        : PASS(pass), OS(OS ? OS : &nulls()), Banner(b) {}
+        : PASS(pass), OS(OS ? *OS : nulls()), Banner(b) {}
 
     MachineVerifier(const char *b, LiveVariables *LiveVars,
                     LiveIntervals *LiveInts, LiveStacks *LiveStks,
                     SlotIndexes *Indexes, raw_ostream *OS)
-        : OS(OS ? OS : &nulls()), Banner(b), LiveVars(LiveVars),
+        : OS(OS ? *OS : nulls()), Banner(b), LiveVars(LiveVars),
           LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes) {}
 
     unsigned verify(const MachineFunction &MF);
 
     MachineFunctionAnalysisManager *MFAM = nullptr;
     Pass *const PASS = nullptr;
-    raw_ostream *OS = nullptr;
+    raw_ostream &OS;
     const char *Banner;
     const MachineFunction *MF = nullptr;
     const TargetMachine *TM = nullptr;
@@ -490,7 +490,7 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
       if (MI.getParent() != &MBB) {
         report("Bad instruction parent pointer", &MBB);
-        *OS << "Instruction: " << MI;
+        OS << "Instruction: " << MI;
         continue;
       }
 
@@ -548,48 +548,48 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
 
 void MachineVerifier::report(const char *msg, const MachineFunction *MF) {
   assert(MF);
-  *OS << '\n';
+  OS << '\n';
   if (!foundErrors++) {
     if (Banner)
-      *OS << "# " << Banner << '\n';
+      OS << "# " << Banner << '\n';
 
     if (LiveInts != nullptr)
-      LiveInts->print(*OS);
+      LiveInts->print(OS);
     else
-      MF->print(*OS, Indexes);
+      MF->print(OS, Indexes);
   }
 
-  *OS << "*** Bad machine code: " << msg << " ***\n"
-      << "- function:    " << MF->getName() << '\n';
+  OS << "*** Bad machine code: " << msg << " ***\n"
+     << "- function:    " << MF->getName() << '\n';
 }
 
 void MachineVerifier::report(const char *msg, const MachineBasicBlock *MBB) {
   assert(MBB);
   report(msg, MBB->getParent());
-  *OS << "- basic block: " << printMBBReference(*MBB) << ' ' << MBB->getName()
-      << " (" << (const void *)MBB << ')';
+  OS << "- basic block: " << printMBBReference(*MBB) << ' ' << MBB->getName()
+     << " (" << (const void *)MBB << ')';
   if (Indexes)
-    *OS << " [" << Indexes->getMBBStartIdx(MBB) << ';'
-        << Indexes->getMBBEndIdx(MBB) << ')';
-  *OS << '\n';
+    OS << " [" << Indexes->getMBBStartIdx(MBB) << ';'
+       << Indexes->getMBBEndIdx(MBB) << ')';
+  OS << '\n';
 }
 
 void MachineVerifier::report(const char *msg, const MachineInstr *MI) {
   assert(MI);
   report(msg, MI->getParent());
-  *OS << "- instruction: ";
+  OS << "- instruction: ";
   if (Indexes && Indexes->hasIndex(*MI))
-    *OS << Indexes->getInstructionIndex(*MI) << '\t';
-  MI->print(*OS, /*IsStandalone=*/true);
+    OS << Indexes->getInstructionIndex(*MI) << '\t';
+  MI->print(OS, /*IsStandalone=*/true);
 }
 
 void MachineVerifier::report(const char *msg, const MachineOperand *MO,
                              unsigned MONum, LLT MOVRegType) {
   assert(MO);
   report(msg, MO->getParent());
-  *OS << "- operand " << MONum << ":   ";
-  MO->print(*OS, MOVRegType, TRI);
-  *OS << '\n';
+  OS << "- operand " << MONum << ":   ";
+  MO->print(OS, MOVRegType, TRI);
+  OS << '\n';
 }
 
 void MachineVerifier::report(const Twine &Msg, const MachineInstr *MI) {
@@ -597,11 +597,11 @@ void MachineVerifier::report(const Twine &Msg, const MachineInstr *MI) {
 }
 
 void MachineVerifier::report_context(SlotIndex Pos) const {
-  *OS << "- at:          " << Pos << '\n';
+  OS << "- at:          " << Pos << '\n';
 }
 
 void MachineVerifier::report_context(const LiveInterval &LI) const {
-  *OS << "- interval:    " << LI << '\n';
+  OS << "- interval:    " << LI << '\n';
 }
 
 void MachineVerifier::report_context(const LiveRange &LR, Register VRegUnit,
@@ -613,35 +613,35 @@ void MachineVerifier::report_context(const LiveRange &LR, Register VRegUnit,
 }
 
 void MachineVerifier::report_context(const LiveRange::Segment &S) const {
-  *OS << "- segment:     " << S << '\n';
+  OS << "- segment:     " << S << '\n';
 }
 
 void MachineVerifier::report_context(const VNInfo &VNI) const {
-  *OS << "- ValNo:       " << VNI.id << " (def " << VNI.def << ")\n";
+  OS << "- ValNo:       " << VNI.id << " (def " << VNI.def << ")\n";
 }
 
 void MachineVerifier::report_context_liverange(const LiveRange &LR) const {
-  *OS << "- liverange:   " << LR << '\n';
+  OS << "- liverange:   " << LR << '\n';
 }
 
 void MachineVerifier::report_context(MCPhysReg PReg) const {
-  *OS << "- p. register: " << printReg(PReg, TRI) << '\n';
+  OS << "- p. register: " << printReg(PReg, TRI) << '\n';
 }
 
 void MachineVerifier::report_context_vreg(Register VReg) const {
-  *OS << "- v. register: " << printReg(VReg, TRI) << '\n';
+  OS << "- v. register: " << printReg(VReg, TRI) << '\n';
 }
 
 void MachineVerifier::report_context_vreg_regunit(Register VRegOrUnit) const {
   if (VRegOrUnit.isVirtual()) {
     report_context_vreg(VRegOrUnit);
   } else {
-    *OS << "- regunit:     " << printRegUnit(VRegOrUnit, TRI) << '\n';
+    OS << "- regunit:     " << printRegUnit(VRegOrUnit, TRI) << '\n';
   }
 }
 
 void MachineVerifier::report_context_lanemask(LaneBitmask LaneMask) const {
-  *OS << "- lanemask:    " << PrintLaneMask(LaneMask) << '\n';
+  OS << "- lanemask:    " << PrintLaneMask(LaneMask) << '\n';
 }
 
 void MachineVerifier::markReachable(const MachineBasicBlock *MBB) {
@@ -720,8 +720,8 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       report("MBB has successor that isn't part of the function.", MBB);
     if (!MBBInfoMap[succ].Preds.count(MBB)) {
       report("Inconsistent CFG", MBB);
-      *OS << "MBB is not in the predecessor list of the successor "
-          << printMBBReference(*succ) << ".\n";
+      OS << "MBB is not in the predecessor list of the successor "
+         << printMBBReference(*succ) << ".\n";
     }
   }
 
@@ -731,8 +731,8 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       report("MBB has predecessor that isn't part of the function.", MBB);
     if (!MBBInfoMap[Pred].Succs.count(MBB)) {
       report("Inconsistent CFG", MBB);
-      *OS << "MBB is not in the successor list of the predecessor "
-          << printMBBReference(*Pred) << ".\n";
+      OS << "MBB is not in the successor list of the predecessor "
+         << printMBBReference(*Pred) << ".\n";
     }
   }
 
@@ -890,7 +890,7 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
     SlotIndex idx = Indexes->getInstructionIndex(*MI);
     if (!(idx > lastIndex)) {
       report("Instruction index out of order", MI);
-      *OS << "Last instruction was at " << lastIndex << '\n';
+      OS << "Last instruction was at " << lastIndex << '\n';
     }
     lastIndex = idx;
   }
@@ -904,7 +904,7 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
     // precede non-terminators.
     if (FirstTerminator->getOpcode() != TargetOpcode::G_INVOKE_REGION_START) {
       report("Non-terminator instruction after the first terminator", MI);
-      *OS << "First terminator was:\t" << *FirstTerminator;
+      OS << "First terminator was:\t" << *FirstTerminator;
     }
   }
 }
@@ -2195,8 +2195,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   if (MI->getNumOperands() < MCID.getNumOperands()) {
     report("Too few operands", MI);
-    *OS << MCID.getNumOperands() << " operands expected, but "
-        << MI->getNumOperands() << " given.\n";
+    OS << MCID.getNumOperands() << " operands expected, but "
+       << MI->getNumOperands() << " given.\n";
   }
 
   if (MI->getFlag(MachineInstr::NoConvergent) && !MCID.isConvergent())
@@ -2288,7 +2288,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       // If both types are valid, check that the types are the same.
       if (SrcTy != DstTy) {
         report("Copy Instruction is illegal with mismatching types", MI);
-        *OS << "Def = " << DstTy << ", Src = " << SrcTy << '\n';
+        OS << "Def = " << DstTy << ", Src = " << SrcTy << '\n';
       }
 
       break;
@@ -2332,7 +2332,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
       if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
         report("Copy Instruction is illegal with mismatching sizes", MI);
-        *OS << "Def Size = " << DstSize << ", Src Size = " << SrcSize << '\n';
+        OS << "Def Size = " << DstSize << ", Src Size = " << SrcSize << '\n';
       }
     }
     break;
@@ -2563,8 +2563,8 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
               TII->getRegClass(MCID, MONum, TRI, *MF)) {
           if (!DRC->contains(Reg)) {
             report("Illegal physical register for instruction", MO, MONum);
-            *OS << printReg(Reg, TRI) << " is not a "
-                << TRI->getRegClassName(DRC) << " register.\n";
+            OS << printReg(Reg, TRI) << " is not a "
+               << TRI->getRegClassName(DRC) << " register.\n";
           }
         }
       }
@@ -2627,9 +2627,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
               RBI->getMaximumSize(RegBank->getID()) < Ty.getSizeInBits()) {
             report("Register bank is too small for virtual register", MO,
                    MONum);
-            *OS << "Register bank " << RegBank->getName() << " too small("
-                << RBI->getMaximumSize(RegBank->getID()) << ") to fit "
-                << Ty.getSizeInBits() << "-bits\n";
+            OS << "Register bank " << RegBank->getName() << " too small("
+               << RBI->getMaximumSize(RegBank->getID()) << ") to fit "
+               << Ty.getSizeInBits() << "-bits\n";
             return;
           }
         }
@@ -2648,9 +2648,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
             TII->getRegClass(MCID, MONum, TRI, *MF)) {
           report("Virtual register does not match instruction constraint", MO,
                  MONum);
-          *OS << "Expect register class "
-              << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI, *MF))
-              << " but got nothing\n";
+          OS << "Expect register class "
+             << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI, *MF))
+             << " but got nothing\n";
           return;
         }
 
@@ -2661,14 +2661,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           TRI->getSubClassWithSubReg(RC, SubIdx);
         if (!SRC) {
           report("Invalid subregister index for virtual register", MO, MONum);
-          *OS << "Register class " << TRI->getRegClassName(RC)
-              << " does not support subreg index " << SubIdx << '\n';
+          OS << "Register class " << TRI->getRegClassName(RC)
+             << " does not support subreg index " << SubIdx << '\n';
           return;
         }
         if (RC != SRC) {
           report("Invalid register class for subregister index", MO, MONum);
-          *OS << "Register class " << TRI->getRegClassName(RC)
-              << " does not fully support subreg index " << SubIdx << '\n';
+          OS << "Register class " << TRI->getRegClassName(RC)
+             << " does not fully support subreg index " << SubIdx << '\n';
           return;
         }
       }
@@ -2690,9 +2690,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
           if (!RC->hasSuperClassEq(DRC)) {
             report("Illegal virtual register for instruction", MO, MONum);
-            *OS << "Expected a " << TRI->getRegClassName(DRC)
-                << " register, but got a " << TRI->getRegClassName(RC)
-                << " register\n";
+            OS << "Expected a " << TRI->getRegClassName(DRC)
+               << " register, but got a " << TRI->getRegClassName(RC)
+               << " register\n";
           }
         }
       }
@@ -2741,11 +2741,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
       if (loads && !LI.liveAt(Idx.getRegSlot(true))) {
         report("Instruction loads from dead spill slot", MO, MONum);
-        *OS << "Live stack: " << LI << '\n';
+        OS << "Live stack: " << LI << '\n';
       }
       if (stores && !LI.liveAt(Idx.getRegSlot())) {
         report("Instruction stores to dead spill slot", MO, MONum);
-        *OS << "Live stack: " << LI << '\n';
+        OS << "Live stack: " << LI << '\n';
       }
     }
     break;
@@ -3040,8 +3040,8 @@ MachineVerifier::visitMachineBasicBlockAfter(const MachineBasicBlock *MBB) {
     SlotIndex stop = Indexes->getMBBEndIdx(MBB);
     if (!(stop > lastIndex)) {
       report("Block ends before last instruction index", MBB);
-      *OS << "Block ends at " << stop << " last instruction was at "
-          << lastIndex << '\n';
+      OS << "Block ends at " << stop << " last instruction was at " << lastIndex
+         << '\n';
     }
     lastIndex = stop;
   }
@@ -3286,8 +3286,8 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
       for (MachineBasicBlock *Pred : MBB.predecessors()) {
         if (!seen.count(Pred)) {
           report("Missing PHI operand", &Phi);
-          *OS << printMBBReference(*Pred)
-              << " is a predecessor according to the CFG.\n";
+          OS << printMBBReference(*Pred)
+             << " is a predecessor according to the CFG.\n";
         }
       }
     }
@@ -3297,9 +3297,9 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
 static void
 verifyConvergenceControl(const MachineFunction &MF, MachineDominatorTree &DT,
                          std::function<void(const Twine &Message)> FailureCB,
-                         raw_ostream *OS) {
+                         raw_ostream &OS) {
   MachineConvergenceVerifier CV;
-  CV.initialize(OS, FailureCB, MF);
+  CV.initialize(&OS, FailureCB, MF);
 
   for (const auto &MBB : MF) {
     CV.visit(MBB);
@@ -3333,8 +3333,8 @@ void MachineVerifier::visitMachineFunctionAfter() {
     for (Register VReg : MInfo.vregsRequired)
       if (MInfo.regsKilled.count(VReg)) {
         report("Virtual register killed in block, but needed live out.", &MBB);
-        *OS << "Virtual register " << printReg(VReg)
-            << " is used after the block.\n";
+        OS << "Virtual register " << printReg(VReg)
+           << " is used after the block.\n";
       }
   }
 
@@ -3370,8 +3370,8 @@ void MachineVerifier::visitMachineFunctionAfter() {
           if (!PInfo.regsLiveOut.count(LiveInReg)) {
             report("Live in register not found to be live out from predecessor.",
                    &MBB);
-            *OS << TRI->getName(LiveInReg) << " not found to be live out from "
-                << printMBBReference(*Pred) << '\n';
+            OS << TRI->getName(LiveInReg) << " not found to be live out from "
+               << printMBBReference(*Pred) << '\n';
           }
         }
       }
@@ -3408,14 +3408,14 @@ void MachineVerifier::verifyLiveVariables() {
       if (MInfo.vregsRequired.count(Reg)) {
         if (!VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block missing from AliveBlocks", &MBB);
-          *OS << "Virtual register " << printReg(Reg)
-              << " must be live through the block.\n";
+          OS << "Virtual register " << printReg(Reg)
+             << " must be live through the block.\n";
         }
       } else {
         if (VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block should not be in AliveBlocks", &MBB);
-          *OS << "Virtual register " << printReg(Reg)
-              << " is not needed live through the block.\n";
+          OS << "Virtual register " << printReg(Reg)
+             << " is not needed live through the block.\n";
         }
       }
     }
@@ -3433,7 +3433,7 @@ void MachineVerifier::verifyLiveIntervals() {
 
     if (!LiveInts->hasInterval(Reg)) {
       report("Missing live interval for virtual register", MF);
-      *OS << printReg(Reg, TRI) << " still has defs or uses\n";
+      OS << printReg(Reg, TRI) << " still has defs or uses\n";
       continue;
     }
 
@@ -3745,9 +3745,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
         report("Register not marked live out of predecessor", Pred);
         report_context(LR, Reg, LaneMask);
         report_context(*VNI);
-        *OS << " live into " << printMBBReference(*MFI) << '@'
-            << LiveInts->getMBBStartIdx(&*MFI) << ", not live before " << PEnd
-            << '\n';
+        OS << " live into " << printMBBReference(*MFI) << '@'
+           << LiveInts->getMBBStartIdx(&*MFI) << ", not live before " << PEnd
+           << '\n';
         continue;
       }
 
@@ -3755,10 +3755,10 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       if (!IsPHI && PVNI != VNI) {
         report("Different value live out of predecessor", Pred);
         report_context(LR, Reg, LaneMask);
-        *OS << "Valno #" << PVNI->id << " live out of "
-            << printMBBReference(*Pred) << '@' << PEnd << "\nValno #" << VNI->id
-            << " live into " << printMBBReference(*MFI) << '@'
-            << LiveInts->getMBBStartIdx(&*MFI) << '\n';
+        OS << "Valno #" << PVNI->id << " live out of "
+           << printMBBReference(*Pred) << '@' << PEnd << "\nValno #" << VNI->id
+           << " live into " << printMBBReference(*MFI) << '@'
+           << LiveInts->getMBBStartIdx(&*MFI) << '\n';
       }
     }
     if (&*MFI == EndMBB)
@@ -3813,11 +3813,11 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
     report("Multiple connected components in live interval", MF);
     report_context(LI);
     for (unsigned comp = 0; comp != NumComp; ++comp) {
-      *OS << comp << ": valnos";
+      OS << comp << ": valnos";
       for (const VNInfo *I : LI.valnos)
         if (comp == ConEQ.getEqClass(I))
-          *OS << ' ' << I->id;
-      *OS << '\n';
+          OS << ' ' << I->id;
+      OS << '\n';
     }
   }
 }
@@ -3879,9 +3879,9 @@ void MachineVerifier::verifyStackFrame() {
       report("Call frame size on entry does not match value computed from "
              "predecessor",
              MBB);
-      *OS << "Call frame size on entry " << MBB->getCallFrameSize()
-          << " does not match value computed from predecessor "
-          << -BBState.EntryValue << '\n';
+      OS << "Call frame size on entry " << MBB->getCallFrameSize()
+         << " does not match value computed from predecessor "
+         << -BBState.EntryValue << '\n';
     }
 
     // Update stack state by checking contents of MBB.
@@ -3904,8 +3904,8 @@ void MachineVerifier::verifyStackFrame() {
                                                BBState.ExitValue;
         if (BBState.ExitIsSetup && AbsSPAdj != Size) {
           report("FrameDestroy <n> is after FrameSetup <m>", &I);
-          *OS << "FrameDestroy <" << Size << "> is after FrameSetup <"
-              << AbsSPAdj << ">.\n";
+          OS << "FrameDestroy <" << Size << "> is after FrameSetup <"
+             << AbsSPAdj << ">.\n";
         }
         if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
           report("AdjustsStack not set in presence of a frame pseudo "
@@ -3923,11 +3923,11 @@ void MachineVerifier::verifyStackFrame() {
           (SPState[Pred->getNumber()].ExitValue != BBState.EntryValue ||
            SPState[Pred->getNumber()].ExitIsSetup != BBState.EntryIsSetup)) {
         report("The exit stack state of a predecessor is inconsistent.", MBB);
-        *OS << "Predecessor " << printMBBReference(*Pred) << " has exit state ("
-            << SPState[Pred->getNumber()].ExitValue << ", "
-            << SPState[Pred->getNumber()].ExitIsSetup << "), while "
-            << printMBBReference(*MBB) << " has entry state ("
-            << BBState.EntryValue << ", " << BBState.EntryIsSetup << ").\n";
+        OS << "Predecessor " << printMBBReference(*Pred) << " has exit state ("
+           << SPState[Pred->getNumber()].ExitValue << ", "
+           << SPState[Pred->getNumber()].ExitIsSetup << "), while "
+           << printMBBReference(*MBB) << " has entry state ("
+           << BBState.EntryValue << ", " << BBState.EntryIsSetup << ").\n";
       }
     }
 
@@ -3938,11 +3938,11 @@ void MachineVerifier::verifyStackFrame() {
           (SPState[Succ->getNumber()].EntryValue != BBState.ExitValue ||
            SPState[Succ->getNumber()].EntryIsSetup != BBState.ExitIsSetup)) {
         report("The entry stack state of a successor is inconsistent.", MBB);
-        *OS << "Successor " << printMBBReference(*Succ) << " has entry state ("
-            << SPState[Succ->getNumber()].EntryValue << ", "
-            << SPState[Succ->getNumber()].EntryIsSetup << "), while "
-            << printMBBReference(*MBB) << " has exit state ("
-            << BBState.ExitValue << ", " << BBState.ExitIsSetup << ").\n";
+        OS << "Successor " << printMBBReference(*Succ) << " has entry state ("
+           << SPState[Succ->getNumber()].EntryValue << ", "
+           << SPState[Succ->getNumber()].EntryIsSetup << "), while "
+           << printMBBReference(*MBB) << " has exit state ("
+           << BBState.ExitValue << ", " << BBState.ExitIsSetup << ").\n";
       }
     }
 
