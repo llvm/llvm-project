@@ -429,6 +429,29 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
 
 .. _AlignConsecutiveBitFields:
 
@@ -570,6 +593,29 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
 
 .. _AlignConsecutiveDeclarations:
@@ -713,6 +759,29 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
 
 .. _AlignConsecutiveMacros:
 
@@ -855,6 +924,29 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
 
 .. _AlignConsecutiveShortCaseStatements:
@@ -1118,6 +1210,29 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
 
 .. _AlignConsecutiveTableGenCondOperatorColons:
 
@@ -1258,6 +1373,29 @@ the configuration (without a prefix: ``Auto``).
       a     = 2;
       bbb >>= 2;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
 
 .. _AlignConsecutiveTableGenDefinitionColons:
 
@@ -1397,6 +1535,29 @@ the configuration (without a prefix: ``Auto``).
 
       a     = 2;
       bbb >>= 2;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      someLongFunction(int                /*a*/,
+                       bool               b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      someLongFunction(int /*a*/,
+                       bool b,
+                       const std::string& c)
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
 
 .. _AlignEscapedNewlines:
