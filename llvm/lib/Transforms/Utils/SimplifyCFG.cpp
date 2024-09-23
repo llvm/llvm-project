@@ -1689,7 +1689,7 @@ static void hoistConditionalLoadsStores(
   };
   for (auto *I : SpeculatedConditionalLoadsStores) {
     IRBuilder<> Builder(Invert ? I : BI);
-    if (!Mask)
+    if (!Invert)
       Mask = I->getParent() == BI->getSuccessor(0) ? MaskTrue : MaskFalse;
     // We currently assume conditional faulting load/store is supported for
     // scalar types only when creating new instructions. This can be easily

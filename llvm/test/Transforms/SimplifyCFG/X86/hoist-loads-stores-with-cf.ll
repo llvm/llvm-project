@@ -284,9 +284,9 @@ define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 1>, ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP2]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
-; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP2]])
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
