@@ -2888,6 +2888,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantPtrAuth>(
           new ConstantPtrAuth(cast<llvm::ConstantPtrAuth>(C), *this));
       break;
+    case llvm::Value::ConstantExprVal:
+      It->second = std::unique_ptr<ConstantExpr>(
+          new ConstantExpr(cast<llvm::ConstantExpr>(C), *this));
+      break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
       break;

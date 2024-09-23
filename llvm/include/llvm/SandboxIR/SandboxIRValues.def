@@ -40,6 +40,7 @@ DEF_CONST(GlobalAlias, GlobalAlias)
 DEF_CONST(BlockAddress, BlockAddress)
 DEF_CONST(NoCFIValue, NoCFIValue)
 DEF_CONST(ConstantPtrAuth, ConstantPtrAuth)
+DEF_CONST(ConstantExpr, ConstantExpr)
 DEF_CONST(DSOLocalEquivalent, DSOLocalEquivalent)
 DEF_CONST(ConstantTokenNone, ConstantTokenNone)
 
