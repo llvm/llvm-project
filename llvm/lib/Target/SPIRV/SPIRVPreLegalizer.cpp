@@ -341,6 +341,17 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   return {Reg, GetIdOp};
 }
 
+static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
+  MachineBasicBlock &MBB = *Def->getParent();
+  MachineBasicBlock::iterator DefIt =
+      Def->getNextNode() ? Def->getNextNode()->getIterator() : MBB.end();
+  // Skip all the PHI and debug instructions.
+  while (DefIt != MBB.end() &&
+         (DefIt->isPHI() || DefIt->isDebugOrPseudoInstr()))
+    DefIt = std::next(DefIt);
+  MIB.setInsertPt(MBB, DefIt);
+}
+
 // Insert ASSIGN_TYPE instuction between Reg and its definition, set NewReg as
 // a dst of the definition, assign SPIRVType to both registers. If SpvType is
 // provided, use it as SPIRVType in ASSIGN_TYPE, otherwise create it from Ty.
@@ -350,11 +361,9 @@ namespace llvm {
 Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
                            SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                            MachineRegisterInfo &MRI) {
-  MachineInstr *Def = MRI.getVRegDef(Reg);
   assert((Ty || SpvType) && "Either LLVM or SPIRV type is expected.");
-  MIB.setInsertPt(*Def->getParent(),
-                  (Def->getNextNode() ? Def->getNextNode()->getIterator()
-                                      : Def->getParent()->end()));
+  MachineInstr *Def = MRI.getVRegDef(Reg);
+  setInsertPtAfterDef(MIB, Def);
   SpvType = SpvType ? SpvType : GR->getOrCreateSPIRVType(Ty, MIB);
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
   if (auto *RC = MRI.getRegClassOrNull(Reg)) {
