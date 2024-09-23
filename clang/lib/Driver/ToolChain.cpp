@@ -889,7 +889,9 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
-         Args.hasArg(options::OPT_forder_file_instrumentation);
+         Args.hasArg(options::OPT_forder_file_instrumentation) ||
+         Args.hasArg(options::OPT_fprofile_sample_cold_function) ||
+         Args.hasArg(options::OPT_fprofile_sample_cold_function_EQ);
 }
 
 bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {

@@ -1785,6 +1785,12 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
+def fprofile_sample_cold_function : Flag<["-"], "fprofile-sample-cold-function">, 
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Generate instrumented code to cold functions guided by sampling-based profile into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
+def fprofile_sample_cold_function_EQ : Joined<["-"], "fprofile-sample-cold-function=">, 
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<file>">,
+    HelpText<"Generate instrumented code to cold functions guided by sampling-based profile into <file> (overridden by LLVM_PROFILE_FILE env var)">; 
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
