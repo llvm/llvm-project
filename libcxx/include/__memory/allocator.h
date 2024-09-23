@@ -14,11 +14,10 @@
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
-#include <__type_traits/is_const.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
-#include <__type_traits/is_volatile.h>
 #include <__utility/forward.h>
 #include <cstddef>
 #include <new>
@@ -76,8 +75,7 @@ struct __non_trivial_if<true, _Unique> {
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
-  static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
-  static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
+  static_assert(__allocator_requirements<allocator, _Tp>::value);
 
 public:
   typedef size_t size_type;
@@ -169,6 +167,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
 }
 
 #endif
+
+_LIBCPP_DEFINE__ALLOCATOR_VALUE_TYPE_REQUIREMENTS(allocator, "allocate");
 
 _LIBCPP_END_NAMESPACE_STD
 
