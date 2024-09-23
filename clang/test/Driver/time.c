@@ -5,16 +5,17 @@
 // could be something different, just check that whatever is printed to stderr
 // looks like timing information.
 
-// RUN: %clang -time -c -O3 -o /dev/null %s 2>&1 \
+// RUN: %clang -time -c -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -S -emit-llvm -O3 -o /dev/null %s 2>&1 \
+// RUN: %clang -time -S -emit-llvm -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -S -O3 -o /dev/null %s 2>&1 \
+// RUN: %clang -time -S -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -O3 -o /dev/null %s 2>&1 \
+// RUN: %clang -time -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-AND-LINK
 
 // COMPILE-ONLY: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
+// COMPILE-ONLY-NOT: {{.}}
 
 // COMPILE-AND-LINK: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
 // COMPILE-AND-LINK: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
