@@ -109,7 +109,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
       isSafeForNoCSROpt(MF.getFunction()) &&
       isProfitableForNoCSROpt(MF.getFunction())) {
     const MCPhysReg *IPRACSRegs = TRI.getIPRACSRegs(&MF);
-    for (unsigned i = 0; IPRACSRegs[i]; ++i)
+    for (unsigned i = 0; IPRACSRegs && IPRACSRegs[i]; ++i)
       SavedRegs.set(IPRACSRegs[i]);
     return;
   }

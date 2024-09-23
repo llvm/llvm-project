@@ -491,7 +491,9 @@ public:
 
   /// Return a null-terminated list of all of the callee-saved registers on
   /// this target when IPRA is on. Normally, this list should be null.
-  virtual const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const = 0;
+  virtual const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const {
+    return nullptr;
+  }
 
   /// Return a mask of call-preserved registers for the given calling convention
   /// on the current function. The mask should include all call-preserved
