@@ -769,9 +769,10 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
 }
 
 static const char *getDefaultSYCLArch(Compilation &C) {
+  // If -fsycl is supplied we will assume SPIR-V
   if (C.getDefaultToolChain().getTriple().getArch() == llvm::Triple::x86)
-    return "spir";
-  return "spir64";
+    return "spirv32";
+  return "spirv64";
 }
 
 static bool addSYCLDefaultTriple(Compilation &C,
@@ -1004,7 +1005,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // SYCL
   //
   // We need to generate a SYCL toolchain if the user specified -fsycl.
-  // If -fsycl is supplied we will assume SPIR-V.
   bool IsSYCL =
       C.getInputArgs().hasFlag(options::OPT_fsycl, options::OPT_fno_sycl,
                                false);
@@ -1023,7 +1023,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
   llvm::SmallVector<llvm::Triple, 4> UniqueSYCLTriplesVec;
 
-  // If -fsycl is supplied we will assume SPIR-V.
   if (IsSYCL) {
     addSYCLDefaultTriple(C, UniqueSYCLTriplesVec);
 
@@ -6635,7 +6634,6 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
       break;
     }
     case Action::OFK_SYCL:
-      // TODO: Add additional Arch values for Ahead of Time support for SYCL.
       switch (Target.getArch()) {
       case llvm::Triple::spir:
       case llvm::Triple::spir64:

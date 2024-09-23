@@ -6,9 +6,6 @@
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu \
 // RUN:   -fsycl %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHK-PHASES %s
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=CHK-PHASES %s
 // RUN: %clang_cl -ccc-print-phases --target=x86_64-pc-windows-msvc -fsycl \
 // RUN:   %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHK-PHASES %s
@@ -19,7 +16,7 @@
 // CHK-PHASES: 4: preprocessor, {3}, c++-cpp-output, (device-sycl)
 // CHK-PHASES: 5: compiler, {4}, ir, (device-sycl)
 // CHK-PHASES: 6: backend, {5}, ir, (device-sycl)
-// CHK-PHASES: 7: offload, "device-sycl (spir64-unknown-unknown)" {6}, ir
+// CHK-PHASES: 7: offload, "device-sycl (spirv64-unknown-unknown)" {6}, ir
 // CHK-PHASES: 8: clang-offload-packager, {7}, image, (device-sycl)
 // CHK-PHASES: 9: offload, "host-sycl (x86_64{{.*}})" {2}, "device-sycl (x86_64{{.*}})" {8}, ir
 // CHK-PHASES: 10: backend, {9}, assembler, (host-sycl)
@@ -30,11 +27,11 @@
 /// well as clang-offload-packager inputs.
 // RUN: %clang -### -fsycl -c --target=x86_64-unknown-linux-gnu %s 2>&1 \
 // RUN: | FileCheck -check-prefix=CHK-DEVICE-TRIPLE %s
-// CHK-DEVICE-TRIPLE: clang{{.*}} "-triple" "spir64-unknown-unknown"
+// CHK-DEVICE-TRIPLE: clang{{.*}} "-triple" "spirv64-unknown-unknown"
 // CHK-DEVICE-TRIPLE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHK-DEVICE-TRIPLE-SAME: "-fsycl-is-device"
 // CHK-DEVICE-TRIPLE-SAME: "-O2"
-// CHK-DEVICE-TRIPLE: clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=spir64-unknown-unknown,arch=,kind=sycl"
+// CHK-DEVICE-TRIPLE: clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=spirv64-unknown-unknown,arch=,kind=sycl"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.

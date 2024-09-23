@@ -77,6 +77,7 @@ add_clang_library(clangDriver
   ToolChains/RISCVToolchain.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
+  ToolChains/SYCL.cpp
   ToolChains/TCE.cpp
   ToolChains/VEToolchain.cpp
   ToolChains/WebAssembly.cpp
@@ -85,7 +86,6 @@ add_clang_library(clangDriver
   ToolChains/PPCFreeBSD.cpp
   ToolChains/InterfaceStubs.cpp
   ToolChains/ZOS.cpp
-  ToolChains/SYCL.cpp
   Types.cpp
   XRayArgs.cpp
 
