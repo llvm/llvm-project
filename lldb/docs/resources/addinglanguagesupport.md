@@ -49,6 +49,13 @@ clearer that evaluation with the static `Module`-returned `TypeSystem` instances
 make no sense, and have them error out on those calls. But either approach is
 fine.
 
+# Creating Types
+
+Your `TypeSystem` will need an approach for creating types based on a set of
+`Module`s. If your type info is going to come from DWARF info, you will want to
+subclass [DWARFASTParser](https://github.com/llvm/llvm-project/blob/main/lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParser.h).
+
+
 # Add Expression Evaluation Support
 
 Expression Evaluation support is enabled by implementing the relevant methods on
@@ -68,12 +75,6 @@ There are three levels of type completion, each requiring more type information:
 
 Ensure you never complete more of a type than is needed for a given situation.
 This will keep your type system from doing more work than necessary.
-
-# Creating Types
-
-Your `TypeSystem` will need an approach for creating types based on a set of
-`Module`s. If your type info is going to come from DWARF info, you will want to
-subclass [DWARFASTParser](https://github.com/llvm/llvm-project/blob/main/lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParser.h).
 
 # Language and LanguageRuntime Plugins
 
