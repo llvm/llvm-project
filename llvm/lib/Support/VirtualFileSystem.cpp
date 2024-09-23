@@ -325,8 +325,15 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
   SmallString<256> RealName, Storage;
+  auto OpenFlags = sys::fs::OF_None;
+#ifdef __MVS__
+  // If the file is tagged with a text ccsid, it may require autoconversion.
+  llvm::ErrorOr<bool> IsFileText = llvm::iszOSTextFile(Name.str().c_str());
+  if (IsFileText && *IsFileText)
+    OpenFlags |= sys::fs::OF_Text;
+#endif
   Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
+      adjustPath(Name, Storage), OpenFlags, &RealName);
   if (!FDOrErr)
     return errorToErrorCode(FDOrErr.takeError());
   return std::unique_ptr<File>(
