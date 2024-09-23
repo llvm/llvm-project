@@ -221,10 +221,9 @@ namespace {
         return;
       }
       // Get the new text.
-      std::string SStr;
-      llvm::raw_string_ostream S(SStr);
+      std::string Str;
+      llvm::raw_string_ostream S(Str);
       New->printPretty(S, nullptr, PrintingPolicy(LangOpts));
-      const std::string &Str = S.str();
 
       // If replacement succeeded or warning disabled return with no warning.
       if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, Str)) {
@@ -1702,7 +1701,7 @@ Stmt *RewriteObjC::RewriteObjCSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
   llvm::raw_string_ostream syncExprBuf(syncExprBufS);
   assert(syncExpr != nullptr && "Expected non-null Expr");
   syncExpr->printPretty(syncExprBuf, nullptr, PrintingPolicy(LangOpts));
-  syncBuf += syncExprBuf.str();
+  syncBuf += syncExprBufS;
   syncBuf += ");";
 
   buf += syncBuf;
@@ -2508,7 +2507,7 @@ Stmt *RewriteObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));
-  Preamble += prettyBuf.str();
+  Preamble += prettyBufS;
   Preamble += ",";
   Preamble += utostr(Exp->getString()->getByteLength()) + "};\n";
 
@@ -4359,19 +4358,21 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
     for (unsigned i = 0; i < InnerBlockDeclRefs.size(); i++) {
       DeclRefExpr *Exp = InnerBlockDeclRefs[i];
       ValueDecl *VD = Exp->getDecl();
-      if (!VD->hasAttr<BlocksAttr>() && !BlockByCopyDeclsPtrSet.count(VD)) {
-      // We need to save the copied-in variables in nested
-      // blocks because it is needed at the end for some of the API generations.
-      // See SynthesizeBlockLiterals routine.
-        InnerDeclRefs.push_back(Exp); countOfInnerDecls++;
+      if (!VD->hasAttr<BlocksAttr>() &&
+          BlockByCopyDeclsPtrSet.insert(VD).second) {
+        // We need to save the copied-in variables in nested
+        // blocks because it is needed at the end for some of the API
+        // generations. See SynthesizeBlockLiterals routine.
+        InnerDeclRefs.push_back(Exp);
+        countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByCopyDeclsPtrSet.insert(VD);
         BlockByCopyDecls.push_back(VD);
       }
-      if (VD->hasAttr<BlocksAttr>() && !BlockByRefDeclsPtrSet.count(VD)) {
-        InnerDeclRefs.push_back(Exp); countOfInnerDecls++;
+      if (VD->hasAttr<BlocksAttr>() &&
+          BlockByRefDeclsPtrSet.insert(VD).second) {
+        InnerDeclRefs.push_back(Exp);
+        countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByRefDeclsPtrSet.insert(VD);
         BlockByRefDecls.push_back(VD);
       }
     }

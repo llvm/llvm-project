@@ -2425,6 +2425,19 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     }
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
+  case Intrinsic::spv_loop_merge:
+  case Intrinsic::spv_selection_merge: {
+    const auto Opcode = IID == Intrinsic::spv_selection_merge
+                            ? SPIRV::OpSelectionMerge
+                            : SPIRV::OpLoopMerge;
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode));
+    for (unsigned i = 1; i < I.getNumExplicitOperands(); ++i) {
+      assert(I.getOperand(i).isMBB());
+      MIB.addMBB(I.getOperand(i).getMBB());
+    }
+    MIB.addImm(SPIRV::SelectionControl::None);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
   case Intrinsic::spv_cmpxchg:
     return selectAtomicCmpXchg(ResVReg, ResType, I);
   case Intrinsic::spv_unreachable:

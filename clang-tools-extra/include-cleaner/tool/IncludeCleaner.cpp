@@ -139,7 +139,17 @@ private:
   }
 
   void ExecuteAction() override {
-    auto &P = getCompilerInstance().getPreprocessor();
+    const auto &CI = getCompilerInstance();
+
+    // Disable all warnings when running include-cleaner, as we are only
+    // interested in include-cleaner related findings. This makes the tool both
+    // more resilient around in-development code, and possibly faster as we
+    // skip some extra analysis.
+    auto &Diags = CI.getDiagnostics();
+    Diags.setEnableAllWarnings(false);
+    Diags.setSeverityForAll(clang::diag::Flavor::WarningOrError,
+                            clang::diag::Severity::Ignored);
+    auto &P = CI.getPreprocessor();
     P.addPPCallbacks(PP.record(P));
     PI.record(getCompilerInstance());
     ASTFrontendAction::ExecuteAction();

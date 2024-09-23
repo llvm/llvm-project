@@ -12,8 +12,5 @@ main:
 	retq
 	.size	main, .-main
 
-	.type	P,@object
-	.globl	P
-P:
-	.byte main-. # Generate R_X86_64_PC8 relocation.
-  .size P, .-P
+	.rodata
+	.byte	main-. # Generate R_X86_64_PC8 relocation.

@@ -257,8 +257,12 @@ public:
     EABIHF,
     Android,
     Musl,
+    MuslABIN32,
+    MuslABI64,
     MuslEABI,
     MuslEABIHF,
+    MuslF32,
+    MuslSF,
     MuslX32,
 
     MSVC,
@@ -783,8 +787,12 @@ public:
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||
+           getEnvironment() == Triple::MuslABIN32 ||
+           getEnvironment() == Triple::MuslABI64 ||
            getEnvironment() == Triple::MuslEABI ||
            getEnvironment() == Triple::MuslEABIHF ||
+           getEnvironment() == Triple::MuslF32 ||
+           getEnvironment() == Triple::MuslSF ||
            getEnvironment() == Triple::MuslX32 ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
@@ -1031,6 +1039,12 @@ public:
   bool isArm64e() const {
     return getArch() == Triple::aarch64 &&
            getSubArch() == Triple::AArch64SubArch_arm64e;
+  }
+
+  // Tests whether the target is N32.
+  bool isABIN32() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32;
   }
 
   /// Tests whether the target is X32.
