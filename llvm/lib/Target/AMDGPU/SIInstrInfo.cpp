@@ -2873,9 +2873,20 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   auto I = MBB.end();
 
+  // Note: as this is used after hazard recognizer we need to apply some hazard
+  // workarounds directly.
+  const bool FlushSGPRWrites = (ST.isWave64() && ST.hasVALUMaskWriteHazard()) ||
+                               ST.hasVALUReadSGPRHazard();
+  auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
+    if (FlushSGPRWrites)
+      BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+  };
+
   // We need to compute the offset relative to the instruction immediately after
   // s_getpc_b64. Insert pc arithmetic code before last terminator.
   MachineInstr *GetPC = BuildMI(MBB, I, DL, get(AMDGPU::S_GETPC_B64), PCReg);
+  ApplyHazardWorkarounds();
 
   auto &MCCtx = MF->getContext();
   MCSymbol *PostGetPCLabel =
@@ -2894,6 +2905,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
       .addSym(OffsetHi, MO_FAR_BRANCH_OFFSET);
+  ApplyHazardWorkarounds();
 
   // Insert the indirect branch after the other terminator.
   BuildMI(&MBB, DL, get(AMDGPU::S_SETPC_B64))

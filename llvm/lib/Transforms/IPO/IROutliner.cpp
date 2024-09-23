@@ -787,10 +787,8 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
-        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
+        if (NotSame.contains(GVN) && Seen.insert(GVN).second)
           Inputs.push_back(GVN);
-          Seen.insert(GVN);
-        }
     }
   }
 }
@@ -814,8 +812,9 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
   }
@@ -836,8 +835,9 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     RemappedArgInputs.insert(Input);
   }
 }

@@ -21443,28 +21443,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_swizzle);
     return Builder.CreateCall(Callee, {Src, Indices});
   }
-  case WebAssembly::BI__builtin_wasm_sub_sat_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_sub_sat_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_sub_sat_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_sub_sat_u_i16x8: {
-    unsigned IntNo;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_sub_sat_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_sub_sat_s_i16x8:
-      IntNo = Intrinsic::wasm_sub_sat_signed;
-      break;
-    case WebAssembly::BI__builtin_wasm_sub_sat_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_sub_sat_u_i16x8:
-      IntNo = Intrinsic::wasm_sub_sat_unsigned;
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    Value *LHS = EmitScalarExpr(E->getArg(0));
-    Value *RHS = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
-    return Builder.CreateCall(Callee, {LHS, RHS});
-  }
   case WebAssembly::BI__builtin_wasm_abs_i8x16:
   case WebAssembly::BI__builtin_wasm_abs_i16x8:
   case WebAssembly::BI__builtin_wasm_abs_i32x4:
