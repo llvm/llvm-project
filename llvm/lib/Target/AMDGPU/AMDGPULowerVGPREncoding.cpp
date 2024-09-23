@@ -108,23 +108,25 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
     }
 
     unsigned encode(bool forSetVGPRFrames) const {
+      static constexpr unsigned BitsPerField = 2;
       unsigned V = 0;
       if (forSetVGPRFrames) {
         // GFX13 layout:
         // [src0 idx_sel, src1 idx_sel, src2 idx_sel, dst idx_sel,
         //  src0 msb, src1 msb, src2 msb, dst msb]
+        static constexpr unsigned MSBFieldsPos = 8;
         for (const auto &[I, Op] : enumerate(Ops)) {
           MCRegister R = Op.IdxReg.value_or(AMDGPU::IDX0);
           assert(AMDGPU::IDX0 <= R && R <= AMDGPU::IDX3);
-          V |= (R - AMDGPU::IDX0) << (I * 2);
-          V |= Op.MSBits.value_or(0) << (I * 2 + 8);
+          V |= (R - AMDGPU::IDX0) << (I * BitsPerField);
+          V |= Op.MSBits.value_or(0) << (I * BitsPerField + MSBFieldsPos);
         }
         return V;
       }
 
       // GFX1210 layout: [src0 msb, src1 msb, src2 msb, dst msb]
       for (const auto &[I, Op] : enumerate(Ops))
-        V |= Op.MSBits.value_or(0) << (I * 2);
+        V |= Op.MSBits.value_or(0) << (I * BitsPerField);
       return V;
     }
   };
