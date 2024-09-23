@@ -971,6 +971,13 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       BigTy = LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8);
       LitTy = LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
       Vec = MIB.buildBitcast(BigTy, Vec).getReg(0);
+      auto E = MIB.buildExtractSubvector(LitTy, Vec, Idx);
+      if (LitTy != MRI.getType(Dst))
+        MIB.buildBitcast(Dst, E);
+      else
+        E->getOperand(0).setReg(Dst);
+      MI.eraseFromParent();
+      return true;
     } else {
       // We can't slide this mask vector up indexed by its i1 elements.
       // This poses a problem when we wish to insert a scalable vector which
@@ -997,19 +1004,15 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account.
   const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   MVT LitTyMVT = getMVTForLLT(LitTy);
-  unsigned SubRegIdx;
-  ElementCount RemIdx;
   auto Decompose =
       RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
           getMVTForLLT(BigTy), LitTyMVT, Idx, TRI);
-  SubRegIdx = Decompose.first;
-  RemIdx = ElementCount::getScalable(Decompose.second);
+  unsigned RemIdx = Decompose.second;
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
   // using subregister manipulation.
-  // TODO: add tests
-  if (RemIdx.isZero())
+  if (RemIdx == 0)
     return true;
 
   // Else LitTy is M1 or smaller and may need to be slid down: if LitTy
@@ -1026,19 +1029,18 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
                           getLMUL1Ty(BigTy).getSizeInBits())) {
     // If BigTy has an LMUL > 1, then LitTy should have a smaller LMUL, and
     // we should have successfully decomposed the extract into a subregister.
-    assert(SubRegIdx != RISCV::NoSubRegister);
+    assert(Decompose.first != RISCV::NoSubRegister);
     InterLitTy = getLMUL1Ty(BigTy);
-    // SDAG builds a TargetExtractSubreg. A Copy with SubReg specified on the
-    // source Register is the equivalent.
-    Vec = MIB.buildInstr(TargetOpcode::COPY, {InterLitTy}, {})
-              .addReg(Vec, 0, SubRegIdx)
-              .getReg(0);
+    // SDAG builds a TargetExtractSubreg. We cannot create a a Copy with SubReg
+    // specified on the source Register (the equivalent) since generic virtual
+    // register does not allow subregister index.
+    Vec = MIB.buildExtractSubvector(InterLitTy, Vec, Idx - RemIdx).getReg(0);
   }
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
   const LLT XLenTy(STI.getXLenVT());
-  auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx.getKnownMinValue());
+  auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
   auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
   uint64_t Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
   auto Slidedown = MIB.buildInstr(
@@ -1051,7 +1053,11 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
 
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
-  MIB.buildBitcast(Dst, Extract);
+  if (TypeSize::isKnownLT(LitTy.getSizeInBits(),
+                          MRI.getType(Dst).getSizeInBits()))
+    MIB.buildBitcast(Dst, Extract);
+  else
+    Extract->getOperand(0).setReg(Dst);
 
   MI.eraseFromParent();
   return true;
