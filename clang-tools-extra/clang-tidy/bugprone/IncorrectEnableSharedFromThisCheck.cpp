@@ -40,10 +40,10 @@ void IncorrectEnableSharedFromThisCheck::check(
       if (isStdEnableSharedFromThis(RDecl))
         EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
 
-      for (const auto &Base : RDecl->bases()) {
-        const auto *BaseRecord =
+      for (const CXXBaseSpecifier &Base : RDecl->bases()) {
+        const CXXRecordDecl *BaseRecord =
             Base.getType()->getAsCXXRecordDecl()->getCanonicalDecl();
-        const auto IsStdEnableSharedFromThisBool =
+        const bool IsStdEnableSharedFromThisBool =
             isStdEnableSharedFromThis(BaseRecord);
 
         if (EnableSharedClassSet.contains(BaseRecord) ||
