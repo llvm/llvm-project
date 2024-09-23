@@ -395,6 +395,9 @@ typedef enum {
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
                                the input value when decremented below zero */
+  LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
+                                 overflow */
+  LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {

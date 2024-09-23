@@ -78,7 +78,6 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-ConfigWrapper elf::config;
 Ctx elf::ctx;
 
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
@@ -91,9 +90,11 @@ void elf::errorOrWarn(const Twine &msg) {
     error(msg);
 }
 
-Ctx::Ctx() : arg(config.c), driver(*this) {}
+Ctx::Ctx() : driver(*this) {}
 
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   driver.~LinkerDriver();
   new (&driver) LinkerDriver(*this);
   script = nullptr;
@@ -162,8 +163,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   context->e.errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
-
-  config = ConfigWrapper();
 
   LinkerScript script(ctx);
   ctx.script = &script;
@@ -867,8 +866,7 @@ static StripPolicy getStrip(opt::InputArgList &args) {
 static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
                                     const opt::Arg &arg) {
   uint64_t va = 0;
-  if (s.starts_with("0x"))
-    s = s.drop_front(2);
+  s.consume_front("0x");
   if (!to_integer(s, va, 16))
     error("invalid argument: " + arg.getAsString(args));
   return va;
@@ -1435,12 +1433,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         error("unknown --save-temps value: " + s);
     }
     // All subtractive values implies starting with all temps
-    if (config->saveTempsArgs.empty() && !toRemove.empty()) {
+    if (ctx.arg.saveTempsArgs.empty() && !toRemove.empty()) {
       for (const char *s : saveTempsValues)
-        config->saveTempsArgs.insert(s);
+        ctx.arg.saveTempsArgs.insert(s);
     }
     for (auto rm : toRemove) {
-      config->saveTempsArgs.erase(rm);
+      ctx.arg.saveTempsArgs.erase(rm);
     }
   }
 

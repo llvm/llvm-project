@@ -3974,6 +3974,10 @@ static AtomicRMWInst::BinOp mapFromLLVMRMWBinOp(LLVMAtomicRMWBinOp BinOp) {
       return AtomicRMWInst::UIncWrap;
     case LLVMAtomicRMWBinOpUDecWrap:
       return AtomicRMWInst::UDecWrap;
+    case LLVMAtomicRMWBinOpUSubCond:
+      return AtomicRMWInst::USubCond;
+    case LLVMAtomicRMWBinOpUSubSat:
+      return AtomicRMWInst::USubSat;
   }
 
   llvm_unreachable("Invalid LLVMAtomicRMWBinOp value!");
@@ -4000,6 +4004,10 @@ static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
       return LLVMAtomicRMWBinOpUIncWrap;
     case AtomicRMWInst::UDecWrap:
       return LLVMAtomicRMWBinOpUDecWrap;
+    case AtomicRMWInst::USubCond:
+      return LLVMAtomicRMWBinOpUSubCond;
+    case AtomicRMWInst::USubSat:
+      return LLVMAtomicRMWBinOpUSubSat;
     default: break;
   }
 

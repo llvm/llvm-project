@@ -1,8 +1,6 @@
-// This test checks that IFUNC trampoline is properly recognised by BOLT
-
 // With -O0 indirect call is performed on IPLT trampoline. IPLT trampoline
 // has IFUNC symbol.
-// RUN: %clang %cflags -nostdlib -O0 -no-pie %s -fuse-ld=lld \
+// RUN: %clang %cflags -nostdlib -O0 -no-pie %p/../Inputs/ifunc.c -fuse-ld=lld \
 // RUN:    -o %t.O0.exe -Wl,-q
 // RUN: llvm-bolt %t.O0.exe -o %t.O0.bolt.exe \
 // RUN:   --print-disasm --print-only=_start | \
@@ -12,7 +10,7 @@
 
 // Non-pie static executable doesn't generate PT_DYNAMIC, check relocation
 // is readed successfully and IPLT trampoline has been identified by bolt.
-// RUN: %clang %cflags -nostdlib -O3 %s -fuse-ld=lld -no-pie \
+// RUN: %clang %cflags -nostdlib -O3 %p/../Inputs/ifunc.c -fuse-ld=lld -no-pie \
 // RUN:   -o %t.O3_nopie.exe -Wl,-q
 // RUN: llvm-readelf -l %t.O3_nopie.exe | \
 // RUN:   FileCheck --check-prefix=NON_DYN_CHECK %s
@@ -25,7 +23,7 @@
 // With -O3 direct call is performed on IPLT trampoline. IPLT trampoline
 // doesn't have associated symbol. The ifunc symbol has the same address as
 // IFUNC resolver function.
-// RUN: %clang %cflags -nostdlib -O3 %s -fuse-ld=lld -fPIC -pie \
+// RUN: %clang %cflags -nostdlib -O3 %p/../Inputs/ifunc.c -fuse-ld=lld -fPIC -pie \
 // RUN:   -o %t.O3_pie.exe -Wl,-q
 // RUN: llvm-bolt %t.O3_pie.exe -o %t.O3_pie.bolt.exe  \
 // RUN:   --print-disasm --print-only=_start | \
@@ -35,8 +33,8 @@
 
 // Check that IPLT trampoline located in .plt section are normally handled by
 // BOLT. The gnu-ld linker doesn't use separate .iplt section.
-// RUN: %clang %cflags -nostdlib -O3 %s -fuse-ld=lld -fPIC -pie \
-// RUN:   -T %p/Inputs/iplt.ld -o %t.iplt_O3_pie.exe -Wl,-q
+// RUN: %clang %cflags -nostdlib -O3 %p/../Inputs/ifunc.c -fuse-ld=lld -fPIC -pie \
+// RUN:   -T %p/../Inputs/iplt.ld -o %t.iplt_O3_pie.exe -Wl,-q
 // RUN: llvm-bolt %t.iplt_O3_pie.exe -o %t.iplt_O3_pie.bolt.exe  \
 // RUN:   --print-disasm --print-only=_start  | \
 // RUN:   FileCheck --check-prefix=CHECK %s
@@ -49,14 +47,3 @@
 
 // REL_CHECK: R_AARCH64_IRELATIVE [[#%x,REL_SYMB_ADDR:]]
 // REL_CHECK: [[#REL_SYMB_ADDR]] {{.*}} FUNC {{.*}} resolver_foo
-
-static void foo() {}
-static void bar() {}
-
-extern int use_foo;
-
-static void *resolver_foo(void) { return use_foo ? foo : bar; }
-
-__attribute__((ifunc("resolver_foo"))) void ifoo();
-
-void _start() { ifoo(); }
