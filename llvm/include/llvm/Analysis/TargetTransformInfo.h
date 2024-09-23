@@ -1371,11 +1371,15 @@ public:
   /// is an existing instruction that holds Opcode, it may be passed in the
   /// 'I' parameter. The \p VecPred parameter can be used to indicate the select
   /// is using a compare with the specified predicate as condition. When vector
-  /// types are passed, \p VecPred must be used for all lanes.
+  /// types are passed, \p VecPred must be used for all lanes.  For a
+  /// comparison, the two operands are the natural values.  For a select, the
+  /// two operands are the *value* operands, not the condition operand.
   InstructionCost
   getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                      CmpInst::Predicate VecPred,
                      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                     OperandValueInfo Op1Info = {OK_AnyValue, OP_None},
+                     OperandValueInfo Op2Info = {OK_AnyValue, OP_None},
                      const Instruction *I = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
@@ -2049,11 +2053,11 @@ public:
   virtual InstructionCost getCFInstrCost(unsigned Opcode,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) = 0;
-  virtual InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                             Type *CondTy,
-                                             CmpInst::Predicate VecPred,
-                                             TTI::TargetCostKind CostKind,
-                                             const Instruction *I) = 0;
+  virtual InstructionCost
+  getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                     CmpInst::Predicate VecPred, TTI::TargetCostKind CostKind,
+                     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
+                     const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              TTI::TargetCostKind CostKind,
                                              unsigned Index, Value *Op0,
@@ -2710,8 +2714,11 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
+                                     OperandValueInfo Op1Info,
+                                     OperandValueInfo Op2Info,
                                      const Instruction *I) override {
-    return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+    return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
   }
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
