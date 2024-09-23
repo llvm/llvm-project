@@ -18,6 +18,19 @@ define i32 @shrinkExtractElt_i64_to_i32_0(<3 x i64> %x) {
   ret i32 %t
 }
 
+define i32 @shrinkShiftExtractElt_i64_to_i32_0(<3 x i64> %x) {
+; ANY-LABEL: @shrinkShiftExtractElt_i64_to_i32_0(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i64> [[X:%.*]], i64 0
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 32
+; ANY-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i32
+; ANY-NEXT:    ret i32 [[T]]
+;
+  %e = extractelement <3 x i64> %x, i32 0
+  %s = lshr i64 %e, 32
+  %t = trunc i64 %s to i32
+  ret i32 %t
+}
+
 define i32 @vscale_shrinkExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
 ; LE-LABEL: @vscale_shrinkExtractElt_i64_to_i32_0(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i64> [[X:%.*]] to <vscale x 6 x i32>
@@ -34,6 +47,18 @@ define i32 @vscale_shrinkExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
   ret i32 %t
 }
 
+define i32 @vscale_shrinkShiftExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
+; ANY-LABEL: @vscale_shrinkShiftExtractElt_i64_to_i32_0(
+; ANY-NEXT:    [[E:%.*]] = extractelement <vscale x 3 x i64> [[X:%.*]], i64 0
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 32
+; ANY-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i32
+; ANY-NEXT:    ret i32 [[T]]
+;
+  %e = extractelement <vscale x 3 x i64> %x, i32 0
+  %s = lshr i64 %e, 32
+  %t = trunc i64 %s to i32
+  ret i32 %t
+}
 
 define i32 @shrinkExtractElt_i64_to_i32_1(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i32_1(
@@ -80,6 +105,19 @@ define i16 @shrinkExtractElt_i64_to_i16_0(<3 x i64> %x) {
 ;
   %e = extractelement <3 x i64> %x, i16 0
   %t = trunc i64 %e to i16
+  ret i16 %t
+}
+
+define i16 @shrinkShiftExtractElt_i64_to_i16_0(<3 x i64> %x) {
+; ANY-LABEL: @shrinkShiftExtractElt_i64_to_i16_0(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i64> [[X:%.*]], i64 0
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 48
+; ANY-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
+; ANY-NEXT:    ret i16 [[T]]
+;
+  %e = extractelement <3 x i64> %x, i16 0
+  %s = ashr i64 %e, 48
+  %t = trunc i64 %s to i16
   ret i16 %t
 }
 
@@ -157,6 +195,20 @@ define i30 @shrinkExtractElt_i40_to_i30_1(<3 x i40> %x) {
   ret i30 %t
 }
 
+; Do not optimize if the shift amount isn't a whole number of truncated bits.
+define i16 @shrinkShiftExtractElt_i64_to_i16_0_badshift(<3 x i64> %x) {
+; ANY-LABEL: @shrinkShiftExtractElt_i64_to_i16_0_badshift(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i64> [[X:%.*]], i64 0
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 31
+; ANY-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ANY-NEXT:    ret i16 [[T]]
+;
+  %e = extractelement <3 x i64> %x, i16 0
+  %s = lshr i64 %e, 31
+  %t = trunc i64 %s to i16
+  ret i16 %t
+}
+
 ; Do not canonicalize if that would increase the instruction count.
 declare void @use(i64)
 define i16 @shrinkExtractElt_i64_to_i16_2_extra_use(<3 x i64> %x) {
@@ -169,6 +221,38 @@ define i16 @shrinkExtractElt_i64_to_i16_2_extra_use(<3 x i64> %x) {
   %e = extractelement <3 x i64> %x, i64 2
   call void @use(i64 %e)
   %t = trunc i64 %e to i16
+  ret i16 %t
+}
+
+; Do not canonicalize if that would increase the instruction count.
+define i16 @shrinkShiftExtractElt_i64_to_i16_2_extra_shift_use(<3 x i64> %x) {
+; ANY-LABEL: @shrinkShiftExtractElt_i64_to_i16_2_extra_shift_use(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i64> [[X:%.*]], i64 2
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 48
+; ANY-NEXT:    call void @use(i64 [[S]])
+; ANY-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
+; ANY-NEXT:    ret i16 [[T]]
+;
+  %e = extractelement <3 x i64> %x, i64 2
+  %s = lshr i64 %e, 48
+  call void @use(i64 %s)
+  %t = trunc i64 %s to i16
+  ret i16 %t
+}
+
+; OK to reuse the extract if we remove the shift+trunc.
+define i16 @shrinkShiftExtractElt_i64_to_i16_2_extra_extract_use(<3 x i64> %x) {
+; ANY-LABEL: @shrinkShiftExtractElt_i64_to_i16_2_extra_extract_use(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i64> [[X:%.*]], i64 2
+; ANY-NEXT:    call void @use(i64 [[E]])
+; ANY-NEXT:    [[S:%.*]] = lshr i64 [[E]], 48
+; ANY-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
+; ANY-NEXT:    ret i16 [[T]]
+;
+  %e = extractelement <3 x i64> %x, i64 2
+  call void @use(i64 %e)
+  %s = lshr i64 %e, 48
+  %t = trunc i64 %s to i16
   ret i16 %t
 }
 
