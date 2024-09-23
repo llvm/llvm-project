@@ -1,11 +1,10 @@
-//===--- OffloadBundle.h - Utilities for handling offloading code -*- C++
-//-*-===//
+//===- OffloadBundle.h - Utilities for offload bundles---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===------------------------------------------------------------------------===//
+//===-------------------------------------------------------------------------===//
 //
 // This file contains the binary format used for budingling device metadata with
 // an associated device image. The data can then be stored inside a host object
@@ -13,7 +12,7 @@
 // thin wrapper around the image itself. If this format becomes sufficiently
 // complex it should be moved to a standard binary format like msgpack or ELF.
 //
-//===------------------------------------------------------------------------===//
+//===-------------------------------------------------------------------------===//
 
 #ifndef LLVM_OBJECT_OFFLOADBUNDLE_H
 #define LLVM_OBJECT_OFFLOADBUNDLE_H
@@ -109,16 +108,6 @@ public:
   OffloadBundleFatBin(MemoryBufferRef Source, StringRef File)
       : FileName(File), NumberOfEntries(0),
         Entries(SmallVector<OffloadBundleEntry>()) {}
-
-  SmallVector<OffloadBundleEntry> entryIDContains(StringRef Str) {
-
-    SmallVector<OffloadBundleEntry> Found = SmallVector<OffloadBundleEntry>();
-    llvm::transform(Entries, std::back_inserter(Found), [Str](auto &X) {
-      if (X.ID.contains(Str))
-        return X;
-    });
-    return Found;
-  }
 };
 
 enum UriTypeT { FILE_URI, MEMORY_URI };
@@ -146,9 +135,6 @@ public:
     case MEMORY_URI:
       return createMemoryURI(Str);
       break;
-    default:
-      return createStringError(object_error::parse_failed,
-                               "Unrecognized URI type");
     }
   }
 
@@ -180,7 +166,7 @@ public:
     Str.getAsInteger(10, S);
     std::unique_ptr<OffloadBundleURI> OffloadingURI(
         new OffloadBundleURI(FilePathname, O, S));
-    return OffloadingURI;
+    return std::move(OffloadingURI);
   }
 
   static Expected<std::unique_ptr<OffloadBundleURI>>
