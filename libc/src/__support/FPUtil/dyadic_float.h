@@ -101,6 +101,7 @@ template <size_t Bits> struct DyadicFloat {
     return exponent + (Bits - 1);
   }
 
+#ifdef LIBC_TYPES_HAS_FLOAT16
   template <typename T, bool ShouldSignalExceptions>
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
@@ -207,6 +208,7 @@ template <size_t Bits> struct DyadicFloat {
 
     return FPBits(result).get_val();
   }
+#endif // LIBC_TYPES_HAS_FLOAT16
 
   template <typename T, bool ShouldSignalExceptions,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
