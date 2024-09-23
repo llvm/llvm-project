@@ -1,5 +1,5 @@
 //===- bolt/Passes/ContinuityStats.cpp - function cfg continuity analysis ---*-
-//C++ -*-===//
+// C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -208,19 +208,8 @@ void printCFGContinuityStats(raw_ostream &OS,
   }
 }
 
-void printAll(BinaryContext &BC, size_t NumFunctionsPerBucket,
-              size_t NumTopFunctions) {
-
-  // Create a list of functions with valid profiles.
-  FunctionListType ValidFunctions;
-  for (const auto &BFI : BC.getBinaryFunctions()) {
-    const BinaryFunction *Function = &BFI.second;
-    if (Function->empty() || !Function->hasValidProfile() ||
-        !Function->isSimple())
-      continue;
-    ValidFunctions.push_back(Function);
-  }
-
+void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
+              size_t NumFunctionsPerBucket, size_t NumTopFunctions) {
   // Sort the list of functions by execution counts (reverse).
   llvm::sort(ValidFunctions,
              [&](const BinaryFunction *A, const BinaryFunction *B) {
@@ -278,7 +267,23 @@ void printAll(BinaryContext &BC, size_t NumFunctionsPerBucket,
 }
 } // namespace
 
+bool PrintContinuityStats::shouldOptimize(const BinaryFunction &BF) const {
+  // Apply execution count threshold
+  if (BF.empty() || !BF.hasValidProfile())
+    return false;
+
+  return BinaryFunctionPass::shouldOptimize(BF);
+}
+
 Error PrintContinuityStats::runOnFunctions(BinaryContext &BC) {
-  printAll(BC, opts::NumFunctionsPerBucket, opts::NumTopFunctions);
+  // Create a list of functions with valid profiles.
+  FunctionListType ValidFunctions;
+  for (const auto &BFI : BC.getBinaryFunctions()) {
+    const BinaryFunction *Function = &BFI.second;
+    if (PrintContinuityStats::shouldOptimize(*Function))
+      ValidFunctions.push_back(Function);
+  }
+  printAll(BC, ValidFunctions, opts::NumFunctionsPerBucket,
+           opts::NumTopFunctions);
   return Error::success();
 }

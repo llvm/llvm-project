@@ -157,7 +157,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> PrintContinuityStats(
     "print-continuity-stats",
-    cl::desc("print profile function CFG continuity stats"), cl::init(true),
+    cl::desc("print profile function CFG continuity stats"),
     cl::cat(BoltCategory));
 
 static cl::opt<bool>

@@ -1,5 +1,5 @@
 //===- bolt/Passes/ContinuityStats.h - function cfg continuity analysis ---*-
-//C++ -*-===//
+// C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,7 @@ public:
   explicit PrintContinuityStats(const cl::opt<bool> &PrintPass)
       : BinaryFunctionPass(PrintPass) {}
 
+  bool shouldOptimize(const BinaryFunction &BF) const override;
   const char *getName() const override { return "continuity-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }
   Error runOnFunctions(BinaryContext &BC) override;
