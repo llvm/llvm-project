@@ -1078,6 +1078,8 @@ public:
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
+  /// Return true if all of the indices of this GEP are zero except the last
+  /// indice.
   bool hasAllZeroIndicesExceptLast() const;
 
   /// Set nowrap flags for GEP instruction.
