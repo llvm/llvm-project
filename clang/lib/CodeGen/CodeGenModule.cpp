@@ -4272,6 +4272,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
             if (getTarget().getTriple().isRISCV()) {
               Feats.push_back(TVA->getName());
             } else {
+              assert(getTarget().getTriple().isAArch64());
               TVA->getFeatures(Feats);
             }
             Options.emplace_back(Func, /*Architecture*/ "", Feats);

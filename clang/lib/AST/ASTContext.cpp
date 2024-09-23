@@ -14276,6 +14276,7 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Features.insert(Features.begin(), ParsedAttr.Features.begin(),
                       ParsedAttr.Features.end());
     } else {
+      assert(Target->getTriple().isAArch64());
       llvm::SmallVector<StringRef, 8> Feats;
       TV->getFeatures(Feats);
       Features = getFMVBackendFeaturesFor(Feats);
