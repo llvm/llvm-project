@@ -713,7 +713,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     return s.getVA(0) - tls->p_memsz -
            ((-tls->p_vaddr - tls->p_memsz) & (tls->p_align - 1));
   default:
-    llvm_unreachable("unhandled Config->EMachine");
+    llvm_unreachable("unhandled ctx.arg.emachine");
   }
 }
 

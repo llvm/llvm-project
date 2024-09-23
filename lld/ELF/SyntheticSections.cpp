@@ -2057,8 +2057,6 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
   size_t oldSize = relrRelocs.size();
   relrRelocs.clear();
 
-  // Same as Config->Wordsize but faster because this is a compile-time
-  // constant.
   const size_t wordsize = sizeof(typename ELFT::uint);
 
   // Number of bits to use for the relocation offsets bitmap.

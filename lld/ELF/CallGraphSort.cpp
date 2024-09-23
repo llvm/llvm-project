@@ -108,7 +108,7 @@ constexpr uint64_t MAX_CLUSTER_SIZE = 1024 * 1024;
 using SectionPair =
     std::pair<const InputSectionBase *, const InputSectionBase *>;
 
-// Take the edge list in Config->CallGraphProfile, resolve symbol names to
+// Take the edge list in ctx.arg.callGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
 CallGraphSort::CallGraphSort() {
