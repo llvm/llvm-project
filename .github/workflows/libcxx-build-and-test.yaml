@@ -49,7 +49,9 @@ env:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/libcxx/actions-builder:fozzie-live
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -84,7 +86,9 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/libcxx/actions-builder:fozzie-live
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -136,12 +140,15 @@ jobs:
       matrix:
         config: [
           'generic-abi-unstable',
+          'generic-asan',
+          'generic-cxx26',
           'generic-hardening-mode-debug',
           'generic-hardening-mode-extensive',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
           'generic-modules-lsv',
+          'generic-msan',
           'generic-no-exceptions',
           'generic-no-experimental',
           'generic-no-filesystem',
@@ -155,25 +162,16 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
+          'generic-tsan',
+          'generic-ubsan',
           # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
           # or don't provide much value since the benchmark run results are too noise on the bots.
           'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
-        include:
-        - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
-        - config: 'generic-asan'
-          machine: libcxx-runners-8-set
-        - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
-        - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
-        # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
-        - config: 'generic-msan'
-          machine: libcxx-runners-8-set
-    runs-on: ${{ matrix.machine }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/libcxx/actions-builder:fozzie-live
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
