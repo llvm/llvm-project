@@ -4069,7 +4069,7 @@ LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name) {
-  return wrap(unwrap(B)->CreateGlobalStringPtr(Str, Name));
+  return wrap(unwrap(B)->CreateGlobalString(Str, Name));
 }
 
 LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {

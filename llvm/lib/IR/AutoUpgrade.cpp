@@ -1268,6 +1268,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
+      else if (Name.consume_front("bitcast."))
+        // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
+        Expand =
+            Name == "f2i" || Name == "i2f" || Name == "ll2d" || Name == "d2ll";
       else
         Expand = false;
 
@@ -4258,6 +4262,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                    F->getParent(), Intrinsic::convert_from_fp16,
                                    {Builder.getFloatTy()}),
                                CI->getArgOperand(0), "h2f");
+      } else if (Name.consume_front("bitcast.") &&
+                 (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
+                  Name == "d2ll")) {
+        Rep = Builder.CreateBitCast(CI->getArgOperand(0), CI->getType());
       } else {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
         if (IID != Intrinsic::not_intrinsic &&
