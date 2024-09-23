@@ -786,6 +786,26 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB, MRI);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI.setType(DstReg, sXLen);
+    break;
+  }
+  case TargetOpcode::G_LOAD: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT DstTy = MRI.getType(DstReg);
+    if (!(DstTy.isVector() && DstTy.getElementType().isPointer()))
+        break;
+    const LLT sXLen = LLT::scalar(STI.getXLen());
+    MRI.setType(DstReg, LLT::scalable_vector(DstTy.getElementCount().getKnownMinValue(), sXLen));
+    break;
+  }
+  case TargetOpcode::G_STORE: {
+    MachineOperand &SrcOp = MI.getOperand(0);
+    const LLT SrcTy = MRI.getType(SrcOp.getReg());
+    if (!(SrcTy.isVector() && SrcTy.getElementType().isPointer()))
+        break;
+    const LLT sXLen = LLT::scalar(STI.getXLen());
+    auto Copy = MIB.buildCopy(LLT::scalable_vector(SrcTy.getElementCount().getKnownMinValue(), sXLen), SrcOp);
+    Register NewSrc = Copy.getReg(0);
+    SrcOp.setReg(NewSrc);
   }
   }
 }
