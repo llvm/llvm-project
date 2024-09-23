@@ -1,4 +1,5 @@
-//===- bolt/Passes/ContinuityStats.cpp - function cfg continuity analysis ---*- C++ -*-===//
+//===- bolt/Passes/ContinuityStats.cpp - function cfg continuity analysis ---*-
+//C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,16 +27,18 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned> NumTopFunctions(
-    "num-top-functions",
-    cl::desc(
-        "number of hottest functions to print aggregated CFG discontinuity stats of."),
-    cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
-cl::opt<bool> PrintBucketedStats(
-    "print-bucketed-stats",
-    cl::desc("print CFG discontinuity stats for the top functions divided into buckets "
-             "based on their execution counts."),
-    cl::Hidden, cl::cat(BoltCategory));
+cl::opt<unsigned>
+    NumTopFunctions("num-top-functions",
+                    cl::desc("number of hottest functions to print aggregated "
+                             "CFG discontinuity stats of."),
+                    cl::init(1000), cl::ZeroOrMore, cl::Hidden,
+                    cl::cat(BoltOptCategory));
+cl::opt<bool>
+    PrintBucketedStats("print-bucketed-stats",
+                       cl::desc("print CFG discontinuity stats for the top "
+                                "functions divided into buckets "
+                                "based on their execution counts."),
+                       cl::Hidden, cl::cat(BoltCategory));
 cl::opt<unsigned>
     NumFunctionsPerBucket("num-functions-per-bucket",
                           cl::desc("maximum number of functions per bucket."),
@@ -43,10 +46,10 @@ cl::opt<unsigned>
                           cl::cat(BoltOptCategory));
 cl::opt<unsigned>
     MinNumFunctions("min-num-functions",
-                          cl::desc("minimum number of hot functions in the binary to "
-                          "trigger profile CFG continuity check."),
-                          cl::init(5), cl::ZeroOrMore, cl::Hidden,
-                          cl::cat(BoltOptCategory));
+                    cl::desc("minimum number of hot functions in the binary to "
+                             "trigger profile CFG continuity check."),
+                    cl::init(5), cl::ZeroOrMore, cl::Hidden,
+                    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -84,8 +87,8 @@ void printDistribution(raw_ostream &OS, std::vector<T> &values,
 }
 
 void printCFGContinuityStats(raw_ostream &OS,
-                               iterator_range<function_iterator> &Functions, 
-                               bool Verbose=false) {
+                             iterator_range<function_iterator> &Functions,
+                             bool Verbose = false) {
   // Given a perfect profile, every positive-execution-count BB should be
   // connected to an entry of the function through a positive-execution-count
   // directed path in the control flow graph.
@@ -144,7 +147,8 @@ void printCFGContinuityStats(raw_ostream &OS,
 
     size_t NumReachableBBs = Visited.size();
 
-    // Loop through Visited, and sum the corresponding BBs' execution counts (ECs).
+    // Loop through Visited, and sum the corresponding BBs' execution counts
+    // (ECs).
     size_t SumReachableBBEC = 0;
     for (unsigned BBIndex : Visited) {
       const BinaryBasicBlock *BB = IndexToBB[BBIndex];
@@ -169,15 +173,18 @@ void printCFGContinuityStats(raw_ostream &OS,
 
   if (!Verbose) {
     if (FractionECUnreachables.empty()) {
-      OS << "no functions have more than 1 basic block and hence no CFG discontinuity.\n";
+      OS << "no functions have more than 1 basic block and hence no CFG "
+            "discontinuity.\n";
       return;
     }
     std::sort(FractionECUnreachables.begin(), FractionECUnreachables.end());
     int Rank = int(FractionECUnreachables.size() * 0.95);
-    OS << format("the TOP 5%% function CFG discontinuity is %.2lf%%", FractionECUnreachables[Rank] * 100) << "\n";
+    OS << format("the TOP 5%% function CFG discontinuity is %.2lf%%",
+                 FractionECUnreachables[Rank] * 100)
+       << "\n";
     return;
   }
-  
+
   OS << format("Focus on %zu (%.2lf%%) of considered functions that have at "
                "least 2 basic blocks\n",
                SumECUnreachables.size(),
@@ -201,8 +208,7 @@ void printCFGContinuityStats(raw_ostream &OS,
   }
 }
 
-void printAll(BinaryContext &BC,
-              size_t NumFunctionsPerBucket,
+void printAll(BinaryContext &BC, size_t NumFunctionsPerBucket,
               size_t NumTopFunctions) {
 
   // Create a list of functions with valid profiles.
@@ -224,40 +230,48 @@ void printAll(BinaryContext &BC,
   size_t RealNumTopFunctions = std::min(NumTopFunctions, ValidFunctions.size());
   if (RealNumTopFunctions <= opts::MinNumFunctions)
     return;
-  BC.outs() << format("BOLT-INFO: among the hottest %zu functions ", RealNumTopFunctions);
+  BC.outs() << format("BOLT-INFO: among the hottest %zu functions ",
+                      RealNumTopFunctions);
   iterator_range<function_iterator> Functions(
       ValidFunctions.begin(), ValidFunctions.begin() + RealNumTopFunctions);
   printCFGContinuityStats(BC.outs(), Functions, /*Verbose=*/false);
 
   // Print more detailed bucketed stats if requested.
   if (opts::PrintBucketedStats) {
-    size_t PerBucketSize = std::min(NumFunctionsPerBucket, ValidFunctions.size());
+    size_t PerBucketSize =
+        std::min(NumFunctionsPerBucket, ValidFunctions.size());
     if (PerBucketSize == 0)
       return;
     size_t NumBuckets = RealNumTopFunctions / PerBucketSize +
                         (RealNumTopFunctions % PerBucketSize != 0);
-    BC.outs() << format("Detailed stats for %zu buckets, each with at most %zu functions:\n",
-                NumBuckets, PerBucketSize);
-    BC.outs() << "For each considered function, identify positive execution-count basic blocks\n"
-       << "(abbr. POS BBs) that are *unreachable* from the function entry through a\n"
-       << "positive-execution-count path.\n";
+    BC.outs() << format(
+        "Detailed stats for %zu buckets, each with at most %zu functions:\n",
+        NumBuckets, PerBucketSize);
+    BC.outs() << "For each considered function, identify positive "
+                 "execution-count basic blocks\n"
+              << "(abbr. POS BBs) that are *unreachable* from the function "
+                 "entry through a\n"
+              << "positive-execution-count path.\n";
 
-    // For each bucket, print the CFG continuity stats of the functions in the bucket.
+    // For each bucket, print the CFG continuity stats of the functions in the
+    // bucket.
     for (size_t BucketIndex = 0; BucketIndex < NumBuckets; ++BucketIndex) {
       const size_t StartIndex = BucketIndex * PerBucketSize;
       size_t EndIndex = std::min(StartIndex + PerBucketSize, NumTopFunctions);
       EndIndex = std::min(EndIndex, ValidFunctions.size());
       iterator_range<function_iterator> Functions(
-          ValidFunctions.begin() + StartIndex, ValidFunctions.begin() + EndIndex);
+          ValidFunctions.begin() + StartIndex,
+          ValidFunctions.begin() + EndIndex);
       const size_t MaxFunctionExecutionCount =
           ValidFunctions[StartIndex]->getKnownExecutionCount();
       const size_t MinFunctionExecutionCount =
           ValidFunctions[EndIndex - 1]->getKnownExecutionCount();
       BC.outs() << format("----------------\n|   Bucket %zu:  "
-                  "|\n----------------\nExecution counts of the %zu functions in the bucket: "
-                  "%zu-%zu\n",
-                  BucketIndex + 1, EndIndex - StartIndex,
-                  MinFunctionExecutionCount, MaxFunctionExecutionCount);
+                          "|\n----------------\nExecution counts of the %zu "
+                          "functions in the bucket: "
+                          "%zu-%zu\n",
+                          BucketIndex + 1, EndIndex - StartIndex,
+                          MinFunctionExecutionCount, MaxFunctionExecutionCount);
       printCFGContinuityStats(BC.outs(), Functions, /*Verbose=*/true);
     }
   }

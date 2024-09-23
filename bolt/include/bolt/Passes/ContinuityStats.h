@@ -1,4 +1,5 @@
-//===- bolt/Passes/ContinuityStats.h - function cfg continuity analysis ---*- C++ -*-===//
+//===- bolt/Passes/ContinuityStats.h - function cfg continuity analysis ---*-
+//C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +14,8 @@
 #ifndef BOLT_PASSES_CONTINUITYSTATS_H
 #define BOLT_PASSES_CONTINUITYSTATS_H
 
-#include <vector>
 #include "bolt/Passes/BinaryPasses.h"
+#include <vector>
 
 namespace llvm {
 
