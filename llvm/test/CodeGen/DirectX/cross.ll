@@ -1,5 +1,5 @@
-; RUN: opt -S  -dxil-intrinsic-expansion  < %s | FileCheck %s --check-prefix=CHECK
-; RUN: opt -S  -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library < %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -S  -dxil-intrinsic-expansion  < %s | FileCheck %s
+; RUN: opt -S  -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library < %s | FileCheck %s
 
 ; Make sure dxil operation function calls for cross are generated for half/float.
 
