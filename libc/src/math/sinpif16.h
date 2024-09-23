@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_MATH_SINPIF16_H
 #define LLVM_LIBC_SRC_MATH_SINPIF16_H
 
-
 #include "include/llvm-libc-macros/float16-macros.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
@@ -20,4 +19,4 @@ float16 sinpif16(float16 x);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif //LLVM_LIBC_SRC_MATH_SINPIF16_H
+#endif // LLVM_LIBC_SRC_MATH_SINPIF16_H

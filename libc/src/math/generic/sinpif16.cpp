@@ -15,7 +15,7 @@
 #include "src/__support/macros/config.h"
 
 // TODO: Should probably create a new file; sincospif16_utils.h
-// To store the following helper functions and constants. 
+// To store the following helper functions and constants.
 // I'd defer to @lntue for suggestions regarding that
 
 // HELPER_START
@@ -23,19 +23,15 @@ namespace LIBC_NAMESPACE_DECL {
 
 constexpr float PI_OVER_32 = M_PI / 32;
 
-// In Sollya generate 10 coeffecients for a degree-9 chebyshev polynomial 
-// approximating the sine function in [-pi / 32, pi / 32] with the following 
+// In Sollya generate 10 coeffecients for a degree-9 chebyshev polynomial
+// approximating the sine function in [-pi / 32, pi / 32] with the following
 // commands:
 // > prec=23;
 // > TL = chebyshevform(sin(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float SIN_COEFF[10] = {
-  0x1.801p-27, 0x1.000078p0,
-  -0x1.7e98p-14, -0x1.6bf4p-3,
-  0x1.95ccp-5, 0x1.1baep2,
-  -0x1.030ap3, -0x1.3dap9, 
-  0x1.98e4p8, 0x1.d3d8p14
-};
+    0x1.801p-27, 0x1.000078p0, -0x1.7e98p-14, -0x1.6bf4p-3, 0x1.95ccp-5,
+    0x1.1baep2,  -0x1.030ap3,  -0x1.3dap9,    0x1.98e4p8,   0x1.d3d8p14};
 
 // In Sollya generate 10 coefficients for a degree-9 chebyshev polynomial
 // approximating the sine function in [-pi/32, pi/32] with the following
@@ -44,12 +40,8 @@ const float SIN_COEFF[10] = {
 // > TL = chebyshevform(cos(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float COS_COEFF[10] = {
-  0x1.00001p0, -0x1.48p-17,
-  -0x1.01259cp-1, -0x1.17fp-6,
-  0x1.283p0, 0x1.5d1p3,
-  -0x1.6278p7, -0x1.c23p10,
-  0x1.1444p13, 0x1.5fcp16
-};
+    0x1.00001p0, -0x1.48p-17, -0x1.01259cp-1, -0x1.17fp-6, 0x1.283p0,
+    0x1.5d1p3,   -0x1.6278p7, -0x1.c23p10,    0x1.1444p13, 0x1.5fcp16};
 
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follows:
@@ -57,30 +49,70 @@ const float COS_COEFF[10] = {
 // > prec = 23;
 // > for k from 0 to 63 do {sin(k * pi/32);};
 
-const float SIN_K_PI_OVER_32[64] = {
-  0, 0x1.917a6cp-4, 0x1.8f8b84p-3,
-  0x1.294064p-2, 0x1.87de2cp-2, 0x1.e2b5d4p-2,
-  0x1.1c73b4p-1, 0x1.44cf34p-1, 0x1.6a09e8p-1,
-  0x1.8bc808p-1, 0x1.a9b664p-1, 0x1.c38b3p-1,
-  0x1.d906bcp-1, 0x1.e9f414p-1, 0x1.f6297cp-1,
-  0x1.fd88dcp-1, 0x1p0, 0x1.fd88dcp-1,
-  0x1.f6297cp-1, 0x1.e9f414p-1, 0x1.d906bcp-1,
-  0x1.c38b3p-1, 0x1.a9b664p-1, 0x1.8bc808p-1,
-  0x1.6a09e8p-1, 0x1.44cf34p-1, 0x1.1c73b4p-1,
-  0x1.e2b5d4p-2, 0x1.87de2cp-2, 0x1.294064p-2,
-  0x1.8f8b84p-3, 0x1.917a6cp-4, 0,
-  -0x1.917a6cp-4, -0x1.8f8b84p-3, -0x1.294064p-2,
-  -0x1.87de2cp-2, -0x1.e2b5d4p-2, -0x1.1c73b4p-1,
-  -0x1.44cf34p-1, -0x1.6a09e8p-1, -0x1.8bc808p-1,
-  -0x1.a9b664p-1, -0x1.c38b3p-1, -0x1.d906bcp-1,
-  -0x1.e9f414p-1, -0x1.f6297cp-1, -0x1.fd88dcp-1,
-  -0x1p0, -0x1.fd88dcp-1, -0x1.f6297cp-1,
-  -0x1.e9f414p-1, -0x1.d906bcp-1, -0x1.c38b3p-1,
-  -0x1.a9b664p-1, -0x1.8bc808p-1, -0x1.6a09e8p-1,
-  -0x1.44cf34p-1, -0x1.1c73b4p-1, -0x1.e2b5d4p-2,
-  -0x1.87de2cp-2, -0x1.294064p-2, -0x1.8f8b84p-3,
-  -0x1.917a6cp-4
-};
+const float SIN_K_PI_OVER_32[64] = {0,
+                                    0x1.917a6cp-4,
+                                    0x1.8f8b84p-3,
+                                    0x1.294064p-2,
+                                    0x1.87de2cp-2,
+                                    0x1.e2b5d4p-2,
+                                    0x1.1c73b4p-1,
+                                    0x1.44cf34p-1,
+                                    0x1.6a09e8p-1,
+                                    0x1.8bc808p-1,
+                                    0x1.a9b664p-1,
+                                    0x1.c38b3p-1,
+                                    0x1.d906bcp-1,
+                                    0x1.e9f414p-1,
+                                    0x1.f6297cp-1,
+                                    0x1.fd88dcp-1,
+                                    0x1p0,
+                                    0x1.fd88dcp-1,
+                                    0x1.f6297cp-1,
+                                    0x1.e9f414p-1,
+                                    0x1.d906bcp-1,
+                                    0x1.c38b3p-1,
+                                    0x1.a9b664p-1,
+                                    0x1.8bc808p-1,
+                                    0x1.6a09e8p-1,
+                                    0x1.44cf34p-1,
+                                    0x1.1c73b4p-1,
+                                    0x1.e2b5d4p-2,
+                                    0x1.87de2cp-2,
+                                    0x1.294064p-2,
+                                    0x1.8f8b84p-3,
+                                    0x1.917a6cp-4,
+                                    0,
+                                    -0x1.917a6cp-4,
+                                    -0x1.8f8b84p-3,
+                                    -0x1.294064p-2,
+                                    -0x1.87de2cp-2,
+                                    -0x1.e2b5d4p-2,
+                                    -0x1.1c73b4p-1,
+                                    -0x1.44cf34p-1,
+                                    -0x1.6a09e8p-1,
+                                    -0x1.8bc808p-1,
+                                    -0x1.a9b664p-1,
+                                    -0x1.c38b3p-1,
+                                    -0x1.d906bcp-1,
+                                    -0x1.e9f414p-1,
+                                    -0x1.f6297cp-1,
+                                    -0x1.fd88dcp-1,
+                                    -0x1p0,
+                                    -0x1.fd88dcp-1,
+                                    -0x1.f6297cp-1,
+                                    -0x1.e9f414p-1,
+                                    -0x1.d906bcp-1,
+                                    -0x1.c38b3p-1,
+                                    -0x1.a9b664p-1,
+                                    -0x1.8bc808p-1,
+                                    -0x1.6a09e8p-1,
+                                    -0x1.44cf34p-1,
+                                    -0x1.1c73b4p-1,
+                                    -0x1.e2b5d4p-2,
+                                    -0x1.87de2cp-2,
+                                    -0x1.294064p-2,
+                                    -0x1.8f8b84p-3,
+                                    -0x1.917a6cp-4};
 
 // horner's algorithm to accurately and efficiently evaluate a degree-9
 // polynomial iteratively
@@ -96,7 +128,7 @@ float horners(float x, const float COEFF[10]) {
   return fputil::multiply_add<float>(b1, x, COEFF[0]);
 }
 
-float range_reduction(float x, float& y) {
+float range_reduction(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add<float>(x, 32.0, -kf);
 
@@ -125,10 +157,12 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
   // Once k and y are computed, we then deduce the answer by the sine of sum
   // formula:
   //   sin(x * pi) = sin((k + y) * pi/32)
-  //           = sin(k * pi/32) * cos(y * pi/32) + sin (y * pi/32) * cos (k * pi/32)
-  // The values of sin(k * pi/32) and cos (k * pi/32) for k = 0...63 are precomputed
-  // and stored using a vector of 64 single precision floats. sin(y * pi/32) and cos(y * pi/32) are
-  // computed using degree-9 chebyshev polynomials generated by Sollya.
+  //           = sin(k * pi/32) * cos(y * pi/32) + sin (y * pi/32) * cos (k *
+  //           pi/32)
+  // The values of sin(k * pi/32) and cos (k * pi/32) for k = 0...63 are
+  // precomputed and stored using a vector of 64 single precision floats. sin(y
+  // * pi/32) and cos(y * pi/32) are computed using degree-9 chebyshev
+  // polynomials generated by Sollya.
 
   float f32 = x;
   float y;
@@ -146,6 +180,7 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
     sin_y = horners(y * PI_OVER_32, SIN_COEFF);
   }
 
-  return static_cast<float16>(fputil::multiply_add(sin_k, cos_y, fputil::multiply_add(sin_y, cos_k, 0)));
+  return static_cast<float16>(fputil::multiply_add(
+      sin_k, cos_y, fputil::multiply_add(sin_y, cos_k, 0)));
 }
-}
+} // namespace LIBC_NAMESPACE_DECL
