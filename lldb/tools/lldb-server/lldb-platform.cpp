@@ -106,6 +106,55 @@ static void display_usage(const char *progname, const char *subcommand) {
   exit(0);
 }
 
+static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
+                                     const std::string &listen_host_port,
+                                     std::string &address,
+                                     uint16_t &platform_port,
+                                     std::string &gdb_address,
+                                     const uint16_t gdbserver_port) {
+  std::string hostname;
+  // Try to match socket name as URL - e.g., tcp://localhost:5555
+  if (std::optional<URI> uri = URI::Parse(listen_host_port)) {
+    if (!Socket::FindProtocolByScheme(uri->scheme.str().c_str(), protocol)) {
+      return Status::FromErrorStringWithFormat(
+          "Unknown protocol scheme \"%s\".", uri->scheme.str().c_str());
+    }
+    if (protocol == Socket::ProtocolTcp) {
+      hostname = uri->hostname;
+      if (uri->port) {
+        platform_port = *(uri->port);
+      }
+    } else
+      address = listen_host_port.substr(uri->scheme.size() + strlen("://"));
+  } else {
+    // Try to match socket name as $host:port - e.g., localhost:5555
+    llvm::Expected<Socket::HostAndPort> host_port =
+        Socket::DecodeHostAndPort(listen_host_port);
+    if (!llvm::errorToBool(host_port.takeError())) {
+      protocol = Socket::ProtocolTcp;
+      hostname = host_port->hostname;
+      platform_port = host_port->port;
+    } else
+      address = listen_host_port;
+  }
+
+  if (protocol == Socket::ProtocolTcp) {
+    if (platform_port != 0 && platform_port == gdbserver_port) {
+      return Status::FromErrorStringWithFormat(
+          "The same platform and gdb ports %u.", platform_port);
+    }
+    address = llvm::formatv("{0}:{1}", hostname, platform_port).str();
+    gdb_address = llvm::formatv("{0}:{1}", hostname, gdbserver_port).str();
+  } else {
+    if (gdbserver_port) {
+      return Status::FromErrorStringWithFormat(
+          "--gdbserver-port %u is redundant for non-tcp protocol %s.",
+          gdbserver_port, Socket::FindSchemeByProtocol(protocol));
+    }
+  }
+  return Status();
+}
+
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
@@ -125,6 +174,69 @@ static Status save_socket_id_to_file(const std::string &socket_id,
         "Failed to atomically write file %s: %s", file_spec.GetPath().c_str(),
         llvm::toString(std::move(Err)).c_str());
   return status;
+}
+
+static Status ListenGdbConnectionsIfNeeded(
+    const Socket::SocketProtocol protocol, std::unique_ptr<TCPSocket> &gdb_sock,
+    const std::string &gdb_address, uint16_t &gdbserver_port) {
+  if (protocol != Socket::ProtocolTcp)
+    return Status();
+
+  gdb_sock = std::make_unique<TCPSocket>(
+      /*should_close=*/true, /*child_processes_inherit=*/false);
+  Status error = gdb_sock->Listen(gdb_address, backlog);
+  if (error.Fail())
+    return error;
+
+  if (gdbserver_port == 0)
+    gdbserver_port = gdb_sock->GetLocalPortNumber();
+
+  return Status();
+}
+
+static Status
+AcceptGdbConnectionsIfNeeded(const Socket::SocketProtocol protocol,
+                             std::unique_ptr<TCPSocket> &gdb_sock,
+                             std::vector<MainLoopBase::ReadHandleUP> &handles,
+                             const uint16_t gdbserver_port,
+                             const lldb_private::Args &inferior_arguments) {
+  if (protocol != Socket::ProtocolTcp)
+    return Status();
+
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> handles_or_err =
+      gdb_sock->Accept(*g_main_loop, [gdbserver_port, &inferior_arguments](
+                                         std::unique_ptr<Socket> sock_up) {
+        Log *log = GetLog(LLDBLog::Platform);
+        Status error;
+        SharedSocket shared_socket(sock_up.get(), error);
+        if (error.Fail()) {
+          LLDB_LOGF(log, "gdbserver SharedSocket failed: %s",
+                    error.AsCString());
+          return;
+        }
+        lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
+        std::string socket_name;
+        GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
+                                                      gdbserver_port);
+        error =
+            platform.LaunchGDBServer(inferior_arguments, child_pid, socket_name,
+                                     shared_socket.GetSendableFD());
+        if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
+          error = shared_socket.CompleteSending(child_pid);
+          if (error.Fail()) {
+            Host::Kill(child_pid, SIGTERM);
+            LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
+                      error.AsCString());
+            return;
+          }
+        }
+      });
+  if (!handles_or_err)
+    return Status::FromError(handles_or_err.takeError());
+
+  handles = std::move(*handles_or_err);
+
+  return Status();
 }
 
 static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
@@ -388,9 +500,8 @@ int main_platform(int argc, char *argv[]) {
       socket = new DomainSocket(sockfd, /*should_close=*/true,
                                 /*child_processes_inherit=*/false);
 #else
-      LLDB_LOGF(log,
-                "lldb-platform child: Unix domain sockets are not supported on "
-                "this platform.");
+      WithColor::error() << "lldb-platform child: Unix domain sockets are not "
+                            "supported on this platform.";
       return socket_error;
 #endif
     }
@@ -408,80 +519,36 @@ int main_platform(int argc, char *argv[]) {
     return 1;
   }
 
-  std::string hostname;
+  std::string address;
+  std::string gdb_address;
   uint16_t platform_port = 0;
-
-  // Try to match socket name as URL - e.g., tcp://localhost:5555
-  if (std::optional<URI> uri = URI::Parse(listen_host_port)) {
-    if (!Socket::FindProtocolByScheme(uri->scheme.str().c_str(), protocol)) {
-      fprintf(stderr, "Unknown protocol scheme \"%s\".",
-              uri->scheme.str().c_str());
-      return socket_error;
-    }
-    if (protocol == Socket::ProtocolTcp) {
-      hostname = uri->hostname;
-      if (uri->port) {
-        platform_port = *(uri->port);
-      }
-    } else
-      hostname = listen_host_port.substr(uri->scheme.size() + strlen("://"));
-  } else {
-    // Try to match socket name as $host:port - e.g., localhost:5555
-    llvm::Expected<Socket::HostAndPort> host_port =
-        Socket::DecodeHostAndPort(listen_host_port);
-    if (!llvm::errorToBool(host_port.takeError())) {
-      protocol = Socket::ProtocolTcp;
-      hostname = host_port->hostname;
-      platform_port = host_port->port;
-    } else
-      hostname = listen_host_port;
+  error = parse_listen_host_port(protocol, listen_host_port, address,
+                                 platform_port, gdb_address, gdbserver_port);
+  if (error.Fail()) {
+    printf("Failed to parse listen address: %s\n", error.AsCString());
+    return socket_error;
   }
 
-  if (protocol == Socket::ProtocolTcp) {
-    if (platform_port != 0 && platform_port == gdbserver_port) {
-      fprintf(stderr, "The same platform and gdb ports %u.", platform_port);
-      return socket_error;
-    }
-  } else {
-    if (gdbserver_port) {
-      fprintf(stderr,
-              "--gdbserver-port %u is redundant for non-tcp protocol %s.",
-              gdbserver_port, Socket::FindSchemeByProtocol(protocol));
-      return socket_error;
-    }
-    if (g_server) {
-      fprintf(stderr,
-              "Ambiguous parameters --server --listen %s.\n"
-              "The protocol must be tcp for the server mode.",
-              listen_host_port.c_str());
-      return socket_error;
-    }
-  }
-
-  std::unique_ptr<Socket> sock_platform =
+  std::unique_ptr<Socket> platform_sock =
       Socket::Create(protocol, /*child_processes_inherit=*/false, error);
   if (error.Fail()) {
     printf("Failed to create platform socket: %s\n", error.AsCString());
     return socket_error;
   }
-  error = sock_platform->Listen(
-      protocol == Socket::ProtocolTcp
-          ? llvm::formatv("{0}:{1}", hostname, platform_port).str()
-          : hostname,
-      backlog);
+  error = platform_sock->Listen(address, backlog);
   if (error.Fail()) {
     printf("Failed to listen platform: %s\n", error.AsCString());
     return socket_error;
   }
   if (protocol == Socket::ProtocolTcp && platform_port == 0)
     platform_port =
-        static_cast<TCPSocket *>(sock_platform.get())->GetLocalPortNumber();
+        static_cast<TCPSocket *>(platform_sock.get())->GetLocalPortNumber();
 
   if (socket_file) {
     error = save_socket_id_to_file(
         protocol == Socket::ProtocolTcp
             ? (platform_port ? llvm::to_string(platform_port) : "")
-            : hostname,
+            : address,
         socket_file);
     if (error.Fail()) {
       fprintf(stderr, "failed to write socket id to %s: %s\n",
@@ -490,29 +557,20 @@ int main_platform(int argc, char *argv[]) {
     }
   }
 
-  lldb_private::Args gdb_inferior_arguments;
-  std::unique_ptr<TCPSocket> sock_gdb;
-  if (protocol == Socket::ProtocolTcp) {
-    sock_gdb = std::make_unique<TCPSocket>(
-        /*should_close=*/true, /*child_processes_inherit=*/false);
-    error = sock_gdb->Listen(
-        llvm::formatv("{0}:{1}", hostname, gdbserver_port).str(), backlog);
-    if (error.Fail()) {
-      printf("Failed to listen gdb: %s\n", error.AsCString());
-      return socket_error;
-    }
-    if (gdbserver_port == 0)
-      gdbserver_port = sock_gdb->GetLocalPortNumber();
-
-    gdb_inferior_arguments.AppendArguments(inferior_arguments);
+  std::unique_ptr<TCPSocket> gdb_sock;
+  // Update gdbserver_port if it is still 0 and protocol is tcp.
+  error = ListenGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_address,
+                                       gdbserver_port);
+  if (error.Fail()) {
+    printf("Failed to listen gdb: %s\n", error.AsCString());
+    return socket_error;
   }
 
-  GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
   {
     llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> platform_handles =
-        sock_platform->Accept(
+        platform_sock->Accept(
             *g_main_loop,
-            [progname, gdbserver_port, inferior_arguments, log_file,
+            [progname, gdbserver_port, &inferior_arguments, log_file,
              log_channels](std::unique_ptr<Socket> sock_up) {
               // If not running as a server, this process will not accept
               // connections while a connection is active.
@@ -540,41 +598,11 @@ int main_platform(int argc, char *argv[]) {
     }
 
     std::vector<MainLoopBase::ReadHandleUP> gdb_handles;
-    if (protocol == Socket::ProtocolTcp) {
-      llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> handles =
-          sock_gdb->Accept(*g_main_loop, [&platform, &gdb_inferior_arguments](
-                                             std::unique_ptr<Socket> sock_up) {
-            Log *log = GetLog(LLDBLog::Platform);
-            Status error;
-            SharedSocket shared_socket(sock_up.get(), error);
-            if (error.Fail()) {
-              LLDB_LOGF(log, "gdbserver SharedSocket failed: %s",
-                        error.AsCString());
-              return;
-            }
-            lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
-            std::string socket_name;
-            error = platform.LaunchGDBServer(gdb_inferior_arguments, child_pid,
-                                             socket_name,
-                                             shared_socket.GetSendableFD());
-            if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
-              error = shared_socket.CompleteSending(child_pid);
-              if (error.Fail()) {
-                Host::Kill(child_pid, SIGTERM);
-                LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
-                          error.AsCString());
-                return;
-              }
-              // Use gdb inferior arguments once.
-              gdb_inferior_arguments.Clear();
-            }
-          });
-      if (!handles) {
-        printf("Failed to accept gdb: %s\n",
-               llvm::toString(handles.takeError()).c_str());
-        return socket_error;
-      }
-      gdb_handles = std::move(*handles);
+    error = AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_handles,
+                                         gdbserver_port, inferior_arguments);
+    if (error.Fail()) {
+      printf("Failed to accept gdb: %s\n", error.AsCString());
+      return socket_error;
     }
     g_main_loop->Run();
   }

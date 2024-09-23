@@ -217,9 +217,7 @@ void ConnectToRemote(MainLoop &mainloop,
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
     // Create the connection.
-#if LLDB_ENABLE_POSIX
     ::fcntl(connection_fd, F_SETFD, FD_CLOEXEC);
-#endif
 #endif
   } else if (!host_and_port.empty()) {
     llvm::Expected<std::string> url_exp =
