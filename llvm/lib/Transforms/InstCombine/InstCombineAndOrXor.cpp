@@ -4693,7 +4693,20 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // calls in there are unnecessary as SimplifyDemandedInstructionBits should
   // have already taken care of those cases.
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *M;
+  Value *X, *Y, *M;
+
+  // (X | Y) ^ M -> (X ^ M) ^ Y
+  // (X | Y) ^ M -> (Y ^ M) ^ X
+  if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
+                        m_Value(M)))) {
+    if (Value *XorAC =
+            simplifyBinOp(Instruction::Xor, X, M, SQ.getWithInstruction(&I)))
+      return BinaryOperator::CreateXor(XorAC, Y);
+
+    if (Value *XorBC = simplifyBinOp(Instruction::Xor, Y, M, SQ))
+      return BinaryOperator::CreateXor(XorBC, X);
+  }
+
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value())))) {
     if (isGuaranteedNotToBeUndef(M))
@@ -4705,7 +4718,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
-  Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;

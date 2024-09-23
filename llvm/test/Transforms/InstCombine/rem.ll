@@ -1073,3 +1073,106 @@ define i16 @rem_pow2(i16 %x, i16 %y) {
   %rem = urem i16 %x, %y
   ret i16 %rem
 }
+
+define i64 @rem_pow2_domcond(i64 %a, i64 %b) {
+; CHECK-LABEL: @rem_pow2_domcond(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CPOP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[CPOP]], 1
+; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i64 0
+;
+start:
+  %cpop = call i64 @llvm.ctpop.i64(i64 %b)
+  %cond = icmp eq i64 %cpop, 1
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %rem = urem i64 %a, %b
+  ret i64 %rem
+
+bb2:
+  ret i64 0
+}
+
+define i64 @rem_pow2_domcond_in_else(i64 %a, i64 %b) {
+; CHECK-LABEL: @rem_pow2_domcond_in_else(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CPOP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i64 [[CPOP]], 1
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i64 0
+;
+start:
+  %cpop = call i64 @llvm.ctpop.i64(i64 %b)
+  %cond = icmp ne i64 %cpop, 1
+  br i1 %cond, label %bb2, label %bb1
+
+bb1:
+  %rem = urem i64 %a, %b
+  ret i64 %rem
+
+bb2:
+  ret i64 0
+}
+
+define i64 @rem_pow2_or_zero_domcond(i64 %a, i64 %b) {
+; CHECK-LABEL: @rem_pow2_or_zero_domcond(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CPOP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[CPOP]], 2
+; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[A:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i64 0
+;
+start:
+  %cpop = call i64 @llvm.ctpop.i64(i64 %b)
+  %cond = icmp ult i64 %cpop, 2
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %rem = urem i64 %a, %b
+  ret i64 %rem
+
+bb2:
+  ret i64 0
+}
+
+define i64 @rem_pow2_non_domcond(i64 %a, i64 %b) {
+; CHECK-LABEL: @rem_pow2_non_domcond(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[CPOP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i64 [[CPOP]], 1
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB1]]
+;
+start:
+  %cpop = call i64 @llvm.ctpop.i64(i64 %b)
+  %cond = icmp ne i64 %cpop, 1
+  br i1 %cond, label %bb2, label %bb1
+
+bb1:
+  %rem = urem i64 %a, %b
+  ret i64 %rem
+
+bb2:
+  br label %bb1
+}

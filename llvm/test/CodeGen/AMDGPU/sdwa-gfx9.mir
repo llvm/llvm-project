@@ -1,6 +1,9 @@
 # RUN: llc -mtriple=amdgcn -mcpu=kaveri -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=kaveri -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}name: add_shr_i32
 # GCN: [[SMOV:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 123

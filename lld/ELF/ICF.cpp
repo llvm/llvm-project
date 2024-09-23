@@ -242,7 +242,7 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
   for (; rai != rae; ++rai, ++rbi) {
     if (rai->r_offset != rbi->r_offset ||
-        rai->getType(config->isMips64EL) != rbi->getType(config->isMips64EL))
+        rai->getType(ctx.arg.isMips64EL) != rbi->getType(ctx.arg.isMips64EL))
       return false;
 
     uint64_t addA = getAddend<ELFT>(*rai);
@@ -324,7 +324,7 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  if (ra.areRelocsCrel())
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
     return constantEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? constantEq(a, ra.rels, b, rb.rels)
@@ -376,7 +376,7 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  if (ra.areRelocsCrel())
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
     return variableEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? variableEq(a, ra.rels, b, rb.rels)
@@ -458,7 +458,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 }
 
 static void print(const Twine &s) {
-  if (config->printIcfSections)
+  if (ctx.arg.printIcfSections)
     message(s);
 }
 
@@ -467,7 +467,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Compute isPreemptible early. We may add more symbols later, so this loop
   // cannot be merged with the later computeIsPreemptible() pass which is used
   // by scanRelocations().
-  if (config->hasDynSymTab)
+  if (ctx.arg.hasDynSymTab)
     for (Symbol *sym : symtab.getSymbols())
       sym->isPreemptible = computeIsPreemptible(*sym);
 
@@ -480,7 +480,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
   uint32_t uniqueId = 0;
-  for (Partition &part : partitions)
+  for (Partition &part : ctx.partitions)
     part.ehFrame->iterateFDEWithLSDA<ELFT>(
         [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 

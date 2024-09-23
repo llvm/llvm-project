@@ -1708,8 +1708,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1032-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s0
 ; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 0, s7, s0
+; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s0
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
@@ -1722,8 +1722,8 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1064-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s[0:1]
 ; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, s7, s[0:1]
+; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s[0:1]
 ; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v4, 0

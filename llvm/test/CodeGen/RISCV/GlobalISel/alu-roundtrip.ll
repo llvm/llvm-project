@@ -348,9 +348,7 @@ define i32 @sdiv_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: sdiv_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sext.w a0, a0
-; RV64IM-NEXT:    sext.w a1, a1
-; RV64IM-NEXT:    div a0, a0, a1
+; RV64IM-NEXT:    divw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sdiv i32 %a, %b
@@ -365,9 +363,7 @@ define i32 @srem_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: srem_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sext.w a0, a0
-; RV64IM-NEXT:    sext.w a1, a1
-; RV64IM-NEXT:    rem a0, a0, a1
+; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = srem i32 %a, %b
@@ -382,11 +378,7 @@ define i32 @udiv_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: udiv_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    srli a0, a0, 32
-; RV64IM-NEXT:    slli a1, a1, 32
-; RV64IM-NEXT:    srli a1, a1, 32
-; RV64IM-NEXT:    divu a0, a0, a1
+; RV64IM-NEXT:    divuw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = udiv i32 %a, %b
@@ -401,11 +393,7 @@ define i32 @urem_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: urem_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    srli a0, a0, 32
-; RV64IM-NEXT:    slli a1, a1, 32
-; RV64IM-NEXT:    srli a1, a1, 32
-; RV64IM-NEXT:    remu a0, a0, a1
+; RV64IM-NEXT:    remuw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = urem i32 %a, %b

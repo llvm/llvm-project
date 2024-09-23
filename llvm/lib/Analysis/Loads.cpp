@@ -93,20 +93,37 @@ static bool isDereferenceableAndAlignedPointer(
                                               Visited, MaxDepth);
   }
 
-  bool CheckForNonNull, CheckForFreed;
-  APInt KnownDerefBytes(Size.getBitWidth(),
-                        V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                          CheckForFreed));
-  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-      !CheckForFreed)
-    if (!CheckForNonNull ||
-        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
-      // As we recursed through GEPs to get here, we've incrementally checked
-      // that each step advanced by a multiple of the alignment. If our base is
-      // properly aligned, then the original offset accessed must also be.
-      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-      return isAligned(V, Offset, Alignment, DL);
-    }
+  auto IsKnownDeref = [&]() {
+    bool CheckForNonNull, CheckForFreed;
+    APInt KnownDerefBytes(Size.getBitWidth(),
+                          V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                            CheckForFreed));
+    if (!KnownDerefBytes.getBoolValue() || !KnownDerefBytes.uge(Size) ||
+        CheckForFreed)
+      return false;
+    if (CheckForNonNull &&
+        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+      return false;
+    // When using something like !dereferenceable on a load, the
+    // dereferenceability may only be valid on a specific control-flow path.
+    // If the instruction doesn't dominate the context instruction, we're
+    // asking about dereferenceability under the assumption that the
+    // instruction has been speculated to the point of the context instruction,
+    // in which case we don't know if the dereferenceability info still holds.
+    // We don't bother handling allocas here, as they aren't speculatable
+    // anyway.
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && !isa<AllocaInst>(I))
+      return CtxI && isValidAssumeForContext(I, CtxI, DT);
+    return true;
+  };
+  if (IsKnownDeref()) {
+    // As we recursed through GEPs to get here, we've incrementally checked
+    // that each step advanced by a multiple of the alignment. If our base is
+    // properly aligned, then the original offset accessed must also be.
+    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
+    return isAligned(V, Offset, Alignment, DL);
+  }
 
   /// TODO refactor this function to be able to search independently for
   /// Dereferencability and Alignment requirements.

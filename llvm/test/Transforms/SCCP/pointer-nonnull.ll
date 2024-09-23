@@ -248,9 +248,13 @@ define ptr @ret_maybe_null_pointer(ptr %p) {
 }
 
 define internal void @ip_nonnull_arg_callee(ptr %p) {
-; CHECK-LABEL: define internal void @ip_nonnull_arg_callee(
-; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    ret void
+; SCCP-LABEL: define internal void @ip_nonnull_arg_callee(
+; SCCP-SAME: ptr [[P:%.*]]) {
+; SCCP-NEXT:    ret void
+;
+; IPSCCP-LABEL: define internal void @ip_nonnull_arg_callee(
+; IPSCCP-SAME: ptr nonnull [[P:%.*]]) {
+; IPSCCP-NEXT:    ret void
 ;
   ret void
 }

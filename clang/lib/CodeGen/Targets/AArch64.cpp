@@ -500,7 +500,7 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // For the soft-float ABI variant, no types are considered to be homogeneous
   // aggregates.
-  if (Kind == AArch64ABIKind::AAPCSSoft)
+  if (isSoftFloat())
     return false;
 
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
@@ -555,8 +555,8 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = Kind != AArch64ABIKind::AAPCSSoft &&
-               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
+  bool IsFPR =
+      !isSoftFloat() && (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:

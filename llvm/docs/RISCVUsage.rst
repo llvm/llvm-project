@@ -207,8 +207,8 @@ on support follow.
      ``Zkt``           Supported
      ``Zmmul``         Supported
      ``Ztso``          Supported
-     ``Zvbb``          Assembly Support
-     ``Zvbc``          Assembly Support
+     ``Zvbb``          Supported
+     ``Zvbc``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
@@ -217,20 +217,21 @@ on support follow.
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
-     ``Zvkb``          Assembly Support
-     ``Zvkg``          Assembly Support
-     ``Zvkn``          Assembly Support
-     ``Zvknc``         Assembly Support
-     ``Zvkned``        Assembly Support
-     ``Zvkng``         Assembly Support
-     ``Zvknha``        Assembly Support
-     ``Zvknhb``        Assembly Support
-     ``Zvks``          Assembly Support
-     ``Zvksc``         Assembly Support
-     ``Zvksed``        Assembly Support
-     ``Zvksg``         Assembly Support
-     ``Zvksh``         Assembly Support
-     ``Zvkt``          Assembly Support
+     ``Zvfhmin``       Supported
+     ``Zvkb``          Supported
+     ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkned``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkng``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknha``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknhb``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvks``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksed``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkt``          Supported
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
      ``Zvl128b``       Supported
@@ -266,6 +267,11 @@ Supported
 ``Zknd``, ``Zkne``, ``Zknh``, ``Zksed``, ``Zksh``
   No pattern matching exists.  As a result, these instructions can only be used from assembler or via intrinsic calls.
 
+.. _riscv-vector-crypto-note:
+
+``Zvbc``, ``Zvkg``, ``Zvkn``, ``Zvknc``, ``Zvkned``, ``Zvkng``, ``Zvknha``, ``Zvknhb``, ``Zvks``, ``Zvks``, ``Zvks``, ``Zvksc``, ``Zvksed``, ``Zvksg``, ``Zvksh``.
+  No pattern matching exists. As a result, these instructions can only be used from assembler or via intrinsic calls.
+
 .. _riscv-vlen-32-note:
 
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
@@ -280,6 +286,13 @@ Supported
 
 ``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
+
+Atomics ABIs
+============
+
+At the time of writing there are three atomics mappings (ABIs) `defined for RISC-V <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version>`__.  As of LLVM 19, LLVM defaults to "A6S", which is compatible with both the original "A6" and the future "A7" ABI. See `the psABI atomics document <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-atomic.adoc>`__ for more information on these mappings.
+
+Note that although the "A6S" mapping is used, the ELF attribute recording the mapping isn't currently emitted by default due to a bug causing a crash in older versions of binutils when processing files containing this attribute.
 
 Experimental Extensions
 =======================
@@ -408,19 +421,31 @@ extension are still experimental.  To use C intrinsics for such an extension
 from `clang`, you must add `-menable-experimental-extensions` to the command
 line.  This currently applies to the following extensions:
 
-* ``Zvbb``
-* ``Zvbc``
-* ``Zvkb``
-* ``Zvkg``
-* ``Zvkn``
-* ``Zvknc``
-* ``Zvkned``
-* ``Zvkng``
-* ``Zvknha``
-* ``Zvknhb``
-* ``Zvks``
-* ``Zvksc``
-* ``Zvksed``
-* ``Zvksg``
-* ``Zvksh``
-* ``Zvkt``
+No extensions have experimental intrinsics.
+
+Global Pointer (GP) Relaxation and the Small Data Limit
+=======================================================
+
+Some of the RISC-V psABI variants reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
+
+To use this functionality, you need to be doing all of the following:
+
+* Use the ``medlow`` (aka ``small``) code model;
+* Not use the ``gp`` register for any other uses (some platforms use it for the shadow stack and others as a temporary -- as denoted by the ``Tag_RISCV_x3_reg_usage`` build attribute);
+* Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects (this is the default, but ``-mno-relax`` disables these relaxation annotations);
+* Compile for a position-dependent static executable (not a shared library, and ``-fno-PIC`` / ``-fno-pic`` / ``-fno-pie``); and
+* Use LLD's ``--relax-gp`` option.
+
+LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of ``__global_pointer$`` (which will be defined if it is used and does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
+
+There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+
+Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
+
+Therefore the compiler can place smaller global variables into sections with names starting with ``.sdata`` or ``.sbss`` (matching sections with names starting with ``.data`` and ``.bss`` respectively). LLD knows to define the ``global_pointer$`` symbol close to these sections, and to lay these sections out adjacent to the ``.data`` section.
+
+Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in bytes) for a global variable to be considered small. ``-msmall-data-limit=0`` disables the use of sections starting ``.sdata`` and ``.sbss``. The ``-msmall-data-limit=`` option will not move global variables that have an explicit data section, and will keep globals in separate sections if you are using ``-fdata-sections``.
+
+The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
+
+Data suggests that these options can produce significant improvements across a range of benchmarks.

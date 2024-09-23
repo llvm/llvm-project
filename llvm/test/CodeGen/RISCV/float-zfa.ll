@@ -269,3 +269,61 @@ define void @fli_remat() {
   tail call void @foo(float 1.000000e+00, float 1.000000e+00)
   ret void
 }
+
+define float @fadd_neg_0p5(float %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.5
+; CHECK-NEXT:    fsub.s fa0, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = fadd float %x, -0.5
+  ret float %a
+}
+
+define float @fma_neg_addend(float %x, float %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.5
+; CHECK-NEXT:    fmsub.s fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float %y, float -0.5)
+  ret float %a
+}
+
+define float @fma_neg_multiplicand(float %x, float %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.125
+; CHECK-NEXT:    fnmsub.s fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float -0.125, float %y)
+  ret float %a
+}
+
+define float @fma_neg_addend_multiplicand(float %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 0.25
+; CHECK-NEXT:    fli.s fa4, 0.5
+; CHECK-NEXT:    fnmadd.s fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = call float @llvm.fma.f32(float %x, float -0.5, float -0.25)
+  ret float %a
+}
+
+define float @select_loadfpimm(float %x) nounwind {
+; CHECK-LABEL: select_loadfpimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    fle.s a0, fa5, fa0
+; CHECK-NEXT:    fli.s fa0, 0.5
+; CHECK-NEXT:    bnez a0, .LBB30_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fneg.s fa0, fa0
+; CHECK-NEXT:  .LBB30_2: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select i1 %cmp, float -5.000000e-01, float 5.000000e-01
+  ret float %sel
+}

@@ -934,12 +934,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     assert(scopeIt != regionStack.rend() &&
            "could not find region scope for handle");
     RegionScope *scope = *scopeIt;
-    for (Operation *user : handle.getUsers()) {
-      if (user != scope->currentTransform &&
-          !happensBefore(user, scope->currentTransform))
-        return false;
-    }
-    return true;
+    return llvm::all_of(handle.getUsers(), [&](Operation *user) {
+      return user == scope->currentTransform ||
+             happensBefore(user, scope->currentTransform);
+    });
   };
   transform::ErrorCheckingTrackingListener trackingListener(*this, transform,
                                                             config);

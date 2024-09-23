@@ -553,6 +553,17 @@ def Rbits :  DXILOp<30, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def CBits :  DXILOp<31, unary> {
+  let Doc = "Returns the number of 1 bits in the specified value.";
+  let LLVMIntrinsic = int_ctpop;
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_maxnum;
@@ -716,6 +727,15 @@ def BufferStore : DXILOp<69, bufferStore> {
   ];
   let result = VoidTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
+  let Doc = "checks whether a Sample, Gather, or Load operation "
+            "accessed mapped tiles in a tiled resource";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
