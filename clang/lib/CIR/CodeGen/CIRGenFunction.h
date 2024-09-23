@@ -2307,7 +2307,38 @@ struct DominatingCIRValue {
   typedef llvm::PointerIntPair<mlir::Value, 1, bool> saved_type;
 
   /// Answer whether the given value needs extra work to be saved.
-  static bool needsSaving(mlir::Value value) { llvm_unreachable("NYI"); }
+  static bool needsSaving(mlir::Value value) {
+    if (!value)
+      return false;
+
+    // If it's a block argument, we don't need to save.
+    mlir::Operation *definingOp = value.getDefiningOp();
+    if (!definingOp)
+      return false;
+
+    // If value is defined the function or a global init entry block, we don't
+    // need to save.
+    mlir::Block *currBlock = definingOp->getBlock();
+    if (!currBlock->isEntryBlock() || !definingOp->getParentOp())
+      return false;
+
+    if (auto fnOp = definingOp->getParentOfType<mlir::cir::FuncOp>()) {
+      if (&fnOp.getBody().front() == currBlock)
+        return true;
+      return false;
+    }
+
+    if (auto globalOp = definingOp->getParentOfType<mlir::cir::GlobalOp>()) {
+      assert(globalOp.getNumRegions() == 2 && "other regions NYI");
+      if (&globalOp.getCtorRegion().front() == currBlock)
+        return true;
+      if (&globalOp.getDtorRegion().front() == currBlock)
+        return true;
+      return false;
+    }
+
+    return false;
+  }
 
   static saved_type save(CIRGenFunction &CGF, mlir::Value value);
   static mlir::Value restore(CIRGenFunction &CGF, saved_type value);
@@ -2315,7 +2346,18 @@ struct DominatingCIRValue {
 
 inline DominatingCIRValue::saved_type
 DominatingCIRValue::save(CIRGenFunction &CGF, mlir::Value value) {
-  llvm_unreachable("NYI");
+  if (!needsSaving(value))
+    return saved_type(value, false);
+
+  // Otherwise, we need an alloca.
+  auto align = CharUnits::fromQuantity(
+      CGF.CGM.getDataLayout().getPrefTypeAlign(value.getType()));
+  mlir::Location loc = value.getLoc();
+  Address alloca =
+      CGF.CreateTempAlloca(value.getType(), align, loc, "cond-cleanup.save");
+  CGF.getBuilder().createStore(loc, value, alloca);
+
+  return saved_type(alloca.emitRawPointer(), true);
 }
 
 inline mlir::Value DominatingCIRValue::restore(CIRGenFunction &CGF,

@@ -115,6 +115,75 @@ RValue DominatingValue<RValue>::saved_type::restore(CIRGenFunction &CGF) {
   llvm_unreachable("bad saved r-value kind");
 }
 
+static bool IsUsedAsEHCleanup(EHScopeStack &EHStack,
+                              EHScopeStack::stable_iterator cleanup) {
+  // If we needed an EH block for any reason, that counts.
+  if (EHStack.find(cleanup)->hasEHBranches())
+    return true;
+
+  // Check whether any enclosed cleanups were needed.
+  for (EHScopeStack::stable_iterator i = EHStack.getInnermostEHScope();
+       i != cleanup;) {
+    assert(cleanup.strictlyEncloses(i));
+
+    EHScope &scope = *EHStack.find(i);
+    if (scope.hasEHBranches())
+      return true;
+
+    i = scope.getEnclosingEHScope();
+  }
+
+  return false;
+}
+
+enum ForActivation_t { ForActivation, ForDeactivation };
+
+/// The given cleanup block is changing activation state.  Configure a
+/// cleanup variable if necessary.
+///
+/// It would be good if we had some way of determining if there were
+/// extra uses *after* the change-over point.
+static void setupCleanupBlockActivation(CIRGenFunction &CGF,
+                                        EHScopeStack::stable_iterator C,
+                                        ForActivation_t kind,
+                                        mlir::Operation *dominatingIP) {
+  EHCleanupScope &Scope = cast<EHCleanupScope>(*CGF.EHStack.find(C));
+
+  // We always need the flag if we're activating the cleanup in a
+  // conditional context, because we have to assume that the current
+  // location doesn't necessarily dominate the cleanup's code.
+  bool isActivatedInConditional =
+      (kind == ForActivation && CGF.isInConditionalBranch());
+
+  bool needFlag = false;
+
+  // Calculate whether the cleanup was used:
+
+  //   - as a normal cleanup
+  if (Scope.isNormalCleanup()) {
+    Scope.setTestFlagInNormalCleanup();
+    needFlag = true;
+  }
+
+  //  - as an EH cleanup
+  if (Scope.isEHCleanup() &&
+      (isActivatedInConditional || IsUsedAsEHCleanup(CGF.EHStack, C))) {
+    Scope.setTestFlagInEHCleanup();
+    needFlag = true;
+  }
+
+  // If it hasn't yet been used as either, we're done.
+  if (!needFlag)
+    return;
+
+  Address var = Scope.getActiveFlag();
+  if (!var.isValid()) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
+}
+
 /// Deactive a cleanup that was created in an active state.
 void CIRGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
                                             mlir::Operation *dominatingIP) {
@@ -143,7 +212,9 @@ void CIRGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
     return;
   }
 
-  llvm_unreachable("NYI");
+  // Otherwise, follow the general case.
+  setupCleanupBlockActivation(*this, C, ForDeactivation, dominatingIP);
+  Scope.setActive(false);
 }
 
 void CIRGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
