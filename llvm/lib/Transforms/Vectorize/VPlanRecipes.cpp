@@ -2253,9 +2253,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
                                     CostKind, OpInfo, &Ingredient);
   }
-  // If the store value is a live-in scalar value which is uniform, we don't
-  // need to calculate the reverse cost.
-  if (!Reverse || (isa<StoreInst>(Ingredient) && getOperand(1)->isLiveIn()))
+  if (!Reverse)
     return Cost;
 
   return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
@@ -2464,6 +2462,43 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
   State.addMetadata(NewSI, SI);
+}
+
+InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  if (!Consecutive) {
+    // TODO: Using the original IR may not be accurate.
+    // Currently, ARM will use the underlying IR to calculate gather/scatter
+    // instruction cost.
+    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    assert(!Reverse &&
+           "Inconsecutive memory access should not have the order.");
+    return Ctx.TTI.getAddressComputationCost(Ty) +
+           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
+                                          IsMasked, Alignment, CostKind,
+                                          &Ingredient);
+  }
+
+  InstructionCost Cost = 0;
+  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // here because the EVL recipes using EVL to replace the tail mask. But in the
+  // legacy model, it will always calculate the cost of mask.
+  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // don't need to care the legacy cost model.
+  Cost += Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                        AS, CostKind);
+  if (!Reverse)
+    return Cost;
+
+  return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                        cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

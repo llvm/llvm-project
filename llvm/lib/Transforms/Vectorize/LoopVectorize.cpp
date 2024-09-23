@@ -5666,10 +5666,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
   }
 
   bool Reverse = ConsecutiveStride < 0;
-  const StoreInst *SI = dyn_cast<StoreInst>(I);
-  bool IsLoopInvariantStoreValue =
-      SI && Legal->isInvariant(const_cast<StoreInst *>(SI)->getValueOperand());
-  if (Reverse && !IsLoopInvariantStoreValue)
+  if (Reverse)
     Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, {},
                                CostKind, 0);
   return Cost;
