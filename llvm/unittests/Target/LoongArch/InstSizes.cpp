@@ -73,7 +73,11 @@ void runChecks(
   M->setTargetTriple(TM->getTargetTriple().getTriple());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(TM);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+
+  MachineModuleInfo MMI(*TM, MCCtx);
   bool Res = MParser->parseMachineFunctions(*M, MMI);
   ASSERT_FALSE(Res);
 

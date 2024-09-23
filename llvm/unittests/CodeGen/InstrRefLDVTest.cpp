@@ -40,6 +40,7 @@ public:
   using MLocTransferMap = InstrRefBasedLDV::MLocTransferMap;
 
   LLVMContext Ctx;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<Module> Mod;
   std::unique_ptr<TargetMachine> Machine;
   std::unique_ptr<MachineFunction> MF;
@@ -90,7 +91,12 @@ public:
         Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
+    MCCtx = std::make_unique<MCContext>(
+        Machine->getTargetTriple(), Machine->getMCAsmInfo(),
+        Machine->getMCRegisterInfo(), Machine->getMCSubtargetInfo(), nullptr,
+        &Machine->Options.MCOptions, false);
+    MMI = std::make_unique<MachineModuleInfo>(*(LLVMTargetMachine *)&*Machine,
+                                              *MCCtx);
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
     MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,

@@ -206,13 +206,16 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
   return std::move(AsmStreamer);
 }
 
+std::unique_ptr<MachineModuleInfo>
+LLVMTargetMachine::createMachineModuleInfo(MCContext &Ctx) const {
+  return std::make_unique<MachineModuleInfo>(*this, Ctx);
+}
+
 bool LLVMTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, bool DisableVerify,
-    MachineModuleInfoWrapperPass *MMIWP) {
+    CodeGenFileType FileType, MachineModuleInfo &MMI, bool DisableVerify) {
   // Add common CodeGen passes.
-  if (!MMIWP)
-    MMIWP = new MachineModuleInfoWrapperPass(this);
+  auto *MMIWP = new MachineModuleInfoWrapperPass(MMI);
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
@@ -233,14 +236,14 @@ bool LLVMTargetMachine::addPassesToEmitFile(
 
 /// addPassesToEmitMC - Add passes to the specified pass manager to get
 /// machine code emitted with the MCJIT. This method returns true if machine
-/// code is not supported. It fills the MCContext Ctx pointer which can be
-/// used to build custom MCStreamer.
-///
-bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
+/// code is not supported. It uses the MCContext Ctx of \p MMI  so that it
+/// can be used to build custom MCStreamer.
+bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM,
                                           raw_pwrite_stream &Out,
+                                          MachineModuleInfo &MMI,
                                           bool DisableVerify) {
   // Add common CodeGen passes.
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(this);
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(MMI);
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
@@ -248,7 +251,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   assert(TargetPassConfig::willCompleteCodeGenPipeline() &&
          "Cannot emit MC with limited codegen pipeline");
 
-  Ctx = &MMIWP->getMMI().getContext();
+  auto &Ctx = MMI.getContext();
   // libunwind is unable to load compact unwind dynamically, so we must generate
   // DWARF unwind info for the JIT.
   Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
@@ -258,7 +261,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   std::unique_ptr<MCCodeEmitter> MCE(
-      getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
+      getTarget().createMCCodeEmitter(*getMCInstrInfo(), Ctx));
   MCAsmBackend *MAB =
       getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
   if (!MCE || !MAB)
@@ -266,7 +269,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
+      T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
       std::move(MCE), STI));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.

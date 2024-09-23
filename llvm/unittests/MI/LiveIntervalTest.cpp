@@ -54,29 +54,27 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
                              std::nullopt, CodeGenOptLevel::Aggressive)));
 }
 
-std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                 legacy::PassManagerBase &PM,
-                                 std::unique_ptr<MIRParser> &MIR,
-                                 const LLVMTargetMachine &TM,
-                                 StringRef MIRCode) {
+std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
+parseMIR(LLVMContext &Context, MCContext &MCCtx,
+         std::unique_ptr<MIRParser> &MIR, const LLVMTargetMachine &TM,
+         StringRef MIRCode) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
   if (!MIR)
-    return nullptr;
+    return {nullptr, nullptr};
 
   std::unique_ptr<Module> M = MIR->parseIRModule();
   if (!M)
-    return nullptr;
+    return {nullptr, nullptr};
 
   M->setDataLayout(TM.createDataLayout());
 
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(&TM);
-  if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
-    return nullptr;
-  PM.add(MMIWP);
+  auto MMI = TM.createMachineModuleInfo(MCCtx);
+  if (MIR->parseMachineFunctions(*M, *MMI))
+    return {nullptr, nullptr};
 
-  return M;
+  return {std::move(M), std::move(MMI)};
 }
 
 struct TestPass : public MachineFunctionPass {
@@ -205,14 +203,19 @@ static void doTest(StringRef MIRFunc,
                    bool ShouldPass = true) {
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
   // This test is designed for the X86 backend; stop if it is not available.
   if (!TM)
     return;
 
   legacy::PassManager PM;
   std::unique_ptr<MIRParser> MIR;
-  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRFunc);
+  auto [M, MMI] = parseMIR(Context, MCCtx, MIR, *TM, MIRFunc);
   ASSERT_TRUE(M);
+  ASSERT_TRUE(MMI);
+  PM.add(new MachineModuleInfoWrapperPass(*MMI));
 
   PM.add(new TestPassT<AnalysisType>(T, ShouldPass));
 

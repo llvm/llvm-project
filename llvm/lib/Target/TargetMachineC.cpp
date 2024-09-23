@@ -13,9 +13,11 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/FileSystem.h"
@@ -309,7 +311,13 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
       ft = CodeGenFileType::ObjectFile;
       break;
   }
-  if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {
+
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = TM->createMachineModuleInfo(MCCtx);
+
+  if (TM->addPassesToEmitFile(pass, OS, nullptr, ft, *MMI)) {
     error = "TargetMachine can't emit a file of this type";
     *ErrorMessage = strdup(error.c_str());
     return true;

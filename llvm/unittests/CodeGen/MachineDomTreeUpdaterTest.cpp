@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
@@ -30,6 +31,7 @@ class MachineDomTreeUpdaterTest : public testing::Test {
 public:
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<Module> M;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MIRParser> MIR;
@@ -60,8 +62,12 @@ public:
         T->createTargetMachine("X86", "", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+
     MMI = std::make_unique<MachineModuleInfo>(
-        static_cast<LLVMTargetMachine *>(TM.get()));
+        *static_cast<LLVMTargetMachine *>(TM.get()), *MCCtx);
 
     PassBuilder PB(TM.get());
     PB.registerModuleAnalyses(MAM);

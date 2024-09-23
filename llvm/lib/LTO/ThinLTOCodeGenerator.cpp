@@ -24,6 +24,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -334,9 +336,13 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
 
+    MCContext MCCtx(TM.getTargetTriple(), TM.getMCAsmInfo(),
+                    TM.getMCRegisterInfo(), TM.getMCSubtargetInfo(), nullptr,
+                    &TM.Options.MCOptions, false);
+    auto MMI = TM.createMachineModuleInfo(MCCtx);
     // Setup the codegen now.
     if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
-                               /* DisableVerify */ true))
+                               *MMI, /* DisableVerify */ true))
       report_fatal_error("Failed to setup codegen");
 
     // Run codegen now. resulting binary is in OutputBuffer.

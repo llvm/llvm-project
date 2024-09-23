@@ -69,7 +69,11 @@ protected:
     if (!AliasedG)
       report_fatal_error("AliasedG?");
 
-    MachineModuleInfo MMI(TM.get());
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+
+    MachineModuleInfo MMI(*TM, *MCCtx);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
                                            MMI.getContext(), 0);
@@ -91,6 +95,7 @@ protected:
   }
 
   LLVMContext Context;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;

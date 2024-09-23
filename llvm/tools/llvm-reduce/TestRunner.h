@@ -27,7 +27,8 @@ class TestRunner {
 public:
   TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs,
              std::unique_ptr<ReducerWorkItem> Program,
-             std::unique_ptr<TargetMachine> TM, StringRef ToolName,
+             std::unique_ptr<TargetMachine> TM,
+             std::unique_ptr<MCContext> MCCtx, StringRef ToolName,
              StringRef OutputFilename, bool InputIsBitcode, bool OutputBitcode);
 
   /// Runs the interesting-ness test for the specified file
@@ -44,6 +45,8 @@ public:
 
   const TargetMachine *getTargetMachine() const { return TM.get(); }
 
+  MCContext *getMCContext() const { return MCCtx.get(); }
+
   StringRef getToolName() const { return ToolName; }
 
   void writeOutput(StringRef Message);
@@ -58,6 +61,7 @@ private:
   const std::vector<std::string> &TestArgs;
   std::unique_ptr<ReducerWorkItem> Program;
   std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<MCContext> MCCtx;
   StringRef OutputFilename;
   const bool InputIsBitcode;
   bool EmitBitcode;

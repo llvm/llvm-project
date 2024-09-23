@@ -109,7 +109,10 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  llvm::MCContext MCCtx(LLVMTM.getTargetTriple(), LLVMTM.getMCAsmInfo(),
+                        LLVMTM.getMCRegisterInfo(), LLVMTM.getMCSubtargetInfo(),
+                        nullptr, &LLVMTM.Options.MCOptions, false);
+  MachineModuleInfo MMI(LLVMTM, MCCtx);
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,

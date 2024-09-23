@@ -15,6 +15,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/Operations.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
@@ -96,10 +98,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   // Build up a PM to do instruction selection.
   legacy::PassManager PM;
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = TM->createMachineModuleInfo(MCCtx);
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;
-  TM->addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::Null);
+  TM->addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::Null, *MMI);
   PM.run(*M);
 
   return 0;

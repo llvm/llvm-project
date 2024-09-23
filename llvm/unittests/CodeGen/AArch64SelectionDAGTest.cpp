@@ -46,6 +46,9 @@ protected:
     TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
         T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
                                std::nullopt, CodeGenOptLevel::Aggressive)));
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
     if (!TM)
       GTEST_SKIP();
 
@@ -59,10 +62,10 @@ protected:
     if (!F)
       report_fatal_error("F?");
 
-    MachineModuleInfo MMI(TM.get());
+    MachineModuleInfo MMI(*TM, *MCCtx);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+                                           *MCCtx, 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
@@ -82,6 +85,7 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<Module> M;
   Function *F;
   std::unique_ptr<MachineFunction> MF;

@@ -20,11 +20,13 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -423,9 +425,15 @@ static void codegen(const Config &Conf, TargetMachine *TM,
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)
     Conf.PreCodeGenPassesHook(CodeGenPasses);
+
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = TM->createMachineModuleInfo(MCCtx);
+
   if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
+                              DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
+                              *MMI))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(Mod);
 

@@ -400,7 +400,11 @@ protected:
     AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
     legacy::PassManager PM;
-    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    MCContext MCCtx(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
+                    LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(),
+                    nullptr, &LLVMTM->Options.MCOptions, false);
+    MachineModuleInfo MMI(*LLVMTM, MCCtx);
+    PM.add(new MachineModuleInfoWrapperPass(MMI));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
@@ -450,7 +454,11 @@ protected:
     AP->addDebugHandler(std::make_unique<TestDebugHandler>(*this, AP));
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
     legacy::PassManager PM;
-    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    MCContext MCCtx(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
+                    LLVMTM->getMCRegisterInfo(), LLVMTM->getMCSubtargetInfo(),
+                    nullptr, &LLVMTM->Options.MCOptions, false);
+    MachineModuleInfo MMI(*LLVMTM, MCCtx);
+    PM.add(new MachineModuleInfoWrapperPass(MMI));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));

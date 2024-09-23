@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/FileCheck/FileCheck.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -126,7 +127,10 @@ body:             |
   RET undef $lr
 ...
 )MIR";
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF1 = MMI.getMachineFunction(*M->getFunction("f1"));
@@ -195,7 +199,10 @@ body:             |
   RET undef $lr
 ...
 )MIR";
-  MachineModuleInfo MMI(TM.get());
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  MachineModuleInfo MMI(*TM, MCCtx);
   M = parseMIR(*TM, MIRString, MMI);
   ASSERT_TRUE(M);
   auto *MF1 = MMI.getMachineFunction(*M->getFunction("f1"));

@@ -24,6 +24,9 @@ void runChecks(
     std::function<void(const ARMBaseInstrInfo &, MachineFunction &, unsigned &)>
         Checks) {
   LLVMContext Context;
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
 
   auto MIRString = "--- |\n"
                    "  declare void @sizes()\n" +
@@ -55,7 +58,7 @@ void runChecks(
   M->setTargetTriple(TM->getTargetTriple().getTriple());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(TM);
+  MachineModuleInfo MMI(*TM, MCCtx);
   bool Res = MParser->parseMachineFunctions(*M, MMI);
   ASSERT_FALSE(Res);
 

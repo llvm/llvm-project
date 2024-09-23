@@ -20,6 +20,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/Frontend/Offloading/OffloadWrapper.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constants.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -1051,10 +1053,14 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
   legacy::PassManager CodeGenPasses;
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = TM->createMachineModuleInfo(MCCtx);
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
-                              CodeGenFileType::ObjectFile))
+                              CodeGenFileType::ObjectFile, *MMI))
     return createStringError("Failed to execute host backend");
   CodeGenPasses.run(M);
 

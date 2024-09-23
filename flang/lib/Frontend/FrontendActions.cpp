@@ -51,6 +51,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -58,6 +59,7 @@
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -944,7 +946,11 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
+  llvm::MCContext mcCtx(tm.getTargetTriple(), tm.getMCAsmInfo(),
+                        tm.getMCRegisterInfo(), tm.getMCSubtargetInfo(),
+                        nullptr, &tm.Options.MCOptions, false);
+  auto mmi = tm.createMachineModuleInfo(mcCtx);
+  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft, *mmi)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");

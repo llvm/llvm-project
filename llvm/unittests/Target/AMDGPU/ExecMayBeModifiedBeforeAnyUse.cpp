@@ -28,9 +28,10 @@ TEST(AMDGPU, ExecMayBeModifiedBeforeAnyUse) {
   auto *Type = FunctionType::get(Type::getVoidTy(Ctx), false);
   auto *F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);
 
-  MachineModuleInfo MMI(TM.get());
-  auto MF =
-      std::make_unique<MachineFunction>(*F, *TM, ST, MMI.getContext(), 42);
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MF = std::make_unique<MachineFunction>(*F, *TM, ST, MCCtx, 42);
   auto *BB = MF->CreateMachineBasicBlock();
   MF->push_back(BB);
 

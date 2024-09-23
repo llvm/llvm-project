@@ -234,9 +234,13 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP->getMMI());
+  auto MCCtx = std::make_unique<MCContext>(
+      LLVMTM.getTargetTriple(), LLVMTM.getMCAsmInfo(),
+      LLVMTM.getMCRegisterInfo(), LLVMTM.getMCSubtargetInfo(), nullptr,
+      &LLVMTM.Options.MCOptions, false);
+  auto MMI = std::make_unique<llvm::MachineModuleInfo>(LLVMTM, *MCCtx);
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
@@ -249,7 +253,11 @@ Error assembleToStream(const ExegesisTarget &ET,
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
+  MCContext MCCtx(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                  TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(), nullptr,
+                  &TM->Options.MCOptions, false);
+  auto MMI = std::make_unique<llvm::MachineModuleInfo>(*TM, MCCtx);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(*MMI);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP.get()->getMMI());
   MF.ensureAlignment(kFunctionAlignment);

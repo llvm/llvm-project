@@ -492,9 +492,11 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
 }
 
 std::unique_ptr<ReducerWorkItem>
-ReducerWorkItem::clone(const TargetMachine *TM) const {
+ReducerWorkItem::clone(const TargetMachine *TM, MCContext *MCCtx) const {
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
   if (TM) {
+    if (!MCCtx)
+      report_fatal_error("MCContext is nullptr");
     // We're assuming the Module IR contents are always unchanged by MIR
     // reductions, and can share it as a constant.
     CloneMMM->M = M;
@@ -504,7 +506,7 @@ ReducerWorkItem::clone(const TargetMachine *TM) const {
     // is pretty ugly).
     const LLVMTargetMachine *LLVMTM =
         static_cast<const LLVMTargetMachine *>(TM);
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(*LLVMTM, *MCCtx);
 
     for (const Function &F : getModule()) {
       if (auto *MF = MMI->getMachineFunction(F))
@@ -783,7 +785,7 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
 
 std::pair<std::unique_ptr<ReducerWorkItem>, bool>
 llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
-                           LLVMContext &Ctxt,
+                           LLVMContext &Ctxt, std::unique_ptr<MCContext> &MCCtx,
                            std::unique_ptr<TargetMachine> &TM, bool IsMIR) {
   bool IsBitcode = false;
   Triple TheTriple;
@@ -822,7 +824,11 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MCCtx.reset(new MCContext(LLVMTM->getTargetTriple(), LLVMTM->getMCAsmInfo(),
+                              LLVMTM->getMCRegisterInfo(),
+                              LLVMTM->getMCSubtargetInfo(), nullptr,
+                              &LLVMTM->Options.MCOptions, false));
+    MMM->MMI = std::make_unique<MachineModuleInfo>(*LLVMTM, *MCCtx);
     MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
   } else {

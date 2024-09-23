@@ -83,13 +83,11 @@ class MachineModuleInfo {
   friend class MachineModuleInfoWrapperPass;
   friend class MachineModuleAnalysis;
 
+  /// This is the TargetMachine used for the entire code generator.
   const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
-  MCContext Context;
-  // This is an external context, that if assigned, will be used instead of the
-  // internal context.
-  MCContext *ExternalContext = nullptr;
+  MCContext &Context;
 
   /// This is the LLVM Module being worked on.
   const Module *TheModule = nullptr;
@@ -106,15 +104,14 @@ class MachineModuleInfo {
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
-  MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
-
 public:
-  explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
+  explicit MachineModuleInfo(const LLVMTargetMachine &TM, MCContext &Context);
 
-  explicit MachineModuleInfo(const LLVMTargetMachine *TM,
-                             MCContext *ExtContext);
+  /// Deleted copy constructor
+  MachineModuleInfo(MachineModuleInfo &MMI) = delete;
 
-  MachineModuleInfo(MachineModuleInfo &&MMII);
+  /// Deleted copy assignment operator
+  MachineModuleInfo &operator=(MachineModuleInfo &MMII) = delete;
 
   ~MachineModuleInfo();
 
@@ -123,12 +120,8 @@ public:
 
   const LLVMTargetMachine &getTarget() const { return TM; }
 
-  const MCContext &getContext() const {
-    return ExternalContext ? *ExternalContext : Context;
-  }
-  MCContext &getContext() {
-    return ExternalContext ? *ExternalContext : Context;
-  }
+  const MCContext &getContext() const { return Context; }
+  MCContext &getContext() { return Context; }
 
   const Module *getModule() const { return TheModule; }
 
@@ -169,14 +162,12 @@ public:
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
-  MachineModuleInfo MMI;
+  MachineModuleInfo &MMI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
-                                        MCContext *ExtContext);
+  explicit MachineModuleInfoWrapperPass(MachineModuleInfo &MMI);
 
   // Initialization and Finalization
   bool doInitialization(Module &) override;

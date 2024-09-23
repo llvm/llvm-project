@@ -20,9 +20,11 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -175,9 +177,15 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
   { // Drop pstream after this to prevent the ISA from being stuck buffering
     llvm::buffer_ostream pstream(stream);
     llvm::legacy::PassManager codegenPasses;
+    llvm::MCContext mcCtx(
+        targetMachine.getTargetTriple(), targetMachine.getMCAsmInfo(),
+        targetMachine.getMCRegisterInfo(), targetMachine.getMCSubtargetInfo(),
+        nullptr, &targetMachine.Options.MCOptions, false);
+    auto mmi = targetMachine.createMachineModuleInfo(mcCtx);
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CodeGenFileType::AssemblyFile))
+                                          llvm::CodeGenFileType::AssemblyFile,
+                                          *mmi))
       return std::nullopt;
 
     codegenPasses.run(llvmModule);

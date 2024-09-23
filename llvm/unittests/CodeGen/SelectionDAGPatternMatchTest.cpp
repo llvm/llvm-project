@@ -68,10 +68,14 @@ protected:
     if (!AliasedG)
       report_fatal_error("AliasedG?");
 
-    MachineModuleInfo MMI(TM.get());
+    MCCtx = std::make_unique<MCContext>(
+        TM->getTargetTriple(), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+        TM->getMCSubtargetInfo(), nullptr, &TM->Options.MCOptions, false);
+
+    MachineModuleInfo MMI(*TM, *MCCtx);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+                                           *MCCtx, 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
@@ -95,6 +99,7 @@ protected:
   Function *F;
   GlobalVariable *G;
   GlobalAlias *AliasedG;
+  std::unique_ptr<MCContext> MCCtx;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<SelectionDAG> DAG;
 };
