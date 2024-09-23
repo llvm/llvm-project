@@ -83,7 +83,8 @@ struct Violation {
   ViolationID ID = ViolationID::None;
   ViolationSite Site;
   SourceLocation Loc;
-  const Decl *Callee = nullptr; // Only valid for Calls*.
+  const Decl *Callee =
+      nullptr; // Only valid for ViolationIDs Calls{Decl,Expr}WithoutEffect.
 
   Violation() = default;
 
@@ -275,7 +276,7 @@ struct CallableInfo {
   }
 
   /// Generate a name for logging and diagnostics.
-  std::string name(Sema &S) const {
+  std::string getNameForDiagnostic(Sema &S) const {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
 
@@ -298,6 +299,7 @@ class EffectToViolationMap {
   // than 1), use a SmallVector with an inline capacity of 1. Since it
   // is often empty, use a unique_ptr to the SmallVector.
   // Note that Violation itself contains a FunctionEffect which is the key.
+  // FIXME: Is there a way to simplify this using existing data structures?
   using ImplVec = llvm::SmallVector<Violation, 1>;
   std::unique_ptr<ImplVec> Impl;
 
@@ -316,9 +318,8 @@ public:
     if (Impl == nullptr)
       return nullptr;
 
-    auto *Iter =
-        llvm::find_if(*Impl,
-                     [&](const auto &Item) { return Item.Effect == Key; });
+    auto *Iter = llvm::find_if(
+        *Impl, [&](const auto &Item) { return Item.Effect == Key; });
     return Iter != Impl->end() ? &*Iter : nullptr;
   }
 
@@ -417,9 +418,9 @@ public:
   ArrayRef<Violation> getSortedViolationsForExplicitEffects(SourceManager &SM) {
     if (!ViolationsForExplicitEffects.empty())
       llvm::sort(ViolationsForExplicitEffects,
-                [&SM](const Violation &LHS, const Violation &RHS) {
-                  return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
-                });
+                 [&SM](const Violation &LHS, const Violation &RHS) {
+                   return SM.isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
+                 });
     return ViolationsForExplicitEffects;
   }
 
@@ -434,7 +435,7 @@ public:
       OS << "; Calls: ";
       for (const DirectCall &Call : UnverifiedDirectCalls) {
         CallableInfo CI(*Call.Callee);
-        OS << " " << CI.name(SemaRef);
+        OS << " " << CI.getNameForDiagnostic(SemaRef);
       }
     }
     OS << "\n";
@@ -524,7 +525,7 @@ class Analyzer {
       for (const auto &item : *this) {
         CallableInfo CI(*item.first);
         const auto AP = item.second;
-        OS << item.first << " " << CI.name(SemaRef) << " : ";
+        OS << item.first << " " << CI.getNameForDiagnostic(SemaRef) << " : ";
         if (AP.isNull()) {
           OS << "null\n";
         } else if (isa<CompleteFunctionAnalysis *>(AP)) {
@@ -642,7 +643,8 @@ private:
     // a fairly trivial move to a heap-allocated object.
     PendingFunctionAnalysis FAnalysis(S, CInfo, AllInferrableEffectsToVerify);
 
-    LLVM_DEBUG(llvm::dbgs() << "\nVerifying " << CInfo.name(S) << " ";
+    LLVM_DEBUG(llvm::dbgs()
+                   << "\nVerifying " << CInfo.getNameForDiagnostic(S) << " ";
                FAnalysis.dump(S, llvm::dbgs()););
 
     FunctionBodyASTVisitor Visitor(*this, FAnalysis, CInfo);
@@ -683,8 +685,8 @@ private:
   // the possibility of inference. Deletes Pending.
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
     CallableInfo Caller(*D);
-    LLVM_DEBUG(llvm::dbgs()
-                   << "finishPendingAnalysis for " << Caller.name(S) << " : ";
+    LLVM_DEBUG(llvm::dbgs() << "finishPendingAnalysis for "
+                            << Caller.getNameForDiagnostic(S) << " : ";
                Pending->dump(S, llvm::dbgs()); llvm::dbgs() << "\n";);
     for (const PendingFunctionAnalysis::DirectCall &Call :
          Pending->unverifiedCalls()) {
@@ -726,9 +728,10 @@ private:
     if (!Callee.isVerifiable())
       IsInferencePossible = false;
 
-    LLVM_DEBUG(llvm::dbgs() << "followCall from " << Caller.name(S) << " to "
-                            << Callee.name(S) << "; verifiable: "
-                            << Callee.isVerifiable() << "; callee ";
+    LLVM_DEBUG(llvm::dbgs()
+                   << "followCall from " << Caller.getNameForDiagnostic(S)
+                   << " to " << Callee.getNameForDiagnostic(S)
+                   << "; verifiable: " << Callee.isVerifiable() << "; callee ";
                CalleeEffects.dump(llvm::dbgs()); llvm::dbgs() << "\n";
                llvm::dbgs() << "  callee " << Callee.CDecl << " canonical "
                             << Callee.CDecl->getCanonicalDecl() << "\n";);
@@ -858,7 +861,7 @@ private:
 
       case ViolationID::CallsDeclWithoutEffect: {
         CallableInfo CalleeInfo(*Viol1.Callee);
-        std::string CalleeName = CalleeInfo.name(S);
+        std::string CalleeName = CalleeInfo.getNameForDiagnostic(S);
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
             << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName
@@ -935,14 +938,14 @@ private:
             S.Diag(Viol2.Loc, diag::note_func_effect_calls_func_without_effect)
                 << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
                 << SiteDescIndex(Viol2.Callee, nullptr)
-                << MaybeNextCallee->name(S);
+                << MaybeNextCallee->getNameForDiagnostic(S);
             break;
           }
           MaybeAddTemplateNote(Callee);
           Callee = Viol2.Callee;
           if (MaybeNextCallee) {
             CalleeInfo = *MaybeNextCallee;
-            CalleeName = CalleeInfo.name(S);
+            CalleeName = CalleeInfo.getNameForDiagnostic(S);
           }
         }
       } break;
@@ -1417,7 +1420,7 @@ void Sema::performFunctionEffectAnalysis(TranslationUnitDecl *TU) {
   Analyzer{*this}.run(*TU);
 }
 
-Sema::FunctionEffectDifferences::FunctionEffectDifferences(
+Sema::FunctionEffectDiffVector::FunctionEffectDiffVector(
     const FunctionEffectsRef &Old, const FunctionEffectsRef &New) {
 
   FunctionEffectsRef::iterator POld = Old.begin();

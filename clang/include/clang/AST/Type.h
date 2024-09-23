@@ -4719,8 +4719,9 @@ public:
     NonBlocking = 1,
     NonAllocating = 2,
     Blocking = 3,
-    Allocating = 4
+    Allocating = 4,
   };
+  constexpr static size_t KindMaximum = 4;
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;
@@ -4958,20 +4959,23 @@ public:
 /// A mutable set of FunctionEffect::Kind.
 class FunctionEffectKindSet {
   // For now this only needs to be a bitmap.
-  constexpr static size_t EndBitPos = 8;
+  constexpr static size_t EndBitPos = FunctionEffect::KindMaximum;
   using KindBitsT = std::bitset<EndBitPos>;
 
   KindBitsT KindBits{};
 
   explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
 
+  // Functions to translate between an effect kind, starting at 1, and a
+  // position in the bitset.
+
   constexpr static size_t kindToPos(FunctionEffect::Kind K) {
-    return static_cast<size_t>(K);
+    return static_cast<size_t>(K) - 1;
   }
 
-public:
-  FunctionEffectKindSet() = default;
-  explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
+  constexpr static FunctionEffect::Kind posToKind(size_t Pos) {
+    return static_cast<FunctionEffect::Kind>(Pos + 1);
+  }
 
   // Iterates through the bits which are set.
   class iterator {
@@ -5001,9 +5005,13 @@ public:
 
     FunctionEffect operator*() const {
       assert(Idx < EndBitPos && "Dereference of end iterator");
-      return FunctionEffect(FunctionEffect::Kind(Idx));
+      return FunctionEffect(posToKind(Idx));
     }
   };
+
+public:
+  FunctionEffectKindSet() = default;
+  explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
 
   iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, EndBitPos); }

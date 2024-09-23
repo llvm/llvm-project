@@ -15066,10 +15066,10 @@ public:
         const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
   };
 
-  struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
+  struct FunctionEffectDiffVector : public SmallVector<FunctionEffectDiff> {
     /// Caller should short-circuit by checking for equality first.
-    FunctionEffectDifferences(const FunctionEffectsRef &Old,
-                              const FunctionEffectsRef &New);
+    FunctionEffectDiffVector(const FunctionEffectsRef &Old,
+                             const FunctionEffectsRef &New);
   };
 
   /// All functions/lambdas/blocks which have bodies and which have a non-empty

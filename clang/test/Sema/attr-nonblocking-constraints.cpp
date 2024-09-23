@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the FXAnalysis pass from running at all.
 
-#pragma clang diagnostic warning "-Wfunction-effects"
 // This diagnostic is re-enabled and exercised in isolation later in this file.
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 

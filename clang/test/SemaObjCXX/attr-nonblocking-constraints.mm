@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -fobjc-exceptions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -fobjc-exceptions -verify -Wfunction-effects %s
 
-#pragma clang diagnostic warning "-Wfunction-effects"
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 
 // Objective-C

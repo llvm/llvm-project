@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -fblocks -fcxx-exceptions -fms-extensions -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -fblocks -fcxx-exceptions -fms-extensions -verify -Wfunction-effects %s
 
-#pragma clang diagnostic warning "-Wfunction-effects"
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 
 // These need '-fms-extensions' (and maybe '-fdeclspec')

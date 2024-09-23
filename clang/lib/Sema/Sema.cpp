@@ -644,7 +644,7 @@ void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
   const auto SrcFX = FunctionEffectsRef::get(SrcType);
   const auto DstFX = FunctionEffectsRef::get(DstType);
   if (SrcFX != DstFX) {
-    for (const auto &Diff : FunctionEffectDifferences(SrcFX, DstFX)) {
+    for (const auto &Diff : FunctionEffectDiffVector(SrcFX, DstFX)) {
       if (Diff.shouldDiagnoseConversion(SrcType, SrcFX, DstType, DstFX))
         Diag(Loc, diag::warn_invalid_add_func_effects) << Diff.effectName();
     }
