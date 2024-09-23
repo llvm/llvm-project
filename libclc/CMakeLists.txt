@@ -278,49 +278,22 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH ${ARCH} )
   endif()
 
-  # Enumerate SOURCES* files
-  set( source_list )
-  foreach( l ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS} )
-    foreach( s "SOURCES" "SOURCES_${LLVM_MAJOR}.${LLVM_MINOR}" )
-      file( TO_CMAKE_PATH ${l}/lib/${s} file_loc )
-      file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
-      # Prepend the location to give higher priority to
-      # specialized implementation
-      if( EXISTS ${loc} )
-        set( source_list ${file_loc} ${source_list} )
-      endif()
-    endforeach()
-  endforeach()
+  set( opencl_lib_files )
+  set( opencl_gen_files )
 
-  # Add the generated convert.cl here to prevent adding the one listed in
-  # SOURCES
-  set( objects )   # A "set" of already-added input files
-  set( rel_files ) # Source directory input files, relative to the root dir
-  set( gen_files ) # Generated binary input files, relative to the binary dir
-  if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" )
-    if( NOT ENABLE_RUNTIME_SUBNORMAL AND NOT ${ARCH} STREQUAL "clspv" AND
-        NOT ${ARCH} STREQUAL "clspv64" )
-      list( APPEND gen_files convert.cl )
-      list( APPEND objects convert.cl )
-      list( APPEND rel_files generic/lib/subnormal_use_default.ll )
-    elseif(${ARCH} STREQUAL "clspv" OR ${ARCH} STREQUAL "clspv64")
-      list( APPEND gen_files clspv-convert.cl )
-      list( APPEND objects clspv-convert.cl )
+  if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 )
+    if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+      list( APPEND opencl_gen_files clspv-convert.cl )
+    elseif ( NOT ENABLE_RUNTIME_SUBNORMAL )
+      list( APPEND opencl_gen_files convert.cl )
+      list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
     endif()
   endif()
 
-  foreach( l ${source_list} )
-    file( READ ${l} file_list )
-    string( REPLACE "\n" ";" file_list ${file_list} )
-    get_filename_component( dir ${l} DIRECTORY )
-    foreach( f ${file_list} )
-      # Only add each file once, so that targets can 'specialize' builtins
-      if( NOT ${f} IN_LIST objects )
-        list( APPEND objects ${f} )
-        list( APPEND rel_files ${dir}/${f} )
-      endif()
-    endforeach()
-  endforeach()
+  libclc_configure_lib_source(
+    opencl_lib_files
+    DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+  )
 
   foreach( d ${${t}_devices} )
     get_libclc_device_info(
@@ -330,11 +303,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       ARCH_SUFFIX arch_suffix
       CLANG_TRIPLE clang_triple
     )
-
-    set( mcpu )
-    if( NOT "${cpu}" STREQUAL "" )
-      set( mcpu "-mcpu=${cpu}" )
-    endif()
 
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
@@ -363,109 +331,19 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -Wno-bitwise-conditional-parentheses
     )
 
-    set( bytecode_files "" )
-    foreach( file IN LISTS gen_files rel_files )
-      # We need to take each file and produce an absolute input file, as well
-      # as a unique architecture-specific output file. We deal with a mix of
-      # different input files, which makes this trickier.
-      if( ${file} IN_LIST gen_files )
-        # Generated files are given just as file names, which we must make
-        # absolute to the binary directory.
-        set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
-      else()
-        # Other files are originally relative to each SOURCE file, which are
-        # then make relative to the libclc root directory. We must normalize
-        # the path (e.g., ironing out any ".."), then make it relative to the
-        # root directory again, and use that relative path component for the
-        # binary path.
-        get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
-        file( RELATIVE_PATH root_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${abs_path} )
-        set( input_file ${CMAKE_CURRENT_SOURCE_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
-      endif()
-
-      get_filename_component( file_dir ${file} DIRECTORY )
-
-      compile_to_bc(
-        TRIPLE ${clang_triple}
-        INPUT ${input_file}
-        OUTPUT ${output_file}
-        EXTRA_OPTS "${mcpu}" -fno-builtin -nostdlib
-                   "${build_flags}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
-        DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
-      )
-      list( APPEND bytecode_files ${output_file} )
-    endforeach()
-
-    set( builtins_comp_lib_tgt builtins.comp.${arch_suffix} )
-    add_custom_target( ${builtins_comp_lib_tgt}
-      DEPENDS ${bytecode_files}
-    )
-    set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
-
-    set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
-    link_bc(
-      TARGET ${builtins_link_lib_tgt}
-      INPUTS ${bytecode_files}
-      DEPENDENCIES ${builtins_comp_lib_tgt}
-    )
-
-    set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
-
-    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
-      set( spv_suffix ${arch_suffix}.spv )
-      add_custom_command( OUTPUT ${spv_suffix}
-        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-      )
-      add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
-      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
-      install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
-         DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
-    else()
-      set( builtins_opt_lib_tgt builtins.opt.${arch_suffix} )
-
-      # Add opt target
-      add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
-        COMMAND ${opt_exe} ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
-          ${builtins_link_lib}
-        DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-      )
-      add_custom_target( ${builtins_opt_lib_tgt}
-        ALL DEPENDS ${builtins_opt_lib_tgt}.bc
-      )
-      set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-        TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
-        FOLDER "libclc/Device IR/Opt"
-      )
-
-      set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
-
-      # Add prepare target
-      set( obj_suffix ${arch_suffix}.bc )
-      add_custom_command( OUTPUT ${obj_suffix}
-        COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
-        DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
-      add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
-      set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
-
-      # nvptx-- targets don't include workitem builtins
-      if( NOT clang_triple MATCHES ".*ptx.*--$" )
-        add_test( NAME external-calls-${obj_suffix}
-          COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
-          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-      endif()
-
-      install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
-      foreach( a ${${d}_aliases} )
-        set( alias_suffix "${a}-${clang_triple}.bc" )
-        add_custom_target( ${alias_suffix} ALL
-          COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
-          DEPENDS prepare-${obj_suffix} )
-        set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/Device IR/Aliases" )
-        install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
-      endforeach( a )
+    if( NOT "${cpu}" STREQUAL "" )
+      list( APPEND build_flags -mcpu=${cpu} )
     endif()
+
+    add_libclc_builtin_set(
+      ARCH ${ARCH}
+      ARCH_SUFFIX ${arch_suffix}
+      TRIPLE ${clang_triple}
+      COMPILE_FLAGS ${build_flags}
+      OPT_FLAGS ${opt_flags}
+      LIB_FILES ${opencl_lib_files}
+      GEN_FILES ${opencl_gen_files}
+      ALIASES ${${d}_aliases}
+    )
   endforeach( d )
 endforeach( t )
