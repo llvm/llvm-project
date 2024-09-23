@@ -162,8 +162,8 @@ static uint64_t encodeRegisterForDwarf(std::string registerName) {
   uint64_t result = 0;
   for (int i = 0; i < registerName.length(); ++i) {
     result = result << 8;
-    char c = registerName[i];
-    result += c;
+    unsigned char c = registerName[i];
+    result |= c;
   }
   return result;
 }
@@ -181,7 +181,7 @@ int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
     std::string name = NVPTXInstPrinter::getRegisterName(RegNum.id());
     return encodeRegisterForDwarf(name);
   }
-  auto lookup = debugRegisterMap.lookup(RegNum.id());
+  uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
   if (lookup)
     return lookup;
   return -1;
