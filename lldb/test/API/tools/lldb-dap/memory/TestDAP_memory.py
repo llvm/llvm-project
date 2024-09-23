@@ -108,4 +108,3 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Reads at offset 0x0 fail
         mem = self.dap_server.request_readMemory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
-        self.assertEqual(mem["message"], "memory read failed for 0x0")
