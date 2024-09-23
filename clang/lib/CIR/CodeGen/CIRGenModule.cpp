@@ -33,6 +33,8 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
+#include "clang/AST/Expr.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -3330,16 +3332,22 @@ mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(AnnotateAttr *attr) {
   llvm::SmallVector<mlir::Attribute, 4> args;
   args.reserve(exprs.size());
   for (Expr *e : exprs) {
+    auto &ce = *cast<clang::ConstantExpr>(e);
     if (auto *const strE =
-            ::clang::dyn_cast<clang::StringLiteral>(e->IgnoreParenCasts())) {
+            clang::dyn_cast<clang::StringLiteral>(ce.IgnoreParenCasts())) {
       // Add trailing null character as StringLiteral->getString() does not
       args.push_back(builder.getStringAttr(strE->getString()));
-    } else if (auto *const intE = ::clang::dyn_cast<clang::IntegerLiteral>(
-                   e->IgnoreParenCasts())) {
-      args.push_back(mlir::IntegerAttr::get(
-          mlir::IntegerType::get(builder.getContext(),
-                                 intE->getValue().getBitWidth()),
-          intE->getValue()));
+    } else if (ce.hasAPValueResult()) {
+      // Handle case which can be evaluated to some numbers, not only literals
+      const auto &ap = ce.getAPValueResult();
+      if (ap.isInt()) {
+        args.push_back(mlir::IntegerAttr::get(
+            mlir::IntegerType::get(builder.getContext(),
+                                   ap.getInt().getBitWidth()),
+            ap.getInt()));
+      } else {
+        llvm_unreachable("NYI like float, fixed-point, array...");
+      }
     } else {
       llvm_unreachable("NYI");
     }
