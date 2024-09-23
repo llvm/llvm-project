@@ -212,7 +212,6 @@ ObjectFile::createObjectFile(StringRef ObjectPath) {
   if (std::error_code EC = FileOrErr.getError())
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> Buffer = std::move(FileOrErr.get());
-
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       createObjectFile(Buffer->getMemBufferRef());
   if (Error Err = ObjOrErr.takeError())
