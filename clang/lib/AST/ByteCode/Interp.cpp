@@ -1286,6 +1286,80 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   return Call(S, OpPC, F, VarArgSize);
 }
 
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
+
+  const auto *NewExpr = cast<CXXNewExpr>(E);
+  QualType StorageType = Ptr.getType();
+
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr())) {
+    // FIXME: Are there other cases where this is a problem?
+    StorageType = StorageType->getPointeeType();
+  }
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  QualType AllocType;
+  if (ArraySize) {
+    AllocType = ASTCtx.getConstantArrayType(
+        NewExpr->getAllocatedType(),
+        APInt(64, static_cast<uint64_t>(*ArraySize), false), nullptr,
+        ArraySizeModifier::Normal, 0);
+  } else {
+    AllocType = NewExpr->getAllocatedType();
+  }
+
+  unsigned StorageSize = 1;
+  unsigned AllocSize = 1;
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
+    AllocSize = CAT->getZExtSize();
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(StorageType))
+    StorageSize = CAT->getZExtSize();
+
+  if (AllocSize > StorageSize ||
+      !ASTCtx.hasSimilarType(ASTCtx.getBaseElementType(AllocType),
+                             ASTCtx.getBaseElementType(StorageType))) {
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_constexpr_placement_new_wrong_type)
+        << StorageType << AllocType;
+    return false;
+  }
+  return true;
+}
+
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
+  assert(E);
+  const auto &Loc = S.Current->getSource(OpPC);
+
+  if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
+    const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
+
+    if (!S.getLangOpts().CPlusPlus26 && NewExpr->getNumPlacementArgs() > 0) {
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*C++26 feature*/ 1 << E->getSourceRange();
+    } else if (NewExpr->getNumPlacementArgs() == 1 &&
+               !OperatorNew->isReservedGlobalPlacementOperator()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*Unsupported*/ 0 << E->getSourceRange();
+    } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+    }
+  } else {
+    const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
+    const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
+    if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
+    }
+  }
+
+  return false;
+}
+
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
