@@ -83,8 +83,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
   // Required variables to get from metadata search
   LLVMContext *Context;
-  SmallString<128> FilePath;
-  unsigned SourceLanguage = 0;
+  SmallVector<SmallString<128>> FilePaths;
+  SmallVector<int64_t> SourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
   SmallPtrSet<DIBasicType *, 12> BasicTypes;
@@ -101,9 +101,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
         DIFile *File = CompileUnit->getFile();
-        sys::path::append(FilePath, File->getDirectory(), File->getFilename());
-        SourceLanguage = CompileUnit->getSourceLanguage();
-        break;
+        FilePaths.emplace_back();
+        sys::path::append(FilePaths.back(), File->getDirectory(),
+                          File->getFilename());
+        SourceLanguages.push_back(CompileUnit->getSourceLanguage());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
@@ -160,9 +161,6 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    // Emit OpString with FilePath which is required by DebugSource
-    const Register FilePathStrReg = EmitOpString(FilePath);
-
     const SPIRVType *VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
 
@@ -187,27 +185,29 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    // Emit DebugSource which is required by DebugCompilationUnit
-    const Register DebugSourceResIdReg = EmitDIInstruction(
-        SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
-
     const SPIRVType *I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
 
-    // Convert DwarfVersion, DebugInfo and SourceLanguage integers to OpConstant
-    // instructions required by DebugCompilationUnit
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
-    const Register SourceLanguageReg =
-        GR->buildConstantInt(SourceLanguage, MIRBuilder, I32Ty, false);
 
-    [[maybe_unused]]
-    const Register DebugCompUnitResIdReg =
-        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
-                          {DebugInfoVersionReg, DwarfVersionReg,
-                           DebugSourceResIdReg, SourceLanguageReg});
+    for (unsigned Idx = 0; Idx < SourceLanguages.size(); ++Idx) {
+      const Register FilePathStrReg = EmitOpString(FilePaths[Idx]);
+
+      const Register DebugSourceResIdReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
+
+      const Register SourceLanguageReg =
+          GR->buildConstantInt(SourceLanguages[Idx], MIRBuilder, I32Ty, false);
+
+      [[maybe_unused]]
+      const Register DebugCompUnitResIdReg =
+          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
+                            {DebugInfoVersionReg, DwarfVersionReg,
+                             DebugSourceResIdReg, SourceLanguageReg});
+    }
 
     // We aren't extracting any DebugInfoFlags now so we
     // emitting zero to use as <id>Flags argument for DebugBasicType
