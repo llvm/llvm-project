@@ -2947,14 +2947,17 @@ struct Conv1DGenerator
 
     if (!setOperKind(reduceOp))
       return;
-    maybeKind = getCombinerOpKind(reduceOp);
+    auto maybeKind = getCombinerOpKind(reduceOp);
     // Typically convolution will have a `Add` CombiningKind but for i1 type it
-    // can get strength reduced to `OR` which is also supported.
+    // can get strength reduced to `OR` which is also supported. This strength
+    // reduction logic is in `buildBinaryFn` helper in the Linalg dialect.
     if (!maybeKind || ((*maybeKind != vector::CombiningKind::ADD &&
                         *maybeKind != vector::CombiningKind::OR) &&
                        (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
       return;
     }
+    reductionKind = maybeKind.value();
+
     auto rhsRank = rhsShapedType.getRank();
     switch (oper) {
     case Conv:
@@ -3158,9 +3161,9 @@ struct Conv1DGenerator
                                                    lhsVals[linearIndex(kw, w)],
                                                    rhsVals[kw], resVals[w]);
           } else {
-            resVals[w] = conv1dSliceAsContraction(
-                rewriter, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw],
-                resVals[w], maybeKind);
+            resVals[w] = conv1dSliceAsContraction(rewriter, loc,
+                                                  lhsVals[linearIndex(kw, w)],
+                                                  rhsVals[kw], resVals[w]);
           }
           break;
         case Pool:
@@ -3228,24 +3231,20 @@ struct Conv1DGenerator
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
-  Value
-  conv1dSliceAsContraction(RewriterBase &rewriter, Location loc, Value lhs,
-                           Value rhs, Value res,
-                           std::optional<vector::CombiningKind> maybeKind) {
+  Value conv1dSliceAsContraction(RewriterBase &rewriter, Location loc,
+                                 Value lhs, Value rhs, Value res) {
     vector::IteratorType par = vector::IteratorType::parallel;
     vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
     lhs = promote(rewriter, loc, lhs, res.getType());
     rhs = promote(rewriter, loc, rhs, res.getType());
-    auto ContrationOp = rewriter.create<vector::ContractionOp>(
+    auto contrationOp = rewriter.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
         /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
-    if (maybeKind) {
-      ContrationOp.setKind(*maybeKind);
-    }
-    return ContrationOp;
+    contrationOp.setKind(reductionKind);
+    return contrationOp;
   }
 
   // Create an outerproduct: lhs{w} * rhs{1} -> res{w} for single channel
@@ -3635,7 +3634,7 @@ private:
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
-  std::optional<vector::CombiningKind> maybeKind;
+  vector::CombiningKind reductionKind;
 
   // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
   // Returns true iff it is a valid conv/pooling op.
@@ -3652,7 +3651,8 @@ private:
     case 1: {
       // Will be convolution if feeder is a MulOp.
       // A strength reduced version of MulOp for i1 type is AndOp which is also
-      // supported. Otherwise, it can be pooling.
+      // supported. Otherwise, it can be pooling. This strength reduction logic
+      // is in `buildBinaryFn` helper in the Linalg dialect.
       auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
                                          llvm::IsaPred<BlockArgument>);
       Operation *feedOp = (*feedValIt).getDefiningOp();

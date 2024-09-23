@@ -61,6 +61,33 @@ func.func @conv1d_nwc_4x2x8_memref(%input: memref<4x6x3xf32>, %filter: memref<1x
 
 // -----
 
+// This test is same as above but for i1 type.
+func.func @conv1d_nwc_4x2x8_memref_i1(%input: memref<4x6x3xi1>, %filter: memref<1x3x8xi1>, %output: memref<4x2x8xi1>) {
+  linalg.conv_1d_nwc_wcf
+    {dilations = dense<1> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>}
+    ins(%input, %filter : memref<4x6x3xi1>, memref<1x3x8xi1>)
+    outs(%output : memref<4x2x8xi1>)
+  return
+}
+// CHECK: #[[INPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[FILTER_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK: #[[OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+//      CHECK: func @conv1d_nwc_4x2x8_memref_i1
+/// w == 0, kw == 0
+//      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
+// CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+
+/// w == 1, kw == 0
+//      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
+// CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+
+// -----
+
 // The i8i8i32 case is similar to f32 case, so checking one case is enough for
 // test coverage.
 func.func @conv1d_nwc_4x2x8_i8i8i32_memref(%input: memref<4x6x3xi8>, %filter: memref<1x3x8xi8>, %output: memref<4x2x8xi32>) {
@@ -321,6 +348,33 @@ func.func @conv1d_ncw_4x8x2_memref(%input: memref<4x3x6xf32>, %filter: memref<8x
 
 // Write the result back in one shot.
 //      CHECK:   vector.transfer_write %[[RES_2]], %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
+
+// -----
+
+// This test is same as above but for i1 type.
+func.func @conv1d_ncw_4x8x2_memref_i1(%input: memref<4x3x6xi1>, %filter: memref<8x3x1xi1>, %output: memref<4x8x2xi1>) {
+  linalg.conv_1d_ncw_fcw
+    {dilations = dense<1> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>}
+    ins(%input, %filter : memref<4x3x6xi1>, memref<8x3x1xi1>)
+    outs(%output : memref<4x8x2xi1>)
+  return
+}
+
+// CHECK: #[[INPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[FILTER_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK: #[[OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+//      CHECK: func @conv1d_ncw_4x8x2_memref_i1
+/// w == 0, kw == 0
+//      CHECK:   vector.contract {
+// CHECK-SAME:   kind = #vector.kind<or>
+// CHECK-SAME:   : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+
+/// w == 1, kw == 0
+//      CHECK:   vector.contract {
+// CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
 
 // -----
 
@@ -653,35 +707,6 @@ func.func @conv_1d_nwc_wcf_mixed_int_fp_memref(%input: memref<1x2x3xi8>, %filter
 // CHECK: %[[CAST1:.+]] = arith.sitofp %[[EXT]] : vector<3x2xi8> to vector<3x2xf32>
 // CHECK: %[[CONTRACT:.+]] = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %[[CAST0]], %[[CAST1]], %[[READ2]]
 // CHECK: vector.transfer_write %[[CONTRACT]], %arg2[%[[I0]], %[[I0]], %[[I0]]]
-
-// -----
-
-func.func @conv2d_i1_i1_i1(%arg0: tensor<1x8x6xi1>, %arg1: tensor<8x8x1xi1>, %arg2: tensor<1x8x6xi1>) -> tensor<1x8x6xi1> {
-  %0 = linalg.conv_1d_ncw_fcw 
-  {dilations = dense<1> : vector<1xi64>, strides = dense<1> : vector<1xi64>}
-   ins(%arg0, %arg1 : tensor<1x8x6xi1>, tensor<8x8x1xi1>) 
-   outs(%arg2 : tensor<1x8x6xi1>) -> tensor<1x8x6xi1>
-  return %0 : tensor<1x8x6xi1>
-}
-
-// CHECK-LABEL:  func @conv2d_i1_i1_i1
-// CHECK-SAME:   (%[[INPUT:[0-9a-z]+]]: tensor<1x8x6xi1>, %[[FILTER:[0-9a-z]+]]: tensor<8x8x1xi1>, %[[OUTPUT:[0-9a-z]+]]: tensor<1x8x6xi1>) -> tensor<1x8x6xi1> {
-// CHECK-DAG:    %[[I0:.+]] = arith.constant 0 : index
-// CHECK-DAG:    %[[FALSE:.+]] = arith.constant false
-// CHECK-DAG:    %[[READ0:.+]] = vector.transfer_read %[[INPUT]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
-// CHECK-DAG:    %[[READ1:.+]] = vector.transfer_read %[[FILTER]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
-// CHECK-DAG:    %[[READ2:.+]] = vector.transfer_read %[[OUTPUT]][%[[I0]], %[[I0]], %[[I0]]], %[[FALSE]]
-// CHECK-DAG:    %[[TREAD0:.+]] = vector.transpose %[[READ0]], [0, 2, 1] : vector<1x8x6xi1> to vector<1x6x8xi1>
-// CHECK-DAG:    %[[TREAD1:.+]] = vector.transpose %[[READ1]], [2, 1, 0] : vector<8x8x1xi1> to vector<1x8x8xi1>
-// CHECK-DAG:    %[[TREAD2:.+]] = vector.transpose %[[READ2]], [0, 2, 1] : vector<1x8x6xi1> to vector<1x6x8xi1>
-// CHECK:        %[[EXTRACT:.+]] = vector.extract %[[TREAD1]][0] : vector<8x8xi1> from vector<1x8x8xi1>
-// CHECK:        %[[CONTRACT:.+]] = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"], kind = #vector.kind<or>} 
-// CHECK-SAME:   %[[TREAD0]], %[[EXTRACT]], %[[TREAD2]] : vector<1x6x8xi1>, vector<8x8xi1> into vector<1x6x8xi1>
-// CHECK:        %[[TCONTRACT:.+]] = vector.transpose %[[CONTRACT]], [0, 2, 1] : vector<1x6x8xi1> to vector<1x8x6xi1>
-// CHECK:        %[[RESULT:.+]] = vector.transfer_write %[[TCONTRACT]], %[[OUTPUT]][%[[I0]], %[[I0]], %[[I0]]] 
-// CHECK:        return %[[RESULT]] : tensor<1x8x6xi1>
-
-
 
 // -----
 
