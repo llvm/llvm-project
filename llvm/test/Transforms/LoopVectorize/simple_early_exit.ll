@@ -7,10 +7,9 @@ declare void @init_mem(ptr, i64);
 
 define i64 @same_exit_block_pre_inc_use1() {
 ; DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
-; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
@@ -1089,8 +1088,7 @@ loop.end:
 
 define i64 @loop_contains_safe_call() {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_call'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
 ; CHECK-LABEL: define i64 @loop_contains_safe_call() {
 ; CHECK-NEXT:  entry:
@@ -1193,8 +1191,7 @@ loop.end:
 
 define i64 @loop_contains_safe_div() {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_div'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
 ; CHECK-LABEL: define i64 @loop_contains_safe_div() {
 ; CHECK-NEXT:  entry:
@@ -1347,10 +1344,9 @@ loop.end:
 
 define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(8) %p2) {
 ; DEBUG-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 63
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
-; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i64 @loop_contains_load_after_early_exit(
 ; CHECK-SAME: ptr align 8 dereferenceable(1024) [[P2:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -1623,10 +1619,9 @@ loop.end:
 ; The form of the induction variables requires SCEV predicates.
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
+; DEBUG:       Found an early exit loop with symbolic max backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
 ; DEBUG-NEXT:  LV: We can vectorize this loop!
-; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i32 @diff_exit_block_needs_scev_check(
 ; CHECK-SAME: i32 [[END:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -1695,9 +1690,8 @@ declare void @abort()
 ; early is loop invariant.
 define i32 @diff_blocks_invariant_early_exit_cond(ptr %s) {
 ; DEBUG-LABEL: LV: Checking a loop in 'diff_blocks_invariant_early_exit_cond'
-; DEBUG:       LV: Found an early exit. Retrying with speculative exit count.
-; DEBUG-NEXT:  LV: Found speculative backedge taken count: 275
-; DEBUG:       LV: Not vectorizing: Auto-vectorization of early exit loops is not yet supported.
+; DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 275
+; DEBUG:       LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit is not yet supported.
 ; CHECK-LABEL: define i32 @diff_blocks_invariant_early_exit_cond(
 ; CHECK-SAME: ptr [[S:%.*]]) {
 ; CHECK-NEXT:  entry:
