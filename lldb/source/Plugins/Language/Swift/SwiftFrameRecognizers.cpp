@@ -4,6 +4,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -17,6 +18,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
 namespace lldb_private {
 
 /// Holds the stack frame that caused the runtime failure and the inlined stop
@@ -150,6 +152,33 @@ class SwiftHiddenFrameRecognizer : public StackFrameRecognizer {
     bool ShouldHide() override { return true; }
   };
 
+  /// Returns true if \ref root represents a Swift name
+  /// that we want to mark hidden by this recognizer.
+  ///
+  /// Currently these are:
+  /// * Async thunks
+  /// * Auto-conformed protocols in the `std` module
+  ///
+  bool ShouldHideSwiftName(NodePointer root) {
+    using namespace swift_demangle;
+
+    if (NodeAtPath(root, {Node::Kind::Global,
+                          Node::Kind::AsyncAwaitResumePartialFunction}) &&
+        (ChildAtPath(root, {Node::Kind::BackDeploymentFallback}) ||
+         ChildAtPath(root, {Node::Kind::PartialApplyForwarder})))
+      return true;
+
+    if (auto witness_node =
+            NodeAtPath(root, {Node::Kind::Global, Node::Kind::ProtocolWitness,
+                              Node::Kind::ProtocolConformance}))
+      if (auto module_node = ChildAtPath(witness_node, {Node::Kind::Module});
+          module_node && module_node->getText() == "__C_Synthesized")
+        return true;
+    ;
+
+    return false;
+  }
+
 public:
   SwiftHiddenFrameRecognizer() : m_hidden_frame(new SwiftHiddenFrame()) {}
 
@@ -168,13 +197,11 @@ public:
     using namespace swift::Demangle;
     using namespace swift_demangle;
     Context demangle_ctx;
-    NodePointer nodes =
-        SwiftLanguageRuntime::DemangleSymbolAsNode(symbol_name, demangle_ctx);
-    if (NodeAtPath(nodes, {Node::Kind::Global,
-                           Node::Kind::AsyncAwaitResumePartialFunction}) &&
-        (ChildAtPath(nodes, {Node::Kind::BackDeploymentFallback}) ||
-         ChildAtPath(nodes, {Node::Kind::PartialApplyForwarder})))
-      return m_hidden_frame;
+    if (NodePointer nodes = SwiftLanguageRuntime::DemangleSymbolAsNode(
+            symbol_name, demangle_ctx))
+      if (ShouldHideSwiftName(nodes))
+        return m_hidden_frame;
+
     return {};
   }
 };

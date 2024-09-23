@@ -19,4 +19,4 @@ class TestSwiftForwardInteropVerboseTrap(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Make sure we stopped in the first user-level frame.
-        self.assertTrue(self.frame().name.startswith("a.takes<")
+        self.assertTrue(self.frame().name.startswith("a.takes<"))

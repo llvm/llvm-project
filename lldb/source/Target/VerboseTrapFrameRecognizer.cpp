@@ -17,20 +17,6 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
-#ifdef LLDB_ENABLE_SWIFT
-/// Returns true if \ref frame_name is the name of
-/// a Swift frame we wouldn't want to stop in.
-static bool ShouldHideSwiftFrame(llvm::StringRef frame_name) {
-  static llvm::SmallVector<RegularExpression, 2> s_patterns{
-      RegularExpression{R"(^(__C\.)?std\.)"},
-      RegularExpression{R"(protocol witness for Cxx\.)"}};
-
-  return llvm::any_of(s_patterns, [&](RegularExpression const &pattern) {
-    return pattern.Execute(frame_name);
-  });
-}
-#endif // LLDB_ENABLE_SWIFT
-
 /// The 0th frame is the artificial inline frame generated to store
 /// the verbose_trap message. So, starting with the current parent frame,
 /// find the first frame that's not inside of the STL.
@@ -51,18 +37,21 @@ static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
     if (!frame_name)
       return nullptr;
 
-    // Found a frame outside of the `std` namespace. That's the
+    // Find a frame outside of the `std` namespace. That's the
     // first frame in user-code that ended up triggering the
     // verbose_trap. Hence that's the one we want to display.
-    if (!frame_name.GetStringRef().starts_with("std::")
+    //
+    // IsHidden will get us to the first non-implementation detail
+    // frame. But that could still be in the `std` namespace, so
+    // check the namespace prefix too.
+    if (!frame_name.GetStringRef().starts_with("std::") &&
+        !most_relevant_frame_sp->IsHidden()
 #ifdef LLDB_ENABLE_SWIFT
         // In Swift-C++ interop, we generate frames with a "std."
         // prefix for functions from libc++. We don't want to
         // stop in those frames either.
-        //
-        // TODO: could eventually use StackFrame::IsHidden
-        // and/or StackFrame::IsArtificial as a heuristic too.
-        && !ShouldHideSwiftFrame(frame_name)
+        && !frame_name.GetStringRef().starts_with("__C.std.") &&
+        !frame_name.GetStringRef().starts_with("std.")
 #endif
     )
       return most_relevant_frame_sp;
