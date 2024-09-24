@@ -181,7 +181,11 @@ static void setupCleanupBlockActivation(CIRGenFunction &CGF,
     llvm_unreachable("NYI");
   }
 
-  llvm_unreachable("NYI");
+  auto builder = CGF.getBuilder();
+  mlir::Location loc = var.getPointer().getLoc();
+  mlir::Value trueOrFalse =
+      kind == ForActivation ? builder.getTrue(loc) : builder.getFalse(loc);
+  CGF.getBuilder().createStore(loc, trueOrFalse, var);
 }
 
 /// Deactive a cleanup that was created in an active state.
@@ -421,7 +425,6 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   if (RequiresEHCleanup) {
     mlir::cir::TryOp tryOp =
         ehEntry->getParentOp()->getParentOfType<mlir::cir::TryOp>();
-    assert(tryOp && "expected available cir.try");
     auto *nextAction = getEHDispatchBlock(EHParent, tryOp);
     (void)nextAction;
 
@@ -469,6 +472,19 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         mlir::Block *blockToPatch = cleanupsToPatch[currBlock];
         auto currYield = cast<YieldOp>(blockToPatch->getTerminator());
         builder.setInsertionPoint(currYield);
+
+        // If nextAction is an EH resume block, also update all try locations
+        // for these "to-patch" blocks with the appropriate resume content.
+        if (nextAction == ehResumeBlock) {
+          if (auto tryToPatch = currYield->getParentOp()
+                                    ->getParentOfType<mlir::cir::TryOp>()) {
+            mlir::Block *resumeBlockToPatch =
+                tryToPatch.getCatchUnwindEntryBlock();
+            buildEHResumeBlock(/*isCleanup=*/true, resumeBlockToPatch,
+                               tryToPatch.getLoc());
+          }
+        }
+
         buildCleanup(*this, Fn, cleanupFlags, EHActiveFlag);
         currBlock = blockToPatch;
       }

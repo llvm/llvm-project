@@ -544,7 +544,7 @@ public:
 
     // Quick block cleanup: no indirection to the post try block.
     auto brOp = dyn_cast<mlir::cir::BrOp>(afterTry->getTerminator());
-    if (brOp) {
+    if (brOp && brOp.getDest()->hasNoPredecessors()) {
       mlir::Block *srcBlock = brOp.getDest();
       rewriter.eraseOp(brOp);
       rewriter.mergeBlocks(srcBlock, afterTry);

@@ -1787,6 +1787,8 @@ public:
   /// Emits try/catch information for the current EH stack.
   mlir::cir::CallOp callWithExceptionCtx = nullptr;
   mlir::Operation *buildLandingPad(mlir::cir::TryOp tryOp);
+  void buildEHResumeBlock(bool isCleanup, mlir::Block *ehResumeBlock,
+                          mlir::Location loc);
   mlir::Block *getEHResumeBlock(bool isCleanup, mlir::cir::TryOp tryOp);
   mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope,
                                   mlir::cir::TryOp tryOp);
@@ -2370,7 +2372,17 @@ DominatingCIRValue::save(CIRGenFunction &CGF, mlir::Value value) {
 
 inline mlir::Value DominatingCIRValue::restore(CIRGenFunction &CGF,
                                                saved_type value) {
-  llvm_unreachable("NYI");
+  // If the value says it wasn't saved, trust that it's still dominating.
+  if (!value.getInt())
+    return value.getPointer();
+
+  // Otherwise, it should be an alloca instruction, as set up in save().
+  auto alloca = cast<mlir::cir::AllocaOp>(value.getPointer().getDefiningOp());
+  mlir::Value val = CGF.getBuilder().createAlignedLoad(
+      alloca.getLoc(), alloca.getType(), alloca);
+  mlir::cir::LoadOp loadOp = cast<mlir::cir::LoadOp>(val.getDefiningOp());
+  loadOp.setAlignment(alloca.getAlignment());
+  return val;
 }
 
 /// A specialization of DominatingValue for RValue.

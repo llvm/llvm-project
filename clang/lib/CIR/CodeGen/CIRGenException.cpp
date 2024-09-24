@@ -252,19 +252,9 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
   DeactivateCleanupBlock(cleanup, op);
 }
 
-mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
-                                              mlir::cir::TryOp tryOp) {
-
-  if (ehResumeBlock)
-    return ehResumeBlock;
-  // Just like some other try/catch related logic: return the basic block
-  // pointer but only use it to denote we're tracking things, but there
-  // shouldn't be any changes to that block after work done in this function.
-  assert(tryOp && "expected available cir.try");
-  ehResumeBlock = tryOp.getCatchUnwindEntryBlock();
-  if (!ehResumeBlock->empty())
-    return ehResumeBlock;
-
+void CIRGenFunction::buildEHResumeBlock(bool isCleanup,
+                                        mlir::Block *ehResumeBlock,
+                                        mlir::Location loc) {
   auto ip = getBuilder().saveInsertionPoint();
   getBuilder().setInsertionPointToStart(ehResumeBlock);
 
@@ -283,9 +273,22 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
     llvm_unreachable("NYI");
   }
 
-  getBuilder().create<mlir::cir::ResumeOp>(tryOp.getLoc(), mlir::Value{},
-                                           mlir::Value{});
+  getBuilder().create<mlir::cir::ResumeOp>(loc, mlir::Value{}, mlir::Value{});
   getBuilder().restoreInsertionPoint(ip);
+}
+
+mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
+                                              mlir::cir::TryOp tryOp) {
+
+  if (ehResumeBlock)
+    return ehResumeBlock;
+  // Setup unwind.
+  assert(tryOp && "expected available cir.try");
+  ehResumeBlock = tryOp.getCatchUnwindEntryBlock();
+  if (!ehResumeBlock->empty())
+    return ehResumeBlock;
+
+  buildEHResumeBlock(isCleanup, ehResumeBlock, tryOp.getLoc());
   return ehResumeBlock;
 }
 
@@ -599,7 +602,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 /// Check whether this is a non-EH scope, i.e. a scope which doesn't
 /// affect exception handling.  Currently, the only non-EH scopes are
 /// normal-only cleanup scopes.
-static bool isNonEHScope(const EHScope &S) {
+[[maybe_unused]] static bool isNonEHScope(const EHScope &S) {
   switch (S.getKind()) {
   case EHScope::Cleanup:
     return !cast<EHCleanupScope>(S).isEHCleanup();
@@ -625,15 +628,16 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
   case EHScope::Catch:
   case EHScope::Cleanup:
   case EHScope::Filter:
-    if (auto *lpad = innermostEHScope.getCachedLandingPad())
-      return lpad;
+    // CIR does not cache landing pads.
+    break;
   }
 
   // If there's an existing TryOp, it means we got a `cir.try` scope
   // that leads to this "landing pad" creation site. Otherwise, exceptions
   // are enabled but a throwing function is called anyways (common pattern
   // with function local static initializers).
-  {
+  mlir::ArrayAttr catches = tryOp.getCatchTypesAttr();
+  if (!catches || catches.empty()) {
     // Save the current CIR generation state.
     mlir::OpBuilder::InsertionGuard guard(builder);
     assert(!MissingFeatures::generateDebugInfo() && "NYI");
@@ -727,13 +731,15 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
     // Add final array of clauses into TryOp.
     tryOp.setCatchTypesAttr(
         mlir::ArrayAttr::get(builder.getContext(), clauses));
-
-    // In traditional LLVM codegen. this tells the backend how to generate the
-    // landing pad by generating a branch to the dispatch block.
-    mlir::Block *dispatch =
-        getEHDispatchBlock(EHStack.getInnermostEHScope(), tryOp);
-    (void)dispatch;
   }
+
+  // In traditional LLVM codegen. this tells the backend how to generate the
+  // landing pad by generating a branch to the dispatch block. In CIR,
+  // getEHDispatchBlock is used to populate blocks for later filing during
+  // cleanup handling.
+  mlir::Block *dispatch =
+      getEHDispatchBlock(EHStack.getInnermostEHScope(), tryOp);
+  (void)dispatch;
 
   return tryOp;
 }
@@ -755,8 +761,21 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
 
   // Otherwise, we should look at the actual scope.
   EHScope &scope = *EHStack.find(si);
-
   auto *dispatchBlock = scope.getCachedEHDispatchBlock();
+
+  mlir::Block *originalBlock = nullptr;
+  if (dispatchBlock && tryOp) {
+    // If the dispatch is cached but comes from a different tryOp, make sure:
+    // - Populate current `tryOp` with a new dispatch block regardless.
+    // - Update the map to enqueue new dispatchBlock to also get a cleanup. See
+    // code at the end of the function.
+    mlir::Operation *parentOp = dispatchBlock->getParentOp();
+    if (tryOp != parentOp->getParentOfType<mlir::cir::TryOp>()) {
+      originalBlock = dispatchBlock;
+      dispatchBlock = nullptr;
+    }
+  }
+
   if (!dispatchBlock) {
     switch (scope.getKind()) {
     case EHScope::Catch: {
@@ -774,13 +793,25 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
     }
 
     case EHScope::Cleanup: {
-      assert(callWithExceptionCtx && "expected call information");
-      {
+      if (callWithExceptionCtx && "expected call information") {
         mlir::OpBuilder::InsertionGuard guard(getBuilder());
         assert(callWithExceptionCtx.getCleanup().empty() &&
                "one per call: expected empty region at this point");
         dispatchBlock = builder.createBlock(&callWithExceptionCtx.getCleanup());
         builder.createYield(callWithExceptionCtx.getLoc());
+      } else {
+        // Usually coming from general cir.scope cleanups that aren't
+        // tried to a specific throwing call.
+        assert(currLexScope && currLexScope->isRegular() &&
+               "expected regular cleanup");
+        dispatchBlock = currLexScope->getOrCreateCleanupBlock(builder);
+        if (dispatchBlock->empty()) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointToEnd(dispatchBlock);
+          mlir::Location loc =
+              currSrcLoc ? *currSrcLoc : builder.getUnknownLoc();
+          builder.createYield(loc);
+        }
       }
       break;
     }
@@ -793,6 +824,14 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si,
       llvm_unreachable("NYI");
       break;
     }
+  }
+
+  if (originalBlock) {
+    // As mentioned above: update the map to enqueue new dispatchBlock to also
+    // get a cleanup.
+    cleanupsToPatch[originalBlock] = dispatchBlock;
+    dispatchBlock = originalBlock;
+  } else {
     scope.setCachedEHDispatchBlock(dispatchBlock);
   }
   return dispatchBlock;
@@ -826,18 +865,13 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl(mlir::cir::TryOp tryOp) {
   assert(!EHStack.empty());
   assert(isInvokeDest());
 
-  // Check the innermost scope for a cached landing pad.  If this is
-  // a non-EH cleanup, we'll check enclosing scopes in EmitLandingPad.
-  auto *LP = EHStack.begin()->getCachedLandingPad();
-  if (LP)
-    return LP;
-
+  // CIR does not cache landing pads.
   const EHPersonality &Personality = EHPersonality::get(*this);
 
   // FIXME(cir): add personality function
   // if (!CurFn->hasPersonalityFn())
   //   CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
-
+  mlir::Operation *LP = nullptr;
   if (Personality.usesFuncletPads()) {
     // We don't need separate landing pads in the funclet model.
     llvm::errs() << "PersonalityFn: " << Personality.PersonalityFn << "\n";
@@ -848,14 +882,7 @@ mlir::Operation *CIRGenFunction::getInvokeDestImpl(mlir::cir::TryOp tryOp) {
 
   assert(LP);
 
-  // Cache the landing pad on the innermost scope.  If this is a
-  // non-EH scope, cache the landing pad on the enclosing scope, too.
-  for (EHScopeStack::iterator ir = EHStack.begin(); true; ++ir) {
-    ir->setCachedLandingPad(LP);
-    if (!isNonEHScope(*ir))
-      break;
-  }
-
+  // CIR does not cache landing pads.
   return LP;
 }
 
