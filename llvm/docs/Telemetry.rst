@@ -95,7 +95,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     // This destination just prints the given entry to a stdout.
     // In "real life", this would be where you forward the data to your
     // custom data storage.
-    class MyStdoutDestination : public llvm::telemetry::Destiantion {
+    class MyStdoutDestination : public llvm::telemetry::Destination {
     public:
       Error emitEntry(const TelemetryInfo* Entry) override {
          return sendToBlackBox(Entry);
