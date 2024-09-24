@@ -12,6 +12,7 @@
 #include "hdr/types/struct_msghdr.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/errno/libc_errno.h"
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
@@ -36,6 +37,14 @@ LLVM_LIBC_FUNCTION(ssize_t, recvmsg,
     libc_errno = static_cast<int>(-ret);
     return -1;
   }
+
+  // Unpoison the msghdr, as well as all its components.
+  MSAN_UNPOISON(msg->msg_name, msg->msg_namelen);
+  for (size_t i = 0; i < msg->msg_iovlen; ++i) {
+    MSAN_UNPOISON(msg->msg_iov->iov_base, msg->msg_iov->iov_len);
+  }
+  MSAN_UNPOISON(msg->msg_control, msg->msg_controllen);
+
   return ret;
 }
 
