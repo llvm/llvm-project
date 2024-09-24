@@ -136,7 +136,6 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   if (!dtv || dtv->beg)
     return nullptr;
   CHECK_LE(static_tls_begin, static_tls_end);
-  uptr tls_size = 0;
   uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
@@ -148,16 +147,20 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
-    tls_size = 0;
-  } else {
-    tls_size = __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg));
-    if (!tls_size) {
-      VReport(2, "__tls_get_addr: Can't guess glibc version\n");
-      // This may happen inside the DTOR of main thread, so just ignore it.
-    }
+    dtv->beg = tls_beg;
+    dtv->size = 0;
+    return nullptr;
   }
+  if (uptr tls_size =
+          __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg))) {
+    dtv->beg = tls_beg;
+    dtv->size = tls_size;
+    return dtv;
+  }
+  VReport(2, "__tls_get_addr: Can't guess glibc version\n");
+  // This may happen inside the DTOR of main thread, so just ignore it.
   dtv->beg = tls_beg;
-  dtv->size = tls_size;
+  dtv->size = 0;
   return dtv;
 }
 
