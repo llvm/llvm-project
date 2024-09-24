@@ -17,7 +17,7 @@ extern "C" {
 
 void *RTDEF(CUFMemAlloc)(
     std::size_t bytes, unsigned type, const char *sourceFile, int sourceLine) {
-  void *ptr;
+  void *ptr = nullptr;
   if (bytes != 0) {
     if (type == kMemTypeDevice) {
       CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
@@ -36,6 +36,8 @@ void *RTDEF(CUFMemAlloc)(
 
 void RTDEF(CUFMemFree)(
     void *ptr, unsigned type, const char *sourceFile, int sourceLine) {
+  if (!ptr)
+    return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||
       type == kMemTypeUnified) {
     CUDA_REPORT_IF_ERROR(cudaFree(ptr));
