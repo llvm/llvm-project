@@ -738,6 +738,37 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     VirtRegMap *VRM) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  if (Ops.size() != 1)
+    return nullptr;
+  unsigned Opcode = MI.getOpcode();
+
+  // If spilling the destination of a FPR<->GPR move, just store the source
+  // register instead. If filling the source of a FPR<->GPR move, just load
+  // the destination register instead.
+  if (Opcode == RISCV::FMV_D_X || Opcode == RISCV::FMV_W_X ||
+      Opcode == RISCV::FMV_X_D || Opcode == RISCV::FMV_X_W) {
+    bool IsSpill = Ops[0] == 0;
+    const MachineOperand &DstMO = MI.getOperand(0);
+    const MachineOperand &SrcMO = MI.getOperand(1);
+    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    MachineBasicBlock &MBB = *MI.getParent();
+    Register DstReg = DstMO.getReg();
+    Register SrcReg = SrcMO.getReg();
+
+    auto getRegClass = [&](unsigned Reg) {
+      return Register::isVirtualRegister(Reg) ? MRI.getRegClass(Reg)
+                                              : TRI.getMinimalPhysRegClass(Reg);
+    };
+    if (IsSpill)
+      storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
+                          getRegClass(SrcReg), &TRI, Register());
+    else
+      loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex,
+                           getRegClass(DstReg), &TRI, Register());
+    return &*--InsertPt;
+  }
+
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
@@ -745,11 +776,11 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
-  if (Ops.size() != 1 || Ops[0] != 1)
-   return nullptr;
+  if (Ops[0] != 1)
+    return nullptr;
 
   unsigned LoadOpc;
-  switch (MI.getOpcode()) {
+  switch (Opcode) {
   default:
     if (RISCV::isSEXT_W(MI)) {
       LoadOpc = RISCV::LW;
