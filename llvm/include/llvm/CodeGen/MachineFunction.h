@@ -74,20 +74,6 @@ class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
-template <> struct ilist_alloc_traits<MachineBasicBlock> {
-  void deleteNode(MachineBasicBlock *MBB);
-};
-
-template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* N);
-  void removeNodeFromList(MachineBasicBlock* N);
-
-  template <class Iterator>
-  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
-    assert(this == &OldList && "never transfer MBBs between functions");
-  }
-};
-
 /// MachineFunctionInfo - This class can be derived from and used by targets to
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
@@ -958,8 +944,8 @@ public:
 
   void remove(iterator MBBI) { BasicBlocks.remove(MBBI); }
   void remove(MachineBasicBlock *MBBI) { BasicBlocks.remove(MBBI); }
-  void erase(iterator MBBI) { BasicBlocks.erase(MBBI); }
-  void erase(MachineBasicBlock *MBBI) { BasicBlocks.erase(MBBI); }
+  iterator erase(iterator MBBI) { return BasicBlocks.erase(MBBI); }
+  iterator erase(MachineBasicBlock *MBBI) { return BasicBlocks.erase(MBBI); }
 
   template <typename Comp>
   void sort(Comp comp) {

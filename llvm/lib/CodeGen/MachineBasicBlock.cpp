@@ -1471,9 +1471,9 @@ MachineBasicBlock *MachineBasicBlock::removeFromParent() {
 }
 
 /// This method unlinks 'this' from the containing function, and deletes it.
-void MachineBasicBlock::eraseFromParent() {
+ilist<MachineBasicBlock>::iterator MachineBasicBlock::eraseFromParent() {
   assert(getParent() && "Not embedded in a function!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 /// Given a machine basic block that branched to 'Old', change the code and CFG

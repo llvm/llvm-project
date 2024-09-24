@@ -43,6 +43,22 @@ class raw_ostream;
 class LiveIntervals;
 class TargetRegisterClass;
 class TargetRegisterInfo;
+
+template <> struct ilist_alloc_traits<MachineBasicBlock> {
+  void deleteNode(MachineBasicBlock *MBB);
+};
+
+template <> struct ilist_callback_traits<MachineBasicBlock> {
+  void addNodeToList(MachineBasicBlock* N);
+  void removeNodeFromList(MachineBasicBlock* N);
+
+  template <class Iterator>
+  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
+    assert(this == &OldList && "never transfer MBBs between functions");
+  }
+};
+
+
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
@@ -1126,7 +1142,7 @@ public:
   MachineBasicBlock *removeFromParent();
 
   /// This method unlinks 'this' from the containing function and deletes it.
-  void eraseFromParent();
+  ilist<MachineBasicBlock>::iterator eraseFromParent();
 
   /// Given a machine basic block that branched to 'Old', change the code and
   /// CFG so that it branches to 'New' instead.

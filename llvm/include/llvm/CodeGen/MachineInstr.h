@@ -21,6 +21,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -1309,7 +1310,7 @@ public:
   /// If this instruction is the header of a bundle, the whole bundle is erased.
   /// This function can not be used for instructions inside a bundle, use
   /// eraseFromBundle() to erase individual bundled instructions.
-  void eraseFromParent();
+  MachineInstrBundleIterator<MachineInstr> eraseFromParent();
 
   /// Unlink 'this' from its basic block and delete it.
   ///
