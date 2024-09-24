@@ -224,6 +224,11 @@ bool clang::ento::seenWeakLoopAssumption(ProgramStateRef State) {
   return State->get<SeenWeakLoopAssumption>();
 }
 
+// This trait points to the last expression (logical operator) where an eager
+// assumption introduced a state split (i.e. both cases were feasible). This is
+// used by the WeakLoopAssumption heuristic to find situations where the an
+// eager assumption introduces a state split within the evaluation of a loop
+// condition.
 REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeAssumptionAt, const Expr *)
 
 //===----------------------------------------------------------------------===//

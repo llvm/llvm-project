@@ -604,9 +604,8 @@ public:
                                 ExplodedNodeSet &Dst);
 
   /// evalEagerlyAssumeOpBifurcation - Given the nodes in 'Src', eagerly assume
-  /// symbolic
-  ///  expressions of the form 'x != 0' or '!x' and generate new nodes (stored
-  ///  in Dst) with those assumptions.
+  /// symbolic expressions of the form 'x != 0' or '!x' and generate new nodes
+  /// (stored in Dst) with those assumptions.
   void evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
                                       ExplodedNodeSet &Src, const Expr *Ex);
 
