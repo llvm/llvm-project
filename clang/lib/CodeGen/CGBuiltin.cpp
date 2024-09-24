@@ -2014,6 +2014,21 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   return ArgValue;
 }
 
+Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
+  Value *ArgValue = EvaluateExprAsBool(E);
+  if (!SanOpts.has(SanitizerKind::Builtin))
+    return ArgValue;
+
+  SanitizerScope SanScope(this);
+  EmitCheck(
+      std::make_pair(ArgValue, SanitizerKind::Builtin),
+      SanitizerHandler::InvalidBuiltin,
+      {EmitCheckSourceLocation(E->getExprLoc()),
+       llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
+      std::nullopt);
+  return ArgValue;
+}
+
 static Value *EmitAbs(CodeGenFunction &CGF, Value *ArgValue, bool HasNSW) {
   return CGF.Builder.CreateBinaryIntrinsic(
       Intrinsic::abs, ArgValue,
@@ -3424,7 +3439,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->HasSideEffects(getContext()))
       return RValue::get(nullptr);
 
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitCheckedArgForAssume(E->getArg(0));
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
     Builder.CreateCall(FnAssume, ArgValue);
     return RValue::get(nullptr);
