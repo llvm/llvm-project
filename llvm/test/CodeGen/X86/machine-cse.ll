@@ -20,8 +20,10 @@ define fastcc ptr @t(i32 %base) nounwind {
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    callq bar@PLT
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    ud2
 entry:
   %0 = zext i32 %base to i64
   %1 = getelementptr inbounds %struct.s2, ptr null, i64 %0

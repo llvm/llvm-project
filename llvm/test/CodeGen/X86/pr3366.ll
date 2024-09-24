@@ -9,7 +9,6 @@ define void @_ada_c34002a() nounwind {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    idivb 0
 ; CHECK-NEXT:    cmpb $3, %al
-; CHECK-NEXT:  # %bb.1: # %bb457
 entry:
   %0 = load i8, ptr null, align 1
   %1 = sdiv i8 90, %0
@@ -25,5 +24,5 @@ bb451:
   br label %bb457
 
 bb457:
-  unreachable
+  ret void
 }

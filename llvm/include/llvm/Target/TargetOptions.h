@@ -145,7 +145,7 @@ namespace llvm {
           DataSections(false), IgnoreXCOFFVisibility(false),
           XCOFFTracebackTable(true), UniqueSectionNames(true),
           UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+          TrapUnreachable(true), NoTrapAfterNoreturn(true), TLSSize(0),
           EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),

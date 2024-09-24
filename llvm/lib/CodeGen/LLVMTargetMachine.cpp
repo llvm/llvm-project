@@ -33,11 +33,11 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-static cl::opt<bool>
-    EnableTrapUnreachable("trap-unreachable", cl::Hidden,
-                          cl::desc("Enable generating trap for unreachable"));
+cl::opt<bool> EnableTrapUnreachable(
+    "trap-unreachable", cl::Hidden,
+    cl::desc("Enable generating trap for unreachable"));
 
-static cl::opt<bool> EnableNoTrapAfterNoreturn(
+cl::opt<bool> EnableNoTrapAfterNoreturn(
     "no-trap-after-noreturn", cl::Hidden,
     cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
              "after noreturn calls, even if --trap-unreachable is set."));
@@ -96,10 +96,15 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
   this->CMModel = CM;
   this->OptLevel = OL;
 
-  if (EnableTrapUnreachable)
-    this->Options.TrapUnreachable = true;
-  if (EnableNoTrapAfterNoreturn)
-    this->Options.NoTrapAfterNoreturn = true;
+  if (EnableTrapUnreachable.getNumOccurrences())
+    this->Options.TrapUnreachable = EnableTrapUnreachable;
+
+  if (EnableNoTrapAfterNoreturn.getNumOccurrences())
+    this->Options.NoTrapAfterNoreturn = EnableNoTrapAfterNoreturn;
+
+  // Keep all traps in debug environments.
+  else if (OL == CodeGenOptLevel::None)
+    this->Options.NoTrapAfterNoreturn = false;
 }
 
 TargetTransformInfo

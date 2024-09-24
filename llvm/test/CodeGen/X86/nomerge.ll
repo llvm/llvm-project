@@ -99,10 +99,13 @@ define void @nomerge_debugtrap(i32 %i) {
 ; CHECK:      # %bb.1: # %entry
 ; CHECK:      # %bb.2: # %if.then
 ; CHECK-NEXT: int3
+; CHECK-NEXT: ud2
 ; CHECK-NEXT: LBB{{.*}}: # %if.then2
 ; CHECK-NEXT: int3
+; CHECK-NEXT: ud2
 ; CHECK-NEXT: .LBB{{.*}}: # %if.end3
 ; CHECK-NEXT: int3
+; CHECK-NEXT: ud2
 entry:
   switch i32 %i, label %if.end3 [
     i32 5, label %if.then
@@ -128,10 +131,13 @@ define void @nomerge_named_debugtrap(i32 %i) {
 ; CHECK:      # %bb.1: # %entry
 ; CHECK:      # %bb.2: # %if.then
 ; CHECK-NEXT: callq trap_func@PLT
+; CHECK-NEXT: ud2
 ; CHECK-NEXT: LBB{{.*}}: # %if.then2
 ; CHECK-NEXT: callq trap_func@PLT
+; CHECK-NEXT: ud2
 ; CHECK-NEXT: .LBB{{.*}}: # %if.end3
 ; CHECK-NEXT: callq trap_func@PLT
+; CHECK-NEXT: ud2
 entry:
   switch i32 %i, label %if.end3 [
     i32 5, label %if.then

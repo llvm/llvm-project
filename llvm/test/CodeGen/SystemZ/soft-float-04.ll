@@ -3,7 +3,7 @@
 ; Check that this function with soft-float does not result in a s390.tdc
 ; intrinsic (which cannot be handled by SoftenFloatOperand).
 
-define void @fun(float %arg) {
+define i32 @fun(float %arg) {
 ; CHECK-LABEL: fun:
 ; CHECK: cijl
 bb:
@@ -15,8 +15,8 @@ bb1:                                              ; preds = %bb
   br i1 %tmp2, label %bb3, label %bb4
 
 bb3:                                              ; preds = %bb1
-  unreachable
+  ret i32 1
 
 bb4:                                              ; preds = %bb1
-  unreachable
+  ret i32 2
 }

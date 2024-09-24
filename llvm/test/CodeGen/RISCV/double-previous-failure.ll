@@ -81,6 +81,5 @@ if.end:
   unreachable
 }
 
-declare void @abort()
-
-declare void @exit(i32)
+declare void @abort() noreturn
+declare void @exit(i32) noreturn

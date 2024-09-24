@@ -28,13 +28,14 @@ define dso_local i32 @main() nounwind {
 ; CHECK-NEXT:    notl %ecx
 ; CHECK-NEXT:    andl %eax, %ecx
 ; CHECK-NEXT:    testq %rcx, %rcx
-; CHECK-NEXT:    jle .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %if.end
+; CHECK-NEXT:    jle .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %if.end
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %if.then
+; CHECK-NEXT:  .LBB0_1: # %if.then
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq abort@PLT
+; CHECK-NEXT:    ud2
 entry:
   store i16 1, ptr @e, align 2
   store i64 1, ptr @b, align 8

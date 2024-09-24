@@ -110,11 +110,13 @@ define void @storev16i16(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: storev16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
+; CHECK-NEXT:    ud2
 ;
 ; CHECK_O0-LABEL: storev16i16:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    vmovdqa %ymm0, (%rax)
+; CHECK_O0-NEXT:    vmovaps %ymm0, (%rax)
+; CHECK_O0-NEXT:    ud2
   store <16 x i16> %a, ptr undef, align 32
   unreachable
 }
@@ -124,11 +126,16 @@ define void @storev16i16_01(<16 x i16> %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rax)
 ; CHECK-NEXT:    vmovups %xmm0, (%rax)
+; CHECK-NEXT:    ud2
 ;
 ; CHECK_O0-LABEL: storev16i16_01:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rax)
+; CHECK_O0-NEXT:    vextractf128 $1, %ymm0, (%rax)
+; CHECK_O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK_O0-NEXT:    # implicit-def: $rax
+; CHECK_O0-NEXT:    vmovdqu %xmm0, (%rax)
+; CHECK_O0-NEXT:    ud2
   store <16 x i16> %a, ptr undef, align 4
   unreachable
 }
@@ -137,11 +144,13 @@ define void @storev32i8(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: storev32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
+; CHECK-NEXT:    ud2
 ;
 ; CHECK_O0-LABEL: storev32i8:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    vmovdqa %ymm0, (%rax)
+; CHECK_O0-NEXT:    vmovaps %ymm0, (%rax)
+; CHECK_O0-NEXT:    ud2
   store <32 x i8> %a, ptr undef, align 32
   unreachable
 }
@@ -151,11 +160,16 @@ define void @storev32i8_01(<32 x i8> %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rax)
 ; CHECK-NEXT:    vmovups %xmm0, (%rax)
+; CHECK-NEXT:    ud2
 ;
 ; CHECK_O0-LABEL: storev32i8_01:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rax)
+; CHECK_O0-NEXT:    vextractf128 $1, %ymm0, (%rax)
+; CHECK_O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK_O0-NEXT:    # implicit-def: $rax
+; CHECK_O0-NEXT:    vmovdqu %xmm0, (%rax)
+; CHECK_O0-NEXT:    ud2
   store <32 x i8> %a, ptr undef, align 4
   unreachable
 }
@@ -213,16 +227,16 @@ define void @f_f() nounwind {
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB9_2
-; CHECK-NEXT:  # %bb.1: # %cif_mask_all
-; CHECK-NEXT:  .LBB9_2: # %cif_mask_mixed
+; CHECK-NEXT:    je .LBB9_3
+; CHECK-NEXT:  # %bb.1: # %cif_mask_mixed
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB9_4
-; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all
+; CHECK-NEXT:    jne .LBB9_3
+; CHECK-NEXT:  # %bb.2: # %cif_mixed_test_all
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
-; CHECK-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
+; CHECK-NEXT:  .LBB9_3: # %cif_mask_all
+; CHECK-NEXT:    ud2
 ;
 ; CHECK_O0-LABEL: f_f:
 ; CHECK_O0:       # %bb.0: # %allocas
@@ -231,6 +245,7 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:    jne .LBB9_1
 ; CHECK_O0-NEXT:    jmp .LBB9_2
 ; CHECK_O0-NEXT:  .LBB9_1: # %cif_mask_all
+; CHECK_O0-NEXT:    ud2
 ; CHECK_O0-NEXT:  .LBB9_2: # %cif_mask_mixed
 ; CHECK_O0-NEXT:    # implicit-def: $al
 ; CHECK_O0-NEXT:    testb $1, %al
@@ -243,7 +258,9 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:    # implicit-def: $rax
 ; CHECK_O0-NEXT:    # implicit-def: $ymm1
 ; CHECK_O0-NEXT:    vmaskmovps %ymm1, %ymm0, (%rax)
+; CHECK_O0-NEXT:    ud2
 ; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
+; CHECK_O0-NEXT:    ud2
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed
 

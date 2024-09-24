@@ -117,10 +117,12 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-GEN-ISEL-TRUE-NEXT:    addi r6, r4, 88
 ; CHECK-GEN-ISEL-TRUE-NEXT:    bl __assert_fail
 ; CHECK-GEN-ISEL-TRUE-NEXT:    nop
+; CHECK-GEN-ISEL-TRUE-NEXT:    trap
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_16: # %if.then9
 ; CHECK-GEN-ISEL-TRUE-NEXT:    li r3, 1
 ; CHECK-GEN-ISEL-TRUE-NEXT:    bl exit
 ; CHECK-GEN-ISEL-TRUE-NEXT:    nop
+; CHECK-GEN-ISEL-TRUE-NEXT:    trap
 ;
 ; CHECK-LABEL: _Z3fn1N4llvm9StringRefE:
 ; CHECK:       # %bb.0: # %entry
@@ -233,10 +235,12 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-NEXT:    addi r6, r4, 88
 ; CHECK-NEXT:    bl __assert_fail
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    trap
 ; CHECK-NEXT:  .LBB0_21: # %if.then9
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    bl exit
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    trap
 entry:
   %Str.coerce.fca.0.extract = extractvalue [2 x i64] %Str.coerce, 0
   %Str.coerce.fca.1.extract = extractvalue [2 x i64] %Str.coerce, 1

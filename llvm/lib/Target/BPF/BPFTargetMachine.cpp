@@ -34,6 +34,8 @@
 #include <optional>
 using namespace llvm;
 
+extern cl::opt<bool> EnableTrapUnreachable;
+
 static cl::
 opt<bool> DisableMIPeephole("disable-bpf-peephole", cl::Hidden,
                             cl::desc("Disable machine peepholes for BPF"));
@@ -74,6 +76,12 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+  // FIXME: If the user has not explicitly enabled TrapUnreachable,
+  // disable it. We do not have an explicit trap opcode and external calls
+  // to abort are a no-no.
+  if (!EnableTrapUnreachable.getNumOccurrences())
+    this->Options.TrapUnreachable = false;
+
   initAsmInfo();
 
   BPFMCAsmInfo *MAI =

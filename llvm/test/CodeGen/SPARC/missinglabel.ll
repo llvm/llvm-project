@@ -11,12 +11,10 @@ define void @f(i64 %a0) align 2 {
 ; CHECK-NEXT:    brz %o0, .LBB0_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %cond.false
+; CHECK-NEXT:    ta 5
 ; CHECK-NEXT:  .LBB0_2: ! %targetblock
 ; CHECK-NEXT:    cmp %g0, 0
-; CHECK-NEXT:    bne %icc, .LBB0_4
-; CHECK-NEXT:    nop
-; CHECK-NEXT:  ! %bb.3: ! %cond.false.i83
-; CHECK-NEXT:  .LBB0_4: ! %exit.i85
+; CHECK-NEXT:    ta 5
 entry:
   %cmp = icmp eq i64 %a0, 0
   br i1 %cmp, label %targetblock, label %cond.false

@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs -filetype=obj -o - -mtriple=x86_64-apple-macosx < %s | llvm-objdump --no-print-imm-hex --triple=x86_64-apple-macosx -d - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-macosx < %s | FileCheck %s --check-prefix=CHECK-ALIGN
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386 < %s | FileCheck %s --check-prefixes=X86,X86CFI,XCHG
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc < %s | FileCheck %s --check-prefixes=X86,MOV
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium3 < %s | FileCheck %s --check-prefixes=X86,MOV
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium4 < %s | FileCheck %s --check-prefixes=X86,XCHG
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -trap-unreachable=false -verify-machineinstrs -show-mc-encoding -mtriple=i386 < %s | FileCheck %s --check-prefixes=X86,X86CFI,XCHG
+; RUN: llc -trap-unreachable=false -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc < %s | FileCheck %s --check-prefixes=X86,MOV
+; RUN: llc -trap-unreachable=false -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium3 < %s | FileCheck %s --check-prefixes=X86,MOV
+; RUN: llc -trap-unreachable=false -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium4 < %s | FileCheck %s --check-prefixes=X86,XCHG
+; RUN: llc -trap-unreachable=false -verify-machineinstrs -show-mc-encoding -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
 
 declare void @callee(ptr)
 
@@ -135,7 +135,7 @@ bb21:
 }
 
 ; This testcase produces an empty function (not even a ret on some targets).
-; This scenario can happen with undefined behavior.
+; This scenario can happen with undefined behavior when trap-unreachable is set to false.
 ; Ensure that the "patchable-function" pass supports this case.
 ; CHECK-LABEL: _emptyfunc
 ; CHECK-NEXT: 0f 0b 	ud2

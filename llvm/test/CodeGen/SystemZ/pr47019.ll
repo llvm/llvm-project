@@ -13,6 +13,8 @@ define dso_local void @main() local_unnamed_addr {
 ; CHECK-NEXT:    strl %r0, g_317+296
 ; CHECK-NEXT:    lhi %r0, 6
 ; CHECK-NEXT:    strl %r0, g_150+12
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    j .Ltmp0+2
 bb:
   br label %bb1
 

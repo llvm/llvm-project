@@ -344,6 +344,7 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp1:
 ; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %unreachable
+; NOCOMPACTUNWIND-NEXT:    ud2
 ; NOCOMPACTUNWIND-NEXT:  .LBB4_3: # %landing
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp2:
 ; NOCOMPACTUNWIND-NEXT:    popq %rax

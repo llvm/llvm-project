@@ -18,7 +18,7 @@ entry:
 ; LINUX: int3
 ; PS4: int     $65
 ; WIN64: int3
-; WIN64-NOT: ud2
+; CHECK-NEXT: ud2
 define i32 @test1() noreturn nounwind  {
 entry:
 	tail call void @llvm.debugtrap( )

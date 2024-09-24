@@ -35,6 +35,7 @@ define dso_local i1 @t(ptr %this, i32 %color, i32 %vertex) local_unnamed_addr {
 ; CHECK-P9-NEXT:    mr r3, r5
 ; CHECK-P9-NEXT:    blr
 ; CHECK-P9-NEXT:  .LBB0_6: # %lor.lhs.false.1
+; CHECK-P9-NEXT:    trap
 entry:
   br i1 undef, label %land.lhs.true, label %lor.lhs.false
 

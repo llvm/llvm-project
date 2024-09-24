@@ -25,6 +25,7 @@ define void @TestvMeth(i32 %0, i64 %1) gc "statepoint-example" !prof !1 {
 ; CHECK-NEXT:    psubd %xmm2, %xmm1
 ; CHECK-NEXT:    movdqu %xmm1, (%rax)
 ; CHECK-NEXT:    movss %xmm0, (%rax)
+; CHECK-NEXT:    ud2
 bci_0:
    %token418 = call token (i64, i32, ptr, i32,
 i32, ...) @llvm.experimental.gc.statepoint.p0(i64

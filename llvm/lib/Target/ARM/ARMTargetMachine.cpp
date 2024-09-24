@@ -251,11 +251,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       this->Options.EABIVersion = EABI::EABI5;
   }
 
-  if (TT.isOSBinFormatMachO()) {
-    this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = true;
-  }
-
   // ARM supports the debug entry values.
   setSupportsDebugEntryValues(true);
 

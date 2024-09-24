@@ -360,11 +360,6 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
-  if (TT.isOSBinFormatMachO()) {
-    this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = true;
-  }
-
   if (getMCAsmInfo()->usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
@@ -373,6 +368,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // FIXME: We could elide the trap if the next instruction would be in
     // the same region anyway.
     this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = false;
   }
 
   if (this->Options.TLSSize == 0) // default

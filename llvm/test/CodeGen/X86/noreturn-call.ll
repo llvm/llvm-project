@@ -39,7 +39,8 @@ if.then:
 ; Even though _crash2 is not marked noreturn, it is in practice because
 ; of the "unreachable" right after it. This happens e.g. when falling off
 ; a non-void function after a call.
-; CHECK-NOT: add
+; CHECK-NEXT: add
+; CHECK-NEXT: ud2
 ; CHECK-NOT: pop
 }
 

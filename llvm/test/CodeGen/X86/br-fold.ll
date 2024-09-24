@@ -8,15 +8,13 @@
 ; X64_DARWIN-NEXT: ud2
 
 ; X64_LINUX: orq _ZN11xercesc_2_56XMLUni16fgNotationStringE@GOTPCREL(%rip), %rax
-; X64_LINUX-NEXT: je
-; X64_LINUX-NEXT: %bb4.i.i318.preheader
+; X64_LINUX-NEXT: ud2
 
 ; X64_WINDOWS: orq %rax, %rcx
-; X64_WINDOWS-NEXT: je
+; X64_WINDOWS-NEXT: ud2
 
-; X64_WINDOWS_GNU: movq .refptr._ZN11xercesc_2_513SchemaSymbols21fgURI_SCHEMAFORSCHEMAE(%rip), %rax
 ; X64_WINDOWS_GNU: orq .refptr._ZN11xercesc_2_56XMLUni16fgNotationStringE(%rip), %rax
-; X64_WINDOWS_GNU-NEXT: je
+; X64_WINDOWS_GNU-NEXT: ud2
 
 ; PS4: orq _ZN11xercesc_2_56XMLUni16fgNotationStringE@GOTPCREL(%rip), %rax
 ; PS4-NEXT: ud2

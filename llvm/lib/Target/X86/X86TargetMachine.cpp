@@ -242,10 +242,11 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
           OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
-  // the calling function, and TrapUnreachable is an easy way to get that.
-  if (TT.isPS() || TT.isOSBinFormatMachO()) {
+  // the calling function, and unsetting NoTrapAfterNoreturn
+  // is an easy way to get that.
+  if (TT.isPS()) {
     this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
+    this->Options.NoTrapAfterNoreturn = false;
   }
 
   setMachineOutliner(true);

@@ -17,6 +17,7 @@ define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    leaq 4(%rdi), %rdi
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %failure
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB0_4: # %exit
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
@@ -58,7 +59,8 @@ define i32 @test_02(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    cmpl %edx, (%rdi)
 ; CHECK-NEXT:    leaq 4(%rdi), %rdi
 ; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.3: # %failure
+; CHECK-NEXT:  # %bb.3: # %
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB1_4: # %exit
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
@@ -101,6 +103,7 @@ define i32 @test_02_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    leaq 4(%rdi), %rdi
 ; CHECK-NEXT:    jne .LBB2_1
 ; CHECK-NEXT:  # %bb.3: # %failure
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB2_4: # %exit
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
@@ -145,6 +148,7 @@ define i32 @test_03(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    leaq 4(%rdi), %rdi
 ; CHECK-NEXT:    jne .LBB3_1
 ; CHECK-NEXT:  # %bb.3: # %failure
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB3_4: # %exit
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
@@ -187,6 +191,7 @@ define i32 @test_03_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    leaq 4(%rdi), %rdi
 ; CHECK-NEXT:    jne .LBB4_1
 ; CHECK-NEXT:  # %bb.3: # %failure
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB4_4: # %exit
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq

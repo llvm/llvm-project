@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -verify-machineinstrs | FileCheck %s
+; RUN: llc -trap-unreachable=false -mtriple=x86_64-linux-gnu %s -o - -verify-machineinstrs | FileCheck %s
 
 define i32 @tail_merge_unreachable(i32 %i) {
 entry:

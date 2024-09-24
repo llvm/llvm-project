@@ -35,6 +35,7 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-AIX-NEXT:    vsplth 2, 2, 0
 ; CHECK-AIX-NEXT:    stxvw4x 34, 0, 3
+; CHECK-AIX-NEXT:    trap
 ;
 ; CHECK-LABEL: test_aix_splatimm:
 ; CHECK:       # %bb.0: # %bb
@@ -56,6 +57,7 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    stxvd2x 34, 0, 3
 ; CHECK-NEXT:    vsplth 3, 3, 3
 ; CHECK-NEXT:    stxvd2x 35, 0, 3
+; CHECK-NEXT:    trap
 bb:
   br i1 undef, label %bb22, label %bb3
 

@@ -235,12 +235,15 @@ define void @test5(i32 %x) {
 ; CHECK-NEXT:  # %bb.4: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq g@PLT
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB4_3: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq g@PLT
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB4_2: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq g@PLT
+; CHECK-NEXT:    ud2
 
 entry:
   switch i32 %x, label %return [

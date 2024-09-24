@@ -24,6 +24,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    movl $1, -16(%ebp)
 ; I686-NEXT:    calll _throw
 ; I686-NEXT:  # %bb.1: # %bb14
+; I686-NEXT:    ud2
 ; I686-NEXT:  LBB0_3: # Block address taken
 ; I686-NEXT:    # %bb17
 ; I686-NEXT:    addl $12, %ebp
@@ -86,10 +87,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    callq throw
 ; X86_64-NEXT:  .Ltmp1:
 ; X86_64-NEXT:  # %bb.1: # %bb14
+; X86_64-NEXT:    ud2
 ; X86_64-NEXT:  .LBB0_3: # Block address taken
 ; X86_64-NEXT:    # %exit
 ; X86_64-NEXT:  $ehgcr_0_3:
-; X86_64-NEXT:    nop
 ; X86_64-NEXT:    addq $64, %rsp
 ; X86_64-NEXT:    popq %rbp
 ; X86_64-NEXT:    retq

@@ -45,6 +45,7 @@ define void @redundancy_on_ppc_and_other_targets() nounwind {
 ; PPC64LE-NEXT:    std 4, 0(3)
 ; PPC64LE-NEXT:    bl barney.94
 ; PPC64LE-NEXT:    nop
+; PPC64LE-NEXT:    trap
   store ptr null, ptr @global.6
   call void @barney.94(ptr undef, i32 0)
   unreachable

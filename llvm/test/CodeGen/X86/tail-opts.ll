@@ -277,6 +277,7 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:  .LBB3_8: # %bb1
 ; CHECK-NEXT:    cmpb $23, %bl
 ; CHECK-NEXT:  .LBB3_9: # %bb3
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB3_15:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .LBB3_16
@@ -300,6 +301,7 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    cmpl $23, %ecx
 ; CHECK-NEXT:    jne .LBB3_9
 ; CHECK-NEXT:  .LBB3_16: # %lvalue_p.exit4
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    orb %al, %cl
@@ -527,6 +529,7 @@ define dso_local void @two() nounwind optsize {
 ; CHECK-NEXT:  .LBB7_1: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
+; CHECK-NEXT:    ud2
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -568,6 +571,7 @@ define dso_local void @two_pgso() nounwind !prof !14 {
 ; CHECK-NEXT:  .LBB8_1: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
+; CHECK-NEXT:    ud2
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -611,6 +615,7 @@ define dso_local void @two_minsize() nounwind minsize {
 ; CHECK-NEXT:  .LBB9_1: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
+; CHECK-NEXT:    ud2
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -752,6 +757,7 @@ define dso_local void @merge_aborts() {
 ; CHECK-NEXT:  .LBB12_5: # %abort1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq abort
+; CHECK-NEXT:    ud2
 entry:
   %c1 = call i1 @qux()
   br i1 %c1, label %cont1, label %abort1
@@ -812,8 +818,10 @@ define dso_local void @merge_alternating_aborts() {
 ; CHECK-NEXT:  .LBB13_5: # %abort1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq abort
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB13_6: # %abort2
 ; CHECK-NEXT:    callq alt_abort
+; CHECK-NEXT:    ud2
 entry:
   %c1 = call i1 @qux()
   br i1 %c1, label %cont1, label %abort1

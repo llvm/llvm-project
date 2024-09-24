@@ -38,9 +38,7 @@ define void @jbd2_journal_commit_transaction(i32 %input1, ptr %input2, ptr %inpu
 ; CHECK-NEXT:    isel 7, 3, 8, 20
 ; CHECK-NEXT:  .LBB0_4: # %while.end418
 ; CHECK-NEXT:    cmplwi 7, 0
-; CHECK-NEXT:    beq 0, .LBB0_6
-; CHECK-NEXT:  # %bb.5: # %if.then420
-; CHECK-NEXT:  .LBB0_6: # %if.end421
+; CHECK-NEXT:    trap
 ;
 ; CHECK-NO-ISEL-LABEL: jbd2_journal_commit_transaction:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
@@ -61,10 +59,10 @@ define void @jbd2_journal_commit_transaction(i32 %input1, ptr %input2, ptr %inpu
 ; CHECK-NO-ISEL-EMPTY:
 ; CHECK-NO-ISEL-NEXT:    #NO_APP
 ; CHECK-NO-ISEL-NEXT:    std 5, 0(6)
-; CHECK-NO-ISEL-NEXT:    beq- 5, .LBB0_6
+; CHECK-NO-ISEL-NEXT:    beq- 5, .LBB0_5
 ; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %while.body392
 ; CHECK-NO-ISEL-NEXT:    #
-; CHECK-NO-ISEL-NEXT:    bne- 1, .LBB0_5
+; CHECK-NO-ISEL-NEXT:    bne- 1, .LBB0_6
 ; CHECK-NO-ISEL-NEXT:  # %bb.3: # %wait_on_buffer.exit1319
 ; CHECK-NO-ISEL-NEXT:    #
 ; CHECK-NO-ISEL-NEXT:    ld 5, 0(6)
@@ -77,13 +75,12 @@ define void @jbd2_journal_commit_transaction(i32 %input1, ptr %input2, ptr %inpu
 ; CHECK-NO-ISEL-NEXT:    #
 ; CHECK-NO-ISEL-NEXT:    li 4, -5
 ; CHECK-NO-ISEL-NEXT:    b .LBB0_1
-; CHECK-NO-ISEL-NEXT:  .LBB0_5:
-; CHECK-NO-ISEL-NEXT:    mr 4, 7
-; CHECK-NO-ISEL-NEXT:  .LBB0_6: # %while.end418
+; CHECK-NO-ISEL-NEXT:  .LBB0_5: # %while.end418
 ; CHECK-NO-ISEL-NEXT:    cmplwi 4, 0
-; CHECK-NO-ISEL-NEXT:    beq 0, .LBB0_8
-; CHECK-NO-ISEL-NEXT:  # %bb.7: # %if.then420
-; CHECK-NO-ISEL-NEXT:  .LBB0_8: # %if.end421
+; CHECK-NO-ISEL-NEXT:    trap
+; CHECK-NO-ISEL-NEXT:  .LBB0_6:
+; CHECK-NO-ISEL-NEXT:    cmplwi 7, 0
+; CHECK-NO-ISEL-NEXT:    trap
 entry:
   br label %while.body392
 

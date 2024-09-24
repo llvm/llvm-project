@@ -9,7 +9,7 @@ define void @foo() gc "statepoint-example" personality ptr @__gxx_personality_se
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    callq raise
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    int3
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:    .seh_endproc
     %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @raise, i32 0, i32 0, i32 0, i32 0)
     unreachable

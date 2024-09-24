@@ -2507,20 +2507,18 @@ define i32 @pr27135(i32 %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB24_5
+; CHECK-NEXT:    jne .LBB24_3
 ; CHECK-NEXT:  # %bb.1: # %sw
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    addl $-96, %edi
 ; CHECK-NEXT:    cmpl $5, %edi
 ; CHECK-NEXT:    jbe .LBB24_2
-; CHECK-NEXT:  .LBB24_5: # %end
+; CHECK-NEXT:  .LBB24_3: # %end
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB24_2: # %sw
 ; CHECK-NEXT:    movl $19, %eax
 ; CHECK-NEXT:    btl %edi, %eax
-; CHECK-NEXT:    jae .LBB24_3
-; CHECK-NEXT:  # %bb.4: # %sw.bb2
-; CHECK-NEXT:  .LBB24_3: # %sw.bb
+; CHECK-NEXT:    ud2
 ;
 ; NOOPT-LABEL: pr27135:
 ; NOOPT:       # %bb.0: # %entry
@@ -2558,7 +2556,9 @@ define i32 @pr27135(i32 %i) {
 ; NOOPT-NEXT:    jne .LBB24_4
 ; NOOPT-NEXT:    jmp .LBB24_2
 ; NOOPT-NEXT:  .LBB24_2: # %sw.bb
+; NOOPT-NEXT:    ud2
 ; NOOPT-NEXT:  .LBB24_3: # %sw.bb2
+; NOOPT-NEXT:    ud2
 ; NOOPT-NEXT:  .LBB24_4: # %end
 ; NOOPT-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; NOOPT-NEXT:    retq
@@ -2619,6 +2619,7 @@ define void @range_with_unreachable_fallthrough(i32 %i) {
 ; NOOPT-NEXT:    jmp .LBB25_4
 ; NOOPT-NEXT:  # %bb.3: # %default
 ; NOOPT-NEXT:    .cfi_def_cfa_offset 8
+; NOOPT-NEXT:    ud2
 ; NOOPT-NEXT:  .LBB25_4: # %return
 ; NOOPT-NEXT:    .cfi_def_cfa_offset 16
 ; NOOPT-NEXT:    popq %rax

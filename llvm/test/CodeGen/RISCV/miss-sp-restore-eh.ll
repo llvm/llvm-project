@@ -38,6 +38,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  # %bb.1: # %try.cont.unreachable
+; CHECK-NEXT:    unimp
 ; CHECK-NEXT:  .LBB0_2: # %lpad
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    sext.w a1, a1

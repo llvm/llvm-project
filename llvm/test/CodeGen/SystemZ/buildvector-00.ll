@@ -17,7 +17,8 @@ define void @f1(<2 x i64> %a0) {
 ; CHECK-NEXT:    vnc %v0, %v2, %v0
 ; CHECK-NEXT:    vlgvf %r0, %v0, 1
 ; CHECK-NEXT:    tmll %r0, 1
-; CHECK-NEXT:  # %bb.1: # %bb15
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    j .Ltmp0+2
 
 bb:
   %tmp = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> zeroinitializer

@@ -1185,9 +1185,11 @@ end:
 define void @bar() {
 ; RV32-LABEL: bar:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    unimp
 ;
 ; RV64-LABEL: bar:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    unimp
   %cmp = icmp eq i64 1, -1
   %frombool = zext i1 %cmp to i8
   unreachable
@@ -1196,9 +1198,11 @@ define void @bar() {
 define void @foo() {
 ; RV32-LABEL: foo:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    unimp
 ;
 ; RV64-LABEL: foo:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    unimp
   %sub = add nsw i64 1, 1
   %conv = trunc i64 %sub to i32
   unreachable

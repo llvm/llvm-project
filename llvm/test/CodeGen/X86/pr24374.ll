@@ -31,6 +31,6 @@ define void @g() {
   unreachable
 }
 ; CHECK-LABEL: g:
-; CHECK: nop
+; CHECK: ud2
 
 attributes #0 = { nounwind }

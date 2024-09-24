@@ -27,6 +27,7 @@ bb.i19:                                           ; preds = %bb.i19, %bb3
 define void @test_illegal_build_vector() nounwind {
 ; CHECK-LABEL: test_illegal_build_vector:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   store <2 x i64> undef, ptr undef, align 16
   %0 = load <16 x i8>, ptr undef, align 16            ; <<16 x i8>> [#uses=1]
@@ -40,6 +41,7 @@ entry:
 define void @test_pr22678() {
 ; CHECK-LABEL: test_pr22678:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .inst 0xe7ffdefe
   %1 = fptoui <16 x float> undef to <16 x i8>
   store <16 x i8> %1, ptr undef
   ret void

@@ -99,8 +99,8 @@ if.else:
   ret i32 %sub
 }
 
-declare void @abort()
-declare void @exit(i32)
+declare void @abort() noreturn
+declare void @exit(i32) noreturn
 @t = common global i32 0
 
 ; If the comparison uses the C bit (signed overflow/underflow), we can't

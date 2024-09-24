@@ -2,22 +2,19 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d -O0 < %s | FileCheck %s --check-prefix=NOSHRINKW
 ; RUN: llc --mtriple=loongarch64 -mattr=+d -O2 < %s | FileCheck %s --check-prefix=SHRINKW
 
-declare void @abort()
+declare void @abort() noreturn
 
 define void @eliminate_restore(i32 %n) nounwind {
 ; NOSHRINKW-LABEL: eliminate_restore:
 ; NOSHRINKW:       # %bb.0:
-; NOSHRINKW-NEXT:    addi.d $sp, $sp, -16
-; NOSHRINKW-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; NOSHRINKW-NEXT:    addi.w $a1, $a0, 0
 ; NOSHRINKW-NEXT:    ori $a0, $zero, 32
 ; NOSHRINKW-NEXT:    bltu $a0, $a1, .LBB0_2
 ; NOSHRINKW-NEXT:    b .LBB0_1
 ; NOSHRINKW-NEXT:  .LBB0_1: # %if.then
 ; NOSHRINKW-NEXT:    bl %plt(abort)
+; NOSHRINKW-NEXT:    amswap.w $zero, $ra, $zero
 ; NOSHRINKW-NEXT:  .LBB0_2: # %if.end
-; NOSHRINKW-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOSHRINKW-NEXT:    addi.d $sp, $sp, 16
 ; NOSHRINKW-NEXT:    ret
 ;
 ; SHRINKW-LABEL: eliminate_restore:
@@ -28,8 +25,6 @@ define void @eliminate_restore(i32 %n) nounwind {
 ; SHRINKW-NEXT:  # %bb.1: # %if.end
 ; SHRINKW-NEXT:    ret
 ; SHRINKW-NEXT:  .LBB0_2: # %if.then
-; SHRINKW-NEXT:    addi.d $sp, $sp, -16
-; SHRINKW-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; SHRINKW-NEXT:    bl %plt(abort)
   %cmp = icmp ule i32 %n, 32
   br i1 %cmp, label %if.then, label %if.end

@@ -396,6 +396,8 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+extern cl::opt<bool> EnableTrapUnreachable;
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -612,6 +614,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                         FS, Options, getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
+  // FIXME: There are some scenarios where targets may not have hardware traps,
+  // and external calls to `abort` also fail. For now, do a blanket-disable.
+  if (!EnableTrapUnreachable.getNumOccurrences())
+    this->Options.TrapUnreachable = false;
   initAsmInfo();
   if (TT.getArch() == Triple::amdgcn) {
     if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize64"))

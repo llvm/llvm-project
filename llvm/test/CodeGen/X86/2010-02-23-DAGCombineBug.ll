@@ -9,6 +9,7 @@ define ptr @t(i32 %a0) nounwind optsize ssp {
 ; CHECK-NEXT:  # %bb.1: # %if.then27
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_2: # %if.else29
+; CHECK-NEXT:    ud2
 entry:
   %cmp = icmp slt i32 %a0, 0                    ; <i1> [#uses=1]
   %outsearch.0 = select i1 %cmp, i1 false, i1 true ; <i1> [#uses=1]
