@@ -1477,6 +1477,58 @@ TEST_F(SymbolCollectorTest, Documentation) {
                         forCodeCompletion(false))));
 }
 
+TEST_F(SymbolCollectorTest, DocumentationInMain) {
+  const std::string Header = R"(
+    // doc Foo
+    class Foo {
+      void f();
+    };
+  )";
+  const std::string Main = R"(
+    // doc f
+    void Foo::f() {}
+  )";
+  CollectorOpts.StoreAllDocumentation = true;
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(qName("Foo"), doc("doc Foo"), forCodeCompletion(true)),
+                  AllOf(qName("Foo::f"), doc("doc f"), returnType(""),
+                        forCodeCompletion(false))));
+}
+
+TEST_F(SymbolCollectorTest, DocumentationAtDeclThenDef) {
+  const std::string Header = R"(
+    class Foo {
+      // doc f decl
+      void f();
+    };
+  )";
+  const std::string Main = R"(
+    // doc f def
+    void Foo::f() {}
+  )";
+  CollectorOpts.StoreAllDocumentation = true;
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(qName("Foo")),
+                                   AllOf(qName("Foo::f"), doc("doc f decl"))));
+}
+
+TEST_F(SymbolCollectorTest, DocumentationAtDefThenDecl) {
+  const std::string Header = R"(
+    // doc f def
+    void f() {}
+
+    // doc f decl
+    void f();
+  )";
+  CollectorOpts.StoreAllDocumentation = true;
+  runSymbolCollector(Header, "" /*Main*/);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(qName("f"), doc("doc f def"))));
+}
+
 TEST_F(SymbolCollectorTest, ClassMembers) {
   const std::string Header = R"(
     class Foo {

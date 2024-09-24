@@ -18,13 +18,7 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[STEP_ADD]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[STEP_ADD1]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 8
@@ -50,9 +44,6 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP23]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[TMP28]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i64, ptr [[TMP28]], i32 4
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i64, ptr [[TMP28]], i32 8
@@ -129,9 +120,6 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 8
@@ -153,9 +141,6 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP14]], 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[TMP24]], i32 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[TMP24]], i32 8
