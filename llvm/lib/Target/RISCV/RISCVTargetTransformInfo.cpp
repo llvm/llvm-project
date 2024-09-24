@@ -1635,7 +1635,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
 
-  auto getConstantMatCost =
+  auto GetConstantMatCost =
       [&](TTI::OperandValueInfo OpInfo) -> InstructionCost {
     if (OpInfo.isUniform())
       // We return 0 we currently ignore the cost of materializing scalar
@@ -1647,9 +1647,9 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
 
   InstructionCost ConstantMatCost;
   if (Op1Info.isConstant())
-    ConstantMatCost += getConstantMatCost(Op1Info);
+    ConstantMatCost += GetConstantMatCost(Op1Info);
   if (Op2Info.isConstant())
-    ConstantMatCost += getConstantMatCost(Op2Info);
+    ConstantMatCost += GetConstantMatCost(Op2Info);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
