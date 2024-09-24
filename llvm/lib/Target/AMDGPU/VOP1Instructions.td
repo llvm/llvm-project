@@ -583,7 +583,7 @@ class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
 >;
 
 let SubtargetPredicate = HasFP8ConversionInsts in {
-let OtherPredicates = [HasCvtFP8VOP1Bug, HasSDWA] in {
+let OtherPredicates = [HasCvtFP8VOP1Bug] in {
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
                (V_CVT_F32_FP8_sdwa 0, $src, 0, 0, 0)>;
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
