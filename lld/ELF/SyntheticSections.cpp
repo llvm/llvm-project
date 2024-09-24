@@ -2546,8 +2546,9 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
 }
 
 HashTableSection::HashTableSection(Ctx &ctx)
-    : SyntheticSection(ctx, ".hash", SHT_HASH, SHF_ALLOC, 4) {
-  this->entsize = 4;
+    : SyntheticSection(ctx, ".hash", SHT_HASH, SHF_ALLOC,
+                       ctx.target->hashEntrySize) {
+  this->entsize = ctx.target->hashEntrySize;
 }
 
 void HashTableSection::finalizeContents() {
@@ -2561,28 +2562,44 @@ void HashTableSection::finalizeContents() {
 
   // Create as many buckets as there are symbols.
   numEntries += symTab->getNumSymbols();
-  this->size = numEntries * 4;
+  this->size = numEntries * this->entsize;
 }
 
 void HashTableSection::writeTo(uint8_t *buf) {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   unsigned numSymbols = symTab->getNumSymbols();
+  size_t size = this->entsize;
 
-  uint32_t *p = reinterpret_cast<uint32_t *>(buf);
-  write32(ctx, p++, numSymbols); // nbucket
-  write32(ctx, p++, numSymbols); // nchain
+  uint8_t *p = buf;
+  this->writeHashTable(ctx, p, numSymbols); // nbucket
+  p += size;
+  this->writeHashTable(ctx, p, numSymbols); // nchain
+  p += size;
 
-  uint32_t *buckets = p;
-  uint32_t *chains = p + numSymbols;
+  uint8_t *buckets = p;
+  uint8_t *chains = p + numSymbols * size;
 
   for (const SymbolTableEntry &s : symTab->getSymbols()) {
     Symbol *sym = s.sym;
     StringRef name = sym->getName();
     unsigned i = sym->dynsymIndex;
-    uint32_t hash = hashSysV(name) % numSymbols;
-    chains[i] = buckets[hash];
-    write32(ctx, buckets + hash, i);
+    uint64_t hash = hashSysV(name) % numSymbols;
+    // chains[i] = buckets[hash]
+    memcpy(chains + i * size, buckets + hash * size, size);
+    // buckets[hash] = i
+    this->writeHashTable(ctx, buckets + hash * size, i);
   }
+}
+
+inline void HashTableSection::writeHashTable(Ctx &ctx, uint8_t *buf,
+                                             uint64_t entry) const {
+  // All but SystemZ use 32-bit .hash entries.
+  if (this->entsize == 4)
+    write32(ctx, buf, entry);
+  else if (this->entsize == 8)
+    write64(ctx, buf, entry);
+  else
+    fatal("unsupported .hash entry size: " + Twine(this->entsize));
 }
 
 PltSection::PltSection(Ctx &ctx)
