@@ -149,7 +149,7 @@ typedef ArrayRef<SVal> ValueList;
 
 ProgramStateRef
 ProgramState::invalidateRegions(RegionList Regions,
-                             const Expr *E, unsigned Count,
+                             const Stmt *S, unsigned Count,
                              const LocationContext *LCtx,
                              bool CausedByPointerEscape,
                              InvalidatedSymbols *IS,
@@ -159,13 +159,13 @@ ProgramState::invalidateRegions(RegionList Regions,
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegions(Values, E, Count, LCtx, CausedByPointerEscape, IS,
+  return invalidateRegions(Values, S, Count, LCtx, CausedByPointerEscape, IS,
                            Call, ITraits);
 }
 
 ProgramStateRef
 ProgramState::invalidateRegions(ValueList Values,
-                             const Expr *E, unsigned Count,
+                             const Stmt *S, unsigned Count,
                              const LocationContext *LCtx,
                              bool CausedByPointerEscape,
                              InvalidatedSymbols *IS,
@@ -186,7 +186,7 @@ ProgramState::invalidateRegions(ValueList Values,
   StoreManager::InvalidatedRegions TopLevelInvalidated;
   StoreManager::InvalidatedRegions Invalidated;
   const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
-      getStore(), Values, E, Count, LCtx, Call, *IS, *ITraits,
+      getStore(), Values, S, Count, LCtx, Call, *IS, *ITraits,
       &TopLevelInvalidated, &Invalidated);
 
   ProgramStateRef NewState = makeWithStore(NewStore);

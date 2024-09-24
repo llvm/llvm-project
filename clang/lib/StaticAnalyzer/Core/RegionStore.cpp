@@ -406,7 +406,7 @@ public:
   // Binding values to regions.
   //===-------------------------------------------------------------------===//
   RegionBindingsRef invalidateGlobalRegion(MemRegion::Kind K,
-                                           const Expr *Ex,
+                                           const Stmt *S,
                                            unsigned Count,
                                            const LocationContext *LCtx,
                                            RegionBindingsRef B,
@@ -414,7 +414,7 @@ public:
 
   StoreRef invalidateRegions(Store store,
                              ArrayRef<SVal> Values,
-                             const Expr *E, unsigned Count,
+                             const Stmt *S, unsigned Count,
                              const LocationContext *LCtx,
                              const CallEvent *Call,
                              InvalidatedSymbols &IS,
@@ -975,7 +975,7 @@ RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
 namespace {
 class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 {
-  const Expr *Ex;
+  const Stmt *S;
   unsigned Count;
   const LocationContext *LCtx;
   InvalidatedSymbols &IS;
@@ -986,14 +986,14 @@ public:
   InvalidateRegionsWorker(RegionStoreManager &rm,
                           ProgramStateManager &stateMgr,
                           RegionBindingsRef b,
-                          const Expr *ex, unsigned count,
+                          const Stmt *S, unsigned count,
                           const LocationContext *lctx,
                           InvalidatedSymbols &is,
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
                           GlobalsFilterKind GFK)
      : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b),
-       Ex(ex), Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
+       S(S), Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
        GlobalsFilter(GFK) {}
 
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C);
@@ -1127,7 +1127,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-      svalBuilder.conjureSymbolVal(baseR, Ex, LCtx, Ctx.IntTy, Count);
+      svalBuilder.conjureSymbolVal(baseR, S, LCtx, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1148,7 +1148,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   if (T->isRecordType()) {
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
-    DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, Ex, LCtx,
+    DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, S, LCtx,
                                                           Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
@@ -1217,13 +1217,13 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   conjure_default:
       // Set the default value of the array to conjured symbol.
     DefinedOrUnknownSVal V =
-    svalBuilder.conjureSymbolVal(baseR, Ex, LCtx,
+    svalBuilder.conjureSymbolVal(baseR, S, LCtx,
                                      AT->getElementType(), Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
 
-  DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, Ex, LCtx,
+  DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, S, LCtx,
                                                         T,Count);
   assert(SymbolManager::canSymbolicate(T) || V.isUnknown());
   B = B.addBinding(baseR, BindingKey::Direct, V);
@@ -1254,7 +1254,7 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
 
 RegionBindingsRef
 RegionStoreManager::invalidateGlobalRegion(MemRegion::Kind K,
-                                           const Expr *Ex,
+                                           const Stmt *S,
                                            unsigned Count,
                                            const LocationContext *LCtx,
                                            RegionBindingsRef B,
@@ -1262,7 +1262,7 @@ RegionStoreManager::invalidateGlobalRegion(MemRegion::Kind K,
   // Bind the globals memory space to a new symbol that we will use to derive
   // the bindings for all globals.
   const GlobalsSpaceRegion *GS = MRMgr.getGlobalsRegion(K);
-  SVal V = svalBuilder.conjureSymbolVal(/* symbolTag = */ (const void*) GS, Ex, LCtx,
+  SVal V = svalBuilder.conjureSymbolVal(/* symbolTag = */ (const void*) GS, S, LCtx,
                                         /* type does not matter */ Ctx.IntTy,
                                         Count);
 
@@ -1301,7 +1301,7 @@ void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
 StoreRef
 RegionStoreManager::invalidateRegions(Store store,
                                      ArrayRef<SVal> Values,
-                                     const Expr *Ex, unsigned Count,
+                                     const Stmt *S, unsigned Count,
                                      const LocationContext *LCtx,
                                      const CallEvent *Call,
                                      InvalidatedSymbols &IS,
@@ -1319,7 +1319,7 @@ RegionStoreManager::invalidateRegions(Store store,
   }
 
   RegionBindingsRef B = getRegionBindings(store);
-  InvalidateRegionsWorker W(*this, StateMgr, B, Ex, Count, LCtx, IS, ITraits,
+  InvalidateRegionsWorker W(*this, StateMgr, B, S, Count, LCtx, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
   // Scan the bindings and generate the clusters.
@@ -1340,11 +1340,11 @@ RegionStoreManager::invalidateRegions(Store store,
   switch (GlobalsFilter) {
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind,
-                               Ex, Count, LCtx, B, Invalidated);
+                               S, Count, LCtx, B, Invalidated);
     [[fallthrough]];
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind,
-                               Ex, Count, LCtx, B, Invalidated);
+                               S, Count, LCtx, B, Invalidated);
     [[fallthrough]];
   case GFK_None:
     break;

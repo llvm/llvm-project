@@ -203,7 +203,7 @@ public:
                                         const LocationContext *LCtx,
                                         unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
+                                        const Stmt *S,
                                         const LocationContext *LCtx,
                                         QualType type,
                                         unsigned count);
