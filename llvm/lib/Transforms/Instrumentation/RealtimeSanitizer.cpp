@@ -20,30 +20,43 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
+#include <vector>
+
 using namespace llvm;
 
+static std::vector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
+  std::vector<Type *> Types;
+  for (Value *Arg : FunctionArgs)
+    Types.push_back(Arg->getType());
+  return Types;
+}
+
 static void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
-                                        const char *FunctionName) {
+                                        const char *FunctionName,
+                                        ArrayRef<Value *> FunctionArgs) {
   LLVMContext &Context = Fn.getContext();
-  FunctionType *FuncType = FunctionType::get(Type::getVoidTy(Context), false);
+  FunctionType *FuncType = FunctionType::get(Type::getVoidTy(Context),
+                                             getArgTypes(FunctionArgs), false);
   FunctionCallee Func =
       Fn.getParent()->getOrInsertFunction(FunctionName, FuncType);
   IRBuilder<> Builder{&Instruction};
-  Builder.CreateCall(Func, {});
+  Builder.CreateCall(Func, FunctionArgs);
 }
 
 static void insertCallAtFunctionEntryPoint(Function &Fn,
-                                           const char *InsertFnName) {
-
-  insertCallBeforeInstruction(Fn, Fn.front().front(), InsertFnName);
+                                           const char *InsertFnName,
+                                           ArrayRef<Value *> FunctionArgs) {
+  insertCallBeforeInstruction(Fn, Fn.front().front(), InsertFnName,
+                              FunctionArgs);
 }
 
 static void insertCallAtAllFunctionExitPoints(Function &Fn,
-                                              const char *InsertFnName) {
+                                              const char *InsertFnName,
+                                              ArrayRef<Value *> FunctionArgs) {
   for (auto &BB : Fn)
     for (auto &I : BB)
       if (isa<ReturnInst>(&I))
-        insertCallBeforeInstruction(Fn, I, InsertFnName);
+        insertCallBeforeInstruction(Fn, I, InsertFnName, FunctionArgs);
 }
 
 static PreservedAnalyses rtsanPreservedCFGAnalyses() {
@@ -52,18 +65,17 @@ static PreservedAnalyses rtsanPreservedCFGAnalyses() {
   return PA;
 }
 
-static void insertNotifyBlockingCallAtFunctionEntryPoint(Function &Fn) {
+static PreservedAnalyses runSanitizeRealtime(Function &Fn) {
+  insertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter", {});
+  insertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit", {});
+  return rtsanPreservedCFGAnalyses();
+}
+
+static PreservedAnalyses runSanitizeRealtimeUnsafe(Function &Fn) {
   IRBuilder<> Builder(&Fn.front().front());
-  Value *NameArg = Builder.CreateGlobalString(demangle(Fn.getName()));
-
-  FunctionType *FuncType =
-      FunctionType::get(Type::getVoidTy(Fn.getContext()),
-                        {PointerType::getUnqual(Fn.getContext())}, false);
-
-  FunctionCallee Func = Fn.getParent()->getOrInsertFunction(
-      "__rtsan_notify_blocking_call", FuncType);
-
-  Builder.CreateCall(Func, {NameArg});
+  Value *Name = Builder.CreateGlobalString(demangle(Fn.getName()));
+  insertCallAtFunctionEntryPoint(Fn, "__rtsan_notify_blocking_call", {Name});
+  return rtsanPreservedCFGAnalyses();
 }
 
 RealtimeSanitizerPass::RealtimeSanitizerPass(
@@ -71,16 +83,11 @@ RealtimeSanitizerPass::RealtimeSanitizerPass(
 
 PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
                                              AnalysisManager<Function> &AM) {
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime)) {
-    insertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter");
-    insertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit");
-    return rtsanPreservedCFGAnalyses();
-  }
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime))
+    return runSanitizeRealtime(Fn);
 
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe)) {
-    insertNotifyBlockingCallAtFunctionEntryPoint(Fn);
-    return rtsanPreservedCFGAnalyses();
-  }
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe))
+    return runSanitizeRealtimeUnsafe(Fn);
 
   return PreservedAnalyses::all();
 }
