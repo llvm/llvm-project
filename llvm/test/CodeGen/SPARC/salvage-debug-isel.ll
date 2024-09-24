@@ -1,9 +1,9 @@
-; RUN: llc -march=sparc -O1 %s -o - | FileCheck %s
+; RUN: llc -march=sparc -O1 %s -o - -stop-after=finalize-isel | FileCheck %s
 
 ; Debug info salvaging in isel means we should see a location for this variable.
 
-; CHECK-LABEL: a:
-; CHECK:    !DEBUG_VALUE: a:d <- [DW_OP_plus_uconst 98, DW_OP_plus_uconst 3, DW_OP_stack_value] $o6
+; CHECK-LABEL: name:            a
+; CHECK: DBG_VALUE %stack.0.b, $noreg, ![[#]], !DIExpression(DW_OP_plus_uconst, 3, DW_OP_stack_value)
 
 define dso_local zeroext i16 @a() local_unnamed_addr #0 !dbg !7 {
 entry:
