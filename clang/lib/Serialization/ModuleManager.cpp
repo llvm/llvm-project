@@ -279,8 +279,8 @@ void ModuleManager::removeModules(ModuleIterator First) {
 void
 ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  const FileEntry *Entry =
-      FileMgr.getVirtualFile(FileName, Buffer->getBufferSize(), 0);
+  FileEntryRef Entry =
+      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
   InMemoryBuffers[Entry] = std::move(Buffer);
 }
 

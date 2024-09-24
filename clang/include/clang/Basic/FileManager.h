@@ -271,6 +271,8 @@ public:
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
 
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getVirtualFileRef()")
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 

@@ -126,7 +126,7 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
   // Fake an empty real file system.
   manager.setStatCache(std::make_unique<FakeStatCache>());
 
-  manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
+  manager.getVirtualFileRef("virtual/dir/bar.h", 100, 0);
   ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
 
   auto dir = manager.getDirectoryRef("virtual/dir");
@@ -172,7 +172,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   // Fake an empty real file system.
   manager.setStatCache(std::make_unique<FakeStatCache>());
 
-  manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
+  manager.getVirtualFileRef("virtual/dir/bar.h", 100, 0);
   auto file = manager.getFileRef("virtual/dir/bar.h");
   ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
   EXPECT_EQ("virtual/dir/bar.h", file->getName());
@@ -208,7 +208,7 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   manager.setStatCache(std::move(statCache));
 
   // Create a virtual bar.cpp file.
-  manager.getVirtualFile("bar.cpp", 200, 0);
+  manager.getVirtualFileRef("bar.cpp", 200, 0);
 
   auto file = manager.getFileRef("xyz.txt");
   ASSERT_FALSE(file);
@@ -422,10 +422,9 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   manager.setStatCache(std::move(statCache));
 
   // Inject the virtual file:
-  const FileEntry *file1 = manager.getVirtualFile("c:\\tmp\\test", 123, 1);
-  ASSERT_TRUE(file1 != nullptr);
-  EXPECT_EQ(43U, file1->getUniqueID().getFile());
-  EXPECT_EQ(123, file1->getSize());
+  FileEntryRef file1 = manager.getVirtualFileRef("c:\\tmp\\test", 123, 1);
+  EXPECT_EQ(43U, file1.getUniqueID().getFile());
+  EXPECT_EQ(123, file1.getSize());
 
   // Lookup the virtual file with a different name:
   auto file2 = manager.getOptionalFileRef("c:/tmp/test", 100, 1);
@@ -489,12 +488,11 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   Manager.setStatCache(std::move(statCache));
 
   // Check for real path.
-  const FileEntry *file = Manager.getVirtualFile("/tmp/test", 123, 1);
-  ASSERT_TRUE(file != nullptr);
+  FileEntryRef file = Manager.getVirtualFileRef("/tmp/test", 123, 1);
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
-  EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
+  EXPECT_EQ(file.getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
