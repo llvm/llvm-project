@@ -3062,7 +3062,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
 
     bool HasArch = false;
     bool HasPriority = false;
-    bool IsDefault = false;
+    bool HasDefault = false;
     for (auto &AttrStr : AttrStrs) {
       // Only support arch=+ext,... syntax.
       if (AttrStr.starts_with("arch=+")) {
@@ -3077,7 +3077,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
       } else if (AttrStr.starts_with("default")) {
-        IsDefault = true;
+        HasDefault = true;
       } else if (AttrStr.consume_front("priority=")) {
         HasPriority = true;
         int Digit;
@@ -3090,7 +3090,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       }
     }
 
-    if ((HasPriority || HasArch) && IsDefault)
+    if ((HasPriority || HasArch) && HasDefault)
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << AttrStr << TargetVersion;
 
