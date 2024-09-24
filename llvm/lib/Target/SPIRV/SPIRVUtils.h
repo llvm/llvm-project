@@ -14,9 +14,12 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <string>
+#include <unordered_set>
 
 namespace llvm {
 class MCInst;
@@ -29,6 +32,73 @@ class Register;
 class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
+
+// This class implements a partial ordering visitor, which visits a cyclic graph
+// in natural topological-like ordering. Topological ordering is not defined for
+// directed graphs with cycles, so this assumes cycles are a single node, and
+// ignores back-edges. The cycle is visited from the entry in the same
+// topological-like ordering.
+//
+// This means once we visit a node, we know all the possible ancestors have been
+// visited.
+//
+// clang-format off
+//
+// Given this graph:
+//
+//     ,-> B -\
+// A -+        +---> D ----> E -> F -> G -> H
+//     `-> C -/      ^                 |
+//                   +-----------------+
+//
+// Visit order is:
+//  A, [B, C in any order], D, E, F, G, H
+//
+// clang-format on
+//
+// Changing the function CFG between the construction of the visitor and
+// visiting is undefined. The visitor can be reused, but if the CFG is updated,
+// the visitor must be rebuilt.
+class PartialOrderingVisitor {
+  DomTreeBuilder::BBDomTree DT;
+  LoopInfo LI;
+  std::unordered_set<BasicBlock *> Visited = {};
+
+  struct OrderInfo {
+    size_t Rank;
+    size_t TraversalIndex;
+  };
+
+  using BlockToOrderInfoMap = std::unordered_map<BasicBlock *, OrderInfo>;
+  BlockToOrderInfoMap BlockToOrder;
+  std::vector<BasicBlock *> Order = {};
+
+  // Get all basic-blocks reachable from Start.
+  std::unordered_set<BasicBlock *> getReachableFrom(BasicBlock *Start);
+
+  // Internal function used to determine the partial ordering.
+  // Visits |BB| with the current rank being |Rank|.
+  size_t visit(BasicBlock *BB, size_t Rank);
+
+public:
+  // Build the visitor to operate on the function F.
+  PartialOrderingVisitor(Function &F);
+
+  // Returns true is |LHS| comes before |RHS| in the partial ordering.
+  // If |LHS| and |RHS| have the same rank, the traversal order determines the
+  // order (order is stable).
+  bool compare(const BasicBlock *LHS, const BasicBlock *RHS) const;
+
+  // Visit the function starting from the basic block |Start|, and calling |Op|
+  // on each visited BB. This traversal ignores back-edges, meaning this won't
+  // visit a node to which |Start| is not an ancestor.
+  // If Op returns |true|, the visitor continues. If |Op| returns false, the
+  // visitor will stop at that rank. This means if 2 nodes share the same rank,
+  // and Op returns false when visiting the first, the second will be visited
+  // afterwards. But none of their successors will.
+  void partialOrderVisit(BasicBlock &Start,
+                         std::function<bool(BasicBlock *)> Op);
+};
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
@@ -105,6 +175,11 @@ bool isEntryPoint(const Function &F);
 
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
 Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
+
+// Sort blocks in a partial ordering, so each block is after all its
+// dominators. This should match both the SPIR-V and the MIR requirements.
+// Returns true if the function was changed.
+bool sortBlocks(Function &F);
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {

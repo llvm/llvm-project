@@ -838,7 +838,7 @@ void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
                                  MachineBasicBlock *MBB) {
   // Emit the code for the jump table
-  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  assert(JT.Reg && "Should lower JT Header first!");
   MachineIRBuilder MIB(*MBB->getParent());
   MIB.setMBB(*MBB);
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
@@ -2193,6 +2193,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
+  case Intrinsic::fake_use: {
+    SmallVector<llvm::SrcOp, 4> VRegs;
+    for (const auto &Arg : CI.args())
+      for (auto VReg : getOrCreateVRegs(*Arg))
+        VRegs.push_back(VReg);
+    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
+    return true;
+  }
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
@@ -2332,6 +2340,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::fptosi_sat:
+    MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::fptoui_sat:
+    MIRBuilder.buildFPTOUI_SAT(getOrCreateVReg(CI),
+                               getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::memcpy_inline:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY_INLINE);
   case Intrinsic::memcpy:
@@ -3175,15 +3191,14 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
-  // A ShuffleVector that has operates on scalable vectors is a splat vector
-  // where the value of the splat vector is the 0th element of the first
-  // operand, since the index mask operand is the zeroinitializer (undef and
+  // A ShuffleVector that operates on scalable vectors is a splat vector where
+  // the value of the splat vector is the 0th element of the first operand,
+  // since the index mask operand is the zeroinitializer (undef and
   // poison are treated as zeroinitializer here).
   if (U.getOperand(0)->getType()->isScalableTy()) {
-    Value *Op0 = U.getOperand(0);
+    Register Val = getOrCreateVReg(*U.getOperand(0));
     auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
-        LLT::scalar(Op0->getType()->getScalarSizeInBits()),
-        getOrCreateVReg(*Op0), 0);
+        MRI->getType(Val).getElementType(), Val, 0);
     MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
     return true;
   }
@@ -3300,6 +3315,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   case AtomicRMWInst::UDecWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UDEC_WRAP;
+    break;
+  case AtomicRMWInst::USubCond:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    Opcode = TargetOpcode::G_ATOMICRMW_USUB_SAT;
     break;
   }
 
@@ -3515,18 +3536,17 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
     EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
   } else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
-    if (!isa<FixedVectorType>(CAZ->getType()))
-      return false;
+    Constant &Elt = *CAZ->getElementValue(0u);
+    if (isa<ScalableVectorType>(CAZ->getType())) {
+      EntryBuilder->buildSplatVector(Reg, getOrCreateVReg(Elt));
+      return true;
+    }
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
     if (NumElts == 1)
-      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder);
-    SmallVector<Register, 4> Ops;
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant &Elt = *CAZ->getElementValue(I);
-      Ops.push_back(getOrCreateVReg(Elt));
-    }
-    EntryBuilder->buildBuildVector(Reg, Ops);
+      return translateCopy(C, Elt, *EntryBuilder);
+    // All elements are zero so we can just use the first one.
+    EntryBuilder->buildSplatBuildVector(Reg, getOrCreateVReg(Elt));
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
@@ -3930,7 +3950,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower function: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower function: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
@@ -3952,7 +3973,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
+    R << "unable to lower arguments: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }

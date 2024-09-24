@@ -178,3 +178,30 @@ return:                                           ; preds = %strdup.exit, %while
 }
 
 declare i32 @toupper()
+
+; In this example, %arg and the return value (13) have overlapping live
+; intervals because the ABI mandidates they both be placed in a0.
+define signext i32 @overlap_live_ranges(ptr %arg, i32 signext %arg1) {
+; CHECK-LABEL: overlap_live_ranges:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    li a2, 13
+; CHECK-NEXT:    bne a1, a3, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %bb2
+; CHECK-NEXT:    lw a2, 4(a0)
+; CHECK-NEXT:  .LBB1_2: # %bb5
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+bb:
+  %i = icmp eq i32 %arg1, 1
+  br i1 %i, label %bb2, label %bb5
+
+bb2:                                              ; preds = %bb
+  %i3 = getelementptr inbounds nuw i8, ptr %arg, i64 4
+  %i4 = load i32, ptr %i3, align 4
+  br label %bb5
+
+bb5:                                              ; preds = %bb2, %bb
+  %i6 = phi i32 [ %i4, %bb2 ], [ 13, %bb ]
+  ret i32 %i6
+}

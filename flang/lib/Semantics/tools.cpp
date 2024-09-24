@@ -440,7 +440,7 @@ static void CheckMissingAnalysis(
     llvm::raw_string_ostream ss{buf};
     ss << "node has not been analyzed:\n";
     parser::DumpTree(ss, x);
-    common::die(ss.str().c_str());
+    common::die(buf.c_str());
   }
 }
 
@@ -1354,7 +1354,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }

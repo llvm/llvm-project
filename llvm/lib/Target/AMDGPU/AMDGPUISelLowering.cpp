@@ -426,12 +426,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
   // default unless marked custom/legal.
-  setOperationAction(
-      ISD::IS_FPCLASS,
-      {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16, MVT::v2f32, MVT::v3f32,
-       MVT::v4f32, MVT::v5f32, MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32,
-       MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64, MVT::v16f64},
-      Custom);
+  setOperationAction(ISD::IS_FPCLASS,
+                     {MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
+                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32,
+                      MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64,
+                      MVT::v16f64},
+                     Custom);
+
+  if (isTypeLegal(MVT::f16))
+    setOperationAction(ISD::IS_FPCLASS,
+                       {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16},
+                       Custom);
 
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
@@ -1017,14 +1022,45 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
   return Src == MVT::i32 && Dest == MVT::i64;
 }
 
-bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
+bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                 EVT DestVT) const {
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::MUL:
+  case ISD::SETCC:
+  case ISD::SELECT:
+    if (Subtarget->has16BitInsts() &&
+        (DestVT.isVector() ? !Subtarget->hasVOP3PInsts() : true)) {
+      // Don't narrow back down to i16 if promoted to i32 already.
+      if (!N->isDivergent() && DestVT.isInteger() &&
+          DestVT.getScalarSizeInBits() > 1 &&
+          DestVT.getScalarSizeInBits() <= 16 &&
+          SrcVT.getScalarSizeInBits() > 16) {
+        return false;
+      }
+    }
+    return true;
+  default:
+    break;
+  }
+
   // There aren't really 64-bit registers, but pairs of 32-bit ones and only a
   // limited number of native 64-bit operations. Shrinking an operation to fit
   // in a single 32-bit register should always be helpful. As currently used,
   // this is much less general than the name suggests, and is only used in
   // places trying to reduce the sizes of loads. Shrinking loads to < 32-bits is
   // not profitable, and may actually be harmful.
-  return SrcVT.getSizeInBits() > 32 && DestVT.getSizeInBits() == 32;
+  if (isa<LoadSDNode>(N))
+    return SrcVT.getSizeInBits() > 32 && DestVT.getSizeInBits() == 32;
+
+  return true;
 }
 
 bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
@@ -5506,7 +5542,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
   NODE_NAME_CASE(LDS)
-  NODE_NAME_CASE(FPTRUNC_ROUND)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)
@@ -5541,6 +5576,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SBUFFER_LOAD_UBYTE)
   NODE_NAME_CASE(SBUFFER_LOAD_SHORT)
   NODE_NAME_CASE(SBUFFER_LOAD_USHORT)
+  NODE_NAME_CASE(SBUFFER_PREFETCH_DATA)
   NODE_NAME_CASE(BUFFER_STORE)
   NODE_NAME_CASE(BUFFER_STORE_BYTE)
   NODE_NAME_CASE(BUFFER_STORE_SHORT)

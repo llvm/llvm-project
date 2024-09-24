@@ -1028,7 +1028,14 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   if (!BB->hasNPredecessorsOrMore(2))
     return false;
 
-  // Get single common predecessors of both BB and Succ
+  if (any_of(BBPreds, [](const BasicBlock *Pred) {
+        return isa<PHINode>(Pred->begin()) &&
+               isa<IndirectBrInst>(Pred->getTerminator());
+      }))
+    return false;
+
+  // Get the single common predecessor of both BB and Succ. Return false
+  // when there are more than one common predecessors.
   for (BasicBlock *SuccPred : SuccPreds) {
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
@@ -1133,7 +1140,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
-  // Even if we can not fold bB into Succ, we may be able to redirect the
+  // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
   bool BBPhisMergeable =
       BBKillable ||
@@ -3491,6 +3498,9 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (II && II->getIntrinsicID() == Intrinsic::fake_use)
+      continue;
     if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
@@ -3628,7 +3638,7 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
   unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
   if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
       !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-    MDNode *NN = MDNode::get(OldLI.getContext(), std::nullopt);
+    MDNode *NN = MDNode::get(OldLI.getContext(), {});
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
   }
 }

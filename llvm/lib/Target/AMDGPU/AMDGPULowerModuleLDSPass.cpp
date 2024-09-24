@@ -1010,19 +1010,20 @@ public:
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
-
-      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
-      // kernel. We may have inferred this wasn't used prior to the pass.
-      //
-      // TODO: We could filter out subgraphs that do not access LDS globals.
-      for (Function *F : KernelsThatAllocateTableLDS)
-        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =
         lowerDynamicLDSVariables(M, LDSUsesInfo,
                                  KernelsThatIndirectlyAllocateDynamicLDS,
                                  DynamicVariables, OrderedKernels);
+
+    // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+    // kernel. We may have inferred this wasn't used prior to the pass.
+    // TODO: We could filter out subgraphs that do not access LDS globals.
+    for (auto *KernelSet : {&KernelsThatIndirectlyAllocateDynamicLDS,
+                            &KernelsThatAllocateTableLDS})
+      for (Function *F : *KernelSet)
+        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.

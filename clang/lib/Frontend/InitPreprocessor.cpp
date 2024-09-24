@@ -671,10 +671,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
                         LangOpts.CPlusPlus23   ? "202211L"
                         : LangOpts.CPlusPlus17 ? "201603L"
                                                : "200907");
-    Builder.defineMacro("__cpp_static_assert", LangOpts.CPlusPlus26 ? "202306L"
-                                               : LangOpts.CPlusPlus17
-                                                   ? "201411L"
-                                                   : "200410");
+    // C++17 / C++26 static_assert supported as an extension in earlier language
+    // modes, so we use the C++26 value.
+    Builder.defineMacro("__cpp_static_assert", "202306L");
     Builder.defineMacro("__cpp_decltype", "200707L");
     Builder.defineMacro("__cpp_attributes", "200809L");
     Builder.defineMacro("__cpp_rvalue_references", "200610L");

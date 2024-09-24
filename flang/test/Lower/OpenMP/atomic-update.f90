@@ -91,7 +91,7 @@ program OmpAtomicUpdate
         z = x * z 
 
 !CHECK: %[[VAL_c1:.*]] = arith.constant 1 : i32
-!CHECK: omp.atomic.update memory_order(relaxed) hint(uncontended) %[[VAL_X_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update hint(uncontended) memory_order(relaxed) %[[VAL_X_DECLARE]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.subi %[[ARG]], %[[VAL_c1]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
@@ -113,7 +113,7 @@ program OmpAtomicUpdate
         y = max(y, c, d)
 
 !CHECK: %[[VAL_X_LOADED:.*]] = fir.load %[[VAL_X_DECLARE]]#0 : !fir.ref<i32>
-!CHECK: omp.atomic.update memory_order(relaxed) hint(contended) %[[VAL_Z_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update hint(contended) memory_order(relaxed) %[[VAL_Z_DECLARE]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.addi %[[ARG]], %[[VAL_X_LOADED]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
@@ -122,7 +122,7 @@ program OmpAtomicUpdate
         z = z + x
 
 !CHECK: %[[VAL_c10:.*]] = arith.constant 10 : i32
-!CHECK: omp.atomic.update memory_order(release) hint(contended) %[[VAL_Z_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update hint(contended) memory_order(release) %[[VAL_Z_DECLARE]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.muli %[[VAL_c10]], %[[ARG]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
@@ -131,7 +131,7 @@ program OmpAtomicUpdate
         z = z * 10
 
 !CHECK: %[[VAL_Z_LOADED:.*]] = fir.load %[[VAL_Z_DECLARE]]#0 : !fir.ref<i32>
-!CHECK: omp.atomic.update memory_order(release) hint(speculative) %[[VAL_X_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update hint(speculative) memory_order(release) %[[VAL_X_DECLARE]]#1 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.divsi %[[ARG]], %[[VAL_Z_LOADED]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)

@@ -75,7 +75,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineBlockPlacementPass(Registry);
   initializeMachineBlockPlacementStatsPass(Registry);
   initializeMachineCFGPrinterPass(Registry);
-  initializeMachineCSEPass(Registry);
+  initializeMachineCSELegacyPass(Registry);
   initializeMachineCombinerPass(Registry);
   initializeMachineCopyPropagationPass(Registry);
   initializeMachineCycleInfoPrinterPassPass(Registry);
@@ -116,6 +116,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRegUsageInfoCollectorPass(Registry);
   initializeRegUsageInfoPropagationPass(Registry);
   initializeRegisterCoalescerPass(Registry);
+  initializeRemoveLoadsIntoFakeUsesPass(Registry);
   initializeRemoveRedundantDebugValuesPass(Registry);
   initializeRenameIndependentSubregsPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);

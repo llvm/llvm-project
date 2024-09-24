@@ -906,7 +906,7 @@ struct PeelConvert {
   }
 };
 
-static Fortran::semantics::SomeExpr
+static inline Fortran::semantics::SomeExpr
 peelOuterConvert(Fortran::semantics::SomeExpr &expr) {
   if (auto peeled = PeelConvert::visit(expr))
     return *peeled;

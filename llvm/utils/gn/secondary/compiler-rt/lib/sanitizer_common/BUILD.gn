@@ -167,42 +167,38 @@ source_set("sources") {
     "sanitizer_vector.h",
     "sanitizer_win.cpp",
     "sanitizer_win.h",
+    "sanitizer_win_interception.cpp",
+    "sanitizer_win_interception.h",
     "sanitizer_win_defs.h",
-    "sanitizer_win_dll_thunk.h",
-    "sanitizer_win_weak_interception.h",
+    "sanitizer_win_thunk_interception.h",
   ]
 }
 
-source_set("weak_interception") {
+source_set("runtime_thunk") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [
-    "sanitizer_coverage_win_weak_interception.cpp",
-    "sanitizer_win_weak_interception.cpp",
+  sources = [ "sanitizer_win_thunk_interception.cpp" ]
+  defines = [
+    "SANITIZER_DYNAMIC_RUNTIME_THUNK",
+    "SANITIZER_STATIC_RUNTIME_THUNK",
   ]
-  defines = [ "SANITIZER_DYNAMIC" ]
+  cflags = []
+  if (current_os == "win") {
+    cflags += [ "-Zl" ]
+  }
 }
 
-source_set("dll_thunk") {
+source_set("sancov_runtime_thunk") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [
-    "sanitizer_coverage_win_dll_thunk.cpp",
+    "sanitizer_coverage_win_runtime_thunk.cpp",
     "sanitizer_coverage_win_sections.cpp",
-    "sanitizer_win_dll_thunk.cpp",
   ]
-  defines = [ "SANITIZER_DLL_THUNK" ]
-}
-
-source_set("dynamic_runtime_thunk") {
-  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [
-    "sanitizer_coverage_win_dynamic_runtime_thunk.cpp",
-    "sanitizer_coverage_win_sections.cpp",
-    "sanitizer_win_dynamic_runtime_thunk.cpp",
+  defines = [
+    "SANITIZER_DYNAMIC_RUNTIME_THUNK",
+    "SANITIZER_STATIC_RUNTIME_THUNK",
   ]
-  defines = [ "SANITIZER_DYNAMIC_RUNTIME_THUNK" ]
   cflags = []
   if (current_os == "win") {
     cflags += [ "-Zl" ]

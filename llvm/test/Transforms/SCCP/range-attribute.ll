@@ -193,8 +193,7 @@ define i1 @ip_range_attribute_constant() {
 
 define internal i1 @ip_cmp_attribute_overdefined_callee(i32 range(i32 0, 10) %x) {
 ; IPSCCP-LABEL: @ip_cmp_attribute_overdefined_callee(
-; IPSCCP-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 10
-; IPSCCP-NEXT:    ret i1 [[CMP]]
+; IPSCCP-NEXT:    ret i1 poison
 ;
 ; SCCP-LABEL: @ip_cmp_attribute_overdefined_callee(
 ; SCCP-NEXT:    ret i1 true
@@ -204,9 +203,13 @@ define internal i1 @ip_cmp_attribute_overdefined_callee(i32 range(i32 0, 10) %x)
 }
 
 define i1 @ip_cmp_attribute_overdefined_caller(i32 %x) {
-; CHECK-LABEL: @ip_cmp_attribute_overdefined_caller(
-; CHECK-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_overdefined_callee(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i1 [[RES]]
+; IPSCCP-LABEL: @ip_cmp_attribute_overdefined_caller(
+; IPSCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_overdefined_callee(i32 [[X:%.*]])
+; IPSCCP-NEXT:    ret i1 true
+;
+; SCCP-LABEL: @ip_cmp_attribute_overdefined_caller(
+; SCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_overdefined_callee(i32 [[X:%.*]])
+; SCCP-NEXT:    ret i1 [[RES]]
 ;
   %res = call i1 @ip_cmp_attribute_overdefined_callee(i32 %x)
   ret i1 %res
@@ -214,9 +217,7 @@ define i1 @ip_cmp_attribute_overdefined_caller(i32 %x) {
 
 define internal i1 @ip_cmp_attribute_intersect_callee(i32 range(i32 0, 10) %x) {
 ; IPSCCP-LABEL: @ip_cmp_attribute_intersect_callee(
-; IPSCCP-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 10
-; IPSCCP-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], true
-; IPSCCP-NEXT:    ret i1 [[AND]]
+; IPSCCP-NEXT:    ret i1 poison
 ;
 ; SCCP-LABEL: @ip_cmp_attribute_intersect_callee(
 ; SCCP-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X:%.*]], 5
@@ -230,9 +231,13 @@ define internal i1 @ip_cmp_attribute_intersect_callee(i32 range(i32 0, 10) %x) {
 }
 
 define i1 @ip_cmp_attribute_intersect_caller(i32 range(i32 5, 15) %x) {
-; CHECK-LABEL: @ip_cmp_attribute_intersect_caller(
-; CHECK-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_intersect_callee(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i1 [[RES]]
+; IPSCCP-LABEL: @ip_cmp_attribute_intersect_caller(
+; IPSCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_intersect_callee(i32 [[X:%.*]])
+; IPSCCP-NEXT:    ret i1 true
+;
+; SCCP-LABEL: @ip_cmp_attribute_intersect_caller(
+; SCCP-NEXT:    [[RES:%.*]] = call i1 @ip_cmp_attribute_intersect_callee(i32 [[X:%.*]])
+; SCCP-NEXT:    ret i1 [[RES]]
 ;
   %res = call i1 @ip_cmp_attribute_intersect_callee(i32 %x)
   ret i1 %res

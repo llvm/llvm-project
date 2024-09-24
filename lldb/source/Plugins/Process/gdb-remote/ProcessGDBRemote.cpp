@@ -1600,7 +1600,6 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // If we have "jstopinfo" then we have stop descriptions for all threads
     // that have stop reasons, and if there is no entry for a thread, then it
     // has no stop reason.
-    thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
       // If a thread is stopped at a breakpoint site, set that as the stop
       // reason even if it hasn't executed the breakpoint instruction yet.
@@ -2317,6 +2316,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         StreamString ostr;
         ostr.Printf("%" PRIu64, wp_addr);
         description = std::string(ostr.GetString());
+      } else if (key.compare("swbreak") == 0 || key.compare("hwbreak") == 0) {
+        reason = "breakpoint";
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
         if (error) {
@@ -3447,7 +3448,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
 #endif
 
-    int communication_fd = -1;
+    shared_fd_t communication_fd = SharedSocket::kInvalidFD;
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
     // Use a socketpair on non-Windows systems for security and performance
     // reasons.
@@ -5358,7 +5359,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
   output_stream << end_delimiter;
   m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
 
-  return output_stream.str();
+  return output;
 }
 
 void ProcessGDBRemote::HandleStopReply() {
