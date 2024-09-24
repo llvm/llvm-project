@@ -1399,9 +1399,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
     assert(LastId == Ids.back());
 
-    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
-    assert(FirstNode);
-
     // Recompute the context ids for this stack id sequence (the
     // intersection of the context ids of the corresponding nodes).
     // Start with the ids we saved in the map for this call, which could be
@@ -1448,6 +1445,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     NodeToCallingFunc[NewNode] = Func;
     NonAllocationCallToContextNodeMap[Call] = NewNode;
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
+
+    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
+    assert(FirstNode);
 
     // Connect to callees of innermost stack frame in inlined call chain.
     // This updates context ids for FirstNode's callee's to reflect those
