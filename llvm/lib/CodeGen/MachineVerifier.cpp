@@ -2758,6 +2758,15 @@ void MachineVerifier::checkLivenessAtUse(const MachineOperand *MO,
                                          Register VRegOrUnit,
                                          LaneBitmask LaneMask) {
   const MachineInstr *MI = MO->getParent();
+
+  if (!LR.verify()) {
+    report("invalid live range", MO, MONum);
+    report_context_liverange(LR);
+    report_context_vreg_regunit(VRegOrUnit);
+    report_context(UseIdx);
+    return;
+  }
+
   LiveQueryResult LRQ = LR.Query(UseIdx);
   bool HasValue = LRQ.valueIn() || (MI->isPHI() && LRQ.valueOut());
   // Check if we have a segment at the use, note however that we only need one
@@ -2784,6 +2793,15 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
                                          Register VRegOrUnit,
                                          bool SubRangeCheck,
                                          LaneBitmask LaneMask) {
+  if (!LR.verify()) {
+    report("invalid live range", MO, MONum);
+    report_context_liverange(LR);
+    report_context_vreg_regunit(VRegOrUnit);
+    if (LaneMask.any())
+      report_context_lanemask(LaneMask);
+    report_context(DefIdx);
+  }
+
   if (const VNInfo *VNI = LR.getVNInfoAt(DefIdx)) {
     // The LR can correspond to the whole reg and its def slot is not obliged
     // to be the same as the MO' def slot. E.g. when we check here "normal"
