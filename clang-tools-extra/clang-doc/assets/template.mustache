@@ -3,7 +3,7 @@
     See https://llvm.org/LICENSE.txt for license information.
     SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
     
-    This file defines the template for generating Namespaces
+    This file defines the template for generating namespaces
 }}
 <!DOCTYPE html>
 <html lang="en-US">
@@ -13,7 +13,9 @@
     </head>
     <h1>{{NamespaceTitle}}</h1>
     {{#NamespaceComments}}
-    <p>Namespace Comment</p>
+    <div>
+        {{>Comments}}
+    </div>
     {{/NamespaceComments}}
     {{#Namespace}}
     <h2 id="Namespace">Namespace</h2>
@@ -39,6 +41,7 @@
     <h2 id="Function">Function</h2>
     <div>
         {{#Obj}}
+            
         {{/Obj}}
     </div>
     {{/Function}}
