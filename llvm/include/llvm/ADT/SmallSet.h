@@ -152,12 +152,12 @@ public:
   SmallSet(SmallSet &&) = default;
 
   template <typename IterT> SmallSet(IterT Begin, IterT End) {
-    this->insert(Begin, End);
+    insert(Begin, End);
   }
 
   template <typename RangeT>
   explicit SmallSet(const iterator_range<RangeT> &R) {
-    this->insert(R.begin(), R.end());
+    insert(R.begin(), R.end());
   }
 
   SmallSet(std::initializer_list<T> L) { this->insert(L.begin(), L.end()); }

@@ -12,49 +12,44 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace llvm;
 
 TEST(SmallSetTest, ConstructorIteratorPair) {
-  auto L = {1, 2, 3, 4, 5};
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
   SmallSet<int, 4> S(std::begin(L), std::end(L));
-  for (int Value : L)
-    EXPECT_TRUE(S.contains(Value));
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
 }
 
 TEST(SmallSet, ConstructorRange) {
-  auto L = {1, 2, 3, 4, 5};
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
 
   SmallSet<int, 4> S(llvm::make_range(std::begin(L), std::end(L)));
-  for (int Value : L)
-    EXPECT_TRUE(S.contains(Value));
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
 }
 
 TEST(SmallSet, ConstructorInitializerList) {
-  auto L = {1, 2, 3, 4, 5};
+  std::initializer_list<int> L = {1, 2, 3, 4, 5};
   SmallSet<int, 4> S = {1, 2, 3, 4, 5};
-  for (int Value : L)
-    EXPECT_TRUE(S.contains(Value));
+  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
 }
 
 TEST(SmallSet, CopyConstructor) {
   SmallSet<int, 4> S = {1, 2, 3};
   SmallSet<int, 4> T = S;
 
-  EXPECT_EQ(S, T);
+  EXPECT_THAT(S, testing::ContainerEq(T));
 }
 
 TEST(SmallSet, MoveConstructor) {
-  auto L = {1, 2, 3};
+  std::initializer_list<int> L = {1, 2, 3};
   SmallSet<int, 4> S = L;
   SmallSet<int, 4> T = std::move(S);
 
-  EXPECT_TRUE(T.size() == L.size());
-  for (int Value : L) {
-    EXPECT_TRUE(T.contains(Value));
-  }
+  EXPECT_THAT(T, testing::UnorderedElementsAreArray(L));
 }
 
 TEST(SmallSet, CopyAssignment) {
@@ -62,19 +57,16 @@ TEST(SmallSet, CopyAssignment) {
   SmallSet<int, 4> T;
   T = S;
 
-  EXPECT_EQ(S, T);
+  EXPECT_THAT(S, testing::ContainerEq(T));
 }
 
 TEST(SmallSet, MoveAssignment) {
-  auto L = {1, 2, 3};
+  std::initializer_list<int> L = {1, 2, 3};
   SmallSet<int, 4> S = L;
   SmallSet<int, 4> T;
   T = std::move(S);
 
-  EXPECT_TRUE(T.size() == L.size());
-  for (int Value : L) {
-    EXPECT_TRUE(T.contains(Value));
-  }
+  EXPECT_THAT(T, testing::UnorderedElementsAreArray(L));
 }
 
 TEST(SmallSetTest, Insert) {
