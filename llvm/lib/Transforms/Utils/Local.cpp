@@ -1053,9 +1053,9 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   return true;
 }
 
-// Check whether removing BB will make the phis in its Succ have too
-// many incoming entries. This function does not check whether BB is foldable
-// or not.
+/// Check whether removing \p BB will make the phis in its \p Succ have too
+/// many incoming entries. This function does not check whether \p BB is
+/// foldable or not.
 static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
   // If BB only has one predecessor, then removing it will not introduce more
   // incoming edges for phis.
@@ -1066,7 +1066,7 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
   for (auto &Phi : Succ->phis()) {
     // If the incoming value is a phi and the phi is defined in BB,
     // then removing BB will not increase the total phi entries of the ir.
-    if (PHINode *IncomingPhi =
+    if (auto *IncomingPhi =
             dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
       if (IncomingPhi->getParent() == BB)
         continue;
