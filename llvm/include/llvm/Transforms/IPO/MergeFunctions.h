@@ -15,7 +15,10 @@
 #ifndef LLVM_TRANSFORMS_IPO_MERGEFUNCTIONS_H
 #define LLVM_TRANSFORMS_IPO_MERGEFUNCTIONS_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include <map>
+#include <set>
 
 namespace llvm {
 
@@ -25,6 +28,10 @@ class Module;
 class MergeFunctionsPass : public PassInfoMixin<MergeFunctionsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool runOnModule(Module &M);
+  static std::pair<bool, std::map<Function *, Function *>>
+  runOnFunctions(std::set<Function *> &F);
 };
 
 } // end namespace llvm
