@@ -1,4 +1,4 @@
-//===- OptParserEmitter.cpp - Table Driven Command Line Parsing -----------===//
+//===- OptionParserEmitter.cpp - Table Driven Command Option Line Parsing -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -247,10 +247,10 @@ static void EmitHelpTextsForVariants(
   OS << " }})";
 }
 
-/// OptParserEmitter - This tablegen backend takes an input .td file
+/// OptionParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
-static void EmitOptParser(const RecordKeeper &Records, raw_ostream &OS) {
+static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
   ArrayRef<const Record *> Groups =
       Records.getAllDerivedDefinitions("OptionGroup");
@@ -572,5 +572,5 @@ static void EmitOptParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 }
 
-static TableGen::Emitter::Opt X("gen-opt-parser-defs", EmitOptParser,
+static TableGen::Emitter::Opt X("gen-opt-parser-defs", EmitOptionParser,
                                 "Generate option definitions");
