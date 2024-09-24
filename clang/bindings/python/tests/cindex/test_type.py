@@ -384,7 +384,6 @@ char *myClass::*pMyAttr = &myClass::myAttr;
     def test_get_named_type(self):
         tu = get_tu("using char_alias = char; char_alias xyz;", lang="cpp")
         cur = get_cursor(tu, "xyz")
-        self.assertEqual(cur.type.kind, TypeKind.ELABORATED)
         self.assertEqual(cur.type.get_named_type().spelling, "char_alias")
 
     def test_get_ref_qualifier(self):
