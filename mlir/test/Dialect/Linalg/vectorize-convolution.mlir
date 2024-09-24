@@ -78,13 +78,15 @@ func.func @conv1d_nwc_4x2x8_memref_i1(%input: memref<4x6x3xi1>, %filter: memref<
 //      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+// CHECK-SAME:       kind = #vector.kind<or>
+// CHECK-SAME:       : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
 
 /// w == 1, kw == 0
 //      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+// CHECK-SAME:       kind = #vector.kind<or>
+// CHECK-SAME:       : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
 
 // -----
 
@@ -367,14 +369,17 @@ func.func @conv1d_ncw_4x8x2_memref_i1(%input: memref<4x3x6xi1>, %filter: memref<
 //      CHECK: func @conv1d_ncw_4x8x2_memref_i1
 /// w == 0, kw == 0
 //      CHECK:   vector.contract {
-// CHECK-SAME:   kind = #vector.kind<or>
-// CHECK-SAME:   : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+// CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:       kind = #vector.kind<or>
+// CHECK-SAME:       : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
 
 /// w == 1, kw == 0
 //      CHECK:   vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:     : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
+// CHECK-SAME:       kind = #vector.kind<or>
+// CHECK-SAME:       : vector<4x1x3xi1>, vector<3x8xi1> into vector<4x1x8xi1>
 
 // -----
 
