@@ -1252,6 +1252,31 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   if (EnableInferAlignmentPass)
     FPM.addPass(InferAlignmentPass());
+
+  // We do UnrollAndJam in a separate LPM to Unroll to ensure it happens first.
+  // In order for outer loop vectorization to be done, UnrollAndJam must occur
+  // before the SLPVectorizerPass. Placing UnrollAndJam immediately after the
+  // LoopVectorizePass when !IsFullLTO leads to improved compile times versus
+  // placing it immediately before the SLPVectorizerPass, due to analysis
+  // re-use.
+  if (EnableUnrollAndJam && PTO.LoopUnrolling) {
+    // Cleanup after loop vectorization. Simplification passes like CVP and
+    // GVN, loop transforms, and others have already run, so it's now better to
+    // convert to more optimized IR using more aggressive simplify CFG options.
+    // SimplifyCFGPass must be run before UnrollAndJam for UnrollAndJam-SLP
+    // outer loop vectorization to happen.
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                    .forwardSwitchCondToPhi(true)
+                                    .convertSwitchRangeToICmp(true)
+                                    .convertSwitchToLookupTable(true)
+                                    .needCanonicalLoops(false)
+                                    .hoistCommonInsts(true)
+                                    .sinkCommonInsts(true)));
+
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LoopUnrollAndJamPass(Level.getSpeedupLevel())));
+  }
+
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -1260,10 +1285,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // FIXME: It would be really good to use a loop-integrated instruction
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
-    // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-    if (EnableUnrollAndJam && PTO.LoopUnrolling)
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(Level.getSpeedupLevel())));
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         PTO.ForgetAllSCEVInLoopUnroll)));
@@ -1351,11 +1372,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // FIXME: It would be really good to use a loop-integrated instruction
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
-    // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-    if (EnableUnrollAndJam && PTO.LoopUnrolling) {
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(Level.getSpeedupLevel())));
-    }
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         PTO.ForgetAllSCEVInLoopUnroll)));
