@@ -38,7 +38,7 @@ namespace telemetry {
 
 /// Configuration for the Telemeter class.
 /// This stores configurations from both users and vendors and is passed
-/// to the Telemeter upon contruction. (Any changes to the config after
+/// to the Telemeter upon construction. (Any changes to the config after
 /// the Telemeter's construction will not have effect on it).
 ///
 /// This struct can be extended as needed to add additional configuration
