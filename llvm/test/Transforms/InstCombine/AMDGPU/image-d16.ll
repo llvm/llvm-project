@@ -17,7 +17,7 @@ define amdgpu_ps half @image_sample_2d_fptrunc_to_d16(<8 x i32> inreg %rsrc, <4 
 ; GFX81PLUS-NEXT:    ret half [[TEX]]
 ;
 main_body:
-  %tex = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %tex = call float @llvm.amdgcn.image.sample.lz.2d.f32.f32.v8i32.v4i32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   %tex_half = fptrunc float %tex to half
   ret half %tex_half
 }
@@ -41,7 +41,7 @@ define amdgpu_ps half @image_sample_2d_v2f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 main_body:
-  %tex = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32(i32 3, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %tex = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32.v8i32.v4i32(i32 3, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   %tex_2_half = fptrunc <2 x float> %tex to <2 x half>
   %tex_half_0 = extractelement <2 x half> %tex_2_half, i64 0
   %tex_half_1 = extractelement <2 x half> %tex_2_half, i64 1
@@ -72,7 +72,7 @@ define amdgpu_ps half @image_sample_2d_v3f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_1]]
 ;
 main_body:
-  %tex = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32(i32 7, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %tex = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   %tex_3_half = fptrunc <3 x float> %tex to <3 x half>
   %tex_half_0 = extractelement <3 x half> %tex_3_half, i64 0
   %tex_half_1 = extractelement <3 x half> %tex_3_half, i64 1
@@ -109,7 +109,7 @@ define amdgpu_ps half @image_sample_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_2]]
 ;
 main_body:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 15, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   %tex_4_half = fptrunc <4 x float> %tex to <4 x half>
   %tex_half_0 = extractelement <4 x half> %tex_4_half, i64 0
   %tex_half_1 = extractelement <4 x half> %tex_4_half, i64 1
@@ -148,7 +148,7 @@ define amdgpu_ps half @image_gather4_2d_v4f32(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_2]]
 ;
 main_body:
-  %tex = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16(i32 1, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %tex = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f16.v8i32.v4i32(i32 1, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   %tex_4_half = fptrunc <4 x float> %tex to <4 x half>
   %tex_half_0 = extractelement <4 x half> %tex_4_half, i64 0
   %tex_half_1 = extractelement <4 x half> %tex_4_half, i64 1
@@ -170,7 +170,7 @@ define amdgpu_ps half @load_1d(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX81PLUS-NEXT:    [[S_FLOAT:%.*]] = call half @llvm.amdgcn.image.load.1d.f16.i16.v8i32(i32 1, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX81PLUS-NEXT:    ret half [[S_FLOAT]]
 ;
-  %s_float = call float @llvm.amdgcn.image.load.1d.f32.i16(i32 1, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %s_float = call float @llvm.amdgcn.image.load.1d.f32.i16.v8i32(i32 1, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %s_half = fptrunc float %s_float to half
   ret half %s_half
 }
@@ -191,7 +191,7 @@ define amdgpu_ps half @load_1d_v2(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
-  %v2_float = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16(i32 3, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %v2_float = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16.v8i32(i32 3, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %v2_half = fptrunc <2 x float> %v2_float to <2 x half>
   %s0 = extractelement <2 x half> %v2_half, i64 0
   %s1 = extractelement <2 x half> %v2_half, i64 1
@@ -219,7 +219,7 @@ define amdgpu_ps half @load_1d_v3(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_1:%.*]] = fadd half [[S2]], [[ADDF_SUM_0]]
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_1]]
 ;
-  %v3_float = call <3 x float> @llvm.amdgcn.image.load.1d.v3f32.i16(i32 7, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %v3_float = call <3 x float> @llvm.amdgcn.image.load.1d.v3f32.i16.v8i32(i32 7, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %v3_half = fptrunc <3 x float> %v3_float to <3 x half>
   %s0 = extractelement <3 x half> %v3_half, i64 0
   %s1 = extractelement <3 x half> %v3_half, i64 1
@@ -253,7 +253,7 @@ define amdgpu_ps half @load_1d_v4(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX81PLUS-NEXT:    [[ADDF_SUM_2:%.*]] = fadd half [[ADDF_SUM_0]], [[ADDF_SUM_1]]
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_2]]
 ;
-  %v4_float = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 15, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %v4_float = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16.v8i32(i32 15, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %v4_half = fptrunc <4 x float> %v4_float to <4 x half>
   %s0 = extractelement <4 x half> %v4_half, i64 0
   %s1 = extractelement <4 x half> %v4_half, i64 1
@@ -278,7 +278,7 @@ define amdgpu_ps half @load_2dmsaa(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %f
 ; GFX81PLUS-NEXT:    ret half [[S_FLOAT]]
 ;
 main_body:
-  %s_float = call float @llvm.amdgcn.image.msaa.load.x.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
+  %s_float = call float @llvm.amdgcn.image.msaa.load.x.2dmsaa.f32.i32.v8i32(i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   %s_half = fptrunc float %s_float to half
   ret half %s_half
 }
@@ -302,7 +302,7 @@ define amdgpu_ps half @load_2dmsaa_v2(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 main_body:
-  %v2_float = call <2 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f32.i32(i32 3, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
+  %v2_float = call <2 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f32.i32.v8i32(i32 3, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   %v2_half = fptrunc <2 x float> %v2_float to <2 x half>
   %s0 = extractelement <2 x half> %v2_half, i64 0
   %s1 = extractelement <2 x half> %v2_half, i64 1
@@ -333,7 +333,7 @@ define amdgpu_ps half @load_2dmsaa_v3(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_1]]
 ;
 main_body:
-  %v3_float = call <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32(i32 7, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
+  %v3_float = call <3 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v3f32.i32.v8i32(i32 7, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   %v3_half = fptrunc <3 x float> %v3_float to <3 x half>
   %s0 = extractelement <3 x half> %v3_half, i64 0
   %s1 = extractelement <3 x half> %v3_half, i64 1
@@ -370,7 +370,7 @@ define amdgpu_ps half @load_2dmsaa_v4(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_2]]
 ;
 main_body:
-  %v4_float = call <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
+  %v4_float = call <4 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
   %v4_half = fptrunc <4 x float> %v4_float to <4 x half>
   %s0 = extractelement <4 x half> %v4_half, i64 0
   %s1 = extractelement <4 x half> %v4_half, i64 1
