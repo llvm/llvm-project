@@ -15888,7 +15888,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         break;
       SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
       SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
-      return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+      SDValue TruncatedOp = DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+      if (TLI.(TruncatedOp, SrcVT))
+        break;
+      return TruncatedOp;
     }
   }
 
