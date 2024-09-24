@@ -89,6 +89,8 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
+  bool SafeAfterMflo(const MachineInstr &MI) const;
+
   /// Predicate to determine if an instruction can go in a forbidden slot.
   bool SafeInForbiddenSlot(const MachineInstr &MI) const;
 
@@ -99,6 +101,8 @@ public:
   /// Predicate to determine if an instruction can go in a load delay slot.
   bool SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
                            const MachineInstr &LoadMI) const;
+
+  bool IsMfloOrMfhi(const MachineInstr &MI) const;
 
   /// Predicate to determine if an instruction has a forbidden slot.
   bool HasForbiddenSlot(const MachineInstr &MI) const;
