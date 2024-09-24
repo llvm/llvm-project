@@ -209,6 +209,12 @@ public:
     return tryInsertInstruction(Select);
   }
 
+  VPValue *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                            const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset}, DL, Name));
+  }
+
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
   /// and \p B.
   /// TODO: add createFCmp when needed.
