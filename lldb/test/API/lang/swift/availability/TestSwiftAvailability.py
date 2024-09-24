@@ -17,7 +17,7 @@ def getOSName(os):
     return os
 
 def getArch(os):
-    if os == 'macosx': return 'x86_64'
+    if os == 'macosx': return lldbplatformutil.getArchitecture()
     if os == 'ios': return 'arm64'
     if os == 'tvos': return 'arm64'
     if os == 'watchos': return 'armv7k'
