@@ -16,8 +16,8 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
 #define LLVM_UTILS_TABLEGEN_COMMON_PREDICATEEXPANDER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include <vector>
 
 namespace llvm {
 
@@ -52,7 +52,6 @@ public:
   void increaseIndentLevel() { ++IndentLevel; }
   void decreaseIndentLevel() { --IndentLevel; }
 
-  using RecVec = std::vector<Record *>;
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
   void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal,
@@ -73,9 +72,10 @@ public:
   void expandCheckNumOperands(raw_ostream &OS, int NumOps);
   void expandCheckOpcode(raw_ostream &OS, const Record *Inst);
 
-  void expandCheckPseudo(raw_ostream &OS, const RecVec &Opcodes);
-  void expandCheckOpcode(raw_ostream &OS, const RecVec &Opcodes);
-  void expandPredicateSequence(raw_ostream &OS, const RecVec &Sequence,
+  void expandCheckPseudo(raw_ostream &OS, ArrayRef<const Record *> Opcodes);
+  void expandCheckOpcode(raw_ostream &OS, ArrayRef<const Record *> Opcodes);
+  void expandPredicateSequence(raw_ostream &OS,
+                               ArrayRef<const Record *> Sequence,
                                bool IsCheckAll);
   void expandTIIFunctionCall(raw_ostream &OS, StringRef MethodName);
   void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
@@ -91,7 +91,8 @@ public:
   void expandPredicate(raw_ostream &OS, const Record *Rec);
   void expandReturnStatement(raw_ostream &OS, const Record *Rec);
   void expandOpcodeSwitchCase(raw_ostream &OS, const Record *Rec);
-  void expandOpcodeSwitchStatement(raw_ostream &OS, const RecVec &Cases,
+  void expandOpcodeSwitchStatement(raw_ostream &OS,
+                                   ArrayRef<const Record *> Cases,
                                    const Record *Default);
   void expandStatement(raw_ostream &OS, const Record *Rec);
 };

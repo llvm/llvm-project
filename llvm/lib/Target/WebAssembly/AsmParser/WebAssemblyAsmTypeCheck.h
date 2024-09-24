@@ -34,7 +34,7 @@ class WebAssemblyAsmTypeCheck final {
   SmallVector<wasm::ValType, 4> ReturnTypes;
   wasm::WasmSignature LastSig;
   bool Unreachable = false;
-  bool is64;
+  bool Is64;
 
   void dumpTypeStack(Twine Msg);
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
@@ -54,7 +54,7 @@ class WebAssemblyAsmTypeCheck final {
 
 public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII,
-                          bool is64);
+                          bool Is64);
 
   void funcDecl(const wasm::WasmSignature &Sig);
   void localDecl(const SmallVectorImpl<wasm::ValType> &Locals);
@@ -62,7 +62,7 @@ public:
   bool endOfFunction(SMLoc ErrorLoc);
   bool typeCheck(SMLoc ErrorLoc, const MCInst &Inst, OperandVector &Operands);
 
-  void Clear() {
+  void clear() {
     Stack.clear();
     BrStack.clear();
     LocalTypes.clear();

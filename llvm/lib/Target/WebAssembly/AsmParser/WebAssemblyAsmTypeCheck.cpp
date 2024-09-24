@@ -38,14 +38,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-asm-parser"
 
-extern StringRef GetMnemonic(unsigned Opc);
+extern StringRef getMnemonic(unsigned Opc);
 
 namespace llvm {
 
 WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
                                                  const MCInstrInfo &MII,
-                                                 bool is64)
-    : Parser(Parser), MII(MII), is64(is64) {}
+                                                 bool Is64)
+    : Parser(Parser), MII(MII), Is64(Is64) {}
 
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
@@ -189,7 +189,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, GlobalOp, SymRef))
     return true;
-  auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
   switch (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA)) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     Type = static_cast<wasm::ValType>(WasmSym->getGlobalType().Type);
@@ -199,7 +199,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     switch (SymRef->getKind()) {
     case MCSymbolRefExpr::VK_GOT:
     case MCSymbolRefExpr::VK_WASM_GOT_TLS:
-      Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+      Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
       break;
@@ -217,7 +217,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, TableOp, SymRef))
     return true;
-  auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
@@ -270,7 +270,7 @@ bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
 bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
                                         OperandVector &Operands) {
   auto Opc = Inst.getOpcode();
-  auto Name = GetMnemonic(Opc);
+  auto Name = getMnemonic(Opc);
   dumpTypeStack("typechecking " + Name + ": ");
   wasm::ValType Type;
 
@@ -357,7 +357,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.fill") {
-    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, Type);
@@ -365,7 +365,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.copy") {
-    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, Type);
@@ -373,7 +373,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.init") {
-    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, Type);

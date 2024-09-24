@@ -799,19 +799,9 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `1`
      - `0`
      - :good:`100%`
-   * - clang/tools/clang-pseudo
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - clang/tools/clang-refactor
      - `4`
      - `4`
-     - `0`
-     - :good:`100%`
-   * - clang/tools/clang-rename
-     - `1`
-     - `1`
      - `0`
      - :good:`100%`
    * - clang/tools/clang-repl

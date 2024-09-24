@@ -11859,13 +11859,14 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc()))
     return StmtError();
 
-  llvm::SmallVector<OpenACCClause *> TransformedClauses =
-      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
-                                              C->clauses());
   // Transform Structured Block.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
                                                 C->getDirectiveKind());
@@ -11884,13 +11885,13 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
 
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
-    return StmtError();
-
   llvm::SmallVector<OpenACCClause *> TransformedClauses =
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
 
   // Transform Loop.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),

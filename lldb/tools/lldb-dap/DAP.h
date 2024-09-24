@@ -185,7 +185,7 @@ struct DAP {
   bool is_attach;
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
-  bool enable_display_extended_backtrace;
+  bool display_extended_backtrace;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -205,6 +205,12 @@ struct DAP {
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  // This is used to allow request_evaluate to handle empty expressions
+  // (ie the user pressed 'return' and expects the previous expression to
+  // repeat). If the previous expression was a command, this string will be
+  // empty; if the previous expression was a variable expression, this string
+  // will contain that expression.
+  std::string last_nonempty_var_expression;
 
   DAP();
   ~DAP();

@@ -47,10 +47,10 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -65,7 +65,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                   const Twine &Msg);
 
   /// Helper for processing MC instructions that have been successfully matched
-  /// by MatchAndEmitInstruction.
+  /// by matchAndEmitInstruction.
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, OperandVector &Operands,
                           MCStreamer &Out);
 
@@ -793,7 +793,7 @@ bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
   return Error(getLoc(), "unknown operand");
 }
 
-bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool LoongArchAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                           StringRef Name, SMLoc NameLoc,
                                           OperandVector &Operands) {
   // First operand in MCInst is instruction mnemonic.
@@ -1506,7 +1506,7 @@ bool LoongArchAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool LoongArchAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                  OperandVector &Operands,
                                                  MCStreamer &Out,
                                                  uint64_t &ErrorInfo,

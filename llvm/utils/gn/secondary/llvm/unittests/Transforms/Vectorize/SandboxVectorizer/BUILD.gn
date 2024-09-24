@@ -9,5 +9,10 @@ unittest("SandboxVectorizerTests") {
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Vectorize",
   ]
-  sources = [ "DependencyGraphTest.cpp" ]
+  sources = [
+    "DependencyGraphTest.cpp",
+    "InstrIntervalTest.cpp",
+    "LegalityTest.cpp",
+    "RegionTest.cpp",
+  ]
 }

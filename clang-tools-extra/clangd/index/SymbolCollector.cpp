@@ -635,17 +635,21 @@ bool SymbolCollector::handleDeclOccurrence(
     return true;
 
   const Symbol *BasicSymbol = Symbols.find(ID);
-  if (isPreferredDeclaration(*OriginalDecl, Roles))
+  bool SkipDocCheckInDef = false;
+  if (isPreferredDeclaration(*OriginalDecl, Roles)) {
     // If OriginalDecl is preferred, replace/create the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
     BasicSymbol = addDeclaration(*OriginalDecl, std::move(ID), IsMainFileOnly);
-  else if (!BasicSymbol || DeclIsCanonical)
+    SkipDocCheckInDef = true;
+  } else if (!BasicSymbol || DeclIsCanonical) {
     BasicSymbol = addDeclaration(*ND, std::move(ID), IsMainFileOnly);
+    SkipDocCheckInDef = true;
+  }
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
-    addDefinition(*OriginalDecl, *BasicSymbol);
+    addDefinition(*OriginalDecl, *BasicSymbol, SkipDocCheckInDef);
 
   return true;
 }
@@ -1025,16 +1029,28 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
       *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
-  std::string Documentation =
-      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
-                                              /*CommentsFromHeaders=*/true));
+  std::string DocComment;
+  std::string Documentation;
+  bool AlreadyHasDoc = S.Flags & Symbol::HasDocComment;
+  if (!AlreadyHasDoc) {
+    DocComment = getDocComment(Ctx, SymbolCompletion,
+                               /*CommentsFromHeaders=*/true);
+    Documentation = formatDocumentation(*CCS, DocComment);
+  }
+  const auto UpdateDoc = [&] {
+    if (!AlreadyHasDoc) {
+      if (!DocComment.empty())
+        S.Flags |= Symbol::HasDocComment;
+      S.Documentation = Documentation;
+    }
+  };
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
     if (Opts.StoreAllDocumentation)
-      S.Documentation = Documentation;
+      UpdateDoc();
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
-  S.Documentation = Documentation;
+  UpdateDoc();
   std::string Signature;
   std::string SnippetSuffix;
   getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
@@ -1058,8 +1074,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   return Symbols.find(S.ID);
 }
 
-void SymbolCollector::addDefinition(const NamedDecl &ND,
-                                    const Symbol &DeclSym) {
+void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
+                                    bool SkipDocCheck) {
   if (DeclSym.Definition)
     return;
   const auto &SM = ND.getASTContext().getSourceManager();
@@ -1074,6 +1090,27 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   Symbol S = DeclSym;
   // FIXME: use the result to filter out symbols.
   S.Definition = *DefLoc;
+
+  std::string DocComment;
+  std::string Documentation;
+  if (!SkipDocCheck && !(S.Flags & Symbol::HasDocComment) &&
+      (llvm::isa<FunctionDecl>(ND) || llvm::isa<CXXMethodDecl>(ND))) {
+    CodeCompletionResult SymbolCompletion(&getTemplateOrThis(ND), 0);
+    const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
+        *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
+        *CompletionTUInfo,
+        /*IncludeBriefComments*/ false);
+    DocComment = getDocComment(ND.getASTContext(), SymbolCompletion,
+                               /*CommentsFromHeaders=*/true);
+    if (!S.Documentation.empty())
+      Documentation = S.Documentation.str() + '\n' + DocComment;
+    else
+      Documentation = formatDocumentation(*CCS, DocComment);
+    if (!DocComment.empty())
+      S.Flags |= Symbol::HasDocComment;
+    S.Documentation = Documentation;
+  }
+
   Symbols.insert(S);
 }
 

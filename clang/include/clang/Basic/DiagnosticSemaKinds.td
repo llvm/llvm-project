@@ -3290,7 +3290,7 @@ def err_attribute_unsupported_m_profile
 def err_duplicate_target_attribute
     : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
-              "attribute string; ">;
+              "attribute string;">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -9915,7 +9915,7 @@ def err_defaulted_comparison_constexpr_mismatch : Error<
   "three-way comparison operator}0 cannot be "
   "declared %select{constexpr|consteval}2 because "
   "%select{it|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function ">;
+  "invokes a non-constexpr comparison function">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
@@ -10101,10 +10101,14 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter|compound literal}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 "
+  "%select{returned|passed to musttail function}3">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
+  InGroup<ReturnStackAddress>;
+def warn_musttail_local_temp_addr_ref : Warning<
+  "passing %select{address of|reference to}0 local temporary object to musttail function">,
   InGroup<ReturnStackAddress>;
 def err_ret_local_temp_ref : Error<
   "returning reference to local temporary object">;
@@ -11559,7 +11563,7 @@ def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
 def err_omp_declare_target_has_local_vars : Error<
-  "local variable '%0' should not be used in 'declare target' directive; ">;
+  "local variable '%0' should not be used in 'declare target' directive;">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;

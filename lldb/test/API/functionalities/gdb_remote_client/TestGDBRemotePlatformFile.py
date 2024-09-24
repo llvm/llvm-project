@@ -49,25 +49,23 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
                 return "F-1,58"
 
         self.server.responder = Responder()
-
+        enosys_regex = r"error: (Function not implemented|function not supported)"
         self.match(
             "platform file open /some/file.txt -v 0755",
-            [r"error: Function not implemented"],
+            [enosys_regex],
             error=True,
         )
         self.match(
             "platform file read 16 -o 11 -c 13",
-            [r"error: Function not implemented"],
+            [enosys_regex],
             error=True,
         )
         self.match(
             "platform file write 16 -o 11 -d teststring",
-            [r"error: Function not implemented"],
+            [enosys_regex],
             error=True,
         )
-        self.match(
-            "platform file close 16", [r"error: Function not implemented"], error=True
-        )
+        self.match("platform file close 16", [enosys_regex], error=True)
         self.assertPacketLogContains(
             [
                 "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",

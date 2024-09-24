@@ -350,8 +350,12 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
-  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
+  case MachineOperand::MO_ExternalSymbol: {
+    MCSymbol *Sym = GetSymbolFromOperand(MO);
+    Sym->setExternal(true);
+    return LowerSymbolOperand(MO, Sym);
+  }
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
@@ -1537,7 +1541,6 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   printDstRegisterName(CS, MI, SrcOp1Idx);
   CS << " = ";
   printShuffleMask(CS, Src1Name, Src2Name, Mask);
-  CS.flush();
 
   return Comment;
 }
@@ -2051,21 +2054,21 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
   MASK_AVX512_CASE(X86::VBROADCASTF32X4Z256rm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X2Z128rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2Z256rm)
   MASK_AVX512_CASE(X86::VBROADCASTI32X4Z256rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X2Z128rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2Z256rm)
     printBroadcast(MI, OutStreamer, 2, 128);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTF32X4rm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X2rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI32X4rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X2rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF32X4Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X4Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2Zrm)
     printBroadcast(MI, OutStreamer, 4, 128);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTF32X8rm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X4rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI32X8rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF32X8Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X4Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X8Zrm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X4Zrm)
     printBroadcast(MI, OutStreamer, 2, 256);
     break;
 

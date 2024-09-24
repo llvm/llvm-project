@@ -502,6 +502,14 @@ void SymbolTable::resolveRemainingUndefines() {
     // This odd rule is for compatibility with MSVC linker.
     if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
+      if (imp) {
+        // The unprefixed symbol might come later in symMap, so handle it now
+        // so that the condition below can be appropriately applied.
+        auto *undef = dyn_cast<Undefined>(imp);
+        if (undef) {
+          undef->resolveWeakAlias();
+        }
+      }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
         replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
@@ -815,13 +823,13 @@ DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
   return nullptr;
 }
 
-Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
-                                    ImportThunkChunk *chunk) {
+Defined *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
+                                     ImportThunkChunk *chunk) {
   auto [s, wasInserted] = insert(name, nullptr);
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportThunk>(s, ctx, name, id, chunk);
-    return s;
+    return cast<Defined>(s);
   }
 
   reportDuplicate(s, id->file);
