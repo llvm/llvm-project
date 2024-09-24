@@ -117,7 +117,7 @@ public:
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);
-    return callback_list.push_back({callback, obj});
+    return callback_list.push_back({callback, obj}) ? 0 : -1;
   }
 
   void call() {

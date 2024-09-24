@@ -53,3 +53,25 @@ add_object_library(
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
 )
+
+add_object_library(
+    random
+  HDRS
+    random.h
+  SRCS
+    random.cpp
+  DEPENDS
+    libc.src.sys.random.getrandom
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.sysconf
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.vdso
+    libc.src.__support.threads.callonce
+    libc.src.__support.threads.linux.raw_mutex
+    libc.src.__support.threads.thread
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.__sched_getcpucount
+)
+

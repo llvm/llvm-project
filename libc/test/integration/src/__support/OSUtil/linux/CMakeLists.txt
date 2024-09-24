@@ -1,0 +1,10 @@
+add_integration_test(
+  random_fill_test
+  SUITE
+    libc-osutil-integration-tests
+  SRCS
+    random_fill_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.OSUtil.linux.random
+)

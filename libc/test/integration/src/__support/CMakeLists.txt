@@ -1,4 +1,5 @@
 add_subdirectory(threads)
+add_subdirectory(OSUtil)
 if(LIBC_TARGET_OS_IS_GPU)
   add_subdirectory(GPU)
 endif()
