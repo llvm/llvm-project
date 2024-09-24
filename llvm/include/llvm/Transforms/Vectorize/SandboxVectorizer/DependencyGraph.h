@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrInterval.h"
 
 namespace llvm::sandboxir {
 
@@ -72,9 +73,9 @@ public:
       It->second = std::make_unique<DGNode>(I);
     return It->second.get();
   }
-  // TODO: extend() should work with intervals not the whole BB.
-  /// Build the dependency graph for \p BB.
-  void extend(BasicBlock *BB);
+  /// Build/extend the dependency graph such that it includes \p Instrs. Returns
+  /// the interval spanning \p Instrs.
+  InstrInterval extend(ArrayRef<Instruction *> Instrs);
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
