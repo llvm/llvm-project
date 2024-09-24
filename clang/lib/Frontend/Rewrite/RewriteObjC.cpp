@@ -128,10 +128,8 @@ namespace {
     SmallVector<DeclRefExpr *, 32> BlockDeclRefs;
 
     // Block related declarations.
-    SmallVector<ValueDecl *, 8> BlockByCopyDecls;
-    llvm::SmallPtrSet<ValueDecl *, 8> BlockByCopyDeclsPtrSet;
-    SmallVector<ValueDecl *, 8> BlockByRefDecls;
-    llvm::SmallPtrSet<ValueDecl *, 8> BlockByRefDeclsPtrSet;
+    llvm::SmallSetVector<ValueDecl *, 8> BlockByCopyDecls;
+    llvm::SmallSetVector<ValueDecl *, 8> BlockByRefDecls;
     llvm::DenseMap<ValueDecl *, unsigned> BlockByRefDeclNo;
     llvm::SmallPtrSet<ValueDecl *, 8> ImportedBlockDecls;
     llvm::SmallPtrSet<VarDecl *, 8> ImportedLocalExternalDecls;
@@ -3357,7 +3355,7 @@ std::string RewriteObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
     S += VD->getNameAsString();
     S += ", (void*)src->";
     S += VD->getNameAsString();
-    if (BlockByRefDeclsPtrSet.count(VD))
+    if (BlockByRefDecls.contains(VD))
       S += ", " + utostr(BLOCK_FIELD_IS_BYREF) + "/*BLOCK_FIELD_IS_BYREF*/);";
     else if (VD->getType()->isBlockPointerType())
       S += ", " + utostr(BLOCK_FIELD_IS_BLOCK) + "/*BLOCK_FIELD_IS_BLOCK*/);";
@@ -3374,7 +3372,7 @@ std::string RewriteObjC::SynthesizeBlockHelperFuncs(BlockExpr *CE, int i,
   for (ValueDecl *VD : ImportedBlockDecls) {
     S += "_Block_object_dispose((void*)src->";
     S += VD->getNameAsString();
-    if (BlockByRefDeclsPtrSet.count(VD))
+    if (BlockByRefDecls.contains(VD))
       S += ", " + utostr(BLOCK_FIELD_IS_BYREF) + "/*BLOCK_FIELD_IS_BYREF*/);";
     else if (VD->getType()->isBlockPointerType())
       S += ", " + utostr(BLOCK_FIELD_IS_BLOCK) + "/*BLOCK_FIELD_IS_BLOCK*/);";
@@ -3553,14 +3551,10 @@ void RewriteObjC::SynthesizeBlockLiterals(SourceLocation FunLocStart,
       DeclRefExpr *Exp = InnerDeclRefs[count++];
       ValueDecl *VD = Exp->getDecl();
       BlockDeclRefs.push_back(Exp);
-      if (!VD->hasAttr<BlocksAttr>() && !BlockByCopyDeclsPtrSet.count(VD)) {
-        BlockByCopyDeclsPtrSet.insert(VD);
-        BlockByCopyDecls.push_back(VD);
-      }
-      if (VD->hasAttr<BlocksAttr>() && !BlockByRefDeclsPtrSet.count(VD)) {
-        BlockByRefDeclsPtrSet.insert(VD);
-        BlockByRefDecls.push_back(VD);
-      }
+      if (VD->hasAttr<BlocksAttr>())
+        BlockByRefDecls.insert(VD);
+      else
+        BlockByCopyDecls.insert(VD);
       // imported objects in the inner blocks not used in the outer
       // blocks must be copied/disposed in the outer block as well.
       if (VD->hasAttr<BlocksAttr>() ||
@@ -3590,9 +3584,7 @@ void RewriteObjC::SynthesizeBlockLiterals(SourceLocation FunLocStart,
 
     BlockDeclRefs.clear();
     BlockByRefDecls.clear();
-    BlockByRefDeclsPtrSet.clear();
     BlockByCopyDecls.clear();
-    BlockByCopyDeclsPtrSet.clear();
     ImportedBlockDecls.clear();
   }
   if (RewriteSC) {
@@ -4314,20 +4306,12 @@ void RewriteObjC::CollectBlockDeclRefInfo(BlockExpr *Exp) {
   if (BlockDeclRefs.size()) {
     // Unique all "by copy" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
-      if (!BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
-        if (!BlockByCopyDeclsPtrSet.count(BlockDeclRefs[i]->getDecl())) {
-          BlockByCopyDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl());
-          BlockByCopyDecls.push_back(BlockDeclRefs[i]->getDecl());
-        }
-      }
+      if (!BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>())
+        BlockByCopyDecls.insert(BlockDeclRefs[i]->getDecl());
     // Unique all "by ref" declarations.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
-      if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>()) {
-        if (!BlockByRefDeclsPtrSet.count(BlockDeclRefs[i]->getDecl())) {
-          BlockByRefDeclsPtrSet.insert(BlockDeclRefs[i]->getDecl());
-          BlockByRefDecls.push_back(BlockDeclRefs[i]->getDecl());
-        }
-      }
+      if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>())
+        BlockByRefDecls.insert(BlockDeclRefs[i]->getDecl());
     // Find any imported blocks...they will need special attention.
     for (unsigned i = 0; i < BlockDeclRefs.size(); i++)
       if (BlockDeclRefs[i]->getDecl()->hasAttr<BlocksAttr>() ||
@@ -4358,22 +4342,18 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
     for (unsigned i = 0; i < InnerBlockDeclRefs.size(); i++) {
       DeclRefExpr *Exp = InnerBlockDeclRefs[i];
       ValueDecl *VD = Exp->getDecl();
-      if (!VD->hasAttr<BlocksAttr>() &&
-          BlockByCopyDeclsPtrSet.insert(VD).second) {
+      if (!VD->hasAttr<BlocksAttr>() && BlockByCopyDecls.insert(VD)) {
         // We need to save the copied-in variables in nested
         // blocks because it is needed at the end for some of the API
         // generations. See SynthesizeBlockLiterals routine.
         InnerDeclRefs.push_back(Exp);
         countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByCopyDecls.push_back(VD);
       }
-      if (VD->hasAttr<BlocksAttr>() &&
-          BlockByRefDeclsPtrSet.insert(VD).second) {
+      if (VD->hasAttr<BlocksAttr>() && BlockByRefDecls.insert(VD)) {
         InnerDeclRefs.push_back(Exp);
         countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByRefDecls.push_back(VD);
       }
     }
     // Find any imported blocks...they will need special attention.
@@ -4534,9 +4514,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
                                     NewRep);
   BlockDeclRefs.clear();
   BlockByRefDecls.clear();
-  BlockByRefDeclsPtrSet.clear();
   BlockByCopyDecls.clear();
-  BlockByCopyDeclsPtrSet.clear();
   ImportedBlockDecls.clear();
   return NewRep;
 }
