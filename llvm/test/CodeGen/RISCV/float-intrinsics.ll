@@ -688,8 +688,7 @@ define float @fabs_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: fabs_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    slli a0, a0, 1
-; RV32IZFINX-NEXT:    srli a0, a0, 1
+; RV32IZFINX-NEXT:    fabs.s a0, a0
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IF-LABEL: fabs_f32:
@@ -1445,7 +1444,7 @@ define iXLen @lround_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: lround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: lround_f32:
@@ -1593,7 +1592,7 @@ define i64 @llround_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: llround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: llround_f32:

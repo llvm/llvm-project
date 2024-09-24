@@ -1,0 +1,13 @@
+# XFAIL: *
+# RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s
+
+ # FIXME: This should catch the undefined use of %0
+
+---
+name:            undef_virtreg
+body:             |
+  bb.0:
+
+    S_ENDPGM 0, implicit %0:sreg_32
+
+...

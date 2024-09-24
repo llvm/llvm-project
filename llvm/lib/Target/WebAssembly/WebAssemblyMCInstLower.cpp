@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
@@ -220,12 +221,27 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
           MCOp = lowerTypeIndexOperand(std::move(Returns), std::move(Params));
           break;
-        } else if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+        }
+        if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
           auto BT = static_cast<WebAssembly::BlockType>(MO.getImm());
           assert(BT != WebAssembly::BlockType::Invalid);
           if (BT == WebAssembly::BlockType::Multivalue) {
-            SmallVector<wasm::ValType, 1> Returns;
-            getFunctionReturns(MI, Returns);
+            SmallVector<wasm::ValType, 2> Returns;
+            // Multivalue blocks are emitted in two cases:
+            // 1. When the blocks will never be exited and are at the ends of
+            //    functions (see
+            //    WebAssemblyCFGStackify::fixEndsAtEndOfFunction). In this case
+            //    the exact multivalue signature can always be inferred from the
+            //    return type of the parent function.
+            // 2. (catch_ref ...) clause in try_table instruction. Currently all
+            //    tags we support (cpp_exception and c_longjmp) throws a single
+            //    i32, so the multivalue signature for this case will be (i32,
+            //    exnref). Having MO_CATCH_BLOCK_SIG target flags means this is
+            //    a destination of a catch_ref.
+            if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG)
+              Returns = {wasm::ValType::I32, wasm::ValType::EXNREF};
+            else
+              getFunctionReturns(MI, Returns);
             MCOp = lowerTypeIndexOperand(std::move(Returns),
                                          SmallVector<wasm::ValType, 4>());
             break;

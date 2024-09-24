@@ -54,18 +54,6 @@ bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
 }
 
-static bool canRemoveInstruction(Instruction *I) {
-  if (wouldInstructionBeTriviallyDead(I))
-    return true;
-
-  // Some instructions can be handled but are rejected above. Catch
-  // those cases by falling through to here.
-  // TODO: Mark globals as being constant earlier, so
-  // TODO: wouldInstructionBeTriviallyDead() knows that atomic loads
-  // TODO: are safe to remove.
-  return isa<LoadInst>(I);
-}
-
 bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   Constant *Const = getConstantOrNull(V);
   if (!Const)
@@ -75,8 +63,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
   // those uses cannot be updated with a constant.
   CallBase *CB = dyn_cast<CallBase>(V);
-  if (CB && ((CB->isMustTailCall() &&
-              !canRemoveInstruction(CB)) ||
+  if (CB && ((CB->isMustTailCall() && !wouldInstructionBeTriviallyDead(CB)) ||
              CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
     Function *F = CB->getCalledFunction();
 
@@ -244,7 +231,7 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (canRemoveInstruction(&Inst))
+      if (wouldInstructionBeTriviallyDead(&Inst))
         Inst.eraseFromParent();
 
       MadeChanges = true;
@@ -352,6 +339,48 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
     llvm_unreachable("Must have at least one feasible successor");
   }
   return true;
+}
+
+static void inferAttribute(Function *F, unsigned AttrIndex,
+                           const ValueLatticeElement &Val) {
+  // If there is a known constant range for the value, add range attribute.
+  if (Val.isConstantRange() && !Val.getConstantRange().isSingleElement()) {
+    // Do not add range attribute if the value may include undef.
+    if (Val.isConstantRangeIncludingUndef())
+      return;
+
+    // Take the intersection of the existing attribute and the inferred range.
+    Attribute OldAttr = F->getAttributeAtIndex(AttrIndex, Attribute::Range);
+    ConstantRange CR = Val.getConstantRange();
+    if (OldAttr.isValid())
+      CR = CR.intersectWith(OldAttr.getRange());
+    F->addAttributeAtIndex(
+        AttrIndex, Attribute::get(F->getContext(), Attribute::Range, CR));
+    return;
+  }
+  // Infer nonnull attribute.
+  if (Val.isNotConstant() && Val.getNotConstant()->getType()->isPointerTy() &&
+      Val.getNotConstant()->isNullValue() &&
+      !F->hasAttributeAtIndex(AttrIndex, Attribute::NonNull)) {
+    F->addAttributeAtIndex(AttrIndex,
+                           Attribute::get(F->getContext(), Attribute::NonNull));
+  }
+}
+
+void SCCPSolver::inferReturnAttributes() const {
+  for (const auto &[F, ReturnValue] : getTrackedRetVals())
+    inferAttribute(F, AttributeList::ReturnIndex, ReturnValue);
+}
+
+void SCCPSolver::inferArgAttributes() const {
+  for (Function *F : getArgumentTrackedFunctions()) {
+    if (!isBlockExecutable(&F->front()))
+      continue;
+    for (Argument &A : F->args())
+      if (!A.getType()->isStructTy())
+        inferAttribute(F, AttributeList::FirstArgIndex + A.getArgNo(),
+                       getLatticeValueFor(&A));
+  }
 }
 
 /// Helper class for SCCPSolver. This implements the instruction visitor and
@@ -673,6 +702,7 @@ private:
   void visitStoreInst(StoreInst &I);
   void visitLoadInst(LoadInst &I);
   void visitGetElementPtrInst(GetElementPtrInst &I);
+  void visitAllocaInst(AllocaInst &AI);
 
   void visitInvokeInst(InvokeInst &II) {
     visitCallBase(II);
@@ -750,6 +780,10 @@ public:
     return TrackingIncomingArguments.count(F);
   }
 
+  const SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() const {
+    return TrackingIncomingArguments;
+  }
+
   void solve();
 
   bool resolvedUndef(Instruction &I);
@@ -819,19 +853,21 @@ public:
       markOverdefined(ValueState[V], V);
   }
 
-  void trackValueOfArgument(Argument *A) {
+  ValueLatticeElement getArgAttributeVL(Argument *A) {
     if (A->getType()->isIntOrIntVectorTy()) {
-      if (std::optional<ConstantRange> Range = A->getRange()) {
-        markConstantRange(ValueState[A], A, *Range);
-        return;
-      }
+      if (std::optional<ConstantRange> Range = A->getRange())
+        return ValueLatticeElement::getRange(*Range);
     }
-    if (A->hasNonNullAttr()) {
-      markNotNull(ValueState[A], A);
-      return;
-    }
+    if (A->hasNonNullAttr())
+      return ValueLatticeElement::getNot(Constant::getNullValue(A->getType()));
     // Assume nothing about the incoming arguments without attributes.
-    markOverdefined(A);
+    return ValueLatticeElement::getOverdefined();
+  }
+
+  void trackValueOfArgument(Argument *A) {
+    if (A->getType()->isStructTy())
+      return (void)markOverdefined(A);
+    mergeInValue(A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1624,6 +1660,15 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
     markConstant(&I, C);
+  else
+    markOverdefined(&I);
+}
+
+void SCCPInstVisitor::visitAllocaInst(AllocaInst &I) {
+  if (!NullPointerIsDefined(I.getFunction(), I.getAddressSpace()))
+    return (void)markNotNull(ValueState[&I], &I);
+
+  markOverdefined(&I);
 }
 
 void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {
@@ -1647,18 +1692,23 @@ void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {
 }
 
 static ValueLatticeElement getValueFromMetadata(const Instruction *I) {
-  if (I->getType()->isIntOrIntVectorTy()) {
+  if (const auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getType()->isIntOrIntVectorTy())
+      if (std::optional<ConstantRange> Range = CB->getRange())
+        return ValueLatticeElement::getRange(*Range);
+    if (CB->getType()->isPointerTy() && CB->isReturnNonNull())
+      return ValueLatticeElement::getNot(
+          ConstantPointerNull::get(cast<PointerType>(I->getType())));
+  }
+
+  if (I->getType()->isIntOrIntVectorTy())
     if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
       return ValueLatticeElement::getRange(
           getConstantRangeFromMetadata(*Ranges));
-
-    if (const auto *CB = dyn_cast<CallBase>(I))
-      if (std::optional<ConstantRange> Range = CB->getRange())
-        return ValueLatticeElement::getRange(*Range);
-  }
   if (I->hasMetadata(LLVMContext::MD_nonnull))
     return ValueLatticeElement::getNot(
         ConstantPointerNull::get(cast<PointerType>(I->getType())));
+
   return ValueLatticeElement::getOverdefined();
 }
 
@@ -1787,7 +1837,9 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
                        getMaxWidenStepsOpts());
         }
       } else
-        mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts());
+        mergeInValue(&*AI,
+                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
+                     getMaxWidenStepsOpts());
     }
   }
 }
@@ -2106,6 +2158,11 @@ bool SCCPSolver::isArgumentTrackedFunction(Function *F) {
   return Visitor->isArgumentTrackedFunction(F);
 }
 
+const SmallPtrSetImpl<Function *> &
+SCCPSolver::getArgumentTrackedFunctions() const {
+  return Visitor->getArgumentTrackedFunctions();
+}
+
 void SCCPSolver::solve() { Visitor->solve(); }
 
 bool SCCPSolver::resolvedUndefsIn(Function &F) {
@@ -2151,7 +2208,7 @@ const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
 }
 
 const MapVector<Function *, ValueLatticeElement> &
-SCCPSolver::getTrackedRetVals() {
+SCCPSolver::getTrackedRetVals() const {
   return Visitor->getTrackedRetVals();
 }
 

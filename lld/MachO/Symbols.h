@@ -14,20 +14,13 @@
 #include "Target.h"
 
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace lld {
 namespace macho {
 
 class MachHeaderSection;
-
-struct StringRefZ {
-  StringRefZ(const char *s) : data(s), size(-1) {}
-  StringRefZ(StringRef s) : data(s.data()), size(s.size()) {}
-
-  const char *data;
-  const uint32_t size;
-};
 
 class Symbol {
 public:
@@ -41,15 +34,20 @@ public:
     AliasKind,
   };
 
+  // Enum that describes the type of Identical Code Folding (ICF) applied to a
+  // symbol. This information is crucial for accurately representing symbol
+  // sizes in the map file.
+  enum ICFFoldKind {
+    None, // No folding is applied.
+    Body, // The entire body (function or data) is folded.
+    Thunk // The function body is folded into a single branch thunk.
+  };
+
   virtual ~Symbol() {}
 
   Kind kind() const { return symbolKind; }
 
-  StringRef getName() const {
-    if (nameSize == (uint32_t)-1)
-      nameSize = strlen(nameData);
-    return {nameData, nameSize};
-  }
+  StringRef getName() const { return {nameData, nameSize}; }
 
   bool isLive() const { return used; }
   bool isLazy() const {
@@ -96,15 +94,15 @@ public:
   InputFile *getFile() const { return file; }
 
 protected:
-  Symbol(Kind k, StringRefZ name, InputFile *file)
-      : symbolKind(k), nameData(name.data), file(file), nameSize(name.size),
+  Symbol(Kind k, StringRef name, InputFile *file)
+      : symbolKind(k), nameData(name.data()), file(file), nameSize(name.size()),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
         used(!config->deadStrip) {}
 
   Kind symbolKind;
   const char *nameData;
   InputFile *file;
-  mutable uint32_t nameSize;
+  uint32_t nameSize;
 
 public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
@@ -116,7 +114,7 @@ public:
 
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
+  Defined(StringRef name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
           bool includeInSymtab, bool isReferencedDynamically, bool noDeadStrip,
           bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
@@ -154,8 +152,9 @@ public:
   bool privateExtern : 1;
   // Whether this symbol should appear in the output symbol table.
   bool includeInSymtab : 1;
-  // Whether this symbol was folded into a different symbol during ICF.
-  bool wasIdenticalCodeFolded : 1;
+  // The ICF folding kind of this symbol: None / Body / Thunk.
+  LLVM_PREFERRED_TYPE(ICFFoldKind)
+  uint8_t identicalCodeFoldingKind : 2;
   // Symbols marked referencedDynamically won't be removed from the output's
   // symbol table by tools like strip. In theory, this could be set on arbitrary
   // symbols in input object files. In practice, it's used solely for the
@@ -206,7 +205,7 @@ enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name, InputFile *file, RefState refState,
+  Undefined(StringRef name, InputFile *file, RefState refState,
             bool wasBitcodeSymbol)
       : Symbol(UndefinedKind, name, file), refState(refState),
         wasBitcodeSymbol(wasBitcodeSymbol) {
@@ -238,7 +237,7 @@ public:
 // to regular defined symbols in a __common section.
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align,
+  CommonSymbol(StringRef name, InputFile *file, uint64_t size, uint32_t align,
                bool isPrivateExtern)
       : Symbol(CommonKind, name, file), size(size),
         align(align != 1 ? align : llvm::PowerOf2Ceil(size)),
@@ -255,7 +254,7 @@ public:
 
 class DylibSymbol : public Symbol {
 public:
-  DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef,
+  DylibSymbol(DylibFile *file, StringRef name, bool isWeakDef,
               RefState refState, bool isTlv)
       : Symbol(DylibKind, name, file), shouldReexport(false),
         refState(refState), weakDef(isWeakDef), tlv(isTlv) {
@@ -301,6 +300,7 @@ public:
   }
 
   bool shouldReexport : 1;
+
 private:
   RefState refState : 2;
   const bool weakDef : 1;

@@ -343,7 +343,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[201] = {
 
 } // namespace __indic_conjunct_break
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

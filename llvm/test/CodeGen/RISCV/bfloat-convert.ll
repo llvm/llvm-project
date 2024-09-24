@@ -18,7 +18,7 @@
 define i16 @fcvt_si_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_si_bf16:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
@@ -32,7 +32,7 @@ define i16 @fcvt_si_bf16(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_si_bf16:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -120,8 +120,8 @@ declare i16 @llvm.fptosi.sat.i16.bf16(bfloat)
 define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_ui_bf16:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
 ; RV32ID-LABEL: fcvt_ui_bf16:
@@ -134,8 +134,8 @@ define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_ui_bf16:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK64ZFBFMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
 ; RV64ID-LABEL: fcvt_ui_bf16:
@@ -206,7 +206,7 @@ declare i16 @llvm.fptoui.sat.i16.bf16(bfloat)
 define i32 @fcvt_w_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_w_bf16:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
@@ -288,7 +288,7 @@ declare i32 @llvm.fptosi.sat.i32.bf16(bfloat)
 define i32 @fcvt_wu_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_bf16:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
@@ -320,7 +320,7 @@ define i32 @fcvt_wu_bf16(bfloat %a) nounwind {
 define i32 @fcvt_wu_bf16_multiple_use(bfloat %x, ptr %y) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_bf16_multiple_use:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    seqz a1, a0
 ; CHECK32ZFBFMIN-NEXT:    add a0, a0, a1
@@ -438,7 +438,7 @@ define i64 @fcvt_l_bf16(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_l_bf16:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -625,7 +625,7 @@ define i64 @fcvt_lu_bf16(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_lu_bf16:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -749,7 +749,7 @@ define bfloat @fcvt_bf16_si(i16 %a) nounwind {
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    slli a0, a0, 48
 ; CHECK64ZFBFMIN-NEXT:    srai a0, a0, 48
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -795,7 +795,7 @@ define bfloat @fcvt_bf16_si_signext(i16 signext %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_si_signext:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -845,7 +845,7 @@ define bfloat @fcvt_bf16_ui(i16 %a) nounwind {
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    slli a0, a0, 48
 ; CHECK64ZFBFMIN-NEXT:    srli a0, a0, 48
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -891,7 +891,7 @@ define bfloat @fcvt_bf16_ui_zeroext(i16 zeroext %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_ui_zeroext:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -935,8 +935,7 @@ define bfloat @fcvt_bf16_w(i32 %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_w:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    sext.w a0, a0
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -983,7 +982,7 @@ define bfloat @fcvt_bf16_w_load(ptr %p) nounwind {
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_w_load:
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    lw a0, 0(a0)
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -1029,9 +1028,7 @@ define bfloat @fcvt_bf16_wu(i32 %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_wu:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    slli a0, a0, 32
-; CHECK64ZFBFMIN-NEXT:    srli a0, a0, 32
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -1078,7 +1075,7 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_wu_load:
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    lwu a0, 0(a0)
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.lu fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -1376,7 +1373,7 @@ define signext i32 @fcvt_bf16_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_w_demanded_bits:
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    addiw a0, a0, 1
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.l fa5, a0
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK64ZFBFMIN-NEXT:    fsh fa5, 0(a1)
 ; CHECK64ZFBFMIN-NEXT:    ret
@@ -1436,9 +1433,7 @@ define signext i32 @fcvt_bf16_wu_demanded_bits(i32 signext %0, ptr %1) nounwind 
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_wu_demanded_bits:
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    addiw a0, a0, 1
-; CHECK64ZFBFMIN-NEXT:    slli a2, a0, 32
-; CHECK64ZFBFMIN-NEXT:    srli a2, a2, 32
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.lu fa5, a2
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK64ZFBFMIN-NEXT:    fsh fa5, 0(a1)
 ; CHECK64ZFBFMIN-NEXT:    ret
@@ -1470,7 +1465,7 @@ define signext i32 @fcvt_bf16_wu_demanded_bits(i32 signext %0, ptr %1) nounwind 
 define signext i8 @fcvt_w_s_i8(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_w_s_i8:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
@@ -1484,7 +1479,7 @@ define signext i8 @fcvt_w_s_i8(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_w_s_i8:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
@@ -1572,8 +1567,8 @@ declare i8 @llvm.fptosi.sat.i8.bf16(bfloat)
 define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32ZFBFMIN:       # %bb.0:
-; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
 ; RV32ID-LABEL: fcvt_wu_s_i8:
@@ -1586,7 +1581,7 @@ define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0, rne
+; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;

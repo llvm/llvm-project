@@ -130,6 +130,12 @@ public:
   }
 
   static constexpr unsigned MaxLegalAddressSpace = 6;
+
+  // Adds known SPIR-V extensions to the global list of allowed extensions that
+  // SPIRVSubtarget module owns as
+  // cl::opt<std::set<SPIRV::Extension::Extension>, ...> global variable.
+  static void
+  addExtensionsToClOpt(const std::set<SPIRV::Extension::Extension> &AllowList);
 };
 } // namespace llvm
 

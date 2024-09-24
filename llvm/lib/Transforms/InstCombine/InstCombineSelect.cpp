@@ -1992,41 +1992,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   return Changed ? &SI : nullptr;
 }
 
-/// SI is a select whose condition is a PHI node (but the two may be in
-/// different blocks). See if the true/false values (V) are live in all of the
-/// predecessor blocks of the PHI. For example, cases like this can't be mapped:
-///
-///   X = phi [ C1, BB1], [C2, BB2]
-///   Y = add
-///   Z = select X, Y, 0
-///
-/// because Y is not live in BB1/BB2.
-static bool canSelectOperandBeMappingIntoPredBlock(const Value *V,
-                                                   const SelectInst &SI) {
-  // If the value is a non-instruction value like a constant or argument, it
-  // can always be mapped.
-  const Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return true;
-
-  // If V is a PHI node defined in the same block as the condition PHI, we can
-  // map the arguments.
-  const PHINode *CondPHI = cast<PHINode>(SI.getCondition());
-
-  if (const PHINode *VP = dyn_cast<PHINode>(I))
-    if (VP->getParent() == CondPHI->getParent())
-      return true;
-
-  // Otherwise, if the PHI and select are defined in the same block and if V is
-  // defined in a different block, then we can transform it.
-  if (SI.getParent() == CondPHI->getParent() &&
-      I->getParent() != CondPHI->getParent())
-    return true;
-
-  // Otherwise we have a 'hard' case and we can't tell without doing more
-  // detailed dominator based analysis, punt.
-  return false;
-}
-
 /// We have an SPF (e.g. a min or max) of an SPF of the form:
 ///   SPF2(SPF1(A, B), C)
 Instruction *InstCombinerImpl::foldSPFofSPF(Instruction *Inner,
@@ -3586,9 +3551,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
     Pred = ICmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
   }
-
-  Intrinsic::ID IID =
-      ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   bool Replace = false;
   ICmpInst::Predicate ExtendedCmpPredicate;
@@ -3610,6 +3573,32 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
        ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
     Replace = true;
 
+  // (x == y) ? 0 : (x > y ? 1 : -1)
+  ICmpInst::Predicate FalseBranchSelectPredicate;
+  const APInt *InnerTV, *InnerFV;
+  if (Pred == ICmpInst::ICMP_EQ && match(TV, m_Zero()) &&
+      match(FV, m_Select(m_c_ICmp(FalseBranchSelectPredicate, m_Specific(LHS),
+                                  m_Specific(RHS)),
+                         m_APInt(InnerTV), m_APInt(InnerFV)))) {
+    if (!ICmpInst::isGT(FalseBranchSelectPredicate)) {
+      FalseBranchSelectPredicate =
+          ICmpInst::getSwappedPredicate(FalseBranchSelectPredicate);
+      std::swap(LHS, RHS);
+    }
+
+    if (!InnerTV->isOne()) {
+      std::swap(InnerTV, InnerFV);
+      std::swap(LHS, RHS);
+    }
+
+    if (ICmpInst::isGT(FalseBranchSelectPredicate) && InnerTV->isOne() &&
+        InnerFV->isAllOnes()) {
+      IsSigned = ICmpInst::isSigned(FalseBranchSelectPredicate);
+      Replace = true;
+    }
+  }
+
+  Intrinsic::ID IID = IsSigned ? Intrinsic::scmp : Intrinsic::ucmp;
   if (Replace)
     return replaceInstUsesWith(
         SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));
@@ -3929,11 +3918,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   // See if we can fold the select into a phi node if the condition is a select.
   if (auto *PN = dyn_cast<PHINode>(SI.getCondition()))
-    // The true/false values have to be live in the PHI predecessor's blocks.
-    if (canSelectOperandBeMappingIntoPredBlock(TrueVal, SI) &&
-        canSelectOperandBeMappingIntoPredBlock(FalseVal, SI))
-      if (Instruction *NV = foldOpIntoPhi(SI, PN))
-        return NV;
+    if (Instruction *NV = foldOpIntoPhi(SI, PN))
+      return NV;
 
   if (SelectInst *TrueSI = dyn_cast<SelectInst>(TrueVal)) {
     if (TrueSI->getCondition()->getType() == CondVal->getType()) {

@@ -142,13 +142,13 @@ void InvokeStdFunction(std::function<void()> &&function) { function(); }
 
 TEST(TestRtsan, CopyingALambdaWithLargeCaptureDiesWhenRealtime) {
   std::array<float, 16> lots_of_data;
-  auto lambda = [lots_of_data]() mutable {
+  auto LargeLambda = [lots_of_data]() mutable {
     // Stop everything getting optimised out
     lots_of_data[3] = 0.25f;
     EXPECT_EQ(16u, lots_of_data.size());
     EXPECT_EQ(0.25f, lots_of_data[3]);
   };
-  auto Func = [&]() { InvokeStdFunction(lambda); };
+  auto Func = [&]() { InvokeStdFunction(LargeLambda); };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
@@ -204,10 +204,10 @@ TEST(TestRtsan, ThrowingAnExceptionDiesWhenRealtime) {
 TEST(TestRtsan, DoesNotDieIfTurnedOff) {
   std::mutex mutex;
   auto RealtimeUnsafeFunc = [&]() {
-    __rtsan_off();
+    __rtsan_disable();
     mutex.lock();
     mutex.unlock();
-    __rtsan_on();
+    __rtsan_enable();
   };
   RealtimeInvoke(RealtimeUnsafeFunc);
 }

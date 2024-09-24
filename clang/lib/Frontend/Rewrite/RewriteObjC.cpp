@@ -221,10 +221,9 @@ namespace {
         return;
       }
       // Get the new text.
-      std::string SStr;
-      llvm::raw_string_ostream S(SStr);
+      std::string Str;
+      llvm::raw_string_ostream S(Str);
       New->printPretty(S, nullptr, PrintingPolicy(LangOpts));
-      const std::string &Str = S.str();
 
       // If replacement succeeded or warning disabled return with no warning.
       if (!Rewrite.ReplaceText(SrcRange.getBegin(), Size, Str)) {
@@ -1702,7 +1701,7 @@ Stmt *RewriteObjC::RewriteObjCSynchronizedStmt(ObjCAtSynchronizedStmt *S) {
   llvm::raw_string_ostream syncExprBuf(syncExprBufS);
   assert(syncExpr != nullptr && "Expected non-null Expr");
   syncExpr->printPretty(syncExprBuf, nullptr, PrintingPolicy(LangOpts));
-  syncBuf += syncExprBuf.str();
+  syncBuf += syncExprBufS;
   syncBuf += ");";
 
   buf += syncBuf;
@@ -2508,7 +2507,7 @@ Stmt *RewriteObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));
-  Preamble += prettyBuf.str();
+  Preamble += prettyBufS;
   Preamble += ",";
   Preamble += utostr(Exp->getString()->getByteLength()) + "};\n";
 
@@ -3293,8 +3292,8 @@ std::string RewriteObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
 
   // Create local declarations to avoid rewriting all closure decl ref exprs.
   // First, emit a declaration for all "by ref" decls.
-  for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByRefDecls.begin(),
-       E = BlockByRefDecls.end(); I != E; ++I) {
+  for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+       ++I) {
     S += "  ";
     std::string Name = (*I)->getNameAsString();
     std::string TypeString;
@@ -3304,8 +3303,8 @@ std::string RewriteObjC::SynthesizeBlockFunc(BlockExpr *CE, int i,
     S += Name + " = __cself->" + (*I)->getNameAsString() + "; // bound by ref\n";
   }
   // Next, emit a declaration for all "by copy" declarations.
-  for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByCopyDecls.begin(),
-       E = BlockByCopyDecls.end(); I != E; ++I) {
+  for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+       ++I) {
     S += "  ";
     // Handle nested closure invocation. For example:
     //
@@ -3401,8 +3400,8 @@ std::string RewriteObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
 
   if (BlockDeclRefs.size()) {
     // Output all "by copy" declarations.
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByCopyDecls.begin(),
-         E = BlockByCopyDecls.end(); I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       S += "  ";
       std::string FieldName = (*I)->getNameAsString();
       std::string ArgName = "_" + FieldName;
@@ -3430,8 +3429,8 @@ std::string RewriteObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
       S += FieldName + ";\n";
     }
     // Output all "by ref" declarations.
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByRefDecls.begin(),
-         E = BlockByRefDecls.end(); I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       S += "  ";
       std::string FieldName = (*I)->getNameAsString();
       std::string ArgName = "_" + FieldName;
@@ -3449,8 +3448,8 @@ std::string RewriteObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
     Constructor += ", int flags=0)";
     // Initialize all "by copy" arguments.
     bool firsTime = true;
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByCopyDecls.begin(),
-         E = BlockByCopyDecls.end(); I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       std::string Name = (*I)->getNameAsString();
         if (firsTime) {
           Constructor += " : ";
@@ -3464,8 +3463,8 @@ std::string RewriteObjC::SynthesizeBlockImpl(BlockExpr *CE, std::string Tag,
           Constructor += Name + "(_" + Name + ")";
     }
     // Initialize all "by ref" arguments.
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByRefDecls.begin(),
-         E = BlockByRefDecls.end(); I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       std::string Name = (*I)->getNameAsString();
       if (firsTime) {
         Constructor += " : ";
@@ -4111,9 +4110,8 @@ void RewriteObjC::RewriteBlockPointerDecl(NamedDecl *ND) {
 std::string RewriteObjC::SynthesizeByrefCopyDestroyHelper(VarDecl *VD,
                                                           int flag) {
   std::string S;
-  if (CopyDestroyCache.count(flag))
+  if (!CopyDestroyCache.insert(flag).second)
     return S;
-  CopyDestroyCache.insert(flag);
   S = "static void __Block_byref_id_object_copy_";
   S += utostr(flag);
   S += "(void *dst, void *src) {\n";
@@ -4360,19 +4358,21 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
     for (unsigned i = 0; i < InnerBlockDeclRefs.size(); i++) {
       DeclRefExpr *Exp = InnerBlockDeclRefs[i];
       ValueDecl *VD = Exp->getDecl();
-      if (!VD->hasAttr<BlocksAttr>() && !BlockByCopyDeclsPtrSet.count(VD)) {
-      // We need to save the copied-in variables in nested
-      // blocks because it is needed at the end for some of the API generations.
-      // See SynthesizeBlockLiterals routine.
-        InnerDeclRefs.push_back(Exp); countOfInnerDecls++;
+      if (!VD->hasAttr<BlocksAttr>() &&
+          BlockByCopyDeclsPtrSet.insert(VD).second) {
+        // We need to save the copied-in variables in nested
+        // blocks because it is needed at the end for some of the API
+        // generations. See SynthesizeBlockLiterals routine.
+        InnerDeclRefs.push_back(Exp);
+        countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByCopyDeclsPtrSet.insert(VD);
         BlockByCopyDecls.push_back(VD);
       }
-      if (VD->hasAttr<BlocksAttr>() && !BlockByRefDeclsPtrSet.count(VD)) {
-        InnerDeclRefs.push_back(Exp); countOfInnerDecls++;
+      if (VD->hasAttr<BlocksAttr>() &&
+          BlockByRefDeclsPtrSet.insert(VD).second) {
+        InnerDeclRefs.push_back(Exp);
+        countOfInnerDecls++;
         BlockDeclRefs.push_back(Exp);
-        BlockByRefDeclsPtrSet.insert(VD);
         BlockByRefDecls.push_back(VD);
       }
     }
@@ -4439,8 +4439,8 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
   if (BlockDeclRefs.size()) {
     Expr *Exp;
     // Output all "by copy" declarations.
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByCopyDecls.begin(),
-         E = BlockByCopyDecls.end(); I != E; ++I) {
+    for (auto I = BlockByCopyDecls.begin(), E = BlockByCopyDecls.end(); I != E;
+         ++I) {
       if (isObjCType((*I)->getType())) {
         // FIXME: Conform to ABI ([[obj retain] autorelease]).
         FD = SynthBlockInitFunctionDecl((*I)->getName());
@@ -4476,8 +4476,8 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
       InitExprs.push_back(Exp);
     }
     // Output all "by ref" declarations.
-    for (SmallVectorImpl<ValueDecl *>::iterator I = BlockByRefDecls.begin(),
-         E = BlockByRefDecls.end(); I != E; ++I) {
+    for (auto I = BlockByRefDecls.begin(), E = BlockByRefDecls.end(); I != E;
+         ++I) {
       ValueDecl *ND = (*I);
       std::string Name(ND->getNameAsString());
       std::string RecName;

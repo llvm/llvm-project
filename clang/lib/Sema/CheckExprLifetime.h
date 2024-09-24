@@ -22,6 +22,7 @@ namespace clang::sema {
 struct AssignedEntity {
   // The left-hand side expression of the assignment.
   Expr *LHS = nullptr;
+  CXXMethodDecl *AssignmentOperator = nullptr;
 };
 
 /// Check that the lifetime of the given expr (and its subobjects) is
@@ -33,6 +34,12 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 /// Check that the lifetime of the given expr (and its subobjects) is
 /// sufficient for assigning to the entity.
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity, Expr *Init);
+
+/// Check that the lifetime of the given expr (and its subobjects) is
+/// sufficient, assuming that it is passed as an argument to a musttail
+/// function.
+void checkExprLifetimeMustTailArg(Sema &SemaRef,
+                                  const InitializedEntity &Entity, Expr *Init);
 
 } // namespace clang::sema
 

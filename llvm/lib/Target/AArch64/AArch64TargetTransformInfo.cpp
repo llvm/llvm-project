@@ -517,25 +517,31 @@ static bool isUnpackedVectorVT(EVT VecVT) {
 static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
   Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+  unsigned TotalHistCnts = 1;
 
-  // Only allow (32b and 64b) integers or pointers for now...
-  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      (EltTy->getScalarSizeInBits() != 32 &&
-       EltTy->getScalarSizeInBits() != 64))
+  unsigned EltSize = EltTy->getScalarSizeInBits();
+  // Only allow (up to 64b) integers or pointers
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) || EltSize > 64)
     return InstructionCost::getInvalid();
 
-  // FIXME: Hacky check for legal vector types. We can promote smaller types
-  //        but we cannot legalize vectors via splitting for histcnt.
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
-  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
-    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
-         VTy->getElementCount().getKnownMinValue() != 4) ||
-        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
-        !VTy->isScalableTy())
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
+    unsigned EC = VTy->getElementCount().getKnownMinValue();
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
       return InstructionCost::getInvalid();
 
-  return InstructionCost(BaseHistCntCost);
+    // HistCnt only supports 32b and 64b element types
+    unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
+
+    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
+      return InstructionCost(BaseHistCntCost);
+
+    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
+    TotalHistCnts = EC / NaturalVectorWidth;
+  }
+
+  return InstructionCost(BaseHistCntCost * TotalHistCnts);
 }
 
 InstructionCost
@@ -605,7 +611,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal vectors involves an `index' instruction plus
@@ -1073,6 +1079,33 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with its operand
+static std::optional<Instruction *>
+instCombineSVENoActiveReplace(InstCombiner &IC, IntrinsicInst &II,
+                              bool hasInactiveVector) {
+  int PredOperand = hasInactiveVector ? 1 : 0;
+  int ReplaceOperand = hasInactiveVector ? 0 : 1;
+  if (match(II.getOperand(PredOperand), m_ZeroInt())) {
+    IC.replaceInstUsesWith(II, II.getOperand(ReplaceOperand));
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
+// Simplify unary operation where predicate has all inactive lanes or
+// replace unused first operand with undef when all lanes are active
+static std::optional<Instruction *>
+instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
+  if (isAllActivePredicate(II.getOperand(1)) &&
+      !isa<llvm::UndefValue>(II.getOperand(0)) &&
+      !isa<llvm::PoisonValue>(II.getOperand(0))) {
+    Value *Undef = llvm::UndefValue::get(II.getType());
+    return IC.replaceOperand(II, 0, Undef);
+  }
+  return instCombineSVENoActiveReplace(IC, II, true);
+}
+
 // Erase unary operation where predicate has all inactive lanes
 static std::optional<Instruction *>
 instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
@@ -1083,10 +1116,10 @@ instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
   return std::nullopt;
 }
 
-// Simplify unary operation where predicate has all inactive lanes by replacing
+// Simplify operation where predicate has all inactive lanes by replacing
 // instruction with zeroed object
 static std::optional<Instruction *>
-instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
+instCombineSVENoActiveZero(InstCombiner &IC, IntrinsicInst &II) {
   if (match(II.getOperand(0), m_ZeroInt())) {
     Constant *Node;
     Type *RetTy = II.getType();
@@ -1099,10 +1132,9 @@ instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
                                                   : ConstantInt::get(VecT, 0));
       }
       Node = ConstantStruct::get(StructT, ZerVec);
-    } else if (RetTy->isFPOrFPVectorTy())
-      Node = ConstantFP::get(RetTy, 0.0);
-    else
-      Node = ConstantInt::get(II.getType(), 0);
+    } else
+      Node = RetTy->isFPOrFPVectorTy() ? ConstantFP::get(RetTy, 0.0)
+                                       : ConstantInt::get(II.getType(), 0);
 
     IC.replaceInstUsesWith(II, Node);
     return IC.eraseInstFromFunction(II);
@@ -1161,7 +1193,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
   LLVMContext &Ctx = II.getContext();
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   // Check that the predicate is all active
@@ -1529,7 +1561,7 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Type *VecTy = II.getType();
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   if (isAllActivePredicate(Pred)) {
@@ -1880,7 +1912,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   // Contiguous gather => masked load.
@@ -1946,7 +1978,13 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
   if (!SplatConstantInt)
     return std::nullopt;
+
   APInt Divisor = SplatConstantInt->getValue();
+  const int64_t DivisorValue = Divisor.getSExtValue();
+  if (DivisorValue == -1)
+    return std::nullopt;
+  if (DivisorValue == 1)
+    IC.replaceInstUsesWith(II, Vec);
 
   if (Divisor.isPowerOf2()) {
     Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
@@ -2109,7 +2147,41 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-
+  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f64:
+  case Intrinsic::aarch64_sve_fcvt_f32f16:
+  case Intrinsic::aarch64_sve_fcvt_f32f64:
+  case Intrinsic::aarch64_sve_fcvt_f64f16:
+  case Intrinsic::aarch64_sve_fcvt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtlt_f32f16:
+  case Intrinsic::aarch64_sve_fcvtlt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtx_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtzs:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f32:
+  case Intrinsic::aarch64_sve_fcvtzu:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_scvtf:
+  case Intrinsic::aarch64_sve_scvtf_f16i32:
+  case Intrinsic::aarch64_sve_scvtf_f16i64:
+  case Intrinsic::aarch64_sve_scvtf_f32i64:
+  case Intrinsic::aarch64_sve_scvtf_f64i32:
+  case Intrinsic::aarch64_sve_ucvtf:
+  case Intrinsic::aarch64_sve_ucvtf_f16i32:
+  case Intrinsic::aarch64_sve_ucvtf_f16i64:
+  case Intrinsic::aarch64_sve_ucvtf_f32i64:
+  case Intrinsic::aarch64_sve_ucvtf_f64i32:
+    return instCombineSVEAllOrNoActiveUnary(IC, II);
   case Intrinsic::aarch64_sve_st1_scatter:
   case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
   case Intrinsic::aarch64_sve_st1_scatter_sxtw:
@@ -2136,6 +2208,31 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st4q:
     return instCombineSVENoActiveUnaryErase(IC, II, 4);
+  case Intrinsic::aarch64_sve_addqv:
+  case Intrinsic::aarch64_sve_and_z:
+  case Intrinsic::aarch64_sve_bic_z:
+  case Intrinsic::aarch64_sve_brka_z:
+  case Intrinsic::aarch64_sve_brkb_z:
+  case Intrinsic::aarch64_sve_brkn_z:
+  case Intrinsic::aarch64_sve_brkpa_z:
+  case Intrinsic::aarch64_sve_brkpb_z:
+  case Intrinsic::aarch64_sve_cntp:
+  case Intrinsic::aarch64_sve_compact:
+  case Intrinsic::aarch64_sve_eor_z:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_eorqv:
+  case Intrinsic::aarch64_sve_nand_z:
+  case Intrinsic::aarch64_sve_nor_z:
+  case Intrinsic::aarch64_sve_orn_z:
+  case Intrinsic::aarch64_sve_orr_z:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_orqv:
+  case Intrinsic::aarch64_sve_pnext:
+  case Intrinsic::aarch64_sve_rdffr_z:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_umaxqv:
   case Intrinsic::aarch64_sve_cmpeq:
   case Intrinsic::aarch64_sve_cmpeq_wide:
   case Intrinsic::aarch64_sve_cmpge:
@@ -2190,7 +2287,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ldnt1_gather_index:
   case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
-    return instCombineSVENoActiveUnaryZero(IC, II);
+    return instCombineSVENoActiveZero(IC, II);
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_index:
   case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
@@ -3163,8 +3260,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     [[fallthrough]];
   case ISD::UDIV: {
+    auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
@@ -3178,6 +3275,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
+
+    // div i128's are lowered as libcalls.  Pass nullptr as (u)divti3 calls are
+    // emitted by the backend even when those functions are not declared in the
+    // module.
+    if (!VT.isVector() && VT.getSizeInBits() > 64)
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);

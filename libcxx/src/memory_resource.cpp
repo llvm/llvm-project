@@ -82,7 +82,7 @@ union ResourceInitHelper {
 // attribute with a value that's reserved for the implementation (we're the implementation).
 #include "memory_resource_init_helper.h"
 
-} // end namespace
+} // namespace
 
 memory_resource* new_delete_resource() noexcept { return &res_init.resources.new_delete_res; }
 

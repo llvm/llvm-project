@@ -83,11 +83,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
   }
 }
 
-int
-X86RegisterInfo::getSEHRegNum(unsigned i) const {
-  return getEncodingValue(i);
-}
-
 const TargetRegisterClass *
 X86RegisterInfo::getSubClassWithSubReg(const TargetRegisterClass *RC,
                                        unsigned Idx) const {

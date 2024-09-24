@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstring>
+#include <iostream>
 
 #include <memory>
 
@@ -44,7 +45,7 @@ char CPPLanguageRuntime::ID = 0;
 /// A frame recognizer that is installed to hide libc++ implementation
 /// details from the backtrace.
 class LibCXXFrameRecognizer : public StackFrameRecognizer {
-  RegularExpression m_hidden_function_regex;
+  std::array<RegularExpression, 4> m_hidden_regex;
   RecognizedStackFrameSP m_hidden_frame;
 
   struct LibCXXHiddenFrame : public RecognizedStackFrame {
@@ -53,10 +54,30 @@ class LibCXXFrameRecognizer : public StackFrameRecognizer {
 
 public:
   LibCXXFrameRecognizer()
-      : m_hidden_function_regex(
-            R"(^std::__.*::(__function.*::operator\(\)|__invoke))"
-            R"((\[.*\])?)"    // ABI tag.
-            R"(( const)?$)"), // const.
+      : m_hidden_regex{
+            // internal implementation details of std::function
+            //    std::__1::__function::__alloc_func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()[abi:ne200000]
+            //    std::__1::__function::__func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()
+            //    std::__1::__function::__value_func<void ()>::operator()[abi:ne200000]() const
+            RegularExpression{""
+              R"(^std::__[^:]*::)" // Namespace.
+              R"(__function::.*::operator\(\))"},
+            // internal implementation details of std::function in ABI v2
+            //    std::__2::__function::__policy_invoker<void (int, int)>::__call_impl[abi:ne200000]<std::__2::__function::__default_alloc_func<int (*)(int, int), int (int, int)>>
+            RegularExpression{""
+              R"(^std::__[^:]*::)" // Namespace.
+              R"(__function::.*::__call_impl)"},
+            // internal implementation details of std::invoke
+            //   std::__1::__invoke[abi:ne200000]<void (*&)()>
+            RegularExpression{
+              R"(^std::__[^:]*::)" // Namespace.
+              R"(__invoke)"},
+            // internal implementation details of std::invoke
+            //   std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
+            RegularExpression{
+              R"(^std::__[^:]*::)" // Namespace.
+              R"(__invoke_void_return_wrapper<.*>::__call)"}
+        },
         m_hidden_frame(new LibCXXHiddenFrame()) {}
 
   std::string GetName() override { return "libc++ frame recognizer"; }
@@ -69,8 +90,9 @@ public:
     if (!sc.function)
       return {};
 
-    if (m_hidden_function_regex.Execute(sc.function->GetNameNoArguments()))
-      return m_hidden_frame;
+    for (RegularExpression &r : m_hidden_regex)
+      if (r.Execute(sc.function->GetNameNoArguments()))
+        return m_hidden_frame;
 
     return {};
   }
@@ -81,8 +103,9 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
   if (process)
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
-        std::make_shared<RegularExpression>("^std::__.*::"),
-        /*first_instruction_only*/ false);
+        std::make_shared<RegularExpression>("^std::__[^:]*::"),
+        /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
+        /*first_instruction_only=*/false);
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
@@ -108,8 +131,7 @@ bool contains_lambda_identifier(llvm::StringRef &str_ref) {
 
 CPPLanguageRuntime::LibCppStdFunctionCallableInfo
 line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
-                  llvm::StringRef first_template_param_sref,
-                  bool has_invoke) {
+                  llvm::StringRef first_template_param_sref, bool has_invoke) {
 
   CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
 
@@ -190,7 +212,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     ValueObjectSP sub_member_f_(member_f_->GetChildMemberWithName("__f_"));
 
     if (sub_member_f_)
-        member_f_ = sub_member_f_;
+      member_f_ = sub_member_f_;
   }
 
   if (!member_f_)

@@ -1535,8 +1535,10 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
 def BranchProtection : DiagGroup<"branch-protection">;
 
 // HLSL diagnostic groups
+def HLSL202y : DiagGroup<"hlsl-202y-extensions">;
+
 // Warnings for HLSL Clang extensions
-def HLSLExtension : DiagGroup<"hlsl-extensions">;
+def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
@@ -1547,15 +1549,22 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
+// Warnings specifically for DXC incompatabilities.
+def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
+
 // Warnings for legacy binding behavior
 def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
+
+// Warning for HLSL Attributes on Statement.
+def HLSLAttributeStatement : DiagGroup<"attribute-statement">;
 
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
 
 // Warnings and notes related to the function effects system underlying
 // the nonblocking and nonallocating attributes.

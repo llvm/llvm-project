@@ -655,9 +655,11 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
   context_.messages().Emit(os, context_.allCookedSources());
 }
 
-void Semantics::DumpSymbols(llvm::raw_ostream &os) {
-  DoDumpSymbols(os, context_.globalScope());
+void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
+  DoDumpSymbols(os, globalScope());
 }
+
+void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }
 
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;

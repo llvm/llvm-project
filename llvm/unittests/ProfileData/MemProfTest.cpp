@@ -255,7 +255,6 @@ TEST(MemProf, PortableWrapper) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   WriteBlock.serialize(Schema, OS);
-  OS.flush();
 
   PortableMemInfoBlock ReadBlock(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
@@ -296,7 +295,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version0);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -326,7 +324,6 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
@@ -378,7 +375,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
   Record.serialize(Schema, OS, llvm::memprof::Version2);
-  OS.flush();
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),

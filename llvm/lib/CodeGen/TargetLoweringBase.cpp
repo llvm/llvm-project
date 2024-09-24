@@ -169,6 +169,8 @@ RTLIB::Libcall RTLIB::getFPROUND(EVT OpVT, EVT RetVT) {
       return FPROUND_F32_BF16;
     if (OpVT == MVT::f64)
       return FPROUND_F64_BF16;
+    if (OpVT == MVT::f80)
+      return FPROUND_F80_BF16;
   } else if (RetVT == MVT::f32) {
     if (OpVT == MVT::f64)
       return FPROUND_F64_F32;
@@ -1682,16 +1684,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i) {
-      ISD::ArgFlagsTy OutFlags = Flags;
-      if (NumParts > 1 && i == 0)
-        OutFlags.setSplit();
-      else if (i == NumParts - 1 && i != 0)
-        OutFlags.setSplitEnd();
-
-      Outs.push_back(
-          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
-    }
+    for (unsigned i = 0; i < NumParts; ++i)
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
   }
 }
 

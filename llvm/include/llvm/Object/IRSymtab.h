@@ -169,7 +169,8 @@ Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
 /// possibly a storage::Uncommon.
 struct Symbol {
   // Copied from storage::Symbol.
-  StringRef Name, IRName;
+  mutable StringRef Name;
+  StringRef IRName;
   int ComdatIndex;
   uint32_t Flags;
 

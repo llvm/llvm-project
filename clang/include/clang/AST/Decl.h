@@ -3366,6 +3366,7 @@ public:
 /// Represents a declaration of a type.
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
+  friend class ASTReader;
 
   /// This indicates the Type object that represents
   /// this TypeDecl.  It is a cache maintained by

@@ -616,6 +616,49 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
+static unsigned isM1OrSmaller(MVT VT) {
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
+          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+}
+
+InstructionCost RISCVTTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind) {
+  if (isa<ScalableVectorType>(Ty))
+    return InstructionCost::getInvalid();
+
+  // A build_vector (which is m1 sized or smaller) can be done in no
+  // worse than one vslide1down.vx per element in the type.  We could
+  // in theory do an explode_vector in the inverse manner, but our
+  // lowering today does not have a first class node for this pattern.
+  InstructionCost Cost = BaseT::getScalarizationOverhead(
+      Ty, DemandedElts, Insert, Extract, CostKind);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector()) {
+    if (Ty->getScalarSizeInBits() == 1) {
+      auto *WideVecTy = cast<VectorType>(Ty->getWithNewBitWidth(8));
+      // Note: Implicit scalar anyextend is assumed to be free since the i1
+      // must be stored in a GPR.
+      return getScalarizationOverhead(WideVecTy, DemandedElts, Insert, Extract,
+                                      CostKind) +
+             getCastInstrCost(Instruction::Trunc, Ty, WideVecTy,
+                              TTI::CastContextHint::None, CostKind, nullptr);
+    }
+
+    assert(LT.second.isFixedLengthVector());
+    MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
+    if (isM1OrSmaller(ContainerVT)) {
+      InstructionCost BV =
+          cast<FixedVectorType>(Ty)->getNumElements() *
+          getRISCVInstructionCost(RISCV::VSLIDE1DOWN_VX, LT.second, CostKind);
+      if (BV < Cost)
+        Cost = BV;
+    }
+  }
+  return Cost;
+}
+
 InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
@@ -765,6 +808,23 @@ InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
+}
+
+InstructionCost
+RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+  // FIXME: This is a property of the default vector convention, not
+  // all possible calling conventions.  Fixing that will require
+  // some TTI API and SLP rework.
+  InstructionCost Cost = 0;
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  for (auto *Ty : Tys) {
+    if (!Ty->isVectorTy())
+      continue;
+    Align A = DL.getPrefTypeAlign(Ty);
+    Cost += getMemoryOpCost(Instruction::Store, Ty, A, 0, CostKind) +
+            getMemoryOpCost(Instruction::Load, Ty, A, 0, CostKind);
+  }
+  return Cost;
 }
 
 // Currently, these represent both throughput and codesize costs
@@ -929,7 +989,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   // TODO: add more intrinsic
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
     // Legalisation of illegal types involves an `index' instruction plus
     // (LT.first - 1) vector adds.
@@ -1011,9 +1071,66 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::vp_frem: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    if (FOp)
-      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
+    assert(FOp.has_value());
+    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
+  }
+  // vp int cast ops.
+  case Intrinsic::vp_trunc:
+  case Intrinsic::vp_zext:
+  case Intrinsic::vp_sext:
+  // vp float cast ops.
+  case Intrinsic::vp_fptoui:
+  case Intrinsic::vp_fptosi:
+  case Intrinsic::vp_uitofp:
+  case Intrinsic::vp_sitofp:
+  case Intrinsic::vp_fptrunc:
+  case Intrinsic::vp_fpext: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    assert(FOp.has_value() && !ICA.getArgTypes().empty());
+    return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
+                            TTI::CastContextHint::None, CostKind);
+    break;
+  }
+
+  // vp compare
+  case Intrinsic::vp_icmp:
+  case Intrinsic::vp_fcmp: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    // We can only handle vp_cmp intrinsics with underlying instructions.
+    if (!ICA.getInst())
+      break;
+
+    assert(FOp);
+    auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
+    return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
+                              UI->getPredicate(), CostKind);
+  }
+  // vp load/store
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store: {
+    if (!ICA.getInst())
+      break;
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    assert(FOp.has_value());
+    auto *UI = cast<VPIntrinsic>(ICA.getInst());
+    if (ICA.getID() == Intrinsic::vp_load)
+      return getMemoryOpCost(
+          *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
+          UI->getOperand(0)->getType()->getPointerAddressSpace(), CostKind);
+    return getMemoryOpCost(
+        *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
+        UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
+  }
+  case Intrinsic::vp_select: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    assert(FOp.has_value());
+    return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
   }
   }
 
@@ -1060,6 +1177,9 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
                            DstLT.second.getSizeInBits()))
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+  // The split cost is handled by the base getCastInstrCost
+  assert((SrcLT.first == 1) && (DstLT.first == 1) && "Illegal type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
@@ -1118,34 +1238,89 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return Cost;
   }
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT:
-    // For fp vector to mask, we use:
-    // vfncvt.rtz.x.f.w v9, v8
-    // vand.vi v8, v9, 1
-    // vmsne.vi v0, v8, 0
-    if (Dst->getScalarSizeInBits() == 1)
-      return 3;
-
-    if (std::abs(PowDiff) <= 1)
-      return 1;
-
-    // Counts of narrow/widen instructions.
-    return std::abs(PowDiff);
-
+  case ISD::FP_TO_UINT: {
+    unsigned IsSigned = ISD == ISD::FP_TO_SINT;
+    unsigned FCVT = IsSigned ? RISCV::VFCVT_RTZ_X_F_V : RISCV::VFCVT_RTZ_XU_F_V;
+    unsigned FWCVT =
+        IsSigned ? RISCV::VFWCVT_RTZ_X_F_V : RISCV::VFWCVT_RTZ_XU_F_V;
+    unsigned FNCVT =
+        IsSigned ? RISCV::VFNCVT_RTZ_X_F_W : RISCV::VFNCVT_RTZ_XU_F_W;
+    unsigned SrcEltSize = Src->getScalarSizeInBits();
+    unsigned DstEltSize = Dst->getScalarSizeInBits();
+    InstructionCost Cost = 0;
+    if ((SrcEltSize == 16) &&
+        (!ST->hasVInstructionsF16() || ((DstEltSize / 2) > SrcEltSize))) {
+      // If the target only supports zvfhmin or it is fp16-to-i64 conversion
+      // pre-widening to f32 and then convert f32 to integer
+      VectorType *VecF32Ty =
+          VectorType::get(Type::getFloatTy(Dst->getContext()),
+                          cast<VectorType>(Dst)->getElementCount());
+      std::pair<InstructionCost, MVT> VecF32LT =
+          getTypeLegalizationCost(VecF32Ty);
+      Cost +=
+          VecF32LT.first * getRISCVInstructionCost(RISCV::VFWCVT_F_F_V,
+                                                   VecF32LT.second, CostKind);
+      Cost += getCastInstrCost(Opcode, Dst, VecF32Ty, CCH, CostKind, I);
+      return Cost;
+    }
+    if (DstEltSize == SrcEltSize)
+      Cost += getRISCVInstructionCost(FCVT, DstLT.second, CostKind);
+    else if (DstEltSize > SrcEltSize)
+      Cost += getRISCVInstructionCost(FWCVT, DstLT.second, CostKind);
+    else { // (SrcEltSize > DstEltSize)
+      // First do a narrowing conversion to an integer half the size, then
+      // truncate if needed.
+      MVT ElementVT = MVT::getIntegerVT(SrcEltSize / 2);
+      MVT VecVT = DstLT.second.changeVectorElementType(ElementVT);
+      Cost += getRISCVInstructionCost(FNCVT, VecVT, CostKind);
+      if ((SrcEltSize / 2) > DstEltSize) {
+        Type *VecTy = EVT(VecVT).getTypeForEVT(Dst->getContext());
+        Cost +=
+            getCastInstrCost(Instruction::Trunc, Dst, VecTy, CCH, CostKind, I);
+      }
+    }
+    return Cost;
+  }
   case ISD::SINT_TO_FP:
-  case ISD::UINT_TO_FP:
-    // For mask vector to fp, we should use the following instructions:
-    // vmv.v.i v8, 0
-    // vmerge.vim v8, v8, -1, v0
-    // vfcvt.f.x.v v8, v8
-    if (Src->getScalarSizeInBits() == 1)
-      return 3;
+  case ISD::UINT_TO_FP: {
+    unsigned IsSigned = ISD == ISD::SINT_TO_FP;
+    unsigned FCVT = IsSigned ? RISCV::VFCVT_F_X_V : RISCV::VFCVT_F_XU_V;
+    unsigned FWCVT = IsSigned ? RISCV::VFWCVT_F_X_V : RISCV::VFWCVT_F_XU_V;
+    unsigned FNCVT = IsSigned ? RISCV::VFNCVT_F_X_W : RISCV::VFNCVT_F_XU_W;
+    unsigned SrcEltSize = Src->getScalarSizeInBits();
+    unsigned DstEltSize = Dst->getScalarSizeInBits();
 
-    if (std::abs(PowDiff) <= 1)
-      return 1;
-    // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),
-    // so it only need two conversion.
-    return 2;
+    InstructionCost Cost = 0;
+    if ((DstEltSize == 16) &&
+        (!ST->hasVInstructionsF16() || ((SrcEltSize / 2) > DstEltSize))) {
+      // If the target only supports zvfhmin or it is i64-to-fp16 conversion
+      // it is converted to f32 and then converted to f16
+      VectorType *VecF32Ty =
+          VectorType::get(Type::getFloatTy(Dst->getContext()),
+                          cast<VectorType>(Dst)->getElementCount());
+      std::pair<InstructionCost, MVT> VecF32LT =
+          getTypeLegalizationCost(VecF32Ty);
+      Cost += getCastInstrCost(Opcode, VecF32Ty, Src, CCH, CostKind, I);
+      Cost += VecF32LT.first * getRISCVInstructionCost(RISCV::VFNCVT_F_F_W,
+                                                       DstLT.second, CostKind);
+      return Cost;
+    }
+
+    if (DstEltSize == SrcEltSize)
+      Cost += getRISCVInstructionCost(FCVT, DstLT.second, CostKind);
+    else if (DstEltSize > SrcEltSize) {
+      if ((DstEltSize / 2) > SrcEltSize) {
+        VectorType *VecTy =
+            VectorType::get(IntegerType::get(Dst->getContext(), DstEltSize / 2),
+                            cast<VectorType>(Dst)->getElementCount());
+        unsigned Op = IsSigned ? Instruction::SExt : Instruction::ZExt;
+        Cost += getCastInstrCost(Op, VecTy, Src, CCH, CostKind, I);
+      }
+      Cost += getRISCVInstructionCost(FWCVT, DstLT.second, CostKind);
+    } else
+      Cost += getRISCVInstructionCost(FNCVT, DstLT.second, CostKind);
+    return Cost;
+  }
   }
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
@@ -1626,9 +1801,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (LT.second.isScalableVector() && !LT.first.isValid())
     return LT.first;
 
-  if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
-
   // Mask vector extract/insert is expanded via e8.
   if (Val->getScalarSizeInBits() == 1) {
     VectorType *WideTy =
@@ -1666,6 +1838,14 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (LT.second.isFixedLengthVector()) {
       unsigned Width = LT.second.getVectorNumElements();
       Index = Index % Width;
+    }
+
+    // If exact VLEN is known, we will insert/extract into the appropriate
+    // subvector with no additional subvector insert/extract cost.
+    if (auto VLEN = ST->getRealVLen()) {
+      unsigned EltSize = LT.second.getScalarSizeInBits();
+      unsigned M1Max = *VLEN / EltSize;
+      Index = Index % M1Max;
     }
 
     // We could extract/insert the first element without vslidedown/vslideup.
@@ -1847,8 +2027,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
         continue;
       Cost += getArithmeticInstrCost(Instruction::Add, GEP->getType(), CostKind,
                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                     {TTI::OK_AnyValue, TTI::OP_None},
-                                     std::nullopt);
+                                     {TTI::OK_AnyValue, TTI::OP_None}, {});
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
@@ -1942,8 +2121,15 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
-  TypeSize Size = DL.getTypeSizeInBits(Ty);
   if (Ty->isVectorTy()) {
+    // f16 with only zvfhmin and bf16 will be promoted to f32
+    Type *EltTy = cast<VectorType>(Ty)->getElementType();
+    if ((EltTy->isHalfTy() && !ST->hasVInstructionsF16()) ||
+        EltTy->isBFloatTy())
+      Ty = VectorType::get(Type::getFloatTy(Ty->getContext()),
+                           cast<VectorType>(Ty));
+
+    TypeSize Size = DL.getTypeSizeInBits(Ty);
     if (Size.isScalable() && ST->hasVInstructions())
       return divideCeil(Size.getKnownMinValue(), RISCV::RVVBitsPerBlock);
 

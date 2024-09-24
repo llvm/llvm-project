@@ -22,8 +22,9 @@
 #include <functional>
 #if HAS_QUADMATHLIB
 #include "quadmath.h"
-#include "flang/Common/float128.h"
 #endif
+#include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -255,6 +256,25 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+
+// Helpers to map complex std::pow whose resolution in F2{std::pow} is
+// ambiguous as of clang++ 20.
+template <typename HostT>
+static std::complex<HostT> StdPowF2(
+    const std::complex<HostT> &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+template <typename HostT>
+static std::complex<HostT> StdPowF2A(
+    const HostT &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+template <typename HostT>
+static std::complex<HostT> StdPowF2B(
+    const std::complex<HostT> &x, const HostT &y) {
+  return std::pow(x, y);
+}
+
 template <typename HostT>
 struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   using F = FuncPointer<std::complex<HostT>, const std::complex<HostT> &>;
@@ -275,9 +295,9 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
       FolderFactory<F, F{std::cosh}>::Create("cosh"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::log}>::Create("log"),
-      FolderFactory<F2, F2{std::pow}>::Create("pow"),
-      FolderFactory<F2A, F2A{std::pow}>::Create("pow"),
-      FolderFactory<F2B, F2B{std::pow}>::Create("pow"),
+      FolderFactory<F2, F2{StdPowF2}>::Create("pow"),
+      FolderFactory<F2A, F2A{StdPowF2A}>::Create("pow"),
+      FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),
       FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
@@ -395,7 +415,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#if HAS_FLOAT80 || HAS_LDBL128
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
@@ -411,7 +431,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
+#endif // HAS_FLOAT80 || HAS_LDBL128
 #endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description

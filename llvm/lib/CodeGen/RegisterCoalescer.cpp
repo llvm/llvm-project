@@ -3548,8 +3548,7 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LHSVals.removeImplicitDefs();
   RHSVals.removeImplicitDefs();
 
-  LRange.verify();
-  RRange.verify();
+  assert(LRange.verify() && RRange.verify());
 
   // Join RRange into LHS.
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),

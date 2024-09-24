@@ -227,4 +227,42 @@ def OptionalOperandOp : TestOp<"optional_operand_op"> {
   let results = (outs I32:$result);
 }
 
+def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
+                                       [SameVariadicOperandSize]> {
+  let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                   Variadic<AnyType>:$variadic2);
+}
+
+// Check different arrangements of variadic groups
+def SameVariadicResultSizeOpVFV : TestOp<"same_variadic_result_vfv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
+                 Variadic<AnyType>:$variadic2);
+}
+
+def SameVariadicResultSizeOpVVV : TestOp<"same_variadic_result_vvv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, Variadic<AnyType>:$variadic2,
+                 Variadic<AnyType>:$variadic3);
+}
+
+def SameVariadicResultSizeOpFFV : TestOp<"same_variadic_result_ffv",
+                                        [SameVariadicResultSize]> {
+  let results = (outs AnyType:$non_variadic1, AnyType:$non_variadic2,
+                 Variadic<AnyType>:$variadic);
+}
+
+def SameVariadicResultSizeOpVVF : TestOp<"same_variadic_result_vvf",
+                                        [SameVariadicResultSize]> {
+  let results = (outs Variadic<AnyType>:$variadic1, Variadic<AnyType>:$variadic2,
+                 AnyType:$non_variadic);
+}
+
+def SameVariadicResultSizeOpFVFVF : TestOp<"same_variadic_result_fvfvf",
+                                          [SameVariadicResultSize]> {
+  let results = (outs AnyType:$non_variadic1, Variadic<AnyType>:$variadic1,
+                 AnyType:$non_variadic2, Variadic<AnyType>:$variadic2,
+                 AnyType:$non_variadic3);
+}
+
 #endif // PYTHON_TEST_OPS

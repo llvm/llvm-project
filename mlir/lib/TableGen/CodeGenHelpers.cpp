@@ -49,7 +49,7 @@ StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs) {
+    ArrayRef<const llvm::Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
@@ -258,20 +258,20 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto *it = map.find(constraint);
-  if (it == map.end())
-    map.insert({constraint, getUniqueName(kind, map.size())});
+  auto [it, inserted] = map.try_emplace(constraint);
+  if (inserted)
+    it->second = getUniqueName(kind, map.size());
 }
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
-    ArrayRef<Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   const auto collectTypeConstraints = [&](Operator::const_value_range values) {
     for (const NamedTypeConstraint &value : values)
       if (value.hasPredicate())
         collectConstraint(typeConstraints, "type", value.constraint);
   };
 
-  for (Record *def : opDefs) {
+  for (const Record *def : opDefs) {
     Operator op(*def);
     /// Collect type constraints.
     collectTypeConstraints(op.getOperands());
@@ -315,5 +315,5 @@ std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
   llvm::raw_string_ostream os(ret);
   os.write_escaped(value);
-  return os.str();
+  return ret;
 }

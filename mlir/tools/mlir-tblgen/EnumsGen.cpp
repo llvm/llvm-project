@@ -645,8 +645,8 @@ public:
 static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
 
-  auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
-  for (const auto *def : defs)
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDecl(*def, os);
 
   return false;
@@ -683,8 +683,8 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
 static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
 
-  auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
-  for (const auto *def : defs)
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDef(*def, os);
 
   return false;

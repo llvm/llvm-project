@@ -171,16 +171,16 @@
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   ifndef __cpp_lib_constexpr_new
 #     error "__cpp_lib_constexpr_new should be defined in c++26"
 #   endif
 #   if __cpp_lib_constexpr_new != 202406L
 #     error "__cpp_lib_constexpr_new should have the value 202406L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_constexpr_new
-#     error "__cpp_lib_constexpr_new should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_constexpr_new should not be defined when the requirement '!defined(_LIBCPP_ABI_VCRUNTIME)' is not met!"
 #   endif
 # endif
 
