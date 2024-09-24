@@ -287,8 +287,14 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
   // amdgpu_cs_chain_preserve calling convention and this is a scratch register.
   // We never need to allocate a spill for these because we don't even need to
   // restore the inactive lanes for them (they're scratchier than the usual
-  // scratch registers).
-  if (isChainFunction() && SIRegisterInfo::isChainScratchRegister(VGPR))
+  // scratch registers). We only need to do this if we have calls to
+  // llvm.amdgcn.cs.chain (otherwise there's no one to save them for, since
+  // chain functions do not return) and the function did not contain a call to
+  // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
+  // when entering the function).
+  if (isChainFunction() &&
+      (SIRegisterInfo::isChainScratchRegister(VGPR) ||
+       !MF.getFrameInfo().hasTailCall() || hasInitWholeWave()))
     return;
 
   WWMSpills.insert(std::make_pair(
