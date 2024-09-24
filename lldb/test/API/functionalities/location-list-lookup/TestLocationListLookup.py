@@ -37,12 +37,14 @@ class LocationListLookupTestCase(TestBase):
                     process.GetSelectedThread().SetSelectedFrame(f.idx)
                     self.expect_expr("this", result_type="Foo *")
 
+    @skipIf(bugnumber = "rdar://135577167")
     @skipIf(oslist=["linux"], archs=["arm"])
     @skipIfDarwin
     def test_loclist_frame_var(self):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
 
+    @skipIf(bugnumber = "rdar://135577167")
     @skipIf(dwarf_version=["<", "3"])
     @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @skipUnlessDarwin

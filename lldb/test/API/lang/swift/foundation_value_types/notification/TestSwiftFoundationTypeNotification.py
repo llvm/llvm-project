@@ -4,6 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipUnlessDarwin
 class TestSwiftFoundationTypeNotification(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
