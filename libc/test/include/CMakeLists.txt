@@ -82,6 +82,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  fpclassify_test
+  SUITE
+    libc_include_tests
+  SRCS
+    fpclassify_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  fpclassifyf_test
+  SUITE
+    libc_include_tests
+  SRCS
+    fpclassifyf_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  fpclassifyl_test
+  SUITE
+    libc_include_tests
+  SRCS
+    fpclassifyl_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
   iszero_test
   SUITE
     libc_include_tests
@@ -284,6 +314,21 @@ add_libc_test(
     libc_include_tests
   SRCS
     isfinite_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  fpclassify_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    fpclassify_test.c
   COMPILE_OPTIONS
     -Wall
     -Werror
