@@ -268,7 +268,6 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
 } // namespace
 
 bool PrintContinuityStats::shouldOptimize(const BinaryFunction &BF) const {
-  // Apply execution count threshold
   if (BF.empty() || !BF.hasValidProfile())
     return false;
 
