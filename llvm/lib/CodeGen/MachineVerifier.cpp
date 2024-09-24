@@ -1597,12 +1597,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
-    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+    TypeSize DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
+    TypeSize SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
     if (SrcSize == DstSize)
       report("extract source must be larger than result", MI);
 
-    if (DstSize + OffsetOp.getImm() > SrcSize)
+    if (DstSize.getKnownMinValue() + OffsetOp.getImm() >
+        SrcSize.getKnownMinValue())
       report("extract reads past end of register", MI);
     break;
   }
@@ -1619,13 +1620,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
-    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+    TypeSize DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
+    TypeSize SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
 
-    if (DstSize <= SrcSize)
+    if (TypeSize::isKnownLE(DstSize, SrcSize))
       report("inserted size must be smaller than total register", MI);
 
-    if (SrcSize + OffsetOp.getImm() > DstSize)
+    if (SrcSize.getKnownMinValue() + OffsetOp.getImm() >
+        DstSize.getKnownMinValue())
       report("insert writes past end of register", MI);
 
     break;

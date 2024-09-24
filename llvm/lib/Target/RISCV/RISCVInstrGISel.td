@@ -41,6 +41,82 @@ def G_VMCLR_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VMCLR_VL, riscv_vmclr_vl>;
 
+// Pseudo equivalent to a RISCVISD::VFMV_S_F_VL
+def G_VFMV_S_F_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VFMV_S_F_VL, riscv_vfmv_s_f_vl>;
+
+// Pseudo equivalent to a RISCVISD::VFMV_V_F_VL
+def G_VFMV_V_F_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VFMV_V_F_VL, riscv_vfmv_v_f_vl>;
+
+// Pseudo equivalent to a RISCVISD::VMV_S_X_VL
+def G_VMV_S_X_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMV_S_X_VL, riscv_vmv_s_x_vl>;
+
+// Pseudo equivalent to a RISCVISD::VMV_V_X_VL
+def G_VMV_V_X_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMV_V_X_VL, riscv_vmv_v_x_vl>;
+
+// Pseudo equivalent to a RISCVISD::VMV_V_V_VL
+def G_VMV_V_V_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type2:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMV_V_V_VL, riscv_vmv_v_v_vl>;
+
+// This instruction is a vector move instruction where the type of the element
+// can be either a integer or a floating point but the registerbank information
+// is not yet available to decide between G_VMV_V_X and G_VFMV_V_F.
+def G_VEC_MOVE_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+
+// This instruction is a scalar move instruction where the type of the element
+// can be either a integer or a floating point but the registerbank information
+// is not yet available to decide between G_VMV_S_X and G_VFMV_S_F.
+def G_SCALAR_MOVE_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$scalar, type2:$vl);
+  let hasSideEffects = false;
+}
+
+// Pseudo equivalent to a RISCVISD::VSLIDEUP_VL
+def G_VSLIDEUP_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$merge, type0:$vec, type1:$idx, type2:$mask,
+                       type3:$vl, type4:$policy);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VSLIDEUP_VL, riscv_slideup_vl>;
+
+// Pseudo equivalent to a RISCVISD::VSLIDEDOWN_VL
+def G_VSLIDEDOWN_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$merge, type0:$vec, type1:$idx, type2:$mask,
+                       type3:$vl, type4:$policy);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VSLIDEDOWN_VL, riscv_slidedown_vl>;
+
 // Pseudo equivalent to a RISCVISD::VMSET_VL
 def G_VMSET_VL : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
