@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Defines the clang::TypeLoc interface and its subclasses.
+/// Defines the clang::TypeLoc interface and its subclasses, which model
+/// both syntax and semantics of types written in source code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,10 +53,79 @@ class UnresolvedUsingTypenameDecl;
   class Class##TypeLoc;
 #include "clang/AST/TypeLocNodes.def"
 
-/// Base wrapper for a particular "section" of type source info.
+/// A TypeLoc describes an occurrence of type written in source code.
+/// This is the base class for a hierarchy: PointerTypeLoc, BuiltinTypeLoc etc,
+/// which is parallel to the hierarchy of Types.
 ///
-/// A client should use the TypeLoc subclasses through castAs()/getAs()
-/// in order to get at the actual information.
+/// The following code has three TypeLocs:
+///   int x;
+///   int* y;
+/// - a BuiltinTypeLoc for `int` on line 1
+/// - a PointerTypeLoc for `int*` on line 2
+/// - a BuiltinTypeLoc for `int` on line 2. (== PointerTypeLoc.getPointeeLoc())
+///
+/// TypeLocs describe both the type and how it was written. A PointerTypeLoc
+/// contains the SourceLocation of the `*`, and a TypeLoc describing how the
+/// pointee type was written. It also contains the PointerType which fully
+/// describes the type's semantics.
+///
+/// In general TypeLocs and Types are not 1:1 - expressions have Types but
+/// not TypeLocs, and multiple TypeLocs can name the same Type (`int`, above).
+///
+/// TypeLocs are passed by value, and are most easily understood as non-owning
+/// reference types (like llvm::StringRef).
+///
+/// ====== Data model and layout =====
+///
+/// A TypeLoc is a fat pointer (Type*, void* data).
+///
+/// - The Type is sugared, so captures written structure (use of typedefs etc).
+/// - The data buffer stores location information to augment this Type, followed
+///   by location information to augment any Types nested within it.
+///
+/// TypeLoc does not own its buffer - TypeSourceInfo is the owning equivalent.
+/// AST nodes have pointers to allocated TypeSourceInfo objects, and their
+/// public methods expose TypeLoc "views" of these.
+///
+/// ----------------------------------
+///
+/// This data model is best motivated by an example:
+/// Naively, a PointerTypeLoc for `int* x` could look like:
+///
+///   PointerTypeLoc(
+///      type = PointerType(pointee = BuiltinType(kind = Int)),
+///      starLoc = <loc1>,
+///      pointeeLoc = BuiltinTypeLoc(
+///        type = BuiltinType(kind = Int),
+///        keywordLoc = <loc2>
+///      )
+///  )
+///
+/// There is a lot of redundancy here: the PointerTypeLoc structure mirrors
+/// the corresponding PointerType, and we're just adding some SourceLocations.
+/// 
+/// Instead, this more compact representation is used:
+///
+///   PointerTypeLoc(
+///     data = [<loc1><loc2>],  // not owned!
+///     type = PointerType(pointee = BuiltinType(kind = Int)),
+///   )
+///
+/// The front of the data buffer has the starLoc "local" to PointerTypeLoc.
+/// The back of the data buffer has the data for the inner types.
+///
+/// PointerTypeLoc's implementation is:
+///   getStarLoc() returns data[0].
+///   getPointeeLoc() returns TypeLoc(&data[1], type->getPointeeType())
+///
+/// ----------------------------------
+///
+/// One quirk here is how the TypeLoc inheritance hierarchy and casting work.
+///
+/// All subclasses of TypeLoc have exactly the same layout: (Type*, void*).
+/// We downcast a TypeLoc to e.g. PointerTypeLoc *by value*, by simply creating
+/// a PointerTypeLoc with the same type and buffer.
+/// (The cast can be checked by examining the Type).
 class TypeLoc {
 protected:
   // The correctness of this relies on the property that, for Type *Ty,

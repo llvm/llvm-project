@@ -76,13 +76,26 @@ enum AvailabilityResult {
   AR_Unavailable
 };
 
-/// Decl - This represents one declaration (or definition), e.g. a variable,
-/// typedef, function, struct, etc.
+/// A Decl describes a declaration (or definition) of a variable, function, etc.
+/// This is the base class for a hierarchy of Decls: VarDecl, FunctionDecl...
 ///
-/// Note: There are objects tacked on before the *beginning* of Decl
-/// (and its subclasses) in its Decl::operator new(). Proper alignment
-/// of all subclasses (not requiring more than the alignment of Decl) is
-/// asserted in DeclBase.cpp.
+/// The declarations form a tree rooted at the TranslationUnitDecl.
+/// The non-leaf nodes of this tree are DeclContexts (as well as being Decls).
+///
+/// Decls are also the AST's representation of the things being declared.
+/// So a VarDecl* may refer either to a specific declaration of a variable, or
+/// to the variable itself - pointing at an arbitrary declaration of it.
+/// (Declarations of the same variable are linked in a "redecl chain", and
+/// the first entry is the canonical representative when one is needed).
+///
+/// Some entities have zero declarations in code, like implicit constructors.
+/// For these, a Decl is synthesized and marked "implicit". Lexical information
+/// like SourceLocations may not be meaningful for such Decls.
+///
+/// Like other AST nodes, Decls are allocated within an ASTContext, using
+/// factory functions like FooDecl::Create(Ctx, ...).
+/// This may allocate leading data before the object (see Decl::operator new)
+/// and trailing data after it (see e.g. CXXConstructorDecl::Create).
 class alignas(8) Decl {
 public:
   /// Lists the kind of concrete classes of Decl.
@@ -1416,23 +1429,18 @@ enum class OMPDeclareReductionInitKind;
 enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
 
-/// DeclContext - This is used only as base class of specific decl types that
-/// can act as declaration contexts. These decls are (only the top classes
-/// that directly derive from DeclContext are mentioned, not their subclasses):
+/// A declaration context is a Decl that can contain other declarations.
 ///
-///   TranslationUnitDecl
-///   ExternCContext
-///   NamespaceDecl
-///   TagDecl
-///   OMPDeclareReductionDecl
-///   OMPDeclareMapperDecl
-///   FunctionDecl
-///   ObjCMethodDecl
-///   ObjCContainerDecl
-///   LinkageSpecDecl
-///   ExportDecl
-///   BlockDecl
-///   CapturedDecl
+/// Declarations form a tree rooted at the single TranslationUnitDecl, and
+/// the non-leaf nodes are DeclContexts.
+///
+/// Contexts are important for name lookup, which usually involves querying
+/// several contexts in sequence. (However some local lookup scopes such as
+/// CompoundStmt are not DeclContexts - see clang::Scope).
+///
+/// DeclContext is a second base class for the relevant Decl subclasses,
+/// e.g. FunctionDecl inherits from both DeclaratorDecl and DeclContext.
+/// It is safe to cast<Decl>(&DC), as DeclContexts are always Decls.
 class DeclContext {
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;

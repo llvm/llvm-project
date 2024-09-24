@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Defines the virtual file system interface vfs::FileSystem.
+/// Provides abstract filesystem APIs to decouple from OS-level file access.
+///
+/// This allows replacing access to physical files on disk by in-memory data,
+/// for testing or other purposes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +47,10 @@ class Twine;
 
 namespace vfs {
 
-/// The result of a \p status operation.
+/// Metadata about a file or directory, obtained through a virtual filesystem.
+///
+/// Obtained from a path (VirtualFileSystem::status) or an open File.
+/// This loosely corresponds to a POSIX `struct stat`, but also knows its path.
 class Status {
   std::string Name;
   llvm::sys::fs::UniqueID UID;
@@ -261,7 +267,14 @@ public:
   void no_push() { State->HasNoPushRequest = true; }
 };
 
-/// The virtual file system interface.
+/// A vfs::FileSystem abstracts read-only filesystem access.
+///
+/// The standard implementation (getRealFileSystem()) forwards to the operating
+/// system's filesystem APIs. Others can expose in-memory virtual files, or
+/// wrap an underlying filesystem to change its behavior.
+///
+/// "VFS-clean" code avoids direct OS IO APIs, and can be deployed in more
+/// environments, such as crash reproducers with llvm::FileCollector.
 class FileSystem : public llvm::ThreadSafeRefCountedBase<FileSystem>,
                    public RTTIExtends<FileSystem, RTTIRoot> {
 public:

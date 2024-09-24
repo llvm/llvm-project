@@ -1802,32 +1802,32 @@ enum class ArraySizeModifier;
 enum class ElaboratedTypeKeyword;
 enum class VectorKind;
 
-/// The base class of the type hierarchy.
+/// A type in the program, such as `int` or `vector<bool>`.
+/// This the base class for a hierarchy of types: PointerType, BuiltinType etc.
 ///
-/// A central concept with types is that each type always has a canonical
-/// type.  A canonical type is the type with any typedef names stripped out
-/// of it or the types it references.  For example, consider:
+/// Types appear throughout the AST: expressions and (some) declarations have
+/// types; casts, new-expressions, and template-arguments refer to types, etc.
+/// A Type is not tied to a specific place where it was written (see TypeLoc).
 ///
-///  typedef int  foo;
-///  typedef foo* bar;
-///    'int *'    'foo *'    'bar'
+/// For each distinct type (per language rules) there is one canonical Type.
+/// Compound types are formed as trees of simpler types.
+/// e.g `int*`: a PointerType(pointee = BuiltinType(kind = Int)).
+/// Types are interned: you can compare canonical type equality by pointer.
 ///
-/// There will be a Type object created for 'int'.  Since int is canonical, its
-/// CanonicalType pointer points to itself.  There is also a Type for 'foo' (a
-/// TypedefType).  Its CanonicalType pointer points to the 'int' Type.  Next
-/// there is a PointerType that represents 'int*', which, like 'int', is
-/// canonical.  Finally, there is a PointerType type for 'foo*' whose canonical
-/// type is 'int*', and there is a TypedefType for 'bar', whose canonical type
-/// is also 'int*'.
+/// There are also non-canonical "sugar" types, which also describe e.g. what
+/// typedef was used. For example:
 ///
-/// Non-canonical types are useful for emitting diagnostics, without losing
-/// information about typedefs being used.  Canonical types are useful for type
-/// comparisons (they allow by-pointer equality tests) and useful for reasoning
-/// about whether something has a particular form (e.g. is a function type),
-/// because they implicitly, recursively, strip all typedefs out of a type.
+///   using Integer = int; // BuiltinType(kind = int)
+///   Integer* x;          // PointerType(pointee = TypedefType(decl = Integer))
 ///
-/// Types, once created, are immutable.
+/// The Type obtained from the VarDecl for x reflects how that declaration was
+/// written. This is useful for diagnostic messages and so on.
+/// Each Type has a pointer to its canonical type, and these should be used for
+/// semantic checks: are two types equal, is this a function type, etc.
 ///
+/// All types are allocated within the ASTContext, interned, and immutable.
+/// For compactness, qualifiers (`const int`) do not create distinct Types.
+/// See QualType - essentially a Type* with cv-qualifiers stored in low bits. 
 class alignas(TypeAlignment) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {

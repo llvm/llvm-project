@@ -648,18 +648,54 @@ public:
 /// instances.
 using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 
-/// This class handles loading and caching of source files into memory.
+/// The SourceManager describes the compiler's view of source code.
 ///
-/// This object owns the MemoryBuffer objects for all of the loaded
-/// files and assigns unique FileID's for each unique \#include chain.
+/// This includes:
+///   - sources before preprocessing: raw code from disk
+///   - code after preprocessing e.g. expanded from an `assert()` macro
+///   - the relationship between the two, e.g. where the `assert()` was written
 ///
-/// The SourceManager can be queried for information about SourceLocation
-/// objects, turning them into either spelling or expansion locations. Spelling
-/// locations represent where the bytes corresponding to a token came from and
-/// expansion locations represent where the location is in the user's view. In
-/// the case of a macro expansion, for example, the spelling location indicates
-/// where the expanded token came from and the expansion location specifies
-/// where it was expanded.
+/// SourceManager is designed to represent this information compactly. 
+/// AST nodes hold SourceLocations pointing at tokens that were parsed,
+/// so that diagnostics can point to relevant source code (including macros).
+/// A SourceLocation is a 32-bit integer, and is only meaningful together with
+/// the SourceManager which maintains the tables needed to decode it.
+///
+/// The SourceManager sits above the FileManager, which reads source files and
+/// exposes them as FileEntrys.
+/// SourceManager does not generally know about tokens or AST nodes, the lexer
+/// and parser are layered above SourceManager.
+/// 
+/// ====== SourceLocations, FileIDs, and SLocEntrys =======
+///
+/// A SourceLocation can point at any byte of code. Rather than store
+/// (file, offset) pairs, it is a single offset into a buffer of all files
+/// concatenated together.
+///
+/// [--file1--][----file2----][file3]
+///               ^
+/// This buffer does not exist in memory. Instead SourceManager keeps an array
+/// of SLocEntry objects, each describing one file and its offset in the buffer.
+/// Each entry is assigned a FileID, and SourceManager can encode/decode a
+/// SourceLocation into a (FileID, file offset) pair: see getDeomposedLoc().
+///
+/// The SLocEntry holds the cached source code, and preprocessing metadata:
+/// the SourceLocation where the file was #included.
+///
+/// SourceLocations can also point at code produced by macro expansion.
+/// To achieve this, every macro expansion has its own SLocEntry and FileID.
+///
+/// [--file1--][----file2----][expn of INT_MAX][file3][another expn of INT_MAX]
+///                                ^
+/// Again, the expanded code does not exist in memory, only as address space.
+/// In this case, the SLocEntry stores two SourceLocations:
+///  - expansion location: where the macro was used (i.e. the text "INT_MAX")
+///  - spelling location: the macro's definition (i.e. the text "2147483647")
+/// Either or both may be relevant to the user.
+/// See get[Immediate]ExpansionRange and get[Immediate]SpellingLoc.
+///
+/// Nested macros are also handled by this scheme: e.g. the expansion location
+/// may itself be inside a macro expansion.
 class SourceManager : public RefCountedBase<SourceManager> {
   /// DiagnosticsEngine object.
   DiagnosticsEngine &Diag;

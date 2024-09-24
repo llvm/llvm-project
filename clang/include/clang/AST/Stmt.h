@@ -79,8 +79,24 @@ enum class StringLiteralKind;
 // AST classes for statements.
 //===----------------------------------------------------------------------===//
 
-/// Stmt - This represents one statement.
+/// A statement or expression in the program.
 ///
+/// This is the base for the hierarchy of statements (ForStmt, ReturnStmt...)
+/// as well as expressions (Expr, CastExpr, IntegerLiteral...).
+/// Classing expressions as Stmt allows them to appear as statements without
+/// needing an extra "expression-statement" node.
+///
+/// Statements can have children and so form trees. e.g. `while (i>0) i--;`
+///
+///   WhileStmt
+///   |-BinaryOperator >
+///   | |-DeclRefExpr i
+///   | `-IntegerLiteral 0
+///   `-UnaryOperator --
+///       DeclRefExpr i
+///
+/// These trees are usually rooted at function bodies, and attach to the rest
+/// of the AST via FunctionDecls.
 class alignas(void *) Stmt {
 public:
   enum StmtClass {
