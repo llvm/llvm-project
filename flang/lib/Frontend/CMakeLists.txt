@@ -35,6 +35,7 @@ add_flang_library(flangFrontend
   FIRSupport
   FIRBuilder
   FIRCodeGen
+  FIRPasses
   FIRTransforms
   HLFIRDialect
   HLFIRTransforms

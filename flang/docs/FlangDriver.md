@@ -521,7 +521,7 @@ e.g. during the semantic checks.
 ## FIR Optimizer Pass Pipeline Extension Points
 
 The default FIR optimizer pass pipeline `createDefaultFIROptimizerPassPipeline`
-in `flang/include/flang/Tools/CLOptions.inc` contains extension point callback
+in `flang/lib/Optimizer/Passes/Pipelines.cpp` contains extension point callback
 invocations `invokeFIROptEarlyEPCallbacks`, `invokeFIRInlinerCallback`, and
 `invokeFIROptLastEPCallbacks` for Flang drivers to be able to insert additonal
 passes at different points of the default pass pipeline. An example use of these

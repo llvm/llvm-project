@@ -20,6 +20,7 @@ CUFAttrs
 CUFDialect
 FIRDialect
 FIRDialectSupport
+FIRPasses
 FIRSupport
 FIRTransforms
 FIRBuilder

@@ -12,12 +12,14 @@ target_link_libraries(tco PRIVATE
   FIRCodeGen
   FIRDialect
   FIRDialectSupport
+  FIRPasses
   FIRSupport
   FIRTransforms
   FIRBuilder
   HLFIRDialect
   HLFIRTransforms
   FlangOpenMPTransforms
+  FortranCommon
   ${dialect_libs}
   ${extension_libs}
   MLIRIR
