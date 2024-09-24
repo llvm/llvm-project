@@ -121,10 +121,8 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
 }
 
 static bool isNoexcept(const FunctionDecl *FD) {
-  const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>())
-    return true;
-  return false;
+  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+  return FPT && (FPT->isNothrow() || FD->hasAttr<NoThrowAttr>());
 }
 
 // This list is probably incomplete.
@@ -1028,9 +1026,11 @@ private:
             return;
           }
         }
-        // If the callee is both noreturn and noexcept, it presumably
+        // If the callee is both `noreturn` and `noexcept`, it presumably
         // terminates. Ignore it for the purposes of effect analysis.
-        if (FD->isNoReturn() && isNoexcept(FD))
+        // If not C++, `noreturn` alone is sufficient.
+        if (FD->isNoReturn() &&
+            (!Outer.S.getLangOpts().CPlusPlus || isNoexcept(FD)))
           return;
       }
 
