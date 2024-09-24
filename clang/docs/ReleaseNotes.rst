@@ -403,6 +403,7 @@ Bug Fixes to C++ Support
 - Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
+- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
