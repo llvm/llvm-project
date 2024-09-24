@@ -7,14 +7,11 @@
 define void @foo(ptr byval(%struct4bytes) %p0, ; --> R0
                  ptr byval(%struct20bytes) %p1 ; --> R1,R2,R3, [SP+0 .. SP+8)
 ) {
-;CHECK:  sub  sp, sp, #16
-;CHECK:  push  {r11, lr}
-;CHECK:  add  r12, sp, #8
-;CHECK:  stm  r12, {r0, r1, r2, r3}
-;CHECK:  add  r0, sp, #12
-;CHECK:  bl  useInt
-;CHECK:  pop  {r11, lr}
-;CHECK:  add  sp, sp, #16
+;CHECK:  sub     sp, sp, #16
+;CHECK:  stm     sp, {r0, r1, r2, r3}
+;CHECK:  add     r0, sp, #4
+;CHECK:  add     sp, sp, #16
+;CHECK:  b       useInt
 
   %1 = ptrtoint ptr %p1 to i32
   tail call void @useInt(i32 %1)
