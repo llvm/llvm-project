@@ -116,13 +116,10 @@ static SmallVector<llvm::OperandBundleDef>
 convertOperandBundles(OperandRangeRange bundleOperands,
                       ArrayRef<std::string> bundleTags,
                       LLVM::ModuleTranslation &moduleTranslation) {
-  assert(bundleOperands.size() == bundleTags.size() &&
-         "operand bundles and tags do not match");
-
   SmallVector<llvm::OperandBundleDef> bundles;
   bundles.reserve(bundleOperands.size());
 
-  for (auto [operands, tag] : llvm::zip(bundleOperands, bundleTags))
+  for (auto [operands, tag] : llvm::zip_equal(bundleOperands, bundleTags))
     bundles.push_back(convertOperandBundle(operands, tag, moduleTranslation));
   return bundles;
 }
