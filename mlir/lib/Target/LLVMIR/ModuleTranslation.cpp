@@ -195,7 +195,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
@@ -205,7 +204,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-P" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutGlobalMemorySpaceKey) {
@@ -215,7 +213,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-G" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
@@ -225,7 +222,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-A" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutStackAlignmentKey) {
@@ -235,7 +231,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (alignment == 0)
         continue;
       layoutStream << "-S" << alignment;
-      layoutStream.flush();
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;
@@ -293,7 +288,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     if (failed(result))
       return failure();
   }
-  layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
   if (layoutSpec.starts_with("-"))
     layoutSpec = layoutSpec.drop_front();
@@ -1830,21 +1824,6 @@ LogicalResult ModuleTranslation::createIdentMetadata() {
   return success();
 }
 
-LogicalResult ModuleTranslation::createCommandlineMetadata() {
-  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
-          LLVMDialect::getCommandlineAttrName())) {
-    StringRef cmdLine = attr;
-    llvm::LLVMContext &ctx = llvmModule->getContext();
-    llvm::NamedMDNode *nmd = llvmModule->getOrInsertNamedMetadata(
-        LLVMDialect::getCommandlineAttrName());
-    llvm::MDNode *md =
-        llvm::MDNode::get(ctx, llvm::MDString::get(ctx, cmdLine));
-    nmd->addOperand(md);
-  }
-
-  return success();
-}
-
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -1997,8 +1976,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
   if (failed(translator.createIdentMetadata()))
-    return nullptr;
-  if (failed(translator.createCommandlineMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.

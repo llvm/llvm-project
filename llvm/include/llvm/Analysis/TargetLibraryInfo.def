@@ -2067,6 +2067,21 @@ TLI_DEFINE_ENUM_INTERNAL(remquol)
 TLI_DEFINE_STRING_INTERNAL("remquol")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl, Ptr)
 
+/// double fdim(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(fdim)
+TLI_DEFINE_STRING_INTERNAL("fdim")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl)
+
+/// float fdimf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(fdimf)
+TLI_DEFINE_STRING_INTERNAL("fdimf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt)
+
+/// long double fdiml(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(fdiml)
+TLI_DEFINE_STRING_INTERNAL("fdiml")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)
 TLI_DEFINE_STRING_INTERNAL("remove")

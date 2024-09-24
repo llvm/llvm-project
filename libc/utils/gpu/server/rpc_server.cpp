@@ -392,6 +392,17 @@ rpc_status_t handle_server_impl(
     });
     break;
   }
+  case RPC_SYSTEM: {
+    uint64_t sizes[lane_size] = {0};
+    void *args[lane_size] = {nullptr};
+    port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          system(reinterpret_cast<const char *>(args[id])));
+      delete[] reinterpret_cast<uint8_t *>(args[id]);
+    });
+    break;
+  }
   case RPC_NOOP: {
     port->recv([](rpc::Buffer *) {});
     break;

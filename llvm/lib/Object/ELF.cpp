@@ -9,6 +9,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
@@ -980,7 +981,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
   return SecToRelocMap;
 }
 
-template class llvm::object::ELFFile<ELF32LE>;
-template class llvm::object::ELFFile<ELF32BE>;
-template class llvm::object::ELFFile<ELF64LE>;
-template class llvm::object::ELFFile<ELF64BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64BE>;
