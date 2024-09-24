@@ -112,7 +112,7 @@ class Destination {
 public:
   virtual ~Destination() = default;
   virtual Error emitEntry(const TelemetryInfo *Entry) = 0;
-  virtual std::string name() const = 0;
+  virtual llvm::StringLiteral name() const = 0;
 };
 
 /// This class is the main interaction point between any LLVM tool

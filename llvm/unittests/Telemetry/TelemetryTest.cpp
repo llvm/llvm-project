@@ -233,8 +233,8 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
 //    + where to send the data
 //    + in what form
 
-const std::string STRING_DEST("STRING");
-const std::string JSON_DEST("JSON");
+static constexpr llvm::StringLiteral STRING_DEST("STRING");
+static constexpr llvm::StringLiteral JSON_DEST("JSON");
 
 // This Destination sends data to a std::string given at ctor.
 class StringDestination : public Destination {
@@ -269,7 +269,7 @@ public:
     return Error::success();
   }
 
-  std::string name() const override { return STRING_DEST; }
+  llvm::StringLiteral name() const override { return STRING_DEST; }
 
 private:
   // Returns a copy of the given entry, but with some fields sanitized.
@@ -315,7 +315,7 @@ public:
                                    inconvertibleErrorCode());
   }
 
-  std::string name() const override { return JSON_DEST; }
+  llvm::StringLiteral name() const override { return JSON_DEST; }
 
 private:
   // Returns a copy of the given entry, but with some fields sanitized.
@@ -356,10 +356,10 @@ public:
     for (const std::string &Dest : config->AdditionalDestinations) {
       // The destination(s) are ALSO defined by vendor, so it should understand
       // what the name of each destination signifies.
-      if (Dest == JSON_DEST) {
+      if (Dest == JSON_DEST.str()) {
         Telemeter->addDestination(new vendor_code::JsonStreamDestination(
             CurrentContext->SanitizeData));
-      } else if (Dest == STRING_DEST) {
+      } else if (Dest == STRING_DEST.str()) {
         Telemeter->addDestination(new vendor_code::StringDestination(
             CurrentContext->SanitizeData, CurrentContext->Buffer));
       } else {
@@ -560,8 +560,8 @@ TEST(TelemetryTest, TelemetryEnabled) {
   std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
 
   // Add some destinations
-  Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
-  Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST);
+  Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST.str());
+  Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
   auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
 
@@ -642,8 +642,8 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
 
   // Add some destinations
-  Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST);
-  Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST);
+  Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST.str());
+  Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
   auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
 
