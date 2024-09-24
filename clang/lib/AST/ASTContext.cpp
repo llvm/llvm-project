@@ -1184,6 +1184,13 @@ ASTContext::getTypePackElementDecl() const {
   return TypePackElementDecl;
 }
 
+BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
+  if (!BuiltinCommonTypeDecl)
+    BuiltinCommonTypeDecl = buildBuiltinTemplateDecl(
+        BTK__builtin_common_type, getBuiltinCommonTypeName());
+  return BuiltinCommonTypeDecl;
+}
+
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,
                                             RecordDecl::TagKind TK) const {
   SourceLocation Loc;
