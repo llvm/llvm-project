@@ -102,49 +102,49 @@ program sample
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable x expected to be assigned in the second statement of atomic capture construct
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
         v = x
         b = b + 1
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable x expected to be assigned in the second statement of atomic capture construct
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
         v = x
         b = 10
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Updated variable x expected to be captured in the second statement of atomic capture construct
+    !ERROR: Updated variable/array element/derived-type component x expected to be captured in the second statement of ATOMIC CAPTURE construct
         x = x + 10
         v = b
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Invalid atomic capture construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]
+    !ERROR: Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]
         v = 1
         x = 4
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable z%y expected to be assigned in the second statement of atomic capture construct
+    !ERROR: Captured variable/array element/derived-type component z%y expected to be assigned in the second statement of ATOMIC CAPTURE construct
         x = z%y
         z%m = z%m + 1.0
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Updated variable z%m expected to be captured in the second statement of atomic capture construct
+    !ERROR: Updated variable/array element/derived-type component z%m expected to be captured in the second statement of ATOMIC CAPTURE construct
         z%m = z%m + 1.0
         x = z%y
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Captured variable y(2) expected to be assigned in the second statement of atomic capture construct
+    !ERROR: Captured variable/array element/derived-type component y(2) expected to be assigned in the second statement of ATOMIC CAPTURE construct
         x = y(2)
         y(1) = y(1) + 1
     !$omp end atomic
 
     !$omp atomic capture
-    !ERROR: Updated variable y(1) expected to be captured in the second statement of atomic capture construct
+    !ERROR: Updated variable/array element/derived-type component y(1) expected to be captured in the second statement of ATOMIC CAPTURE construct
         y(1) = y(1) + 1
         x = y(2)
     !$omp end atomic

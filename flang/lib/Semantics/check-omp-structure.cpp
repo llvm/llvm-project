@@ -1997,24 +1997,22 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
   if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
     CheckAtomicCaptureStmt(stmt1);
     if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
-      // Atomic capture construct is of the form [capture-stmt, update-stmt]
+      // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
       CheckAtomicUpdateStmt(stmt2);
     } else {
-      // Atomic capture construct is of the form [capture-stmt, write-stmt]
+      // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
       CheckAtomicWriteStmt(stmt2);
     }
     auto *v{stmt2Var.typedExpr.get()};
     auto *e{stmt1Expr.typedExpr.get()};
     if (v && e && !(v->v == e->v)) {
       context_.Say(stmt1Expr.source,
-          "Captured variable %s "
-          "expected to be assigned in the second statement of "
-          "atomic capture construct"_err_en_US,
+          "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
           stmt1Expr.source);
     }
   } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
       Fortran::semantics::checkForSingleVariableOnRHS(stmt2)) {
-    // Atomic capture construct is of the form [update-stmt, capture-stmt]
+    // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
     CheckAtomicUpdateStmt(stmt1);
     CheckAtomicCaptureStmt(stmt2);
     // Variable updated in stmt1 should be captured in stmt2
@@ -2022,16 +2020,12 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
     auto *e{stmt2Expr.typedExpr.get()};
     if (v && e && !(v->v == e->v)) {
       context_.Say(stmt1Var.GetSource(),
-          "Updated variable %s "
-          "expected to be captured in the second statement of "
-          "atomic capture construct"_err_en_US,
+          "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
           stmt1Var.GetSource());
     }
   } else {
     context_.Say(stmt1Expr.source,
-        "Invalid atomic capture construct statements. "
-        "Expected one of [update-stmt, capture-stmt], "
-        "[capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
+        "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
   }
 }
 
