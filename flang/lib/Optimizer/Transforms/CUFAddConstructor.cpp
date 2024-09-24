@@ -1,13 +1,8 @@
-//===- CUFAddConstructor.cpp ------------------------------------*- C++ -*-===//
+//===-- CUFAddConstructor.cpp ---------------------------------------------===//
 //
-// Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-//
-// NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-// property and proprietary rights in and to this material, related
-// documentation and any modifications thereto. Any use, reproduction,
-// disclosure or distribution of this material and related documentation
-// without an express license agreement from NVIDIA CORPORATION or
-// its affiliates is strictly prohibited.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
