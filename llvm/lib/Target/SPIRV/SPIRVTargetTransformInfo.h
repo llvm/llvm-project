@@ -24,6 +24,7 @@
 namespace llvm {
 class SPIRVTTIImpl : public BasicTTIImplBase<SPIRVTTIImpl> {
   using BaseT = BasicTTIImplBase<SPIRVTTIImpl>;
+  using TTI = TargetTransformInfo;
 
   friend BaseT;
 
@@ -37,6 +38,15 @@ public:
   explicit SPIRVTTIImpl(const SPIRVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
+
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
+    // SPIR-V natively supports OpBitcount, per 3.53.14 in the spec, as such it
+    // is reasonable to assume the Op is fast / preferable to the expanded loop.
+    // Furthermore, this prevents information being lost if transforms are
+    // applied to SPIR-V before lowering to a concrete target.
+    assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+    return TTI::PSK_FastHardware;
+  }
 };
 
 } // namespace llvm
