@@ -979,21 +979,20 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       MIB.buildBitcast(Dst, PromotedExtract);
       MI.eraseFromParent();
       return true;
-    } else {
-      // We can't slide this mask vector up indexed by its i1 elements.
-      // This poses a problem when we wish to insert a scalable vector which
-      // can't be re-expressed as a larger type. Just choose the slow path and
-      // extend to a larger type, then truncate back down.
-      LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
-      LLT ExtLitTy = LitTy.changeElementType(LLT::scalar(8));
-      auto BigZExt = MIB.buildZExt(ExtBigTy, Src);
-      auto ExtractZExt = MIB.buildExtractSubvector(ExtLitTy, BigZExt, Idx);
-      auto SplatZero = MIB.buildSplatVector(
-          ExtLitTy, MIB.buildConstant(ExtLitTy.getElementType(), 0));
-      MIB.buildICmp(CmpInst::Predicate::ICMP_NE, Dst, ExtractZExt, SplatZero);
-      MI.eraseFromParent();
-      return true;
     }
+    // We can't slide this mask vector up indexed by its i1 elements.
+    // This poses a problem when we wish to insert a scalable vector which
+    // can't be re-expressed as a larger type. Just choose the slow path and
+    // extend to a larger type, then truncate back down.
+    LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
+    LLT ExtLitTy = LitTy.changeElementType(LLT::scalar(8));
+    auto BigZExt = MIB.buildZExt(ExtBigTy, Src);
+    auto ExtractZExt = MIB.buildExtractSubvector(ExtLitTy, BigZExt, Idx);
+    auto SplatZero = MIB.buildSplatVector(
+        ExtLitTy, MIB.buildConstant(ExtLitTy.getElementType(), 0));
+    MIB.buildICmp(CmpInst::Predicate::ICMP_NE, Dst, ExtractZExt, SplatZero);
+    MI.eraseFromParent();
+    return true;
   }
 
   // extract_subvector scales the index by vscale if the subvector is scalable,
