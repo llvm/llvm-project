@@ -5424,8 +5424,8 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @sink_splat_select(ptr nocapture %a, i32 signext %x) {
-; CHECK-LABEL: sink_splat_select:
+define void @sink_splat_select_op1(ptr nocapture %a, i32 signext %x) {
+; CHECK-LABEL: sink_splat_select_op1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a2, 1
 ; CHECK-NEXT:    add a2, a0, a2
@@ -5452,6 +5452,44 @@ vector.body:                                      ; preds = %vector.body, %entry
   %load = load <4 x i32>, ptr %0, align 4
   %cond = icmp eq <4 x i32> %load, splat (i32 42)
   %1 = select <4 x i1> %cond, <4 x i32> %broadcast.splat, <4 x i32> %load
+  store <4 x i32> %1, ptr %0, align 4
+  %index.next = add nuw i64 %index, 4
+  %2 = icmp eq i64 %index.next, 1024
+  br i1 %2, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+
+define void @sink_splat_select_op2(ptr nocapture %a, i32 signext %x) {
+; CHECK-LABEL: sink_splat_select_op2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:    li a2, 42
+; CHECK-NEXT:  .LBB118_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmseq.vx v0, v9, a2
+; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
+; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bne a0, a1, .LBB118_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds i32, ptr %a, i64 %index
+  %load = load <4 x i32>, ptr %0, align 4
+  %cond = icmp eq <4 x i32> %load, splat (i32 42)
+  %1 = select <4 x i1> %cond, <4 x i32> %load, <4 x i32> %broadcast.splat
   store <4 x i32> %1, ptr %0, align 4
   %index.next = add nuw i64 %index, 4
   %2 = icmp eq i64 %index.next, 1024
