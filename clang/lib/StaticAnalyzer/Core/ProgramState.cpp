@@ -147,14 +147,11 @@ ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
 typedef ArrayRef<const MemRegion *> RegionList;
 typedef ArrayRef<SVal> ValueList;
 
-ProgramStateRef
-ProgramState::invalidateRegions(RegionList Regions,
-                             const Stmt *S, unsigned Count,
-                             const LocationContext *LCtx,
-                             bool CausedByPointerEscape,
-                             InvalidatedSymbols *IS,
-                             const CallEvent *Call,
-                             RegionAndSymbolInvalidationTraits *ITraits) const {
+ProgramStateRef ProgramState::invalidateRegions(
+    RegionList Regions, const Stmt *S, unsigned Count,
+    const LocationContext *LCtx, bool CausedByPointerEscape,
+    InvalidatedSymbols *IS, const CallEvent *Call,
+    RegionAndSymbolInvalidationTraits *ITraits) const {
   SmallVector<SVal, 8> Values;
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
@@ -163,14 +160,11 @@ ProgramState::invalidateRegions(RegionList Regions,
                            Call, ITraits);
 }
 
-ProgramStateRef
-ProgramState::invalidateRegions(ValueList Values,
-                             const Stmt *S, unsigned Count,
-                             const LocationContext *LCtx,
-                             bool CausedByPointerEscape,
-                             InvalidatedSymbols *IS,
-                             const CallEvent *Call,
-                             RegionAndSymbolInvalidationTraits *ITraits) const {
+ProgramStateRef ProgramState::invalidateRegions(
+    ValueList Values, const Stmt *S, unsigned Count,
+    const LocationContext *LCtx, bool CausedByPointerEscape,
+    InvalidatedSymbols *IS, const CallEvent *Call,
+    RegionAndSymbolInvalidationTraits *ITraits) const {
 
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
