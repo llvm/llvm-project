@@ -784,8 +784,9 @@ getLLVMVisibility(clang::LangOptions::VisibilityFromDLLStorageClassKinds K) {
   llvm_unreachable("unknown option value!");
 }
 
-void setLLVMVisibility(llvm::GlobalValue &GV,
-                       std::optional<llvm::GlobalValue::VisibilityTypes> V) {
+static void
+setLLVMVisibility(llvm::GlobalValue &GV,
+                  std::optional<llvm::GlobalValue::VisibilityTypes> V) {
   if (!V)
     return;
 
@@ -4224,8 +4225,8 @@ TargetMVPriority(const TargetInfo &TI,
 // in the cases of CPUDispatch, this causes issues. This also makes sure we
 // work with internal linkage functions, so that the same function name can be
 // used with internal linkage in multiple TUs.
-llvm::GlobalValue::LinkageTypes getMultiversionLinkage(CodeGenModule &CGM,
-                                                       GlobalDecl GD) {
+static llvm::GlobalValue::LinkageTypes
+getMultiversionLinkage(CodeGenModule &CGM, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->getFormalLinkage() == Linkage::Internal)
     return llvm::GlobalValue::InternalLinkage;

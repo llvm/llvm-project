@@ -6353,6 +6353,17 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (!Seen.contains(".amdhsa_next_free_sgpr"))
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
+  unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
+
+  // Consider the case where the total number of UserSGPRs with trailing
+  // allocated preload SGPRs, is greater than the number of explicitly
+  // referenced SGPRs.
+  if (PreloadLength) {
+    MCContext &Ctx = getContext();
+    NextFreeSGPR = AMDGPUMCExpr::createMax(
+        {NextFreeSGPR, MCConstantExpr::create(UserSGPRCount, Ctx)}, Ctx);
+  }
+
   const MCExpr *VGPRBlocks;
   const MCExpr *SGPRBlocks;
   if (calculateGPRBlocks(getFeatureBits(), ReserveVCC, ReserveFlatScr,
@@ -6405,7 +6416,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
 
   if (isGFX1210Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))

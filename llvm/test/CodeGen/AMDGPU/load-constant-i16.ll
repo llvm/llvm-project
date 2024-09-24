@@ -379,10 +379,11 @@ define amdgpu_kernel void @constant_load_v4i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-LABEL: constant_load_v4i16:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
@@ -471,10 +472,11 @@ define amdgpu_kernel void @constant_load_v8i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX13-LABEL: constant_load_v8i16:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v4, 0
+; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
 ; GFX13-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
