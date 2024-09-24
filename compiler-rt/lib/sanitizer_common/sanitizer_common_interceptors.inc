@@ -1289,9 +1289,9 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   static const int PR_SCHED_CORE = 62;
   static const int PR_SCHED_CORE_GET = 0;
   static const int PR_GET_PDEATHSIG = 2;
-  static const int PR_SET_SECCOMP = 22;
 
 #  if !SANITIZER_ANDROID
+  static const int PR_SET_SECCOMP = 22;
   static const int SECCOMP_MODE_FILTER = 2;
 #  endif
   if (option == PR_SET_VMA && arg2 == 0UL) {
