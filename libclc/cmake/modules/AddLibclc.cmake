@@ -76,6 +76,8 @@ endfunction()
 # Links together one or more bytecode files
 #
 # Arguments:
+# * INTERNALIZE
+#     Set if -internalize flag should be passed when linking
 # * TARGET <string>
 #     Custom target to create
 # * INPUT <string> ...
@@ -84,7 +86,7 @@ endfunction()
 #     List of extra dependencies to inject
 function(link_bc)
   cmake_parse_arguments(ARG
-    ""
+    "INTERNALIZE"
     "TARGET"
     "INPUTS;DEPENDENCIES"
     ${ARGN}
@@ -97,7 +99,7 @@ function(link_bc)
     file( TO_CMAKE_PATH ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.rsp RSP_FILE )
     # Turn it into a space-separate list of input files
     list( JOIN ARG_INPUTS " " RSP_INPUT )
-    file( WRITE ${RSP_FILE} ${RSP_INPUT} )
+    file( GENERATE OUTPUT ${RSP_FILE} CONTENT ${RSP_INPUT} )
     # Ensure that if this file is removed, we re-run CMake
     set_property( DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
       ${RSP_FILE}
@@ -107,7 +109,7 @@ function(link_bc)
 
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND ${llvm-link_exe} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    COMMAND ${llvm-link_exe} $<$<BOOL:${ARG_INTERNALIZE}>:--internalize> -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
@@ -195,6 +197,9 @@ endfunction()
 #      Triple used to compile
 #
 # Optional Arguments:
+# * CLC_INTERNAL
+#     Pass if compiling the internal CLC builtin libraries, which are not
+#     optimized and do not have aliases created.
 #  * LIB_FILES <string> ...
 #      List of files that should be built for this library
 #  * GEN_FILES <string> ...
@@ -205,11 +210,14 @@ endfunction()
 #      Optimization options (for opt)
 #  * ALIASES <string> ...
 #      List of aliases
+#  * INTERNAL_LINK_DEPENDENCIES <string> ...
+#      A list of extra bytecode files to link into the builtin library. Symbols
+#      from these link dependencies will be internalized during linking.
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
-    ""
+    "CLC_INTERNAL"
     "ARCH;TRIPLE;ARCH_SUFFIX"
-    "LIB_FILES;GEN_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES"
+    "LIB_FILES;GEN_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES;INTERNAL_LINK_DEPENDENCIES"
     ${ARGN}
   )
 
@@ -258,12 +266,42 @@ function(add_libclc_builtin_set)
   )
   set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
+  if( NOT bytecode_files )
+    message(FATAL_ERROR "Cannot create an empty builtins library")
+  endif()
+
   set( builtins_link_lib_tgt builtins.link.${ARG_ARCH_SUFFIX} )
-  link_bc(
-    TARGET ${builtins_link_lib_tgt}
-    INPUTS ${bytecode_files}
-    DEPENDENCIES ${builtins_comp_lib_tgt}
-  )
+
+  if( NOT ARG_INTERNAL_LINK_DEPENDENCIES )
+    link_bc(
+      TARGET ${builtins_link_lib_tgt}
+      INPUTS ${bytecode_files}
+      DEPENDENCIES ${builtins_comp_lib_tgt}
+    )
+  else()
+    # If we have libraries to link while internalizing their symbols, we need
+    # two separate link steps; the --internalize flag applies to all link
+    # inputs but the first.
+    set( builtins_link_lib_tmp_tgt builtins.link.pre-deps.${ARG_ARCH_SUFFIX} )
+    link_bc(
+      TARGET ${builtins_link_lib_tmp_tgt}
+      INPUTS ${bytecode_files}
+      DEPENDENCIES ${builtins_comp_lib_tgt}
+    )
+    link_bc(
+      INTERNALIZE
+      TARGET ${builtins_link_lib_tgt}
+      INPUTS $<TARGET_PROPERTY:${builtins_link_lib_tmp_tgt},TARGET_FILE>
+        ${ARG_INTERNAL_LINK_DEPENDENCIES}
+      DEPENDENCIES ${builtins_link_lib_tmp_tgt}
+    )
+  endif()
+
+  # For the CLC internal builtins, exit here - we only optimize the targets'
+  # entry points once we've linked the CLC buitins into them
+  if( ARG_CLC_INTERNAL )
+    return()
+  endif()
 
   set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
 
@@ -331,6 +369,9 @@ endfunction(add_libclc_builtin_set)
 # LIB_FILE_LIST may be pre-populated and is appended to.
 #
 # Arguments:
+# * CLC_INTERNAL
+#     Pass if compiling the internal CLC builtin libraries, which have a
+#     different directory structure.
 # * LIB_ROOT_DIR <string>
 #     Root directory containing target's lib files, relative to libclc root
 #     directory. If not provided, is set to '.'.
@@ -339,7 +380,7 @@ endfunction(add_libclc_builtin_set)
 #     files
 function(libclc_configure_lib_source LIB_FILE_LIST)
   cmake_parse_arguments(ARG
-    ""
+    "CLC_INTERNAL"
     "LIB_ROOT_DIR"
     "DIRS"
     ${ARGN}
@@ -353,7 +394,11 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
   set( source_list )
   foreach( l ${ARG_DIRS} )
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
-      file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
+      if( ARG_CLC_INTERNAL )
+        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
+      else()
+        file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
+      endif()
       file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
       # Prepend the location to give higher priority to
       # specialized implementation
