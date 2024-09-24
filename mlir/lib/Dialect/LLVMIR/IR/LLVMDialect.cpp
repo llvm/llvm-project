@@ -289,6 +289,9 @@ static std::optional<ParseResult> parseOpBundles(
   if (p.parseOptionalLSquare())
     return std::nullopt;
 
+  if (succeeded(p.parseOptionalRSquare()))
+    return success();
+
   auto bundleParser = [&] {
     return parseOneOpBundle(p, opBundleOperands, opBundleOperandTypes,
                             opBundleTags);

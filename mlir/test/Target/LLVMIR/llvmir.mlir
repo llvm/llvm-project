@@ -2631,6 +2631,16 @@ llvm.func @intel_reqd_sub_group_size() attributes {intel_reqd_sub_group_size = 3
 
 llvm.func @foo()
 
+llvm.func @call_with_empty_opbundle() {
+  llvm.call @foo() [] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle() {
+// CHECK-NEXT:   call void @foo()
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
 llvm.func @call_with_opbundle() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.constant(2 : i32) : i32
