@@ -39,22 +39,15 @@ struct CUFAddConstructor
     auto funcTy =
         mlir::LLVM::LLVMFunctionType::get(voidTy, {}, /*isVarArg=*/false);
 
-    llvm::errs() << "DBG1\n";
     // Symbol reference to CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
-    llvm::errs() << "DBG1.1\n";
     auto registerFuncOp = builder.create<mlir::LLVM::LLVMFuncOp>(
         loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
-    llvm::errs() << "DBG1.2\n";
     registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
     auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
         mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
-    llvm::errs() << "DBG1.3\n";
     builder.setInsertionPointToEnd(mod.getBody());
-    // mod.push_back(registerFuncOp);
-    llvm::errs() << "DBG1.4\n";
 
-    llvm::errs() << "DBG2\n";
     // Create the constructor function that cal CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
     auto func = builder.create<mlir::LLVM::LLVMFuncOp>(loc, cudaFortranCtorName,
@@ -63,9 +56,7 @@ struct CUFAddConstructor
     builder.setInsertionPointToStart(func.addEntryBlock(builder));
     builder.create<mlir::LLVM::CallOp>(loc, funcTy, cufRegisterAllocatorRef);
     builder.create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});
-    // mod.push_back(func);
 
-    llvm::errs() << "DBG3\n";
     // Create the llvm.global_ctor with the function.
     // TODO: We might want to have a utility that retrieve it if already created
     // and adds new functions.
