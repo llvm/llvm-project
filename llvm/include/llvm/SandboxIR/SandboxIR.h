@@ -1935,6 +1935,22 @@ public:
   /// \Returns this Instruction's opcode. Note that SandboxIR has its own opcode
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
+
+  // TODO: Missing function getOpcodeName().
+
+  bool isTerminator() const {
+    return cast<llvm::Instruction>(Val)->isTerminator();
+  }
+  bool isUnaryOp() const { return cast<llvm::Instruction>(Val)->isUnaryOp(); }
+  bool isBinaryOp() const { return cast<llvm::Instruction>(Val)->isBinaryOp(); }
+  bool isIntDivRem() const {
+    return cast<llvm::Instruction>(Val)->isIntDivRem();
+  }
+  bool isShift() const { return cast<llvm::Instruction>(Val)->isShift(); }
+  bool isCast() const { return cast<llvm::Instruction>(Val)->isCast(); }
+
+  // TODO: More missing functions
+
   /// Detach this from its parent BasicBlock without deleting it.
   void removeFromParent();
   /// Detach this Value from its parent and delete it.
