@@ -88,7 +88,7 @@ getOrCreateFuncAnalysisState(OneShotAnalysisState &state) {
 
 /// Return the unique ReturnOp that terminates `funcOp`.
 /// Return nullptr if there is no such unique ReturnOp.
-static Operation* getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
+static Operation *getAssumedUniqueReturnOp(FunctionOpInterface funcOp) {
   Operation *returnOp = nullptr;
   for (Block &b : funcOp.getFunctionBody()) {
     auto candidateOp = b.getTerminator();
@@ -127,7 +127,8 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 /// Store function BlockArguments that are equivalent to/aliasing a returned
 /// value in FuncAnalysisState.
 static LogicalResult
-aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &state,
+aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp,
+                             OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
   if (funcOp.getFunctionBody().empty()) {
     // No function body available. Conservatively assume that every tensor
@@ -168,8 +169,8 @@ aliasingFuncOpBBArgsAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &s
   return success();
 }
 
-static void annotateFuncArgAccess(FunctionOpInterface funcOp, int64_t idx, bool isRead,
-                                  bool isWritten) {
+static void annotateFuncArgAccess(FunctionOpInterface funcOp, int64_t idx,
+                                  bool isRead, bool isWritten) {
   OpBuilder b(funcOp.getContext());
   Attribute accessType;
   if (isRead && isWritten) {
@@ -189,10 +190,10 @@ static void annotateFuncArgAccess(FunctionOpInterface funcOp, int64_t idx, bool 
 /// function with unknown ops, we conservatively assume that such ops bufferize
 /// to a read + write.
 static LogicalResult
-funcOpBbArgReadWriteAnalysis(FunctionOpInterface funcOp, OneShotAnalysisState &state,
+funcOpBbArgReadWriteAnalysis(FunctionOpInterface funcOp,
+                             OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
-  for (int64_t idx = 0, e = funcOp.getNumArguments(); idx < e;
-       ++idx) {
+  for (int64_t idx = 0, e = funcOp.getNumArguments(); idx < e; ++idx) {
     // Skip non-tensor arguments.
     if (!isa<TensorType>(funcOp.getArgumentTypes()[idx]))
       continue;
@@ -277,10 +278,8 @@ static void equivalenceAnalysis(FunctionOpInterface funcOp,
 
 /// Return "true" if the given function signature has tensor semantics.
 static bool hasTensorSignature(FunctionOpInterface funcOp) {
-  return llvm::any_of(funcOp.getArgumentTypes(),
-                      llvm::IsaPred<TensorType>) ||
-         llvm::any_of(funcOp.getResultTypes(),
-                      llvm::IsaPred<TensorType>);
+  return llvm::any_of(funcOp.getArgumentTypes(), llvm::IsaPred<TensorType>) ||
+         llvm::any_of(funcOp.getResultTypes(), llvm::IsaPred<TensorType>);
 }
 
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
@@ -310,7 +309,8 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     return funcOp.walk([&](CallOpInterface callOp) -> WalkResult {
       FunctionOpInterface calledFunction = getCalledFunction(callOp);
-      assert(calledFunction && "could not retrieved called FunctionOpInterface");
+      assert(calledFunction &&
+             "could not retrieved called FunctionOpInterface");
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
       if (!hasTensorSignature(calledFunction))
@@ -364,8 +364,8 @@ static void foldMemRefCasts(FunctionOpInterface funcOp) {
     }
   }
 
-  auto newFuncType = FunctionType::get(
-      funcOp.getContext(), funcOp.getArgumentTypes(), resultTypes);
+  auto newFuncType = FunctionType::get(funcOp.getContext(),
+                                       funcOp.getArgumentTypes(), resultTypes);
   funcOp.setType(newFuncType);
 }
 
