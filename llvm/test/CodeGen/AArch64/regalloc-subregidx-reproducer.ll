@@ -30,12 +30,12 @@ define void @reproducer(ptr %ptr, ptr %ptr2, <8 x i32> %vec.arg) {
 ; CHECK-NEXT:    ld1 { v5.2d, v6.2d }, [x8] // 32-byte Folded Reload
 ; CHECK-NEXT:    ushll2 v2.2d, v6.4s, #1
 ; CHECK-NEXT:    ushll v3.2d, v6.2s, #1
-; CHECK-NEXT:    fmov s6, s5                     // <---- this is wrong, it should copy the full 128-bit vector, rather than 32-bit subreg
 ; CHECK-NEXT:    ushll v4.2d, v5.2s, #0
+; CHECK-NEXT:    mov v6.16b, v5.16b
 ; CHECK-NEXT:    ushll2 v5.2d, v0.4s, #1
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #1
-; CHECK-NEXT:    ushll2 v6.2d, v6.4s, #0
 ; CHECK-NEXT:    orr v3.16b, v3.16b, v4.16b
+; CHECK-NEXT:    ushll2 v6.2d, v6.4s, #0
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    orr v2.16b, v2.16b, v6.16b
 ; CHECK-NEXT:    stp q0, q3, [sp, #32] // 32-byte Folded Spill

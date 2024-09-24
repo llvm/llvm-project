@@ -559,7 +559,7 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
     // B) If the meaning is 'if the bits are equal, the sub-registers overlap
     //    fully', then we can define the high bits with an artificial register.
 
-#if 1
+#if 0
     // Early exit if we found a perfect match.
     if (SubRegMask == LaneMask) {
       BestIdx = Idx;
