@@ -996,17 +996,17 @@ mlir::LogicalResult CIRGenFunction::buildSwitchBody(
     for (auto *c : compoundStmt->body()) {
       if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
         res = buildSwitchCase(*switchCase, condType, caseAttrs);
+        lastCaseBlock = builder.getBlock();
       } else if (lastCaseBlock) {
         // This means it's a random stmt following up a case, just
         // emit it as part of previous known case.
         mlir::OpBuilder::InsertionGuard guardCase(builder);
         builder.setInsertionPointToEnd(lastCaseBlock);
         res = buildStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c));
+        lastCaseBlock = builder.getBlock();
       } else {
         llvm_unreachable("statement doesn't belong to any case region, NYI");
       }
-
-      lastCaseBlock = builder.getBlock();
 
       if (res.failed())
         break;

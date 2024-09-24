@@ -288,3 +288,25 @@ void foo() {
 // NOFLAT:   cir.scope {
 // NOFLAT:     cir.label "label"
 // NOFLAT:     %0 = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["agg.tmp0"]
+
+extern "C" void action1();
+extern "C" void action2();
+extern "C" void multiple_non_case(int v) {
+  switch (v) {
+    default:
+        action1();
+      l2:
+        action2();
+        break;
+  }
+}
+
+// NOFLAT: cir.func @multiple_non_case
+// NOFLAT: cir.switch
+// NOFLAT: case (default)
+// NOFLAT: cir.call @action1()
+// NOFLAT: cir.br ^[[BB1:[a-zA-Z0-9]+]]
+// NOFLAT: ^[[BB1]]:
+// NOFLAT: cir.label
+// NOFLAT: cir.call @action2()
+// NOFLAT: cir.break
