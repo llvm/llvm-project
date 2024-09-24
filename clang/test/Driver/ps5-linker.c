@@ -58,14 +58,15 @@
 // Test that <sdk-root>/target/lib is added to library search paths, if it
 // exists and no --sysroot is specified.
 
-// RUN: rm -rf %t.dir && mkdir -p %t.dir/target/lib
+// RUN: rm -rf %t.dir && mkdir %t.dir
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+
+// CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
+// CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
+
+// RUN: mkdir -p %t.dir/target/lib
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-TARGETLIB-SAME: "-L{{.*[/\\]}}target/lib"
-
-// RUN: env SCE_PROSPERO_SDK_DIR=missing %clang --target=x64_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### --sysroot=missing 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-
-// CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
-// CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
