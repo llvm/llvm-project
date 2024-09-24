@@ -418,10 +418,15 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       // correct register value. But not sure the register value alone is
       // adequate to lower the DIExpression. It should be worked out later.
       for (MachineInstr &MI : MBB) {
-        if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
-            !MFI.isFixedObjectIndex(MI.getOperand(0).getIndex()) &&
-            SpillFIs[MI.getOperand(0).getIndex()]) {
-          MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
+        if (MI.isDebugValue()) {
+          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
+          if (MI.getOperand(StackOperandIdx).isFI() &&
+              !MFI.isFixedObjectIndex(
+                  MI.getOperand(StackOperandIdx).getIndex()) &&
+              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
+            MI.getOperand(StackOperandIdx)
+                .ChangeToRegister(Register(), false /*isDef*/);
+          }
         }
       }
     }
