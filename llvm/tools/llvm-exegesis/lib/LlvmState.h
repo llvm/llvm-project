@@ -76,10 +76,8 @@ public:
     return *OpcodeNameToOpcodeIdxMapping;
   };
 
-  const DenseMap<StringRef, MCRegister> &getRegNameToRegNoMapping() const {
-    assert(RegNameToRegNoMapping);
-    return *RegNameToRegNoMapping;
-  }
+  std::optional<MCRegister>
+  getRegisterNumberFromName(StringRef RegisterName) const;
 
 private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>

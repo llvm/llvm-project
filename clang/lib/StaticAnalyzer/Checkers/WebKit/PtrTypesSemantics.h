@@ -20,6 +20,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class QualType;
 class Stmt;
 class Type;
 
@@ -44,6 +45,10 @@ bool isRefCounted(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
+std::optional<bool> isUncounted(const clang::QualType T);
+
+/// \returns true if \p Class is ref-countable AND not ref-counted, false if
+/// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
 
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
@@ -57,8 +62,8 @@ bool isRefType(const std::string &Name);
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
-/// \returns true if \p F returns a ref-counted object, false if not.
-bool isReturnValueRefCounted(const clang::FunctionDecl *F);
+/// \returns true if \p T is RefPtr, Ref, or its variant, false if not.
+bool isRefType(const clang::QualType T);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfRefCounted(const clang::CXXMethodDecl* Method);

@@ -497,16 +497,22 @@ Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
   }
 
   if (isa<IntRecTy>(Ty)) {
-    int64_t Result = 0;
-    for (unsigned i = 0, e = getNumBits(); i != e; ++i)
-      if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
-        Result |= static_cast<int64_t>(Bit->getValue()) << i;
-      else
-        return nullptr;
-    return IntInit::get(getRecordKeeper(), Result);
+    std::optional<int64_t> Result = convertInitializerToInt();
+    if (Result)
+      return IntInit::get(getRecordKeeper(), *Result);
   }
 
   return nullptr;
+}
+
+std::optional<int64_t> BitsInit::convertInitializerToInt() const {
+  int64_t Result = 0;
+  for (unsigned i = 0, e = getNumBits(); i != e; ++i)
+    if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
+      Result |= static_cast<int64_t>(Bit->getValue()) << i;
+    else
+      return std::nullopt;
+  return Result;
 }
 
 Init *
@@ -832,7 +838,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.
@@ -3027,6 +3032,21 @@ Record::getValueAsListOfDefs(StringRef FieldName) const {
   return Defs;
 }
 
+std::vector<const Record *>
+Record::getValueAsListOfConstDefs(StringRef FieldName) const {
+  ListInit *List = getValueAsListInit(FieldName);
+  std::vector<const Record *> Defs;
+  for (const Init *I : List->getValues()) {
+    if (const DefInit *DI = dyn_cast<DefInit>(I))
+      Defs.push_back(DI->getDef());
+    else
+      PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
+                                    FieldName +
+                                    "' list is not entirely DefInit!");
+  }
+  return Defs;
+}
+
 int64_t Record::getValueAsInt(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
@@ -3204,7 +3224,7 @@ Init *RecordKeeper::getNewAnonymousName() {
 // These functions implement the phase timing facility. Starting a timer
 // when one is already running stops the running one.
 
-void RecordKeeper::startTimer(StringRef Name) {
+void RecordKeeper::startTimer(StringRef Name) const {
   if (TimingGroup) {
     if (LastTimer && LastTimer->isRunning()) {
       LastTimer->stopTimer();

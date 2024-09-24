@@ -117,6 +117,8 @@ add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
+  DEPENDS
+    libc.hdr.types.wint_t
 )
 
 add_header_library(
@@ -192,6 +194,9 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
     libc.src.errno.errno
 )
 

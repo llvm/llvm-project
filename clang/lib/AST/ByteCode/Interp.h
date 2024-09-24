@@ -154,13 +154,16 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize);
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize);
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
             const CallExpr *CE, uint32_t BuiltinID);
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
+
+enum class ShiftDir { Left, Right };
 
 /// Checks if the shift operation is legal.
-template <typename LT, typename RT>
+template <ShiftDir Dir, typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
                 unsigned Bits) {
   if (RHS.isNegative()) {
@@ -181,19 +184,21 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       return false;
   }
 
-  if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
-    // operand, and must not overflow the corresponding unsigned type.
-    if (LHS.isNegative()) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-      if (!S.noteUndefinedBehavior())
-        return false;
-    } else if (LHS.toUnsigned().countLeadingZeros() <
-               static_cast<unsigned>(RHS)) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_discards);
-      if (!S.noteUndefinedBehavior())
-        return false;
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      if (LHS.isNegative()) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+        if (!S.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.toUnsigned().countLeadingZeros() <
+                 static_cast<unsigned>(RHS)) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!S.noteUndefinedBehavior())
+          return false;
+      }
     }
   }
 
@@ -237,11 +242,18 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 
+  // Can't be too many elements if the bitwidth of NumElements is lower than
+  // that of Descriptor::MaxArrayElemBytes.
+  if ((NumElements->bitWidth() - NumElements->isSigned()) <
+      (sizeof(Descriptor::MaxArrayElemBytes) * 8))
+    return true;
+
   // FIXME: GH63562
   // APValue stores array extents as unsigned,
   // so anything that is greater that unsigned would overflow when
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
+  assert(MaxElements.isPositive());
   if (NumElements->toAPSInt().getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
       *NumElements > MaxElements) {
@@ -1611,6 +1623,12 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
@@ -1624,6 +1642,12 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
@@ -2382,7 +2406,6 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
-enum class ShiftDir { Left, Right };
 
 template <class LT, class RT, ShiftDir Dir>
 inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
@@ -2419,7 +2442,7 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
     }
   }
 
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
+  if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
     return false;
 
   // Limit the shift amount to Bits - 1. If this happened,
@@ -2924,39 +2947,17 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
-  assert(T);
-  assert(!S.getLangOpts().CPlusPlus23);
+/// Check if the initializer and storage types of a placement-new expression
+/// match.
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize = std::nullopt);
 
-  // C++1y: A constant initializer for an object o [...] may also invoke
-  // constexpr constructors for o and its subobjects even if those objects
-  // are of non-literal class types.
-  //
-  // C++11 missed this detail for aggregates, so classes like this:
-  //   struct foo_t { union { int i; volatile int j; } u; };
-  // are not (obviously) initializable like so:
-  //   __attribute__((__require_constant_initialization__))
-  //   static const foo_t x = {{0}};
-  // because "i" is a subobject with non-literal initialization (due to the
-  // volatile member of the union). See:
-  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
-  // Therefore, we use the C++1y behavior.
-
-  if (S.EvaluatingDecl)
-    return true;
-
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
-      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl)
-    return true;
-
-  const Expr *E = S.Current->getExpr(OpPC);
-  if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
-  else
-    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-  return false;
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
+  const auto &Size = S.Stk.pop<T>();
+  return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
-
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

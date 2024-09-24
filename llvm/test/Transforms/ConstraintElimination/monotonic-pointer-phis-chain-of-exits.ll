@@ -272,3 +272,69 @@ loop.latch:
 exit:
   ret void
 }
+
+declare void @foo()
+
+define i32 @test_latch_exiting1(i32 %N) {
+; CHECK-LABEL: @test_latch_exiting1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_1:%.*]], label [[LOOP]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i32 10
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @foo()
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, %N
+  br i1 %ec, label %exit.1, label %loop
+
+exit.1:
+  ret i32 10
+}
+
+define i32 @test_latch_exiting2(i1 %c, i32 %N) {
+; CHECK-LABEL: @test_latch_exiting2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_2:%.*]], label [[LOOP_HEADER]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i32 10
+; CHECK:       exit.2:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %loop.latch, label %exit.1
+
+loop.latch:
+  call void @foo()
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, %N
+  br i1 %ec, label %exit.2, label %loop.header
+
+exit.1:
+  ret i32 10
+
+exit.2:
+  ret i32 0
+}

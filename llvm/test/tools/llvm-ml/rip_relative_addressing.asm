@@ -59,4 +59,8 @@ mov eax, dword ptr [bar]
 ; CHECK-32: mov eax, dword ptr [bar]
 ; CHECK-64: mov eax, dword ptr [rip + bar]
 
+t10:
+mov ebx, dword ptr [4*eax]
+; CHECK: mov ebx, dword ptr [4*eax]
+
 END

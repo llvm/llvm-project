@@ -100,6 +100,14 @@ std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
           Reloc::Model::Static)));
 }
 
+std::optional<MCRegister>
+LLVMState::getRegisterNumberFromName(StringRef RegisterName) const {
+  auto RegisterIt = RegNameToRegNoMapping->find(RegisterName);
+  if (RegisterIt == RegNameToRegNoMapping->end())
+    return std::nullopt;
+  return RegisterIt->second;
+}
+
 std::unique_ptr<const DenseMap<StringRef, unsigned>>
 LLVMState::createOpcodeNameToOpcodeIdxMapping() const {
   const MCInstrInfo &InstrInfo = getInstrInfo();

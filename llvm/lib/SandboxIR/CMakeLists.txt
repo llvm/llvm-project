@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMSandboxIR
   Pass.cpp
+  PassManager.cpp
   SandboxIR.cpp
   Tracker.cpp
   Type.cpp

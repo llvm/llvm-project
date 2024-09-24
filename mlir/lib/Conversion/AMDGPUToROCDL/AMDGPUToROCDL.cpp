@@ -108,22 +108,23 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       if (wantedVecType.getElementType().isBF16())
         llvmBufferValType = wantedVecType.clone(rewriter.getI16Type());
     if (atomicCmpData) {
-      if (isa<VectorType>(wantedDataType))
-        return gpuOp.emitOpError("vector compare-and-swap does not exist");
       if (auto floatType = dyn_cast<FloatType>(wantedDataType))
         llvmBufferValType = this->getTypeConverter()->convertType(
             rewriter.getIntegerType(floatType.getWidth()));
     }
     if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
+      uint32_t vecLen = dataVector.getNumElements();
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
-      uint32_t totalBits = elemBits * dataVector.getNumElements();
+      uint32_t totalBits = elemBits * vecLen;
+      bool usePackedFp16 =
+          isa_and_present<RawBufferAtomicFaddOp>(*gpuOp) && vecLen == 2;
       if (totalBits > maxVectorOpWidth)
         return gpuOp.emitOpError(
             "Total width of loads or stores must be no more than " +
             Twine(maxVectorOpWidth) + " bits, but we call for " +
             Twine(totalBits) +
             " bits. This should've been caught in validation");
-      if (elemBits < 32) {
+      if (!usePackedFp16 && elemBits < 32) {
         if (totalBits > 32) {
           if (totalBits % 32 != 0)
             return gpuOp.emitOpError("Load or store of more than 32-bits that "
@@ -300,27 +301,35 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
           /*operand_attrs=*/ArrayAttr());
       return success();
     }
-    constexpr int32_t ldsOnlyBitsGfx6789 = ~(0x1f << 8);
-    constexpr int32_t ldsOnlyBitsGfx10 = ~(0x3f << 8);
-    // Left in place in case someone disables the inline ASM path or future
-    // chipsets use the same bit pattern.
-    constexpr int32_t ldsOnlyBitsGfx11 = ~(0x3f << 4);
+    if (chipset.majorVersion < 12) {
+      constexpr int32_t ldsOnlyBitsGfx6789 = ~(0x1f << 8);
+      constexpr int32_t ldsOnlyBitsGfx10 = ~(0x3f << 8);
+      // Left in place in case someone disables the inline ASM path or future
+      // chipsets use the same bit pattern.
+      constexpr int32_t ldsOnlyBitsGfx11 = ~(0x3f << 4);
 
-    int32_t ldsOnlyBits;
-    if (chipset.majorVersion == 11)
-      ldsOnlyBits = ldsOnlyBitsGfx11;
-    else if (chipset.majorVersion == 10)
-      ldsOnlyBits = ldsOnlyBitsGfx10;
-    else if (chipset.majorVersion <= 9)
-      ldsOnlyBits = ldsOnlyBitsGfx6789;
-    else
-      return op.emitOpError(
-                 "don't know how to lower this for chipset major version")
-             << chipset.majorVersion;
+      int32_t ldsOnlyBits;
+      if (chipset.majorVersion == 11)
+        ldsOnlyBits = ldsOnlyBitsGfx11;
+      else if (chipset.majorVersion == 10)
+        ldsOnlyBits = ldsOnlyBitsGfx10;
+      else if (chipset.majorVersion <= 9)
+        ldsOnlyBits = ldsOnlyBitsGfx6789;
+      else
+        return op.emitOpError(
+                   "don't know how to lower this for chipset major version")
+               << chipset.majorVersion;
 
-    Location loc = op->getLoc();
-    rewriter.create<ROCDL::WaitcntOp>(loc, ldsOnlyBits);
-    rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
+      Location loc = op->getLoc();
+      rewriter.create<ROCDL::WaitcntOp>(loc, ldsOnlyBits);
+      rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
+    } else {
+      Location loc = op->getLoc();
+      rewriter.create<ROCDL::WaitDscntOp>(loc, 0);
+      rewriter.create<ROCDL::BarrierSignalOp>(loc, -1);
+      rewriter.replaceOpWithNewOp<ROCDL::BarrierWaitOp>(op, -1);
+    }
+
     return success();
   }
 };
@@ -670,10 +679,19 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   matchAndRewrite(WMMAOp op, WMMAOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    Type outType = typeConverter->convertType(op.getDestD().getType());
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
+
+    // The WMMA operations represent vectors of bf16s as vectors of i16s, so we
+    // need to bitcast bfloats to i16 and then bitcast them back.
+    VectorType rawOutType = outType;
+    if (outType.getElementType().isBF16())
+      rawOutType = outType.clone(rewriter.getI16Type());
 
     std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
 
@@ -681,7 +699,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
 
     OperationState loweredOp(loc, *maybeIntrinsic);
-    loweredOp.addTypes(outType);
+    loweredOp.addTypes(rawOutType);
 
     SmallVector<Value, 4> operands;
     wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedA(),
@@ -693,7 +711,12 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     loweredOp.addOperands(operands);
     Operation *lowered = rewriter.create(loweredOp);
-    rewriter.replaceOp(op, lowered->getResults());
+
+    Operation *maybeCastBack = lowered;
+    if (rawOutType != outType)
+      maybeCastBack =
+          rewriter.create<LLVM::BitcastOp>(loc, outType, lowered->getResult(0));
+    rewriter.replaceOp(op, maybeCastBack->getResults());
 
     return success();
   }
@@ -1032,15 +1055,6 @@ struct ConvertAMDGPUToROCDLPass
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
-  converter.addConversion([](BFloat16Type t) -> Type {
-    return IntegerType::get(t.getContext(), 16);
-  });
-  converter.addConversion([&converter](VectorType t) -> std::optional<Type> {
-    if (!t.getElementType().isBF16())
-      return std::nullopt;
-    return converter.convertType(t.clone(IntegerType::get(t.getContext(), 16)));
-  });
-
   patterns
       .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
            RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,

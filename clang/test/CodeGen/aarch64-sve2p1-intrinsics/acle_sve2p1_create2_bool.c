@@ -33,15 +33,15 @@
 
 // CHECK-LABEL: @test_svcreate2_b(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> poison, <vscale x 16 x i1> [[X0:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], i64 16)
-// CHECK-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[X0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z16test_svcreate2_bu10__SVBool_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> poison, <vscale x 16 x i1> [[X0:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x i1> @llvm.vector.insert.nxv32i1.nxv16i1(<vscale x 32 x i1> [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], i64 16)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[X0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[X1:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]]
 //
 svboolx2_t test_svcreate2_b(svbool_t x0, svbool_t x1) MODE_ATTR
 {

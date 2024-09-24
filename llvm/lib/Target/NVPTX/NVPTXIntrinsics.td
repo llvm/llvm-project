@@ -981,15 +981,17 @@ def INT_NVVM_FABS_D : F_MATH_1<"abs.f64 \t$dst, $src0;", Float64Regs,
 // copysign
 //
 
+def fcopysign_nvptx : SDNode<"NVPTXISD::FCOPYSIGN", SDTFPBinOp>;
+
 def COPYSIGN_F :
     NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src0, Float32Regs:$src1),
               "copysign.f32 \t$dst, $src0, $src1;",
-              [(set Float32Regs:$dst, (fcopysign Float32Regs:$src1, Float32Regs:$src0))]>;
+              [(set Float32Regs:$dst, (fcopysign_nvptx Float32Regs:$src1, Float32Regs:$src0))]>;
 
 def COPYSIGN_D :
     NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src0, Float64Regs:$src1),
               "copysign.f64 \t$dst, $src0, $src1;",
-              [(set Float64Regs:$dst, (fcopysign Float64Regs:$src1, Float64Regs:$src0))]>;
+              [(set Float64Regs:$dst, (fcopysign_nvptx Float64Regs:$src1, Float64Regs:$src0))]>;
 
 //
 // Abs, Neg bf16, bf16x2
@@ -1574,20 +1576,6 @@ def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
           (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN)>;
 def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
           (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
-
-//
-// Bitcast
-//
-
-def INT_NVVM_BITCAST_F2I : F_MATH_1<"mov.b32 \t$dst, $src0;", Int32Regs,
-  Float32Regs, int_nvvm_bitcast_f2i>;
-def INT_NVVM_BITCAST_I2F : F_MATH_1<"mov.b32 \t$dst, $src0;", Float32Regs,
-  Int32Regs, int_nvvm_bitcast_i2f>;
-
-def INT_NVVM_BITCAST_LL2D : F_MATH_1<"mov.b64 \t$dst, $src0;", Float64Regs,
-  Int64Regs, int_nvvm_bitcast_ll2d>;
-def INT_NVVM_BITCAST_D2LL : F_MATH_1<"mov.b64 \t$dst, $src0;", Int64Regs,
-  Float64Regs, int_nvvm_bitcast_d2ll>;
 
 //
 // FNS
@@ -2745,134 +2733,9 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
 
-// rotate builtin support
-
-def ROTATE_B32_HW_IMM
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$src, i32imm:$amt),
-              "shf.l.wrap.b32 \t$dst, $src, $src, $amt;",
-              [(set Int32Regs:$dst,
-                 (int_nvvm_rotate_b32 Int32Regs:$src, (i32 imm:$amt)))]>,
-              Requires<[hasHWROT32]> ;
-
-def ROTATE_B32_HW_REG
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$src, Int32Regs:$amt),
-              "shf.l.wrap.b32 \t$dst, $src, $src, $amt;",
-              [(set Int32Regs:$dst,
-                 (int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt))]>,
-              Requires<[hasHWROT32]> ;
-
-def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, (i32 imm:$amt)),
-          (ROT32imm_sw Int32Regs:$src, imm:$amt, (SUB_FRM_32 node:$amt))>,
-      Requires<[noHWROT32]> ;
-
-def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt),
-          (ROTL32reg_sw Int32Regs:$src, Int32Regs:$amt)>,
-      Requires<[noHWROT32]> ;
-
-let hasSideEffects = false in {
-  def GET_LO_INT64 : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
-    !strconcat("{{\n\t",
-               ".reg .b32 %dummy;\n\t",
-               "mov.b64 \t{$dst,%dummy}, $src;\n\t",
-               "}}"),
-          []> ;
-
-  def GET_HI_INT64 : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
-    !strconcat("{{\n\t",
-               ".reg .b32 %dummy;\n\t",
-               "mov.b64 \t{%dummy,$dst}, $src;\n\t",
-               "}}"),
-          []> ;
-}
-
-let hasSideEffects = false in {
-  def PACK_TWO_INT32
-    : NVPTXInst<(outs Int64Regs:$dst), (ins Int32Regs:$lo, Int32Regs:$hi),
-                "mov.b64 \t$dst, {{$lo, $hi}};", []> ;
-}
-
 def : Pat<(int_nvvm_swap_lo_hi_b64 Int64Regs:$src),
-          (PACK_TWO_INT32 (GET_HI_INT64 Int64Regs:$src),
-                          (GET_LO_INT64 Int64Regs:$src))> ;
-
-// Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
-// no side effects.
-let hasSideEffects = false in {
-  def SHF_L_WRAP_B32_IMM
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_L_WRAP_B32_REG
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_R_WRAP_B32_IMM
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-
-  def SHF_R_WRAP_B32_REG
-    : NVPTXInst<(outs Int32Regs:$dst),
-                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-      Requires<[hasHWROT32]>;
-}
-
-// HW version of rotate 64
-def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),
-          (PACK_TWO_INT32
-            (SHF_L_WRAP_B32_IMM (GET_HI_INT64 Int64Regs:$src),
-                                (GET_LO_INT64 Int64Regs:$src), imm:$amt),
-            (SHF_L_WRAP_B32_IMM (GET_LO_INT64 Int64Regs:$src),
-                                (GET_HI_INT64 Int64Regs:$src), imm:$amt))>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, Int32Regs:$amt),
-          (PACK_TWO_INT32
-            (SHF_L_WRAP_B32_REG (GET_HI_INT64 Int64Regs:$src),
-                                (GET_LO_INT64 Int64Regs:$src), Int32Regs:$amt),
-            (SHF_L_WRAP_B32_REG (GET_LO_INT64 Int64Regs:$src),
-                               (GET_HI_INT64 Int64Regs:$src), Int32Regs:$amt))>,
-      Requires<[hasHWROT32]>;
-
-
-def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, (i32 imm:$amt)),
-          (PACK_TWO_INT32
-            (SHF_R_WRAP_B32_IMM (GET_LO_INT64 Int64Regs:$src),
-                                (GET_HI_INT64 Int64Regs:$src), imm:$amt),
-            (SHF_R_WRAP_B32_IMM (GET_HI_INT64 Int64Regs:$src),
-                                (GET_LO_INT64 Int64Regs:$src), imm:$amt))>,
-      Requires<[hasHWROT32]>;
-
-def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
-          (PACK_TWO_INT32
-            (SHF_R_WRAP_B32_REG (GET_LO_INT64 Int64Regs:$src),
-                                (GET_HI_INT64 Int64Regs:$src), Int32Regs:$amt),
-            (SHF_R_WRAP_B32_REG (GET_HI_INT64 Int64Regs:$src),
-                               (GET_LO_INT64 Int64Regs:$src), Int32Regs:$amt))>,
-      Requires<[hasHWROT32]>;
-
-// SW version of rotate 64
-def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),
-          (ROT64imm_sw Int64Regs:$src, imm:$amt, (SUB_FRM_64 node:$amt))>,
-      Requires<[noHWROT32]>;
-def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, Int32Regs:$amt),
-          (ROTL64reg_sw Int64Regs:$src, Int32Regs:$amt)>,
-      Requires<[noHWROT32]>;
-def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, (i32 imm:$amt)),
-          (ROT64imm_sw Int64Regs:$src, (SUB_FRM_64 node:$amt), imm:$amt)>,
-      Requires<[noHWROT32]>;
-def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
-          (ROTR64reg_sw Int64Regs:$src, Int32Regs:$amt)>,
-      Requires<[noHWROT32]>;
-
+          (V2I32toI64 (I64toI32H Int64Regs:$src),
+                      (I64toI32L Int64Regs:$src))> ;
 
 //-----------------------------------
 // Texture Intrinsics

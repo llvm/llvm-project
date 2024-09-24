@@ -214,12 +214,6 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_NORETURN)
-#define TEST_NORETURN _LIBCPP_NORETURN
-#else
-#define TEST_NORETURN [[noreturn]]
-#endif
-
 #if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
   (!(TEST_STD_VER > 14 || \
     (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))

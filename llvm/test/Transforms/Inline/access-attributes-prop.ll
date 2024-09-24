@@ -559,3 +559,24 @@ define void @prop_byval_readonly(ptr %p) {
   call void @foo_byval_readonly(ptr %p)
   ret void
 }
+
+define ptr @caller_bad_param_prop(ptr %p1, ptr %p2, i64 %x) {
+; CHECK-LABEL: define {{[^@]+}}@caller_bad_param_prop
+; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr [[P1]](i64 [[X]], ptr [[P2]])
+; CHECK-NEXT:    ret ptr [[TMP1]]
+;
+  %1 = call ptr %p1(i64 %x, ptr %p2)
+  %2 = call ptr @callee_bad_param_prop(ptr %1)
+  ret ptr %2
+}
+
+define ptr @callee_bad_param_prop(ptr readonly %x) {
+; CHECK-LABEL: define {{[^@]+}}@callee_bad_param_prop
+; CHECK-SAME: (ptr readonly [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = tail call ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 -1)
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = tail call ptr @llvm.ptrmask(ptr %x, i64 -1)
+  ret ptr %r
+}

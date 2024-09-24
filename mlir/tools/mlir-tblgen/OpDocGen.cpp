@@ -162,7 +162,7 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
           os << effect << " on " << rec->getValueAsString("resource");
         });
         os << "}";
-        effects.insert(backticks(os.str()));
+        effects.insert(backticks(effectStr));
         name.append(llvm::formatv(" ({0})", traitName).str());
       }
       interfaces.insert(backticks(name));
@@ -433,7 +433,7 @@ static void maybeNest(bool nest, llvm::function_ref<void(raw_ostream &os)> fn,
   std::string str;
   llvm::raw_string_ostream ss(str);
   fn(ss);
-  for (StringRef x : llvm::split(ss.str(), "\n")) {
+  for (StringRef x : llvm::split(str, "\n")) {
     if (nest && x.starts_with("#"))
       os << "#";
     os << x << "\n";

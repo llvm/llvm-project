@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -620,6 +621,7 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+  SmallPtrSet<JITDylib const *, 8> InitializedDylib;
 };
 
 } // End namespace orc

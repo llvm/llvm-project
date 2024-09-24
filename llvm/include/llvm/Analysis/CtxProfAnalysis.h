@@ -9,7 +9,6 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -118,6 +117,9 @@ public:
 
   /// Get the instruction instrumenting a BB, or nullptr if not present.
   static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
+
+  /// Get the step instrumentation associated with a `select`
+  static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
 };
 
 class CtxProfAnalysisPrinterPass

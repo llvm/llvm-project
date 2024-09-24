@@ -67,6 +67,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_widen_gep_and_select'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -77,7 +78,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>, vp<[[VF]]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
@@ -160,12 +161,11 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %for.body ] (extra operand: vp<[[RED_EX]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -244,6 +244,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -258,7 +259,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
 ; CHECK-NEXT: Successor(s): pred.udiv
@@ -442,12 +443,11 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %for.body ] (extra operand: vp<[[RED_EX]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT:}
 
 entry:
@@ -569,11 +569,14 @@ declare float @llvm.fmuladd.f32(float, float, float)
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: Checking a loop in 'print_expand_scev'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.*]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:   IR %div = udiv i64 %y, 492802768830814060
+; CHECK-NEXT:   IR %inc = add i64 %div, 1
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT: No successors
@@ -586,7 +589,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     WIDEN-INDUCTION\l" +
 ; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
-; CHECK-NEXT:     "  ir<%v2>, vp<[[EXP_SCEV]]>
+; CHECK-NEXT:     "  ir<%v2>, vp<[[EXP_SCEV]]>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add nuw ir<%v2>, ir<1>
@@ -633,6 +636,7 @@ loop.exit:
 define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-LABEL: Checking a loop in 'print_exit_value'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
@@ -643,7 +647,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
@@ -662,12 +666,11 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i32 %lcssa = vp<[[EXIT]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -1033,6 +1036,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -1040,7 +1044,6 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Live-out i16 %for.1 = vp<[[RESUME_P]]>
-; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR_RESULT]]>
 ; CHECK-NEXT: }
 ;
 entry:

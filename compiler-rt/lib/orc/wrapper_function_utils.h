@@ -338,10 +338,11 @@ template <typename... SPSTagTs>
 class WrapperFunction<void(SPSTagTs...)>
     : private WrapperFunction<SPSEmpty(SPSTagTs...)> {
 public:
-  template <typename... ArgTs>
-  static Error call(const void *FnTag, const ArgTs &...Args) {
+  template <typename DispatchFn, typename... ArgTs>
+  static Error call(DispatchFn &&Dispatch, const ArgTs &...Args) {
     SPSEmpty BE;
-    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(FnTag, BE, Args...);
+    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(
+        std::forward<DispatchFn>(Dispatch), BE, Args...);
   }
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;

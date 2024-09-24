@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "common.h"
+#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 #include "gtest/gtest.h"
 
@@ -98,13 +100,14 @@ __orc_rt_jit_dispatch(__orc_rt_Opaque *Ctx, const void *FnTag,
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionCallVoidNoopAndHandle) {
-  EXPECT_FALSE(!!WrapperFunction<void()>::call((void *)&voidNoopWrapper));
+  EXPECT_FALSE(
+      !!WrapperFunction<void()>::call(JITDispatch((void *)&voidNoopWrapper)));
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAddWrapperAndHandle) {
   int32_t Result;
   EXPECT_FALSE(!!WrapperFunction<int32_t(int32_t, int32_t)>::call(
-      (void *)&addWrapper, Result, 1, 2));
+      JITDispatch((void *)&addWrapper), Result, 1, 2));
   EXPECT_EQ(Result, (int32_t)3);
 }
 
@@ -128,7 +131,8 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionMethodCallAndHandleRet) {
   int32_t Result;
   AddClass AddObj(1);
   EXPECT_FALSE(!!WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::call(
-      (void *)&addMethodWrapper, Result, ExecutorAddr::fromPtr(&AddObj), 2));
+      JITDispatch((void *)&addMethodWrapper), Result,
+      ExecutorAddr::fromPtr(&AddObj), 2));
   EXPECT_EQ(Result, (int32_t)3);
 }
 

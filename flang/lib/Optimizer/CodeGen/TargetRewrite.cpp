@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -113,13 +114,6 @@ public:
         fir::getTuneCPU(mod));
 
     setMembers(specifics.get(), &rewriter, &*dl);
-
-    // We may need to call stacksave/stackrestore later, so
-    // create the FuncOps beforehand.
-    fir::FirOpBuilder builder(rewriter, mod);
-    builder.setInsertionPointToStart(mod.getBody());
-    stackSaveFn = fir::factory::getLlvmStackSave(builder);
-    stackRestoreFn = fir::factory::getLlvmStackRestore(builder);
 
     // Perform type conversion on signatures and call sites.
     if (mlir::failed(convertTypes(mod))) {
@@ -1245,19 +1239,19 @@ private:
   // Inserts a call to llvm.stacksave at the current insertion
   // point and the given location. Returns the call's result Value.
   inline mlir::Value genStackSave(mlir::Location loc) {
-    return rewriter->create<fir::CallOp>(loc, stackSaveFn).getResult(0);
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackSave(loc);
   }
 
   // Inserts a call to llvm.stackrestore at the current insertion
   // point and the given location and argument.
   inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
-    rewriter->create<fir::CallOp>(loc, stackRestoreFn, mlir::ValueRange{sp});
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackRestore(loc, sp);
   }
 
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;
   mlir::DataLayout *dataLayout = nullptr;
-  mlir::func::FuncOp stackSaveFn = nullptr;
-  mlir::func::FuncOp stackRestoreFn = nullptr;
 };
 } // namespace

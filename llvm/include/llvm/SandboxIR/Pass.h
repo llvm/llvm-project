@@ -37,9 +37,11 @@ public:
     Pass.print(OS);
     return OS;
   }
-  void print(raw_ostream &OS) const { OS << Name; }
-  LLVM_DUMP_METHOD void dump() const;
+  virtual void print(raw_ostream &OS) const { OS << Name; }
+  LLVM_DUMP_METHOD virtual void dump() const;
 #endif
+  /// Similar to print() but adds a newline. Used for testing.
+  void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }
 };
 
 /// A pass that runs on a sandbox::Function.

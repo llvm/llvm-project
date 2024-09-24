@@ -98,38 +98,3 @@ int uafAndCallsFooWithEmptyReturn(void) {
   fooWithEmptyReturn(12);
   return *x; // expected-warning {{Use of memory after it is freed}}
 }
-
-
-// If we inline any of the malloc-family functions, the checker shouldn't also
-// try to do additional modeling.
-char *strndup(const char *str, size_t n) {
-  if (!str)
-    return 0;
-  
-  // DO NOT FIX. This is to test that we are actually using the inlined
-  // behavior!
-  if (n < 5)
-    return 0;
-  
-  size_t length = strlen(str);
-  if (length < n)
-    n = length;
-  
-  char *result = malloc(n + 1);
-  memcpy(result, str, n);
-  result[n] = '\0';
-  return result;
-}
-
-void useStrndup(size_t n) {
-  if (n == 0) {
-    (void)strndup(0, 20); // no-warning
-    return;
-  } else if (n < 5) {
-    (void)strndup("hi there", n); // no-warning
-    return;
-  } else {
-    (void)strndup("hi there", n);
-    return; // expected-warning{{leak}}
-  }
-}
