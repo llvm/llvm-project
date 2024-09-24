@@ -37,6 +37,10 @@ func.func @any_attr_of_fail() {
 
 func.func @float_attrs_pass() {
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f4E2M1FN
+    float_attr = 2. : f4E2M1FN
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f6E2M3FN
     float_attr = 2. : f6E2M3FN
   } : () -> ()
