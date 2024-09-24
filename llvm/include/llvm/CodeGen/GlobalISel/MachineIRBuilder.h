@@ -2009,6 +2009,13 @@ public:
     return buildInstr(TargetOpcode::G_FFREXP, {Fract, Exp}, {Src}, Flags);
   }
 
+  /// Build and insert \p Sin, \p Cos = G_FSINCOS \p Src
+  MachineInstrBuilder
+  buildFSincos(const DstOp &Sin, const DstOp &Cos, const SrcOp &Src,
+               std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FSINCOS, {Sin, Cos}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {
