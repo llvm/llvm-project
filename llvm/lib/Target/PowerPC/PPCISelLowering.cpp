@@ -11598,8 +11598,8 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   if (isa<ConstantSDNode>(Op0) && EltSize <= 32) {
     int64_t IntVal = Op.getConstantOperandVal(0);
     if (IntVal >= -16 && IntVal <= 15)
-      return getCanonicalConstSplat(IntVal, EltSize / 8, Op.getValueType(),
-                                    DAG, dl);
+      return getCanonicalConstSplat(IntVal, EltSize / 8, Op.getValueType(), DAG,
+                                    dl);
   }
 
   ReuseLoadInfo RLI;
