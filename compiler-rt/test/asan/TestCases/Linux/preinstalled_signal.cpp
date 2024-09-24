@@ -17,6 +17,9 @@
 // This way of setting LD_PRELOAD does not work with Android test runner.
 // REQUIRES: !android
 
+// Issue #109573: Cannot use syscall(__NR_rt_sigaction) on Linux/sparc64.
+// XFAIL: target={{sparc.*-.*-linux.*}}
+
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>

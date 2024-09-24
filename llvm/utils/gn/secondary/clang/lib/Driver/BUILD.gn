@@ -96,6 +96,7 @@ static_library("Driver") {
     "ToolChains/SPIRV.cpp",
     "ToolChains/Solaris.cpp",
     "ToolChains/TCE.cpp",
+    "ToolChains/UEFI.cpp",
     "ToolChains/VEToolchain.cpp",
     "ToolChains/WebAssembly.cpp",
     "ToolChains/XCore.cpp",
