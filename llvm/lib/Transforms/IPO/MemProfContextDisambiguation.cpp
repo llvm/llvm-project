@@ -1416,7 +1416,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
       auto Id = *IdIter;
       ContextNode *CurNode = getNodeForStackId(Id);
-      // We should only have kept stack ids that had nodes.
+      // We should only have kept stack ids that had nodes and weren't
+      // recursive.
       assert(CurNode);
       assert(!CurNode->Recursive);
 
