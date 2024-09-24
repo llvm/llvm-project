@@ -33,7 +33,7 @@ struct TestContext {
   bool HasExitError = false;
   std::string ExitMsg = "";
 
-  // Controllilng whether there is a vendor-provided config for
+  // Controlling whether there is a vendor-provided config for
   // Telemetry.
   bool HasVendorConfig = false;
 
