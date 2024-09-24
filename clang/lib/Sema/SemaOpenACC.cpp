@@ -1770,11 +1770,61 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
   CollapseInfo.CurLevelHasLoopAlready = false;
 }
 
+namespace {
+SourceLocation FindInterveningCodeInCollapseLoop(const Stmt *CurStmt) {
+  // We should diagnose on anything except `CompoundStmt`, `NullStmt`,
+  // `ForStmt`, `CXXForRangeStmt`, since those are legal, and `WhileStmt` and
+  // `DoStmt`, as those are caught as a violation elsewhere.
+  // For `CompoundStmt` we need to search inside of it.
+  if (!CurStmt ||
+      isa<ForStmt, NullStmt, ForStmt, CXXForRangeStmt, WhileStmt, DoStmt>(
+          CurStmt))
+    return SourceLocation{};
+
+  // Any other construct is an error anyway, so it has already been diagnosed.
+  if (isa<OpenACCConstructStmt>(CurStmt))
+    return SourceLocation{};
+
+  // Search inside the compound statement, this allows for arbitrary nesting
+  // of compound statements, as long as there isn't any code inside.
+  if (const auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
+    for (const auto *ChildStmt : CS->children()) {
+      SourceLocation ChildStmtLoc =
+          FindInterveningCodeInCollapseLoop(ChildStmt);
+      if (ChildStmtLoc.isValid())
+        return ChildStmtLoc;
+    }
+    // Empty/not invalid compound statements are legal.
+    return SourceLocation{};
+  }
+  return CurStmt->getBeginLoc();
+}
+} // namespace
+
 void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
   if (!getLangOpts().OpenACC)
     return;
   // Set this to 'true' so if we find another one at this level we can diagnose.
   CollapseInfo.CurLevelHasLoopAlready = true;
+
+  if (!Body.isUsable())
+    return;
+
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0 &&
+      !CollapseInfo.ActiveCollapse->hasForce()) {
+    // OpenACC 3.3: 2.9.1
+    // If the 'force' modifier does not appear, then the associated loops must
+    // be tightly nested.  If the force modifier appears, then any intervening
+    // code may be executed multiple times as needed to perform the collapse.
+
+    SourceLocation OtherStmtLoc = FindInterveningCodeInCollapseLoop(Body.get());
+
+    if (OtherStmtLoc.isValid()) {
+      Diag(OtherStmtLoc, diag::err_acc_collapse_intervening_code);
+      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+           diag::note_acc_collapse_clause_here);
+    }
+  }
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
