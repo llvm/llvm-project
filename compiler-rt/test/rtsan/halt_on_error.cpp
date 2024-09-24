@@ -1,5 +1,6 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
-// RUN: env RTSAN_OPTIONS="halt_on_error=false" %run %t 2>&1 | FileCheck %s
+// RUN: %env_rtsan_opts="halt_on_error=true" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_rtsan_opts="halt_on_error=false" %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-HALT,CHECK
 // UNSUPPORTED: ios
 
 // Intent: Ensure that halt_on_error does not exit on the first violation.
@@ -20,6 +21,6 @@ int main() {
   return 0;
   // CHECK: ==ERROR: RealtimeSanitizer
   // CHECK-NEXT: {{.*`malloc`.*}}
-  // CHECK: ==ERROR: RealtimeSanitizer
-  // CHECK-NEXT: {{.*`free`.*}}
+  // CHECK-NO-HALT: ==ERROR: RealtimeSanitizer
+  // CHECK-NO-HALT-NEXT: {{.*`free`.*}}
 }
