@@ -141,7 +141,7 @@ else:
 }
 
 define i8 @not_correlated(i1, i1) {
-; CHECK-LABEL: define i8 @not_correlated
+; CHECK-LABEL: define range(i8 0, 2) i8 @not_correlated
 ; CHECK-SAME: (i1 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP0]], i8 0, i8 1
@@ -361,7 +361,7 @@ exit:
 }
 
 define i64 @select_cond_may_undef(i32 %a) {
-; CHECK-LABEL: define i64 @select_cond_may_undef
+; CHECK-LABEL: define range(i64 -2147483648, 2147483648) i64 @select_cond_may_undef
 ; CHECK-SAME: (i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[IS_A_NONNEGATIVE:%.*]] = icmp sgt i32 [[A]], 1
 ; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[IS_A_NONNEGATIVE]], i32 [[A]], i32 0
