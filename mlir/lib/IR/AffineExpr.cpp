@@ -363,7 +363,7 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
   assert((opKind == AffineExprKind::Mod || opKind == AffineExprKind::FloorDiv ||
           opKind == AffineExprKind::CeilDiv) &&
          "unexpected opKind");
-  std::vector<std::tuple<AffineExpr, unsigned, AffineExprKind,
+  SmallVector<std::tuple<AffineExpr, unsigned, AffineExprKind,
                          llvm::detail::scope_exit<std::function<void(void)>>>>
       stack;
   stack.emplace_back(expr, symbolPos, opKind, []() {});
