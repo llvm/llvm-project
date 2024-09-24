@@ -15874,7 +15874,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
-  if (TLI.isNarrowingProfitable(N, SrcVT, VT)) {
+  if (TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT)) {
     switch (N0.getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
