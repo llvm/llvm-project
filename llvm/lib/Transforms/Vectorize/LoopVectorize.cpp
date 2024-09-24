@@ -9463,7 +9463,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  // Generate scalar instances for all VF lanes of all UF parts.
+  // Generate scalar instances for all VF lanes.
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)
