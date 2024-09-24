@@ -162,7 +162,7 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
-  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override {
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
     if (!(SrcVT.isScalarInteger() && DestVT.isScalarInteger()))
       return false;
