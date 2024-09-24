@@ -13,7 +13,7 @@ define internal i32 @zoo(ptr %x, i32 %m) {
 
 define internal i32 @foo(ptr %x, ptr %y, i32 %n, i32 %m) {
 ; CHECK-LABEL: define internal i32 @foo(
-; CHECK-SAME: ptr [[X:%.*]], i32 [[Y_0_VAL:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i32 [[Y_0_VAL:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]

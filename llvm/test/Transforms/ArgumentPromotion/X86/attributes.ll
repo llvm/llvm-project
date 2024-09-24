@@ -7,10 +7,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define internal fastcc void @no_promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@no_promote_avx2
-; CHECK-SAME: (ptr [[ARG:%.*]], ptr readonly [[ARG1:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr nocapture readonly [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1]]
-; CHECK-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]]
+; CHECK-NEXT:    [[TMP:%.*]] = load <4 x i64>, ptr [[ARG1]], align 32
+; CHECK-NEXT:    store <4 x i64> [[TMP]], ptr [[ARG]], align 32
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -21,7 +21,7 @@ bb:
 
 define void @no_promote(ptr %arg) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@no_promote
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
@@ -43,9 +43,9 @@ bb:
 
 define internal fastcc void @promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@promote_avx2
-; CHECK-SAME: (ptr [[ARG:%.*]], <4 x i64> [[ARG1_VAL:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]], <4 x i64> [[ARG1_0_VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store <4 x i64> [[ARG1_VAL]], ptr [[ARG]]
+; CHECK-NEXT:    store <4 x i64> [[ARG1_0_VAL]], ptr [[ARG]], align 32
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -56,12 +56,12 @@ bb:
 
 define void @promote(ptr %arg) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@promote
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 [[TMP]], i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP_VAL:%.*]] = load <4 x i64>, ptr [[TMP]]
+; CHECK-NEXT:    [[TMP_VAL:%.*]] = load <4 x i64>, ptr [[TMP]], align 32
 ; CHECK-NEXT:    call fastcc void @promote_avx2(ptr [[TMP2]], <4 x i64> [[TMP_VAL]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 32
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2

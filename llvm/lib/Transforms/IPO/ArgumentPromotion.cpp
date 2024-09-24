@@ -743,6 +743,10 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // Okay, now we know that the argument is only used by load instructions, and
   // it is safe to unconditionally perform all of them.
 
+  // We can infer `nocapture readonly` as the argument is only used by loads.
+  Arg->getParent()->addParamAttr(Arg->getArgNo(), Attribute::NoCapture);
+  Arg->getParent()->addParamAttr(Arg->getArgNo(), Attribute::ReadOnly);
+
   // If we can determine that no call to the Function modifies the memory region
   // accessed through Arg, through alias analysis using actual arguments in the
   // callers, we know that it is guaranteed to be safe to promote the argument.
