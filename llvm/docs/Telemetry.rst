@@ -68,7 +68,7 @@ High-level design
 Key components
 --------------
 
-The framework is consisted of four important classes:
+The framework consists of four important classes:
 
 * `llvm::telemetry::Telemeter`: The class responsible for collecting and
   transmitting telemetry data. This is the main point of interaction between the
