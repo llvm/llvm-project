@@ -62,6 +62,9 @@ struct LowererBase {
 bool defaultMaterializable(Instruction &V);
 void normalizeCoroutine(Function &F, coro::Shape &Shape,
                         TargetTransformInfo &TTI);
+void buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
