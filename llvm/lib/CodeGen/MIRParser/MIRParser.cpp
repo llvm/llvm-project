@@ -406,11 +406,13 @@ bool MIRParserImpl::computeFunctionProperties(
   auto ComputedPropertyHelper =
       [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
                     MachineFunctionProperties::Property P) -> bool {
+    // Prefer explicitly given values over the computed properties
     if (ExplicitProp.value_or(ComputedProp))
       Properties.set(P);
     else
       Properties.reset(P);
-    
+
+    // Check for conflict between the explicit values and the computed ones
     return ExplicitProp && *ExplicitProp && !ComputedProp;
   };
 
