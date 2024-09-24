@@ -368,9 +368,15 @@ void NVPTXPassConfig::addIRPasses() {
     addPass(createSROAPass());
   }
 
-  const auto &Options = getNVPTXTargetMachine().Options;
-  addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                          Options.NoTrapAfterNoreturn));
+  if (ST.getPTXVersion() <= 74) {
+    // This pass is a WAR for a bug that's present in `ptxas` binaries that are
+    // shipped in or prior to CUDA Toolkit 11.4. The highest version that's
+    // supported by `ptxas` in CUDA 11.4 is 7.4. Limit this pass to only run
+    // when targeting PTX 7.4 or lower.
+    const auto &Options = getNVPTXTargetMachine().Options;
+    addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                            Options.NoTrapAfterNoreturn));
+  }
 }
 
 bool NVPTXPassConfig::addInstSelector() {

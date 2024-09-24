@@ -10,6 +10,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -no-trap-after-noreturn=false \
 ; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -mattr=+ptx75 \
+; RUN:     | FileCheck %s  --check-prefixes=CHECK-BUG-FIXED
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
@@ -26,12 +28,14 @@ define void @kernel_func() {
 ; CHECK-TRAP: trap;
 ; CHECK-NOTRAP-NOT: trap;
 ; CHECK: exit;
+; CHECK-BUG-FIXED-NOT: exit;
   unreachable
 }
 
 ; CHECK-LABEL: kernel_func_2
 define void @kernel_func_2() {
 ; CHECK: trap; exit;
+; CHECK-BUG-FIXED-NOT: exit;
   call void @llvm.trap()
 
 ;; Make sure we avoid emitting two trap instructions.
@@ -42,7 +46,5 @@ define void @kernel_func_2() {
 
 attributes #0 = { noreturn }
 
-
 !nvvm.annotations = !{!1}
-
 !1 = !{ptr @kernel_func, !"kernel", i32 1}
