@@ -252,16 +252,6 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
   DeactivateCleanupBlock(cleanup, op);
 }
 
-static mlir::Block *getResumeBlockFromCatch(mlir::cir::TryOp &tryOp,
-                                            mlir::cir::GlobalOp globalParent) {
-  assert(tryOp && "cir.try expected");
-  unsigned numCatchRegions = tryOp.getCatchRegions().size();
-  assert(numCatchRegions && "expected at least one region");
-  auto &fallbackRegion = tryOp.getCatchRegions()[numCatchRegions - 1];
-  return &fallbackRegion.getBlocks().back();
-  return nullptr;
-}
-
 mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
                                               mlir::cir::TryOp tryOp) {
 
@@ -270,7 +260,8 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup,
   // Just like some other try/catch related logic: return the basic block
   // pointer but only use it to denote we're tracking things, but there
   // shouldn't be any changes to that block after work done in this function.
-  ehResumeBlock = getResumeBlockFromCatch(tryOp, CGM.globalOpContext);
+  assert(tryOp && "expected available cir.try");
+  ehResumeBlock = tryOp.getCatchUnwindEntryBlock();
   if (!ehResumeBlock->empty())
     return ehResumeBlock;
 

@@ -418,8 +418,6 @@ public:
       // Do not update `nextDispatcher`, no more business in try/catch
     } else if (auto catchUnwind =
                    dyn_cast<mlir::cir::CatchUnwindAttr>(catchAttr)) {
-      // assert(dispatcher->empty() && "expect empty dispatcher");
-      // assert(!dispatcher->args_empty() && "expected block argument");
       assert(dispatcher->getArguments().size() == 2 &&
              "expected two block argument");
       buildUnwindCase(rewriter, catchRegion, dispatcher);
@@ -440,15 +438,10 @@ public:
     rewriter.setInsertionPointToEnd(beforeCatch);
     rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(tryBodyYield, afterTry);
 
-    // Retrieve catch list and some properties.
-    mlir::ArrayAttr catchAttrList = tryOp.getCatchTypesAttr();
-    bool tryOnlyHasCatchAll = catchAttrList.size() == 1 &&
-                              isa<mlir::cir::CatchAllAttr>(catchAttrList[0]);
-
     // Start the landing pad by getting the inflight exception information.
     mlir::Block *nextDispatcher =
         buildLandingPads(tryOp, rewriter, beforeCatch, afterTry, callsToRewrite,
-                         landingPads, tryOnlyHasCatchAll);
+                         landingPads, tryOp.isCatchAllOnly());
 
     // Fill in dispatcher to all catch clauses.
     rewriter.setInsertionPointToEnd(nextDispatcher);
@@ -456,6 +449,7 @@ public:
     unsigned catchIdx = 0;
 
     // Build control-flow for all catch clauses.
+    mlir::ArrayAttr catchAttrList = tryOp.getCatchTypesAttr();
     for (mlir::Attribute catchAttr : catchAttrList) {
       mlir::Attribute nextCatchAttr;
       if (catchIdx + 1 < catchAttrList.size())

@@ -1243,6 +1243,27 @@ void TryOp::build(
   catchBuilder(builder, result.location, result);
 }
 
+mlir::Region *TryOp::getCatchLastRegion() {
+  unsigned numCatchRegions = getCatchRegions().size();
+  assert(numCatchRegions && "expected at least one region");
+  auto &lastRegion = getCatchRegions()[numCatchRegions - 1];
+  return &lastRegion;
+}
+
+mlir::Block *TryOp::getCatchUnwindEntryBlock() {
+  return &getCatchLastRegion()->getBlocks().front();
+}
+
+mlir::Block *TryOp::getCatchAllEntryBlock() {
+  return &getCatchLastRegion()->getBlocks().front();
+}
+
+bool TryOp::isCatchAllOnly() {
+  mlir::ArrayAttr catchAttrList = getCatchTypesAttr();
+  return catchAttrList.size() == 1 &&
+         isa<mlir::cir::CatchAllAttr>(catchAttrList[0]);
+}
+
 void TryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
