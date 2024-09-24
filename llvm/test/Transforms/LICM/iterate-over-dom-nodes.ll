@@ -883,7 +883,3 @@ cleanup:                                          ; preds = %sw.default, %sw.bb2
   %retval.0 = phi ptr [ null, %sw.default ], [ null, %for.body ], [ %incdec.ptr, %if.end ], [ null, %if.end3 ], [ null, %if.end7 ], [ null, %sw.bb ], [ %__first.addr.2, %sw.bb25 ]
   ret ptr %retval.0
 }
-
-; uselistorder directives
-uselistorder ptr @_ZNK4llvm16itanium_demangle12OutputBuffer18getCurrentPositionEv, { 1, 0 }
-
