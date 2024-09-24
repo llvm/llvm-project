@@ -194,8 +194,12 @@ Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
   Obj.insert({"ReturnType", extractValue(I.ReturnType.Type, ParentInfoDir)});
   
   Value ParamArr = Array();
-  for (const auto &P : I.Params) {
-    ParamArr.getAsArray()->emplace_back(extractValue(P.Type, ParentInfoDir));
+  for (const auto Val : llvm::enumerate(I.Params)) {
+    Value V = Object();
+    V.getAsObject()->insert({"Name", Val.value().Name});
+    V.getAsObject()->insert({"Type", Val.value().Type.Name});
+    V.getAsObject()->insert({"End",  Val.index() + 1 == I.Params.size()});
+    ParamArr.getAsArray()->emplace_back(V);
   }
   Obj.insert({"Params", ParamArr});
   
@@ -328,17 +332,21 @@ MustacheHTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   switch (I->IT) {
   case InfoType::IT_namespace: {
     Value V = extractValue(*static_cast<clang::doc::NamespaceInfo *>(I), CDCtx);
-    llvm::outs() << V << "\n";
-    OS << NamespaceTemplate->render(V);
+    llvm::raw_ostream &OS = llvm::outs();
+    llvm::json::OStream J(OS, /*IndentSize=*/2);
+    J.value(V);
     break;
   }
   case InfoType::IT_record:
     break;
   case InfoType::IT_enum:
+    llvm::outs() << "IT_enum\n";
     break;
   case InfoType::IT_function:
+    llvm::outs() << "IT_Function\n";
     break;
   case InfoType::IT_typedef:
+    llvm::outs() << "IT_typedef\n";
     break;
   case InfoType::IT_default:
     return createStringError(llvm::inconvertibleErrorCode(),
