@@ -84,12 +84,35 @@ static void strictNext(APFloat &V) {
 }
 
 template <typename Fn>
-static void EnumerateConstantFPRangesImpl(Fn TestFn, bool MayBeQNaN,
-                                          bool MayBeSNaN) {
+static void EnumerateConstantFPRangesImpl(Fn TestFn, bool Exhaustive,
+                                          bool MayBeQNaN, bool MayBeSNaN) {
   const fltSemantics &Sem = APFloat::Float8E4M3();
   APFloat PosInf = APFloat::getInf(Sem, /*Negative=*/false);
   APFloat NegInf = APFloat::getInf(Sem, /*Negative=*/true);
   TestFn(ConstantFPRange(PosInf, NegInf, MayBeQNaN, MayBeSNaN));
+
+  if (!Exhaustive) {
+    SmallVector<APFloat, 36> Values;
+    Values.push_back(APFloat::getInf(Sem, /*Negative=*/true));
+    Values.push_back(APFloat::getLargest(Sem, /*Negative=*/true));
+    unsigned BitWidth = APFloat::semanticsSizeInBits(Sem);
+    unsigned Exponents = APFloat::semanticsMaxExponent(Sem) -
+                         APFloat::semanticsMinExponent(Sem) + 3;
+    unsigned MantissaBits = APFloat::semanticsPrecision(Sem) - 1;
+    // Add -2^(max exponent), -2^(max exponent-1), ..., -2^(min exponent)
+    for (unsigned M = Exponents - 2; M != 0; --M)
+      Values.push_back(
+          APFloat(Sem, APInt(BitWidth, (M + Exponents) << MantissaBits)));
+    Values.push_back(APFloat::getSmallest(Sem, /*Negative=*/true));
+    Values.push_back(APFloat::getZero(Sem, /*Negative=*/true));
+    size_t E = Values.size();
+    for (size_t I = 1; I <= E; ++I)
+      Values.push_back(-Values[E - I]);
+    for (size_t I = 0; I != Values.size(); ++I)
+      for (size_t J = I; J != Values.size(); ++J)
+        TestFn(ConstantFPRange(Values[I], Values[J], MayBeQNaN, MayBeSNaN));
+    return;
+  }
 
   auto Next = [&](APFloat &V) {
     if (V.isPosInfinity())
@@ -107,22 +130,27 @@ static void EnumerateConstantFPRangesImpl(Fn TestFn, bool MayBeQNaN,
   } while (Next(Lower));
 }
 
-template <typename Fn> static void EnumerateConstantFPRanges(Fn TestFn) {
-  EnumerateConstantFPRangesImpl(TestFn, /*MayBeQNaN=*/false,
+template <typename Fn>
+static void EnumerateConstantFPRanges(Fn TestFn, bool Exhaustive) {
+  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/false);
-  EnumerateConstantFPRangesImpl(TestFn, /*MayBeQNaN=*/false,
+  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/true);
-  EnumerateConstantFPRangesImpl(TestFn, /*MayBeQNaN=*/true,
+  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/true,
                                 /*MayBeSNaN=*/false);
-  EnumerateConstantFPRangesImpl(TestFn, /*MayBeQNaN=*/true, /*MayBeSNaN=*/true);
+  EnumerateConstantFPRangesImpl(TestFn, Exhaustive, /*MayBeQNaN=*/true,
+                                /*MayBeSNaN=*/true);
 }
 
 template <typename Fn>
-static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn) {
-  EnumerateConstantFPRanges([&](const ConstantFPRange &CR1) {
-    EnumerateConstantFPRanges(
-        [&](const ConstantFPRange &CR2) { TestFn(CR1, CR2); });
-  });
+static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
+                                                    bool Exhaustive) {
+  EnumerateConstantFPRanges(
+      [&](const ConstantFPRange &CR1) {
+        EnumerateConstantFPRanges(
+            [&](const ConstantFPRange &CR2) { TestFn(CR1, CR2); }, Exhaustive);
+      },
+      Exhaustive);
 }
 
 template <typename Fn>
@@ -248,11 +276,21 @@ TEST_F(ConstantFPRangeTest, SingleElement) {
   EXPECT_FALSE(Zero.isSingleElement());
 }
 
-TEST_F(ConstantFPRangeTest, Enumerate) {
+TEST_F(ConstantFPRangeTest, ExhaustivelyEnumerate) {
   constexpr unsigned NNaNValues = (1 << 8) - 2 * ((1 << 3) - 1);
   constexpr unsigned Expected = 4 * ((NNaNValues + 1) * NNaNValues / 2 + 1);
   unsigned Count = 0;
-  EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; });
+  EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; },
+                            /*Exhaustive=*/true);
+  EXPECT_EQ(Expected, Count);
+}
+
+TEST_F(ConstantFPRangeTest, Enumerate) {
+  constexpr unsigned NNaNValues = 2 * ((1 << 4) - 2 + 4);
+  constexpr unsigned Expected = 4 * ((NNaNValues + 1) * NNaNValues / 2 + 1);
+  unsigned Count = 0;
+  EnumerateConstantFPRanges([&](const ConstantFPRange &) { ++Count; },
+                            /*Exhaustive=*/false);
   EXPECT_EQ(Expected, Count);
 }
 
@@ -334,24 +372,26 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomePos.toKnownFPClass().SignBit, false);
   EXPECT_EQ(SomeNeg.toKnownFPClass().SignBit, true);
 
-  EnumerateConstantFPRanges([](const ConstantFPRange &CR) {
-    unsigned Mask = fcNone;
-    bool HasPos = false, HasNeg = false;
-    EnumerateValuesInConstantFPRange(CR, [&](const APFloat &V) {
-      Mask |= V.classify();
-      if (V.isNegative())
-        HasNeg = true;
-      else
-        HasPos = true;
-    });
+  EnumerateConstantFPRanges(
+      [](const ConstantFPRange &CR) {
+        unsigned Mask = fcNone;
+        bool HasPos = false, HasNeg = false;
+        EnumerateValuesInConstantFPRange(CR, [&](const APFloat &V) {
+          Mask |= V.classify();
+          if (V.isNegative())
+            HasNeg = true;
+          else
+            HasPos = true;
+        });
 
-    std::optional<bool> SignBit = std::nullopt;
-    if (HasPos != HasNeg)
-      SignBit = HasNeg;
+        std::optional<bool> SignBit = std::nullopt;
+        if (HasPos != HasNeg)
+          SignBit = HasNeg;
 
-    EXPECT_EQ(SignBit, CR.getSignBit()) << CR;
-    EXPECT_EQ(Mask, CR.classify()) << CR;
-  });
+        EXPECT_EQ(SignBit, CR.getSignBit()) << CR;
+        EXPECT_EQ(Mask, CR.classify()) << CR;
+      },
+      /*Exhaustive=*/true);
 }
 
 TEST_F(ConstantFPRangeTest, Print) {
