@@ -103,19 +103,18 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // saved registers.
   SavedRegs.resize(TRI.getNumRegs());
 
-  // When interprocedural register allocation is enabled caller saved registers
-  // are preferred over callee saved registers.
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = nullptr;
+
+  // When interprocedural register allocation is enabled, callee saved register
+  // lit should be null, since caller saved registers are preferred over callee
+  // saved registers. Unless it has some risked CSR to be optimized out.
   if (MF.getTarget().Options.EnableIPRA &&
       isSafeForNoCSROpt(MF.getFunction()) &&
-      isProfitableForNoCSROpt(MF.getFunction())) {
-    const MCPhysReg *IPRACSRegs = TRI.getIPRACSRegs(&MF);
-    for (unsigned i = 0; IPRACSRegs && IPRACSRegs[i]; ++i)
-      SavedRegs.set(IPRACSRegs[i]);
-    return;
-  }
-
-  // Get the callee saved register list...
-  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+      isProfitableForNoCSROpt(MF.getFunction()))
+    CSRegs = TRI.getIPRACSRegs(&MF);
+  else
+    CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
