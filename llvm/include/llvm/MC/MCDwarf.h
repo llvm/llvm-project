@@ -196,12 +196,24 @@ private:
 public:
   // Constructor to create an MCDwarfLineEntry given a symbol and the dwarf loc.
   MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc,
+                   MCSymbol *lineStreamLabel = nullptr,
+                   SMLoc streamLabelDefLoc = {},
                    bool isEndOfFunction = false /*MCCAS*/)
-      : MCDwarfLoc(loc), Label(label),
+      : MCDwarfLoc(loc), Label(label), LineStreamLabel(lineStreamLabel),
+        StreamLabelDefLoc(streamLabelDefLoc),
         IsEndOfFunction(isEndOfFunction) // MCCAS
   {}
 
   MCSymbol *getLabel() const { return Label; }
+
+  // This is the label that is to be emitted into the line stream. If this is
+  // non-null and we need to emit a label, also make sure to restart the current
+  // line sequence.
+  MCSymbol *LineStreamLabel;
+
+  // Location where LineStreamLabel was defined. If there is an error emitting
+  // LineStreamLabel, we can use the SMLoc to report an error.
+  SMLoc StreamLabelDefLoc;
 
   // This indicates the line entry is synthesized for an end entry.
   bool IsEndEntry = false;
@@ -375,6 +387,9 @@ public:
   static void
   emitOne(MCStreamer *MCOS, MCSection *Section,
           const MCLineSection::MCDwarfLineEntryCollection &LineEntries);
+
+  void endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS, SMLoc DefLoc,
+                                           StringRef Name);
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 std::optional<MD5::MD5Result> Checksum,
