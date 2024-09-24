@@ -84,7 +84,7 @@ class FileManager : public RefCountedBase<FileManager> {
   /// VirtualDirectoryEntries/VirtualFileEntries above.
   ///
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
-  SeenDirEntries;
+      SeenDirEntries;
 
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
