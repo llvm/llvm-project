@@ -22,8 +22,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-bool UnwindPlan::Row::RegisterLocation::
-operator==(const UnwindPlan::Row::RegisterLocation &rhs) const {
+bool UnwindPlan::Row::AbstractRegisterLocation::operator==(
+    const UnwindPlan::Row::AbstractRegisterLocation &rhs) const {
   if (m_type == rhs.m_type) {
     switch (m_type) {
     case unspecified:
@@ -55,7 +55,7 @@ operator==(const UnwindPlan::Row::RegisterLocation &rhs) const {
 
 // This function doesn't copy the dwarf expression bytes; they must remain in
 // allocated memory for the lifespan of this UnwindPlan object.
-void UnwindPlan::Row::RegisterLocation::SetAtDWARFExpression(
+void UnwindPlan::Row::AbstractRegisterLocation::SetAtDWARFExpression(
     const uint8_t *opcodes, uint32_t len) {
   m_type = atDWARFExpression;
   m_location.expr.opcodes = opcodes;
@@ -64,7 +64,7 @@ void UnwindPlan::Row::RegisterLocation::SetAtDWARFExpression(
 
 // This function doesn't copy the dwarf expression bytes; they must remain in
 // allocated memory for the lifespan of this UnwindPlan object.
-void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
+void UnwindPlan::Row::AbstractRegisterLocation::SetIsDWARFExpression(
     const uint8_t *opcodes, uint32_t len) {
   m_type = isDWARFExpression;
   m_location.expr.opcodes = opcodes;
@@ -92,11 +92,9 @@ static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *threa
     s.PutCString("dwarf-expr");
 }
 
-void UnwindPlan::Row::RegisterLocation::Dump(Stream &s,
-                                             const UnwindPlan *unwind_plan,
-                                             const UnwindPlan::Row *row,
-                                             Thread *thread,
-                                             bool verbose) const {
+void UnwindPlan::Row::AbstractRegisterLocation::Dump(
+    Stream &s, const UnwindPlan *unwind_plan, const UnwindPlan::Row *row,
+    Thread *thread, bool verbose) const {
   switch (m_type) {
   case unspecified:
     if (verbose)
@@ -255,7 +253,7 @@ UnwindPlan::Row::Row() : m_cfa_value(), m_afa_value(), m_register_locations() {}
 
 bool UnwindPlan::Row::GetRegisterInfo(
     uint32_t reg_num,
-    UnwindPlan::Row::RegisterLocation &register_location) const {
+    UnwindPlan::Row::AbstractRegisterLocation &register_location) const {
   collection::const_iterator pos = m_register_locations.find(reg_num);
   if (pos != m_register_locations.end()) {
     register_location = pos->second;
@@ -277,7 +275,7 @@ void UnwindPlan::Row::RemoveRegisterInfo(uint32_t reg_num) {
 
 void UnwindPlan::Row::SetRegisterInfo(
     uint32_t reg_num,
-    const UnwindPlan::Row::RegisterLocation register_location) {
+    const UnwindPlan::Row::AbstractRegisterLocation register_location) {
   m_register_locations[reg_num] = register_location;
 }
 
@@ -287,7 +285,7 @@ bool UnwindPlan::Row::SetRegisterLocationToAtCFAPlusOffset(uint32_t reg_num,
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetAtCFAPlusOffset(offset);
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -299,7 +297,7 @@ bool UnwindPlan::Row::SetRegisterLocationToIsCFAPlusOffset(uint32_t reg_num,
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetIsCFAPlusOffset(offset);
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -316,7 +314,7 @@ bool UnwindPlan::Row::SetRegisterLocationToUndefined(
     if (can_replace_only_if_unspecified && !pos->second.IsUnspecified())
       return false;
   }
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetUndefined();
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -327,7 +325,7 @@ bool UnwindPlan::Row::SetRegisterLocationToUnspecified(uint32_t reg_num,
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetUnspecified();
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -339,7 +337,7 @@ bool UnwindPlan::Row::SetRegisterLocationToRegister(uint32_t reg_num,
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetInRegister(other_reg_num);
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -350,7 +348,7 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
   if (must_replace &&
       m_register_locations.find(reg_num) == m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetSame();
   m_register_locations[reg_num] = reg_loc;
   return true;
@@ -362,7 +360,7 @@ bool UnwindPlan::Row::SetRegisterLocationToIsConstant(uint32_t reg_num,
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetIsConstant(constant);
   m_register_locations[reg_num] = reg_loc;
   return true;

@@ -15131,9 +15131,9 @@ static SDValue PerformVMOVRRDCombine(SDNode *N,
     SDValue Op0, Op1;
     while (BV.getOpcode() == ISD::INSERT_VECTOR_ELT) {
       if (isa<ConstantSDNode>(BV.getOperand(2))) {
-        if (BV.getConstantOperandVal(2) == Offset)
+        if (BV.getConstantOperandVal(2) == Offset && !Op0)
           Op0 = BV.getOperand(1);
-        if (BV.getConstantOperandVal(2) == Offset + 1)
+        if (BV.getConstantOperandVal(2) == Offset + 1 && !Op1)
           Op1 = BV.getOperand(1);
       }
       BV = BV.getOperand(0);

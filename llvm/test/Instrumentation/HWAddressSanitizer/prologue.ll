@@ -3,13 +3,13 @@
 ;
 ; RUN: opt -passes=hwasan -S < %s | \
 ; RUN:     FileCheck %s
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=instr < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=tls -hwasan-record-stack-history=instr < %s | \
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-TLS-HISTORY
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=none < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=tls -hwasan-record-stack-history=none < %s | \
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-TLS-NOHISTORY
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=global < %s | \
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-NOTLS
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=ifunc < %s | \
 ; RUN:     FileCheck %s --check-prefixes=IFUNC-NOTLS
 ; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia < %s | \
 ; RUN:     FileCheck %s --check-prefixes=FUCHSIA

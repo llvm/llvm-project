@@ -3474,7 +3474,7 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
 
   assert(Res.getNode() != N && "Expected a new node!");
 
-  assert(Res.getValueType() == N->getValueType(0) &&
+  assert(Res.getValueType() == N->getValueType(0) && N->getNumValues() == 1 &&
          "Invalid operand expansion");
 
   ReplaceValueWith(SDValue(N, 0), Res);
@@ -3544,7 +3544,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
     Op = DAG.getNode(N->getOpcode(), dl, {RVT, MVT::Other},
                      {Op.getValue(1), Op});
     ReplaceValueWith(SDValue(N, 1), Op.getValue(1));
-    return Op;
+    ReplaceValueWith(SDValue(N, 0), Op);
+    return SDValue();
   }
 
   SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);

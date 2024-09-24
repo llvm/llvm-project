@@ -187,8 +187,8 @@ extern char &AMDGPUGlobalISelDivergenceLoweringID;
 void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
-void initializeSILowerSGPRSpillsPass(PassRegistry &);
-extern char &SILowerSGPRSpillsID;
+void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
+extern char &SILowerSGPRSpillsLegacyID;
 
 void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
 extern char &SILoadStoreOptimizerLegacyID;
@@ -404,9 +404,6 @@ extern char &SIModeRegisterID;
 
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
-
-void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
-extern char &AMDGPUInsertSingleUseVDSTID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;

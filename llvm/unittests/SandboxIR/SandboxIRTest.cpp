@@ -14,6 +14,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -1051,6 +1052,152 @@ define void @foo() {
   EXPECT_EQ(GV0->getCodeModel(), LLVMGV0->getCodeModel());
 }
 
+TEST_F(SandboxIRTest, GlobalAlias) {
+  parseIR(C, R"IR(
+@alias0 = dso_local alias void(), ptr @foo
+@alias1 = dso_local alias void(), ptr @foo
+declare void @bar();
+define void @foo() {
+  call void @alias0()
+  call void @alias1()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMCall0 = cast<llvm::CallInst>(&*LLVMIt++);
+  auto *LLVMAlias0 = cast<llvm::GlobalAlias>(LLVMCall0->getCalledOperand());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *CalleeBar = cast<sandboxir::Constant>(CallBar->getCalledOperand());
+  // Check classof(), creation.
+  auto *Alias0 = cast<sandboxir::GlobalAlias>(Call0->getCalledOperand());
+  auto *Alias1 = cast<sandboxir::GlobalAlias>(Call1->getCalledOperand());
+  // Check getIterator().
+  {
+    auto It0 = Alias0->getIterator();
+    auto It1 = Alias1->getIterator();
+    EXPECT_EQ(&*It0, Alias0);
+    EXPECT_EQ(&*It1, Alias1);
+    EXPECT_EQ(std::next(It0), It1);
+    EXPECT_EQ(std::prev(It1), It0);
+    EXPECT_EQ(&*std::next(It0), Alias1);
+    EXPECT_EQ(&*std::prev(It1), Alias0);
+  }
+  // Check getReverseIterator().
+  {
+    auto RevIt0 = Alias0->getReverseIterator();
+    auto RevIt1 = Alias1->getReverseIterator();
+    EXPECT_EQ(&*RevIt0, Alias0);
+    EXPECT_EQ(&*RevIt1, Alias1);
+    EXPECT_EQ(std::prev(RevIt0), RevIt1);
+    EXPECT_EQ(std::next(RevIt1), RevIt0);
+    EXPECT_EQ(&*std::prev(RevIt0), Alias1);
+    EXPECT_EQ(&*std::next(RevIt1), Alias0);
+  }
+  // Check getAliasee().
+  EXPECT_EQ(Alias0->getAliasee(), Ctx.getValue(LLVMAlias0->getAliasee()));
+  // Check setAliasee().
+  auto *OrigAliasee = Alias0->getAliasee();
+  auto *NewAliasee = CalleeBar;
+  EXPECT_NE(NewAliasee, OrigAliasee);
+  Alias0->setAliasee(NewAliasee);
+  EXPECT_EQ(Alias0->getAliasee(), NewAliasee);
+  Alias0->setAliasee(OrigAliasee);
+  EXPECT_EQ(Alias0->getAliasee(), OrigAliasee);
+  // Check getAliaseeObject().
+  EXPECT_EQ(Alias0->getAliaseeObject(),
+            Ctx.getValue(LLVMAlias0->getAliaseeObject()));
+}
+
+TEST_F(SandboxIRTest, NoCFIValue) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void no_cfi @foo()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  // Check classof(), creation.
+  auto *NoCFI = cast<sandboxir::NoCFIValue>(Call->getCalledOperand());
+  // Check get().
+  auto *NewNoCFI = sandboxir::NoCFIValue::get(&F);
+  EXPECT_EQ(NewNoCFI, NoCFI);
+  // Check getGlobalValue().
+  EXPECT_EQ(NoCFI->getGlobalValue(), &F);
+  // Check getType().
+  EXPECT_EQ(NoCFI->getType(), F.getType());
+}
+
+TEST_F(SandboxIRTest, ConstantPtrAuth) {
+  parseIR(C, R"IR(
+define ptr @foo() {
+  ret ptr ptrauth (ptr @foo, i32 2, i64 1234)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto *LLVMRet = cast<llvm::ReturnInst>(&*LLVMBB->begin());
+  auto *LLVMPtrAuth = cast<llvm::ConstantPtrAuth>(LLVMRet->getReturnValue());
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  auto *PtrAuth = cast<sandboxir::ConstantPtrAuth>(Ret->getReturnValue());
+  // Check get(), getKey(), getDiscriminator(), getAddrDiscriminator().
+  auto *NewPtrAuth = sandboxir::ConstantPtrAuth::get(
+      &F, PtrAuth->getKey(), PtrAuth->getDiscriminator(),
+      PtrAuth->getAddrDiscriminator());
+  EXPECT_EQ(NewPtrAuth, PtrAuth);
+  // Check hasAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasAddressDiscriminator(),
+            LLVMPtrAuth->hasAddressDiscriminator());
+  // Check hasSpecialAddressDiscriminator().
+  EXPECT_EQ(PtrAuth->hasSpecialAddressDiscriminator(0u),
+            LLVMPtrAuth->hasSpecialAddressDiscriminator(0u));
+  // Check isKnownCompatibleWith().
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_TRUE(PtrAuth->isKnownCompatibleWith(PtrAuth->getKey(),
+                                             PtrAuth->getDiscriminator(), DL));
+  // Check getWithSameSchema().
+  EXPECT_EQ(PtrAuth->getWithSameSchema(&F), PtrAuth);
+}
+
+TEST_F(SandboxIRTest, ConstantExpr) {
+  parseIR(C, R"IR(
+define i32 @foo() {
+  ret i32 ptrtoint (ptr @foo to i32)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  [[maybe_unused]] auto *ConstExpr =
+      cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
@@ -1245,6 +1392,8 @@ OperandNo: 0
   EXPECT_TRUE(I0->hasNUses(1u));
   EXPECT_FALSE(I0->hasNUses(2u));
 
+  // Check Value.getExpectedType
+
   // Check User.setOperand().
   Ret->setOperand(0, Arg0);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
@@ -1308,13 +1457,74 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   Replaced = Ret->replaceUsesOfWith(I0, Arg0);
   EXPECT_TRUE(Replaced);
   EXPECT_EQ(Ret->getOperand(0), Arg0);
-
   // Check RAUW on constant.
   auto *Glob0 = cast<sandboxir::Constant>(I1->getOperand(0));
   auto *Glob1 = cast<sandboxir::Constant>(I2->getOperand(0));
   auto *Glob0Op = Glob0->getOperand(0);
   Glob0->replaceUsesOfWith(Glob0Op, Glob1);
   EXPECT_EQ(Glob0->getOperand(0), Glob1);
+}
+
+TEST_F(SandboxIRTest, GetExpected) {
+  parseIR(C, R"IR(
+define float @foo(float %v, ptr %ptr) {
+  %add = fadd float %v, %v
+  store float %v, ptr %ptr
+  ret float %v
+}
+define void @bar(float %v, ptr %ptr) {
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  Ctx.createFunction(&Foo);
+  auto *FooBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Foo.begin()));
+  auto FooIt = FooBB->begin();
+  auto Add = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *S0 = cast<sandboxir::Instruction>(&*FooIt++);
+  auto *RetF = cast<sandboxir::Instruction>(&*FooIt++);
+  // getExpectedValue
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(Add), Add);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(S0),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand());
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue());
+  // getExpectedType
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(Add), Add->getType());
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(S0),
+            cast<sandboxir::StoreInst>(S0)->getValueOperand()->getType());
+  EXPECT_EQ(sandboxir::Utils::getExpectedType(RetF),
+            cast<sandboxir::ReturnInst>(RetF)->getReturnValue()->getType());
+
+  // getExpectedValue for void returns
+  llvm::Function &Bar = *M->getFunction("bar");
+  Ctx.createFunction(&Bar);
+  auto *BarBB = cast<sandboxir::BasicBlock>(Ctx.getValue(&*Bar.begin()));
+  auto BarIt = BarBB->begin();
+  auto *RetV = cast<sandboxir::Instruction>(&*BarIt++);
+  EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetV), nullptr);
+}
+
+TEST_F(SandboxIRTest, GetNumBits) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
+bb0:
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+  const DataLayout &DL = M->getDataLayout();
+  // getNumBits for scalars
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
 }
 
 TEST_F(SandboxIRTest, RAUW_RUWIf) {
@@ -1509,12 +1719,16 @@ bb1:
   for (sandboxir::Instruction &I : BB0) {
     EXPECT_EQ(&I, Ctx.getValue(LLVMI));
     LLVMI = LLVMI->getNextNode();
+    // Check getNodeParent().
+    EXPECT_EQ(I.getIterator().getNodeParent(), &BB0);
   }
   LLVMI = &*LLVMBB1->begin();
   for (sandboxir::Instruction &I : BB1) {
     EXPECT_EQ(&I, Ctx.getValue(LLVMI));
     LLVMI = LLVMI->getNextNode();
   }
+  // Check NodeParent() for BB::end().
+  EXPECT_EQ(BB0.end().getNodeParent(), &BB0);
 
   // Check BB.getTerminator()
   EXPECT_EQ(BB0.getTerminator(), Ctx.getValue(LLVMBB0->getTerminator()));
@@ -1541,17 +1755,31 @@ bb0:
 
 TEST_F(SandboxIRTest, Instruction) {
   parseIR(C, R"IR(
-define void @foo(i8 %v1) {
+define void @foo(i8 %v1, ptr %ptr) {
+bb0:
   %add0 = add i8 %v1, %v1
   %sub1 = sub i8 %add0, %v1
+  ret void
+
+bb1:
+  %add1 = add i8 %v1, %v1
+  %sub2 = sub i8 %add1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %ld0, ptr %ptr
+  store volatile i8 %ld0, ptr %ptr
+  %atomicrmw = atomicrmw add ptr %ptr, i8 %v1 acquire
+  %udiv = udiv i8 %ld0, %v1
+  call void @foo()
   ret void
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB1 = getBasicBlockByName(*LLVMF, "bb1");
   sandboxir::Context Ctx(C);
   sandboxir::Function *F = Ctx.createFunction(LLVMF);
   auto *Arg = F->getArg(0);
-  auto *BB = &*F->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(*LLVMF, "bb0")));
   auto It = BB->begin();
   auto *I0 = &*It++;
   auto *I1 = &*It++;
@@ -1630,6 +1858,112 @@ define void @foo(i8 %v1) {
   I1->eraseFromParent();
   EXPECT_EQ(I0->getNumUses(), 0u);
   EXPECT_EQ(I0->getNextNode(), Ret);
+
+  for (auto &LLVMI : *LLVMBB1) {
+    auto &I = cast<sandboxir::Instruction>(*Ctx.getValue(&LLVMI));
+    // Check isAssociative().
+    EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
+    // Check isCommutative().
+    EXPECT_EQ(LLVMI.isCommutative(), I.isCommutative());
+    // Check isIdempotent().
+    EXPECT_EQ(LLVMI.isIdempotent(), I.isIdempotent());
+    // Check isNilpotent().
+    EXPECT_EQ(LLVMI.isNilpotent(), I.isNilpotent());
+    // Check mayWriteToMemory().
+    EXPECT_EQ(LLVMI.mayWriteToMemory(), I.mayWriteToMemory());
+    // Check mayReadFromMemory().
+    EXPECT_EQ(LLVMI.mayReadFromMemory(), I.mayReadFromMemory());
+    // Check mayReadOrWriteMemory().
+    EXPECT_EQ(LLVMI.mayReadOrWriteMemory(), I.mayReadOrWriteMemory());
+    // Check isAtomic().
+    EXPECT_EQ(LLVMI.isAtomic(), I.isAtomic());
+    if (I.isAtomic()) {
+      // Check hasAtomicLoad().
+      EXPECT_EQ(LLVMI.hasAtomicLoad(), I.hasAtomicLoad());
+      // Check hasAtomicStore().
+      EXPECT_EQ(LLVMI.hasAtomicStore(), I.hasAtomicStore());
+    }
+    // Check isVolatile().
+    EXPECT_EQ(LLVMI.isVolatile(), I.isVolatile());
+    // Check getAccessType().
+    EXPECT_EQ(Ctx.getType(LLVMI.getAccessType()), I.getAccessType());
+    // Check mayThrow().
+    EXPECT_EQ(LLVMI.mayThrow(), I.mayThrow());
+    // Check isFenceLike().
+    EXPECT_EQ(LLVMI.isFenceLike(), I.isFenceLike());
+    // Check mayHaveSideEffects().
+    EXPECT_EQ(LLVMI.mayHaveSideEffects(), I.mayHaveSideEffects());
+  }
+}
+
+TEST_F(SandboxIRTest, Instruction_isStackSaveOrRestoreIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add = add i8 %v1, %v1
+  %stacksave = call ptr @llvm.stacksave()
+  call void @llvm.stackrestore(ptr %stacksave)
+  call void @llvm.sideeffect()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *StackSave = cast<sandboxir::CallInst>(&*It++);
+  auto *StackRestore = cast<sandboxir::CallInst>(&*It++);
+  auto *Other = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_FALSE(Add->isStackSaveOrRestoreIntrinsic());
+  EXPECT_TRUE(StackSave->isStackSaveOrRestoreIntrinsic());
+  EXPECT_TRUE(StackRestore->isStackSaveOrRestoreIntrinsic());
+  EXPECT_FALSE(Other->isStackSaveOrRestoreIntrinsic());
+  EXPECT_FALSE(Ret->isStackSaveOrRestoreIntrinsic());
+}
+
+TEST_F(SandboxIRTest, Instruction_isMemDepCandidate) {
+  parseIR(C, R"IR(
+declare void @llvm.fake.use(...)
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
+declare void @bar()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add0 = add i8 %v1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %v1, ptr %ptr
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42, i64 1, i32 0, i64 -1)
+  call void @llvm.fake.use(ptr %ptr)
+  call void @bar()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SideEffect0 = cast<sandboxir::CallInst>(&*It++);
+  auto *PseudoProbe0 = cast<sandboxir::CallInst>(&*It++);
+  auto *OtherIntrinsic0 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_FALSE(Add0->isMemDepCandidate());
+  EXPECT_TRUE(Ld0->isMemDepCandidate());
+  EXPECT_TRUE(St0->isMemDepCandidate());
+  EXPECT_FALSE(SideEffect0->isMemDepCandidate());
+  EXPECT_FALSE(PseudoProbe0->isMemDepCandidate());
+  EXPECT_TRUE(OtherIntrinsic0->isMemDepCandidate());
+  EXPECT_TRUE(CallBar->isMemDepCandidate());
+  EXPECT_FALSE(Ret->isMemDepCandidate());
 }
 
 TEST_F(SandboxIRTest, VAArgInst) {

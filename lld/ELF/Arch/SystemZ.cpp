@@ -187,7 +187,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64be(buf, s.getVA());
 }
 
@@ -417,7 +417,7 @@ void SystemZ::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 RelExpr SystemZ::adjustGotPcExpr(RelType type, int64_t addend,
                                  const uint8_t *loc) const {
   // Only R_390_GOTENT with addend 2 can be relaxed.
-  if (!config->relax || addend != 2 || type != R_390_GOTENT)
+  if (!ctx.arg.relax || addend != 2 || type != R_390_GOTENT)
     return R_GOT_PC;
   const uint16_t op = read16be(loc - 2);
 
