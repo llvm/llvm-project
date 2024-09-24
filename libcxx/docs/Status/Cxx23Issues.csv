@@ -281,7 +281,7 @@
 "`LWG3631 <https://wg21.link/LWG3631>`__","``basic_format_arg(T&&)`` should use ``remove_cvref_t<T>`` throughout","2023-02 (Issaquah)","|Complete|","17.0",""
 "`LWG3645 <https://wg21.link/LWG3645>`__","``resize_and_overwrite`` is overspecified to call its callback with lvalues","2023-02 (Issaquah)","|Complete|","14.0",""
 "`LWG3655 <https://wg21.link/LWG3655>`__","The ``INVOKE`` operation and union types","2023-02 (Issaquah)","|Complete|","18.0",""
-"`LWG3723 <https://wg21.link/LWG3723>`__","``priority_queue::push_range`` needs to ``append_range``","2023-02 (Issaquah)","","",""
+"`LWG3723 <https://wg21.link/LWG3723>`__","``priority_queue::push_range`` needs to ``append_range``","2023-02 (Issaquah)","|Complete|","17.0",""
 "`LWG3734 <https://wg21.link/LWG3734>`__","Inconsistency in ``inout_ptr`` and ``out_ptr`` for empty case","2023-02 (Issaquah)","|Complete|","19.0",""
 "`LWG3772 <https://wg21.link/LWG3772>`__","``repeat_view``'s ``piecewise`` constructor is missing Postconditions","2023-02 (Issaquah)","|Complete|","17.0",""
 "`LWG3786 <https://wg21.link/LWG3786>`__","Flat maps' deduction guide needs to default ``Allocator`` to be useful","2023-02 (Issaquah)","","",""

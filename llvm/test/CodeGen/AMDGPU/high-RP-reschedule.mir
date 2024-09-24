@@ -25,7 +25,7 @@ body: |
     %8:vreg_128 = IMPLICIT_DEF
     %9:vreg_128 = IMPLICIT_DEF
     %10:vreg_128 = IMPLICIT_DEF
-    %11:sreg_64_xexec = IMPLICIT_DEF
+    %11:sreg_64_xexec_xnull = IMPLICIT_DEF
     %12:vreg_64 = IMPLICIT_DEF
 
   bb.1:

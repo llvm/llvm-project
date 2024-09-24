@@ -621,3 +621,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.abort
 )
+
+add_entrypoint_object(
+  system
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.system
+)
