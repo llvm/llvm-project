@@ -104,7 +104,7 @@ struct EntryKind {
 /// such as `CommandArguments` or `CommandName`.
 struct TelemetryInfo {
   // This represents a unique-id, conventionally corresponding to
-  // a tools' session - ie., every time the tool starts until it exits.
+  // a tool's session - i.e., every time the tool starts until it exits.
   //
   // Note: a tool could have mutliple sessions running at once, in which
   // case, these shall be multiple sets of TelemetryInfo with multiple unique
