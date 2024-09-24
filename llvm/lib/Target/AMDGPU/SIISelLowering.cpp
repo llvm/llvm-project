@@ -9967,7 +9967,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                         0);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
-    } else if (!IsInlinableBarID) {
+    } else if (IsInlinableBarID) {
+      Ops.push_back(Chain);
+    } else {
       Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 
