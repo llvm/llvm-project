@@ -487,7 +487,7 @@ static bool allCallersPassValidPointerForArgument(
 
 // Try to prove that all Calls to F do not modify the memory pointed to by Arg,
 // using alias analysis local to each caller of F.
-static bool isArgUnmodifiedByAllCalls(Argument *Arg, const LocationSize &Size,
+static bool isArgUnmodifiedByAllCalls(Argument *Arg,
                                       FunctionAnalysisManager &FAM) {
   for (User *U : Arg->getParent()->users()) {
 
@@ -498,9 +498,6 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg, const LocationSize &Size,
 
     MemoryLocation Loc =
         MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
-
-    // Refine the MemoryLocation Size using information from Loads of Arg.
-    Loc = Loc.getWithNewSize(Size);
 
     AAResults &AAR = FAM.getResult<AAManager>(*Call->getFunction());
     // Bail as soon as we find a Call where Arg may be modified.
@@ -728,8 +725,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   append_range(ArgPartsVec, ArgParts);
   sort(ArgPartsVec, llvm::less_first());
 
-  // Make sure the parts are non-overlapping. This also computes the size of the
-  // memory region accessed through Arg.
+  // Make sure the parts are non-overlapping.
   int64_t Offset = ArgPartsVec[0].first;
   for (const auto &Pair : ArgPartsVec) {
     if (Pair.first < Offset)
@@ -750,7 +746,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // If we can determine that no call to the Function modifies the memory region
   // accessed through Arg, through alias analysis using actual arguments in the
   // callers, we know that it is guaranteed to be safe to promote the argument.
-  if (isArgUnmodifiedByAllCalls(Arg, LocationSize::precise(Offset), FAM))
+  if (isArgUnmodifiedByAllCalls(Arg, FAM))
     return true;
 
   // Otherwise, use alias analysis to check if the pointer is guaranteed to not
