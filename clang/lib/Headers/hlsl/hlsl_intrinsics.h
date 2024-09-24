@@ -448,13 +448,13 @@ template <typename T> constexpr uint asuint(T F) {
 /// \param lowbits The output lowbits of D.
 /// \param highbits The highbits lowbits D.
 #if __is_target_arch(dxil)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asuint_splitdouble)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_splitdouble)
 void asuint(double, out uint, out uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asuint_splitdouble)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_splitdouble)
 void asuint(double2, out uint2, out uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asuint_splitdouble)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_splitdouble)
 void asuint(double3, out uint3, out uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_asuint_splitdouble)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_splitdouble)
 void asuint(double4, out uint4, out uint4);
 #endif
 

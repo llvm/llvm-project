@@ -47,6 +47,7 @@ def ResRetInt32Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
+def ResSplitDoubleTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -778,7 +779,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
-//
+
+def SplitDouble :  DXILOp<102, splitDouble> {
+  let Doc = "Splits a double into 2 uints";
+  let arguments = [OverloadTy];
+  let result = ResSplitDoubleTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
 
 def AnnotateHandle : DXILOp<217, annotateHandle> {
   let Doc = "annotate handle with resource properties";

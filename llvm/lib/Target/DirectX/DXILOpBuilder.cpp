@@ -229,6 +229,13 @@ static StructType *getResPropsType(LLVMContext &Context) {
   return StructType::create({Int32Ty, Int32Ty}, "dx.types.ResourceProperties");
 }
 
+static StructType *getResSplitDoubleType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.splitdouble"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.splitdouble");
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -266,6 +273,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResBindType(Ctx);
   case OpParamType::ResPropsTy:
     return getResPropsType(Ctx);
+  case OpParamType::ResSplitDoubleTy:
+    return getResSplitDoubleType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
@@ -465,6 +474,10 @@ CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
 
 StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
+}
+
+StructType *DXILOpBuilder::getResSplitDoubleType(LLVMContext &Context) {
+  return ::getResSplitDoubleType(Context);
 }
 
 StructType *DXILOpBuilder::getHandleType() {

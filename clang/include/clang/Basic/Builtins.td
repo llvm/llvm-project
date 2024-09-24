@@ -4871,8 +4871,20 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLAsUintSplitDouble: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_asuint_splitdouble"];
+def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_radians"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_radians"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_splitdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

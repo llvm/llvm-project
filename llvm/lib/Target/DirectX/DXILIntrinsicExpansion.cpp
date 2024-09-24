@@ -12,7 +12,6 @@
 
 #include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
-#include "llvm-c/Core.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILResource.h"
