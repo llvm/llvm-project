@@ -60,7 +60,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addRequired<VirtRegMap>();
+    AU.addRequired<VirtRegMapWrapperPass>();
     AU.addRequired<LiveRegMatrix>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -76,7 +76,7 @@ private:
 INITIALIZE_PASS_BEGIN(SIPreAllocateWWMRegs, DEBUG_TYPE,
                 "SI Pre-allocate WWM Registers", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_END(SIPreAllocateWWMRegs, DEBUG_TYPE,
                 "SI Pre-allocate WWM Registers", false, false)
@@ -195,7 +195,7 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
 
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Matrix = &getAnalysis<LiveRegMatrix>();
-  VRM = &getAnalysis<VirtRegMap>();
+  VRM = &getAnalysis<VirtRegMapWrapperPass>().getVRM();
 
   RegClassInfo.runOnMachineFunction(MF);
 

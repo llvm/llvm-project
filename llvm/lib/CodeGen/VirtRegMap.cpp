@@ -56,11 +56,12 @@ STATISTIC(NumIdCopies,   "Number of identity moves eliminated after rewriting");
 //  VirtRegMap implementation
 //===----------------------------------------------------------------------===//
 
-char VirtRegMap::ID = 0;
+char VirtRegMapWrapperPass::ID = 0;
 
-INITIALIZE_PASS(VirtRegMap, "virtregmap", "Virtual Register Map", false, false)
+INITIALIZE_PASS(VirtRegMapWrapperPass, "virtregmap", "Virtual Register Map",
+                false, false)
 
-bool VirtRegMap::runOnMachineFunction(MachineFunction &mf) {
+void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
   TII = mf.getSubtarget().getInstrInfo();
   TRI = mf.getSubtarget().getRegisterInfo();
@@ -72,7 +73,6 @@ bool VirtRegMap::runOnMachineFunction(MachineFunction &mf) {
   Virt2ShapeMap.clear();
 
   grow();
-  return false;
 }
 
 void VirtRegMap::grow() {
@@ -169,6 +169,22 @@ LLVM_DUMP_METHOD void VirtRegMap::dump() const {
 }
 #endif
 
+AnalysisKey VirtRegMapAnalysis::Key;
+
+PreservedAnalyses
+VirtRegMapPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  OS << MFAM.getResult<VirtRegMapAnalysis>(MF);
+  return PreservedAnalyses::all();
+}
+
+VirtRegMap VirtRegMapAnalysis::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MAM) {
+  VirtRegMap VRM;
+  VRM.init(MF);
+  return VRM;
+}
+
 //===----------------------------------------------------------------------===//
 //                              VirtRegRewriter
 //===----------------------------------------------------------------------===//
@@ -232,7 +248,7 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperPass)
 INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
                     "Virtual Register Rewriter", false, false)
 
@@ -245,7 +261,7 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
-  AU.addRequired<VirtRegMap>();
+  AU.addRequired<VirtRegMapWrapperPass>();
 
   if (!ClearVirtRegs)
     AU.addPreserved<LiveDebugVariables>();
@@ -260,7 +276,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   MRI = &MF->getRegInfo();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VRM = &getAnalysis<VirtRegMap>();
+  VRM = &getAnalysis<VirtRegMapWrapperPass>().getVRM();
   DebugVars = &getAnalysis<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
                     << "********** Function: " << MF->getName() << '\n');
