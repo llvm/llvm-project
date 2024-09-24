@@ -1769,6 +1769,7 @@ bb1:
   store volatile i8 %ld0, ptr %ptr
   %atomicrmw = atomicrmw add ptr %ptr, i8 %v1 acquire
   %udiv = udiv i8 %ld0, %v1
+  %urem = urem i8 %ld0, %v1
   call void @foo()
   ret void
 }
@@ -1861,6 +1862,18 @@ bb1:
 
   for (auto &LLVMI : *LLVMBB1) {
     auto &I = cast<sandboxir::Instruction>(*Ctx.getValue(&LLVMI));
+    // Check isTerminator().
+    EXPECT_EQ(LLVMI.isTerminator(), I.isTerminator());
+    // Check isUnaryOp().
+    EXPECT_EQ(LLVMI.isUnaryOp(), I.isUnaryOp());
+    // Check isBinaryOp().
+    EXPECT_EQ(LLVMI.isBinaryOp(), I.isBinaryOp());
+    // Check isIntDivRem().
+    EXPECT_EQ(LLVMI.isIntDivRem(), I.isIntDivRem());
+    // Check isShift().
+    EXPECT_EQ(LLVMI.isShift(), I.isShift());
+    // Check isCast().
+    EXPECT_EQ(LLVMI.isCast(), I.isCast());
     // Check isAssociative().
     EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
     // Check isCommutative().
