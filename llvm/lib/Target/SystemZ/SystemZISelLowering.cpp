@@ -6586,12 +6586,13 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
   // The number of bytes being extracted.
   unsigned BytesPerElement = VecVT.getVectorElementType().getStoreSize();
 
-  while (canTreatAsByteVector(Op.getValueType())) {
+  for (;;) {
     unsigned Opcode = Op.getOpcode();
     if (Opcode == ISD::BITCAST)
       // Look through bitcasts.
       Op = Op.getOperand(0);
-    else if (Opcode == ISD::VECTOR_SHUFFLE || Opcode == SystemZISD::SPLAT) {
+    else if ((Opcode == ISD::VECTOR_SHUFFLE || Opcode == SystemZISD::SPLAT) &&
+             canTreatAsByteVector(Op.getValueType())) {
       // Get a VPERM-like permute mask and see whether the bytes covered
       // by the extracted element are a contiguous sequence from one
       // source operand.
@@ -6613,7 +6614,8 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
       Index = Byte / BytesPerElement;
       Op = Op.getOperand(unsigned(First) / Bytes.size());
       Force = true;
-    } else if (Opcode == ISD::BUILD_VECTOR) {
+    } else if (Opcode == ISD::BUILD_VECTOR &&
+               canTreatAsByteVector(Op.getValueType())) {
       // We can only optimize this case if the BUILD_VECTOR elements are
       // at least as wide as the extracted value.
       EVT OpVT = Op.getValueType();
@@ -6642,6 +6644,7 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
     } else if ((Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
                 Opcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
                 Opcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
+               canTreatAsByteVector(Op.getValueType()) &&
                canTreatAsByteVector(Op.getOperand(0).getValueType())) {
       // Make sure that only the unextended bits are significant.
       EVT ExtVT = Op.getValueType();
@@ -7358,8 +7361,9 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
     SDValue Op0 = N->getOperand(0);
     EVT VecVT = Op0.getValueType();
-    return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
-                          IndexN->getZExtValue(), DCI, false);
+    if (canTreatAsByteVector(VecVT))
+      return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
+                            IndexN->getZExtValue(), DCI, false);
   }
   return SDValue();
 }
