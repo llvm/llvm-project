@@ -256,7 +256,6 @@ struct VPTransformState {
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
-  unsigned UF;
 
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
@@ -309,7 +308,7 @@ struct VPTransformState {
     assert((VF.isScalar() || V->getType()->isVectorTy()) &&
            "scalar values must be stored as (Part, 0)");
     if (!Data.PerPartOutput.count(Def)) {
-      DataState::PerPartValuesTy Entry(UF);
+      DataState::PerPartValuesTy Entry(1);
       Data.PerPartOutput[Def] = Entry;
     }
     Data.PerPartOutput[Def][Part] = V;
@@ -1306,11 +1305,10 @@ private:
   /// needed.
   bool canGenerateScalarForFirstLane() const;
 
-  /// Utility methods serving execute(): generates a single instance of the
-  /// modeled instruction for a given part. \returns the generated value for \p
-  /// Part. In some cases an existing value is returned rather than a generated
-  /// one.
-  Value *generatePerPart(VPTransformState &State, unsigned Part);
+  /// Utility methods serving execute(): generates a single vector instance of
+  /// the modeled instruction. \returns the generated value. . In some cases an
+  /// existing value is returned rather than a generated one.
+  Value *generate(VPTransformState &State);
 
   /// Utility methods serving execute(): generates a scalar single instance of
   /// the modeled instruction for a given lane. \returns the scalar generated
@@ -1616,7 +1614,7 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
 
   Type *ResultTy;
 
-  Value *generate(VPTransformState &State, unsigned Part);
+  Value *generate(VPTransformState &State);
 
 public:
   VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
