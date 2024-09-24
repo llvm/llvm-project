@@ -3031,7 +3031,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // return semantics.
   bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
-  if (isCalleeStructRet || isCallerStructRet) {
+  if (isCalleeStructRet != isCallerStructRet) {
     LLVM_DEBUG(dbgs() << "false (struct-ret)\n");
     return false;
   }
