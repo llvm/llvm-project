@@ -23,7 +23,7 @@ def MapInfoFinalizationPass
 }
 
 def MapsForPrivatizedSymbolsPass
-    : Pass<"omp-map-for-privatized-symbols", "mlir::func::FuncOp"> {
+    : Pass<"omp-maps-for-privatized-symbols", "mlir::func::FuncOp"> {
   let summary = "Creates MapInfoOp instances for privatized symbols when needed";
   let description = [{
     Adds omp.map.info operations for privatized symbols on omp.target ops
