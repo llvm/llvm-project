@@ -311,9 +311,11 @@ private:
   /// @param FuncSize Cost of specializing a function.
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
+  /// @param ConsiderLiterals Whether to specialize on literal constants
   /// @return True, if any potential specializations were found
   bool findSpecializations(Function *F, unsigned FuncSize,
-                           SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
+                           SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM,
+                           bool ConsiderLiterals);
 
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);
@@ -328,7 +330,7 @@ private:
 
   /// Determine if it is possible to specialise the function for constant values
   /// of the formal parameter \p A.
-  bool isArgumentInteresting(Argument *A);
+  bool isArgumentInteresting(Argument *A, bool ConsiderLiterals);
 
   /// Check if the value \p V  (an actual argument) is a constant or can only
   /// have a constant value. Return that constant.

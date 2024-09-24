@@ -663,7 +663,8 @@ bool FunctionSpecializer::run() {
     if (Inserted && Metrics.isRecursive)
       promoteConstantStackValues(&F);
 
-    if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
+    bool ConsiderLiterals = SpecializeLiteralConstant || Metrics.isRecursive;
+    if (!findSpecializations(&F, FuncSize, AllSpecs, SM, ConsiderLiterals)) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -803,7 +804,8 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
 
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
-                                              SpecMap &SM) {
+                                              SpecMap &SM,
+                                              bool ConsiderLiterals) {
   // A mapping from a specialisation signature to the index of the respective
   // entry in the all specialisation array. Used to ensure uniqueness of
   // specialisations.
@@ -812,7 +814,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
   // Get a list of interesting arguments.
   SmallVector<Argument *> Args;
   for (Argument &Arg : F->args())
-    if (isArgumentInteresting(&Arg))
+    if (isArgumentInteresting(&Arg, ConsiderLiterals))
       Args.push_back(&Arg);
 
   if (Args.empty())
@@ -1032,14 +1034,16 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
 
 /// Determine if it is possible to specialise the function for constant values
 /// of the formal parameter \p A.
-bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
+bool FunctionSpecializer::isArgumentInteresting(Argument *A,
+                                                bool ConsiderLiterals) {
   // No point in specialization if the argument is unused.
   if (A->user_empty())
     return false;
 
   Type *Ty = A->getType();
-  if (!Ty->isPointerTy() && (!SpecializeLiteralConstant ||
-      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
+  if (!Ty->isPointerTy() &&
+      (!ConsiderLiterals ||
+       (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
   // SCCP solver does not record an argument that will be constructed on
