@@ -13,7 +13,7 @@
 #define DEBUG_TYPE "flang-debug-type-generator"
 
 #include "DebugTypeGenerator.h"
-#include "flang/Optimizer/CodeGen/DescriptorOffsets.h"
+#include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Pass/Pass.h"
@@ -59,11 +59,11 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
   mlir::Type llvmPtrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
   mlir::Type llvmLenType = getDescFieldTypeModel<kElemLenPosInBox>()(context);
   dimsOffset =
-      getDescComponentOffset<kDimsPosInBox>(*dataLayout, context, llvmDimsType);
+      getComponentOffset<kDimsPosInBox>(*dataLayout, context, llvmDimsType);
   dimsSize = dataLayout->getTypeSize(llvmDimsType);
   ptrSize = dataLayout->getTypeSize(llvmPtrType);
-  lenOffset = getDescComponentOffset<kElemLenPosInBox>(*dataLayout, context,
-                                                       llvmLenType);
+  lenOffset =
+      getComponentOffset<kElemLenPosInBox>(*dataLayout, context, llvmLenType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -189,16 +189,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   std::uint64_t offset = 0;
+  LLVMTypeConverter llvmTypeConverter(module, false, false, *dataLayout);
+
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
-    auto result = fir::getTypeSizeAndAlignment(module.getLoc(), fieldTy,
-                                               *dataLayout, kindMapping);
-    // If we get a type whose size we can't determine, we will break the loop
-    // and generate the derived type with whatever components we have
-    // assembled thus far.
-    if (!result)
-      break;
-    auto [byteSize, byteAlign] = *result;
+    mlir::Type llvmTy;
+    if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
+      llvmTy =
+          llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
+    else
+      llvmTy = llvmTypeConverter.convertType(fieldTy);
+
     // FIXME: Handle non defaults array bound in derived types
+    uint64_t byteSize = dataLayout->getTypeSize(llvmTy);
+    unsigned short byteAlign = dataLayout->getTypeABIAlignment(llvmTy);
     mlir::LLVM::DITypeAttr elemTy =
         convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);

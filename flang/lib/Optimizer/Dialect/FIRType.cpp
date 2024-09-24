@@ -13,9 +13,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/CodeGen/DescriptorModel.h"
-#include "flang/Optimizer/CodeGen/DescriptorOffsets.h"
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
@@ -1457,31 +1454,6 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     if (character.hasConstantLen())
       compSize *= character.getLen();
     return std::pair{compSize, compAlign};
-  }
-  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
-    mlir::MLIRContext *context = boxTy.getContext();
-    mlir::Type ptrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
-    mlir::Type dimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
-    std::uint64_t size =
-        getDescComponentOffset<kDimsPosInBox>(dl, context, dimsType);
-    unsigned rank = getBoxRank(ty);
-    if (rank > 0) {
-      std::uint64_t dimsSize = dl.getTypeSize(dimsType);
-      size += (rank * dimsSize);
-    }
-    if (boxHasAddendum(boxTy)) {
-      mlir::Type optType =
-          getExtendedDescFieldTypeModel<kOptTypePtrPosInBox>()(context);
-      mlir::Type rowType =
-          getExtendedDescFieldTypeModel<kOptRowTypePosInBox>()(context);
-      std::uint64_t fieldSize = dl.getTypeSize(optType);
-      std::uint64_t fieldAlignment = dl.getTypeABIAlignment(optType);
-      size += llvm::alignTo(fieldSize, fieldAlignment);
-      fieldSize = dl.getTypeSize(rowType);
-      fieldAlignment = dl.getTypeABIAlignment(rowType);
-      size += llvm::alignTo(fieldSize, fieldAlignment);
-    }
-    return std::pair{size, (unsigned short)dl.getTypeSize(ptrType)};
   }
   return std::nullopt;
 }
