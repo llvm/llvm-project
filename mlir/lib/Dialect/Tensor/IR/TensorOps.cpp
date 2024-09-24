@@ -3995,11 +3995,11 @@ ArrayRef<int64_t> PackOp::getAllOuterDims() {
 
 SmallVector<int64_t> PackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto destShape = getDestType().getShape();
+  auto packedShape = getDestType().getShape();
   SmallVector<int64_t> res;
 
   for (auto index : innerDimsPos)
-    res.push_back(destShape[index]);
+    res.push_back(packedShape[index]);
 
   return res;
 }
@@ -4436,11 +4436,11 @@ ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
 
 SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto destShape = getSourceType().getShape();
+  auto packedShape = getSourceType().getShape();
   SmallVector<int64_t> res;
 
   for (auto index : innerDimsPos)
-    res.push_back(destShape[index]);
+    res.push_back(packedShape[index]);
 
   return res;
 }
