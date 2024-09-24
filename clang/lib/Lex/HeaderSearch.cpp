@@ -655,7 +655,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     ++NumFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
-    auto Dir = FileMgr.getDirectory(FrameworkName);
+    auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkName);
     if (!Dir)
       return std::nullopt;
 
@@ -718,7 +718,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     bool FoundFramework = false;
     do {
       // Determine whether this directory exists.
-      auto Dir = FileMgr.getDirectory(FrameworkPath);
+      auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkPath);
       if (!Dir)
         break;
 

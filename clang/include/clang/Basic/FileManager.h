@@ -190,6 +190,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning DirectoryEntry are deprecated.",
+                  "getOptionalDirectoryRef()")
   llvm::ErrorOr<const DirectoryEntry *>
   getDirectory(StringRef DirName, bool CacheFailure = true);
 

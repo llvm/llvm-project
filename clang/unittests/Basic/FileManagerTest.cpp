@@ -116,9 +116,9 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
   // by what's in the real file system.
   manager.setStatCache(std::make_unique<FakeStatCache>());
 
-  ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
-  ASSERT_FALSE(manager.getDirectory("virtual/dir"));
-  ASSERT_FALSE(manager.getDirectory("virtual"));
+  ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual/dir/foo"));
+  ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual/dir"));
+  ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual"));
 }
 
 // When a virtual file is added, all of its ancestors should be created.
@@ -127,9 +127,11 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
   manager.setStatCache(std::make_unique<FakeStatCache>());
 
   manager.getVirtualFileRef("virtual/dir/bar.h", 100, 0);
-  ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
 
-  auto dir = manager.getDirectoryRef("virtual/dir");
+  auto dir = manager.getDirectoryRef("virtual/dir/foo");
+  ASSERT_THAT_EXPECTED(dir, llvm::Failed());
+
+  dir = manager.getDirectoryRef("virtual/dir");
   ASSERT_THAT_EXPECTED(dir, llvm::Succeeded());
   EXPECT_EQ("virtual/dir", dir->getName());
 
@@ -220,9 +222,10 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   ASSERT_EQ(llvm::errorToErrorCode(readingDirAsFile.takeError()),
             std::make_error_code(std::errc::is_a_directory));
 
-  auto readingFileAsDir = manager.getDirectory("foo.cpp");
+  auto readingFileAsDir = manager.getDirectoryRef("foo.cpp");
   ASSERT_FALSE(readingFileAsDir);
-  ASSERT_EQ(readingFileAsDir.getError(), std::errc::not_a_directory);
+  ASSERT_EQ(llvm::errorToErrorCode(readingFileAsDir.takeError()),
+            std::make_error_code(std::errc::not_a_directory));
 }
 
 // The following tests apply to Unix-like system only.
