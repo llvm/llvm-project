@@ -953,14 +953,18 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   Register Src = ES.getSrcVec();
   uint64_t Idx = ES.getIndexImm();
 
+  // With an index of 0 this is a cast-like subvector, which can be performed
+  // with subregister operations.
+  if (Idx == 0)
+    return true;
+
   LLT LitTy = MRI.getType(Dst);
   LLT BigTy = MRI.getType(Src);
-  Register Vec = Src;
 
   // We don't have the ability to slide mask vectors down indexed by their i1
   // elements; the smallest we can do is i8. Often we are able to bitcast to
   // equivalent i8 vectors.
-  if (LitTy.getElementType() == LLT::scalar(1) && Idx != 0) {
+  if (LitTy.getElementType() == LLT::scalar(1)) {
     auto BigTyMinElts = BigTy.getElementCount().getKnownMinValue();
     auto LitTyMinElts = LitTy.getElementCount().getKnownMinValue();
     if (BigTyMinElts >= 8 && LitTyMinElts >= 8) {
@@ -970,9 +974,9 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       Idx /= 8;
       BigTy = LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8);
       LitTy = LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
-      Vec = MIB.buildBitcast(BigTy, Vec).getReg(0);
-      auto Extract = MIB.buildExtractSubvector(LitTy, Vec, Idx);
-      MIB.buildBitcast(Dst, Extract);
+      auto CastVec = MIB.buildBitcast(BigTy, Src);
+      auto PromotedExtract = MIB.buildExtractSubvector(LitTy, CastVec, Idx);
+      MIB.buildBitcast(Dst, PromotedExtract);
       MI.eraseFromParent();
       return true;
     } else {
@@ -982,7 +986,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       // extend to a larger type, then truncate back down.
       LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
       LLT ExtLitTy = LitTy.changeElementType(LLT::scalar(8));
-      auto BigZExt = MIB.buildZExt(ExtBigTy, Vec);
+      auto BigZExt = MIB.buildZExt(ExtBigTy, Src);
       auto ExtractZExt = MIB.buildExtractSubvector(ExtLitTy, BigZExt, Idx);
       auto SplatZero = MIB.buildSplatVector(
           ExtLitTy, MIB.buildConstant(ExtLitTy.getElementType(), 0));
@@ -991,11 +995,6 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
       return true;
     }
   }
-
-  // With an index of 0 this is a cast-like subvector, which can be performed
-  // with subregister operations.
-  if (Idx == 0)
-    return true;
 
   // extract_subvector scales the index by vscale if the subvector is scalable,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account.
@@ -1022,6 +1021,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
   LLT InterLitTy = BigTy;
+  Register Vec = Src;
   if (TypeSize::isKnownGT(BigTy.getSizeInBits(),
                           getLMUL1Ty(BigTy).getSizeInBits())) {
     // If BigTy has an LMUL > 1, then LitTy should have a smaller LMUL, and
@@ -1031,7 +1031,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
     // SDAG builds a TargetExtractSubreg. We cannot create a a Copy with SubReg
     // specified on the source Register (the equivalent) since generic virtual
     // register does not allow subregister index.
-    Vec = MIB.buildExtractSubvector(InterLitTy, Vec, Idx - RemIdx).getReg(0);
+    Vec = MIB.buildExtractSubvector(InterLitTy, Src, Idx - RemIdx).getReg(0);
   }
 
   // Slide this vector register down by the desired number of elements in order
