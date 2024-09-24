@@ -38,7 +38,7 @@ Important notes
   We only provide the abstract API here. Any tool that wants telemetry will
   implement one.
   
-  The rationale for this is that, all the tools in llvm are very different in
+  The rationale for this is that, all the tools in LLVM are very different in
   what they care about (what/where/when to instrument data). Hence, it might not
   be practical to have a single implementation.
   However, in the future, if we see enough common pattern, we can extract them
