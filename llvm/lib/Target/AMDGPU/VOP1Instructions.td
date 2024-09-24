@@ -629,9 +629,15 @@ let SubtargetPredicate = isGFX9Only in {
 
 
 // Similar to VOPProfile_Base_CVT_F32_F8, but for VOP3 instructions.
-def VOPProfile_Base_CVT_PK_F32_F8_OpSel : VOPProfileI2F <v2f32, i32> {
+def VOPProfile_Base_CVT_PK_F32_F8_OpSel : VOPProfile<[v2f32, i32, untyped, untyped]> {
   let HasOpSel = 1;
+  let HasClamp = 0;
+  let HasOMod = 0;
+  let HasExtDPP = 0;
   let HasExtVOP3DPP = 0;
+  let AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, 0 /*HasModifiers*/, 0/*Src0HasMods*/, 0/*Src1HasMods*/,
+   0/*Src2HasMods*/, DstVT>.ret;
 }
 
 class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
@@ -678,7 +684,7 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
     (v2f32 (node i32:$src, index)),
     !if (index,
-         (inst_e64 SRCMODS.OP_SEL_0, $src, 0, 0, SRCMODS.NONE),
+         (inst_e64 SRCMODS.OP_SEL_0, $src, 0),
          (inst_e32 $src))
 >;
 
