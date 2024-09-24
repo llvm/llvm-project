@@ -233,13 +233,12 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
     return Def->getLiveInIRValue();
 
   if (hasScalarValue(Def, Instance)) {
-    return Data
-        .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
+    return Data.VPV2Scalars[Def][Instance.Lane.mapToCacheIndex(VF)];
   }
   if (!Instance.Lane.isFirstLane() &&
       vputils::isUniformAfterVectorization(Def) &&
       hasScalarValue(Def, {Instance.Part, VPLane::getFirstLane()})) {
-    return Data.PerPartScalars[Def][Instance.Part][0];
+    return Data.VPV2Scalars[Def][0];
   }
 
   assert(hasVectorValue(Def));
@@ -260,7 +259,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
             !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPIteration(0, 0)) &&
-             Data.PerPartScalars[Def][0].size() == 1)) &&
+             Data.VPV2Scalars[Def].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
            "per part.");
     return get(Def, VPIteration(0, 0));

@@ -292,6 +292,7 @@ static const LLT S160 = LLT::scalar(160);
 static const LLT S224 = LLT::scalar(224);
 static const LLT S256 = LLT::scalar(256);
 static const LLT S512 = LLT::scalar(512);
+static const LLT S1024 = LLT::scalar(1024);
 static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
 static const LLT V2S8 = LLT::fixed_vector(2, 8);
@@ -332,8 +333,8 @@ static const LLT V16S64 = LLT::fixed_vector(16, 64);
 static const LLT V2S128 = LLT::fixed_vector(2, 128);
 static const LLT V4S128 = LLT::fixed_vector(4, 128);
 
-static std::initializer_list<LLT> AllScalarTypes = {S32,  S64,  S96,  S128,
-                                                    S160, S224, S256, S512};
+static std::initializer_list<LLT> AllScalarTypes = {
+    S32, S64, S96, S128, S160, S224, S256, S512, S1024};
 
 static std::initializer_list<LLT> AllS16Vectors{
     V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
@@ -889,10 +890,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S16, S64);
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalIf(isRegisterType(0))
+      .legalIf(isRegisterClassType(0))
       // s1 and s16 are special cases because they have legal operations on
       // them, but don't really occupy registers in the normal way.
       .legalFor({S1, S16})
+      .clampNumElements(0, V16S32, V32S32)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampScalarOrElt(0, S32, MaxScalar)
       .widenScalarToNextPow2(0, 32)
