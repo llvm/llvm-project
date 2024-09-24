@@ -80,15 +80,10 @@ public:
       return {};
 
     // Check if we have a regex match
-    bool matches_regex = false;
     for (RegularExpression &r : m_hidden_regex) {
-      if (r.Execute(sc.function->GetNameNoArguments())) {
-        matches_regex = true;
-        break;
-      }
-    }
+      if (!r.Execute(sc.function->GetNameNoArguments()))
+        continue;
 
-    if (matches_regex) {
       // Only hide this frame if the immediate caller is also within libc++.
       lldb::ThreadSP thread_sp = frame_sp->GetThread();
       if (!thread_sp)
