@@ -78,15 +78,15 @@ void MCResourceInfo::finalize(MCContext &OutContext) {
 }
 
 MCSymbol *MCResourceInfo::getMaxVGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("max_num_vgpr");
+  return OutContext.getOrCreateSymbol("amdgcn.max_num_vgpr");
 }
 
 MCSymbol *MCResourceInfo::getMaxAGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("max_num_agpr");
+  return OutContext.getOrCreateSymbol("amdgcn.max_num_agpr");
 }
 
 MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
-  return OutContext.getOrCreateSymbol("max_num_sgpr");
+  return OutContext.getOrCreateSymbol("amdgcn.max_num_sgpr");
 }
 
 void MCResourceInfo::assignResourceInfoExpr(

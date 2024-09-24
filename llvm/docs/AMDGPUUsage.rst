@@ -1760,14 +1760,13 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target specific
 Function Resource Usage
 -----------------------
 
-The function resource information (e.g., number of VGPRs) required depends on
-all of its callees' function resources. The expression to denote these
-resources should, therefore, be described as the propagative of its callees'
-equivalent expressions. Said expressions are generated and emitted (as symbols)
-by the compiler when compiling to either assembly or object format and should
-not be overwritten or redefined.
+A function's resource usage depends on each of its callees' resource usage. The
+expressions used to denote resource usage reflect this by propagating each
+callees' equivalent expressions. Said expressions are emitted as symbols by the
+compiler when compiling to either assembly or object format and should not be
+overwritten or redefined.
 
-The following describes all emitted function resource usage information:
+The following describes all emitted function resource usage symbols:
 
   .. table:: Function Resource Usage:
      :name: function-usage-table
@@ -1790,11 +1789,11 @@ The following describes all emitted function resource usage information:
                                                      locally used stack size + the worst case
                                                      callee
      <function_name>.uses_vcc              Bool      Whether <function_name>, or any of its    .set foo.uses_vcc, or(0, bar.uses_vcc)
-                                                     callees, uses vcc or not
+                                                     callees, uses vcc
      <function_name>.uses_flat_scratch     Bool      Whether <function_name>, or any of its    .set foo.uses_flat_scratch, 1
                                                      callees, uses flat scratch or not
-     <function_name>.has_dyn_sized_stack   Bool      Whether <function_name> stack is          .set foo.has_dyn_sized_stack, 1
-                                                     dynamically sized
+     <function_name>.has_dyn_sized_stack   Bool      Whether <function_name>, or any of its    .set foo.has_dyn_sized_stack, 1
+                                                     callees, is dynamically sized
      <function_name>.has_recursion         Bool      Whether <function_name>, or any of its    .set foo.has_recursion, 0
                                                      callees, contains recursion
      <function_name>.has_indirect_call     Bool      Whether <function_name>, or any of its    .set foo.has_indirect_call, max(0, bar.has_indirect_call)
@@ -1804,8 +1803,8 @@ The following describes all emitted function resource usage information:
 Futhermore, three symbols are additionally emitted describing the compilation
 unit's worst case (i.e, maxima) ``num_vgpr``, ``num_agpr``, and
 ``numbered_sgpr`` which may be referenced and used by the aforementioned
-symbolic expressions. These three symbols are ``max_num_vgpr``,
-``max_num_agpr``, and ``max_num_sgpr``.
+symbolic expressions. These three symbols are ``amdgcn.max_num_vgpr``,
+``amdgcn.max_num_agpr``, and ``amdgcn.max_num_sgpr``.
 
 .. _amdgpu-elf-code-object:
 
