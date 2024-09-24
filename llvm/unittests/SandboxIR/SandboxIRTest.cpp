@@ -1180,6 +1180,24 @@ define ptr @foo() {
   EXPECT_EQ(PtrAuth->getWithSameSchema(&F), PtrAuth);
 }
 
+TEST_F(SandboxIRTest, ConstantExpr) {
+  parseIR(C, R"IR(
+define i32 @foo() {
+  ret i32 ptrtoint (ptr @foo to i32)
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  // Check classof(), creation.
+  [[maybe_unused]] auto *ConstExpr =
+      cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+}
+
 TEST_F(SandboxIRTest, BlockAddress) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
