@@ -1379,7 +1379,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
   assert(!LastNodeContextIds.empty());
 
+#ifndef NDEBUG
+  bool PrevIterCreatedNode = false;
+  bool CreatedNode = false;
+  for (unsigned I = 0; I < Calls.size();
+       I++, PrevIterCreatedNode = CreatedNode) {
+    CreatedNode = false;
+#else
   for (unsigned I = 0; I < Calls.size(); I++) {
+#endif
     auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
@@ -1391,7 +1399,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       if (!CallToMatchingCall.contains(Call))
         continue;
       auto MatchingCall = CallToMatchingCall[Call];
-      assert(NonAllocationCallToContextNodeMap.contains(MatchingCall));
+      if (!NonAllocationCallToContextNodeMap.contains(MatchingCall)) {
+        // This should only happen if we had a prior iteration, and it didn't
+        // create a node because of the below recomputation of context ids
+        // finding none remaining and continuing early.
+        assert(I > 0 && !PrevIterCreatedNode);
+        continue;
+      }
       NonAllocationCallToContextNodeMap[MatchingCall]->MatchingCalls.push_back(
           Call);
       continue;
@@ -1444,6 +1458,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     ContextNode *NewNode = NodeOwner.back().get();
     NodeToCallingFunc[NewNode] = Func;
     NonAllocationCallToContextNodeMap[Call] = NewNode;
+#ifndef NDEBUG
+    CreatedNode = true;
+#endif
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
 
     ContextNode *FirstNode = getNodeForStackId(Ids[0]);
@@ -1600,15 +1617,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // set used to ensure they are sorted properly.
       if (I > 0 && Ids != Calls[I - 1].StackIds)
         MatchingIdsFuncSet.clear();
-      else
-        // If the prior call had the same stack ids this set would not be empty.
-        // Check if we already have a call that "matches" because it is located
-        // in the same function. If the Calls list was sorted properly we should
-        // not encounter this situation as all such entries should be adjacent
-        // and processed in bulk further below.
-        assert(!MatchingIdsFuncSet.contains(Func));
-
-      MatchingIdsFuncSet.insert(Func);
 #endif
 
       // First compute the context ids for this stack id sequence (the
@@ -1678,6 +1686,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         if (StackSequenceContextIds.empty())
           continue;
       }
+
+#ifndef NDEBUG
+      // If the prior call had the same stack ids this set would not be empty.
+      // Check if we already have a call that "matches" because it is located
+      // in the same function. If the Calls list was sorted properly we should
+      // not encounter this situation as all such entries should be adjacent
+      // and processed in bulk further below.
+      assert(!MatchingIdsFuncSet.contains(Func));
+
+      MatchingIdsFuncSet.insert(Func);
+#endif
 
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
