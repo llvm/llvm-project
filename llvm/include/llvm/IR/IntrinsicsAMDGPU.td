@@ -2121,6 +2121,13 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
 
 def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_add : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_uadd : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_sub : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_usub : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_and : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_or : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_xor : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
