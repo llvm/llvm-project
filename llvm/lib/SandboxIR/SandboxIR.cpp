@@ -569,6 +569,10 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
 }
 
+Type *Instruction::getAccessType() const {
+  return Ctx.getType(cast<llvm::Instruction>(Val)->getAccessType());
+}
+
 void Instruction::setHasApproxFunc(bool B) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&Instruction::hasApproxFunc,
