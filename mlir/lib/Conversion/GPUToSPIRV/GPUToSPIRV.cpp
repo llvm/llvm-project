@@ -614,11 +614,9 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 
   Location loc = gpuPrintfOp.getLoc();
 
-  auto moduleOp = gpuPrintfOp->getParentOfType<spirv::ModuleOp>();
-
-  if (!moduleOp) {
-    return success();
-  }
+  auto moduleOp = gpuPrintfOp.getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp)
+    return failure();
 
   const char formatStringPrefix[] = "printfMsg";
   unsigned stringNumber = 0;
