@@ -171,9 +171,11 @@ body: |
     ; GCN-LABEL: name: test_unmerge_values_s_s64_s_s64_s64_s_s192
     ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:sgpr(s192) = G_IMPLICIT_DEF
-    ; GCN-NEXT: [[UV:%[0-9]+]]:sgpr(s64), [[UV1:%[0-9]+]]:sgpr(s64), [[UV2:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[DEF]](s192)
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[UV]](s64), implicit [[UV1]](s64), implicit [[UV2]](s64)
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sgpr_192 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub0_sub1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub2_sub3
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub4_sub5
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]]
     %0:sgpr(s192) = G_IMPLICIT_DEF
     %1:sgpr(s64), %2:sgpr(s64), %3:sgpr(s64) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2, implicit %3
