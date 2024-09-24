@@ -14,6 +14,7 @@
 #include <rtsan/rtsan_stack.h>
 
 #include <sanitizer_common/sanitizer_allocator_internal.h>
+#include <sanitizer_common/sanitizer_report_decorator.h>
 #include <sanitizer_common/sanitizer_stacktrace.h>
 
 #include <new>
@@ -91,15 +92,28 @@ bool __rtsan::Context::InRealtimeContext() const { return realtime_depth_ > 0; }
 
 bool __rtsan::Context::IsBypassed() const { return bypass_depth_ > 0; }
 
+namespace {
+class Decorator : public __sanitizer::SanitizerCommonDecorator {
+public:
+  Decorator() : SanitizerCommonDecorator() {}
+  const char *FunctionName() { return Green(); }
+  const char *Reason() { return Blue(); }
+};
+} // namespace
+
 void __rtsan::PrintDiagnostics(const char *intercepted_function_name, uptr pc,
                                uptr bp) {
   ScopedErrorReportLock l;
 
+  Decorator d;
+  Printf("%s", d.Error());
   Report("ERROR: RealtimeSanitizer: unsafe-library-call\n");
+  Printf("%s", d.Reason());
   Printf("Intercepted call to real-time unsafe function "
-         "`%s` in real-time context!\n",
-         intercepted_function_name);
+         "`%s%s%s` in real-time context!\n",
+         d.FunctionName(), intercepted_function_name, d.Reason());
 
+  Printf("%s", d.Default());
   __rtsan::PrintStackTrace(pc, bp);
 }
 
