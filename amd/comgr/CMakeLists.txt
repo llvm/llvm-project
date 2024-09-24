@@ -369,6 +369,10 @@ install(FILES
 
 if(TARGET clangFrontendTool)
   set(CLANG_LIBS
+    clangBasic
+    clangDriver
+    clangSerialization
+    clangFrontend
     clangFrontendTool)
 else()
   set(CLANG_LIBS
@@ -384,8 +388,24 @@ if (LLVM_LINK_LLVM_DYLIB)
 else()
   llvm_map_components_to_libnames(LLVM_LIBS
     ${LLVM_TARGETS_TO_BUILD}
+    BinaryFormat
+    BitReader
+    BitWriter
+    CodeGen
+    Core
     DebugInfoDWARF
-    Symbolize)
+    Demangle
+    IRReader
+    Linker
+    MC
+    MCDisassembler
+    MCParser
+    Object
+    Option
+    Support
+    Symbolize
+    TargetParser
+    )
 endif()
 
 target_link_options(amd_comgr
