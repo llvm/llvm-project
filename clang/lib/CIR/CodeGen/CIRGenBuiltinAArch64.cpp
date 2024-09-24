@@ -2162,14 +2162,20 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vset_lane_i16:
   case NEON::BI__builtin_neon_vset_lane_i32:
   case NEON::BI__builtin_neon_vset_lane_i64:
-  case NEON::BI__builtin_neon_vset_lane_bf16:
   case NEON::BI__builtin_neon_vset_lane_f32:
   case NEON::BI__builtin_neon_vsetq_lane_i8:
   case NEON::BI__builtin_neon_vsetq_lane_i16:
   case NEON::BI__builtin_neon_vsetq_lane_i32:
   case NEON::BI__builtin_neon_vsetq_lane_i64:
-  case NEON::BI__builtin_neon_vsetq_lane_bf16:
   case NEON::BI__builtin_neon_vsetq_lane_f32:
+    Ops.push_back(buildScalarExpr(E->getArg(2)));
+    return builder.create<mlir::cir::VecInsertOp>(getLoc(E->getExprLoc()),
+                                                  Ops[1], Ops[0], Ops[2]);
+  case NEON::BI__builtin_neon_vset_lane_bf16:
+  case NEON::BI__builtin_neon_vsetq_lane_bf16:
+    // No support for now as no real/test case for them
+    // at the moment, the implementation should be the same as above
+    // vset_lane or vsetq_lane intrinsics
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vset_lane_f64:
     // The vector type needs a cast for the v1f64 variant.
