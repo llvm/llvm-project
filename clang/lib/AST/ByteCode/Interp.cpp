@@ -1293,6 +1293,13 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   if (!CheckStore(S, OpPC, Ptr))
     return false;
 
+  if (!InvalidNewDeleteExpr(S, OpPC, E))
+    return false;
+
+  // Assume proper types in std functions.
+  if (S.Current->isStdFunction())
+    return true;
+
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
@@ -1334,10 +1341,16 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
   const auto &Loc = S.Current->getSource(OpPC);
 
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
     if (!S.getLangOpts().CPlusPlus26 && NewExpr->getNumPlacementArgs() > 0) {
+      // This is allowed pre-C++26, but only an std function.
+      if (S.Current->isStdFunction())
+        return true;
       S.FFDiag(Loc, diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
     } else if (NewExpr->getNumPlacementArgs() == 1 &&
