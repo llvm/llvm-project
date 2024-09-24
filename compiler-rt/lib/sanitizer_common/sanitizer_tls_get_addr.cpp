@@ -158,10 +158,18 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     return dtv;
   }
   VReport(2, "__tls_get_addr: Can't guess glibc version\n");
-  // This may happen inside the DTOR of main thread, so just ignore it.
+  // This may happen inside the DTOR a thread, or async signal handlers before
+  // thread initialization, so just ignore it.
+  //
+  // If the unknown block is dynamic TLS, unlikely we will be able to recognize
+  // it in future, mark it as done with '{tls_beg, 0}'.
+  //
+  // If the block is static TLS, possible reason of failed detection is nullptr
+  // in `static_tls_begin`. Regardless of reasons, the future handling of static
+  // TLS is still '{tls_beg, 0}'.
   dtv->beg = tls_beg;
   dtv->size = 0;
-  return dtv;
+  return nullptr;
 }
 
 DTLS *DTLS_Get() { return &dtls; }
