@@ -838,7 +838,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.
@@ -987,6 +986,32 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       }
     }
     break;
+
+  case LISTFLATTEN:
+    if (ListInit *LHSList = dyn_cast<ListInit>(LHS)) {
+      ListRecTy *InnerListTy = dyn_cast<ListRecTy>(LHSList->getElementType());
+      // list of non-lists, !listflatten() is a NOP.
+      if (!InnerListTy)
+        return LHS;
+
+      auto Flatten = [](ListInit *List) -> std::optional<std::vector<Init *>> {
+        std::vector<Init *> Flattened;
+        // Concatenate elements of all the inner lists.
+        for (Init *InnerInit : List->getValues()) {
+          ListInit *InnerList = dyn_cast<ListInit>(InnerInit);
+          if (!InnerList)
+            return std::nullopt;
+          for (Init *InnerElem : InnerList->getValues())
+            Flattened.push_back(InnerElem);
+        };
+        return Flattened;
+      };
+
+      auto Flattened = Flatten(LHSList);
+      if (Flattened)
+        return ListInit::get(*Flattened, InnerListTy->getElementType());
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -1011,6 +1036,9 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case LISTFLATTEN:
+    Result = "!listflatten";
+    break;
   case REPR:
     Result = "!repr";
     break;

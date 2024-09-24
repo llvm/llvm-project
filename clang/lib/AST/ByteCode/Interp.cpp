@@ -90,10 +90,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
-  if (!S.getLangOpts().CPlusPlus)
-    return;
-
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (!S.getLangOpts().CPlusPlus) {
+    S.FFDiag(Loc);
+    return;
+  }
+
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
       !VarD->getAnyInitializer()) {
@@ -620,6 +622,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
     return false;
+  if (!CheckWeak(S, OpPC, Ptr))
+    return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
   return true;
@@ -1008,6 +1012,37 @@ void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
   }
 }
 
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
+  assert(T);
+  assert(!S.getLangOpts().CPlusPlus23);
+
+  // C++1y: A constant initializer for an object o [...] may also invoke
+  // constexpr constructors for o and its subobjects even if those objects
+  // are of non-literal class types.
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+
+  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
+    return true;
+  }
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+  else
+    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1249,6 +1284,93 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return CallVirt(S, OpPC, F, VarArgSize);
 
   return Call(S, OpPC, F, VarArgSize);
+}
+
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
+
+  if (!InvalidNewDeleteExpr(S, OpPC, E))
+    return false;
+
+  // Assume proper types in std functions.
+  if (S.Current->isStdFunction())
+    return true;
+
+  const auto *NewExpr = cast<CXXNewExpr>(E);
+  QualType StorageType = Ptr.getType();
+
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr())) {
+    // FIXME: Are there other cases where this is a problem?
+    StorageType = StorageType->getPointeeType();
+  }
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  QualType AllocType;
+  if (ArraySize) {
+    AllocType = ASTCtx.getConstantArrayType(
+        NewExpr->getAllocatedType(),
+        APInt(64, static_cast<uint64_t>(*ArraySize), false), nullptr,
+        ArraySizeModifier::Normal, 0);
+  } else {
+    AllocType = NewExpr->getAllocatedType();
+  }
+
+  unsigned StorageSize = 1;
+  unsigned AllocSize = 1;
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
+    AllocSize = CAT->getZExtSize();
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(StorageType))
+    StorageSize = CAT->getZExtSize();
+
+  if (AllocSize > StorageSize ||
+      !ASTCtx.hasSimilarType(ASTCtx.getBaseElementType(AllocType),
+                             ASTCtx.getBaseElementType(StorageType))) {
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_constexpr_placement_new_wrong_type)
+        << StorageType << AllocType;
+    return false;
+  }
+  return true;
+}
+
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
+  assert(E);
+  const auto &Loc = S.Current->getSource(OpPC);
+
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
+  if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
+    const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
+
+    if (!S.getLangOpts().CPlusPlus26 && NewExpr->getNumPlacementArgs() > 0) {
+      // This is allowed pre-C++26, but only an std function.
+      if (S.Current->isStdFunction())
+        return true;
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*C++26 feature*/ 1 << E->getSourceRange();
+    } else if (NewExpr->getNumPlacementArgs() == 1 &&
+               !OperatorNew->isReservedGlobalPlacementOperator()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*Unsupported*/ 0 << E->getSourceRange();
+    } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+    }
+  } else {
+    const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
+    const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
+    if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
+    }
+  }
+
+  return false;
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

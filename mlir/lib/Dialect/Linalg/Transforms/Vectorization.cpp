@@ -810,6 +810,37 @@ static Value calculateGatherOffset(RewriterBase &rewriter,
 
 enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 
+/// Find the index of the trailing non-unit dim in linalgOp. This hook is used
+/// when checking whether `tensor.extract` Op (within a `linalg.generic` Op)
+/// represents a contiguous load operation.
+///
+/// Note that when calling this hook, it is assumed that the output vector is
+/// effectively 1D. Other cases (i.e. reading n-D vectors) should've been
+/// labelled as a gather load before entering this method.
+///
+/// Following on from the above, it is assumed that:
+///   * for statically shaped loops, when no masks are used, only one dim is !=
+///   1 (that's what the shape of the output vector is based on).
+///   * for dynamically shaped loops, there might be more non-unit dims
+///   as the output vector type is user-specified.
+///
+/// TODO: Statically shaped loops + vector masking
+static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
+  SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
+  assert(linalgOp.hasDynamicShape() ||
+         llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) ==
+                 1 &&
+             "For statically shaped Linalg Ops, only one "
+             "non-unit loop dim is expected");
+
+  size_t idx = loopRanges.size() - 1;
+  for (; idx >= 0; idx--)
+    if (loopRanges[idx] != 1)
+      break;
+
+  return idx;
+}
+
 /// Checks whether `val` can be used for calculating a loop invariant index.
 static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
                                VectorType resType) {
@@ -831,11 +862,11 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
   assert(defOp && "This is neither a block argument nor an operation result");
 
   // IndexOp is loop invariant as long as its result remains constant across
-  // iterations. Given the assumptions on the loop ranges above, only the
-  // trailing loop dim ever changes.
-  auto trailingLoopDim = linalgOp.getStaticLoopRanges().size() - 1;
-  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp))
-    return (indexOp.getDim() != trailingLoopDim);
+  // iterations. Note that for dynamic shapes, the corresponding dim will also
+  // be conservatively treated as != 1.
+  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
+    return linalgOp.getStaticLoopRanges()[indexOp.getDim()] == 1;
+  }
 
   auto *ancestor = block->findAncestorOpInBlock(*defOp);
 
@@ -854,7 +885,7 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
   return result;
 }
 
-/// Check whether \p val could be used for calculating the trailing index for a
+/// Check whether `val` could be used for calculating the trailing index for a
 /// contiguous load operation.
 ///
 /// There are currently 3 types of values that are allowed here:
@@ -863,13 +894,14 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
 ///   3. results of basic arithmetic operations (linear and continuous)
 ///      involving 1., 2. and 3.
 /// This method returns True if indeed only such values are used in calculating
-/// \p val.
+/// `val.`
 ///
 /// Additionally, the trailing index for a contiguous load operation should
 /// increment by 1 with every loop iteration, i.e. be based on:
 ///   * `linalg.index <dim>` ,
-/// where <dim> is the trailing dim of the iteration space. \p foundIndexOp is
-/// updated to `true` when such an op is found.
+/// where <dim> is the trailing non-unit dim of the iteration space (this way,
+/// `linalg.index <dim>` increments by 1 with every loop iteration).
+/// `foundIndexOp` is updated to `true` when such Op is found.
 static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
                                 bool &foundIndexOp, VectorType resType) {
 
@@ -889,11 +921,10 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   Operation *defOp = val.getDefiningOp();
   assert(defOp && "This is neither a block argument nor an operation result");
 
-  // Given the assumption on the loop ranges above, only the trailing loop
-  // index is not constant.
-  auto trailingLoopDim = linalgOp.getStaticLoopRanges().size() - 1;
   if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    foundIndexOp = (indexOp.getDim() == trailingLoopDim);
+    auto loopDimThatIncrementsByOne = getTrailingNonUnitLoopDimIdx(linalgOp);
+
+    foundIndexOp = (indexOp.getDim() == loopDimThatIncrementsByOne);
     return true;
   }
 
@@ -988,7 +1019,10 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   bool foundIndexOp = false;
   bool isContiguousLoad = isContiguousLoadIdx(linalgOp, extractOpTrailingIdx,
                                               foundIndexOp, resType);
-  isContiguousLoad &= foundIndexOp;
+  // TODO: Support generating contiguous loads for column vectors - that will
+  // require adding a permutation map to tranfer_read Ops.
+  bool isRowVector = resType.getShape().back() != 1;
+  isContiguousLoad &= (foundIndexOp && isRowVector);
 
   if (isContiguousLoad) {
     LDBG("Found contigous load: " << extractOp);
@@ -1048,6 +1082,11 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //  a. scalar loads + broadcast,
   //  b. contiguous loads.
   // Both cases use vector.transfer_read.
+
+  assert(llvm::count_if(resultType.getShape(),
+                        [](uint64_t dim) { return dim != 1; }) &&
+         "Contiguous loads and scalar loads + broadcast only support 1-D "
+         "vectors ATM!");
 
   // Collect indices for `vector.transfer_read`. At this point, the indices will
   // either be scalars or would have been broadcast to vectors matching the
@@ -2948,10 +2987,15 @@ struct Conv1DGenerator
     if (!setOperKind(reduceOp))
       return;
     auto maybeKind = getCombinerOpKind(reduceOp);
-    if (!maybeKind || (*maybeKind != vector::CombiningKind::ADD &&
+    // Typically convolution will have a `Add` CombiningKind but for i1 type it
+    // can get strength reduced to `OR` which is also supported. This strength
+    // reduction logic is in `buildBinaryFn` helper in the Linalg dialect.
+    if (!maybeKind || ((*maybeKind != vector::CombiningKind::ADD &&
+                        *maybeKind != vector::CombiningKind::OR) &&
                        (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
       return;
     }
+    reductionKind = maybeKind.value();
 
     auto rhsRank = rhsShapedType.getRank();
     switch (oper) {
@@ -3234,10 +3278,12 @@ struct Conv1DGenerator
     bindDims(ctx, n, w, f, c);
     lhs = promote(rewriter, loc, lhs, res.getType());
     rhs = promote(rewriter, loc, rhs, res.getType());
-    return rewriter.create<vector::ContractionOp>(
+    auto contrationOp = rewriter.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
         /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
+    contrationOp.setKind(reductionKind);
+    return contrationOp;
   }
 
   // Create an outerproduct: lhs{w} * rhs{1} -> res{w} for single channel
@@ -3627,6 +3673,7 @@ private:
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
+  vector::CombiningKind reductionKind;
 
   // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
   // Returns true iff it is a valid conv/pooling op.
@@ -3642,7 +3689,9 @@ private:
     switch (numBlockArguments) {
     case 1: {
       // Will be convolution if feeder is a MulOp.
-      // Otherwise, if it can be pooling.
+      // A strength reduced version of MulOp for i1 type is AndOp which is also
+      // supported. Otherwise, it can be pooling. This strength reduction logic
+      // is in `buildBinaryFn` helper in the Linalg dialect.
       auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
                                          llvm::IsaPred<BlockArgument>);
       Operation *feedOp = (*feedValIt).getDefiningOp();
@@ -3650,7 +3699,9 @@ private:
         oper = Pool;
         isPoolExt = true;
         poolExtOp = feedOp->getName().getIdentifier();
-      } else if (!(isa<arith::MulIOp, arith::MulFOp>(feedOp) &&
+      } else if (!((isa<arith::MulIOp, arith::MulFOp>(feedOp) ||
+                    (isa<arith::AndIOp>(feedOp) &&
+                     feedOp->getResultTypes()[0].isInteger(1))) &&
                    llvm::all_of(feedOp->getOperands(), [](Value v) {
                      if (isa<BlockArgument>(v))
                        return true;

@@ -380,6 +380,7 @@ cc_library(
         ":TensorEncodingIncGen",
         ":config",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -5279,6 +5280,7 @@ cc_library(
         ":IR",
         ":Support",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -7460,6 +7462,7 @@ cc_library(
     deps = [
         ":SPIRVDialect",
         ":Support",
+        "//llvm:config",
     ],
 )
 

@@ -1356,7 +1356,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // the register from VR to VRM2/VRM4/VRM8 if necessary.
   if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
     Op.Reg.RegNum = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
-    if (Op.Reg.RegNum == 0)
+    if (!Op.Reg.RegNum)
       return Match_InvalidOperand;
     return Match_Success;
   }

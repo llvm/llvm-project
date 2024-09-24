@@ -199,7 +199,6 @@ add_proxy_header_library(
     libc.include.setjmp
 )
 
-
 add_proxy_header_library(
   struct_msghdr
   HDRS
@@ -225,4 +224,26 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.socklen_t
     libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  wchar_t
+  HDRS
+    wchar_t.h
+  DEPENDS
+    libc.hdr.wchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.wchar_t
+    libc.include.wchar
+)
+
+add_proxy_header_library(
+  wint_t
+  HDRS
+    wint_t.h
+  DEPENDS
+    libc.hdr.wchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.wint_t
+    libc.include.wchar
 )

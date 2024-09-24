@@ -11,15 +11,10 @@
 #include <rtsan/rtsan.h>
 #include <rtsan/rtsan_context.h>
 
-#include <rtsan/rtsan_stack.h>
-
 #include <sanitizer_common/sanitizer_allocator_internal.h>
-#include <sanitizer_common/sanitizer_stacktrace.h>
 
 #include <new>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace __sanitizer;
 
@@ -31,11 +26,11 @@ static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 static void InternalFreeWrapper(void *ptr) { __sanitizer::InternalFree(ptr); }
 
 static __rtsan::Context &GetContextForThisThreadImpl() {
-  auto make_thread_local_context_key = []() {
+  auto MakeThreadLocalContextKey = []() {
     CHECK_EQ(pthread_key_create(&context_key, InternalFreeWrapper), 0);
   };
 
-  pthread_once(&key_once, make_thread_local_context_key);
+  pthread_once(&key_once, MakeThreadLocalContextKey);
   __rtsan::Context *current_thread_context =
       static_cast<__rtsan::Context *>(pthread_getspecific(context_key));
   if (current_thread_context == nullptr) {
@@ -48,22 +43,6 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
   return *current_thread_context;
 }
 
-/*
-    This is a placeholder stub for a future feature that will allow
-    a user to configure RTSan's behaviour when a real-time safety
-    violation is detected. The RTSan developers intend for the
-    following choices to be made available, via a RTSAN_OPTIONS
-    environment variable, in a future PR:
-
-        i) exit,
-       ii) continue, or
-      iii) wait for user input from stdin.
-
-    Until then, and to keep the first PRs small, only the exit mode
-    is available.
-*/
-static void InvokeViolationDetectedAction() { Die(); }
-
 __rtsan::Context::Context() = default;
 
 void __rtsan::Context::RealtimePush() { realtime_depth_++; }
@@ -74,34 +53,9 @@ void __rtsan::Context::BypassPush() { bypass_depth_++; }
 
 void __rtsan::Context::BypassPop() { bypass_depth_--; }
 
-void __rtsan::ExpectNotRealtime(Context &context,
-                                const char *intercepted_function_name) {
-  CHECK(__rtsan_is_initialized());
-  if (context.InRealtimeContext() && !context.IsBypassed()) {
-    context.BypassPush();
-
-    GET_CALLER_PC_BP;
-    PrintDiagnostics(intercepted_function_name, pc, bp);
-    InvokeViolationDetectedAction();
-    context.BypassPop();
-  }
-}
-
 bool __rtsan::Context::InRealtimeContext() const { return realtime_depth_ > 0; }
 
 bool __rtsan::Context::IsBypassed() const { return bypass_depth_ > 0; }
-
-void __rtsan::PrintDiagnostics(const char *intercepted_function_name, uptr pc,
-                               uptr bp) {
-  ScopedErrorReportLock l;
-
-  Report("ERROR: RealtimeSanitizer: unsafe-library-call\n");
-  Printf("Intercepted call to real-time unsafe function "
-         "`%s` in real-time context!\n",
-         intercepted_function_name);
-
-  __rtsan::PrintStackTrace(pc, bp);
-}
 
 __rtsan::Context &__rtsan::GetContextForThisThread() {
   return GetContextForThisThreadImpl();

@@ -15583,6 +15583,43 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.atan2.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.atan2`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.atan2.f32(float  %X, float %Y)
+      declare double    @llvm.atan2.f64(double %X, double %Y)
+      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %X, x86_fp80 %Y)
+      declare fp128     @llvm.atan2.f128(fp128 %X, fp128 %Y)
+      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %X, ppc_fp128 %Y)
+
+Overview:
+"""""""""
+
+The '``llvm.atan2.*``' intrinsics return the arctangent of the operand.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``atan2``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.sinh.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
