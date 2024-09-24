@@ -6067,7 +6067,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
       return SDValue();
     // Prevent an infinite loop if the target prefers the inverse
     // transformation.
-    if (TLI.isNarrowingProfitable(XVT, VT))
+    if (TLI.isNarrowingProfitable(N, XVT, VT))
       return SDValue();
     SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -15874,7 +15874,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
-  if (TLI.isNarrowingProfitable(SrcVT, VT)) {
+  if (TLI.isNarrowingProfitable(N, SrcVT, VT)) {
     switch (N0.getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
