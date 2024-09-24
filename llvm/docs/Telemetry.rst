@@ -39,7 +39,7 @@ Important notes
   implement one.
   
   The rationale for this is that, all the tools in llvm are very different in
-  what they care about(what/where/when to instrument data). Hence, it might not
+  what they care about (what/where/when to instrument data). Hence, it might not
   be practical to have a single implementation.
   However, in the future, if we see enough common pattern, we can extract them
   into a shared place. This is TBD - contributions are welcomed.
