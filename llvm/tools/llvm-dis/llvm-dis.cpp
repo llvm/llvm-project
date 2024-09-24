@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  for (std::string InputFilename : InputFilenames) {
+  for (const auto &InputFilename : InputFilenames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(InputFilename);
     if (std::error_code EC = BufferOrErr.getError()) {
