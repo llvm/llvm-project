@@ -52,15 +52,15 @@ static PreservedAnalyses rtsanPreservedCFGAnalyses() {
   return PA;
 }
 
-static void insertNotifyBlockingCallAtFunctionEntryPoint(Function &F) {
-  IRBuilder<> Builder(&F.front().front());
-  Value *NameArg = Builder.CreateGlobalString(demangle(F.getName()));
+static void insertNotifyBlockingCallAtFunctionEntryPoint(Function &Fn) {
+  IRBuilder<> Builder(&Fn.front().front());
+  Value *NameArg = Builder.CreateGlobalString(demangle(Fn.getName()));
 
   FunctionType *FuncType =
-      FunctionType::get(Type::getVoidTy(F.getContext()),
-                        {PointerType::getUnqual(F.getContext())}, false);
+      FunctionType::get(Type::getVoidTy(Fn.getContext()),
+                        {PointerType::getUnqual(Fn.getContext())}, false);
 
-  FunctionCallee Func = F.getParent()->getOrInsertFunction(
+  FunctionCallee Func = Fn.getParent()->getOrInsertFunction(
       "__rtsan_notify_blocking_call", FuncType);
 
   Builder.CreateCall(Func, {NameArg});
@@ -69,16 +69,16 @@ static void insertNotifyBlockingCallAtFunctionEntryPoint(Function &F) {
 RealtimeSanitizerPass::RealtimeSanitizerPass(
     const RealtimeSanitizerOptions &Options) {}
 
-PreservedAnalyses RealtimeSanitizerPass::run(Function &F,
+PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
                                              AnalysisManager<Function> &AM) {
-  if (F.hasFnAttribute(Attribute::SanitizeRealtime)) {
-    insertCallAtFunctionEntryPoint(F, "__rtsan_realtime_enter");
-    insertCallAtAllFunctionExitPoints(F, "__rtsan_realtime_exit");
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime)) {
+    insertCallAtFunctionEntryPoint(Fn, "__rtsan_realtime_enter");
+    insertCallAtAllFunctionExitPoints(Fn, "__rtsan_realtime_exit");
     return rtsanPreservedCFGAnalyses();
   }
 
-  if (F.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe)) {
-    insertNotifyBlockingCallAtFunctionEntryPoint(F);
+  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeUnsafe)) {
+    insertNotifyBlockingCallAtFunctionEntryPoint(Fn);
     return rtsanPreservedCFGAnalyses();
   }
 

@@ -11,8 +11,8 @@ define noundef i32 @main() #2 {
 
 attributes #0 = { mustprogress noinline sanitize_realtime_unsafe optnone ssp uwtable(sync) }
 
-; RealtimeSanitizer pass should create the demangled function name as a global string, and
-; pass it as input to an inserted __rtsan_expect_not_realtime call at the function entrypoint
+; RealtimeSanitizer pass should create the demangled function name as a global string and,
+; at the function entrypoint, pass it as an argument to the rtsan notify method
 ; CHECK: [[GLOBAL_STR:@[a-zA-Z0-9\.]+]]
 ; CHECK-SAME: c"blocking_function()\00"
 ; CHECK-LABEL: @_Z17blocking_functionv()
