@@ -9,12 +9,12 @@
 
 name: fred
 tracksRegLiveness: true
+isSSA: false
 body: |
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $r0
 
-    %0:intregs = A2_tfrsi 0           ;; Multiple defs to ensure IsSSA = false
     %0:intregs = L2_loadri_io $r0, 0
     %1:predregs = C2_cmpgti %0, 10
     %2:intregs = C2_mux %1, $r31, %0

@@ -188,6 +188,16 @@ TEST(raw_ostreamTest, Indent) {
   EXPECT_EQ(Spaces(5), printToString(Indent));
   Indent -= 1;
   EXPECT_EQ(Spaces(4), printToString(Indent));
+
+  // Scaled indent.
+  indent Scaled(4, 2);
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+  EXPECT_EQ(Spaces(10), printToString(Scaled + 1));
+  EXPECT_EQ(Spaces(6), printToString(Scaled - 1));
+  Scaled += 1;
+  EXPECT_EQ(Spaces(10), printToString(Scaled));
+  Scaled -= 1;
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
 }
 
 TEST(raw_ostreamTest, FormatHex) {  
