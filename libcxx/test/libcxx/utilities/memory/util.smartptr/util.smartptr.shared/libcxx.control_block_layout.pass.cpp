@@ -195,7 +195,7 @@ int main(int, char**) {
   test<TrivialEmptyType, FinalEmptyAlloc>();
   test<TrivialEmptyType, NonTrivialAlloc>();
 
-#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
+#if !defined(TEST_HAS_NO_ALIGNED_ALLOCATION)
   test<OveralignedEmptyType, TrivialEmptyAlloc>();
   test<OveralignedEmptyType, TrivialNonEmptyAlloc>();
   test<OveralignedEmptyType, FinalEmptyAlloc>();
