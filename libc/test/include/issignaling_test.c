@@ -9,16 +9,11 @@
 
 #include <assert.h>
 
-// check if macro is defined
-#ifndef issignaling
-// TODO: enable the error when issignaling macro is fixed for older compiler
-// #error "issignaling macro is not defined"
-#else
-int main(void) {
 // TODO: enable the test unconditionally when issignaling macro is fixed for
 //       older compiler
-#if (defined(__clang__) && __clang_major__ >= 18) ||                           \
-    (defined(__GNUC__) && __GNUC__ >= 13)
+int main(void) {
+// check if macro is defined
+#ifdef issignaling
   assert(issignaling(__builtin_nans("")) == 1);
   assert(issignaling(__builtin_nansf("")) == 1);
   assert(issignaling(__builtin_nansl("")) == 1);
@@ -28,5 +23,3 @@ int main(void) {
 #endif
   return 0;
 }
-
-#endif
