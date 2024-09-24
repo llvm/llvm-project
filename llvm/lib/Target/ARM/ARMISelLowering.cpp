@@ -3075,11 +3075,11 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     }
   }
 
-  // If Caller's vararg or byval argument has been split between registers and
-  // stack, do not perform tail call, since part of the argument is in caller's
-  // local frame.
+  // If Caller's vararg argument has been split between registers and stack, do
+  // not perform tail call, since part of the argument is in caller's local
+  // frame.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  if (AFI_Caller->getArgRegsSaveSize()) {
+  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize()) {
     LLVM_DEBUG(dbgs() << "false (arg reg save area)\n");
     return false;
   }
