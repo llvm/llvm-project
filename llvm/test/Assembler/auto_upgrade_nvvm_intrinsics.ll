@@ -31,6 +31,10 @@ declare float @llvm.nvvm.bitcast.i2f(i32)
 declare i64 @llvm.nvvm.bitcast.d2ll(double)
 declare double @llvm.nvvm.bitcast.ll2d(i64)
 
+declare i32 @llvm.nvvm.rotate.b32(i32, i32)
+declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
+declare i64 @llvm.nvvm.rotate.b64(i64, i32)
+
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
@@ -138,5 +142,17 @@ define void @bitcast(i32 %a, i64 %b, float %c, double %d) {
   %r3 = call i64 @llvm.nvvm.bitcast.d2ll(double %d)
   %r4 = call double @llvm.nvvm.bitcast.ll2d(i64 %b)
 
+  ret void
+}
+
+; CHECK-LABEL: @rotate
+define void @rotate(i32 %a, i64 %b) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 6)
+; CHECK: call i64 @llvm.fshr.i64(i64 %b, i64 %b, i64 7)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 8)
+;
+  %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
+  %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
+  %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
   ret void
 }
