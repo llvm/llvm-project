@@ -1,4 +1,5 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %run %t %t.tmp 2>&1 | FileCheck %s
+// RUN: %clangxx -O1 %s -o %t && %run %t %t.tmp 2>&1 | FileCheck %s
+
 #include <stdio.h>
 #include <assert.h>
 #include <fcntl.h>
