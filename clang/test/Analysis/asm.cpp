@@ -51,7 +51,7 @@ void testInlineAsmMemcpyUninitLoop(const void *src, unsigned long len)
     int a[10], c;
     unsigned long toCopy = sizeof(a) < len ? sizeof(a) : len;
 
-    MyMemcpy(&a, src, toCopy);
+    MyMemcpy(a, src, toCopy);
 
     for (unsigned long i = 0; i < toCopy; ++i)
       c = a[i]; // no-warning
@@ -63,6 +63,6 @@ void testAsmWithVoidPtrArgument()
   clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning-re {{reg_${{[0-9]+}}<int Element{SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>},0 S64b,int}>}}
   clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
   asm ("" : : "a"(globalVoidPtr)); // no crash
-  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning {{derived_$3{conj_$2{int, LC1, S2385, #1},Element{SymRegion{reg_$0<void * globalVoidPtr>},0 S64b,int}}}}
+  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning-re {{derived_$3{conj_$2{int, LC1, S{{[0-9]+}}, #1},Element{SymRegion{reg_$0<void * globalVoidPtr>},0 S64b,int}}}}
   clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
 }
