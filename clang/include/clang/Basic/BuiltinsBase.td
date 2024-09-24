@@ -73,6 +73,13 @@ def Constexpr : Attribute<"E">;
 // Builtin is immediate and must be constant evaluated. Implies Constexpr, and will only be supported in C++20 mode.
 def Consteval : Attribute<"EG">;
 
+// Address space attribute, only valid for pointer or reference arguments.
+// ArgIdx - argument to which the attribute refers. value 0 is for return type.
+// AddrSpaceNum - Address space number for the argument.
+class AddressSpace<int ArgIdx, int AddrSpaceNum> : IndexedAttribute<"", ArgIdx> {
+  int SpaceNum = AddrSpaceNum;
+}
+
 // Builtin kinds
 // =============
 
