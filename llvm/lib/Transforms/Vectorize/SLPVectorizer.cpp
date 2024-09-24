@@ -12326,8 +12326,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-  APInt ShuffledElements = APInt::getZero(VecTy->getNumElements());
+  APInt ShuffledElements = APInt::getZero(VL.size());
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -12347,8 +12346,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBits(I * ScalarTyNumElements,
-                               I * ScalarTyNumElements + ScalarTyNumElements);
+      ShuffledElements.setBit(I);
       ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
@@ -12361,14 +12359,27 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     }
 
     DuplicateNonConst = true;
-    ShuffledElements.setBits(I * ScalarTyNumElements,
-                             I * ScalarTyNumElements + ScalarTyNumElements);
+    ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (ForPoisonSrc)
-    Cost =
-        TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
-                                      /*Extract*/ false, CostKind);
+  if (ForPoisonSrc) {
+    if (isa<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      // We don't need to insert elements one by one. Instead, we can insert the
+      // entire vector into the destination.
+      Cost = 0;
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+      for (unsigned I : seq<unsigned>(VL.size()))
+        if (!ShuffledElements[I])
+          Cost += TTI->getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
+              I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
+    } else {
+      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+                                           /*Insert*/ true,
+                                           /*Extract*/ false, CostKind);
+    }
+  }
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                              VecTy, ShuffleMask);
