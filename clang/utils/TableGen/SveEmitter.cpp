@@ -1770,6 +1770,58 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+static StringRef parseGuardParenExpr(StringRef &S) {
+  unsigned N = 0;
+  assert(S[0] == '(' && "Expected lparen");
+  for (unsigned I = 0; I < S.size(); ++I) {
+    if (S[I] == '(')
+      ++N;
+    else if (S[I] == ')')
+      --N;
+    if (N == 0) {
+      StringRef Expr = S.substr(1, I - 1);
+      S = S.drop_front(I + 1);
+      return Expr;
+    }
+  }
+  llvm_unreachable("Unmatched parenthesi");
+}
+
+static StringRef parseGuardFeature(StringRef &S) {
+  assert(std::isalpha(S[0]) && "expected feature name");
+  unsigned I;
+  for (I = 0; I < S.size(); ++I) {
+    if (S[I] == ',' || S[I] == '|' || S[I] == ')')
+      break;
+  }
+  StringRef Expr = S.take_front(I);
+  S = S.drop_front(I);
+  return Expr;
+}
+
+static StringRef parseGuardExpr(StringRef &S) {
+  if (S[0] == '(')
+    return parseGuardParenExpr(S);
+  if (std::isalpha(S[0]))
+    return parseGuardFeature(S);
+  llvm_unreachable("Unexpected token in expression");
+}
+
+// Parse the TargetGuard and verify that it satisfies at least one of the
+// features from the Required list.
+static bool verifyGuard(StringRef S, ArrayRef<StringRef> Required) {
+  if (S.empty())
+    return false;
+  StringRef LHS = parseGuardExpr(S);
+  if (S.empty())
+    return llvm::any_of(Required, [LHS](StringRef R) { return R == LHS; });
+  if (S[0] == '|')
+    return verifyGuard(LHS, Required) && verifyGuard(S.drop_front(1), Required);
+  if (S[0] == ',')
+    return verifyGuard(LHS, Required) || verifyGuard(S.drop_front(1), Required);
+  llvm_unreachable("Unexpected token in expression");
+}
+
 void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
@@ -1802,9 +1854,29 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
-    else if (Def->isFlagSet(VerifyRuntimeMode))
+    else if (Def->isFlagSet(VerifyRuntimeMode)) {
+      // Verify that the target guards contain at least one feature that
+      // actually enables SVE or SME (explicitly, or implicitly). This is needed
+      // for the code in SemaARM.cpp (checkArmStreamingBuiltin) that checks
+      // whether the required runtime mode for an intrinsic matches with the
+      // given set of target features and function attributes.
+      //
+      // The feature lists below must match the disabled features in
+      // 'checkArmStreamingBuiltin'!
+      if (!Def->getSVEGuard().empty() &&
+          !verifyGuard(Def->getSVEGuard(),
+                       {"sve", "sve2", "sve2p1", "sve2-aes", "sve2-sha3",
+                        "sve2-sm4", "sve2-bitperm"}))
+        llvm_unreachable(
+            "SVE guard must include at least one base SVE version");
+      if (!Def->getSMEGuard().empty() &&
+          !verifyGuard(Def->getSMEGuard(),
+                       {"sme", "sme2", "sme2p1", "sme-f64f64", "sme-i16i64",
+                        "sme-b16b16", "sme-f16f16", "sme-f8f32", "sme-f8f16"}))
+        llvm_unreachable(
+            "SME guard must include at least one base SME version");
       StreamingMap["VerifyRuntimeMode"].insert(Def->getMangledName());
-    else if (Def->isFlagSet(IsStreamingCompatibleFlag))
+    } else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else
       StreamingMap["ArmNonStreaming"].insert(Def->getMangledName());
