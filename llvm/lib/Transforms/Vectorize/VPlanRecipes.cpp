@@ -1504,8 +1504,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   VecInd->setDebugLoc(EntryVal->getDebugLoc());
   State.set(this, VecInd);
 
-  Instruction *LastInduction = cast<Instruction>(Builder.CreateBinOp(
-      AddOp, VecInd, SplatVF, "vec.ind.next", EntryVal->getDebugLoc()));
+  Instruction *LastInduction = cast<Instruction>(
+      Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
   if (isa<TruncInst>(EntryVal))
     State.addMetadata(LastInduction, EntryVal);
   LastInduction->setDebugLoc(EntryVal->getDebugLoc());
