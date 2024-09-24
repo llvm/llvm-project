@@ -16,15 +16,35 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 void *RTDEF(CUFMemAlloc)(
-    std::size_t bytes, const char *sourceFile, int sourceLine) {
+    std::size_t bytes, unsigned type, const char *sourceFile, int sourceLine) {
   void *ptr;
-  if (bytes != 0)
-    CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+  if (bytes != 0) {
+    if (type == kMemTypeDevice) {
+      CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+    } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
+      CUDA_REPORT_IF_ERROR(
+          cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+    } else if (type == kMemTypePinned) {
+      CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&ptr, bytes));
+    } else {
+      Terminator terminator{sourceFile, sourceLine};
+      terminator.Crash("unsupported memory type");
+    }
+  }
   return ptr;
 }
 
-void RTDEF(CUFMemFree)(void *ptr, const char *sourceFile, int sourceLine) {
-  CUDA_REPORT_IF_ERROR(cudaFree(ptr));
+void RTDEF(CUFMemFree)(
+    void *ptr, unsigned type, const char *sourceFile, int sourceLine) {
+  if (type == kMemTypeDevice || type == kMemTypeManaged ||
+      type == kMemTypeUnified) {
+    CUDA_REPORT_IF_ERROR(cudaFree(ptr));
+  } else if (type == kMemTypePinned) {
+    CUDA_REPORT_IF_ERROR(cudaFreeHost(ptr));
+  } else {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("unsupported memory type");
+  }
 }
 
 void RTDEF(CUFMemsetDescriptor)(const Descriptor &desc, void *value,

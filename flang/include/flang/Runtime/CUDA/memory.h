@@ -18,12 +18,12 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 /// Allocate memory on the device.
-void *RTDECL(CUFMemAlloc)(
-    std::size_t bytes, const char *sourceFile = nullptr, int sourceLine = 0);
+void *RTDECL(CUFMemAlloc)(std::size_t bytes, unsigned type,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Free memory allocated on the device.
-void RTDECL(CUFMemFree)(
-    void *devicePtr, const char *sourceFile = nullptr, int sourceLine = 0);
+void RTDECL(CUFMemFree)(void *devicePtr, unsigned type,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Set value to the data hold by a descriptor. The \p value pointer must be
 /// addressable to the same amount of bytes specified by the element size of

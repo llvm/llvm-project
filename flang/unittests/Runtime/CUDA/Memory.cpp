@@ -17,7 +17,8 @@
 using namespace Fortran::runtime::cuda;
 
 TEST(MemoryCUFTest, SimpleAllocTramsferFree) {
-  int *dev = (int *)RTNAME(CUFMemAlloc)(sizeof(int), __FILE__, __LINE__);
+  int *dev = (int *)RTNAME(CUFMemAlloc)(
+      sizeof(int), kMemTypeDevice, __FILE__, __LINE__);
   EXPECT_TRUE(dev != 0);
   int host = 42;
   RTNAME(CUFDataTransferPtrPtr)
@@ -26,5 +27,5 @@ TEST(MemoryCUFTest, SimpleAllocTramsferFree) {
   RTNAME(CUFDataTransferPtrPtr)
   ((void *)&host, (void *)dev, sizeof(int), kDeviceToHost, __FILE__, __LINE__);
   EXPECT_EQ(42, host);
-  RTNAME(CUFMemFree)((void *)dev, __FILE__, __LINE__);
+  RTNAME(CUFMemFree)((void *)dev, kMemTypeDevice, __FILE__, __LINE__);
 }
