@@ -521,26 +521,62 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
   SmallVector<unsigned, 8> PossibleIndexes;
   unsigned BestIdx = 0;
   unsigned BestCover = 0;
-
+  unsigned BestSize = 0;
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
     if (getSubClassWithSubReg(RC, Idx) != RC)
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
+
+    // The code below (now disabled) is not correct when the lane mask does not
+    // cover the full sub-register. For example, when 16-bit H0 has only one
+    // subreg B0 of 8-bits, and the high lanes are not defined in TableGen (e.g.
+    // by defining B0 and some artificial B0_HI register), then this function
+    // may return either `bsub` or `hsub`, whereas in this case we'd want it to
+    // return the *largest* (in bithwidth) sub-register index. It is better to
+    // keep looking for the biggest one, but this is rather expensive.
+    //
+    // Before thinking of how to solve this, I first want to ask the
+    // question: What is the meaning of 'LaneBitmask'?
+    //
+    // According to LaneBitmask.h:
+    //
+    //  "The individual bits in a lane mask can't be assigned
+    //   any specific meaning. They can be used to check if two
+    //   sub-register indices overlap."
+    //
+    // However, in the code here the assumption is made that if
+    // 'SubRegMask == LaneMask', then the subregister must overlap *fully*.
+    // This is not the case for the way AArch64 registers are defined
+    // at the moment.
+    //
+    // Which interpretation is correct?
+    //
+    // A) If the meaning is 'if the bits are equal, the sub-registers overlap but
+    //    not necessarily fully', then we should fix the code in this function (in
+    //    a better way than just disabling it).
+    //
+    // B) If the meaning is 'if the bits are equal, the sub-registers overlap
+    //    fully', then we can define the high bits with an artificial register.
+
+#if 1
     // Early exit if we found a perfect match.
     if (SubRegMask == LaneMask) {
       BestIdx = Idx;
       break;
     }
+#endif
 
     // The index must not cover any lanes outside \p LaneMask.
     if ((SubRegMask & ~LaneMask).any())
       continue;
 
     unsigned PopCount = SubRegMask.getNumLanes();
+    unsigned Size = getSubRegIdxSize(Idx);
     PossibleIndexes.push_back(Idx);
-    if (PopCount > BestCover) {
+    if ((!BestCover || PopCount >= BestCover) && Size >= BestSize) {
       BestCover = PopCount;
+      BestSize = Size;
       BestIdx = Idx;
     }
   }
@@ -559,6 +595,8 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
     int BestCover = std::numeric_limits<int>::min();
     for (unsigned Idx : PossibleIndexes) {
       LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
+      // FIXME: similar issue as above.
+
       // Early exit if we found a perfect match.
       if (SubRegMask == LanesLeft) {
         BestIdx = Idx;
