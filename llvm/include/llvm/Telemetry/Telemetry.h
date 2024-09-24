@@ -51,7 +51,7 @@ struct Config {
   // telemetry data (Could be stdout, stderr, or some local paths, etc).
   //
   // These strings will be interpreted by the vendor's code.
-  // So the users must pick the  from their vendor's pre-defined
+  // So the users must pick the from their vendor's pre-defined
   // set of Destinations.
   std::vector<std::string> AdditionalDestinations;
 };
