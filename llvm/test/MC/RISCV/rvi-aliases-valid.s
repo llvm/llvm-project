@@ -261,10 +261,10 @@ csrrs t0, 0xfff, 0x10
 csrrc t0, 0x140, 0x11
 
 # CHECK-S-OBJ-NOALIAS: sfence.vma zero, zero
-# CHECK-S-OBJ: sfence.vma
+# CHECK-S-OBJ: sfence.vma{{$}}
 sfence.vma
 # CHECK-S-OBJ-NOALIAS: sfence.vma a0, zero
-# CHECK-S-OBJ: sfence.vma a0
+# CHECK-S-OBJ: sfence.vma a0{{$}}
 sfence.vma a0
 
 # The following aliases are accepted as input but the canonical form

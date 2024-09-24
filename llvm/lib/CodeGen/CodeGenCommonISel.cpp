@@ -202,6 +202,8 @@ FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp) {
   case fcSubnormal | fcZero | fcNan:
     return InvertedTest;
   case fcInf | fcNan:
+  case fcPosInf | fcNan:
+  case fcNegInf | fcNan:
     // If we're trying to use fcmp, we can take advantage of the nan check
     // behavior of the compare (but this is more instructions in the integer
     // expansion).

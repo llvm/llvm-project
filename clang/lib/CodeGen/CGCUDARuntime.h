@@ -21,6 +21,7 @@
 #include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
+class CallBase;
 class Function;
 class GlobalVariable;
 }
@@ -82,9 +83,10 @@ public:
   CGCUDARuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGCUDARuntime();
 
-  virtual RValue EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
-                                        const CUDAKernelCallExpr *E,
-                                        ReturnValueSlot ReturnValue);
+  virtual RValue
+  EmitCUDAKernelCallExpr(CodeGenFunction &CGF, const CUDAKernelCallExpr *E,
+                         ReturnValueSlot ReturnValue,
+                         llvm::CallBase **CallOrInvoke = nullptr);
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;

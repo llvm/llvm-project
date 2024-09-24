@@ -17,6 +17,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -633,8 +634,6 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                          Features);
   for (StringRef Feature : Features)
     CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
-
-  addGPULibraries(getToolChain(), Args, CmdArgs);
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =

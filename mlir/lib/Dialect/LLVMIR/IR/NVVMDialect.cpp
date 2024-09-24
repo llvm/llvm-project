@@ -521,7 +521,7 @@ LogicalResult MmaOp::verify() {
       }
       errorStream << "but got ";
       llvm::interleaveComma(operandTySeg, errorStream);
-      return emitOpError(errorStream.str());
+      return emitOpError(errorMessage);
     }
   }
 
@@ -533,7 +533,7 @@ LogicalResult MmaOp::verify() {
         << "Could not match allowed types for the result; expected one of ";
     llvm::interleaveComma(expectedResult, errorStream);
     errorStream << " but got " << getResult().getType();
-    return emitOpError(errorStream.str());
+    return emitOpError(errorMessage);
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
@@ -967,7 +967,6 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   }
   ss << ";\n"
      << "}\n";
-  ss.flush();
   return ptx;
 }
 

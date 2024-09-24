@@ -30,6 +30,9 @@ class RecordKeeper;
 struct CodeGenIntrinsicContext {
   explicit CodeGenIntrinsicContext(const RecordKeeper &RC);
   std::vector<const Record *> DefaultProperties;
+
+  // Maximum number of values an intrinsic can return.
+  unsigned MaxNumReturn;
 };
 
 struct CodeGenIntrinsic {
@@ -186,6 +189,9 @@ public:
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
+
+private:
+  void CheckDuplicateIntrinsics() const;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.

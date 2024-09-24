@@ -130,8 +130,9 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
-                         bool DeleteIsArray, const Descriptor *D,
+bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
+                         DynamicAllocator::Form AllocForm,
+                         DynamicAllocator::Form DeleteForm, const Descriptor *D,
                          const Expr *NewExpr);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
@@ -153,13 +154,16 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize);
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize);
-bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
-            const CallExpr *CE);
+bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
+            const CallExpr *CE, uint32_t BuiltinID);
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
+
+enum class ShiftDir { Left, Right };
 
 /// Checks if the shift operation is legal.
-template <typename LT, typename RT>
+template <ShiftDir Dir, typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
                 unsigned Bits) {
   if (RHS.isNegative()) {
@@ -180,19 +184,21 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       return false;
   }
 
-  if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
-    // operand, and must not overflow the corresponding unsigned type.
-    if (LHS.isNegative()) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-      if (!S.noteUndefinedBehavior())
-        return false;
-    } else if (LHS.toUnsigned().countLeadingZeros() <
-               static_cast<unsigned>(RHS)) {
-      S.CCEDiag(E, diag::note_constexpr_lshift_discards);
-      if (!S.noteUndefinedBehavior())
-        return false;
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      if (LHS.isNegative()) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+        if (!S.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.toUnsigned().countLeadingZeros() <
+                 static_cast<unsigned>(RHS)) {
+        S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!S.noteUndefinedBehavior())
+          return false;
+      }
     }
   }
 
@@ -236,11 +242,18 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 
+  // Can't be too many elements if the bitwidth of NumElements is lower than
+  // that of Descriptor::MaxArrayElemBytes.
+  if ((NumElements->bitWidth() - NumElements->isSigned()) <
+      (sizeof(Descriptor::MaxArrayElemBytes) * 8))
+    return true;
+
   // FIXME: GH63562
   // APValue stores array extents as unsigned,
   // so anything that is greater that unsigned would overflow when
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
+  assert(MaxElements.isPositive());
   if (NumElements->toAPSInt().getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
       *NumElements > MaxElements) {
@@ -267,7 +280,7 @@ bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call);
+                      const CallExpr *Call, uint32_t BuiltinID);
 
 /// Interpret an offsetof operation.
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
@@ -281,7 +294,8 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC);
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
+                              const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
@@ -302,7 +316,7 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, PC);
+    cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -322,7 +336,7 @@ inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, PC);
+    cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
@@ -1609,6 +1623,12 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
@@ -1622,6 +1642,12 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!Ptr.isBlockPointer()) {
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    return true;
+  }
+
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
@@ -1991,7 +2017,9 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  Pointer Ptr = S.Stk.pop<Pointer>();
+  if (Ptr.isBlockPointer())
+    Ptr = Ptr.expand();
   return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr);
 }
 
@@ -2378,7 +2406,6 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
-enum class ShiftDir { Left, Right };
 
 template <class LT, class RT, ShiftDir Dir>
 inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
@@ -2415,7 +2442,7 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
     }
   }
 
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
+  if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
     return false;
 
   // Limit the shift amount to Bits - 1. If this happened,
@@ -2658,6 +2685,9 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
 
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+inline bool SideEffect(InterpState &S, CodePtr OpPC) {
+  return S.noteSideEffect();
+}
 
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
@@ -2793,10 +2823,11 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID());
+  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
+                                DynamicAllocator::Form::NonArray);
   assert(B);
 
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  S.Stk.push<Pointer>(B);
 
   return true;
 }
@@ -2818,8 +2849,9 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
   }
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
-                                S.Ctx.getEvalID());
+  Block *B =
+      Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
 
@@ -2844,8 +2876,9 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   }
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
-                                S.Ctx.getEvalID());
+  Block *B =
+      Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
 
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
@@ -2890,8 +2923,9 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  bool WasArrayAlloc = Allocator.isArrayAllocation(Source);
   const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
 
   if (!Allocator.deallocate(Source, BlockToDelete, S)) {
     // Nothing has been deallocated, this must be a double-delete.
@@ -2899,8 +2933,13 @@ static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
     return false;
   }
-  return CheckNewDeleteForms(S, OpPC, WasArrayAlloc, DeleteIsArrayForm,
-                             BlockDesc, Source);
+
+  assert(AllocForm);
+  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
+                                          ? DynamicAllocator::Form::Array
+                                          : DynamicAllocator::Form::NonArray;
+  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                             Source);
 }
 
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
@@ -2908,39 +2947,17 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
-  assert(T);
-  assert(!S.getLangOpts().CPlusPlus23);
+/// Check if the initializer and storage types of a placement-new expression
+/// match.
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize = std::nullopt);
 
-  // C++1y: A constant initializer for an object o [...] may also invoke
-  // constexpr constructors for o and its subobjects even if those objects
-  // are of non-literal class types.
-  //
-  // C++11 missed this detail for aggregates, so classes like this:
-  //   struct foo_t { union { int i; volatile int j; } u; };
-  // are not (obviously) initializable like so:
-  //   __attribute__((__require_constant_initialization__))
-  //   static const foo_t x = {{0}};
-  // because "i" is a subobject with non-literal initialization (due to the
-  // volatile member of the union). See:
-  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
-  // Therefore, we use the C++1y behavior.
-
-  if (S.EvaluatingDecl)
-    return true;
-
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
-      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl)
-    return true;
-
-  const Expr *E = S.Current->getExpr(OpPC);
-  if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
-  else
-    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-  return false;
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
+  const auto &Size = S.Stk.pop<T>();
+  return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
-
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

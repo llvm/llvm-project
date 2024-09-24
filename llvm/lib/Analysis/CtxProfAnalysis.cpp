@@ -132,6 +132,23 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     return {};
   }
 
+  DenseSet<GlobalValue::GUID> ProfileRootsInModule;
+  for (const auto &F : M)
+    if (!F.isDeclaration())
+      if (auto GUID = AssignGUIDPass::getGUID(F);
+          MaybeCtx->find(GUID) != MaybeCtx->end())
+        ProfileRootsInModule.insert(GUID);
+
+  // Trim first the roots that aren't in this module.
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
+    if (!ProfileRootsInModule.contains(RootGuid))
+      MaybeCtx->erase(RootGuid);
+  // If none of the roots are in the module, we have no profile (for this
+  // module)
+  if (MaybeCtx->empty())
+    return {};
+
+  // OK, so we have a valid profile and it's applicable to roots in this module.
   PGOContextualProfile Result;
 
   for (const auto &F : M) {
@@ -166,10 +183,6 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   }
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
-  // Trim first the roots that aren't in this module.
-  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
-    if (!Result.FuncInfo.contains(RootGuid))
-      MaybeCtx->erase(RootGuid);
   Result.Profiles = std::move(*MaybeCtx);
   return Result;
 }
@@ -221,16 +234,32 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
 }
 
 InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
-  while (auto *Prev = CB.getPrevNode())
+  if (!InstrProfCallsite::canInstrumentCallsite(CB))
+    return nullptr;
+  for (auto *Prev = CB.getPrevNode(); Prev; Prev = Prev->getPrevNode()) {
     if (auto *IPC = dyn_cast<InstrProfCallsite>(Prev))
       return IPC;
+    assert(!isa<CallBase>(Prev) &&
+           "didn't expect to find another call, that's not the callsite "
+           "instrumentation, before an instrumentable callsite");
+  }
   return nullptr;
 }
 
 InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   for (auto &I : BB)
     if (auto *Incr = dyn_cast<InstrProfIncrementInst>(&I))
-      return Incr;
+      if (!isa<InstrProfIncrementInstStep>(&I))
+        return Incr;
+  return nullptr;
+}
+
+InstrProfIncrementInstStep *
+CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
+  Instruction *Prev = &SI;
+  while ((Prev = Prev->getPrevNode()))
+    if (auto *Step = dyn_cast<InstrProfIncrementInstStep>(Prev))
+      return Step;
   return nullptr;
 }
 

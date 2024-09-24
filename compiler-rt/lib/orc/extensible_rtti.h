@@ -59,7 +59,7 @@
 #ifndef ORC_RT_EXTENSIBLE_RTTI_H
 #define ORC_RT_EXTENSIBLE_RTTI_H
 
-namespace __orc_rt {
+namespace orc_rt {
 
 template <typename ThisT, typename ParentT> class RTTIExtends;
 
@@ -140,6 +140,6 @@ template <typename To, typename From> bool isa(const From &Value) {
   return To::classof(&Value);
 }
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_EXTENSIBLE_RTTI_H

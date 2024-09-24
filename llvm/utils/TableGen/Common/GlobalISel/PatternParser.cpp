@@ -104,15 +104,6 @@ getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
   return CGT.getInstruction(RK.getDef(Opc));
 }
 
-static const CodeGenIntrinsic *getCodeGenIntrinsic(Record *R) {
-  // Intrinsics need to have a static lifetime because the match table keeps
-  // references to CodeGenIntrinsic objects.
-  static CodeGenIntrinsicMap *AllIntrinsics;
-  if (!AllIntrinsics)
-    AllIntrinsics = new CodeGenIntrinsicMap(R->getRecords());
-  return &(*AllIntrinsics)[R];
-}
-
 std::unique_ptr<Pattern>
 PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
   const DagInit *DagPat = dyn_cast<DagInit>(&Arg);
@@ -126,8 +117,8 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =
                  getDagWithOperatorOfSubClass(Arg, "Intrinsic")) {
-    Record *TheDef = IP->getOperatorAsDef(DiagLoc);
-    const CodeGenIntrinsic *Intrin = getCodeGenIntrinsic(TheDef);
+    const Record *TheDef = IP->getOperatorAsDef(DiagLoc);
+    const CodeGenIntrinsic *Intrin = &CGT.getIntrinsic(TheDef);
     const CodeGenInstruction &Instr = getInstrForIntrinsic(CGT, Intrin);
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
@@ -178,7 +169,7 @@ PatternParser::parseWipMatchOpcodeMatcher(const Init &Arg, StringRef Name) {
   // Each argument is an opcode that can match.
   auto Result = std::make_unique<AnyOpcodePattern>(insertStrRef(Name));
   for (const auto &Arg : Matcher->getArgs()) {
-    Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
+    const Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
     if (OpcodeDef) {
       Result->addOpcode(&CGT.getInstruction(OpcodeDef));
       continue;

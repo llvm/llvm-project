@@ -49,7 +49,6 @@ TEST(Bytecode, MultiModuleWithResource) {
   std::string buffer;
   llvm::raw_string_ostream ostream(buffer);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-  ostream.flush();
 
   // Create copy of buffer which is aligned to requested resource alignment.
   constexpr size_t kAlignment = 0x20;
@@ -139,7 +138,7 @@ TEST(Bytecode, OpWithoutProperties) {
   ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os)));
   std::unique_ptr<Block> block = std::make_unique<Block>();
   ASSERT_TRUE(succeeded(readBytecodeFile(
-      llvm::MemoryBufferRef(os.str(), "string-buffer"), block.get(), config)));
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
   EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
   EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);

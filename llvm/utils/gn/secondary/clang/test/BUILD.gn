@@ -171,7 +171,6 @@ group("test") {
     "//clang/tools/clang-installapi",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-refactor",
-    "//clang/tools/clang-rename",
     "//clang/tools/clang-repl",
     "//clang/tools/clang-scan-deps",
     "//clang/tools/diagtool",

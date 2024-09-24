@@ -19,19 +19,27 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
     )
-    target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
-    list(APPEND compile_options -fno-exceptions -fno-rtti)
+    target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
-    if(LIBC_COMPILER_HAS_FIXED_POINT)
-      list(APPEND compile_options -ffixed-point)
-    endif()
-    target_compile_options(${lib} PUBLIC ${compile_options})
   endforeach()
-  _get_hermetic_test_compile_options(compile_options -nostdinc++)
-  target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(${name}.hermetic PRIVATE ${compile_options})
+
+  if(LLVM_LIBC_FULL_BUILD)
+    # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
+    # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
+    set(LLVM_LIBC_FULL_BUILD "")
+    _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
+    set(LLVM_LIBC_FULL_BUILD ON)
+  else()
+    _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
+endif()
+
+  _get_hermetic_test_compile_options(compile_options "")
+  target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
+  target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
     foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})

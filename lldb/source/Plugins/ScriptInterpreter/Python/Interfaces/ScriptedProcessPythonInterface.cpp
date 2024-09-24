@@ -111,7 +111,7 @@ bool ScriptedProcessPythonInterface::CreateBreakpoint(lldb::addr_t addr,
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error))
@@ -128,7 +128,7 @@ lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   return data_sp;
 }
@@ -145,7 +145,7 @@ lldb::offset_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
 
   // If there was an error on the python call, surface it to the user.
   if (py_error.Fail())
-    error = py_error;
+    error = std::move(py_error);
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_OFFSET);
 }

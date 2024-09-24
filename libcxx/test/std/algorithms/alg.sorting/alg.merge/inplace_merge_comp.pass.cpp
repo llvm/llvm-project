@@ -15,9 +15,10 @@
 //   inplace_merge(Iter first, Iter middle, Iter last, Compare comp);
 
 #include <algorithm>
+#include <cassert>
 #include <functional>
 #include <random>
-#include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 
