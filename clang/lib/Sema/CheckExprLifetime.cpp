@@ -34,6 +34,10 @@ enum LifetimeKind {
   LK_Return,
 
   /// The lifetime of a temporary bound to this entity ends too soon, because
+  /// the entity passed to a musttail function call.
+  LK_MustTail,
+
+  /// The lifetime of a temporary bound to this entity ends too soon, because
   /// the entity is the result of a statement expression.
   LK_StmtExprResult,
 
@@ -1150,6 +1154,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
       break;
 
     case LK_Return:
+    case LK_MustTail:
     case LK_StmtExprResult:
       if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
         // We can't determine if the local variable outlives the statement
@@ -1158,7 +1163,8 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
           return false;
         SemaRef.Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
             << InitEntity->getType()->isReferenceType() << DRE->getDecl()
-            << isa<ParmVarDecl>(DRE->getDecl()) << DiagRange;
+            << isa<ParmVarDecl>(DRE->getDecl()) << (LK == LK_MustTail)
+            << DiagRange;
       } else if (isa<BlockExpr>(L)) {
         SemaRef.Diag(DiagLoc, diag::err_ret_local_block) << DiagRange;
       } else if (isa<AddrLabelExpr>(L)) {
@@ -1170,7 +1176,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
       } else if (auto *CLE = dyn_cast<CompoundLiteralExpr>(L)) {
         SemaRef.Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
             << InitEntity->getType()->isReferenceType() << CLE->getInitializer()
-            << 2 << DiagRange;
+            << 2 << (LK == LK_MustTail) << DiagRange;
       } else {
         // P2748R5: Disallow Binding a Returned Glvalue to a Temporary.
         // [stmt.return]/p6: In a function whose return type is a reference,
@@ -1180,6 +1186,9 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (SemaRef.getLangOpts().CPlusPlus26 &&
             InitEntity->getType()->isReferenceType())
           SemaRef.Diag(DiagLoc, diag::err_ret_local_temp_ref)
+              << InitEntity->getType()->isReferenceType() << DiagRange;
+        else if (LK == LK_MustTail)
+          SemaRef.Diag(DiagLoc, diag::warn_musttail_local_temp_addr_ref)
               << InitEntity->getType()->isReferenceType() << DiagRange;
         else
           SemaRef.Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
@@ -1262,6 +1271,12 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
   LifetimeKind LK = LTResult.getInt();
   const InitializedEntity *ExtendingEntity = LTResult.getPointer();
   checkExprLifetimeImpl(SemaRef, &Entity, ExtendingEntity, LK,
+                        /*AEntity*/ nullptr, Init);
+}
+
+void checkExprLifetimeMustTailArg(Sema &SemaRef,
+                                  const InitializedEntity &Entity, Expr *Init) {
+  checkExprLifetimeImpl(SemaRef, &Entity, nullptr, LK_MustTail,
                         /*AEntity*/ nullptr, Init);
 }
 
