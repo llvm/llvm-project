@@ -1066,8 +1066,7 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
   for (auto &Phi : Succ->phis()) {
     // If the incoming value is a phi and the phi is defined in BB,
     // then removing BB will not increase the total phi entries of the ir.
-    if (auto *IncomingPhi =
-            dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
+    if (auto *IncomingPhi = dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
       if (IncomingPhi->getParent() == BB)
         continue;
     // Otherwise, we need to add entries to the phi
