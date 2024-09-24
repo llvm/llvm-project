@@ -166,7 +166,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       }
     private:
       void emitToAllDestinations(const TelemetryInfo* Entry) {
-        // Note: could do this in paralle, if needed.
+        // Note: could do this in parallel, if needed.
         for (Destination* Dest : Destinations)
           Dest->emitEntry(Entry);
       }
