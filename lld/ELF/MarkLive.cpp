@@ -219,7 +219,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->includeInDynsym() && sym->partition == partition)
       markSymbol(sym);
 
@@ -229,16 +229,16 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     return;
   }
 
-  markSymbol(symtab.find(ctx.arg.entry));
-  markSymbol(symtab.find(ctx.arg.init));
-  markSymbol(symtab.find(ctx.arg.fini));
+  markSymbol(ctx.symtab->find(ctx.arg.entry));
+  markSymbol(ctx.symtab->find(ctx.arg.init));
+  markSymbol(ctx.symtab->find(ctx.arg.fini));
   for (StringRef s : ctx.arg.undefined)
-    markSymbol(symtab.find(s));
+    markSymbol(ctx.symtab->find(s));
   for (StringRef s : ctx.script->referencedSymbols)
-    markSymbol(symtab.find(s));
-  for (auto [symName, _] : symtab.cmseSymMap) {
-    markSymbol(symtab.cmseSymMap[symName].sym);
-    markSymbol(symtab.cmseSymMap[symName].acleSeSym);
+    markSymbol(ctx.symtab->find(s));
+  for (auto [symName, _] : ctx.symtab->cmseSymMap) {
+    markSymbol(ctx.symtab->cmseSymMap[symName].sym);
+    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym);
   }
 
   // Mark .eh_frame sections as live because there are usually no relocations
@@ -350,8 +350,8 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
   for (InputSectionBase *sec : ctx.inputSections) {
     if (!sec->isLive() || !isValidCIdentifier(sec->name))
       continue;
-    if (symtab.find(("__start_" + sec->name).str()) ||
-        symtab.find(("__stop_" + sec->name).str()))
+    if (ctx.symtab->find(("__start_" + sec->name).str()) ||
+        ctx.symtab->find(("__stop_" + sec->name).str()))
       enqueue(sec, 0);
   }
 
@@ -366,7 +366,7 @@ template <class ELFT> void elf::markLive() {
   // If --gc-sections is not given, retain all input sections.
   if (!ctx.arg.gcSections) {
     // If a DSO defines a symbol referenced in a regular object, it is needed.
-    for (Symbol *sym : symtab.getSymbols())
+    for (Symbol *sym : ctx.symtab->getSymbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
           cast<SharedFile>(s->file)->isNeeded = true;
