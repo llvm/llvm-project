@@ -1173,6 +1173,12 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     // procedure pointer target.
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
+    {{"int2", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
+         TypePattern{IntType, KindCode::exactKind, 2}},
+        "int"},
+    {{"int8", {{"a", AnyNumeric, Rank::elementalOrBOZ}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "int"},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
     {{"jiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 4}}},
          TypePattern{IntType, KindCode::exactKind, 4}},
