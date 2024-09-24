@@ -113,9 +113,8 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.ends_with(".o"))
+  if (!s.consume_back(".o"))
     return false;
-  s = s.drop_back(2);
   if (s.ends_with("crtend"))
     return true;
   return !s.empty() && s.drop_back().ends_with("crtend");

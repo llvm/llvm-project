@@ -866,8 +866,7 @@ static StripPolicy getStrip(opt::InputArgList &args) {
 static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
                                     const opt::Arg &arg) {
   uint64_t va = 0;
-  if (s.starts_with("0x"))
-    s = s.drop_front(2);
+  s.consume_front("0x");
   if (!to_integer(s, va, 16))
     error("invalid argument: " + arg.getAsString(args));
   return va;
