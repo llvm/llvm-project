@@ -116,7 +116,7 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   return std::error_code();
 }
 
-ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
+ErrorOr<__ccsid_t> getzOSFileTag(const char *FileName, const int FD) {
   // If we have a file descriptor, use it to find out file tagging. Otherwise we
   // need to use stat() with the file path.
   if (FD != -1) {
@@ -135,10 +135,10 @@ ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
   return Attr.st_tag.ft_ccsid;
 }
 
-ErrorOr<bool> llvm::iszOSTextFile(const char *Filename, const int FD) {
+bool llvm::iszOSTextFile(const char *Filename, const int FD) {
   ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(Filename, FD);
   if (std::error_code EC = Ccsid.getError())
-    return EC;
+    return false;
   return *Ccsid != FT_BINARY;
 }
 

@@ -328,8 +328,7 @@ RealFileSystem::openFileForRead(const Twine &Name) {
   auto OpenFlags = sys::fs::OF_None;
 #ifdef __MVS__
   // If the file is tagged with a text ccsid, it may require autoconversion.
-  llvm::ErrorOr<bool> IsFileText = llvm::iszOSTextFile(Name.str().c_str());
-  if (IsFileText && *IsFileText)
+  if (llvm::iszOSTextFile(Name.str().c_str()))
     OpenFlags |= sys::fs::OF_Text;
 #endif
   Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
