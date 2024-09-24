@@ -276,10 +276,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   return false;
 }
 
-bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
-                                             ScalarEvolution &SE,
-                                             DominatorTree &DT,
-                                             AssumptionCache *AC) {
+bool llvm::isDereferenceableAndAlignedInLoop(
+    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
 
@@ -304,7 +303,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   if (!Step)
     return false;
 
-  auto TC = SE.getSmallConstantMaxTripCount(L);
+  auto TC = SE.getSmallConstantMaxTripCount(L, Predicates);
   if (!TC)
     return false;
 
@@ -810,13 +809,13 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
   return isPointerAlwaysReplaceable(From, To, DL);
 }
 
-bool llvm::isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
-                                         DominatorTree *DT,
-                                         AssumptionCache *AC) {
+bool llvm::isDereferenceableReadOnlyLoop(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC))
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           return false;
       } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
         return false;
