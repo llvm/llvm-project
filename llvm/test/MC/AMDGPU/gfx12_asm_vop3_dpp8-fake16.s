@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W32-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,-real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-real-true16 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,-real-true16 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W64-ERR --implicit-check-not=error: %s
 
 v_add3_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: [0x05,0x00,0x55,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
