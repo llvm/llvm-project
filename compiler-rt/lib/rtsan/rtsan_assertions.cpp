@@ -14,18 +14,14 @@
 #include "rtsan/rtsan.h"
 #include "rtsan/rtsan_diagnostics.h"
 
-#include "sanitizer_common/sanitizer_stacktrace.h"
-
 using namespace __sanitizer;
 
-void __rtsan::ExpectNotRealtime(Context &context,
-                                const char *intercepted_function_name) {
+void __rtsan::ExpectNotRealtime(Context &context, const DiagnosticsInfo &info) {
   CHECK(__rtsan_is_initialized());
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     context.BypassPush();
 
-    GET_CALLER_PC_BP;
-    PrintDiagnostics(intercepted_function_name, pc, bp);
+    PrintDiagnostics(info);
     Die();
     context.BypassPop();
   }
