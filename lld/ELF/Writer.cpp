@@ -2387,7 +2387,7 @@ void Writer<ELFT>::addPhdrForSection(Partition &part, unsigned shType,
 // such section.
 template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   const PhdrEntry *prev;
-  auto pageAlign = [&](const PhdrEntry *p) {
+  auto pageAlign = [&, &ctx = this->ctx](const PhdrEntry *p) {
     OutputSection *cmd = p->firstSec;
     if (!cmd)
       return;
@@ -2427,13 +2427,13 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // bug, musl (TLS Variant 1 architectures) before 1.1.23 handled TLS
       // blocks correctly. We need to keep the workaround for a while.
       else if (ctx.tlsPhdr && ctx.tlsPhdr->firstSec == p->firstSec)
-        cmd->addrExpr = [&ctx = this->ctx] {
+        cmd->addrExpr = [&ctx] {
           return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize) +
                  alignToPowerOf2(ctx.script->getDot() % ctx.arg.maxPageSize,
                                  ctx.tlsPhdr->p_align);
         };
       else
-        cmd->addrExpr = [&ctx = this->ctx] {
+        cmd->addrExpr = [&ctx] {
           return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize) +
                  ctx.script->getDot() % ctx.arg.maxPageSize;
         };
