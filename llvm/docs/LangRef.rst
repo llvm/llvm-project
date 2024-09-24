@@ -12658,10 +12658,10 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas from the caller.
-   The ``tail`` marker additionally implies that the callee does not access
-   varargs from the caller. Calls marked ``musttail`` must obey the following
-   additional  rules:
+   Both markers imply that the callee does not access allocas or ``byval``
+   arguments from the caller. The ``tail`` marker additionally implies that the
+   callee does not access varargs from the caller. Calls marked ``musttail``
+   must obey the following additional rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.
