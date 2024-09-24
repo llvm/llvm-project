@@ -1994,7 +1994,11 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 };
 }
 
-Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E) {
+Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
+                                                 BuiltinCheckKind Kind) {
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
+          && "Unsupported builtin check kind");
+
   Value *ArgValue = EmitScalarExpr(E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
@@ -2004,7 +2008,9 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E) {
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
   EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
             SanitizerHandler::InvalidBuiltin,
-            {EmitCheckSourceLocation(E->getExprLoc())}, std::nullopt);
+            {EmitCheckSourceLocation(E->getExprLoc()),
+             llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
+            std::nullopt);
   return ArgValue;
 }
 
@@ -3222,8 +3228,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg &&
                        E->getNumArgs() > 1;
 
-    Value *ArgValue = HasFallback ? EmitScalarExpr(E->getArg(0))
-                                  : EmitCheckedArgForBuiltin(E->getArg(0));
+    Value *ArgValue =
+        HasFallback ? EmitScalarExpr(E->getArg(0))
+                    : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
@@ -3253,8 +3260,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg &&
                        E->getNumArgs() > 1;
 
-    Value *ArgValue = HasFallback ? EmitScalarExpr(E->getArg(0))
-                                  : EmitCheckedArgForBuiltin(E->getArg(0));
+    Value *ArgValue =
+        HasFallback ? EmitScalarExpr(E->getArg(0))
+                    : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);

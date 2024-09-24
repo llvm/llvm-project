@@ -154,8 +154,16 @@ struct ImplicitConversionData {
 RECOVERABLE(implicit_conversion, ImplicitConversionData *Data, ValueHandle Src,
             ValueHandle Dst)
 
+/// Known builtin check kinds.
+/// Keep in sync with the enum of the same name in CodeGenFunction.h
+enum BuiltinCheckKind : unsigned char {
+  BCK_CTZPassedZero,
+  BCK_CLZPassedZero,
+};
+
 struct InvalidBuiltinData {
   SourceLocation Loc;
+  unsigned char Kind;
 };
 
 /// Handle a builtin called in an invalid way.
