@@ -186,6 +186,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  // Other drivers typically add library search paths (`-L`) here via
+  // TC.AddFilePathLibArgs(). We don't do that on PS4 as the PS4 linker
+  // searches those locations by default.
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
 
@@ -290,6 +293,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
 
@@ -382,6 +386,8 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     llvm::sys::path::append(Dir, "target/include");
     CheckSDKPartExists(Dir, "system headers");
   }
+
+  getFilePaths().push_back(".");
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
