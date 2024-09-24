@@ -2480,9 +2480,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   unsigned InterleaveFactor = Group->getFactor();
   auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
-  // Prepare for the new pointers.
-  unsigned Index = Group->getIndex(Instr);
-
   // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
   assert((!BlockInMask || !Group->isReverse()) &&
