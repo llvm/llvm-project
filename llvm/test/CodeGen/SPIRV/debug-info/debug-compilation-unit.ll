@@ -29,11 +29,13 @@ define spir_func void @foo() {
 entry:
   ret void
 }
+; CHECK-SPIRV-NOT: Lfunc_end0:
 
 define spir_func void @bar() {
 entry:
   ret void
 }
+; CHECK-SPIRV-NOT: Lfunc_end1:
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5}
