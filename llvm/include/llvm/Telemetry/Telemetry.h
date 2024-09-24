@@ -85,7 +85,7 @@ struct ExitDescription {
 typedef unsigned KindType;
 /// This struct is used by TelemetryInfo to support isa<>, dyn_cast<>
 /// operations.
-/// It is defined as a struct(rather than an enum) because it is
+/// It is defined as a struct (rather than an enum) because it is
 /// expectend to be extended by subclasses which may have
 /// additional TelemetryInfo types defined to describe different events.
 struct EntryKind {
