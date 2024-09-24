@@ -12065,7 +12065,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    leal (,%rdi,8), %eax
-; FALLBACK0-NEXT:    andl $56, %eax
 ; FALLBACK0-NEXT:    andl $56, %edi
 ; FALLBACK0-NEXT:    movq -128(%rsp,%rdi), %r10
 ; FALLBACK0-NEXT:    movq -120(%rsp,%rdi), %r8
@@ -12073,6 +12072,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movl %eax, %ecx
 ; FALLBACK0-NEXT:    shrq %cl, %r11
 ; FALLBACK0-NEXT:    movl %eax, %esi
+; FALLBACK0-NEXT:    andb $56, %sil
 ; FALLBACK0-NEXT:    notb %sil
 ; FALLBACK0-NEXT:    movq -112(%rsp,%rdi), %rbx
 ; FALLBACK0-NEXT:    leaq (%rbx,%rbx), %r9
@@ -12167,7 +12167,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK1-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK1-NEXT:    andl $56, %ecx
 ; FALLBACK1-NEXT:    andl $56, %eax
 ; FALLBACK1-NEXT:    movq -112(%rsp,%rax), %rdi
 ; FALLBACK1-NEXT:    movq -128(%rsp,%rax), %rsi
@@ -12234,54 +12233,54 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK2-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK2-NEXT:    andl $56, %ecx
 ; FALLBACK2-NEXT:    andl $56, %eax
 ; FALLBACK2-NEXT:    movq -120(%rsp,%rax), %rdi
-; FALLBACK2-NEXT:    movq -112(%rsp,%rax), %r9
-; FALLBACK2-NEXT:    shrxq %rcx, %rdi, %rbx
+; FALLBACK2-NEXT:    movq -112(%rsp,%rax), %r10
+; FALLBACK2-NEXT:    shrxq %rcx, %rdi, %r9
 ; FALLBACK2-NEXT:    shrxq %rcx, -128(%rsp,%rax), %r13
 ; FALLBACK2-NEXT:    movq -104(%rsp,%rax), %rsi
 ; FALLBACK2-NEXT:    shrxq %rcx, %rsi, %r8
-; FALLBACK2-NEXT:    movq -96(%rsp,%rax), %r10
-; FALLBACK2-NEXT:    shrxq %rcx, %r9, %r11
+; FALLBACK2-NEXT:    movq -96(%rsp,%rax), %r11
+; FALLBACK2-NEXT:    shrxq %rcx, %r10, %rbx
 ; FALLBACK2-NEXT:    movq -88(%rsp,%rax), %r14
 ; FALLBACK2-NEXT:    shrxq %rcx, %r14, %r15
-; FALLBACK2-NEXT:    shrxq %rcx, %r10, %rbp
+; FALLBACK2-NEXT:    shrxq %rcx, %r11, %rbp
 ; FALLBACK2-NEXT:    movl %ecx, %r12d
+; FALLBACK2-NEXT:    andb $56, %r12b
 ; FALLBACK2-NEXT:    notb %r12b
-; FALLBACK2-NEXT:    addq %r9, %r9
-; FALLBACK2-NEXT:    shlxq %r12, %r9, %r9
-; FALLBACK2-NEXT:    orq %rbx, %r9
+; FALLBACK2-NEXT:    addq %r10, %r10
+; FALLBACK2-NEXT:    shlxq %r12, %r10, %r10
+; FALLBACK2-NEXT:    orq %r9, %r10
 ; FALLBACK2-NEXT:    addq %rdi, %rdi
 ; FALLBACK2-NEXT:    shlxq %r12, %rdi, %rdi
 ; FALLBACK2-NEXT:    orq %r13, %rdi
-; FALLBACK2-NEXT:    movq -80(%rsp,%rax), %rbx
-; FALLBACK2-NEXT:    shrxq %rcx, %rbx, %r13
+; FALLBACK2-NEXT:    movq -80(%rsp,%rax), %r9
+; FALLBACK2-NEXT:    shrxq %rcx, %r9, %r13
 ; FALLBACK2-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK2-NEXT:    shrxq %rcx, %rax, %rcx
-; FALLBACK2-NEXT:    addq %r10, %r10
-; FALLBACK2-NEXT:    shlxq %r12, %r10, %r10
-; FALLBACK2-NEXT:    orq %r8, %r10
+; FALLBACK2-NEXT:    addq %r11, %r11
+; FALLBACK2-NEXT:    shlxq %r12, %r11, %r11
+; FALLBACK2-NEXT:    orq %r8, %r11
 ; FALLBACK2-NEXT:    addq %rsi, %rsi
 ; FALLBACK2-NEXT:    shlxq %r12, %rsi, %rsi
-; FALLBACK2-NEXT:    orq %r11, %rsi
-; FALLBACK2-NEXT:    leaq (%rbx,%rbx), %r8
+; FALLBACK2-NEXT:    orq %rbx, %rsi
+; FALLBACK2-NEXT:    leaq (%r9,%r9), %r8
 ; FALLBACK2-NEXT:    shlxq %r12, %r8, %r8
 ; FALLBACK2-NEXT:    orq %r15, %r8
 ; FALLBACK2-NEXT:    addq %r14, %r14
-; FALLBACK2-NEXT:    shlxq %r12, %r14, %r11
-; FALLBACK2-NEXT:    orq %rbp, %r11
+; FALLBACK2-NEXT:    shlxq %r12, %r14, %r9
+; FALLBACK2-NEXT:    orq %rbp, %r9
 ; FALLBACK2-NEXT:    addq %rax, %rax
 ; FALLBACK2-NEXT:    shlxq %r12, %rax, %rax
 ; FALLBACK2-NEXT:    orq %r13, %rax
 ; FALLBACK2-NEXT:    movq %rcx, 56(%rdx)
 ; FALLBACK2-NEXT:    movq %rax, 48(%rdx)
-; FALLBACK2-NEXT:    movq %r11, 32(%rdx)
+; FALLBACK2-NEXT:    movq %r9, 32(%rdx)
 ; FALLBACK2-NEXT:    movq %r8, 40(%rdx)
 ; FALLBACK2-NEXT:    movq %rsi, 16(%rdx)
-; FALLBACK2-NEXT:    movq %r10, 24(%rdx)
+; FALLBACK2-NEXT:    movq %r11, 24(%rdx)
 ; FALLBACK2-NEXT:    movq %rdi, (%rdx)
-; FALLBACK2-NEXT:    movq %r9, 8(%rdx)
+; FALLBACK2-NEXT:    movq %r10, 8(%rdx)
 ; FALLBACK2-NEXT:    addq $8, %rsp
 ; FALLBACK2-NEXT:    popq %rbx
 ; FALLBACK2-NEXT:    popq %r12
@@ -12319,7 +12318,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK3-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK3-NEXT:    andl $56, %ecx
 ; FALLBACK3-NEXT:    andl $56, %eax
 ; FALLBACK3-NEXT:    movq -112(%rsp,%rax), %rdi
 ; FALLBACK3-NEXT:    movq -128(%rsp,%rax), %rsi
@@ -12338,17 +12336,16 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK3-NEXT:    shrdq %cl, %r14, %r10
 ; FALLBACK3-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK3-NEXT:    shrdq %cl, %rax, %r11
-; FALLBACK3-NEXT:    shrxq %rcx, %rax, %rax
-; FALLBACK3-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK3-NEXT:    shrdq %cl, %r9, %rsi
+; FALLBACK3-NEXT:    shrxq %rcx, %rax, %rax
 ; FALLBACK3-NEXT:    movq %r11, 48(%rdx)
+; FALLBACK3-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK3-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK3-NEXT:    movq %r15, 40(%rdx)
 ; FALLBACK3-NEXT:    movq %rdi, 16(%rdx)
 ; FALLBACK3-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK3-NEXT:    movq %rsi, (%rdx)
 ; FALLBACK3-NEXT:    movq %r8, 8(%rdx)
-; FALLBACK3-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK3-NEXT:    popq %rbx
 ; FALLBACK3-NEXT:    popq %r14
 ; FALLBACK3-NEXT:    popq %r15
@@ -12378,13 +12375,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK4-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    leal (,%r8,8), %eax
-; FALLBACK4-NEXT:    andl $56, %eax
 ; FALLBACK4-NEXT:    andl $56, %r8d
 ; FALLBACK4-NEXT:    movq -128(%rsp,%r8), %r10
 ; FALLBACK4-NEXT:    movq -120(%rsp,%r8), %r9
 ; FALLBACK4-NEXT:    movl %eax, %ecx
 ; FALLBACK4-NEXT:    shrq %cl, %r10
 ; FALLBACK4-NEXT:    movl %eax, %esi
+; FALLBACK4-NEXT:    andb $56, %sil
 ; FALLBACK4-NEXT:    notb %sil
 ; FALLBACK4-NEXT:    leaq (%r9,%r9), %rdi
 ; FALLBACK4-NEXT:    movl %esi, %ecx
@@ -12474,7 +12471,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK5-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK5-NEXT:    andl $56, %ecx
 ; FALLBACK5-NEXT:    andl $56, %eax
 ; FALLBACK5-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK5-NEXT:    movq -104(%rsp,%rax), %r9
@@ -12534,9 +12530,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    leal (,%rax,8), %esi
-; FALLBACK6-NEXT:    andl $56, %esi
 ; FALLBACK6-NEXT:    andl $56, %eax
-; FALLBACK6-NEXT:    shrxq %rsi, -128(%rsp,%rax), %r11
+; FALLBACK6-NEXT:    shrxq %rsi, -128(%rsp,%rax), %rbx
 ; FALLBACK6-NEXT:    movq -112(%rsp,%rax), %rcx
 ; FALLBACK6-NEXT:    movq -104(%rsp,%rax), %rdi
 ; FALLBACK6-NEXT:    shrxq %rsi, %rdi, %r12
@@ -12545,34 +12540,35 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq -88(%rsp,%rax), %r10
 ; FALLBACK6-NEXT:    shrxq %rsi, %r10, %r14
 ; FALLBACK6-NEXT:    shrxq %rsi, %r13, %r15
-; FALLBACK6-NEXT:    movl %esi, %ebx
-; FALLBACK6-NEXT:    notb %bl
+; FALLBACK6-NEXT:    movl %esi, %r11d
+; FALLBACK6-NEXT:    andb $56, %r11b
+; FALLBACK6-NEXT:    notb %r11b
 ; FALLBACK6-NEXT:    movq -120(%rsp,%rax), %rbp
 ; FALLBACK6-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK6-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK6-NEXT:    orq %r11, %r8
-; FALLBACK6-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK6-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK6-NEXT:    orq %r12, %r11
+; FALLBACK6-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK6-NEXT:    orq %rbx, %r8
+; FALLBACK6-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK6-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK6-NEXT:    orq %r12, %rbx
 ; FALLBACK6-NEXT:    movq -80(%rsp,%rax), %r12
 ; FALLBACK6-NEXT:    shrxq %rsi, %r12, %r13
 ; FALLBACK6-NEXT:    shrxq %rsi, %rbp, %rbp
 ; FALLBACK6-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK6-NEXT:    shrxq %rsi, %rax, %rsi
 ; FALLBACK6-NEXT:    addq %rdi, %rdi
-; FALLBACK6-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK6-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK6-NEXT:    orq %r9, %rdi
 ; FALLBACK6-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK6-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK6-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK6-NEXT:    orq %r14, %r9
 ; FALLBACK6-NEXT:    addq %r10, %r10
-; FALLBACK6-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK6-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK6-NEXT:    orq %r15, %r10
 ; FALLBACK6-NEXT:    addq %rax, %rax
-; FALLBACK6-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK6-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK6-NEXT:    orq %r13, %rax
 ; FALLBACK6-NEXT:    addq %rcx, %rcx
-; FALLBACK6-NEXT:    shlxq %rbx, %rcx, %rcx
+; FALLBACK6-NEXT:    shlxq %r11, %rcx, %rcx
 ; FALLBACK6-NEXT:    orq %rbp, %rcx
 ; FALLBACK6-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK6-NEXT:    movq %rcx, 8(%rdx)
@@ -12580,7 +12576,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK6-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK6-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK6-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK6-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK6-NEXT:    movq %r8, (%rdx)
 ; FALLBACK6-NEXT:    addq $8, %rsp
 ; FALLBACK6-NEXT:    popq %rbx
@@ -12611,7 +12607,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK7-NEXT:    andl $56, %ecx
 ; FALLBACK7-NEXT:    andl $56, %eax
 ; FALLBACK7-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK7-NEXT:    movq -104(%rsp,%rax), %r9
@@ -12631,17 +12626,16 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7-NEXT:    movq -120(%rsp,%rax), %rax
 ; FALLBACK7-NEXT:    movq %rax, %r15
 ; FALLBACK7-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK7-NEXT:    shrxq %rcx, %r11, %r10
-; FALLBACK7-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK7-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK7-NEXT:    shrxq %rcx, %r11, %rax
 ; FALLBACK7-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK7-NEXT:    movq %r9, 48(%rdx)
+; FALLBACK7-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK7-NEXT:    movq %rdi, 32(%rdx)
 ; FALLBACK7-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK7-NEXT:    movq %r8, 16(%rdx)
 ; FALLBACK7-NEXT:    movq %rsi, 24(%rdx)
 ; FALLBACK7-NEXT:    movq %r14, (%rdx)
-; FALLBACK7-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK7-NEXT:    popq %rbx
 ; FALLBACK7-NEXT:    popq %r14
 ; FALLBACK7-NEXT:    popq %r15
@@ -12665,13 +12659,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK8-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    leal (,%r9,8), %eax
-; FALLBACK8-NEXT:    andl $56, %eax
 ; FALLBACK8-NEXT:    andl $56, %r9d
 ; FALLBACK8-NEXT:    movq -128(%rsp,%r9), %r10
 ; FALLBACK8-NEXT:    movq -120(%rsp,%r9), %r8
 ; FALLBACK8-NEXT:    movl %eax, %ecx
 ; FALLBACK8-NEXT:    shrq %cl, %r10
 ; FALLBACK8-NEXT:    movl %eax, %esi
+; FALLBACK8-NEXT:    andb $56, %sil
 ; FALLBACK8-NEXT:    notb %sil
 ; FALLBACK8-NEXT:    leaq (%r8,%r8), %rdi
 ; FALLBACK8-NEXT:    movl %esi, %ecx
@@ -12749,43 +12743,42 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK9-NEXT:    pushq %rbx
 ; FALLBACK9-NEXT:    vmovups (%rdi), %ymm0
 ; FALLBACK9-NEXT:    vmovups 32(%rdi), %ymm1
-; FALLBACK9-NEXT:    movl (%rsi), %eax
+; FALLBACK9-NEXT:    movl (%rsi), %edi
 ; FALLBACK9-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; FALLBACK9-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; FALLBACK9-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK9-NEXT:    andl $56, %ecx
-; FALLBACK9-NEXT:    andl $56, %eax
-; FALLBACK9-NEXT:    movq -96(%rsp,%rax), %rdi
-; FALLBACK9-NEXT:    movq -104(%rsp,%rax), %r9
-; FALLBACK9-NEXT:    movq %r9, %rsi
-; FALLBACK9-NEXT:    shrdq %cl, %rdi, %rsi
-; FALLBACK9-NEXT:    movq -112(%rsp,%rax), %r10
+; FALLBACK9-NEXT:    leal (,%rdi,8), %ecx
+; FALLBACK9-NEXT:    andl $56, %edi
+; FALLBACK9-NEXT:    movq -96(%rsp,%rdi), %rsi
+; FALLBACK9-NEXT:    movq -104(%rsp,%rdi), %r9
+; FALLBACK9-NEXT:    movq %r9, %rax
+; FALLBACK9-NEXT:    shrdq %cl, %rsi, %rax
+; FALLBACK9-NEXT:    movq -112(%rsp,%rdi), %r10
 ; FALLBACK9-NEXT:    movq %r10, %r8
 ; FALLBACK9-NEXT:    shrdq %cl, %r9, %r8
-; FALLBACK9-NEXT:    movq -80(%rsp,%rax), %r9
-; FALLBACK9-NEXT:    movq -88(%rsp,%rax), %r11
+; FALLBACK9-NEXT:    movq -80(%rsp,%rdi), %r9
+; FALLBACK9-NEXT:    movq -88(%rsp,%rdi), %r11
 ; FALLBACK9-NEXT:    movq %r11, %rbx
 ; FALLBACK9-NEXT:    shrdq %cl, %r9, %rbx
-; FALLBACK9-NEXT:    shrdq %cl, %r11, %rdi
-; FALLBACK9-NEXT:    movq -72(%rsp,%rax), %r11
+; FALLBACK9-NEXT:    shrdq %cl, %r11, %rsi
+; FALLBACK9-NEXT:    movq -72(%rsp,%rdi), %r11
 ; FALLBACK9-NEXT:    shrdq %cl, %r11, %r9
-; FALLBACK9-NEXT:    movq -128(%rsp,%rax), %r14
-; FALLBACK9-NEXT:    movq -120(%rsp,%rax), %rax
-; FALLBACK9-NEXT:    movq %rax, %r15
+; FALLBACK9-NEXT:    movq -128(%rsp,%rdi), %r14
+; FALLBACK9-NEXT:    movq -120(%rsp,%rdi), %rdi
+; FALLBACK9-NEXT:    movq %rdi, %r15
 ; FALLBACK9-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK9-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK9-NEXT:    shrdq %cl, %rdi, %r14
 ; FALLBACK9-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK9-NEXT:    shrq %cl, %r11
 ; FALLBACK9-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK9-NEXT:    movq %r9, 48(%rdx)
 ; FALLBACK9-NEXT:    movq %r11, 56(%rdx)
-; FALLBACK9-NEXT:    movq %rdi, 32(%rdx)
+; FALLBACK9-NEXT:    movq %rsi, 32(%rdx)
 ; FALLBACK9-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK9-NEXT:    movq %r8, 16(%rdx)
-; FALLBACK9-NEXT:    movq %rsi, 24(%rdx)
+; FALLBACK9-NEXT:    movq %rax, 24(%rdx)
 ; FALLBACK9-NEXT:    movq %r14, (%rdx)
 ; FALLBACK9-NEXT:    popq %rbx
 ; FALLBACK9-NEXT:    popq %r14
@@ -12811,9 +12804,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    leal (,%rax,8), %esi
-; FALLBACK10-NEXT:    andl $56, %esi
 ; FALLBACK10-NEXT:    andl $56, %eax
-; FALLBACK10-NEXT:    shrxq %rsi, -128(%rsp,%rax), %r11
+; FALLBACK10-NEXT:    shrxq %rsi, -128(%rsp,%rax), %rbx
 ; FALLBACK10-NEXT:    movq -112(%rsp,%rax), %rcx
 ; FALLBACK10-NEXT:    movq -104(%rsp,%rax), %rdi
 ; FALLBACK10-NEXT:    shrxq %rsi, %rdi, %r12
@@ -12822,34 +12814,35 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq -88(%rsp,%rax), %r10
 ; FALLBACK10-NEXT:    shrxq %rsi, %r10, %r14
 ; FALLBACK10-NEXT:    shrxq %rsi, %r13, %r15
-; FALLBACK10-NEXT:    movl %esi, %ebx
-; FALLBACK10-NEXT:    notb %bl
+; FALLBACK10-NEXT:    movl %esi, %r11d
+; FALLBACK10-NEXT:    andb $56, %r11b
+; FALLBACK10-NEXT:    notb %r11b
 ; FALLBACK10-NEXT:    movq -120(%rsp,%rax), %rbp
 ; FALLBACK10-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK10-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK10-NEXT:    orq %r11, %r8
-; FALLBACK10-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK10-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK10-NEXT:    orq %r12, %r11
+; FALLBACK10-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK10-NEXT:    orq %rbx, %r8
+; FALLBACK10-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK10-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK10-NEXT:    orq %r12, %rbx
 ; FALLBACK10-NEXT:    movq -80(%rsp,%rax), %r12
 ; FALLBACK10-NEXT:    shrxq %rsi, %r12, %r13
 ; FALLBACK10-NEXT:    shrxq %rsi, %rbp, %rbp
 ; FALLBACK10-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK10-NEXT:    shrxq %rsi, %rax, %rsi
 ; FALLBACK10-NEXT:    addq %rdi, %rdi
-; FALLBACK10-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK10-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK10-NEXT:    orq %r9, %rdi
 ; FALLBACK10-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK10-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK10-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK10-NEXT:    orq %r14, %r9
 ; FALLBACK10-NEXT:    addq %r10, %r10
-; FALLBACK10-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK10-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK10-NEXT:    orq %r15, %r10
 ; FALLBACK10-NEXT:    addq %rax, %rax
-; FALLBACK10-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK10-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK10-NEXT:    orq %r13, %rax
 ; FALLBACK10-NEXT:    addq %rcx, %rcx
-; FALLBACK10-NEXT:    shlxq %rbx, %rcx, %rcx
+; FALLBACK10-NEXT:    shlxq %r11, %rcx, %rcx
 ; FALLBACK10-NEXT:    orq %rbp, %rcx
 ; FALLBACK10-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK10-NEXT:    movq %rcx, 8(%rdx)
@@ -12857,7 +12850,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK10-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK10-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK10-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK10-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK10-NEXT:    movq %r8, (%rdx)
 ; FALLBACK10-NEXT:    addq $8, %rsp
 ; FALLBACK10-NEXT:    popq %rbx
@@ -12876,44 +12869,42 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK11-NEXT:    pushq %rbx
 ; FALLBACK11-NEXT:    vmovups (%rdi), %ymm0
 ; FALLBACK11-NEXT:    vmovups 32(%rdi), %ymm1
-; FALLBACK11-NEXT:    movl (%rsi), %eax
+; FALLBACK11-NEXT:    movl (%rsi), %edi
 ; FALLBACK11-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; FALLBACK11-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; FALLBACK11-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK11-NEXT:    andl $56, %ecx
-; FALLBACK11-NEXT:    andl $56, %eax
-; FALLBACK11-NEXT:    movq -96(%rsp,%rax), %rdi
-; FALLBACK11-NEXT:    movq -104(%rsp,%rax), %r9
-; FALLBACK11-NEXT:    movq %r9, %rsi
-; FALLBACK11-NEXT:    shrdq %cl, %rdi, %rsi
-; FALLBACK11-NEXT:    movq -112(%rsp,%rax), %r10
+; FALLBACK11-NEXT:    leal (,%rdi,8), %ecx
+; FALLBACK11-NEXT:    andl $56, %edi
+; FALLBACK11-NEXT:    movq -96(%rsp,%rdi), %rsi
+; FALLBACK11-NEXT:    movq -104(%rsp,%rdi), %r9
+; FALLBACK11-NEXT:    movq %r9, %rax
+; FALLBACK11-NEXT:    shrdq %cl, %rsi, %rax
+; FALLBACK11-NEXT:    movq -112(%rsp,%rdi), %r10
 ; FALLBACK11-NEXT:    movq %r10, %r8
 ; FALLBACK11-NEXT:    shrdq %cl, %r9, %r8
-; FALLBACK11-NEXT:    movq -80(%rsp,%rax), %r9
-; FALLBACK11-NEXT:    movq -88(%rsp,%rax), %r11
+; FALLBACK11-NEXT:    movq -80(%rsp,%rdi), %r9
+; FALLBACK11-NEXT:    movq -88(%rsp,%rdi), %r11
 ; FALLBACK11-NEXT:    movq %r11, %rbx
 ; FALLBACK11-NEXT:    shrdq %cl, %r9, %rbx
-; FALLBACK11-NEXT:    shrdq %cl, %r11, %rdi
-; FALLBACK11-NEXT:    movq -72(%rsp,%rax), %r11
+; FALLBACK11-NEXT:    shrdq %cl, %r11, %rsi
+; FALLBACK11-NEXT:    movq -72(%rsp,%rdi), %r11
 ; FALLBACK11-NEXT:    shrdq %cl, %r11, %r9
-; FALLBACK11-NEXT:    movq -128(%rsp,%rax), %r14
-; FALLBACK11-NEXT:    movq -120(%rsp,%rax), %rax
-; FALLBACK11-NEXT:    movq %rax, %r15
+; FALLBACK11-NEXT:    movq -128(%rsp,%rdi), %r14
+; FALLBACK11-NEXT:    movq -120(%rsp,%rdi), %rdi
+; FALLBACK11-NEXT:    movq %rdi, %r15
 ; FALLBACK11-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK11-NEXT:    shrxq %rcx, %r11, %r10
-; FALLBACK11-NEXT:    # kill: def $cl killed $cl killed $rcx
-; FALLBACK11-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK11-NEXT:    shrdq %cl, %rdi, %r14
+; FALLBACK11-NEXT:    shrxq %rcx, %r11, %rcx
 ; FALLBACK11-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK11-NEXT:    movq %r9, 48(%rdx)
-; FALLBACK11-NEXT:    movq %rdi, 32(%rdx)
+; FALLBACK11-NEXT:    movq %rcx, 56(%rdx)
+; FALLBACK11-NEXT:    movq %rsi, 32(%rdx)
 ; FALLBACK11-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK11-NEXT:    movq %r8, 16(%rdx)
-; FALLBACK11-NEXT:    movq %rsi, 24(%rdx)
+; FALLBACK11-NEXT:    movq %rax, 24(%rdx)
 ; FALLBACK11-NEXT:    movq %r14, (%rdx)
-; FALLBACK11-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK11-NEXT:    popq %rbx
 ; FALLBACK11-NEXT:    popq %r14
 ; FALLBACK11-NEXT:    popq %r15
@@ -12935,13 +12926,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK12-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    leal (,%r9,8), %eax
-; FALLBACK12-NEXT:    andl $56, %eax
 ; FALLBACK12-NEXT:    andl $56, %r9d
 ; FALLBACK12-NEXT:    movq -128(%rsp,%r9), %r10
 ; FALLBACK12-NEXT:    movq -120(%rsp,%r9), %r8
 ; FALLBACK12-NEXT:    movl %eax, %ecx
 ; FALLBACK12-NEXT:    shrq %cl, %r10
 ; FALLBACK12-NEXT:    movl %eax, %esi
+; FALLBACK12-NEXT:    andb $56, %sil
 ; FALLBACK12-NEXT:    notb %sil
 ; FALLBACK12-NEXT:    leaq (%r8,%r8), %rdi
 ; FALLBACK12-NEXT:    movl %esi, %ecx
@@ -13023,7 +13014,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK13-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    leal (,%rdi,8), %ecx
-; FALLBACK13-NEXT:    andl $56, %ecx
 ; FALLBACK13-NEXT:    andl $56, %edi
 ; FALLBACK13-NEXT:    movq -96(%rsp,%rdi), %rsi
 ; FALLBACK13-NEXT:    movq -104(%rsp,%rdi), %r9
@@ -13075,9 +13065,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    leal (,%rsi,8), %ecx
-; FALLBACK14-NEXT:    andl $56, %ecx
 ; FALLBACK14-NEXT:    andl $56, %esi
-; FALLBACK14-NEXT:    shrxq %rcx, -128(%rsp,%rsi), %r11
+; FALLBACK14-NEXT:    shrxq %rcx, -128(%rsp,%rsi), %rbx
 ; FALLBACK14-NEXT:    movq -112(%rsp,%rsi), %rax
 ; FALLBACK14-NEXT:    movq -104(%rsp,%rsi), %rdi
 ; FALLBACK14-NEXT:    shrxq %rcx, %rdi, %r12
@@ -13086,34 +13075,35 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq -88(%rsp,%rsi), %r10
 ; FALLBACK14-NEXT:    shrxq %rcx, %r10, %r14
 ; FALLBACK14-NEXT:    shrxq %rcx, %r13, %r15
-; FALLBACK14-NEXT:    movl %ecx, %ebx
-; FALLBACK14-NEXT:    notb %bl
+; FALLBACK14-NEXT:    movl %ecx, %r11d
+; FALLBACK14-NEXT:    andb $56, %r11b
+; FALLBACK14-NEXT:    notb %r11b
 ; FALLBACK14-NEXT:    movq -120(%rsp,%rsi), %rbp
 ; FALLBACK14-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK14-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK14-NEXT:    orq %r11, %r8
-; FALLBACK14-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK14-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK14-NEXT:    orq %r12, %r11
+; FALLBACK14-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK14-NEXT:    orq %rbx, %r8
+; FALLBACK14-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK14-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK14-NEXT:    orq %r12, %rbx
 ; FALLBACK14-NEXT:    movq -80(%rsp,%rsi), %r12
 ; FALLBACK14-NEXT:    shrxq %rcx, %r12, %r13
 ; FALLBACK14-NEXT:    shrxq %rcx, %rbp, %rbp
 ; FALLBACK14-NEXT:    movq -72(%rsp,%rsi), %rsi
 ; FALLBACK14-NEXT:    shrxq %rcx, %rsi, %rcx
 ; FALLBACK14-NEXT:    addq %rdi, %rdi
-; FALLBACK14-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK14-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK14-NEXT:    orq %r9, %rdi
 ; FALLBACK14-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK14-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK14-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK14-NEXT:    orq %r14, %r9
 ; FALLBACK14-NEXT:    addq %r10, %r10
-; FALLBACK14-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK14-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK14-NEXT:    orq %r15, %r10
 ; FALLBACK14-NEXT:    addq %rsi, %rsi
-; FALLBACK14-NEXT:    shlxq %rbx, %rsi, %rsi
+; FALLBACK14-NEXT:    shlxq %r11, %rsi, %rsi
 ; FALLBACK14-NEXT:    orq %r13, %rsi
 ; FALLBACK14-NEXT:    addq %rax, %rax
-; FALLBACK14-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK14-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK14-NEXT:    orq %rbp, %rax
 ; FALLBACK14-NEXT:    movq %rcx, 56(%rdx)
 ; FALLBACK14-NEXT:    movq %rax, 8(%rdx)
@@ -13121,7 +13111,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK14-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK14-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK14-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK14-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK14-NEXT:    movq %r8, (%rdx)
 ; FALLBACK14-NEXT:    addq $8, %rsp
 ; FALLBACK14-NEXT:    popq %rbx
@@ -13139,42 +13129,40 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK15-NEXT:    pushq %r14
 ; FALLBACK15-NEXT:    pushq %rbx
 ; FALLBACK15-NEXT:    vmovups (%rdi), %zmm0
-; FALLBACK15-NEXT:    movl (%rsi), %eax
+; FALLBACK15-NEXT:    movl (%rsi), %edi
 ; FALLBACK15-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; FALLBACK15-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK15-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; FALLBACK15-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK15-NEXT:    andl $56, %ecx
-; FALLBACK15-NEXT:    andl $56, %eax
-; FALLBACK15-NEXT:    movq -96(%rsp,%rax), %rdi
-; FALLBACK15-NEXT:    movq -104(%rsp,%rax), %r9
-; FALLBACK15-NEXT:    movq %r9, %rsi
-; FALLBACK15-NEXT:    shrdq %cl, %rdi, %rsi
-; FALLBACK15-NEXT:    movq -112(%rsp,%rax), %r10
+; FALLBACK15-NEXT:    leal (,%rdi,8), %ecx
+; FALLBACK15-NEXT:    andl $56, %edi
+; FALLBACK15-NEXT:    movq -96(%rsp,%rdi), %rsi
+; FALLBACK15-NEXT:    movq -104(%rsp,%rdi), %r9
+; FALLBACK15-NEXT:    movq %r9, %rax
+; FALLBACK15-NEXT:    shrdq %cl, %rsi, %rax
+; FALLBACK15-NEXT:    movq -112(%rsp,%rdi), %r10
 ; FALLBACK15-NEXT:    movq %r10, %r8
 ; FALLBACK15-NEXT:    shrdq %cl, %r9, %r8
-; FALLBACK15-NEXT:    movq -80(%rsp,%rax), %r9
-; FALLBACK15-NEXT:    movq -88(%rsp,%rax), %r11
+; FALLBACK15-NEXT:    movq -80(%rsp,%rdi), %r9
+; FALLBACK15-NEXT:    movq -88(%rsp,%rdi), %r11
 ; FALLBACK15-NEXT:    movq %r11, %rbx
 ; FALLBACK15-NEXT:    shrdq %cl, %r9, %rbx
-; FALLBACK15-NEXT:    shrdq %cl, %r11, %rdi
-; FALLBACK15-NEXT:    movq -72(%rsp,%rax), %r11
+; FALLBACK15-NEXT:    shrdq %cl, %r11, %rsi
+; FALLBACK15-NEXT:    movq -72(%rsp,%rdi), %r11
 ; FALLBACK15-NEXT:    shrdq %cl, %r11, %r9
-; FALLBACK15-NEXT:    movq -128(%rsp,%rax), %r14
-; FALLBACK15-NEXT:    movq -120(%rsp,%rax), %rax
-; FALLBACK15-NEXT:    movq %rax, %r15
+; FALLBACK15-NEXT:    movq -128(%rsp,%rdi), %r14
+; FALLBACK15-NEXT:    movq -120(%rsp,%rdi), %rdi
+; FALLBACK15-NEXT:    movq %rdi, %r15
 ; FALLBACK15-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK15-NEXT:    shrxq %rcx, %r11, %r10
-; FALLBACK15-NEXT:    # kill: def $cl killed $cl killed $rcx
-; FALLBACK15-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK15-NEXT:    shrdq %cl, %rdi, %r14
+; FALLBACK15-NEXT:    shrxq %rcx, %r11, %rcx
 ; FALLBACK15-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK15-NEXT:    movq %r9, 48(%rdx)
-; FALLBACK15-NEXT:    movq %rdi, 32(%rdx)
+; FALLBACK15-NEXT:    movq %rcx, 56(%rdx)
+; FALLBACK15-NEXT:    movq %rsi, 32(%rdx)
 ; FALLBACK15-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK15-NEXT:    movq %r8, 16(%rdx)
-; FALLBACK15-NEXT:    movq %rsi, 24(%rdx)
+; FALLBACK15-NEXT:    movq %rax, 24(%rdx)
 ; FALLBACK15-NEXT:    movq %r14, (%rdx)
-; FALLBACK15-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK15-NEXT:    popq %rbx
 ; FALLBACK15-NEXT:    popq %r14
 ; FALLBACK15-NEXT:    popq %r15
@@ -13209,198 +13197,202 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl 36(%eax), %ecx
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 40(%eax), %ebp
-; FALLBACK16-NEXT:    movl 44(%eax), %ebx
-; FALLBACK16-NEXT:    movl 48(%eax), %edi
-; FALLBACK16-NEXT:    movl 52(%eax), %esi
-; FALLBACK16-NEXT:    movl 56(%eax), %edx
-; FALLBACK16-NEXT:    movl 60(%eax), %ecx
-; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FALLBACK16-NEXT:    movl (%eax), %eax
+; FALLBACK16-NEXT:    movl 40(%eax), %ebx
+; FALLBACK16-NEXT:    movl 44(%eax), %edi
+; FALLBACK16-NEXT:    movl 48(%eax), %esi
+; FALLBACK16-NEXT:    movl 52(%eax), %edx
+; FALLBACK16-NEXT:    movl 56(%eax), %ecx
+; FALLBACK16-NEXT:    movl 60(%eax), %eax
+; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; FALLBACK16-NEXT:    movl (%ebp), %ebp
 ; FALLBACK16-NEXT:    xorps %xmm0, %xmm0
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl %eax, %esi
-; FALLBACK16-NEXT:    andl $60, %esi
-; FALLBACK16-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK16-NEXT:    shll $3, %eax
-; FALLBACK16-NEXT:    andl $24, %eax
-; FALLBACK16-NEXT:    movl %edx, %edi
-; FALLBACK16-NEXT:    movl %eax, %ecx
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    movl 72(%esp,%esi), %ecx
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl %ebp, %edx
+; FALLBACK16-NEXT:    movl %ebp, %ecx
+; FALLBACK16-NEXT:    andl $60, %ecx
+; FALLBACK16-NEXT:    movl 68(%esp,%ecx), %edi
+; FALLBACK16-NEXT:    movl %ecx, %ebx
+; FALLBACK16-NEXT:    shll $3, %edx
+; FALLBACK16-NEXT:    movl %edi, %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    movl 72(%esp,%ebx), %ecx
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK16-NEXT:    movb %al, %ch
+; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK16-NEXT:    movb %dl, %ch
+; FALLBACK16-NEXT:    andb $24, %ch
 ; FALLBACK16-NEXT:    notb %ch
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %edi, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    addl %edx, %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %edx
-; FALLBACK16-NEXT:    orl %edi, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK16-NEXT:    movl %edx, %ebp
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK16-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %ebp, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %cl, %ebx
-; FALLBACK16-NEXT:    addl %edx, %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %edx
-; FALLBACK16-NEXT:    orl %ebx, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK16-NEXT:    movl %ebx, %ebp
-; FALLBACK16-NEXT:    movl %eax, %edx
-; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    addl %eax, %eax
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %eax
-; FALLBACK16-NEXT:    orl %ebp, %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    addl %ebx, %ebx
-; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %edi, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK16-NEXT:    movl %ebx, %ebp
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 64(%esp,%ebx), %eax
 ; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK16-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %eax
-; FALLBACK16-NEXT:    orl %ebp, %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    addl %ebx, %ebx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %eax, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK16-NEXT:    movl %ebx, %ebp
-; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK16-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %eax
-; FALLBACK16-NEXT:    orl %ebp, %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    addl %ebx, %ebx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %edi, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 108(%esp,%esi), %edi
-; FALLBACK16-NEXT:    movl %edi, %ebp
-; FALLBACK16-NEXT:    movl %eax, %ecx
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    movl 112(%esp,%esi), %ecx
-; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK16-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %ebp, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
 ; FALLBACK16-NEXT:    addl %edi, %edi
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %edi
-; FALLBACK16-NEXT:    orl %edx, %edi
-; FALLBACK16-NEXT:    movl %esi, %edx
-; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 116(%esp,%esi), %esi
-; FALLBACK16-NEXT:    movl %esi, %ebx
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebx
-; FALLBACK16-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK16-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebp
-; FALLBACK16-NEXT:    orl %ebx, %ebp
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    movb %dl, %cl
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %cl, %ebx
-; FALLBACK16-NEXT:    addl %esi, %esi
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    orl %ebx, %esi
+; FALLBACK16-NEXT:    orl %eax, %edi
+; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 76(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %eax
 ; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK16-NEXT:    leal (%ebx,%ebx), %edx
+; FALLBACK16-NEXT:    movl 80(%esp,%ebx), %edi
+; FALLBACK16-NEXT:    leal (%edi,%edi), %esi
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %esi
+; FALLBACK16-NEXT:    orl %eax, %esi
+; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    addl %ebp, %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 84(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %eax
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    movl 88(%esp,%ebx), %esi
+; FALLBACK16-NEXT:    leal (%esi,%esi), %edx
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %edx
 ; FALLBACK16-NEXT:    orl %eax, %edx
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %edi
+; FALLBACK16-NEXT:    addl %ebp, %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edi, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl 92(%esp,%eax), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %edx
+; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK16-NEXT:    leal (%edi,%edi), %eax
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    orl %edx, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    movl %ebx, %eax
+; FALLBACK16-NEXT:    shrl %cl, %esi
+; FALLBACK16-NEXT:    addl %ebp, %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %esi, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK16-NEXT:    movl 100(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %edx
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    movl 104(%esp,%ebx), %esi
+; FALLBACK16-NEXT:    leal (%esi,%esi), %eax
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    orl %edx, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %edi
+; FALLBACK16-NEXT:    addl %ebp, %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edi, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 108(%esp,%ebx), %edi
+; FALLBACK16-NEXT:    movl %edi, %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    movl 112(%esp,%ebx), %ecx
+; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK16-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %esi
+; FALLBACK16-NEXT:    addl %edi, %edi
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %edi
+; FALLBACK16-NEXT:    orl %esi, %edi
+; FALLBACK16-NEXT:    movl 116(%esp,%ebx), %esi
+; FALLBACK16-NEXT:    movl %esi, %eax
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    movl 120(%esp,%ebx), %ebx
+; FALLBACK16-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %edx, %eax
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    addl %esi, %esi
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %esi
+; FALLBACK16-NEXT:    orl %edx, %esi
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebx, %edx
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK16-NEXT:    movl 124(%esp,%ebx), %ebx
+; FALLBACK16-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edx, %ebp
+; FALLBACK16-NEXT:    movl %eax, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %ebx
 ; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK16-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK16-NEXT:    movl %edx, 56(%eax)
+; FALLBACK16-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK16-NEXT:    movl %esi, 48(%eax)
-; FALLBACK16-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK16-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK16-NEXT:    movl %ecx, 44(%eax)
@@ -13498,91 +13490,90 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK17-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK17-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; FALLBACK17-NEXT:    movl %ecx, %ebp
-; FALLBACK17-NEXT:    andl $60, %ebp
-; FALLBACK17-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK17-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl %ecx, %eax
+; FALLBACK17-NEXT:    andl $60, %eax
+; FALLBACK17-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK17-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK17-NEXT:    shll $3, %ecx
-; FALLBACK17-NEXT:    andl $24, %ecx
-; FALLBACK17-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK17-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK17-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK17-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %edi
+; FALLBACK17-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
 ; FALLBACK17-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK17-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl %esi, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK17-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK17-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK17-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK17-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK17-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK17-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK17-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK17-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl %edi, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK17-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK17-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK17-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK17-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK17-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK17-NEXT:    movl %esi, 56(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK17-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK17-NEXT:    shrl %cl, %eax
-; FALLBACK17-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK17-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK17-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK17-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK17-NEXT:    movl %ebx, (%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK17-NEXT:    shrl %cl, %edx
+; FALLBACK17-NEXT:    movl %edx, 60(%eax)
+; FALLBACK17-NEXT:    movl %edi, 48(%eax)
+; FALLBACK17-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK17-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK17-NEXT:    movl %ebp, (%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK17-NEXT:    addl $188, %esp
 ; FALLBACK17-NEXT:    popl %esi
 ; FALLBACK17-NEXT:    popl %edi
@@ -13659,13 +13650,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK18-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK18-NEXT:    movl %eax, %ecx
 ; FALLBACK18-NEXT:    leal (,%eax,8), %edx
-; FALLBACK18-NEXT:    andl $24, %edx
 ; FALLBACK18-NEXT:    andl $60, %ecx
 ; FALLBACK18-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK18-NEXT:    movl 72(%esp,%ecx), %eax
 ; FALLBACK18-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK18-NEXT:    shrxl %edx, %esi, %edi
 ; FALLBACK18-NEXT:    movl %edx, %ebx
+; FALLBACK18-NEXT:    andb $24, %bl
 ; FALLBACK18-NEXT:    notb %bl
 ; FALLBACK18-NEXT:    leal (%eax,%eax), %ebp
 ; FALLBACK18-NEXT:    shlxl %ebx, %ebp, %eax
@@ -13866,7 +13857,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK19-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK19-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK19-NEXT:    shll $3, %ecx
-; FALLBACK19-NEXT:    andl $24, %ecx
 ; FALLBACK19-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK19-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK19-NEXT:    movl 64(%esp,%ebp), %edi
@@ -13963,7 +13953,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movups 16(%ecx), %xmm1
 ; FALLBACK20-NEXT:    movups 32(%ecx), %xmm2
 ; FALLBACK20-NEXT:    movups 48(%ecx), %xmm3
-; FALLBACK20-NEXT:    movl (%eax), %eax
+; FALLBACK20-NEXT:    movl (%eax), %ecx
 ; FALLBACK20-NEXT:    xorps %xmm4, %xmm4
 ; FALLBACK20-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
@@ -13973,106 +13963,110 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK20-NEXT:    movl %eax, %esi
+; FALLBACK20-NEXT:    movl %ecx, %esi
 ; FALLBACK20-NEXT:    andl $60, %esi
-; FALLBACK20-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK20-NEXT:    shll $3, %eax
-; FALLBACK20-NEXT:    andl $24, %eax
-; FALLBACK20-NEXT:    movl %edx, %edi
+; FALLBACK20-NEXT:    movl 68(%esp,%esi), %ebx
+; FALLBACK20-NEXT:    shll $3, %ecx
+; FALLBACK20-NEXT:    movl %ebx, %edi
+; FALLBACK20-NEXT:    shrl %cl, %edi
+; FALLBACK20-NEXT:    movl 72(%esp,%esi), %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal (%eax,%eax), %ebp
+; FALLBACK20-NEXT:    movl %ecx, %edx
+; FALLBACK20-NEXT:    movl %ecx, %eax
+; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    andb $24, %dl
+; FALLBACK20-NEXT:    notb %dl
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %edi, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 64(%esp,%esi), %edi
 ; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    movl 72(%esp,%esi), %ecx
-; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK20-NEXT:    movb %al, %ch
-; FALLBACK20-NEXT:    notb %ch
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    addl %ebx, %ebx
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
 ; FALLBACK20-NEXT:    orl %edi, %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %edx, %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
-; FALLBACK20-NEXT:    orl %edi, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK20-NEXT:    movl %edx, %ebp
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl 76(%esp,%esi), %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK20-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl 80(%esp,%esi), %ecx
+; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebx
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
 ; FALLBACK20-NEXT:    orl %ebp, %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %cl, %edi
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK20-NEXT:    addl %ebx, %ebx
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %ebx
+; FALLBACK20-NEXT:    orl %edi, %ebx
+; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 84(%esp,%esi), %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %ebp
+; FALLBACK20-NEXT:    movl 88(%esp,%esi), %ebx
+; FALLBACK20-NEXT:    leal (%ebx,%ebx), %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebp, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %cl, %ebp
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK20-NEXT:    addl %edi, %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebp, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 92(%esp,%esi), %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %ebp
+; FALLBACK20-NEXT:    movl 96(%esp,%esi), %ecx
+; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebp, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %ebx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK20-NEXT:    addl %edi, %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebx, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 100(%esp,%esi), %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %ebp
+; FALLBACK20-NEXT:    movl 104(%esp,%esi), %ecx
+; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebp, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK20-NEXT:    shrl %cl, %ebx
-; FALLBACK20-NEXT:    addl %edx, %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
-; FALLBACK20-NEXT:    orl %ebx, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
-; FALLBACK20-NEXT:    movl %eax, %edx
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    addl %eax, %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %edi, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK20-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %cl, %eax
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %eax, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK20-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %edi, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK20-NEXT:    addl %edi, %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %ebx, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK20-NEXT:    movl 108(%esp,%esi), %edi
 ; FALLBACK20-NEXT:    movl %edi, %ebp
 ; FALLBACK20-NEXT:    movl %eax, %ecx
@@ -14080,52 +14074,55 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movl 112(%esp,%esi), %ecx
 ; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK20-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
 ; FALLBACK20-NEXT:    orl %ebp, %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %cl, %ebx
 ; FALLBACK20-NEXT:    addl %edi, %edi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %edi
-; FALLBACK20-NEXT:    orl %edx, %edi
-; FALLBACK20-NEXT:    movl %esi, %edx
+; FALLBACK20-NEXT:    orl %ebx, %edi
+; FALLBACK20-NEXT:    movl %esi, %ebp
 ; FALLBACK20-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK20-NEXT:    movl 116(%esp,%esi), %esi
 ; FALLBACK20-NEXT:    movl %esi, %ebx
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %ebx
-; FALLBACK20-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK20-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebp
-; FALLBACK20-NEXT:    orl %ebx, %ebp
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    movl 120(%esp,%ebp), %ebp
+; FALLBACK20-NEXT:    leal (%ebp,%ebp), %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %eax
+; FALLBACK20-NEXT:    orl %ebx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK20-NEXT:    shrl %cl, %ebx
 ; FALLBACK20-NEXT:    addl %esi, %esi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %esi
 ; FALLBACK20-NEXT:    orl %ebx, %esi
-; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl %ebp, %eax
 ; FALLBACK20-NEXT:    shrl %cl, %eax
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK20-NEXT:    leal (%ebx,%ebx), %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
-; FALLBACK20-NEXT:    orl %eax, %edx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    movl 124(%esp,%ecx), %ebx
+; FALLBACK20-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %eax, %ebp
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK20-NEXT:    shrl %cl, %ebx
 ; FALLBACK20-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK20-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK20-NEXT:    movl %edx, 56(%eax)
+; FALLBACK20-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK20-NEXT:    movl %esi, 48(%eax)
-; FALLBACK20-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK20-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK20-NEXT:    movl %ecx, 44(%eax)
@@ -14179,91 +14176,90 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK21-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; FALLBACK21-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK21-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK21-NEXT:    movl %ecx, %ebp
-; FALLBACK21-NEXT:    andl $60, %ebp
-; FALLBACK21-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK21-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl %ecx, %eax
+; FALLBACK21-NEXT:    andl $60, %eax
+; FALLBACK21-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK21-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK21-NEXT:    shll $3, %ecx
-; FALLBACK21-NEXT:    andl $24, %ecx
-; FALLBACK21-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK21-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK21-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK21-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %edi
+; FALLBACK21-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
 ; FALLBACK21-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK21-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl %esi, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK21-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK21-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK21-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK21-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK21-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK21-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl %edi, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK21-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK21-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK21-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK21-NEXT:    movl %esi, 56(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK21-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK21-NEXT:    shrl %cl, %eax
-; FALLBACK21-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK21-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK21-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK21-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK21-NEXT:    movl %ebx, (%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK21-NEXT:    shrl %cl, %edx
+; FALLBACK21-NEXT:    movl %edx, 60(%eax)
+; FALLBACK21-NEXT:    movl %edi, 48(%eax)
+; FALLBACK21-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK21-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK21-NEXT:    movl %ebp, (%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK21-NEXT:    addl $188, %esp
 ; FALLBACK21-NEXT:    popl %esi
 ; FALLBACK21-NEXT:    popl %edi
@@ -14284,7 +14280,7 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    movups 16(%ecx), %xmm1
 ; FALLBACK22-NEXT:    movups 32(%ecx), %xmm2
 ; FALLBACK22-NEXT:    movups 48(%ecx), %xmm3
-; FALLBACK22-NEXT:    movl (%eax), %ecx
+; FALLBACK22-NEXT:    movl (%eax), %edx
 ; FALLBACK22-NEXT:    xorps %xmm4, %xmm4
 ; FALLBACK22-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
@@ -14294,112 +14290,115 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK22-NEXT:    leal (,%ecx,8), %edx
-; FALLBACK22-NEXT:    andl $24, %edx
-; FALLBACK22-NEXT:    andl $60, %ecx
-; FALLBACK22-NEXT:    movl 68(%esp,%ecx), %esi
-; FALLBACK22-NEXT:    movl 72(%esp,%ecx), %eax
+; FALLBACK22-NEXT:    leal (,%edx,8), %ecx
+; FALLBACK22-NEXT:    andl $60, %edx
+; FALLBACK22-NEXT:    movl 68(%esp,%edx), %esi
+; FALLBACK22-NEXT:    movl 72(%esp,%edx), %eax
 ; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, %esi, %edi
-; FALLBACK22-NEXT:    movl %edx, %ebx
+; FALLBACK22-NEXT:    shrxl %ecx, %esi, %edi
+; FALLBACK22-NEXT:    movl %ecx, %ebx
+; FALLBACK22-NEXT:    andb $24, %bl
 ; FALLBACK22-NEXT:    notb %bl
 ; FALLBACK22-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK22-NEXT:    shlxl %ebx, %ebp, %ebp
-; FALLBACK22-NEXT:    orl %edi, %ebp
-; FALLBACK22-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, 64(%esp,%ecx), %edi
-; FALLBACK22-NEXT:    addl %esi, %esi
-; FALLBACK22-NEXT:    shlxl %ebx, %esi, %esi
-; FALLBACK22-NEXT:    orl %edi, %esi
-; FALLBACK22-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    movl 80(%esp,%ecx), %esi
-; FALLBACK22-NEXT:    leal (%esi,%esi), %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    movl 76(%esp,%ecx), %edi
-; FALLBACK22-NEXT:    shrxl %edx, %edi, %ebp
-; FALLBACK22-NEXT:    orl %ebp, %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; FALLBACK22-NEXT:    addl %edi, %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %edi
-; FALLBACK22-NEXT:    orl %eax, %edi
-; FALLBACK22-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    movl 88(%esp,%ecx), %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    leal (%eax,%eax), %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    movl 84(%esp,%ecx), %edi
-; FALLBACK22-NEXT:    shrxl %edx, %edi, %ebp
-; FALLBACK22-NEXT:    orl %ebp, %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, %esi, %esi
-; FALLBACK22-NEXT:    addl %edi, %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    orl %esi, %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    movl 96(%esp,%ecx), %esi
-; FALLBACK22-NEXT:    leal (%esi,%esi), %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    movl 92(%esp,%ecx), %edi
-; FALLBACK22-NEXT:    shrxl %edx, %edi, %ebp
-; FALLBACK22-NEXT:    orl %ebp, %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; FALLBACK22-NEXT:    addl %edi, %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %edi
-; FALLBACK22-NEXT:    orl %eax, %edi
-; FALLBACK22-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    movl 104(%esp,%ecx), %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    leal (%eax,%eax), %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    movl 100(%esp,%ecx), %edi
-; FALLBACK22-NEXT:    shrxl %edx, %edi, %ebp
-; FALLBACK22-NEXT:    orl %ebp, %eax
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, %esi, %esi
-; FALLBACK22-NEXT:    addl %edi, %edi
-; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
-; FALLBACK22-NEXT:    orl %esi, %eax
+; FALLBACK22-NEXT:    shlxl %ebx, %ebp, %eax
+; FALLBACK22-NEXT:    orl %edi, %eax
 ; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    movl %ecx, %eax
-; FALLBACK22-NEXT:    movl 112(%esp,%ecx), %ecx
+; FALLBACK22-NEXT:    shrxl %ecx, 64(%esp,%edx), %edi
+; FALLBACK22-NEXT:    addl %esi, %esi
+; FALLBACK22-NEXT:    shlxl %ebx, %esi, %ecx
+; FALLBACK22-NEXT:    orl %edi, %ecx
+; FALLBACK22-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 80(%esp,%edx), %esi
+; FALLBACK22-NEXT:    leal (%esi,%esi), %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %ecx
+; FALLBACK22-NEXT:    movl 76(%esp,%edx), %edi
+; FALLBACK22-NEXT:    shrxl %eax, %edi, %ebp
+; FALLBACK22-NEXT:    orl %ebp, %ecx
+; FALLBACK22-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; FALLBACK22-NEXT:    movl %eax, %ecx
+; FALLBACK22-NEXT:    addl %edi, %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %edi
+; FALLBACK22-NEXT:    orl %ebp, %edi
+; FALLBACK22-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 88(%esp,%edx), %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    leal (%eax,%eax), %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
+; FALLBACK22-NEXT:    movl 84(%esp,%edx), %edi
+; FALLBACK22-NEXT:    shrxl %ecx, %edi, %ebp
+; FALLBACK22-NEXT:    orl %ebp, %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    shrxl %ecx, %esi, %esi
+; FALLBACK22-NEXT:    addl %edi, %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
+; FALLBACK22-NEXT:    orl %esi, %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 96(%esp,%edx), %esi
+; FALLBACK22-NEXT:    leal (%esi,%esi), %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
+; FALLBACK22-NEXT:    movl 92(%esp,%edx), %edi
+; FALLBACK22-NEXT:    shrxl %ecx, %edi, %ebp
+; FALLBACK22-NEXT:    orl %ebp, %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    shrxl %ecx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; FALLBACK22-NEXT:    addl %edi, %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %edi
+; FALLBACK22-NEXT:    orl %eax, %edi
+; FALLBACK22-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 104(%esp,%edx), %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    leal (%eax,%eax), %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %eax
+; FALLBACK22-NEXT:    movl 100(%esp,%edx), %edi
+; FALLBACK22-NEXT:    shrxl %ecx, %edi, %ebp
+; FALLBACK22-NEXT:    orl %ebp, %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    shrxl %ecx, %esi, %esi
+; FALLBACK22-NEXT:    movl %ecx, %eax
+; FALLBACK22-NEXT:    addl %edi, %edi
+; FALLBACK22-NEXT:    shlxl %ebx, %edi, %ecx
+; FALLBACK22-NEXT:    orl %esi, %ecx
+; FALLBACK22-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 112(%esp,%edx), %ecx
 ; FALLBACK22-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    leal (%ecx,%ecx), %esi
 ; FALLBACK22-NEXT:    shlxl %ebx, %esi, %ecx
-; FALLBACK22-NEXT:    movl 108(%esp,%eax), %esi
-; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, %esi, %ebp
+; FALLBACK22-NEXT:    movl 108(%esp,%edx), %esi
+; FALLBACK22-NEXT:    shrxl %eax, %esi, %ebp
 ; FALLBACK22-NEXT:    orl %ebp, %ecx
 ; FALLBACK22-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK22-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; FALLBACK22-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; FALLBACK22-NEXT:    movl %eax, %ebp
 ; FALLBACK22-NEXT:    addl %esi, %esi
-; FALLBACK22-NEXT:    shlxl %ebx, %esi, %esi
-; FALLBACK22-NEXT:    orl %ecx, %esi
-; FALLBACK22-NEXT:    movl 120(%esp,%eax), %ebp
-; FALLBACK22-NEXT:    leal (%ebp,%ebp), %ecx
+; FALLBACK22-NEXT:    shlxl %ebx, %esi, %eax
+; FALLBACK22-NEXT:    orl %ecx, %eax
+; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK22-NEXT:    movl 120(%esp,%edx), %esi
+; FALLBACK22-NEXT:    leal (%esi,%esi), %ecx
 ; FALLBACK22-NEXT:    shlxl %ebx, %ecx, %ecx
-; FALLBACK22-NEXT:    movl 116(%esp,%eax), %eax
-; FALLBACK22-NEXT:    shrxl %edx, %eax, %edi
+; FALLBACK22-NEXT:    movl 116(%esp,%edx), %eax
+; FALLBACK22-NEXT:    shrxl %ebp, %eax, %edi
 ; FALLBACK22-NEXT:    orl %edi, %ecx
-; FALLBACK22-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; FALLBACK22-NEXT:    shrxl %ebp, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; FALLBACK22-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    addl %eax, %eax
 ; FALLBACK22-NEXT:    shlxl %ebx, %eax, %edi
 ; FALLBACK22-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; FALLBACK22-NEXT:    shrxl %edx, %ebp, %eax
-; FALLBACK22-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK22-NEXT:    movl 124(%esp,%ebp), %ebp
-; FALLBACK22-NEXT:    shrxl %edx, %ebp, %edx
-; FALLBACK22-NEXT:    addl %ebp, %ebp
-; FALLBACK22-NEXT:    shlxl %ebx, %ebp, %ebx
-; FALLBACK22-NEXT:    orl %eax, %ebx
+; FALLBACK22-NEXT:    shrxl %ebp, %esi, %eax
+; FALLBACK22-NEXT:    movl 124(%esp,%edx), %edx
+; FALLBACK22-NEXT:    shrxl %ebp, %edx, %ebp
+; FALLBACK22-NEXT:    addl %edx, %edx
+; FALLBACK22-NEXT:    shlxl %ebx, %edx, %edx
+; FALLBACK22-NEXT:    orl %eax, %edx
 ; FALLBACK22-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FALLBACK22-NEXT:    movl %edx, 60(%eax)
-; FALLBACK22-NEXT:    movl %ebx, 56(%eax)
+; FALLBACK22-NEXT:    movl %ebp, 60(%eax)
+; FALLBACK22-NEXT:    movl %edx, 56(%eax)
 ; FALLBACK22-NEXT:    movl %edi, 48(%eax)
 ; FALLBACK22-NEXT:    movl %ecx, 52(%eax)
-; FALLBACK22-NEXT:    movl %esi, 40(%eax)
+; FALLBACK22-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK22-NEXT:    movl %ecx, 40(%eax)
 ; FALLBACK22-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK22-NEXT:    movl %ecx, 44(%eax)
 ; FALLBACK22-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -14458,7 +14457,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK23-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shll $3, %ecx
-; FALLBACK23-NEXT:    andl $24, %ecx
 ; FALLBACK23-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK23-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 64(%esp,%ebp), %edi
@@ -14561,105 +14559,108 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK24-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    movl %ecx, %esi
 ; FALLBACK24-NEXT:    andl $60, %esi
-; FALLBACK24-NEXT:    movl 68(%esp,%esi), %edx
+; FALLBACK24-NEXT:    movl 68(%esp,%esi), %ebx
 ; FALLBACK24-NEXT:    shll $3, %ecx
-; FALLBACK24-NEXT:    andl $24, %ecx
-; FALLBACK24-NEXT:    movl %edx, %edi
+; FALLBACK24-NEXT:    movl %ebx, %edi
 ; FALLBACK24-NEXT:    shrl %cl, %edi
 ; FALLBACK24-NEXT:    movl 72(%esp,%esi), %eax
 ; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    leal (%eax,%eax), %ebx
-; FALLBACK24-NEXT:    movl %ecx, %ebp
-; FALLBACK24-NEXT:    movb %cl, %ch
-; FALLBACK24-NEXT:    notb %ch
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    leal (%eax,%eax), %ebp
+; FALLBACK24-NEXT:    movl %ecx, %edx
+; FALLBACK24-NEXT:    movl %ecx, %eax
+; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    andb $24, %dl
+; FALLBACK24-NEXT:    notb %dl
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %edi, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 64(%esp,%esi), %edi
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %edi
+; FALLBACK24-NEXT:    addl %ebx, %ebx
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
 ; FALLBACK24-NEXT:    orl %edi, %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK24-NEXT:    movl %ebp, %eax
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %edx, %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
-; FALLBACK24-NEXT:    orl %edi, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK24-NEXT:    movl %edx, %ebp
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl 76(%esp,%esi), %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK24-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl 80(%esp,%esi), %ecx
+; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebx
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
 ; FALLBACK24-NEXT:    orl %ebp, %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %cl, %edi
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK24-NEXT:    addl %ebx, %ebx
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %ebx
+; FALLBACK24-NEXT:    orl %edi, %ebx
+; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 84(%esp,%esi), %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %ebp
+; FALLBACK24-NEXT:    movl 88(%esp,%esi), %ebx
+; FALLBACK24-NEXT:    leal (%ebx,%ebx), %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebp, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %cl, %ebp
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK24-NEXT:    addl %edi, %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebp, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 92(%esp,%esi), %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %ebp
+; FALLBACK24-NEXT:    movl 96(%esp,%esi), %ecx
+; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebp, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %ebx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK24-NEXT:    addl %edi, %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebx, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 100(%esp,%esi), %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %ebp
+; FALLBACK24-NEXT:    movl 104(%esp,%esi), %ecx
+; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebp, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK24-NEXT:    shrl %cl, %ebx
-; FALLBACK24-NEXT:    addl %edx, %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
-; FALLBACK24-NEXT:    orl %ebx, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
-; FALLBACK24-NEXT:    movl %eax, %edx
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    addl %eax, %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %edi, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK24-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %cl, %eax
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %eax, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK24-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %edi, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK24-NEXT:    addl %edi, %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %ebx, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK24-NEXT:    movl 108(%esp,%esi), %edi
 ; FALLBACK24-NEXT:    movl %edi, %ebp
 ; FALLBACK24-NEXT:    movl %eax, %ecx
@@ -14667,52 +14668,55 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK24-NEXT:    movl 112(%esp,%esi), %ecx
 ; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK24-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
 ; FALLBACK24-NEXT:    orl %ebp, %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %cl, %ebx
 ; FALLBACK24-NEXT:    addl %edi, %edi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %edi
-; FALLBACK24-NEXT:    orl %edx, %edi
-; FALLBACK24-NEXT:    movl %esi, %edx
+; FALLBACK24-NEXT:    orl %ebx, %edi
+; FALLBACK24-NEXT:    movl %esi, %ebp
 ; FALLBACK24-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK24-NEXT:    movl 116(%esp,%esi), %esi
 ; FALLBACK24-NEXT:    movl %esi, %ebx
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %ebx
-; FALLBACK24-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK24-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebp
-; FALLBACK24-NEXT:    orl %ebx, %ebp
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    movl 120(%esp,%ebp), %ebp
+; FALLBACK24-NEXT:    leal (%ebp,%ebp), %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %eax
+; FALLBACK24-NEXT:    orl %ebx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK24-NEXT:    shrl %cl, %ebx
 ; FALLBACK24-NEXT:    addl %esi, %esi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %esi
 ; FALLBACK24-NEXT:    orl %ebx, %esi
-; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl %ebp, %eax
 ; FALLBACK24-NEXT:    shrl %cl, %eax
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK24-NEXT:    leal (%ebx,%ebx), %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
-; FALLBACK24-NEXT:    orl %eax, %edx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    movl 124(%esp,%ecx), %ebx
+; FALLBACK24-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %eax, %ebp
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK24-NEXT:    shrl %cl, %ebx
 ; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK24-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK24-NEXT:    movl %edx, 56(%eax)
+; FALLBACK24-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK24-NEXT:    movl %esi, 48(%eax)
-; FALLBACK24-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK24-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK24-NEXT:    movl %ecx, 44(%eax)
@@ -14761,91 +14765,90 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK25-NEXT:    vmovups %ymm2, {{[0-9]+}}(%esp)
 ; FALLBACK25-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; FALLBACK25-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
-; FALLBACK25-NEXT:    movl %ecx, %ebp
-; FALLBACK25-NEXT:    andl $60, %ebp
-; FALLBACK25-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK25-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl %ecx, %eax
+; FALLBACK25-NEXT:    andl $60, %eax
+; FALLBACK25-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK25-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK25-NEXT:    shll $3, %ecx
-; FALLBACK25-NEXT:    andl $24, %ecx
-; FALLBACK25-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK25-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK25-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK25-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %edi
+; FALLBACK25-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
 ; FALLBACK25-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK25-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl %esi, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK25-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK25-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK25-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK25-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK25-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK25-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl %edi, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK25-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK25-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK25-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK25-NEXT:    movl %esi, 56(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK25-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK25-NEXT:    shrl %cl, %eax
-; FALLBACK25-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK25-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK25-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK25-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK25-NEXT:    movl %ebx, (%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK25-NEXT:    shrl %cl, %edx
+; FALLBACK25-NEXT:    movl %edx, 60(%eax)
+; FALLBACK25-NEXT:    movl %edi, 48(%eax)
+; FALLBACK25-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK25-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK25-NEXT:    movl %ebp, (%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK25-NEXT:    addl $188, %esp
 ; FALLBACK25-NEXT:    popl %esi
 ; FALLBACK25-NEXT:    popl %edi
@@ -14872,13 +14875,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK26-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; FALLBACK26-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; FALLBACK26-NEXT:    leal (,%ecx,8), %edx
-; FALLBACK26-NEXT:    andl $24, %edx
 ; FALLBACK26-NEXT:    andl $60, %ecx
 ; FALLBACK26-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK26-NEXT:    movl 72(%esp,%ecx), %eax
 ; FALLBACK26-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK26-NEXT:    shrxl %edx, %esi, %edi
 ; FALLBACK26-NEXT:    movl %edx, %ebx
+; FALLBACK26-NEXT:    andb $24, %bl
 ; FALLBACK26-NEXT:    notb %bl
 ; FALLBACK26-NEXT:    leal (%eax,%eax), %ebp
 ; FALLBACK26-NEXT:    shlxl %ebx, %ebp, %ebp
@@ -15029,7 +15032,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK27-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK27-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK27-NEXT:    shll $3, %ecx
-; FALLBACK27-NEXT:    andl $24, %ecx
 ; FALLBACK27-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK27-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK27-NEXT:    movl 64(%esp,%ebp), %edi
@@ -15130,105 +15132,108 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK28-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    movl %ecx, %esi
 ; FALLBACK28-NEXT:    andl $60, %esi
-; FALLBACK28-NEXT:    movl 68(%esp,%esi), %edx
+; FALLBACK28-NEXT:    movl 68(%esp,%esi), %ebx
 ; FALLBACK28-NEXT:    shll $3, %ecx
-; FALLBACK28-NEXT:    andl $24, %ecx
-; FALLBACK28-NEXT:    movl %edx, %edi
+; FALLBACK28-NEXT:    movl %ebx, %edi
 ; FALLBACK28-NEXT:    shrl %cl, %edi
 ; FALLBACK28-NEXT:    movl 72(%esp,%esi), %eax
 ; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    leal (%eax,%eax), %ebx
-; FALLBACK28-NEXT:    movl %ecx, %ebp
-; FALLBACK28-NEXT:    movb %cl, %ch
-; FALLBACK28-NEXT:    notb %ch
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    leal (%eax,%eax), %ebp
+; FALLBACK28-NEXT:    movl %ecx, %edx
+; FALLBACK28-NEXT:    movl %ecx, %eax
+; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    andb $24, %dl
+; FALLBACK28-NEXT:    notb %dl
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %edi, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 64(%esp,%esi), %edi
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %edi
+; FALLBACK28-NEXT:    addl %ebx, %ebx
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
 ; FALLBACK28-NEXT:    orl %edi, %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK28-NEXT:    movl %ebp, %eax
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %edx, %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
-; FALLBACK28-NEXT:    orl %edi, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK28-NEXT:    movl %edx, %ebp
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl 76(%esp,%esi), %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK28-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl 80(%esp,%esi), %ecx
+; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebx
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
 ; FALLBACK28-NEXT:    orl %ebp, %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %cl, %edi
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK28-NEXT:    addl %ebx, %ebx
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %ebx
+; FALLBACK28-NEXT:    orl %edi, %ebx
+; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 84(%esp,%esi), %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %ebp
+; FALLBACK28-NEXT:    movl 88(%esp,%esi), %ebx
+; FALLBACK28-NEXT:    leal (%ebx,%ebx), %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebp, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %cl, %ebp
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK28-NEXT:    addl %edi, %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebp, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 92(%esp,%esi), %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %ebp
+; FALLBACK28-NEXT:    movl 96(%esp,%esi), %ecx
+; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebp, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %ebx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK28-NEXT:    addl %edi, %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebx, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 100(%esp,%esi), %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %ebp
+; FALLBACK28-NEXT:    movl 104(%esp,%esi), %ecx
+; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    leal (%ecx,%ecx), %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebp, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK28-NEXT:    shrl %cl, %ebx
-; FALLBACK28-NEXT:    addl %edx, %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
-; FALLBACK28-NEXT:    orl %ebx, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
-; FALLBACK28-NEXT:    movl %eax, %edx
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    addl %eax, %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %edi, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK28-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %cl, %eax
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %eax, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK28-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %edi, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK28-NEXT:    addl %edi, %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %ebx, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK28-NEXT:    movl 108(%esp,%esi), %edi
 ; FALLBACK28-NEXT:    movl %edi, %ebp
 ; FALLBACK28-NEXT:    movl %eax, %ecx
@@ -15236,52 +15241,55 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK28-NEXT:    movl 112(%esp,%esi), %ecx
 ; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK28-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
 ; FALLBACK28-NEXT:    orl %ebp, %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %cl, %ebx
 ; FALLBACK28-NEXT:    addl %edi, %edi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %edi
-; FALLBACK28-NEXT:    orl %edx, %edi
-; FALLBACK28-NEXT:    movl %esi, %edx
+; FALLBACK28-NEXT:    orl %ebx, %edi
+; FALLBACK28-NEXT:    movl %esi, %ebp
 ; FALLBACK28-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK28-NEXT:    movl 116(%esp,%esi), %esi
 ; FALLBACK28-NEXT:    movl %esi, %ebx
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %ebx
-; FALLBACK28-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK28-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebp
-; FALLBACK28-NEXT:    orl %ebx, %ebp
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    movl 120(%esp,%ebp), %ebp
+; FALLBACK28-NEXT:    leal (%ebp,%ebp), %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %eax
+; FALLBACK28-NEXT:    orl %ebx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK28-NEXT:    shrl %cl, %ebx
 ; FALLBACK28-NEXT:    addl %esi, %esi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %esi
 ; FALLBACK28-NEXT:    orl %ebx, %esi
-; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl %ebp, %eax
 ; FALLBACK28-NEXT:    shrl %cl, %eax
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK28-NEXT:    leal (%ebx,%ebx), %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
-; FALLBACK28-NEXT:    orl %eax, %edx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    movl 124(%esp,%ecx), %ebx
+; FALLBACK28-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %eax, %ebp
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK28-NEXT:    shrl %cl, %ebx
 ; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK28-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK28-NEXT:    movl %edx, 56(%eax)
+; FALLBACK28-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK28-NEXT:    movl %esi, 48(%eax)
-; FALLBACK28-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK28-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK28-NEXT:    movl %ecx, 44(%eax)
@@ -15327,91 +15335,90 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK29-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; FALLBACK29-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; FALLBACK29-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
-; FALLBACK29-NEXT:    movl %ecx, %ebp
-; FALLBACK29-NEXT:    andl $60, %ebp
-; FALLBACK29-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK29-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl %ecx, %eax
+; FALLBACK29-NEXT:    andl $60, %eax
+; FALLBACK29-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK29-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK29-NEXT:    shll $3, %ecx
-; FALLBACK29-NEXT:    andl $24, %ecx
-; FALLBACK29-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK29-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK29-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK29-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %edi
+; FALLBACK29-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
 ; FALLBACK29-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK29-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl %esi, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK29-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK29-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK29-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK29-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK29-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK29-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl %edi, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK29-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK29-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK29-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK29-NEXT:    movl %esi, 56(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK29-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK29-NEXT:    shrl %cl, %eax
-; FALLBACK29-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK29-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK29-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK29-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK29-NEXT:    movl %ebx, (%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK29-NEXT:    shrl %cl, %edx
+; FALLBACK29-NEXT:    movl %edx, 60(%eax)
+; FALLBACK29-NEXT:    movl %edi, 48(%eax)
+; FALLBACK29-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK29-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK29-NEXT:    movl %ebp, (%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK29-NEXT:    addl $188, %esp
 ; FALLBACK29-NEXT:    popl %esi
 ; FALLBACK29-NEXT:    popl %edi
@@ -15435,13 +15442,13 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK30-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; FALLBACK30-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
 ; FALLBACK30-NEXT:    leal (,%edx,8), %ecx
-; FALLBACK30-NEXT:    andl $24, %ecx
 ; FALLBACK30-NEXT:    andl $60, %edx
 ; FALLBACK30-NEXT:    movl 68(%esp,%edx), %esi
 ; FALLBACK30-NEXT:    movl 72(%esp,%edx), %eax
 ; FALLBACK30-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK30-NEXT:    shrxl %ecx, %esi, %edi
 ; FALLBACK30-NEXT:    movl %ecx, %ebx
+; FALLBACK30-NEXT:    andb $24, %bl
 ; FALLBACK30-NEXT:    notb %bl
 ; FALLBACK30-NEXT:    leal (%eax,%eax), %ebp
 ; FALLBACK30-NEXT:    shlxl %ebx, %ebp, %ebp
@@ -15589,7 +15596,6 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK31-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK31-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK31-NEXT:    shll $3, %ecx
-; FALLBACK31-NEXT:    andl $24, %ecx
 ; FALLBACK31-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK31-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK31-NEXT:    movl 64(%esp,%ebp), %edi
@@ -16050,7 +16056,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    leal (,%rsi,8), %eax
-; FALLBACK0-NEXT:    andl $56, %eax
 ; FALLBACK0-NEXT:    andl $56, %esi
 ; FALLBACK0-NEXT:    negl %esi
 ; FALLBACK0-NEXT:    movslq %esi, %rbx
@@ -16060,6 +16065,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movl %eax, %ecx
 ; FALLBACK0-NEXT:    shlq %cl, %r10
 ; FALLBACK0-NEXT:    movl %eax, %esi
+; FALLBACK0-NEXT:    andb $56, %sil
 ; FALLBACK0-NEXT:    notb %sil
 ; FALLBACK0-NEXT:    movq %r8, %r9
 ; FALLBACK0-NEXT:    shrq %r9
@@ -16158,7 +16164,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    leal (,%rsi,8), %ecx
-; FALLBACK1-NEXT:    andl $56, %ecx
 ; FALLBACK1-NEXT:    andl $56, %esi
 ; FALLBACK1-NEXT:    negl %esi
 ; FALLBACK1-NEXT:    movslq %esi, %r9
@@ -16226,27 +16231,27 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK2-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    leal (,%rsi,8), %eax
-; FALLBACK2-NEXT:    andl $56, %eax
 ; FALLBACK2-NEXT:    andl $56, %esi
 ; FALLBACK2-NEXT:    negl %esi
 ; FALLBACK2-NEXT:    movslq %esi, %rsi
 ; FALLBACK2-NEXT:    movq -64(%rsp,%rsi), %r10
 ; FALLBACK2-NEXT:    movq -56(%rsp,%rsi), %rcx
-; FALLBACK2-NEXT:    shlxq %rax, %rcx, %r9
+; FALLBACK2-NEXT:    shlxq %rax, %rcx, %r8
 ; FALLBACK2-NEXT:    movq -40(%rsp,%rsi), %rdi
 ; FALLBACK2-NEXT:    shlxq %rax, %rdi, %r11
 ; FALLBACK2-NEXT:    movq -48(%rsp,%rsi), %r14
 ; FALLBACK2-NEXT:    shlxq %rax, %r14, %rbx
-; FALLBACK2-NEXT:    movq -24(%rsp,%rsi), %r8
-; FALLBACK2-NEXT:    shlxq %rax, %r8, %r15
+; FALLBACK2-NEXT:    movq -24(%rsp,%rsi), %r9
+; FALLBACK2-NEXT:    shlxq %rax, %r9, %r15
 ; FALLBACK2-NEXT:    shlxq %rax, %r10, %r12
 ; FALLBACK2-NEXT:    movl %eax, %r13d
+; FALLBACK2-NEXT:    andb $56, %r13b
 ; FALLBACK2-NEXT:    notb %r13b
 ; FALLBACK2-NEXT:    shrq %r10
 ; FALLBACK2-NEXT:    shrxq %r13, %r10, %r10
-; FALLBACK2-NEXT:    orq %r9, %r10
-; FALLBACK2-NEXT:    movq -32(%rsp,%rsi), %r9
-; FALLBACK2-NEXT:    shlxq %rax, %r9, %rbp
+; FALLBACK2-NEXT:    orq %r8, %r10
+; FALLBACK2-NEXT:    movq -32(%rsp,%rsi), %r8
+; FALLBACK2-NEXT:    shlxq %rax, %r8, %rbp
 ; FALLBACK2-NEXT:    shrq %r14
 ; FALLBACK2-NEXT:    shrxq %r13, %r14, %r14
 ; FALLBACK2-NEXT:    orq %r11, %r14
@@ -16256,23 +16261,23 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK2-NEXT:    shrq %rcx
 ; FALLBACK2-NEXT:    shrxq %r13, %rcx, %rcx
 ; FALLBACK2-NEXT:    orq %rbx, %rcx
-; FALLBACK2-NEXT:    shrq %r9
-; FALLBACK2-NEXT:    shrxq %r13, %r9, %r9
-; FALLBACK2-NEXT:    orq %r15, %r9
+; FALLBACK2-NEXT:    shrq %r8
+; FALLBACK2-NEXT:    shrxq %r13, %r8, %r8
+; FALLBACK2-NEXT:    orq %r15, %r8
 ; FALLBACK2-NEXT:    shrq %rdi
 ; FALLBACK2-NEXT:    shrxq %r13, %rdi, %rdi
 ; FALLBACK2-NEXT:    orq %rbp, %rdi
 ; FALLBACK2-NEXT:    shrq %rsi
 ; FALLBACK2-NEXT:    shrxq %r13, %rsi, %rsi
 ; FALLBACK2-NEXT:    orq %r11, %rsi
-; FALLBACK2-NEXT:    shrq %r8
-; FALLBACK2-NEXT:    shrxq %r13, %r8, %r8
-; FALLBACK2-NEXT:    orq %rax, %r8
+; FALLBACK2-NEXT:    shrq %r9
+; FALLBACK2-NEXT:    shrxq %r13, %r9, %r9
+; FALLBACK2-NEXT:    orq %rax, %r9
 ; FALLBACK2-NEXT:    movq %r12, (%rdx)
-; FALLBACK2-NEXT:    movq %r8, 48(%rdx)
+; FALLBACK2-NEXT:    movq %r9, 48(%rdx)
 ; FALLBACK2-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK2-NEXT:    movq %rdi, 32(%rdx)
-; FALLBACK2-NEXT:    movq %r9, 40(%rdx)
+; FALLBACK2-NEXT:    movq %r8, 40(%rdx)
 ; FALLBACK2-NEXT:    movq %rcx, 16(%rdx)
 ; FALLBACK2-NEXT:    movq %r14, 24(%rdx)
 ; FALLBACK2-NEXT:    movq %r10, 8(%rdx)
@@ -16313,7 +16318,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK3-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    leal (,%rsi,8), %ecx
-; FALLBACK3-NEXT:    andl $56, %ecx
 ; FALLBACK3-NEXT:    andl $56, %esi
 ; FALLBACK3-NEXT:    negl %esi
 ; FALLBACK3-NEXT:    movslq %esi, %r8
@@ -16370,7 +16374,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK4-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    leal (,%rcx,8), %eax
-; FALLBACK4-NEXT:    andl $56, %eax
 ; FALLBACK4-NEXT:    andl $56, %ecx
 ; FALLBACK4-NEXT:    negl %ecx
 ; FALLBACK4-NEXT:    movslq %ecx, %r9
@@ -16379,6 +16382,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK4-NEXT:    movl %eax, %ecx
 ; FALLBACK4-NEXT:    shlq %cl, %r10
 ; FALLBACK4-NEXT:    movl %eax, %esi
+; FALLBACK4-NEXT:    andb $56, %sil
 ; FALLBACK4-NEXT:    notb %sil
 ; FALLBACK4-NEXT:    movq -32(%rsp,%r9), %r11
 ; FALLBACK4-NEXT:    movq %r11, %r8
@@ -16470,7 +16474,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK5-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK5-NEXT:    andl $56, %ecx
 ; FALLBACK5-NEXT:    andl $56, %eax
 ; FALLBACK5-NEXT:    negl %eax
 ; FALLBACK5-NEXT:    movslq %eax, %r8
@@ -16531,14 +16534,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK6-NEXT:    andl $56, %ecx
 ; FALLBACK6-NEXT:    andl $56, %eax
 ; FALLBACK6-NEXT:    negl %eax
 ; FALLBACK6-NEXT:    movslq %eax, %rsi
 ; FALLBACK6-NEXT:    movq -8(%rsp,%rsi), %rax
-; FALLBACK6-NEXT:    shlxq %rcx, %rax, %r12
+; FALLBACK6-NEXT:    shlxq %rcx, %rax, %r15
 ; FALLBACK6-NEXT:    movq -16(%rsp,%rsi), %rdi
-; FALLBACK6-NEXT:    shlxq %rcx, %rdi, %r15
+; FALLBACK6-NEXT:    shlxq %rcx, %rdi, %r12
 ; FALLBACK6-NEXT:    movq -24(%rsp,%rsi), %r13
 ; FALLBACK6-NEXT:    shlxq %rcx, %r13, %r8
 ; FALLBACK6-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -16547,16 +16549,17 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq -40(%rsp,%rsi), %r14
 ; FALLBACK6-NEXT:    shlxq %rcx, %r14, %rbx
 ; FALLBACK6-NEXT:    movl %ecx, %r9d
+; FALLBACK6-NEXT:    andb $56, %r9b
 ; FALLBACK6-NEXT:    notb %r9b
 ; FALLBACK6-NEXT:    shrq %rdi
 ; FALLBACK6-NEXT:    shrxq %r9, %rdi, %rdi
-; FALLBACK6-NEXT:    orq %r12, %rdi
+; FALLBACK6-NEXT:    orq %r15, %rdi
 ; FALLBACK6-NEXT:    movq (%rsp,%rsi), %rbp
 ; FALLBACK6-NEXT:    shlxq %rcx, %rbp, %r8
 ; FALLBACK6-NEXT:    shrq %r13
-; FALLBACK6-NEXT:    shrxq %r9, %r13, %r12
-; FALLBACK6-NEXT:    orq %r15, %r12
-; FALLBACK6-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r15
+; FALLBACK6-NEXT:    shrxq %r9, %r13, %r15
+; FALLBACK6-NEXT:    orq %r12, %r15
+; FALLBACK6-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r12
 ; FALLBACK6-NEXT:    movq -48(%rsp,%rsi), %rsi
 ; FALLBACK6-NEXT:    shlxq %rcx, %rsi, %rcx
 ; FALLBACK6-NEXT:    shrq %r11
@@ -16573,14 +16576,14 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    orq %r8, %rax
 ; FALLBACK6-NEXT:    shrq %rbp
 ; FALLBACK6-NEXT:    shrxq %r9, %rbp, %r8
-; FALLBACK6-NEXT:    orq %r15, %r8
+; FALLBACK6-NEXT:    orq %r12, %r8
 ; FALLBACK6-NEXT:    movq %rcx, (%rdx)
 ; FALLBACK6-NEXT:    movq %r8, 56(%rdx)
 ; FALLBACK6-NEXT:    movq %rax, 48(%rdx)
 ; FALLBACK6-NEXT:    movq %rsi, 8(%rdx)
 ; FALLBACK6-NEXT:    movq %r14, 16(%rdx)
 ; FALLBACK6-NEXT:    movq %r11, 24(%rdx)
-; FALLBACK6-NEXT:    movq %r12, 32(%rdx)
+; FALLBACK6-NEXT:    movq %r15, 32(%rdx)
 ; FALLBACK6-NEXT:    movq %rdi, 40(%rdx)
 ; FALLBACK6-NEXT:    addq $24, %rsp
 ; FALLBACK6-NEXT:    popq %rbx
@@ -16611,7 +16614,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK7-NEXT:    andl $56, %ecx
 ; FALLBACK7-NEXT:    andl $56, %eax
 ; FALLBACK7-NEXT:    negl %eax
 ; FALLBACK7-NEXT:    movslq %eax, %r8
@@ -16663,7 +16665,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK8-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    leal (,%rcx,8), %eax
-; FALLBACK8-NEXT:    andl $56, %eax
 ; FALLBACK8-NEXT:    andl $56, %ecx
 ; FALLBACK8-NEXT:    negl %ecx
 ; FALLBACK8-NEXT:    movslq %ecx, %r9
@@ -16672,6 +16673,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK8-NEXT:    movl %eax, %ecx
 ; FALLBACK8-NEXT:    shlq %cl, %r10
 ; FALLBACK8-NEXT:    movl %eax, %esi
+; FALLBACK8-NEXT:    andb $56, %sil
 ; FALLBACK8-NEXT:    notb %sil
 ; FALLBACK8-NEXT:    movq -32(%rsp,%r9), %r11
 ; FALLBACK8-NEXT:    movq %r11, %r8
@@ -16758,7 +16760,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK9-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK9-NEXT:    andl $56, %ecx
 ; FALLBACK9-NEXT:    andl $56, %eax
 ; FALLBACK9-NEXT:    negl %eax
 ; FALLBACK9-NEXT:    movslq %eax, %r8
@@ -16814,14 +16815,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK10-NEXT:    andl $56, %ecx
 ; FALLBACK10-NEXT:    andl $56, %eax
 ; FALLBACK10-NEXT:    negl %eax
 ; FALLBACK10-NEXT:    movslq %eax, %rsi
 ; FALLBACK10-NEXT:    movq -8(%rsp,%rsi), %rax
-; FALLBACK10-NEXT:    shlxq %rcx, %rax, %r12
+; FALLBACK10-NEXT:    shlxq %rcx, %rax, %r15
 ; FALLBACK10-NEXT:    movq -16(%rsp,%rsi), %rdi
-; FALLBACK10-NEXT:    shlxq %rcx, %rdi, %r15
+; FALLBACK10-NEXT:    shlxq %rcx, %rdi, %r12
 ; FALLBACK10-NEXT:    movq -24(%rsp,%rsi), %r13
 ; FALLBACK10-NEXT:    shlxq %rcx, %r13, %r8
 ; FALLBACK10-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -16830,16 +16830,17 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq -40(%rsp,%rsi), %r14
 ; FALLBACK10-NEXT:    shlxq %rcx, %r14, %rbx
 ; FALLBACK10-NEXT:    movl %ecx, %r9d
+; FALLBACK10-NEXT:    andb $56, %r9b
 ; FALLBACK10-NEXT:    notb %r9b
 ; FALLBACK10-NEXT:    shrq %rdi
 ; FALLBACK10-NEXT:    shrxq %r9, %rdi, %rdi
-; FALLBACK10-NEXT:    orq %r12, %rdi
+; FALLBACK10-NEXT:    orq %r15, %rdi
 ; FALLBACK10-NEXT:    movq (%rsp,%rsi), %rbp
 ; FALLBACK10-NEXT:    shlxq %rcx, %rbp, %r8
 ; FALLBACK10-NEXT:    shrq %r13
-; FALLBACK10-NEXT:    shrxq %r9, %r13, %r12
-; FALLBACK10-NEXT:    orq %r15, %r12
-; FALLBACK10-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r15
+; FALLBACK10-NEXT:    shrxq %r9, %r13, %r15
+; FALLBACK10-NEXT:    orq %r12, %r15
+; FALLBACK10-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r12
 ; FALLBACK10-NEXT:    movq -48(%rsp,%rsi), %rsi
 ; FALLBACK10-NEXT:    shlxq %rcx, %rsi, %rcx
 ; FALLBACK10-NEXT:    shrq %r11
@@ -16856,14 +16857,14 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    orq %r8, %rax
 ; FALLBACK10-NEXT:    shrq %rbp
 ; FALLBACK10-NEXT:    shrxq %r9, %rbp, %r8
-; FALLBACK10-NEXT:    orq %r15, %r8
+; FALLBACK10-NEXT:    orq %r12, %r8
 ; FALLBACK10-NEXT:    movq %rcx, (%rdx)
 ; FALLBACK10-NEXT:    movq %r8, 56(%rdx)
 ; FALLBACK10-NEXT:    movq %rax, 48(%rdx)
 ; FALLBACK10-NEXT:    movq %rsi, 8(%rdx)
 ; FALLBACK10-NEXT:    movq %r14, 16(%rdx)
 ; FALLBACK10-NEXT:    movq %r11, 24(%rdx)
-; FALLBACK10-NEXT:    movq %r12, 32(%rdx)
+; FALLBACK10-NEXT:    movq %r15, 32(%rdx)
 ; FALLBACK10-NEXT:    movq %rdi, 40(%rdx)
 ; FALLBACK10-NEXT:    addq $24, %rsp
 ; FALLBACK10-NEXT:    popq %rbx
@@ -16889,7 +16890,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK11-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK11-NEXT:    andl $56, %ecx
 ; FALLBACK11-NEXT:    andl $56, %eax
 ; FALLBACK11-NEXT:    negl %eax
 ; FALLBACK11-NEXT:    movslq %eax, %r8
@@ -16939,7 +16939,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK12-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    leal (,%rcx,8), %eax
-; FALLBACK12-NEXT:    andl $56, %eax
 ; FALLBACK12-NEXT:    andl $56, %ecx
 ; FALLBACK12-NEXT:    negl %ecx
 ; FALLBACK12-NEXT:    movslq %ecx, %r9
@@ -16948,6 +16947,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK12-NEXT:    movl %eax, %ecx
 ; FALLBACK12-NEXT:    shlq %cl, %r10
 ; FALLBACK12-NEXT:    movl %eax, %esi
+; FALLBACK12-NEXT:    andb $56, %sil
 ; FALLBACK12-NEXT:    notb %sil
 ; FALLBACK12-NEXT:    movq -32(%rsp,%r9), %r11
 ; FALLBACK12-NEXT:    movq %r11, %r8
@@ -17031,7 +17031,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK13-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK13-NEXT:    andl $56, %ecx
 ; FALLBACK13-NEXT:    andl $56, %eax
 ; FALLBACK13-NEXT:    negl %eax
 ; FALLBACK13-NEXT:    movslq %eax, %r8
@@ -17084,14 +17083,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK14-NEXT:    andl $56, %ecx
 ; FALLBACK14-NEXT:    andl $56, %eax
 ; FALLBACK14-NEXT:    negl %eax
 ; FALLBACK14-NEXT:    movslq %eax, %rsi
 ; FALLBACK14-NEXT:    movq -8(%rsp,%rsi), %rax
-; FALLBACK14-NEXT:    shlxq %rcx, %rax, %r12
+; FALLBACK14-NEXT:    shlxq %rcx, %rax, %r15
 ; FALLBACK14-NEXT:    movq -16(%rsp,%rsi), %rdi
-; FALLBACK14-NEXT:    shlxq %rcx, %rdi, %r15
+; FALLBACK14-NEXT:    shlxq %rcx, %rdi, %r12
 ; FALLBACK14-NEXT:    movq -24(%rsp,%rsi), %r13
 ; FALLBACK14-NEXT:    shlxq %rcx, %r13, %r8
 ; FALLBACK14-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -17100,16 +17098,17 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq -40(%rsp,%rsi), %r14
 ; FALLBACK14-NEXT:    shlxq %rcx, %r14, %rbx
 ; FALLBACK14-NEXT:    movl %ecx, %r9d
+; FALLBACK14-NEXT:    andb $56, %r9b
 ; FALLBACK14-NEXT:    notb %r9b
 ; FALLBACK14-NEXT:    shrq %rdi
 ; FALLBACK14-NEXT:    shrxq %r9, %rdi, %rdi
-; FALLBACK14-NEXT:    orq %r12, %rdi
+; FALLBACK14-NEXT:    orq %r15, %rdi
 ; FALLBACK14-NEXT:    movq (%rsp,%rsi), %rbp
 ; FALLBACK14-NEXT:    shlxq %rcx, %rbp, %r8
 ; FALLBACK14-NEXT:    shrq %r13
-; FALLBACK14-NEXT:    shrxq %r9, %r13, %r12
-; FALLBACK14-NEXT:    orq %r15, %r12
-; FALLBACK14-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r15
+; FALLBACK14-NEXT:    shrxq %r9, %r13, %r15
+; FALLBACK14-NEXT:    orq %r12, %r15
+; FALLBACK14-NEXT:    shlxq %rcx, 8(%rsp,%rsi), %r12
 ; FALLBACK14-NEXT:    movq -48(%rsp,%rsi), %rsi
 ; FALLBACK14-NEXT:    shlxq %rcx, %rsi, %rcx
 ; FALLBACK14-NEXT:    shrq %r11
@@ -17126,14 +17125,14 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    orq %r8, %rax
 ; FALLBACK14-NEXT:    shrq %rbp
 ; FALLBACK14-NEXT:    shrxq %r9, %rbp, %r8
-; FALLBACK14-NEXT:    orq %r15, %r8
+; FALLBACK14-NEXT:    orq %r12, %r8
 ; FALLBACK14-NEXT:    movq %rcx, (%rdx)
 ; FALLBACK14-NEXT:    movq %r8, 56(%rdx)
 ; FALLBACK14-NEXT:    movq %rax, 48(%rdx)
 ; FALLBACK14-NEXT:    movq %rsi, 8(%rdx)
 ; FALLBACK14-NEXT:    movq %r14, 16(%rdx)
 ; FALLBACK14-NEXT:    movq %r11, 24(%rdx)
-; FALLBACK14-NEXT:    movq %r12, 32(%rdx)
+; FALLBACK14-NEXT:    movq %r15, 32(%rdx)
 ; FALLBACK14-NEXT:    movq %rdi, 40(%rdx)
 ; FALLBACK14-NEXT:    addq $24, %rsp
 ; FALLBACK14-NEXT:    popq %rbx
@@ -17156,7 +17155,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK15-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; FALLBACK15-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; FALLBACK15-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK15-NEXT:    andl $56, %ecx
 ; FALLBACK15-NEXT:    andl $56, %eax
 ; FALLBACK15-NEXT:    negl %eax
 ; FALLBACK15-NEXT:    movslq %eax, %r8
@@ -17202,7 +17200,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    subl $204, %esp
 ; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK16-NEXT:    movl (%eax), %ecx
-; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl 4(%eax), %ecx
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl 8(%eax), %ecx
@@ -17221,233 +17219,240 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl 36(%eax), %ecx
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 40(%eax), %ebp
-; FALLBACK16-NEXT:    movl 44(%eax), %ebx
-; FALLBACK16-NEXT:    movl 48(%eax), %edi
-; FALLBACK16-NEXT:    movl 52(%eax), %esi
-; FALLBACK16-NEXT:    movl 56(%eax), %edx
-; FALLBACK16-NEXT:    movl 60(%eax), %ecx
-; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FALLBACK16-NEXT:    movl (%eax), %eax
+; FALLBACK16-NEXT:    movl 40(%eax), %ebx
+; FALLBACK16-NEXT:    movl 44(%eax), %edi
+; FALLBACK16-NEXT:    movl 48(%eax), %esi
+; FALLBACK16-NEXT:    movl 52(%eax), %edx
+; FALLBACK16-NEXT:    movl 56(%eax), %ecx
+; FALLBACK16-NEXT:    movl 60(%eax), %eax
+; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; FALLBACK16-NEXT:    movl (%ebp), %ebp
 ; FALLBACK16-NEXT:    xorps %xmm0, %xmm0
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl %eax, %edx
-; FALLBACK16-NEXT:    andl $60, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; FALLBACK16-NEXT:    subl %edx, %ecx
-; FALLBACK16-NEXT:    movl (%ecx), %edi
-; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 4(%ecx), %edx
-; FALLBACK16-NEXT:    movl %ecx, %ebp
-; FALLBACK16-NEXT:    shll $3, %eax
-; FALLBACK16-NEXT:    andl $24, %eax
-; FALLBACK16-NEXT:    movl %edx, %esi
-; FALLBACK16-NEXT:    movl %eax, %ecx
-; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    shrl %edi
-; FALLBACK16-NEXT:    movb %al, %ch
-; FALLBACK16-NEXT:    notb %ch
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    orl %esi, %edi
-; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 12(%ebp), %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    movl 8(%ebp), %esi
-; FALLBACK16-NEXT:    movl %ebp, %edi
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK16-NEXT:    movl %ebp, %ebx
+; FALLBACK16-NEXT:    movl %ebp, %ecx
+; FALLBACK16-NEXT:    andl $60, %ecx
+; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FALLBACK16-NEXT:    subl %ecx, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl (%eax), %esi
+; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 4(%eax), %edi
+; FALLBACK16-NEXT:    shll $3, %ebx
+; FALLBACK16-NEXT:    movl %edi, %eax
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    shrl %esi
+; FALLBACK16-NEXT:    movl %ebx, %edx
+; FALLBACK16-NEXT:    andb $24, %dl
+; FALLBACK16-NEXT:    notb %dl
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %esi
+; FALLBACK16-NEXT:    orl %eax, %esi
+; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK16-NEXT:    movl 12(%esi), %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    movl 8(%esi), %esi
 ; FALLBACK16-NEXT:    movl %esi, %ebp
 ; FALLBACK16-NEXT:    shrl %ebp
-; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    orl %ebx, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
 ; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    movl %ebx, %ebp
 ; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %esi, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %edi, %ebp
-; FALLBACK16-NEXT:    movl 20(%edi), %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    movl 16(%edi), %esi
-; FALLBACK16-NEXT:    movl %esi, %edx
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %ebx, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK16-NEXT:    shrl %edi
-; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %edi
 ; FALLBACK16-NEXT:    orl %esi, %edi
 ; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %ebp, %edx
-; FALLBACK16-NEXT:    movl 28(%ebp), %ebx
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK16-NEXT:    movl 20(%edi), %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    movl 16(%edi), %esi
+; FALLBACK16-NEXT:    movl %esi, %ebx
+; FALLBACK16-NEXT:    shrl %ebx
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %ebx
+; FALLBACK16-NEXT:    orl %eax, %ebx
 ; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    movl 24(%ebp), %esi
-; FALLBACK16-NEXT:    movl %esi, %edi
-; FALLBACK16-NEXT:    shrl %edi
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    orl %ebx, %edi
-; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebp, %ebx
+; FALLBACK16-NEXT:    movl %ebx, %ecx
 ; FALLBACK16-NEXT:    shll %cl, %esi
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    orl %esi, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 28(%edi), %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    movl 24(%edi), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %esi
+; FALLBACK16-NEXT:    shrl %esi
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %esi
+; FALLBACK16-NEXT:    orl %eax, %esi
+; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %edi
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %edi
+; FALLBACK16-NEXT:    orl %ebp, %edi
+; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %ebp
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    orl %esi, %ebp
-; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 36(%edx), %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    movl 32(%edx), %esi
-; FALLBACK16-NEXT:    movl %edx, %ebp
+; FALLBACK16-NEXT:    movl 36(%ebp), %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    movl 32(%ebp), %esi
 ; FALLBACK16-NEXT:    movl %esi, %edi
 ; FALLBACK16-NEXT:    shrl %edi
-; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    orl %ebx, %edi
+; FALLBACK16-NEXT:    orl %eax, %edi
 ; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebx, %ecx
 ; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %esi, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 44(%ebp), %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    orl %esi, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 44(%ebp), %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    shll %cl, %eax
 ; FALLBACK16-NEXT:    movl 40(%ebp), %esi
-; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %esi, %edx
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %ebx, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %esi, %edi
+; FALLBACK16-NEXT:    shrl %edi
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %edi
+; FALLBACK16-NEXT:    orl %eax, %edi
+; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebx, %ecx
 ; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %esi, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    orl %esi, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl 52(%ebp), %esi
 ; FALLBACK16-NEXT:    movl %esi, %edi
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebx, %ecx
 ; FALLBACK16-NEXT:    shll %cl, %edi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    negl %edx
-; FALLBACK16-NEXT:    movl 176(%esp,%edx), %ebx
-; FALLBACK16-NEXT:    movl %ebx, %ebp
-; FALLBACK16-NEXT:    shrl %ebp
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %ebp
-; FALLBACK16-NEXT:    orl %edi, %ebp
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    negl %eax
+; FALLBACK16-NEXT:    movl 176(%esp,%eax), %ebx
+; FALLBACK16-NEXT:    movl %ebx, %eax
+; FALLBACK16-NEXT:    shrl %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    orl %edi, %eax
+; FALLBACK16-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %edx
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    orl %ebx, %edx
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; FALLBACK16-NEXT:    movl 60(%edi), %edx
-; FALLBACK16-NEXT:    movb %al, %cl
-; FALLBACK16-NEXT:    shll %cl, %edx
+; FALLBACK16-NEXT:    shrl %edi
+; FALLBACK16-NEXT:    movl %edx, %ecx
+; FALLBACK16-NEXT:    shrl %cl, %edi
+; FALLBACK16-NEXT:    orl %ebx, %edi
+; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %ebp, %edi
+; FALLBACK16-NEXT:    movl 60(%ebp), %ebp
+; FALLBACK16-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK16-NEXT:    shll %cl, %ebp
 ; FALLBACK16-NEXT:    movl 56(%edi), %ebx
 ; FALLBACK16-NEXT:    movl %ebx, %edi
 ; FALLBACK16-NEXT:    shrl %edi
-; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    orl %edx, %edi
-; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    orl %ebp, %edi
+; FALLBACK16-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK16-NEXT:    shll %cl, %ebx
 ; FALLBACK16-NEXT:    shrl %esi
-; FALLBACK16-NEXT:    movb %ch, %cl
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %esi
 ; FALLBACK16-NEXT:    orl %ebx, %esi
-; FALLBACK16-NEXT:    movl %eax, %ecx
+; FALLBACK16-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK16-NEXT:    shll %cl, %edx
-; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FALLBACK16-NEXT:    movl %edx, (%eax)
-; FALLBACK16-NEXT:    movl %esi, 56(%eax)
-; FALLBACK16-NEXT:    movl %edi, 60(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 48(%eax)
-; FALLBACK16-NEXT:    movl %ebp, 52(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 40(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 44(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 32(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 36(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 24(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 28(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 16(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 20(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 8(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 12(%eax)
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    movl %ecx, 4(%eax)
+; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; FALLBACK16-NEXT:    movl %edx, (%ecx)
+; FALLBACK16-NEXT:    movl %esi, 56(%ecx)
+; FALLBACK16-NEXT:    movl %edi, 60(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK16-NEXT:    movl %edx, 48(%ecx)
+; FALLBACK16-NEXT:    movl %eax, 52(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 40(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 44(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 32(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 36(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 24(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 28(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 16(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 20(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 8(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 12(%ecx)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl %eax, 4(%ecx)
 ; FALLBACK16-NEXT:    addl $204, %esp
 ; FALLBACK16-NEXT:    popl %esi
 ; FALLBACK16-NEXT:    popl %edi
@@ -17529,7 +17534,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK17-NEXT:    movl 8(%eax), %esi
 ; FALLBACK17-NEXT:    movl 12(%eax), %edx
 ; FALLBACK17-NEXT:    shll $3, %ecx
-; FALLBACK17-NEXT:    andl $24, %ecx
 ; FALLBACK17-NEXT:    movl %edx, %edi
 ; FALLBACK17-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -17682,7 +17686,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK18-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK18-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK18-NEXT:    leal (,%ebp,8), %edx
-; FALLBACK18-NEXT:    andl $24, %edx
 ; FALLBACK18-NEXT:    andl $60, %ebp
 ; FALLBACK18-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK18-NEXT:    leal {{[0-9]+}}(%esp), %edi
@@ -17692,6 +17695,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK18-NEXT:    movl 4(%edi), %eax
 ; FALLBACK18-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK18-NEXT:    movl %edx, %ebx
+; FALLBACK18-NEXT:    andb $24, %bl
 ; FALLBACK18-NEXT:    notb %bl
 ; FALLBACK18-NEXT:    shrl %ecx
 ; FALLBACK18-NEXT:    shrxl %ebx, %ecx, %esi
@@ -17894,7 +17898,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK19-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK19-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK19-NEXT:    leal (,%ebp,8), %ecx
-; FALLBACK19-NEXT:    andl $24, %ecx
 ; FALLBACK19-NEXT:    andl $60, %ebp
 ; FALLBACK19-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; FALLBACK19-NEXT:    subl %ebp, %eax
@@ -17999,7 +18002,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movups 16(%ecx), %xmm1
 ; FALLBACK20-NEXT:    movups 32(%ecx), %xmm2
 ; FALLBACK20-NEXT:    movups 48(%ecx), %xmm3
-; FALLBACK20-NEXT:    movl (%eax), %eax
+; FALLBACK20-NEXT:    movl (%eax), %ecx
 ; FALLBACK20-NEXT:    xorps %xmm4, %xmm4
 ; FALLBACK20-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
@@ -18009,160 +18012,173 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK20-NEXT:    movl %eax, %edx
-; FALLBACK20-NEXT:    andl $60, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; FALLBACK20-NEXT:    subl %edx, %ecx
-; FALLBACK20-NEXT:    movl (%ecx), %edi
+; FALLBACK20-NEXT:    movl %ecx, %eax
+; FALLBACK20-NEXT:    andl $60, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; FALLBACK20-NEXT:    subl %eax, %edx
+; FALLBACK20-NEXT:    movl (%edx), %edi
 ; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 4(%ecx), %edx
-; FALLBACK20-NEXT:    movl %ecx, %ebp
-; FALLBACK20-NEXT:    shll $3, %eax
-; FALLBACK20-NEXT:    andl $24, %eax
-; FALLBACK20-NEXT:    movl %edx, %esi
-; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl 4(%edx), %esi
+; FALLBACK20-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %edx, %ebx
+; FALLBACK20-NEXT:    shll $3, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %esi
 ; FALLBACK20-NEXT:    shrl %edi
-; FALLBACK20-NEXT:    movb %al, %ch
-; FALLBACK20-NEXT:    notb %ch
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %ecx, %edx
+; FALLBACK20-NEXT:    movl %ecx, %eax
+; FALLBACK20-NEXT:    andb $24, %dl
+; FALLBACK20-NEXT:    notb %dl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %edi
 ; FALLBACK20-NEXT:    orl %esi, %edi
 ; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 12(%ebp), %ebx
+; FALLBACK20-NEXT:    movl %ebx, %esi
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl 12(%ebx), %ebx
+; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    movl 8(%ebp), %esi
-; FALLBACK20-NEXT:    movl %ebp, %edi
+; FALLBACK20-NEXT:    movl 8(%esi), %esi
 ; FALLBACK20-NEXT:    movl %esi, %ebp
 ; FALLBACK20-NEXT:    shrl %ebp
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %ebp
 ; FALLBACK20-NEXT:    orl %ebx, %ebp
 ; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl %eax, %edi
 ; FALLBACK20-NEXT:    shll %cl, %esi
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %esi, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl %edi, %ebp
-; FALLBACK20-NEXT:    movl 20(%edi), %ebx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    orl %esi, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK20-NEXT:    movl 20(%esi), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %edi, %eax
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    movl 16(%edi), %esi
-; FALLBACK20-NEXT:    movl %esi, %edx
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %ebx, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl 16(%esi), %esi
+; FALLBACK20-NEXT:    movl %esi, %ebp
+; FALLBACK20-NEXT:    shrl %ebp
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %ebp
+; FALLBACK20-NEXT:    orl %ebx, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %esi
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK20-NEXT:    shrl %edi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %edi
 ; FALLBACK20-NEXT:    orl %esi, %edi
 ; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl %ebp, %edx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; FALLBACK20-NEXT:    movl 28(%ebp), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    movl %eax, %edi
 ; FALLBACK20-NEXT:    shll %cl, %ebx
 ; FALLBACK20-NEXT:    movl 24(%ebp), %esi
-; FALLBACK20-NEXT:    movl %esi, %edi
-; FALLBACK20-NEXT:    shrl %edi
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    orl %ebx, %edi
-; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %esi, %eax
+; FALLBACK20-NEXT:    shrl %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    orl %ebx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %edi, %ecx
+; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK20-NEXT:    shll %cl, %esi
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %ebp
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    orl %esi, %ebp
-; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 36(%edx), %ebx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    orl %esi, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 36(%ebp), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %edi, %eax
+; FALLBACK20-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    movl 32(%edx), %esi
-; FALLBACK20-NEXT:    movl %edx, %ebp
-; FALLBACK20-NEXT:    movl %esi, %edi
+; FALLBACK20-NEXT:    movl 32(%ebp), %ebp
+; FALLBACK20-NEXT:    movl %ebp, %esi
+; FALLBACK20-NEXT:    shrl %esi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %esi
+; FALLBACK20-NEXT:    orl %ebx, %esi
+; FALLBACK20-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %eax, %ecx
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK20-NEXT:    shrl %edi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    orl %ebx, %edi
+; FALLBACK20-NEXT:    orl %ebp, %edi
 ; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shll %cl, %esi
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %esi, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 44(%ebp), %ebx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    movl 44(%eax), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    movl 40(%ebp), %esi
-; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl %esi, %edx
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %ebx, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl 40(%eax), %esi
+; FALLBACK20-NEXT:    movl %eax, %ebp
+; FALLBACK20-NEXT:    movl %esi, %eax
+; FALLBACK20-NEXT:    shrl %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    orl %ebx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %esi
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %esi, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %edi
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %edi
+; FALLBACK20-NEXT:    orl %esi, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK20-NEXT:    movl 52(%ebp), %esi
 ; FALLBACK20-NEXT:    movl %esi, %edi
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %edi
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    negl %edx
-; FALLBACK20-NEXT:    movl 176(%esp,%edx), %ebx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    negl %eax
+; FALLBACK20-NEXT:    movl 176(%esp,%eax), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, %ebp
 ; FALLBACK20-NEXT:    shrl %ebp
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %ebp
 ; FALLBACK20-NEXT:    orl %edi, %ebp
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
-; FALLBACK20-NEXT:    orl %ebx, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    orl %ebx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; FALLBACK20-NEXT:    movl 60(%edi), %edx
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
+; FALLBACK20-NEXT:    movl 60(%edi), %eax
+; FALLBACK20-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK20-NEXT:    shll %cl, %eax
 ; FALLBACK20-NEXT:    movl 56(%edi), %ebx
 ; FALLBACK20-NEXT:    movl %ebx, %edi
 ; FALLBACK20-NEXT:    shrl %edi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    orl %edx, %edi
-; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    orl %eax, %edi
+; FALLBACK20-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    shll %cl, %ebx
 ; FALLBACK20-NEXT:    shrl %esi
-; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    movl %edx, %ecx
 ; FALLBACK20-NEXT:    shrl %cl, %esi
 ; FALLBACK20-NEXT:    orl %ebx, %esi
 ; FALLBACK20-NEXT:    movl %eax, %ecx
@@ -18234,7 +18250,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK21-NEXT:    movl 8(%eax), %esi
 ; FALLBACK21-NEXT:    movl 12(%eax), %edx
 ; FALLBACK21-NEXT:    shll $3, %ecx
-; FALLBACK21-NEXT:    andl $24, %ecx
 ; FALLBACK21-NEXT:    movl %edx, %edi
 ; FALLBACK21-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -18343,7 +18358,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    leal (,%eax,8), %edx
-; FALLBACK22-NEXT:    andl $24, %edx
 ; FALLBACK22-NEXT:    andl $60, %eax
 ; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    leal {{[0-9]+}}(%esp), %edi
@@ -18353,6 +18367,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    movl 4(%edi), %eax
 ; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    movl %edx, %ebx
+; FALLBACK22-NEXT:    andb $24, %bl
 ; FALLBACK22-NEXT:    notb %bl
 ; FALLBACK22-NEXT:    shrl %ecx
 ; FALLBACK22-NEXT:    shrxl %ebx, %ecx, %esi
@@ -18500,7 +18515,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movups 16(%ecx), %xmm1
 ; FALLBACK23-NEXT:    movups 32(%ecx), %xmm2
 ; FALLBACK23-NEXT:    movups 48(%ecx), %xmm3
-; FALLBACK23-NEXT:    movl (%eax), %ebp
+; FALLBACK23-NEXT:    movl (%eax), %ebx
 ; FALLBACK23-NEXT:    xorps %xmm4, %xmm4
 ; FALLBACK23-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
 ; FALLBACK23-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp)
@@ -18510,47 +18525,46 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; FALLBACK23-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK23-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; FALLBACK23-NEXT:    leal (,%ebp,8), %ecx
-; FALLBACK23-NEXT:    andl $24, %ecx
-; FALLBACK23-NEXT:    andl $60, %ebp
+; FALLBACK23-NEXT:    leal (,%ebx,8), %ecx
+; FALLBACK23-NEXT:    andl $60, %ebx
 ; FALLBACK23-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; FALLBACK23-NEXT:    subl %ebp, %eax
+; FALLBACK23-NEXT:    subl %ebx, %eax
 ; FALLBACK23-NEXT:    movl 4(%eax), %esi
 ; FALLBACK23-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 8(%eax), %edi
 ; FALLBACK23-NEXT:    movl 12(%eax), %edx
-; FALLBACK23-NEXT:    movl %edx, %ebx
-; FALLBACK23-NEXT:    shldl %cl, %edi, %ebx
-; FALLBACK23-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK23-NEXT:    movl %edx, %ebp
+; FALLBACK23-NEXT:    shldl %cl, %edi, %ebp
+; FALLBACK23-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK23-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 16(%eax), %edi
 ; FALLBACK23-NEXT:    movl 20(%eax), %esi
-; FALLBACK23-NEXT:    movl %esi, %ebx
-; FALLBACK23-NEXT:    shldl %cl, %edi, %ebx
-; FALLBACK23-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK23-NEXT:    movl %esi, %ebp
+; FALLBACK23-NEXT:    shldl %cl, %edi, %ebp
+; FALLBACK23-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shldl %cl, %edx, %edi
 ; FALLBACK23-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 24(%eax), %edi
 ; FALLBACK23-NEXT:    movl 28(%eax), %edx
-; FALLBACK23-NEXT:    movl %edx, %ebx
-; FALLBACK23-NEXT:    shldl %cl, %edi, %ebx
-; FALLBACK23-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK23-NEXT:    movl %edx, %ebp
+; FALLBACK23-NEXT:    shldl %cl, %edi, %ebp
+; FALLBACK23-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK23-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 32(%eax), %edi
 ; FALLBACK23-NEXT:    movl 36(%eax), %esi
-; FALLBACK23-NEXT:    movl %esi, %ebx
-; FALLBACK23-NEXT:    shldl %cl, %edi, %ebx
-; FALLBACK23-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK23-NEXT:    movl %esi, %ebp
+; FALLBACK23-NEXT:    shldl %cl, %edi, %ebp
+; FALLBACK23-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shldl %cl, %edx, %edi
 ; FALLBACK23-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK23-NEXT:    movl 40(%eax), %ebx
+; FALLBACK23-NEXT:    movl 40(%eax), %ebp
 ; FALLBACK23-NEXT:    movl 44(%eax), %edx
 ; FALLBACK23-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK23-NEXT:    shldl %cl, %ebx, %edx
+; FALLBACK23-NEXT:    shldl %cl, %ebp, %edx
 ; FALLBACK23-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK23-NEXT:    shldl %cl, %esi, %ebx
+; FALLBACK23-NEXT:    shldl %cl, %esi, %ebp
 ; FALLBACK23-NEXT:    movl 56(%eax), %edx
 ; FALLBACK23-NEXT:    movl 60(%eax), %edi
 ; FALLBACK23-NEXT:    shldl %cl, %edx, %edi
@@ -18558,8 +18572,8 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 52(%eax), %esi
 ; FALLBACK23-NEXT:    shldl %cl, %esi, %edx
-; FALLBACK23-NEXT:    negl %ebp
-; FALLBACK23-NEXT:    movl 176(%esp,%ebp), %ebp
+; FALLBACK23-NEXT:    negl %ebx
+; FALLBACK23-NEXT:    movl 176(%esp,%ebx), %ebx
 ; FALLBACK23-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK23-NEXT:    movl %edx, 56(%eax)
 ; FALLBACK23-NEXT:    movl %edi, 60(%eax)
@@ -18568,13 +18582,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK23-NEXT:    shldl %cl, %edx, %edi
-; FALLBACK23-NEXT:    shldl %cl, %ebp, %esi
+; FALLBACK23-NEXT:    shldl %cl, %ebx, %esi
 ; FALLBACK23-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK23-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK23-NEXT:    shldl %cl, %edx, %ebp
-; FALLBACK23-NEXT:    movl %ebp, 48(%eax)
+; FALLBACK23-NEXT:    shldl %cl, %edx, %ebx
+; FALLBACK23-NEXT:    movl %ebx, 48(%eax)
 ; FALLBACK23-NEXT:    movl %esi, 52(%eax)
-; FALLBACK23-NEXT:    movl %ebx, 40(%eax)
+; FALLBACK23-NEXT:    movl %ebp, 40(%eax)
 ; FALLBACK23-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK23-NEXT:    movl %ecx, 44(%eax)
 ; FALLBACK23-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -18614,166 +18628,179 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; FALLBACK24-NEXT:    vmovups (%ecx), %ymm0
 ; FALLBACK24-NEXT:    vmovups 32(%ecx), %ymm1
-; FALLBACK24-NEXT:    movl (%eax), %eax
+; FALLBACK24-NEXT:    movl (%eax), %ecx
 ; FALLBACK24-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; FALLBACK24-NEXT:    vmovups %ymm2, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    vmovups %ymm2, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %eax, %edx
-; FALLBACK24-NEXT:    andl $60, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; FALLBACK24-NEXT:    subl %edx, %ecx
-; FALLBACK24-NEXT:    movl (%ecx), %edi
+; FALLBACK24-NEXT:    movl %ecx, %eax
+; FALLBACK24-NEXT:    andl $60, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; FALLBACK24-NEXT:    subl %eax, %edx
+; FALLBACK24-NEXT:    movl (%edx), %edi
 ; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 4(%ecx), %edx
-; FALLBACK24-NEXT:    movl %ecx, %ebp
-; FALLBACK24-NEXT:    shll $3, %eax
-; FALLBACK24-NEXT:    andl $24, %eax
-; FALLBACK24-NEXT:    movl %edx, %esi
-; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl 4(%edx), %esi
+; FALLBACK24-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %edx, %ebx
+; FALLBACK24-NEXT:    shll $3, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %esi
 ; FALLBACK24-NEXT:    shrl %edi
-; FALLBACK24-NEXT:    movb %al, %ch
-; FALLBACK24-NEXT:    notb %ch
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %ecx, %edx
+; FALLBACK24-NEXT:    movl %ecx, %eax
+; FALLBACK24-NEXT:    andb $24, %dl
+; FALLBACK24-NEXT:    notb %dl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %edi
 ; FALLBACK24-NEXT:    orl %esi, %edi
 ; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 12(%ebp), %ebx
+; FALLBACK24-NEXT:    movl %ebx, %esi
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl 12(%ebx), %ebx
+; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    movl 8(%ebp), %esi
-; FALLBACK24-NEXT:    movl %ebp, %edi
+; FALLBACK24-NEXT:    movl 8(%esi), %esi
 ; FALLBACK24-NEXT:    movl %esi, %ebp
 ; FALLBACK24-NEXT:    shrl %ebp
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %ebp
 ; FALLBACK24-NEXT:    orl %ebx, %ebp
 ; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl %eax, %edi
 ; FALLBACK24-NEXT:    shll %cl, %esi
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %esi, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl %edi, %ebp
-; FALLBACK24-NEXT:    movl 20(%edi), %ebx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    orl %esi, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK24-NEXT:    movl 20(%esi), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %edi, %eax
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    movl 16(%edi), %esi
-; FALLBACK24-NEXT:    movl %esi, %edx
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %ebx, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl 16(%esi), %esi
+; FALLBACK24-NEXT:    movl %esi, %ebp
+; FALLBACK24-NEXT:    shrl %ebp
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %ebp
+; FALLBACK24-NEXT:    orl %ebx, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %esi
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK24-NEXT:    shrl %edi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %edi
 ; FALLBACK24-NEXT:    orl %esi, %edi
 ; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl %ebp, %edx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; FALLBACK24-NEXT:    movl 28(%ebp), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    movl %eax, %edi
 ; FALLBACK24-NEXT:    shll %cl, %ebx
 ; FALLBACK24-NEXT:    movl 24(%ebp), %esi
-; FALLBACK24-NEXT:    movl %esi, %edi
-; FALLBACK24-NEXT:    shrl %edi
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    orl %ebx, %edi
-; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %esi, %eax
+; FALLBACK24-NEXT:    shrl %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    orl %ebx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %edi, %ecx
+; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK24-NEXT:    shll %cl, %esi
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %ebp
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    orl %esi, %ebp
-; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 36(%edx), %ebx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    orl %esi, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 36(%ebp), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %edi, %eax
+; FALLBACK24-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    movl 32(%edx), %esi
-; FALLBACK24-NEXT:    movl %edx, %ebp
-; FALLBACK24-NEXT:    movl %esi, %edi
+; FALLBACK24-NEXT:    movl 32(%ebp), %ebp
+; FALLBACK24-NEXT:    movl %ebp, %esi
+; FALLBACK24-NEXT:    shrl %esi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %esi
+; FALLBACK24-NEXT:    orl %ebx, %esi
+; FALLBACK24-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %eax, %ecx
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK24-NEXT:    shrl %edi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    orl %ebx, %edi
+; FALLBACK24-NEXT:    orl %ebp, %edi
 ; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shll %cl, %esi
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %esi, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 44(%ebp), %ebx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    movl 44(%eax), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    movl 40(%ebp), %esi
-; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl %esi, %edx
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %ebx, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl 40(%eax), %esi
+; FALLBACK24-NEXT:    movl %eax, %ebp
+; FALLBACK24-NEXT:    movl %esi, %eax
+; FALLBACK24-NEXT:    shrl %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    orl %ebx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %esi
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %esi, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %edi
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %edi
+; FALLBACK24-NEXT:    orl %esi, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK24-NEXT:    movl 52(%ebp), %esi
 ; FALLBACK24-NEXT:    movl %esi, %edi
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %edi
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    negl %edx
-; FALLBACK24-NEXT:    movl 176(%esp,%edx), %ebx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    negl %eax
+; FALLBACK24-NEXT:    movl 176(%esp,%eax), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, %ebp
 ; FALLBACK24-NEXT:    shrl %ebp
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %ebp
 ; FALLBACK24-NEXT:    orl %edi, %ebp
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
-; FALLBACK24-NEXT:    orl %ebx, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    orl %ebx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; FALLBACK24-NEXT:    movl 60(%edi), %edx
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
+; FALLBACK24-NEXT:    movl 60(%edi), %eax
+; FALLBACK24-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK24-NEXT:    shll %cl, %eax
 ; FALLBACK24-NEXT:    movl 56(%edi), %ebx
 ; FALLBACK24-NEXT:    movl %ebx, %edi
 ; FALLBACK24-NEXT:    shrl %edi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    orl %edx, %edi
-; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    orl %eax, %edi
+; FALLBACK24-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    shll %cl, %ebx
 ; FALLBACK24-NEXT:    shrl %esi
-; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    movl %edx, %ecx
 ; FALLBACK24-NEXT:    shrl %cl, %esi
 ; FALLBACK24-NEXT:    orl %ebx, %esi
 ; FALLBACK24-NEXT:    movl %eax, %ecx
@@ -18840,7 +18867,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK25-NEXT:    movl 8(%eax), %esi
 ; FALLBACK25-NEXT:    movl 12(%eax), %edx
 ; FALLBACK25-NEXT:    shll $3, %ecx
-; FALLBACK25-NEXT:    andl $24, %ecx
 ; FALLBACK25-NEXT:    movl %edx, %edi
 ; FALLBACK25-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -18944,7 +18970,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK26-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; FALLBACK26-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; FALLBACK26-NEXT:    leal (,%eax,8), %edx
-; FALLBACK26-NEXT:    andl $24, %edx
 ; FALLBACK26-NEXT:    andl $60, %eax
 ; FALLBACK26-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK26-NEXT:    leal {{[0-9]+}}(%esp), %edi
@@ -18954,6 +18979,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK26-NEXT:    movl 4(%edi), %eax
 ; FALLBACK26-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK26-NEXT:    movl %edx, %ebx
+; FALLBACK26-NEXT:    andb $24, %bl
 ; FALLBACK26-NEXT:    notb %bl
 ; FALLBACK26-NEXT:    shrl %ecx
 ; FALLBACK26-NEXT:    shrxl %ebx, %ecx, %esi
@@ -19107,7 +19133,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK27-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; FALLBACK27-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; FALLBACK27-NEXT:    leal (,%ebx,8), %ecx
-; FALLBACK27-NEXT:    andl $24, %ecx
 ; FALLBACK27-NEXT:    andl $60, %ebx
 ; FALLBACK27-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; FALLBACK27-NEXT:    subl %ebx, %eax
@@ -19210,164 +19235,177 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; FALLBACK28-NEXT:    vmovups (%ecx), %zmm0
-; FALLBACK28-NEXT:    movl (%eax), %eax
+; FALLBACK28-NEXT:    movl (%eax), %ecx
 ; FALLBACK28-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; FALLBACK28-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %eax, %edx
-; FALLBACK28-NEXT:    andl $60, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; FALLBACK28-NEXT:    subl %edx, %ecx
-; FALLBACK28-NEXT:    movl (%ecx), %edi
+; FALLBACK28-NEXT:    movl %ecx, %eax
+; FALLBACK28-NEXT:    andl $60, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; FALLBACK28-NEXT:    subl %eax, %edx
+; FALLBACK28-NEXT:    movl (%edx), %edi
 ; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 4(%ecx), %edx
-; FALLBACK28-NEXT:    movl %ecx, %ebp
-; FALLBACK28-NEXT:    shll $3, %eax
-; FALLBACK28-NEXT:    andl $24, %eax
-; FALLBACK28-NEXT:    movl %edx, %esi
-; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl 4(%edx), %esi
+; FALLBACK28-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %edx, %ebx
+; FALLBACK28-NEXT:    shll $3, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %esi
 ; FALLBACK28-NEXT:    shrl %edi
-; FALLBACK28-NEXT:    movb %al, %ch
-; FALLBACK28-NEXT:    notb %ch
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %ecx, %edx
+; FALLBACK28-NEXT:    movl %ecx, %eax
+; FALLBACK28-NEXT:    andb $24, %dl
+; FALLBACK28-NEXT:    notb %dl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %edi
 ; FALLBACK28-NEXT:    orl %esi, %edi
 ; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 12(%ebp), %ebx
+; FALLBACK28-NEXT:    movl %ebx, %esi
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl 12(%ebx), %ebx
+; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    movl 8(%ebp), %esi
-; FALLBACK28-NEXT:    movl %ebp, %edi
+; FALLBACK28-NEXT:    movl 8(%esi), %esi
 ; FALLBACK28-NEXT:    movl %esi, %ebp
 ; FALLBACK28-NEXT:    shrl %ebp
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %ebp
 ; FALLBACK28-NEXT:    orl %ebx, %ebp
 ; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl %eax, %edi
 ; FALLBACK28-NEXT:    shll %cl, %esi
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %esi, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl %edi, %ebp
-; FALLBACK28-NEXT:    movl 20(%edi), %ebx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    orl %esi, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK28-NEXT:    movl 20(%esi), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %edi, %eax
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    movl 16(%edi), %esi
-; FALLBACK28-NEXT:    movl %esi, %edx
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %ebx, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl 16(%esi), %esi
+; FALLBACK28-NEXT:    movl %esi, %ebp
+; FALLBACK28-NEXT:    shrl %ebp
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %ebp
+; FALLBACK28-NEXT:    orl %ebx, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %esi
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK28-NEXT:    shrl %edi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %edi
 ; FALLBACK28-NEXT:    orl %esi, %edi
 ; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl %ebp, %edx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; FALLBACK28-NEXT:    movl 28(%ebp), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    movl %eax, %edi
 ; FALLBACK28-NEXT:    shll %cl, %ebx
 ; FALLBACK28-NEXT:    movl 24(%ebp), %esi
-; FALLBACK28-NEXT:    movl %esi, %edi
-; FALLBACK28-NEXT:    shrl %edi
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    orl %ebx, %edi
-; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %esi, %eax
+; FALLBACK28-NEXT:    shrl %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    orl %ebx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %edi, %ecx
+; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK28-NEXT:    shll %cl, %esi
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %ebp
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    orl %esi, %ebp
-; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 36(%edx), %ebx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    orl %esi, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 36(%ebp), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %edi, %eax
+; FALLBACK28-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    movl 32(%edx), %esi
-; FALLBACK28-NEXT:    movl %edx, %ebp
-; FALLBACK28-NEXT:    movl %esi, %edi
+; FALLBACK28-NEXT:    movl 32(%ebp), %ebp
+; FALLBACK28-NEXT:    movl %ebp, %esi
+; FALLBACK28-NEXT:    shrl %esi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %esi
+; FALLBACK28-NEXT:    orl %ebx, %esi
+; FALLBACK28-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %eax, %ecx
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; FALLBACK28-NEXT:    shrl %edi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    orl %ebx, %edi
+; FALLBACK28-NEXT:    orl %ebp, %edi
 ; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shll %cl, %esi
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %esi, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 44(%ebp), %ebx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    movl 44(%eax), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    movl 40(%ebp), %esi
-; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl %esi, %edx
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %ebx, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl 40(%eax), %esi
+; FALLBACK28-NEXT:    movl %eax, %ebp
+; FALLBACK28-NEXT:    movl %esi, %eax
+; FALLBACK28-NEXT:    shrl %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    orl %ebx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %esi
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %esi, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %edi
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %edi
+; FALLBACK28-NEXT:    orl %esi, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK28-NEXT:    movl 52(%ebp), %esi
 ; FALLBACK28-NEXT:    movl %esi, %edi
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %edi
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    negl %edx
-; FALLBACK28-NEXT:    movl 176(%esp,%edx), %ebx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    negl %eax
+; FALLBACK28-NEXT:    movl 176(%esp,%eax), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, %ebp
 ; FALLBACK28-NEXT:    shrl %ebp
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %ebp
 ; FALLBACK28-NEXT:    orl %edi, %ebp
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
-; FALLBACK28-NEXT:    orl %ebx, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    orl %ebx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; FALLBACK28-NEXT:    movl 60(%edi), %edx
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
+; FALLBACK28-NEXT:    movl 60(%edi), %eax
+; FALLBACK28-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK28-NEXT:    shll %cl, %eax
 ; FALLBACK28-NEXT:    movl 56(%edi), %ebx
 ; FALLBACK28-NEXT:    movl %ebx, %edi
 ; FALLBACK28-NEXT:    shrl %edi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    orl %edx, %edi
-; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    orl %eax, %edi
+; FALLBACK28-NEXT:    movl (%esp), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    shll %cl, %ebx
 ; FALLBACK28-NEXT:    shrl %esi
-; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    movl %edx, %ecx
 ; FALLBACK28-NEXT:    shrl %cl, %esi
 ; FALLBACK28-NEXT:    orl %ebx, %esi
 ; FALLBACK28-NEXT:    movl %eax, %ecx
@@ -19431,7 +19469,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK29-NEXT:    movl 8(%eax), %esi
 ; FALLBACK29-NEXT:    movl 12(%eax), %edx
 ; FALLBACK29-NEXT:    shll $3, %ecx
-; FALLBACK29-NEXT:    andl $24, %ecx
 ; FALLBACK29-NEXT:    movl %edx, %edi
 ; FALLBACK29-NEXT:    shldl %cl, %esi, %edi
 ; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -19532,7 +19569,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK30-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; FALLBACK30-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
 ; FALLBACK30-NEXT:    leal (,%eax,8), %edx
-; FALLBACK30-NEXT:    andl $24, %edx
 ; FALLBACK30-NEXT:    andl $60, %eax
 ; FALLBACK30-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK30-NEXT:    leal {{[0-9]+}}(%esp), %edi
@@ -19542,6 +19578,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK30-NEXT:    movl 4(%edi), %eax
 ; FALLBACK30-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK30-NEXT:    movl %edx, %ebx
+; FALLBACK30-NEXT:    andb $24, %bl
 ; FALLBACK30-NEXT:    notb %bl
 ; FALLBACK30-NEXT:    shrl %ecx
 ; FALLBACK30-NEXT:    shrxl %ebx, %ecx, %esi
@@ -19692,7 +19729,6 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK31-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; FALLBACK31-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
 ; FALLBACK31-NEXT:    leal (,%ebx,8), %ecx
-; FALLBACK31-NEXT:    andl $24, %ecx
 ; FALLBACK31-NEXT:    andl $60, %ebx
 ; FALLBACK31-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; FALLBACK31-NEXT:    subl %ebx, %eax
@@ -20193,7 +20229,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movq %r14, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    movq %r14, -{{[0-9]+}}(%rsp)
 ; FALLBACK0-NEXT:    leal (,%rdi,8), %eax
-; FALLBACK0-NEXT:    andl $56, %eax
 ; FALLBACK0-NEXT:    andl $56, %edi
 ; FALLBACK0-NEXT:    movq -128(%rsp,%rdi), %r10
 ; FALLBACK0-NEXT:    movq -120(%rsp,%rdi), %r8
@@ -20201,6 +20236,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK0-NEXT:    movl %eax, %ecx
 ; FALLBACK0-NEXT:    shrq %cl, %r11
 ; FALLBACK0-NEXT:    movl %eax, %esi
+; FALLBACK0-NEXT:    andb $56, %sil
 ; FALLBACK0-NEXT:    notb %sil
 ; FALLBACK0-NEXT:    movq -112(%rsp,%rdi), %rbx
 ; FALLBACK0-NEXT:    leaq (%rbx,%rbx), %r9
@@ -20299,7 +20335,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK1-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK1-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK1-NEXT:    andl $56, %ecx
 ; FALLBACK1-NEXT:    andl $56, %eax
 ; FALLBACK1-NEXT:    movq -112(%rsp,%rax), %rdi
 ; FALLBACK1-NEXT:    movq -128(%rsp,%rax), %rsi
@@ -20370,54 +20405,54 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK2-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK2-NEXT:    andl $56, %ecx
 ; FALLBACK2-NEXT:    andl $56, %eax
 ; FALLBACK2-NEXT:    movq -120(%rsp,%rax), %rdi
-; FALLBACK2-NEXT:    movq -112(%rsp,%rax), %r9
-; FALLBACK2-NEXT:    shrxq %rcx, %rdi, %rbx
+; FALLBACK2-NEXT:    movq -112(%rsp,%rax), %r10
+; FALLBACK2-NEXT:    shrxq %rcx, %rdi, %r9
 ; FALLBACK2-NEXT:    shrxq %rcx, -128(%rsp,%rax), %r13
 ; FALLBACK2-NEXT:    movq -104(%rsp,%rax), %rsi
 ; FALLBACK2-NEXT:    shrxq %rcx, %rsi, %r8
-; FALLBACK2-NEXT:    movq -96(%rsp,%rax), %r10
-; FALLBACK2-NEXT:    shrxq %rcx, %r9, %r11
+; FALLBACK2-NEXT:    movq -96(%rsp,%rax), %r11
+; FALLBACK2-NEXT:    shrxq %rcx, %r10, %rbx
 ; FALLBACK2-NEXT:    movq -88(%rsp,%rax), %r14
 ; FALLBACK2-NEXT:    shrxq %rcx, %r14, %r15
-; FALLBACK2-NEXT:    shrxq %rcx, %r10, %rbp
+; FALLBACK2-NEXT:    shrxq %rcx, %r11, %rbp
 ; FALLBACK2-NEXT:    movl %ecx, %r12d
+; FALLBACK2-NEXT:    andb $56, %r12b
 ; FALLBACK2-NEXT:    notb %r12b
-; FALLBACK2-NEXT:    addq %r9, %r9
-; FALLBACK2-NEXT:    shlxq %r12, %r9, %r9
-; FALLBACK2-NEXT:    orq %rbx, %r9
+; FALLBACK2-NEXT:    addq %r10, %r10
+; FALLBACK2-NEXT:    shlxq %r12, %r10, %r10
+; FALLBACK2-NEXT:    orq %r9, %r10
 ; FALLBACK2-NEXT:    addq %rdi, %rdi
 ; FALLBACK2-NEXT:    shlxq %r12, %rdi, %rdi
 ; FALLBACK2-NEXT:    orq %r13, %rdi
-; FALLBACK2-NEXT:    movq -80(%rsp,%rax), %rbx
-; FALLBACK2-NEXT:    shrxq %rcx, %rbx, %r13
+; FALLBACK2-NEXT:    movq -80(%rsp,%rax), %r9
+; FALLBACK2-NEXT:    shrxq %rcx, %r9, %r13
 ; FALLBACK2-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK2-NEXT:    sarxq %rcx, %rax, %rcx
-; FALLBACK2-NEXT:    addq %r10, %r10
-; FALLBACK2-NEXT:    shlxq %r12, %r10, %r10
-; FALLBACK2-NEXT:    orq %r8, %r10
+; FALLBACK2-NEXT:    addq %r11, %r11
+; FALLBACK2-NEXT:    shlxq %r12, %r11, %r11
+; FALLBACK2-NEXT:    orq %r8, %r11
 ; FALLBACK2-NEXT:    addq %rsi, %rsi
 ; FALLBACK2-NEXT:    shlxq %r12, %rsi, %rsi
-; FALLBACK2-NEXT:    orq %r11, %rsi
-; FALLBACK2-NEXT:    leaq (%rbx,%rbx), %r8
+; FALLBACK2-NEXT:    orq %rbx, %rsi
+; FALLBACK2-NEXT:    leaq (%r9,%r9), %r8
 ; FALLBACK2-NEXT:    shlxq %r12, %r8, %r8
 ; FALLBACK2-NEXT:    orq %r15, %r8
 ; FALLBACK2-NEXT:    addq %r14, %r14
-; FALLBACK2-NEXT:    shlxq %r12, %r14, %r11
-; FALLBACK2-NEXT:    orq %rbp, %r11
+; FALLBACK2-NEXT:    shlxq %r12, %r14, %r9
+; FALLBACK2-NEXT:    orq %rbp, %r9
 ; FALLBACK2-NEXT:    addq %rax, %rax
 ; FALLBACK2-NEXT:    shlxq %r12, %rax, %rax
 ; FALLBACK2-NEXT:    orq %r13, %rax
 ; FALLBACK2-NEXT:    movq %rcx, 56(%rdx)
 ; FALLBACK2-NEXT:    movq %rax, 48(%rdx)
-; FALLBACK2-NEXT:    movq %r11, 32(%rdx)
+; FALLBACK2-NEXT:    movq %r9, 32(%rdx)
 ; FALLBACK2-NEXT:    movq %r8, 40(%rdx)
 ; FALLBACK2-NEXT:    movq %rsi, 16(%rdx)
-; FALLBACK2-NEXT:    movq %r10, 24(%rdx)
+; FALLBACK2-NEXT:    movq %r11, 24(%rdx)
 ; FALLBACK2-NEXT:    movq %rdi, (%rdx)
-; FALLBACK2-NEXT:    movq %r9, 8(%rdx)
+; FALLBACK2-NEXT:    movq %r10, 8(%rdx)
 ; FALLBACK2-NEXT:    addq $8, %rsp
 ; FALLBACK2-NEXT:    popq %rbx
 ; FALLBACK2-NEXT:    popq %r12
@@ -20459,7 +20494,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK3-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK3-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK3-NEXT:    andl $56, %ecx
 ; FALLBACK3-NEXT:    andl $56, %eax
 ; FALLBACK3-NEXT:    movq -112(%rsp,%rax), %rdi
 ; FALLBACK3-NEXT:    movq -128(%rsp,%rax), %rsi
@@ -20478,17 +20512,16 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK3-NEXT:    shrdq %cl, %r14, %r10
 ; FALLBACK3-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK3-NEXT:    shrdq %cl, %rax, %r11
-; FALLBACK3-NEXT:    sarxq %rcx, %rax, %rax
-; FALLBACK3-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK3-NEXT:    shrdq %cl, %r9, %rsi
+; FALLBACK3-NEXT:    sarxq %rcx, %rax, %rax
 ; FALLBACK3-NEXT:    movq %r11, 48(%rdx)
+; FALLBACK3-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK3-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK3-NEXT:    movq %r15, 40(%rdx)
 ; FALLBACK3-NEXT:    movq %rdi, 16(%rdx)
 ; FALLBACK3-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK3-NEXT:    movq %rsi, (%rdx)
 ; FALLBACK3-NEXT:    movq %r8, 8(%rdx)
-; FALLBACK3-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK3-NEXT:    popq %rbx
 ; FALLBACK3-NEXT:    popq %r14
 ; FALLBACK3-NEXT:    popq %r15
@@ -20524,13 +20557,13 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK4-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK4-NEXT:    leal (,%rdi,8), %eax
-; FALLBACK4-NEXT:    andl $56, %eax
 ; FALLBACK4-NEXT:    andl $56, %edi
 ; FALLBACK4-NEXT:    movq -128(%rsp,%rdi), %r10
 ; FALLBACK4-NEXT:    movq -120(%rsp,%rdi), %r9
 ; FALLBACK4-NEXT:    movl %eax, %ecx
 ; FALLBACK4-NEXT:    shrq %cl, %r10
 ; FALLBACK4-NEXT:    movl %eax, %esi
+; FALLBACK4-NEXT:    andb $56, %sil
 ; FALLBACK4-NEXT:    notb %sil
 ; FALLBACK4-NEXT:    leaq (%r9,%r9), %r8
 ; FALLBACK4-NEXT:    movl %esi, %ecx
@@ -20626,7 +20659,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK5-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK5-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK5-NEXT:    andl $56, %ecx
 ; FALLBACK5-NEXT:    andl $56, %eax
 ; FALLBACK5-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK5-NEXT:    movq -104(%rsp,%rax), %r9
@@ -20692,9 +20724,8 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK6-NEXT:    leal (,%rax,8), %esi
-; FALLBACK6-NEXT:    andl $56, %esi
 ; FALLBACK6-NEXT:    andl $56, %eax
-; FALLBACK6-NEXT:    shrxq %rsi, -128(%rsp,%rax), %r11
+; FALLBACK6-NEXT:    shrxq %rsi, -128(%rsp,%rax), %rbx
 ; FALLBACK6-NEXT:    movq -112(%rsp,%rax), %rcx
 ; FALLBACK6-NEXT:    movq -104(%rsp,%rax), %rdi
 ; FALLBACK6-NEXT:    shrxq %rsi, %rdi, %r12
@@ -20703,34 +20734,35 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq -88(%rsp,%rax), %r10
 ; FALLBACK6-NEXT:    shrxq %rsi, %r10, %r14
 ; FALLBACK6-NEXT:    shrxq %rsi, %r13, %r15
-; FALLBACK6-NEXT:    movl %esi, %ebx
-; FALLBACK6-NEXT:    notb %bl
+; FALLBACK6-NEXT:    movl %esi, %r11d
+; FALLBACK6-NEXT:    andb $56, %r11b
+; FALLBACK6-NEXT:    notb %r11b
 ; FALLBACK6-NEXT:    movq -120(%rsp,%rax), %rbp
 ; FALLBACK6-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK6-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK6-NEXT:    orq %r11, %r8
-; FALLBACK6-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK6-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK6-NEXT:    orq %r12, %r11
+; FALLBACK6-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK6-NEXT:    orq %rbx, %r8
+; FALLBACK6-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK6-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK6-NEXT:    orq %r12, %rbx
 ; FALLBACK6-NEXT:    movq -80(%rsp,%rax), %r12
 ; FALLBACK6-NEXT:    shrxq %rsi, %r12, %r13
 ; FALLBACK6-NEXT:    shrxq %rsi, %rbp, %rbp
 ; FALLBACK6-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK6-NEXT:    sarxq %rsi, %rax, %rsi
 ; FALLBACK6-NEXT:    addq %rdi, %rdi
-; FALLBACK6-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK6-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK6-NEXT:    orq %r9, %rdi
 ; FALLBACK6-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK6-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK6-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK6-NEXT:    orq %r14, %r9
 ; FALLBACK6-NEXT:    addq %r10, %r10
-; FALLBACK6-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK6-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK6-NEXT:    orq %r15, %r10
 ; FALLBACK6-NEXT:    addq %rax, %rax
-; FALLBACK6-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK6-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK6-NEXT:    orq %r13, %rax
 ; FALLBACK6-NEXT:    addq %rcx, %rcx
-; FALLBACK6-NEXT:    shlxq %rbx, %rcx, %rcx
+; FALLBACK6-NEXT:    shlxq %r11, %rcx, %rcx
 ; FALLBACK6-NEXT:    orq %rbp, %rcx
 ; FALLBACK6-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK6-NEXT:    movq %rcx, 8(%rdx)
@@ -20738,7 +20770,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK6-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK6-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK6-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK6-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK6-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK6-NEXT:    movq %r8, (%rdx)
 ; FALLBACK6-NEXT:    addq $8, %rsp
 ; FALLBACK6-NEXT:    popq %rbx
@@ -20775,7 +20807,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK7-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK7-NEXT:    andl $56, %ecx
 ; FALLBACK7-NEXT:    andl $56, %eax
 ; FALLBACK7-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK7-NEXT:    movq -104(%rsp,%rax), %r9
@@ -20795,17 +20826,16 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7-NEXT:    movq -120(%rsp,%rax), %rax
 ; FALLBACK7-NEXT:    movq %rax, %r15
 ; FALLBACK7-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK7-NEXT:    sarxq %rcx, %r11, %r10
-; FALLBACK7-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK7-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK7-NEXT:    sarxq %rcx, %r11, %rax
 ; FALLBACK7-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK7-NEXT:    movq %r9, 48(%rdx)
+; FALLBACK7-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK7-NEXT:    movq %rdi, 32(%rdx)
 ; FALLBACK7-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK7-NEXT:    movq %r8, 16(%rdx)
 ; FALLBACK7-NEXT:    movq %rsi, 24(%rdx)
 ; FALLBACK7-NEXT:    movq %r14, (%rdx)
-; FALLBACK7-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK7-NEXT:    popq %rbx
 ; FALLBACK7-NEXT:    popq %r14
 ; FALLBACK7-NEXT:    popq %r15
@@ -20839,13 +20869,13 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK8-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK8-NEXT:    leal (,%rdi,8), %eax
-; FALLBACK8-NEXT:    andl $56, %eax
 ; FALLBACK8-NEXT:    andl $56, %edi
 ; FALLBACK8-NEXT:    movq -128(%rsp,%rdi), %r10
 ; FALLBACK8-NEXT:    movq -120(%rsp,%rdi), %r9
 ; FALLBACK8-NEXT:    movl %eax, %ecx
 ; FALLBACK8-NEXT:    shrq %cl, %r10
 ; FALLBACK8-NEXT:    movl %eax, %esi
+; FALLBACK8-NEXT:    andb $56, %sil
 ; FALLBACK8-NEXT:    notb %sil
 ; FALLBACK8-NEXT:    leaq (%r9,%r9), %r8
 ; FALLBACK8-NEXT:    movl %esi, %ecx
@@ -20940,7 +20970,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK9-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK9-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK9-NEXT:    andl $56, %ecx
 ; FALLBACK9-NEXT:    andl $56, %eax
 ; FALLBACK9-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK9-NEXT:    movq -104(%rsp,%rax), %r9
@@ -21005,9 +21034,8 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK10-NEXT:    leal (,%rax,8), %esi
-; FALLBACK10-NEXT:    andl $56, %esi
 ; FALLBACK10-NEXT:    andl $56, %eax
-; FALLBACK10-NEXT:    shrxq %rsi, -128(%rsp,%rax), %r11
+; FALLBACK10-NEXT:    shrxq %rsi, -128(%rsp,%rax), %rbx
 ; FALLBACK10-NEXT:    movq -112(%rsp,%rax), %rcx
 ; FALLBACK10-NEXT:    movq -104(%rsp,%rax), %rdi
 ; FALLBACK10-NEXT:    shrxq %rsi, %rdi, %r12
@@ -21016,34 +21044,35 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq -88(%rsp,%rax), %r10
 ; FALLBACK10-NEXT:    shrxq %rsi, %r10, %r14
 ; FALLBACK10-NEXT:    shrxq %rsi, %r13, %r15
-; FALLBACK10-NEXT:    movl %esi, %ebx
-; FALLBACK10-NEXT:    notb %bl
+; FALLBACK10-NEXT:    movl %esi, %r11d
+; FALLBACK10-NEXT:    andb $56, %r11b
+; FALLBACK10-NEXT:    notb %r11b
 ; FALLBACK10-NEXT:    movq -120(%rsp,%rax), %rbp
 ; FALLBACK10-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK10-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK10-NEXT:    orq %r11, %r8
-; FALLBACK10-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK10-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK10-NEXT:    orq %r12, %r11
+; FALLBACK10-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK10-NEXT:    orq %rbx, %r8
+; FALLBACK10-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK10-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK10-NEXT:    orq %r12, %rbx
 ; FALLBACK10-NEXT:    movq -80(%rsp,%rax), %r12
 ; FALLBACK10-NEXT:    shrxq %rsi, %r12, %r13
 ; FALLBACK10-NEXT:    shrxq %rsi, %rbp, %rbp
 ; FALLBACK10-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK10-NEXT:    sarxq %rsi, %rax, %rsi
 ; FALLBACK10-NEXT:    addq %rdi, %rdi
-; FALLBACK10-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK10-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK10-NEXT:    orq %r9, %rdi
 ; FALLBACK10-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK10-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK10-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK10-NEXT:    orq %r14, %r9
 ; FALLBACK10-NEXT:    addq %r10, %r10
-; FALLBACK10-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK10-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK10-NEXT:    orq %r15, %r10
 ; FALLBACK10-NEXT:    addq %rax, %rax
-; FALLBACK10-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK10-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK10-NEXT:    orq %r13, %rax
 ; FALLBACK10-NEXT:    addq %rcx, %rcx
-; FALLBACK10-NEXT:    shlxq %rbx, %rcx, %rcx
+; FALLBACK10-NEXT:    shlxq %r11, %rcx, %rcx
 ; FALLBACK10-NEXT:    orq %rbp, %rcx
 ; FALLBACK10-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK10-NEXT:    movq %rcx, 8(%rdx)
@@ -21051,7 +21080,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK10-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK10-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK10-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK10-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK10-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK10-NEXT:    movq %r8, (%rdx)
 ; FALLBACK10-NEXT:    addq $8, %rsp
 ; FALLBACK10-NEXT:    popq %rbx
@@ -21087,7 +21116,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK11-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK11-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK11-NEXT:    andl $56, %ecx
 ; FALLBACK11-NEXT:    andl $56, %eax
 ; FALLBACK11-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK11-NEXT:    movq -104(%rsp,%rax), %r9
@@ -21107,17 +21135,16 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK11-NEXT:    movq -120(%rsp,%rax), %rax
 ; FALLBACK11-NEXT:    movq %rax, %r15
 ; FALLBACK11-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK11-NEXT:    sarxq %rcx, %r11, %r10
-; FALLBACK11-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK11-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK11-NEXT:    sarxq %rcx, %r11, %rax
 ; FALLBACK11-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK11-NEXT:    movq %r9, 48(%rdx)
+; FALLBACK11-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK11-NEXT:    movq %rdi, 32(%rdx)
 ; FALLBACK11-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK11-NEXT:    movq %r8, 16(%rdx)
 ; FALLBACK11-NEXT:    movq %rsi, 24(%rdx)
 ; FALLBACK11-NEXT:    movq %r14, (%rdx)
-; FALLBACK11-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK11-NEXT:    popq %rbx
 ; FALLBACK11-NEXT:    popq %r14
 ; FALLBACK11-NEXT:    popq %r15
@@ -21152,13 +21179,13 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK12-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; FALLBACK12-NEXT:    leal (,%rdi,8), %eax
-; FALLBACK12-NEXT:    andl $56, %eax
 ; FALLBACK12-NEXT:    andl $56, %edi
 ; FALLBACK12-NEXT:    movq -128(%rsp,%rdi), %r10
 ; FALLBACK12-NEXT:    movq -120(%rsp,%rdi), %r9
 ; FALLBACK12-NEXT:    movl %eax, %ecx
 ; FALLBACK12-NEXT:    shrq %cl, %r10
 ; FALLBACK12-NEXT:    movl %eax, %esi
+; FALLBACK12-NEXT:    andb $56, %sil
 ; FALLBACK12-NEXT:    notb %sil
 ; FALLBACK12-NEXT:    leaq (%r9,%r9), %r8
 ; FALLBACK12-NEXT:    movl %esi, %ecx
@@ -21253,7 +21280,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK13-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK13-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK13-NEXT:    andl $56, %ecx
 ; FALLBACK13-NEXT:    andl $56, %eax
 ; FALLBACK13-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK13-NEXT:    movq -104(%rsp,%rax), %r9
@@ -21318,9 +21344,8 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK14-NEXT:    leal (,%rax,8), %esi
-; FALLBACK14-NEXT:    andl $56, %esi
 ; FALLBACK14-NEXT:    andl $56, %eax
-; FALLBACK14-NEXT:    shrxq %rsi, -128(%rsp,%rax), %r11
+; FALLBACK14-NEXT:    shrxq %rsi, -128(%rsp,%rax), %rbx
 ; FALLBACK14-NEXT:    movq -112(%rsp,%rax), %rcx
 ; FALLBACK14-NEXT:    movq -104(%rsp,%rax), %rdi
 ; FALLBACK14-NEXT:    shrxq %rsi, %rdi, %r12
@@ -21329,34 +21354,35 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq -88(%rsp,%rax), %r10
 ; FALLBACK14-NEXT:    shrxq %rsi, %r10, %r14
 ; FALLBACK14-NEXT:    shrxq %rsi, %r13, %r15
-; FALLBACK14-NEXT:    movl %esi, %ebx
-; FALLBACK14-NEXT:    notb %bl
+; FALLBACK14-NEXT:    movl %esi, %r11d
+; FALLBACK14-NEXT:    andb $56, %r11b
+; FALLBACK14-NEXT:    notb %r11b
 ; FALLBACK14-NEXT:    movq -120(%rsp,%rax), %rbp
 ; FALLBACK14-NEXT:    leaq (%rbp,%rbp), %r8
-; FALLBACK14-NEXT:    shlxq %rbx, %r8, %r8
-; FALLBACK14-NEXT:    orq %r11, %r8
-; FALLBACK14-NEXT:    leaq (%r13,%r13), %r11
-; FALLBACK14-NEXT:    shlxq %rbx, %r11, %r11
-; FALLBACK14-NEXT:    orq %r12, %r11
+; FALLBACK14-NEXT:    shlxq %r11, %r8, %r8
+; FALLBACK14-NEXT:    orq %rbx, %r8
+; FALLBACK14-NEXT:    leaq (%r13,%r13), %rbx
+; FALLBACK14-NEXT:    shlxq %r11, %rbx, %rbx
+; FALLBACK14-NEXT:    orq %r12, %rbx
 ; FALLBACK14-NEXT:    movq -80(%rsp,%rax), %r12
 ; FALLBACK14-NEXT:    shrxq %rsi, %r12, %r13
 ; FALLBACK14-NEXT:    shrxq %rsi, %rbp, %rbp
 ; FALLBACK14-NEXT:    movq -72(%rsp,%rax), %rax
 ; FALLBACK14-NEXT:    sarxq %rsi, %rax, %rsi
 ; FALLBACK14-NEXT:    addq %rdi, %rdi
-; FALLBACK14-NEXT:    shlxq %rbx, %rdi, %rdi
+; FALLBACK14-NEXT:    shlxq %r11, %rdi, %rdi
 ; FALLBACK14-NEXT:    orq %r9, %rdi
 ; FALLBACK14-NEXT:    leaq (%r12,%r12), %r9
-; FALLBACK14-NEXT:    shlxq %rbx, %r9, %r9
+; FALLBACK14-NEXT:    shlxq %r11, %r9, %r9
 ; FALLBACK14-NEXT:    orq %r14, %r9
 ; FALLBACK14-NEXT:    addq %r10, %r10
-; FALLBACK14-NEXT:    shlxq %rbx, %r10, %r10
+; FALLBACK14-NEXT:    shlxq %r11, %r10, %r10
 ; FALLBACK14-NEXT:    orq %r15, %r10
 ; FALLBACK14-NEXT:    addq %rax, %rax
-; FALLBACK14-NEXT:    shlxq %rbx, %rax, %rax
+; FALLBACK14-NEXT:    shlxq %r11, %rax, %rax
 ; FALLBACK14-NEXT:    orq %r13, %rax
 ; FALLBACK14-NEXT:    addq %rcx, %rcx
-; FALLBACK14-NEXT:    shlxq %rbx, %rcx, %rcx
+; FALLBACK14-NEXT:    shlxq %r11, %rcx, %rcx
 ; FALLBACK14-NEXT:    orq %rbp, %rcx
 ; FALLBACK14-NEXT:    movq %rsi, 56(%rdx)
 ; FALLBACK14-NEXT:    movq %rcx, 8(%rdx)
@@ -21364,7 +21390,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK14-NEXT:    movq %r10, 32(%rdx)
 ; FALLBACK14-NEXT:    movq %r9, 40(%rdx)
 ; FALLBACK14-NEXT:    movq %rdi, 16(%rdx)
-; FALLBACK14-NEXT:    movq %r11, 24(%rdx)
+; FALLBACK14-NEXT:    movq %rbx, 24(%rdx)
 ; FALLBACK14-NEXT:    movq %r8, (%rdx)
 ; FALLBACK14-NEXT:    addq $8, %rsp
 ; FALLBACK14-NEXT:    popq %rbx
@@ -21400,7 +21426,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK15-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK15-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; FALLBACK15-NEXT:    leal (,%rax,8), %ecx
-; FALLBACK15-NEXT:    andl $56, %ecx
 ; FALLBACK15-NEXT:    andl $56, %eax
 ; FALLBACK15-NEXT:    movq -96(%rsp,%rax), %rdi
 ; FALLBACK15-NEXT:    movq -104(%rsp,%rax), %r9
@@ -21420,17 +21445,16 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK15-NEXT:    movq -120(%rsp,%rax), %rax
 ; FALLBACK15-NEXT:    movq %rax, %r15
 ; FALLBACK15-NEXT:    shrdq %cl, %r10, %r15
-; FALLBACK15-NEXT:    sarxq %rcx, %r11, %r10
-; FALLBACK15-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; FALLBACK15-NEXT:    shrdq %cl, %rax, %r14
+; FALLBACK15-NEXT:    sarxq %rcx, %r11, %rax
 ; FALLBACK15-NEXT:    movq %r15, 8(%rdx)
 ; FALLBACK15-NEXT:    movq %r9, 48(%rdx)
+; FALLBACK15-NEXT:    movq %rax, 56(%rdx)
 ; FALLBACK15-NEXT:    movq %rdi, 32(%rdx)
 ; FALLBACK15-NEXT:    movq %rbx, 40(%rdx)
 ; FALLBACK15-NEXT:    movq %r8, 16(%rdx)
 ; FALLBACK15-NEXT:    movq %rsi, 24(%rdx)
 ; FALLBACK15-NEXT:    movq %r14, (%rdx)
-; FALLBACK15-NEXT:    movq %r10, 56(%rdx)
 ; FALLBACK15-NEXT:    popq %rbx
 ; FALLBACK15-NEXT:    popq %r14
 ; FALLBACK15-NEXT:    popq %r15
@@ -21516,46 +21540,46 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK16-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK16-NEXT:    movl %ebp, %ecx
-; FALLBACK16-NEXT:    movl %ebp, %esi
-; FALLBACK16-NEXT:    andl $60, %esi
-; FALLBACK16-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK16-NEXT:    shll $3, %ecx
-; FALLBACK16-NEXT:    andl $24, %ecx
-; FALLBACK16-NEXT:    movl %edx, %eax
+; FALLBACK16-NEXT:    movl %ebp, %edx
+; FALLBACK16-NEXT:    movl %ebp, %eax
+; FALLBACK16-NEXT:    andl $60, %eax
+; FALLBACK16-NEXT:    movl 68(%esp,%eax), %edi
+; FALLBACK16-NEXT:    movl %eax, %ebx
+; FALLBACK16-NEXT:    shll $3, %edx
+; FALLBACK16-NEXT:    movl %edi, %eax
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl 72(%esp,%esi), %edi
-; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    addl %edi, %edi
-; FALLBACK16-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK16-NEXT:    movl %ecx, %ebx
-; FALLBACK16-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK16-NEXT:    movl 72(%esp,%ebx), %ecx
+; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK16-NEXT:    movb %dl, %ch
+; FALLBACK16-NEXT:    andb $24, %ch
 ; FALLBACK16-NEXT:    notb %ch
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %eax, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 64(%esp,%ebx), %eax
+; FALLBACK16-NEXT:    movb %dl, %cl
+; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    addl %edi, %edi
+; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %edi
 ; FALLBACK16-NEXT:    orl %eax, %edi
 ; FALLBACK16-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 64(%esp,%esi), %eax
-; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    movl 76(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %eax
+; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    addl %edx, %edx
+; FALLBACK16-NEXT:    movl 80(%esp,%ebx), %edi
+; FALLBACK16-NEXT:    leal (%edi,%edi), %esi
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %edx
-; FALLBACK16-NEXT:    orl %eax, %edx
+; FALLBACK16-NEXT:    shll %cl, %esi
+; FALLBACK16-NEXT:    orl %eax, %esi
+; FALLBACK16-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 76(%esp,%esi), %ebp
-; FALLBACK16-NEXT:    movl %ebp, %edx
-; FALLBACK16-NEXT:    movb %bl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %edx
-; FALLBACK16-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK16-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %eax
-; FALLBACK16-NEXT:    orl %edx, %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %bl, %cl
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK16-NEXT:    shrl %cl, %eax
 ; FALLBACK16-NEXT:    addl %ebp, %ebp
@@ -21563,30 +21587,28 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    shll %cl, %ebp
 ; FALLBACK16-NEXT:    orl %eax, %ebp
 ; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %esi, %edx
-; FALLBACK16-NEXT:    movl 84(%esp,%esi), %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 84(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %eax
+; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl 88(%esp,%esi), %esi
-; FALLBACK16-NEXT:    leal (%esi,%esi), %ebp
+; FALLBACK16-NEXT:    movl 88(%esp,%ebx), %esi
+; FALLBACK16-NEXT:    leal (%esi,%esi), %edx
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebp
-; FALLBACK16-NEXT:    orl %eax, %ebp
-; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    shll %cl, %edx
+; FALLBACK16-NEXT:    orl %eax, %edx
+; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK16-NEXT:    movb %bl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK16-NEXT:    addl %ebx, %ebx
+; FALLBACK16-NEXT:    addl %ebp, %ebp
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %edi, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %edx, %eax
-; FALLBACK16-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl 92(%esp,%edx), %ebp
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edi, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK16-NEXT:    movl 92(%esp,%eax), %ebp
 ; FALLBACK16-NEXT:    movl %ebp, %edx
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; FALLBACK16-NEXT:    movb %bl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %edx
 ; FALLBACK16-NEXT:    movl 96(%esp,%eax), %edi
@@ -21596,87 +21618,85 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK16-NEXT:    orl %edx, %eax
 ; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    movl %ebx, %eax
 ; FALLBACK16-NEXT:    shrl %cl, %esi
 ; FALLBACK16-NEXT:    addl %ebp, %ebp
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %ebp
 ; FALLBACK16-NEXT:    orl %esi, %ebp
 ; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    movl 100(%esp,%edx), %eax
-; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %bl, %cl
-; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl 104(%esp,%edx), %esi
-; FALLBACK16-NEXT:    leal (%esi,%esi), %ebp
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK16-NEXT:    movl 100(%esp,%ebx), %ebp
+; FALLBACK16-NEXT:    movl %ebp, %edx
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    movl 104(%esp,%ebx), %esi
+; FALLBACK16-NEXT:    leal (%esi,%esi), %eax
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebp
-; FALLBACK16-NEXT:    orl %eax, %ebp
-; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %ebx, %edx
+; FALLBACK16-NEXT:    shll %cl, %eax
+; FALLBACK16-NEXT:    orl %edx, %eax
+; FALLBACK16-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %edi
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK16-NEXT:    addl %ebx, %ebx
+; FALLBACK16-NEXT:    addl %ebp, %ebp
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %ebx
-; FALLBACK16-NEXT:    orl %edi, %ebx
-; FALLBACK16-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; FALLBACK16-NEXT:    movl 108(%esp,%ebp), %edi
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edi, %ebp
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl 108(%esp,%ebx), %edi
 ; FALLBACK16-NEXT:    movl %edi, %eax
-; FALLBACK16-NEXT:    movl %edx, %ebx
-; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    movl %edx, %ecx
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl 112(%esp,%ebp), %ecx
+; FALLBACK16-NEXT:    movl 112(%esp,%ebx), %ecx
 ; FALLBACK16-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movl %ebp, %edx
 ; FALLBACK16-NEXT:    leal (%ecx,%ecx), %ebp
 ; FALLBACK16-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %ebp
 ; FALLBACK16-NEXT:    orl %eax, %ebp
 ; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK16-NEXT:    movb %bl, %cl
+; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %esi
 ; FALLBACK16-NEXT:    addl %edi, %edi
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %edi
 ; FALLBACK16-NEXT:    orl %esi, %edi
-; FALLBACK16-NEXT:    movl 116(%esp,%edx), %esi
+; FALLBACK16-NEXT:    movl 116(%esp,%ebx), %esi
 ; FALLBACK16-NEXT:    movl %esi, %eax
-; FALLBACK16-NEXT:    movl %ebx, %ecx
+; FALLBACK16-NEXT:    movb %dl, %cl
 ; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl 120(%esp,%edx), %edx
-; FALLBACK16-NEXT:    leal (%edx,%edx), %ebp
-; FALLBACK16-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK16-NEXT:    movl 120(%esp,%ebx), %ebx
+; FALLBACK16-NEXT:    leal (%ebx,%ebx), %ebp
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %ebp
 ; FALLBACK16-NEXT:    orl %eax, %ebp
-; FALLBACK16-NEXT:    movb %bl, %cl
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK16-NEXT:    shrl %cl, %eax
+; FALLBACK16-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK16-NEXT:    movl %edx, %eax
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK16-NEXT:    shrl %cl, %edx
 ; FALLBACK16-NEXT:    addl %esi, %esi
 ; FALLBACK16-NEXT:    movb %ch, %cl
 ; FALLBACK16-NEXT:    shll %cl, %esi
-; FALLBACK16-NEXT:    orl %eax, %esi
-; FALLBACK16-NEXT:    movb %bl, %cl
-; FALLBACK16-NEXT:    movl %edx, %eax
-; FALLBACK16-NEXT:    shrl %cl, %eax
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK16-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK16-NEXT:    leal (%ebx,%ebx), %edx
+; FALLBACK16-NEXT:    orl %edx, %esi
+; FALLBACK16-NEXT:    movb %al, %cl
+; FALLBACK16-NEXT:    movl %ebx, %edx
+; FALLBACK16-NEXT:    shrl %cl, %edx
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK16-NEXT:    movl 124(%esp,%ebx), %ebx
+; FALLBACK16-NEXT:    leal (%ebx,%ebx), %ebp
 ; FALLBACK16-NEXT:    movb %ch, %cl
-; FALLBACK16-NEXT:    shll %cl, %edx
-; FALLBACK16-NEXT:    orl %eax, %edx
-; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK16-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK16-NEXT:    shll %cl, %ebp
+; FALLBACK16-NEXT:    orl %edx, %ebp
+; FALLBACK16-NEXT:    movl %eax, %ecx
 ; FALLBACK16-NEXT:    sarl %cl, %ebx
 ; FALLBACK16-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK16-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK16-NEXT:    movl %edx, 56(%eax)
+; FALLBACK16-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK16-NEXT:    movl %esi, 48(%eax)
-; FALLBACK16-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK16-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK16-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK16-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK16-NEXT:    movl %ecx, 44(%eax)
@@ -21786,91 +21806,90 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK17-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK17-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK17-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; FALLBACK17-NEXT:    movl %ecx, %ebp
-; FALLBACK17-NEXT:    andl $60, %ebp
-; FALLBACK17-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK17-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl %ecx, %eax
+; FALLBACK17-NEXT:    andl $60, %eax
+; FALLBACK17-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK17-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK17-NEXT:    shll $3, %ecx
-; FALLBACK17-NEXT:    andl $24, %ecx
-; FALLBACK17-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK17-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK17-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK17-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %edi
+; FALLBACK17-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
 ; FALLBACK17-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK17-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl %esi, %edx
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK17-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK17-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK17-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK17-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    movl %eax, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK17-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK17-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK17-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK17-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK17-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK17-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK17-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK17-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK17-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl %edi, %esi
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK17-NEXT:    movl %ebx, (%esp) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK17-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK17-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK17-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK17-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK17-NEXT:    movl %edx, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK17-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK17-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK17-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK17-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK17-NEXT:    movl %esi, 56(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK17-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK17-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK17-NEXT:    sarl %cl, %eax
-; FALLBACK17-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK17-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK17-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK17-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK17-NEXT:    movl %ebx, (%ebp)
-; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK17-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK17-NEXT:    sarl %cl, %edx
+; FALLBACK17-NEXT:    movl %edx, 60(%eax)
+; FALLBACK17-NEXT:    movl %edi, 48(%eax)
+; FALLBACK17-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK17-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK17-NEXT:    movl %ebp, (%eax)
+; FALLBACK17-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK17-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK17-NEXT:    addl $188, %esp
 ; FALLBACK17-NEXT:    popl %esi
 ; FALLBACK17-NEXT:    popl %edi
@@ -21959,7 +21978,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK18-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK18-NEXT:    movl %eax, %ecx
 ; FALLBACK18-NEXT:    leal (,%eax,8), %edx
-; FALLBACK18-NEXT:    andl $24, %edx
 ; FALLBACK18-NEXT:    andl $60, %ecx
 ; FALLBACK18-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK18-NEXT:    movl 72(%esp,%ecx), %edi
@@ -21967,6 +21985,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK18-NEXT:    shrxl %edx, %esi, %eax
 ; FALLBACK18-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK18-NEXT:    movl %edx, %ebx
+; FALLBACK18-NEXT:    andb $24, %bl
 ; FALLBACK18-NEXT:    notb %bl
 ; FALLBACK18-NEXT:    leal (%edi,%edi), %ebp
 ; FALLBACK18-NEXT:    shlxl %ebx, %ebp, %eax
@@ -22179,7 +22198,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK19-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK19-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK19-NEXT:    shll $3, %ecx
-; FALLBACK19-NEXT:    andl $24, %ecx
 ; FALLBACK19-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK19-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK19-NEXT:    movl 64(%esp,%ebp), %edi
@@ -22304,159 +22322,162 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK20-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK20-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK20-NEXT:    movl %eax, %esi
-; FALLBACK20-NEXT:    andl $60, %esi
-; FALLBACK20-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK20-NEXT:    shll $3, %eax
-; FALLBACK20-NEXT:    andl $24, %eax
-; FALLBACK20-NEXT:    movl %edx, %edi
-; FALLBACK20-NEXT:    movl %eax, %ecx
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    movl 72(%esp,%esi), %ecx
+; FALLBACK20-NEXT:    movl %eax, %edx
+; FALLBACK20-NEXT:    andl $60, %eax
+; FALLBACK20-NEXT:    movl 68(%esp,%eax), %edi
+; FALLBACK20-NEXT:    movl %eax, %ebx
+; FALLBACK20-NEXT:    shll $3, %edx
+; FALLBACK20-NEXT:    movl %edi, %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    movl 72(%esp,%ebx), %ecx
 ; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK20-NEXT:    movb %al, %ch
+; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK20-NEXT:    movb %dl, %ch
+; FALLBACK20-NEXT:    andb $24, %ch
 ; FALLBACK20-NEXT:    notb %ch
 ; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %edi, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %edx, %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
-; FALLBACK20-NEXT:    orl %edi, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK20-NEXT:    movl %edx, %ebp
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK20-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %ebp, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %cl, %ebx
-; FALLBACK20-NEXT:    addl %edx, %edx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %edx
-; FALLBACK20-NEXT:    orl %ebx, %edx
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
-; FALLBACK20-NEXT:    movl %eax, %edx
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    addl %eax, %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
 ; FALLBACK20-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %edi, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %eax, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 64(%esp,%ebx), %eax
 ; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK20-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK20-NEXT:    shrl %cl, %eax
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %eax, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK20-NEXT:    movl %ebx, %ebp
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK20-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %eax
-; FALLBACK20-NEXT:    orl %ebp, %eax
-; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edi
-; FALLBACK20-NEXT:    addl %ebx, %ebx
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %edi, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 108(%esp,%esi), %edi
-; FALLBACK20-NEXT:    movl %edi, %ebp
-; FALLBACK20-NEXT:    movl %eax, %ecx
-; FALLBACK20-NEXT:    shrl %cl, %ebp
-; FALLBACK20-NEXT:    movl 112(%esp,%esi), %ecx
-; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK20-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebx
-; FALLBACK20-NEXT:    orl %ebp, %ebx
-; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %edx
 ; FALLBACK20-NEXT:    addl %edi, %edi
 ; FALLBACK20-NEXT:    movb %ch, %cl
 ; FALLBACK20-NEXT:    shll %cl, %edi
-; FALLBACK20-NEXT:    orl %edx, %edi
-; FALLBACK20-NEXT:    movl %esi, %edx
-; FALLBACK20-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK20-NEXT:    movl 116(%esp,%esi), %esi
-; FALLBACK20-NEXT:    movl %esi, %ebx
-; FALLBACK20-NEXT:    movb %al, %cl
-; FALLBACK20-NEXT:    shrl %cl, %ebx
-; FALLBACK20-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK20-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %ebp
-; FALLBACK20-NEXT:    orl %ebx, %ebp
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    movb %dl, %cl
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK20-NEXT:    shrl %cl, %ebx
-; FALLBACK20-NEXT:    addl %esi, %esi
-; FALLBACK20-NEXT:    movb %ch, %cl
-; FALLBACK20-NEXT:    shll %cl, %esi
-; FALLBACK20-NEXT:    orl %ebx, %esi
+; FALLBACK20-NEXT:    orl %eax, %edi
+; FALLBACK20-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 76(%esp,%ebx), %ebp
+; FALLBACK20-NEXT:    movl %ebp, %eax
 ; FALLBACK20-NEXT:    movb %dl, %cl
 ; FALLBACK20-NEXT:    shrl %cl, %eax
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK20-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK20-NEXT:    leal (%ebx,%ebx), %edx
+; FALLBACK20-NEXT:    movl 80(%esp,%ebx), %edi
+; FALLBACK20-NEXT:    leal (%edi,%edi), %esi
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %esi
+; FALLBACK20-NEXT:    orl %eax, %esi
+; FALLBACK20-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    addl %ebp, %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %eax, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 84(%esp,%ebx), %ebp
+; FALLBACK20-NEXT:    movl %ebp, %eax
+; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    movl 88(%esp,%ebx), %esi
+; FALLBACK20-NEXT:    leal (%esi,%esi), %edx
 ; FALLBACK20-NEXT:    movb %ch, %cl
 ; FALLBACK20-NEXT:    shll %cl, %edx
 ; FALLBACK20-NEXT:    orl %eax, %edx
-; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK20-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK20-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK20-NEXT:    movb %bl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %edi
+; FALLBACK20-NEXT:    addl %ebp, %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %edi, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK20-NEXT:    movl 92(%esp,%eax), %ebp
+; FALLBACK20-NEXT:    movl %ebp, %edx
+; FALLBACK20-NEXT:    movb %bl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %edx
+; FALLBACK20-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK20-NEXT:    leal (%edi,%edi), %eax
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %eax
+; FALLBACK20-NEXT:    orl %edx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movb %bl, %cl
+; FALLBACK20-NEXT:    movl %ebx, %eax
+; FALLBACK20-NEXT:    shrl %cl, %esi
+; FALLBACK20-NEXT:    addl %ebp, %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %esi, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK20-NEXT:    movl 100(%esp,%ebx), %ebp
+; FALLBACK20-NEXT:    movl %ebp, %edx
+; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    shrl %cl, %edx
+; FALLBACK20-NEXT:    movl 104(%esp,%ebx), %esi
+; FALLBACK20-NEXT:    leal (%esi,%esi), %eax
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %eax
+; FALLBACK20-NEXT:    orl %edx, %eax
+; FALLBACK20-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %edi
+; FALLBACK20-NEXT:    addl %ebp, %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %edi, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl 108(%esp,%ebx), %edi
+; FALLBACK20-NEXT:    movl %edi, %eax
+; FALLBACK20-NEXT:    movl %edx, %ecx
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    movl 112(%esp,%ebx), %ecx
+; FALLBACK20-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK20-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %eax, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %esi
+; FALLBACK20-NEXT:    addl %edi, %edi
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %edi
+; FALLBACK20-NEXT:    orl %esi, %edi
+; FALLBACK20-NEXT:    movl 116(%esp,%ebx), %esi
+; FALLBACK20-NEXT:    movl %esi, %eax
+; FALLBACK20-NEXT:    movb %dl, %cl
+; FALLBACK20-NEXT:    shrl %cl, %eax
+; FALLBACK20-NEXT:    movl 120(%esp,%ebx), %ebx
+; FALLBACK20-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %eax, %ebp
+; FALLBACK20-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK20-NEXT:    movl %edx, %eax
+; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK20-NEXT:    shrl %cl, %edx
+; FALLBACK20-NEXT:    addl %esi, %esi
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %esi
+; FALLBACK20-NEXT:    orl %edx, %esi
+; FALLBACK20-NEXT:    movb %al, %cl
+; FALLBACK20-NEXT:    movl %ebx, %edx
+; FALLBACK20-NEXT:    shrl %cl, %edx
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK20-NEXT:    movl 124(%esp,%ebx), %ebx
+; FALLBACK20-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK20-NEXT:    movb %ch, %cl
+; FALLBACK20-NEXT:    shll %cl, %ebp
+; FALLBACK20-NEXT:    orl %edx, %ebp
+; FALLBACK20-NEXT:    movl %eax, %ecx
 ; FALLBACK20-NEXT:    sarl %cl, %ebx
 ; FALLBACK20-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK20-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK20-NEXT:    movl %edx, 56(%eax)
+; FALLBACK20-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK20-NEXT:    movl %esi, 48(%eax)
-; FALLBACK20-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK20-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK20-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK20-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK20-NEXT:    movl %ecx, 44(%eax)
@@ -22528,91 +22549,90 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK21-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK21-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK21-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; FALLBACK21-NEXT:    movl %ecx, %ebp
-; FALLBACK21-NEXT:    andl $60, %ebp
-; FALLBACK21-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK21-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl %ecx, %eax
+; FALLBACK21-NEXT:    andl $60, %eax
+; FALLBACK21-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK21-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK21-NEXT:    shll $3, %ecx
-; FALLBACK21-NEXT:    andl $24, %ecx
-; FALLBACK21-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK21-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK21-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK21-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %edi
+; FALLBACK21-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
 ; FALLBACK21-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK21-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK21-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl %esi, %edx
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK21-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK21-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK21-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    movl %eax, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK21-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK21-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK21-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK21-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK21-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK21-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK21-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK21-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK21-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl %edi, %esi
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK21-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK21-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK21-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK21-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK21-NEXT:    movl %edx, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK21-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK21-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK21-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK21-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK21-NEXT:    movl %esi, 56(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK21-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK21-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK21-NEXT:    sarl %cl, %eax
-; FALLBACK21-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK21-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK21-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK21-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK21-NEXT:    movl %ebx, (%ebp)
-; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK21-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK21-NEXT:    sarl %cl, %edx
+; FALLBACK21-NEXT:    movl %edx, 60(%eax)
+; FALLBACK21-NEXT:    movl %edi, 48(%eax)
+; FALLBACK21-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK21-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK21-NEXT:    movl %ebp, (%eax)
+; FALLBACK21-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK21-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK21-NEXT:    addl $188, %esp
 ; FALLBACK21-NEXT:    popl %esi
 ; FALLBACK21-NEXT:    popl %edi
@@ -22663,7 +22683,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK22-NEXT:    movl %eax, %ecx
 ; FALLBACK22-NEXT:    leal (,%eax,8), %edx
-; FALLBACK22-NEXT:    andl $24, %edx
 ; FALLBACK22-NEXT:    andl $60, %ecx
 ; FALLBACK22-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK22-NEXT:    movl 72(%esp,%ecx), %edi
@@ -22671,6 +22690,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK22-NEXT:    shrxl %edx, %esi, %eax
 ; FALLBACK22-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK22-NEXT:    movl %edx, %ebx
+; FALLBACK22-NEXT:    andb $24, %bl
 ; FALLBACK22-NEXT:    notb %bl
 ; FALLBACK22-NEXT:    leal (%edi,%edi), %ebp
 ; FALLBACK22-NEXT:    shlxl %ebx, %ebp, %eax
@@ -22845,7 +22865,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK23-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK23-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    shll $3, %ecx
-; FALLBACK23-NEXT:    andl $24, %ecx
 ; FALLBACK23-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK23-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK23-NEXT:    movl 64(%esp,%ebp), %edi
@@ -22936,191 +22955,195 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK24-NEXT:    pushl %edi
 ; FALLBACK24-NEXT:    pushl %esi
 ; FALLBACK24-NEXT:    subl $204, %esp
-; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; FALLBACK24-NEXT:    vmovups (%ecx), %ymm0
-; FALLBACK24-NEXT:    vmovups 32(%ecx), %xmm1
-; FALLBACK24-NEXT:    movl 48(%ecx), %edx
-; FALLBACK24-NEXT:    movl 52(%ecx), %esi
-; FALLBACK24-NEXT:    movl 56(%ecx), %edi
-; FALLBACK24-NEXT:    movl 60(%ecx), %ecx
-; FALLBACK24-NEXT:    movl (%eax), %eax
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK24-NEXT:    vmovups (%eax), %ymm0
+; FALLBACK24-NEXT:    vmovups 32(%eax), %xmm1
+; FALLBACK24-NEXT:    movl 48(%eax), %edx
+; FALLBACK24-NEXT:    movl 52(%eax), %esi
+; FALLBACK24-NEXT:    movl 56(%eax), %edi
+; FALLBACK24-NEXT:    movl 60(%eax), %eax
+; FALLBACK24-NEXT:    movl (%ecx), %ecx
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK24-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    sarl $31, %ecx
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK24-NEXT:    movl %eax, %esi
-; FALLBACK24-NEXT:    andl $60, %esi
-; FALLBACK24-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK24-NEXT:    shll $3, %eax
-; FALLBACK24-NEXT:    andl $24, %eax
-; FALLBACK24-NEXT:    movl %edx, %edi
-; FALLBACK24-NEXT:    movl %eax, %ecx
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    movl 72(%esp,%esi), %ecx
+; FALLBACK24-NEXT:    sarl $31, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK24-NEXT:    movl %ecx, %edx
+; FALLBACK24-NEXT:    movl %ecx, %eax
+; FALLBACK24-NEXT:    andl $60, %eax
+; FALLBACK24-NEXT:    movl 68(%esp,%eax), %edi
+; FALLBACK24-NEXT:    movl %eax, %ebx
+; FALLBACK24-NEXT:    shll $3, %edx
+; FALLBACK24-NEXT:    movl %edi, %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    movl 72(%esp,%ebx), %ecx
 ; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK24-NEXT:    movb %al, %ch
+; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK24-NEXT:    movb %dl, %ch
+; FALLBACK24-NEXT:    andb $24, %ch
 ; FALLBACK24-NEXT:    notb %ch
 ; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %edi, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %edx, %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
-; FALLBACK24-NEXT:    orl %edi, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK24-NEXT:    movl %edx, %ebp
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK24-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %ebp, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %cl, %ebx
-; FALLBACK24-NEXT:    addl %edx, %edx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %edx
-; FALLBACK24-NEXT:    orl %ebx, %edx
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
-; FALLBACK24-NEXT:    movl %eax, %edx
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    addl %eax, %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
 ; FALLBACK24-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %edi, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %eax, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 64(%esp,%ebx), %eax
 ; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK24-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK24-NEXT:    shrl %cl, %eax
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %eax, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK24-NEXT:    movl %ebx, %ebp
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK24-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %eax
-; FALLBACK24-NEXT:    orl %ebp, %eax
-; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edi
-; FALLBACK24-NEXT:    addl %ebx, %ebx
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %edi, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 108(%esp,%esi), %edi
-; FALLBACK24-NEXT:    movl %edi, %ebp
-; FALLBACK24-NEXT:    movl %eax, %ecx
-; FALLBACK24-NEXT:    shrl %cl, %ebp
-; FALLBACK24-NEXT:    movl 112(%esp,%esi), %ecx
-; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK24-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebx
-; FALLBACK24-NEXT:    orl %ebp, %ebx
-; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %edx
 ; FALLBACK24-NEXT:    addl %edi, %edi
 ; FALLBACK24-NEXT:    movb %ch, %cl
 ; FALLBACK24-NEXT:    shll %cl, %edi
-; FALLBACK24-NEXT:    orl %edx, %edi
-; FALLBACK24-NEXT:    movl %esi, %edx
-; FALLBACK24-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK24-NEXT:    movl 116(%esp,%esi), %esi
-; FALLBACK24-NEXT:    movl %esi, %ebx
-; FALLBACK24-NEXT:    movb %al, %cl
-; FALLBACK24-NEXT:    shrl %cl, %ebx
-; FALLBACK24-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK24-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %ebp
-; FALLBACK24-NEXT:    orl %ebx, %ebp
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    movb %dl, %cl
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK24-NEXT:    shrl %cl, %ebx
-; FALLBACK24-NEXT:    addl %esi, %esi
-; FALLBACK24-NEXT:    movb %ch, %cl
-; FALLBACK24-NEXT:    shll %cl, %esi
-; FALLBACK24-NEXT:    orl %ebx, %esi
+; FALLBACK24-NEXT:    orl %eax, %edi
+; FALLBACK24-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 76(%esp,%ebx), %ebp
+; FALLBACK24-NEXT:    movl %ebp, %eax
 ; FALLBACK24-NEXT:    movb %dl, %cl
 ; FALLBACK24-NEXT:    shrl %cl, %eax
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK24-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK24-NEXT:    leal (%ebx,%ebx), %edx
+; FALLBACK24-NEXT:    movl 80(%esp,%ebx), %edi
+; FALLBACK24-NEXT:    leal (%edi,%edi), %esi
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %esi
+; FALLBACK24-NEXT:    orl %eax, %esi
+; FALLBACK24-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    addl %ebp, %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %eax, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 84(%esp,%ebx), %ebp
+; FALLBACK24-NEXT:    movl %ebp, %eax
+; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    movl 88(%esp,%ebx), %esi
+; FALLBACK24-NEXT:    leal (%esi,%esi), %edx
 ; FALLBACK24-NEXT:    movb %ch, %cl
 ; FALLBACK24-NEXT:    shll %cl, %edx
 ; FALLBACK24-NEXT:    orl %eax, %edx
-; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK24-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK24-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK24-NEXT:    movb %bl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %edi
+; FALLBACK24-NEXT:    addl %ebp, %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %edi, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK24-NEXT:    movl 92(%esp,%eax), %ebp
+; FALLBACK24-NEXT:    movl %ebp, %edx
+; FALLBACK24-NEXT:    movb %bl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %edx
+; FALLBACK24-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK24-NEXT:    leal (%edi,%edi), %eax
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %eax
+; FALLBACK24-NEXT:    orl %edx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movb %bl, %cl
+; FALLBACK24-NEXT:    movl %ebx, %eax
+; FALLBACK24-NEXT:    shrl %cl, %esi
+; FALLBACK24-NEXT:    addl %ebp, %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %esi, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK24-NEXT:    movl 100(%esp,%ebx), %ebp
+; FALLBACK24-NEXT:    movl %ebp, %edx
+; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    shrl %cl, %edx
+; FALLBACK24-NEXT:    movl 104(%esp,%ebx), %esi
+; FALLBACK24-NEXT:    leal (%esi,%esi), %eax
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %eax
+; FALLBACK24-NEXT:    orl %edx, %eax
+; FALLBACK24-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %edi
+; FALLBACK24-NEXT:    addl %ebp, %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %edi, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl 108(%esp,%ebx), %edi
+; FALLBACK24-NEXT:    movl %edi, %eax
+; FALLBACK24-NEXT:    movl %edx, %ecx
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    movl 112(%esp,%ebx), %ecx
+; FALLBACK24-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK24-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %eax, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %esi
+; FALLBACK24-NEXT:    addl %edi, %edi
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %edi
+; FALLBACK24-NEXT:    orl %esi, %edi
+; FALLBACK24-NEXT:    movl 116(%esp,%ebx), %esi
+; FALLBACK24-NEXT:    movl %esi, %eax
+; FALLBACK24-NEXT:    movb %dl, %cl
+; FALLBACK24-NEXT:    shrl %cl, %eax
+; FALLBACK24-NEXT:    movl 120(%esp,%ebx), %ebx
+; FALLBACK24-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %eax, %ebp
+; FALLBACK24-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK24-NEXT:    movl %edx, %eax
+; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK24-NEXT:    shrl %cl, %edx
+; FALLBACK24-NEXT:    addl %esi, %esi
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %esi
+; FALLBACK24-NEXT:    orl %edx, %esi
+; FALLBACK24-NEXT:    movb %al, %cl
+; FALLBACK24-NEXT:    movl %ebx, %edx
+; FALLBACK24-NEXT:    shrl %cl, %edx
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK24-NEXT:    movl 124(%esp,%ebx), %ebx
+; FALLBACK24-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK24-NEXT:    movb %ch, %cl
+; FALLBACK24-NEXT:    shll %cl, %ebp
+; FALLBACK24-NEXT:    orl %edx, %ebp
+; FALLBACK24-NEXT:    movl %eax, %ecx
 ; FALLBACK24-NEXT:    sarl %cl, %ebx
 ; FALLBACK24-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK24-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK24-NEXT:    movl %edx, 56(%eax)
+; FALLBACK24-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK24-NEXT:    movl %esi, 48(%eax)
-; FALLBACK24-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK24-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK24-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK24-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK24-NEXT:    movl %ecx, 44(%eax)
@@ -23191,91 +23214,90 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK25-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK25-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK25-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; FALLBACK25-NEXT:    movl %ecx, %ebp
-; FALLBACK25-NEXT:    andl $60, %ebp
-; FALLBACK25-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK25-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl %ecx, %eax
+; FALLBACK25-NEXT:    andl $60, %eax
+; FALLBACK25-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK25-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK25-NEXT:    shll $3, %ecx
-; FALLBACK25-NEXT:    andl $24, %ecx
-; FALLBACK25-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK25-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK25-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK25-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %edi
+; FALLBACK25-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
 ; FALLBACK25-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK25-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK25-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl %esi, %edx
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK25-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK25-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK25-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    movl %eax, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK25-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK25-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK25-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK25-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK25-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK25-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK25-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK25-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK25-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl %edi, %esi
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK25-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK25-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK25-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK25-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK25-NEXT:    movl %edx, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK25-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK25-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK25-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK25-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK25-NEXT:    movl %esi, 56(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK25-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK25-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK25-NEXT:    sarl %cl, %eax
-; FALLBACK25-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK25-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK25-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK25-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK25-NEXT:    movl %ebx, (%ebp)
-; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK25-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK25-NEXT:    sarl %cl, %edx
+; FALLBACK25-NEXT:    movl %edx, 60(%eax)
+; FALLBACK25-NEXT:    movl %edi, 48(%eax)
+; FALLBACK25-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK25-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK25-NEXT:    movl %ebp, (%eax)
+; FALLBACK25-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK25-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK25-NEXT:    addl $188, %esp
 ; FALLBACK25-NEXT:    popl %esi
 ; FALLBACK25-NEXT:    popl %edi
@@ -23325,7 +23347,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK26-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK26-NEXT:    movl %eax, %ecx
 ; FALLBACK26-NEXT:    leal (,%eax,8), %edx
-; FALLBACK26-NEXT:    andl $24, %edx
 ; FALLBACK26-NEXT:    andl $60, %ecx
 ; FALLBACK26-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK26-NEXT:    movl 72(%esp,%ecx), %edi
@@ -23333,6 +23354,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK26-NEXT:    shrxl %edx, %esi, %eax
 ; FALLBACK26-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK26-NEXT:    movl %edx, %ebx
+; FALLBACK26-NEXT:    andb $24, %bl
 ; FALLBACK26-NEXT:    notb %bl
 ; FALLBACK26-NEXT:    leal (%edi,%edi), %ebp
 ; FALLBACK26-NEXT:    shlxl %ebx, %ebp, %eax
@@ -23506,7 +23528,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK27-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK27-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK27-NEXT:    shll $3, %ecx
-; FALLBACK27-NEXT:    andl $24, %ecx
 ; FALLBACK27-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK27-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK27-NEXT:    movl 64(%esp,%ebp), %edi
@@ -23598,191 +23619,195 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK28-NEXT:    pushl %edi
 ; FALLBACK28-NEXT:    pushl %esi
 ; FALLBACK28-NEXT:    subl $204, %esp
-; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; FALLBACK28-NEXT:    vmovups (%ecx), %ymm0
-; FALLBACK28-NEXT:    vmovups 32(%ecx), %xmm1
-; FALLBACK28-NEXT:    movl 48(%ecx), %edx
-; FALLBACK28-NEXT:    movl 52(%ecx), %esi
-; FALLBACK28-NEXT:    movl 56(%ecx), %edi
-; FALLBACK28-NEXT:    movl 60(%ecx), %ecx
-; FALLBACK28-NEXT:    movl (%eax), %eax
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK28-NEXT:    vmovups (%eax), %ymm0
+; FALLBACK28-NEXT:    vmovups 32(%eax), %xmm1
+; FALLBACK28-NEXT:    movl 48(%eax), %edx
+; FALLBACK28-NEXT:    movl 52(%eax), %esi
+; FALLBACK28-NEXT:    movl 56(%eax), %edi
+; FALLBACK28-NEXT:    movl 60(%eax), %eax
+; FALLBACK28-NEXT:    movl (%ecx), %ecx
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
 ; FALLBACK28-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    sarl $31, %ecx
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; FALLBACK28-NEXT:    movl %eax, %esi
-; FALLBACK28-NEXT:    andl $60, %esi
-; FALLBACK28-NEXT:    movl 68(%esp,%esi), %edx
-; FALLBACK28-NEXT:    shll $3, %eax
-; FALLBACK28-NEXT:    andl $24, %eax
-; FALLBACK28-NEXT:    movl %edx, %edi
-; FALLBACK28-NEXT:    movl %eax, %ecx
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    movl 72(%esp,%esi), %ecx
+; FALLBACK28-NEXT:    sarl $31, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FALLBACK28-NEXT:    movl %ecx, %edx
+; FALLBACK28-NEXT:    movl %ecx, %eax
+; FALLBACK28-NEXT:    andl $60, %eax
+; FALLBACK28-NEXT:    movl 68(%esp,%eax), %edi
+; FALLBACK28-NEXT:    movl %eax, %ebx
+; FALLBACK28-NEXT:    shll $3, %edx
+; FALLBACK28-NEXT:    movl %edi, %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    movl 72(%esp,%ebx), %ecx
 ; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK28-NEXT:    movb %al, %ch
+; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK28-NEXT:    movb %dl, %ch
+; FALLBACK28-NEXT:    andb $24, %ch
 ; FALLBACK28-NEXT:    notb %ch
 ; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %edi, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 64(%esp,%esi), %edi
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %edx, %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
-; FALLBACK28-NEXT:    orl %edi, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 76(%esp,%esi), %edx
-; FALLBACK28-NEXT:    movl %edx, %ebp
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 80(%esp,%esi), %edi
-; FALLBACK28-NEXT:    leal (%edi,%edi), %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %ebp, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %cl, %ebx
-; FALLBACK28-NEXT:    addl %edx, %edx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %edx
-; FALLBACK28-NEXT:    orl %ebx, %edx
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 84(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
-; FALLBACK28-NEXT:    movl %eax, %edx
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 88(%esp,%esi), %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    addl %eax, %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
 ; FALLBACK28-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %edi, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 92(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %eax, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 64(%esp,%ebx), %eax
 ; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 96(%esp,%esi), %edi
-; FALLBACK28-NEXT:    leal (%edi,%edi), %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; FALLBACK28-NEXT:    shrl %cl, %eax
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %eax, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 100(%esp,%esi), %ebx
-; FALLBACK28-NEXT:    movl %ebx, %ebp
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 104(%esp,%esi), %edx
-; FALLBACK28-NEXT:    leal (%edx,%edx), %eax
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %eax
-; FALLBACK28-NEXT:    orl %ebp, %eax
-; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edi
-; FALLBACK28-NEXT:    addl %ebx, %ebx
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %edi, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 108(%esp,%esi), %edi
-; FALLBACK28-NEXT:    movl %edi, %ebp
-; FALLBACK28-NEXT:    movl %eax, %ecx
-; FALLBACK28-NEXT:    shrl %cl, %ebp
-; FALLBACK28-NEXT:    movl 112(%esp,%esi), %ecx
-; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebx
-; FALLBACK28-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebx
-; FALLBACK28-NEXT:    orl %ebp, %ebx
-; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %edx
 ; FALLBACK28-NEXT:    addl %edi, %edi
 ; FALLBACK28-NEXT:    movb %ch, %cl
 ; FALLBACK28-NEXT:    shll %cl, %edi
-; FALLBACK28-NEXT:    orl %edx, %edi
-; FALLBACK28-NEXT:    movl %esi, %edx
-; FALLBACK28-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK28-NEXT:    movl 116(%esp,%esi), %esi
-; FALLBACK28-NEXT:    movl %esi, %ebx
-; FALLBACK28-NEXT:    movb %al, %cl
-; FALLBACK28-NEXT:    shrl %cl, %ebx
-; FALLBACK28-NEXT:    movl 120(%esp,%edx), %eax
-; FALLBACK28-NEXT:    leal (%eax,%eax), %ebp
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %ebp
-; FALLBACK28-NEXT:    orl %ebx, %ebp
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    movb %dl, %cl
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; FALLBACK28-NEXT:    shrl %cl, %ebx
-; FALLBACK28-NEXT:    addl %esi, %esi
-; FALLBACK28-NEXT:    movb %ch, %cl
-; FALLBACK28-NEXT:    shll %cl, %esi
-; FALLBACK28-NEXT:    orl %ebx, %esi
+; FALLBACK28-NEXT:    orl %eax, %edi
+; FALLBACK28-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 76(%esp,%ebx), %ebp
+; FALLBACK28-NEXT:    movl %ebp, %eax
 ; FALLBACK28-NEXT:    movb %dl, %cl
 ; FALLBACK28-NEXT:    shrl %cl, %eax
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; FALLBACK28-NEXT:    movl 124(%esp,%edx), %ebx
-; FALLBACK28-NEXT:    leal (%ebx,%ebx), %edx
+; FALLBACK28-NEXT:    movl 80(%esp,%ebx), %edi
+; FALLBACK28-NEXT:    leal (%edi,%edi), %esi
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %esi
+; FALLBACK28-NEXT:    orl %eax, %esi
+; FALLBACK28-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    addl %ebp, %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %eax, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 84(%esp,%ebx), %ebp
+; FALLBACK28-NEXT:    movl %ebp, %eax
+; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    movl 88(%esp,%ebx), %esi
+; FALLBACK28-NEXT:    leal (%esi,%esi), %edx
 ; FALLBACK28-NEXT:    movb %ch, %cl
 ; FALLBACK28-NEXT:    shll %cl, %edx
 ; FALLBACK28-NEXT:    orl %eax, %edx
-; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; FALLBACK28-NEXT:    # kill: def $cl killed $cl killed $ecx
+; FALLBACK28-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK28-NEXT:    movb %bl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %edi
+; FALLBACK28-NEXT:    addl %ebp, %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %edi, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; FALLBACK28-NEXT:    movl 92(%esp,%eax), %ebp
+; FALLBACK28-NEXT:    movl %ebp, %edx
+; FALLBACK28-NEXT:    movb %bl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %edx
+; FALLBACK28-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK28-NEXT:    leal (%edi,%edi), %eax
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %eax
+; FALLBACK28-NEXT:    orl %edx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movb %bl, %cl
+; FALLBACK28-NEXT:    movl %ebx, %eax
+; FALLBACK28-NEXT:    shrl %cl, %esi
+; FALLBACK28-NEXT:    addl %ebp, %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %esi, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK28-NEXT:    movl 100(%esp,%ebx), %ebp
+; FALLBACK28-NEXT:    movl %ebp, %edx
+; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    shrl %cl, %edx
+; FALLBACK28-NEXT:    movl 104(%esp,%ebx), %esi
+; FALLBACK28-NEXT:    leal (%esi,%esi), %eax
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %eax
+; FALLBACK28-NEXT:    orl %edx, %eax
+; FALLBACK28-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %edi
+; FALLBACK28-NEXT:    addl %ebp, %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %edi, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl 108(%esp,%ebx), %edi
+; FALLBACK28-NEXT:    movl %edi, %eax
+; FALLBACK28-NEXT:    movl %edx, %ecx
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    movl 112(%esp,%ebx), %ecx
+; FALLBACK28-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    leal (%ecx,%ecx), %ebp
+; FALLBACK28-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %eax, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %esi
+; FALLBACK28-NEXT:    addl %edi, %edi
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %edi
+; FALLBACK28-NEXT:    orl %esi, %edi
+; FALLBACK28-NEXT:    movl 116(%esp,%ebx), %esi
+; FALLBACK28-NEXT:    movl %esi, %eax
+; FALLBACK28-NEXT:    movb %dl, %cl
+; FALLBACK28-NEXT:    shrl %cl, %eax
+; FALLBACK28-NEXT:    movl 120(%esp,%ebx), %ebx
+; FALLBACK28-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %eax, %ebp
+; FALLBACK28-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK28-NEXT:    movl %edx, %eax
+; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; FALLBACK28-NEXT:    shrl %cl, %edx
+; FALLBACK28-NEXT:    addl %esi, %esi
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %esi
+; FALLBACK28-NEXT:    orl %edx, %esi
+; FALLBACK28-NEXT:    movb %al, %cl
+; FALLBACK28-NEXT:    movl %ebx, %edx
+; FALLBACK28-NEXT:    shrl %cl, %edx
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; FALLBACK28-NEXT:    movl 124(%esp,%ebx), %ebx
+; FALLBACK28-NEXT:    leal (%ebx,%ebx), %ebp
+; FALLBACK28-NEXT:    movb %ch, %cl
+; FALLBACK28-NEXT:    shll %cl, %ebp
+; FALLBACK28-NEXT:    orl %edx, %ebp
+; FALLBACK28-NEXT:    movl %eax, %ecx
 ; FALLBACK28-NEXT:    sarl %cl, %ebx
 ; FALLBACK28-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FALLBACK28-NEXT:    movl %ebx, 60(%eax)
-; FALLBACK28-NEXT:    movl %edx, 56(%eax)
+; FALLBACK28-NEXT:    movl %ebp, 56(%eax)
 ; FALLBACK28-NEXT:    movl %esi, 48(%eax)
-; FALLBACK28-NEXT:    movl %ebp, 52(%eax)
+; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK28-NEXT:    movl %ecx, 52(%eax)
 ; FALLBACK28-NEXT:    movl %edi, 40(%eax)
 ; FALLBACK28-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; FALLBACK28-NEXT:    movl %ecx, 44(%eax)
@@ -23853,91 +23878,90 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK29-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK29-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; FALLBACK29-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; FALLBACK29-NEXT:    movl %ecx, %ebp
-; FALLBACK29-NEXT:    andl $60, %ebp
-; FALLBACK29-NEXT:    movl 56(%esp,%ebp), %edx
-; FALLBACK29-NEXT:    movl 52(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl %ecx, %eax
+; FALLBACK29-NEXT:    andl $60, %eax
+; FALLBACK29-NEXT:    movl 56(%esp,%eax), %esi
+; FALLBACK29-NEXT:    movl 52(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK29-NEXT:    shll $3, %ecx
-; FALLBACK29-NEXT:    andl $24, %ecx
-; FALLBACK29-NEXT:    shrdl %cl, %edx, %eax
-; FALLBACK29-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 64(%esp,%ebp), %edi
-; FALLBACK29-NEXT:    movl 60(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
+; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 64(%esp,%eax), %ebx
+; FALLBACK29-NEXT:    movl 60(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %edi
+; FALLBACK29-NEXT:    shrdl %cl, %ebx, %edi
+; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 72(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 68(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
 ; FALLBACK29-NEXT:    shrdl %cl, %edi, %esi
 ; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 72(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 68(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 80(%esp,%ebp), %edi
-; FALLBACK29-NEXT:    movl 76(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %edi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 88(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 84(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edx
-; FALLBACK29-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl %esi, %edx
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 96(%esp,%ebp), %esi
-; FALLBACK29-NEXT:    movl 92(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %esi, %edi
-; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; FALLBACK29-NEXT:    movl 104(%esp,%ebp), %edx
-; FALLBACK29-NEXT:    movl 100(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    movl %eax, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %esi
-; FALLBACK29-NEXT:    movl 48(%esp,%ebp), %ebx
-; FALLBACK29-NEXT:    movl 108(%esp,%ebp), %eax
-; FALLBACK29-NEXT:    shrdl %cl, %eax, %edx
-; FALLBACK29-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; FALLBACK29-NEXT:    movl %edx, 56(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; FALLBACK29-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 80(%esp,%eax), %ebx
+; FALLBACK29-NEXT:    movl 76(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %ebx, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK29-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 88(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 84(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %edi, %esi
+; FALLBACK29-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl %edi, %esi
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 96(%esp,%eax), %edi
+; FALLBACK29-NEXT:    movl 92(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %edi, %ebx
+; FALLBACK29-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; FALLBACK29-NEXT:    movl 104(%esp,%eax), %esi
+; FALLBACK29-NEXT:    movl 100(%esp,%eax), %edx
+; FALLBACK29-NEXT:    movl %edx, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %ebx
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %edi
+; FALLBACK29-NEXT:    movl 48(%esp,%eax), %ebp
+; FALLBACK29-NEXT:    movl 108(%esp,%eax), %edx
+; FALLBACK29-NEXT:    shrdl %cl, %edx, %esi
+; FALLBACK29-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FALLBACK29-NEXT:    movl %esi, 56(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; FALLBACK29-NEXT:    shrdl %cl, %esi, %ebp
 ; FALLBACK29-NEXT:    # kill: def $cl killed $cl killed $ecx
-; FALLBACK29-NEXT:    sarl %cl, %eax
-; FALLBACK29-NEXT:    movl %eax, 60(%ebp)
-; FALLBACK29-NEXT:    movl %esi, 48(%ebp)
-; FALLBACK29-NEXT:    movl %edi, 52(%ebp)
-; FALLBACK29-NEXT:    movl (%esp), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 40(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 44(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 32(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 36(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 24(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 28(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 16(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 20(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 8(%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 12(%ebp)
-; FALLBACK29-NEXT:    movl %ebx, (%ebp)
-; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; FALLBACK29-NEXT:    movl %eax, 4(%ebp)
+; FALLBACK29-NEXT:    sarl %cl, %edx
+; FALLBACK29-NEXT:    movl %edx, 60(%eax)
+; FALLBACK29-NEXT:    movl %edi, 48(%eax)
+; FALLBACK29-NEXT:    movl %ebx, 52(%eax)
+; FALLBACK29-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 40(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 44(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 32(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 36(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 24(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 28(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 16(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 20(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 8(%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 12(%eax)
+; FALLBACK29-NEXT:    movl %ebp, (%eax)
+; FALLBACK29-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; FALLBACK29-NEXT:    movl %ecx, 4(%eax)
 ; FALLBACK29-NEXT:    addl $188, %esp
 ; FALLBACK29-NEXT:    popl %esi
 ; FALLBACK29-NEXT:    popl %edi
@@ -23987,7 +24011,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK30-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; FALLBACK30-NEXT:    movl %eax, %ecx
 ; FALLBACK30-NEXT:    leal (,%eax,8), %edx
-; FALLBACK30-NEXT:    andl $24, %edx
 ; FALLBACK30-NEXT:    andl $60, %ecx
 ; FALLBACK30-NEXT:    movl 68(%esp,%ecx), %esi
 ; FALLBACK30-NEXT:    movl 72(%esp,%ecx), %edi
@@ -23995,6 +24018,7 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK30-NEXT:    shrxl %edx, %esi, %eax
 ; FALLBACK30-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK30-NEXT:    movl %edx, %ebx
+; FALLBACK30-NEXT:    andb $24, %bl
 ; FALLBACK30-NEXT:    notb %bl
 ; FALLBACK30-NEXT:    leal (%edi,%edi), %ebp
 ; FALLBACK30-NEXT:    shlxl %ebx, %ebp, %eax
@@ -24168,7 +24192,6 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK31-NEXT:    movl 52(%esp,%ebp), %eax
 ; FALLBACK31-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK31-NEXT:    shll $3, %ecx
-; FALLBACK31-NEXT:    andl $24, %ecx
 ; FALLBACK31-NEXT:    shrdl %cl, %edx, %eax
 ; FALLBACK31-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; FALLBACK31-NEXT:    movl 64(%esp,%ebp), %edi

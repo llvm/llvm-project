@@ -605,8 +605,9 @@ define void @load_1byte_chunk_of_16byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ;
 ; X86-NO-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_16byte_alloca:
 ; X86-NO-BMI2-NO-SHLD:       # %bb.0:
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    subl $40, %esp
+; X86-NO-BMI2-NO-SHLD-NEXT:    subl $36, %esp
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -618,18 +619,19 @@ define void @load_1byte_chunk_of_16byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
 ; X86-NO-BMI2-NO-SHLD-NEXT:    andb $12, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%edx), %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%esi), %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%esi), %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
-; X86-NO-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    movb %dl, (%eax)
-; X86-NO-BMI2-NO-SHLD-NEXT:    addl $40, %esp
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    orb %dl, %bl
+; X86-NO-BMI2-NO-SHLD-NEXT:    movb %bl, (%eax)
+; X86-NO-BMI2-NO-SHLD-NEXT:    addl $36, %esp
 ; X86-NO-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    retl
 ;
 ; X86-SHLD-LABEL: load_1byte_chunk_of_16byte_alloca:
@@ -673,12 +675,12 @@ define void @load_1byte_chunk_of_16byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx), %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orb %dl, %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movb %cl, (%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $40, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
@@ -1224,19 +1226,26 @@ define void @load_1byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X64-NO-BMI2:       # %bb.0:
 ; X64-NO-BMI2-NEXT:    movups (%rdi), %xmm0
 ; X64-NO-BMI2-NEXT:    movups 16(%rdi), %xmm1
-; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %ecx
+; X64-NO-BMI2-NEXT:    leal (,%rsi,8), %eax
 ; X64-NO-BMI2-NEXT:    xorps %xmm2, %xmm2
 ; X64-NO-BMI2-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
 ; X64-NO-BMI2-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
 ; X64-NO-BMI2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NO-BMI2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NO-BMI2-NEXT:    movl %ecx, %eax
-; X64-NO-BMI2-NEXT:    shrb $6, %al
-; X64-NO-BMI2-NEXT:    movzbl %al, %eax
-; X64-NO-BMI2-NEXT:    movq -72(%rsp,%rax,8), %rax
-; X64-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NO-BMI2-NEXT:    shrq %cl, %rax
-; X64-NO-BMI2-NEXT:    movb %al, (%rdx)
+; X64-NO-BMI2-NEXT:    movl %eax, %ecx
+; X64-NO-BMI2-NEXT:    shrb $6, %cl
+; X64-NO-BMI2-NEXT:    movzbl %cl, %esi
+; X64-NO-BMI2-NEXT:    movl -64(%rsp,%rsi,8), %edi
+; X64-NO-BMI2-NEXT:    addl %edi, %edi
+; X64-NO-BMI2-NEXT:    movl %eax, %ecx
+; X64-NO-BMI2-NEXT:    andb $56, %cl
+; X64-NO-BMI2-NEXT:    notb %cl
+; X64-NO-BMI2-NEXT:    shlq %cl, %rdi
+; X64-NO-BMI2-NEXT:    movq -72(%rsp,%rsi,8), %rsi
+; X64-NO-BMI2-NEXT:    movl %eax, %ecx
+; X64-NO-BMI2-NEXT:    shrq %cl, %rsi
+; X64-NO-BMI2-NEXT:    orb %sil, %dil
+; X64-NO-BMI2-NEXT:    movb %dil, (%rdx)
 ; X64-NO-BMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: load_1byte_chunk_of_32byte_alloca:
@@ -1252,14 +1261,22 @@ define void @load_1byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X64-BMI2-NEXT:    movl %esi, %eax
 ; X64-BMI2-NEXT:    shrb $6, %al
 ; X64-BMI2-NEXT:    movzbl %al, %eax
-; X64-BMI2-NEXT:    shrxq %rsi, -72(%rsp,%rax,8), %rax
-; X64-BMI2-NEXT:    movb %al, (%rdx)
+; X64-BMI2-NEXT:    shrxq %rsi, -72(%rsp,%rax,8), %rcx
+; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
+; X64-BMI2-NEXT:    andb $56, %sil
+; X64-BMI2-NEXT:    notb %sil
+; X64-BMI2-NEXT:    movl -64(%rsp,%rax,8), %eax
+; X64-BMI2-NEXT:    addl %eax, %eax
+; X64-BMI2-NEXT:    shlxq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    orb %al, %cl
+; X64-BMI2-NEXT:    movb %cl, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
 ; X86-NO-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_32byte_alloca:
 ; X86-NO-BMI2-NO-SHLD:       # %bb.0:
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    subl $72, %esp
+; X86-NO-BMI2-NO-SHLD-NEXT:    subl $68, %esp
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1273,18 +1290,19 @@ define void @load_1byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movaps %xmm0, (%esp)
 ; X86-NO-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    shrb $5, %dl
-; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%edx,4), %esi
-; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx,4), %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movzbl %dl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl (%esp,%esi,4), %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%esi,4), %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
-; X86-NO-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
-; X86-NO-BMI2-NO-SHLD-NEXT:    movb %dl, (%eax)
-; X86-NO-BMI2-NO-SHLD-NEXT:    addl $72, %esp
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    orb %dl, %bl
+; X86-NO-BMI2-NO-SHLD-NEXT:    movb %bl, (%eax)
+; X86-NO-BMI2-NO-SHLD-NEXT:    addl $68, %esp
 ; X86-NO-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
 ; X86-NO-BMI2-NO-SHLD-NEXT:    retl
 ;
 ; X86-SHLD-LABEL: load_1byte_chunk_of_32byte_alloca:
@@ -1332,12 +1350,12 @@ define void @load_1byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $5, %dl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx,4), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx,4), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edx,4), %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edx,4), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orb %dl, %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movb %cl, (%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $72, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi

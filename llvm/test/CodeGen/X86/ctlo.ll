@@ -53,9 +53,9 @@ define i8 @ctlo_i8(i8 %x) {
 ;
 ; X86-CLZ-LABEL: ctlo_i8:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    shll $24, %eax
-; X86-CLZ-NEXT:    notl %eax
+; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    notb %al
+; X86-CLZ-NEXT:    movzbl %al, %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    addb $-24, %al
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
