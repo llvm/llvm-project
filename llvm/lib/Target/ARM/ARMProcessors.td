@@ -382,6 +382,7 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
+                                                         FeatureTrustZone,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
