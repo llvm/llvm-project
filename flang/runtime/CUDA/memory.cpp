@@ -47,6 +47,7 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("host to host copy not supported");
   }
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
   CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, bytes, kind));
 }
 
