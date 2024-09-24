@@ -228,9 +228,13 @@ static void printOneOpBundle(OpAsmPrinter &p, OperandRange operands,
                              TypeRange operandTypes, StringRef tag) {
   p.printString(tag);
   p << "(";
-  p.printOperands(operands);
-  p << " : ";
-  llvm::interleaveComma(operandTypes, p);
+
+  if (!operands.empty()) {
+    p.printOperands(operands);
+    p << " : ";
+    llvm::interleaveComma(operandTypes, p);
+  }
+
   p << ")";
 }
 
@@ -1611,7 +1615,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
   else
     p << getOperand(0);
 
-  p << '(' << getOperands().drop_front(isDirect ? 0 : 1) << ')';
+  p << '(' << getCalleeOperands().drop_front(isDirect ? 0 : 1) << ')';
   p << " to ";
   p.printSuccessorAndUseList(getNormalDest(), getNormalDestOperands());
   p << " unwind ";
@@ -1635,8 +1639,9 @@ void InvokeOp::print(OpAsmPrinter &p) {
   p << " : ";
   if (!isDirect)
     p << getOperand(0).getType() << ", ";
-  p.printFunctionalType(llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1),
-                        getResultTypes());
+  p.printFunctionalType(
+      llvm::drop_begin(getCalleeOperands().getTypes(), isDirect ? 0 : 1),
+      getResultTypes());
 }
 
 // <operation> ::= `llvm.invoke` (cconv)? (function-id | ssa-use)
