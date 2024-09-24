@@ -359,7 +359,7 @@ bool UnwindPlan::Row::SetRegisterLocationToIsDWARFExpression(
   if (!can_replace &&
       m_register_locations.find(reg_num) != m_register_locations.end())
     return false;
-  RegisterLocation reg_loc;
+  AbstractRegisterLocation reg_loc;
   reg_loc.SetIsDWARFExpression(opcodes, len);
   m_register_locations[reg_num] = reg_loc;
   return true;
