@@ -1997,26 +1997,36 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 
 Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
                                                  BuiltinCheckKind Kind) {
-  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero ||
-          Kind == BCK_AssumePassedFalse) &&
-         "Unsupported builtin check kind");
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
+          && "Unsupported builtin check kind");
 
-  Value *ArgValue =
-      Kind == BCK_AssumePassedFalse ? EvaluateExprAsBool(E) : EmitScalarExpr(E);
+  Value *ArgValue = EmitScalarExpr(E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
   SanitizerScope SanScope(this);
-  Value *Cond =
-      Kind == BCK_AssumePassedFalse
-          ? ArgValue
-          : Builder.CreateICmpNE(
-                ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
+  Value *Cond = Builder.CreateICmpNE(
+      ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
   EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
             std::nullopt);
+  return ArgValue;
+}
+
+Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
+  Value *ArgValue = EvaluateExprAsBool(E);
+  if (!SanOpts.has(SanitizerKind::Builtin))
+    return ArgValue;
+
+  SanitizerScope SanScope(this);
+  EmitCheck(
+      std::make_pair(ArgValue, SanitizerKind::Builtin),
+      SanitizerHandler::InvalidBuiltin,
+      {EmitCheckSourceLocation(E->getExprLoc()),
+       llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
+      std::nullopt);
   return ArgValue;
 }
 
@@ -3433,8 +3443,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->HasSideEffects(getContext()))
       return RValue::get(nullptr);
 
-    Value *ArgValue =
-        EmitCheckedArgForBuiltin(E->getArg(0), BCK_AssumePassedFalse);
+    Value *ArgValue = EmitCheckedArgForAssume(E->getArg(0));
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
     Builder.CreateCall(FnAssume, ArgValue);
     return RValue::get(nullptr);
