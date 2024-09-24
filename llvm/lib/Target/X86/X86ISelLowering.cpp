@@ -43109,6 +43109,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::FMIN:
     case X86ISD::FMAXC:
     case X86ISD::FMINC:
+    case X86ISD::FRSQRT:
+    case X86ISD::FRCP:
       // Horizontal Ops.
     case X86ISD::HADD:
     case X86ISD::HSUB:
