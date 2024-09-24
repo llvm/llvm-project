@@ -26,6 +26,7 @@ using namespace llvm;
 
 static std::vector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
   std::vector<Type *> Types;
+  Types.reserve(FunctionArgs.size());
   for (Value *Arg : FunctionArgs)
     Types.push_back(Arg->getType());
   return Types;
