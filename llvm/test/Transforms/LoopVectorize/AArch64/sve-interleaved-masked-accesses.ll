@@ -55,15 +55,13 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_MASKED_VEC]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = or disjoint i32 [[TMP8]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[TMP12]])
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP14]]
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP13]] to i64
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP8]] to i64
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP16]]
-; SCALAR_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP17]], i64 -1
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP14]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK1:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]])
-; SCALAR_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP18]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK1]])
+; SCALAR_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP17]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK1]])
 ; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP20]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
