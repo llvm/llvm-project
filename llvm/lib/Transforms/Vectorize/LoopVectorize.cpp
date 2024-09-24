@@ -9794,11 +9794,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasSpeculativeEarlyExit()) {
-    reportVectorizationFailure(
-        "Auto-vectorization of early exit loops is not yet supported.",
-        "Auto-vectorization of early exit loops is not yet supported.",
-        "EarlyExitLoopsUnsupported", ORE, L);
+  if (LVL.hasUncountableEarlyExit()) {
+    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                               "early exit is not yet supported",
+                               "Auto-vectorization of loops with uncountable "
+                               "early exit is not yet supported",
+                               "UncountableEarlyExitLoopsUnsupported", ORE, L);
     return false;
   }
 
