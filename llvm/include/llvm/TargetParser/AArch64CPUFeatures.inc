@@ -73,8 +73,8 @@ enum CPUFeatures {
   FEAT_SSBS,
   FEAT_SSBS2,
   FEAT_BTI,
-  FEAT_LS64,
-  FEAT_LS64_V,
+  RESERVED_FEAT_LS64,   // previously used and now ABI legacy
+  RESERVED_FEAT_LS64_V, // previously used and now ABI legacy
   FEAT_LS64_ACCDATA,
   FEAT_WFXT,
   FEAT_SME_F64,

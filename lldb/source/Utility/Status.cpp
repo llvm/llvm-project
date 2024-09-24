@@ -81,6 +81,10 @@ static llvm::Error ErrorFromEnums(Status::ValueType err, ErrorType type,
     return llvm::make_error<MachKernelError>(
         std::error_code(err, std::system_category()));
   case eErrorTypeWin32:
+#ifdef _WIN32
+    if (err == NO_ERROR)
+      return llvm::Error::success();
+#endif
     return llvm::make_error<Win32Error>(
         std::error_code(err, std::system_category()));
   case eErrorTypePOSIX:

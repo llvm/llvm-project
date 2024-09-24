@@ -18,17 +18,17 @@
 ; Check that the extractvalue operands are actually free in vector code.
 
 ; FORCED:         [[E1:%.+]] = extractvalue { i64, i64 } %sv, 0
+; FORCED-NEXT:    [[E2:%.+]] = extractvalue { i64, i64 } %sv, 1
 ; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x i64> poison, i64 [[E1]], i64 0
 ; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    [[E2:%.+]] = extractvalue { i64, i64 } %sv, 1
 ; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x i64> poison, i64 [[E2]], i64 0
 ; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x i64> %broadcast.splatinsert1, <2 x i64> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    [[ADD:%.+]] = add <2 x i64> %broadcast.splat, %broadcast.splat2
 
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; FORCED-NEXT:    [[IV_0:%.]] = add i32 %index, 0
 ; FORCED-NEXT:    [[GEP:%.+]] = getelementptr i64, ptr %dst, i32 [[IV_0]]
-; FORCED-NEXT:    [[ADD:%.+]] = add <2 x i64> %broadcast.splat, %broadcast.splat2
 ; FORCED-NEXT:    [[GEP2:%.+]] = getelementptr i64, ptr [[GEP]], i32 0
 ; FORCED-NEXT:    store <2 x i64> [[ADD]], ptr [[GEP2]], align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
@@ -68,9 +68,9 @@ declare float @powf(float, float) readnone nounwind
 ; FORCED-LABEL: define void @test_getVectorCallCost
 
 ; FORCED:         [[E1:%.+]] = extractvalue { float, float } %sv, 0
+; FORCED-NEXT:    [[E2:%.+]] = extractvalue { float, float } %sv, 1
 ; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x float> poison, float [[E1]], i64 0
 ; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x float> %broadcast.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    [[E2:%.+]] = extractvalue { float, float } %sv, 1
 ; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x float> poison, float [[E2]], i64 0
 ; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x float> %broadcast.splatinsert1, <2 x float> poison, <2 x i32> zeroinitializer
 

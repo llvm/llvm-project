@@ -1598,7 +1598,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
       !cast<ConstantSDNode>(Idxen)->getSExtValue() &&
       !cast<ConstantSDNode>(Addr64)->getSExtValue()) {
     uint64_t Rsrc = TII->getDefaultRsrcDataFormat() |
-                    APInt::getAllOnes(32).getZExtValue(); // Size
+                    maskTrailingOnes<uint64_t>(32); // Size
     SDLoc DL(Addr);
 
     const SITargetLowering& Lowering =

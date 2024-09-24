@@ -508,13 +508,10 @@ public:
       // Sort contents.
       llvm::sort(H->second);
 
-      // Check whether we've seen this header before.
-      auto KnownH = AllHeaderContents.find(H->first);
-      if (KnownH == AllHeaderContents.end()) {
-        // We haven't seen this header before; record its contents.
-        AllHeaderContents.insert(*H);
+      // Record this header and its contents if we haven't seen it before.
+      auto [KnownH, Inserted] = AllHeaderContents.insert(*H);
+      if (Inserted)
         continue;
-      }
 
       // If the header contents are the same, we're done.
       if (H->second == KnownH->second)
