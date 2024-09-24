@@ -20,17 +20,17 @@ define float @decompose_complex_scalar(ptr %array) {
   ret float %res
 }
 
-define <4 x ptr> @decompose_complex_vector(ptr %array) {
+; A vector of pointers typed getelementptr
+define <4 x ptr> @decompose_complex_vector(ptr %array, <4 x ptr> %baseptrs) {
 ; CHECK-LABEL: @decompose_complex_vector(
 ; CHECK-NEXT:    [[VAL:%.*]] = load <4 x i32>, ptr [[ARRAY:%.*]], align 4
 ; CHECK-NEXT:    [[SEXTVAL_SCALE:%.*]] = shl nsw <4 x i32> [[VAL]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[SEXTVAL_SCALE]] to <4 x i64>
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr @mdlComplex, <4 x i64> [[TMP1]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, <4 x ptr> [[BASEPTRS:%.*]], <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x ptr> [[ARRAYIDX]]
 ;
   %val = load <4 x i32>, ptr %array, align 4
   %sextVal = sext <4 x i32> %val to <4 x i64>
-  %arrayidx = getelementptr inbounds [10000 x %"class.std::__1::complex"], ptr @mdlComplex, i32 0, <4 x i64> %sextVal
+  %arrayidx = getelementptr inbounds [10000 x %"class.std::__1::complex"], <4 x ptr> %baseptrs, <4 x i64> zeroinitializer, <4 x i64> %sextVal
   ret <4 x ptr> %arrayidx
 }
-
