@@ -190,9 +190,6 @@ configuration files for
 [clang-tidy](https://clang.llvm.org/extra/clang-tidy/), which should be used to
 ensure patches conform.
 
-One notable exception is the `test/` subdirectory which prefers `camelBack` for
-identifiers rather than `CamelCase`.
-
 A script at `utils/tidy-and-format.sh` can be run to help automate the task of
 ensuring all sources conform to the coding standards. To support the use of
 this script, any exceptions must be annotated in source comments, as described

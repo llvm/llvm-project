@@ -49,62 +49,62 @@
     }                                                                          \
   } while (0)
 
-typedef struct container {
-  char *data;
-  int sz;
+typedef struct Container {
+  char *Data;
+  int Sz;
 } container_t;
 
-void collect_symbolized_string(const char *input, void *data) {
-  int sz = strlen(input);
-  container_t *ptr = (container_t *)data;
-  ptr->data = (char *)malloc(sz + 1);
-  ptr->data[sz] = '\0';
-  ptr->sz = sz;
-  memcpy(ptr->data, input, sz);
+void collectSymbolizedString(const char *Input, void *Data) {
+  int Sz = strlen(Input);
+  container_t *Ptr = (container_t *)Data;
+  Ptr->Data = (char *)malloc(Sz + 1);
+  Ptr->Data[Sz] = '\0';
+  Ptr->Sz = Sz;
+  memcpy(Ptr->Data, Input, Sz);
 }
 
-void test_symbolized_string(container_t *symbol_container) {
+void testSymbolizedString(container_t *SymbolContainer) {
 
-  char *symbol_str = symbol_container->data;
-  CHECK(symbol_str, "Failed, symbol_str is NULL.\n");
+  char *SymbolStr = SymbolContainer->Data;
+  CHECK(SymbolStr, "Failed, symbol_str is NULL.\n");
 
-  char *space_pos = strchr(symbol_str, ' ');
-  CHECK(space_pos, "Expected spaces in %s\n", symbol_str);
+  char *SpacePos = strchr(SymbolStr, ' ');
+  CHECK(SpacePos, "Expected spaces in %s\n", SymbolStr);
 
-  char *line_col_pos = strchr(symbol_str, ':');
-  CHECK(line_col_pos, "Expected line:column information in %s\n", symbol_str);
+  char *LineColPos = strchr(SymbolStr, ':');
+  CHECK(LineColPos, "Expected line:column information in %s\n", SymbolStr);
 
-  char *newline_pos = strchr(symbol_str, '\n');
-  CHECK(newline_pos, "Expected '\\n' in %s", symbol_str);
+  char *NewlinePos = strchr(SymbolStr, '\n');
+  CHECK(NewlinePos, "Expected '\\n' in %s", SymbolStr);
 
-  size_t func_name_size = space_pos - symbol_str;
-  char *func_name = (char *)malloc(sizeof(char) * (func_name_size + 1));
+  size_t FuncNameSize = SpacePos - SymbolStr;
+  char *FuncName = (char *)malloc(sizeof(char) * (FuncNameSize + 1));
 
-  strncpy(func_name, symbol_str, func_name_size);
-  func_name[func_name_size] = '\0';
+  strncpy(FuncName, SymbolStr, FuncNameSize);
+  FuncName[FuncNameSize] = '\0';
 
-  size_t line_col_size = newline_pos - line_col_pos;
-  char *line_col = (char *)malloc(sizeof(char) * (line_col_size));
+  size_t LineColSize = NewlinePos - LineColPos;
+  char *LineCol = (char *)malloc(sizeof(char) * (LineColSize));
 
-  strncpy(line_col, line_col_pos + 1, line_col_size);
-  line_col[line_col_size - 1] = '\0';
+  strncpy(LineCol, LineColPos + 1, LineColSize);
+  LineCol[LineColSize - 1] = '\0';
 
-  if (strcmp(func_name,
+  if (strcmp(FuncName,
              "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz") &&
-      strcmp(line_col, "46:7 (approximate)")) {
+      strcmp(LineCol, "46:7 (approximate)")) {
     printf("mismatch:\n");
     printf("expected symbolized function name: "
            "'bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'\n");
-    printf("actual symbolized function name: '%s'\n", func_name);
+    printf("actual symbolized function name: '%s'\n", FuncName);
     printf("expected symbolized line:column output: '46:7 (approximate)'\n");
-    printf("actual symbolized line:column output: '%s'\n", line_col);
+    printf("actual symbolized line:column output: '%s'\n", LineCol);
     exit(0);
   }
 
-  printf("symbolized string is %s", symbol_str);
-  free(func_name);
-  free(line_col);
-  free(symbol_str);
+  printf("symbolized string is %s", SymbolStr);
+  free(FuncName);
+  free(LineCol);
+  free(SymbolStr);
 
   return;
 }
@@ -114,8 +114,8 @@ int main(int argc, char *argv[]) {
   char *Buf;
   amd_comgr_data_t DataIn;
   amd_comgr_status_t Status;
-  amd_comgr_symbolizer_info_t symbolizer;
-  container_t user_data;
+  amd_comgr_symbolizer_info_t Symbolizer;
+  container_t UserData;
 
   // Read input file
   Size = setBuf(TEST_OBJ_DIR "/symbolize-debug.so", &Buf);
@@ -134,24 +134,23 @@ int main(int argc, char *argv[]) {
   // Create symbolizer info and symbolize
   {
     printf("Test create symbolizer info\n");
-    Status = amd_comgr_create_symbolizer_info(DataIn,
-                                              &collect_symbolized_string,
-                                              &symbolizer);
+    Status = amd_comgr_create_symbolizer_info(DataIn, &collectSymbolizedString,
+                                              &Symbolizer);
     checkError(Status, "amd_comgr_create_symbolizer_info");
     // Use this command to get valid address
     // llvm-objdump --triple=amdgcn-amd-amdhsa -l --mcpu=gfx900 --disassemble
     // --source symbolize-debug.so
-    uint64_t address = 0x128;
-    Status = amd_comgr_symbolize(symbolizer, address, 1, (void *)&user_data);
+    uint64_t Address = 0x128;
+    Status = amd_comgr_symbolize(Symbolizer, Address, 1, (void *)&UserData);
     checkError(Status, "amd_comgr_symbolize");
 
-    test_symbolized_string(&user_data);
+    testSymbolizedString(&UserData);
   }
 
   // Destroy symbolizer info
   {
     printf("Test destroy symbolizer info\n");
-    Status = amd_comgr_destroy_symbolizer_info(symbolizer);
+    Status = amd_comgr_destroy_symbolizer_info(Symbolizer);
     checkError(Status, "amd_comgr_destroy_symbolizer_info");
     Status = amd_comgr_release_data(DataIn);
     checkError(Status, "amd_comgr_release_data");

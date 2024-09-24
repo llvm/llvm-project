@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
       DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *CodeGenOptions[] = {
-    "-mcode-object-version=5", "-mllvm", "-amdgpu-prelink"};
+  const char *CodeGenOptions[] = {"-mcode-object-version=5", "-mllvm",
+                                  "-amdgpu-prelink"};
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 

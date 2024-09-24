@@ -42,12 +42,12 @@
 #define MAX_ISA_NAME_SIZE 1024
 
 typedef enum {
-        none, // The feature is not supported by V2.
-        off,  // The feature is supported in V2 but always disabled.
-        on,   // The feature is supported in V2 but always enabled.
-        any   // The feature is supported in V2 for both disabled and
-              // enabled using different target names.
-        } feature_mode_t;
+  none, // The feature is not supported by V2.
+  off,  // The feature is supported in V2 but always disabled.
+  on,   // The feature is supported in V2 but always enabled.
+  any   // The feature is supported in V2 for both disabled and
+        // enabled using different target names.
+} feature_mode_t;
 
 typedef struct {
   const char *IsaName;
@@ -125,7 +125,7 @@ bool hasSubString(const char *String, const char *Sub) {
 }
 
 bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
-                        char *ExpectedIsaName, bool *needsCOV6) {
+                        char *ExpectedIsaName, bool *NeedsCoV6) {
   char TokenizedIsaName[MAX_ISA_NAME_SIZE];
 
   strncpy(TokenizedIsaName, IsaName, MAX_ISA_NAME_SIZE);
@@ -145,7 +145,7 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
     exit(1);
   }
 
-  *needsCOV6 = Isa->NeedsCOV6;
+  *NeedsCoV6 = Isa->NeedsCOV6;
   strncpy(ExpectedIsaName, Isa->IsaName, MAX_ISA_NAME_SIZE);
 
   feature_mode_t Sramecc = any;

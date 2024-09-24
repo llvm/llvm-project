@@ -44,7 +44,6 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using COMGR::DisassemHelper;
 
 template <class ELFT>
 void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {

@@ -25,10 +25,12 @@ using namespace COMGR;
 namespace COMGR {
 namespace TimeStatistics {
 
-static std::unique_ptr<PerfStats> PS = nullptr;
-static void dump() { PS->dumpPerfStats(); }
+namespace {
+std::unique_ptr<PerfStats> PS = nullptr;
+void dump() { PS->dumpPerfStats(); }
+} // namespace
 
-void GetLogFile(std::string &PerfLog) {
+void getLogFile(std::string &PerfLog) {
   if (std::optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
     PerfLog = (*RedirectLogs).str();
     return;
@@ -43,7 +45,7 @@ bool InitTimeStatistics(std::string LogFile) {
     }
 
     if (LogFile == "") {
-      GetLogFile(LogFile);
+      getLogFile(LogFile);
     }
 
     PS = std::make_unique<PerfStats>();
@@ -83,7 +85,7 @@ ProfilePoint::~ProfilePoint() {
 class PerfTimerWindows : public PerfTimerImpl {
 
 public:
-  PerfTimerWindows(){};
+  PerfTimerWindows() {};
   virtual bool Init() override {
     LARGE_INTEGER li;
     if (QueryPerformanceCounter(&li))

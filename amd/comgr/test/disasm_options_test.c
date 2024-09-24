@@ -152,8 +152,8 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_get_data(DataOut, &Count, Bytes);
   checkError(Status, "amd_comgr_get_data");
   if (!Bytes) {
-   printf("Failed, NULL Bytes\n");
-   return 1;
+    printf("Failed, NULL Bytes\n");
+    return 1;
   }
   expect(ExpectedOut, Bytes, Count);
   free(Bytes);

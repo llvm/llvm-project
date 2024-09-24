@@ -80,7 +80,8 @@ int main(int argc, char *argv[]) {
   expectSymbol(TEST_OBJ_DIR "/shared-v3.so",
                "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
                AMD_COMGR_SYMBOL_TYPE_FUNC);
-  expectSymbol(TEST_OBJ_DIR "/shared-v2.so", "foo", AMD_COMGR_SYMBOL_TYPE_OBJECT);
+  expectSymbol(TEST_OBJ_DIR "/shared-v2.so", "foo",
+               AMD_COMGR_SYMBOL_TYPE_OBJECT);
   expectSymbol(TEST_OBJ_DIR "/shared-v3.so", "foo",
                AMD_COMGR_SYMBOL_TYPE_OBJECT);
   return 0;

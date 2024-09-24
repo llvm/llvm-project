@@ -1,49 +1,49 @@
 #include "amd_comgr.h"
 #include "common.h"
 
-int test(const char *mangled_name, const char *expected_string) {
-  amd_comgr_data_t mangled_data;
-  amd_comgr_data_t demangled_data;
-  amd_comgr_status_t status;
+int test(const char *MangledName, const char *ExpectedString) {
+  amd_comgr_data_t MangledData;
+  amd_comgr_data_t DemangledData;
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BYTES, &mangled_data);
-  checkError(status, "amd_comgr_create_data");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BYTES, &MangledData);
+  checkError(Status, "amd_comgr_create_data");
 
-  size_t size = strlen(mangled_name);
-  status = amd_comgr_set_data(mangled_data, size, mangled_name);
-  checkError(status, "amd_comgr_set_data");
+  size_t Size = strlen(MangledName);
+  Status = amd_comgr_set_data(MangledData, Size, MangledName);
+  checkError(Status, "amd_comgr_set_data");
 
-  status = amd_comgr_demangle_symbol_name(mangled_data, &demangled_data);
-  checkError(status, "amd_comgr_demangle_symbol_name");
+  Status = amd_comgr_demangle_symbol_name(MangledData, &DemangledData);
+  checkError(Status, "amd_comgr_demangle_symbol_name");
 
-  size_t demangled_size = 0;
-  status = amd_comgr_get_data(demangled_data, &demangled_size, NULL);
-  checkError(status, "amd_comgr_get_data");
+  size_t DemangledSize = 0;
+  Status = amd_comgr_get_data(DemangledData, &DemangledSize, NULL);
+  checkError(Status, "amd_comgr_get_data");
 
-  if (demangled_size != strlen(expected_string)) {
+  if (DemangledSize != strlen(ExpectedString)) {
     fail(
         "demangled_string size (%d) does not match expected_string size(%d)\n");
   }
 
-  char *demangled_name = (char *)calloc(demangled_size, sizeof(char));
-  if (demangled_name == NULL) {
+  char *DemangledName = (char *)calloc(DemangledSize, sizeof(char));
+  if (DemangledName == NULL) {
     fail("calloc failed\n");
   }
 
-  status = amd_comgr_get_data(demangled_data, &demangled_size, demangled_name);
-  checkError(status, "amd_comgr_get_data");
+  Status = amd_comgr_get_data(DemangledData, &DemangledSize, DemangledName);
+  checkError(Status, "amd_comgr_get_data");
 
-  if (strncmp(demangled_name, expected_string, demangled_size) != 0) {
-    fail(">> expected %s \n >> got %s\n", expected_string, demangled_name);
+  if (strncmp(DemangledName, ExpectedString, DemangledSize) != 0) {
+    fail(">> expected %s \n >> got %s\n", ExpectedString, DemangledName);
   }
 
-  free(demangled_name);
+  free(DemangledName);
 
-  status = amd_comgr_release_data(mangled_data);
-  checkError(status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(MangledData);
+  checkError(Status, "amd_comgr_release_data");
 
-  status = amd_comgr_release_data(demangled_data);
-  checkError(status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DemangledData);
+  checkError(Status, "amd_comgr_release_data");
 
   return 0;
 }

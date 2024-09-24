@@ -42,10 +42,9 @@ using namespace llvm;
 
 namespace COMGR {
 
-static amd_comgr_status_t addObject(DataSet *DataSet,
-                                    amd_comgr_data_kind_t Kind,
-                                    const char *Name, const void *Data,
-                                    size_t Size) {
+namespace {
+amd_comgr_status_t addObject(DataSet *DataSet, amd_comgr_data_kind_t Kind,
+                             const char *Name, const void *Data, size_t Size) {
   DataObject *Obj = DataObject::allocate(Kind);
   if (!Obj) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
@@ -60,6 +59,7 @@ static amd_comgr_status_t addObject(DataSet *DataSet,
   DataSet->DataObjects.insert(Obj);
   return AMD_COMGR_STATUS_SUCCESS;
 }
+} // namespace
 
 #include "opencl1.2-c.inc"
 #include "opencl2.0-c.inc"
@@ -78,10 +78,13 @@ amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
 }
 
 #include "libraries.inc"
-llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>> getDeviceLibraries() {
+llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
+getDeviceLibraries() {
   static std::tuple<llvm::StringRef, llvm::StringRef> DeviceLibs[] = {
-#define AMD_DEVICE_LIBS_TARGET(target) \
-    {#target ".bc", llvm::StringRef(reinterpret_cast<const char *>(target##_lib), target##_lib_size)},
+#define AMD_DEVICE_LIBS_TARGET(target)                                         \
+  {#target ".bc",                                                              \
+   llvm::StringRef(reinterpret_cast<const char *>(target##_lib),               \
+                   target##_lib_size)},
 #include "libraries_defs.inc"
   };
   return DeviceLibs;

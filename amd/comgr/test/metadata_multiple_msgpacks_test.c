@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct test_meta_data_s {
+typedef struct TestMetaDataS {
   char *Buf;
   amd_comgr_data_t Data;
   amd_comgr_metadata_node_t Root;

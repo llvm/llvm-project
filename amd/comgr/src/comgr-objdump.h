@@ -57,7 +57,7 @@ class MachOObjectFile;
 class ObjectFile;
 class Archive;
 class RelocationRef;
-} // end namespace object
+} // namespace llvm::object
 
 namespace COMGR {
 class DisassemHelper {

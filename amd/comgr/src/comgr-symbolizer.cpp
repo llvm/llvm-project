@@ -36,10 +36,9 @@
  *
  ******************************************************************************/
 
-
-#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "comgr-symbolizer.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -47,14 +46,15 @@
 
 using namespace COMGR;
 
+namespace {
 // llvm symbolizer with default options
-static LLVMSymbolizer::Options getDefaultOptions() {
+LLVMSymbolizer::Options getDefaultOptions() {
   LLVMSymbolizer::Options Opt;
   Opt.SkipLineZero = true;
   return Opt;
 }
 
-static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
+llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   llvm::symbolize::PrinterConfig Config;
   Config.Pretty = true;
   Config.Verbose = false;
@@ -64,8 +64,8 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   return Config;
 }
 
-static llvm::symbolize::ErrorHandler symbolize_error_handler(
-    llvm::raw_string_ostream &OS) {
+llvm::symbolize::ErrorHandler
+symbolizeErrorHandler(llvm::raw_string_ostream &OS) {
   return
       [&](const llvm::ErrorInfoBase &ErrorInfo, llvm::StringRef ErrorBanner) {
         OS << ErrorBanner;
@@ -73,6 +73,7 @@ static llvm::symbolize::ErrorHandler symbolize_error_handler(
         OS << '\n';
       };
 }
+} // namespace
 
 Symbolizer::Symbolizer(std::unique_ptr<ObjectFile> &&CodeObject,
                        PrintSymbolCallback PrintSymbol)
@@ -113,7 +114,7 @@ amd_comgr_status_t Symbolizer::symbolize(uint64_t Address, bool IsCode,
   llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
   llvm::symbolize::Request Request{"", Address, ""};
   auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
-      OS, symbolize_error_handler(OS), Config);
+      OS, symbolizeErrorHandler(OS), Config);
   if (IsCode) {
     auto ResOrErr = SymbolizerImpl->symbolizeInlinedCode(
         *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection});

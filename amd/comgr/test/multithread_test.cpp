@@ -35,14 +35,14 @@
 
 #include "amd_comgr.h"
 #include "common.h"
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <chrono>
 #include <thread>
 #include <vector>
 
-int compile_min(int index) {
+int compileMin(int Index) {
 
   char *BufSource1, *BufSource2, *BufInclude;
   size_t SizeSource1, SizeSource2, SizeInclude;
@@ -198,11 +198,11 @@ int compile_min(int index) {
 
 int main(int argc, char *argv[]) {
 
-  std::vector<std::thread> compile_threads;
+  std::vector<std::thread> CompileThreads;
 
-  for (int i = 0; i < 30; i++)
-    compile_threads.push_back(std::thread (compile_min, i));
+  for (int I = 0; I < 30; I++)
+    CompileThreads.push_back(std::thread(compileMin, I));
 
-  for (auto &thread : compile_threads)
-    thread.join();
+  for (auto &Thread : CompileThreads)
+    Thread.join();
 }

@@ -326,8 +326,7 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-[[noreturn]] static void reportError(StringRef File,
-                                                std::error_code EC) {
+[[noreturn]] static void reportError(StringRef File, std::error_code EC) {
   assert(EC);
   errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
   exit(1);
@@ -343,9 +342,9 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-[[noreturn]] static void
-reportError(StringRef ArchiveName, StringRef FileName, llvm::Error E,
-            StringRef ArchitectureName = StringRef()) {
+[[noreturn]] static void reportError(StringRef ArchiveName, StringRef FileName,
+                                     llvm::Error E,
+                                     StringRef ArchitectureName = StringRef()) {
   assert(E);
   errs() << ToolName << ": ";
   if (ArchiveName != "") {
@@ -364,9 +363,10 @@ reportError(StringRef ArchiveName, StringRef FileName, llvm::Error E,
   exit(1);
 }
 
-[[noreturn]] static void
-reportError(StringRef ArchiveName, const object::Archive::Child &C,
-            llvm::Error E, StringRef ArchitectureName = StringRef()) {
+[[noreturn]] static void reportError(StringRef ArchiveName,
+                                     const object::Archive::Child &C,
+                                     llvm::Error E,
+                                     StringRef ArchitectureName = StringRef()) {
   Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
@@ -651,7 +651,7 @@ public:
        << format("// %012" PRIX64 ": ", Address.Address);
     typedef support::ulittle32_t U32;
     for (auto D : ArrayRef(reinterpret_cast<const U32 *>(Bytes.data()),
-                               Bytes.size() / sizeof(U32))) {
+                           Bytes.size() / sizeof(U32))) {
       // D should be explicitly casted to uint32_t here as it is passed
       // by format to snprintf as vararg.
       OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
@@ -1241,7 +1241,7 @@ addDynamicElfSymbols(const ObjectFile *Obj,
 } // end anonymous namespace
 
 void COMGR::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
-                                             bool InlineRelocs) {
+                                              bool InlineRelocs) {
   if (StartAddress > StopAddress) {
     error("Start address should be less than stop address");
   }
@@ -1899,8 +1899,8 @@ void COMGR::DisassemHelper::PrintSectionContents(const ObjectFile *Obj) {
 }
 
 void COMGR::DisassemHelper::PrintSymbolTable(const ObjectFile *O,
-                                            StringRef ArchiveName,
-                                            StringRef ArchitectureName) {
+                                             StringRef ArchiveName,
+                                             StringRef ArchitectureName) {
   OutS << "SYMBOL TABLE:\n";
 
   for (const SymbolRef &Symbol : O->symbols()) {
@@ -2106,7 +2106,7 @@ void COMGR::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
 }
 
 void COMGR::DisassemHelper::printPrivateFileHeaders(const ObjectFile *O,
-                                                   bool OnlyFirst) {
+                                                    bool OnlyFirst) {
   if (O->isELF()) {
     return printELFFileHeader(O);
   }
@@ -2114,7 +2114,7 @@ void COMGR::DisassemHelper::printPrivateFileHeaders(const ObjectFile *O,
 }
 
 void COMGR::DisassemHelper::DumpObject(ObjectFile *O,
-                                      const Archive *A = nullptr) {
+                                       const Archive *A = nullptr) {
   StringRef ArchiveName = A != nullptr ? A->getFileName() : "";
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
@@ -2159,7 +2159,6 @@ void COMGR::DisassemHelper::DumpObject(ObjectFile *O,
     DICtx->dump(OutS, DumpOpts);
   }
 }
-
 
 /// @brief Dump each object file in \a a;
 void COMGR::DisassemHelper::DumpArchive(const Archive *A) {
@@ -2216,7 +2215,7 @@ void COMGR::DisassemHelper::DumpInput(StringRef File) {
 // ------------------------------------------------------------------------------------
 amd_comgr_status_t
 COMGR::DisassemHelper::disassembleAction(StringRef Input,
-                                        ArrayRef<std::string> Options) {
+                                         ArrayRef<std::string> Options) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 

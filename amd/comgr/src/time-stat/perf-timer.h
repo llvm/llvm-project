@@ -11,7 +11,7 @@ protected:
   double PCFreq;
 
 public:
-  PerfTimerImpl() : CounterStart(0), PCFreq(0.0){};
+  PerfTimerImpl() : CounterStart(0), PCFreq(0.0) {};
   virtual ~PerfTimerImpl() = default;
   virtual bool Init() = 0;
   virtual double getCurrentTime() = 0;

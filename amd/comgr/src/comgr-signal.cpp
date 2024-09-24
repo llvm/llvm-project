@@ -40,46 +40,49 @@
 namespace COMGR {
 namespace signal {
 
+namespace {
 #ifndef _MSC_VER
-static const int Signals[] = {SIGHUP,
-                              SIGINT,
-                              SIGPIPE,
-                              SIGTERM,
-                              SIGUSR1,
-                              SIGUSR2,
-                              SIGILL,
-                              SIGTRAP,
-                              SIGABRT,
-                              SIGFPE,
-                              SIGBUS,
-                              SIGSEGV,
-                              SIGQUIT
+const int Signals[] = {SIGHUP,
+                       SIGINT,
+                       SIGPIPE,
+                       SIGTERM,
+                       SIGUSR1,
+                       SIGUSR2,
+                       SIGILL,
+                       SIGTRAP,
+                       SIGABRT,
+                       SIGFPE,
+                       SIGBUS,
+                       SIGSEGV,
+                       SIGQUIT
 #ifdef SIGSYS
-                              ,
-                              SIGSYS
+                       ,
+                       SIGSYS
 #endif
 #ifdef SIGXCPU
-                              ,
-                              SIGXCPU
+                       ,
+                       SIGXCPU
 #endif
 #ifdef SIGXFSZ
-                              ,
-                              SIGXFSZ
+                       ,
+                       SIGXFSZ
 #endif
 #ifdef SIGEMT
-                              ,
-                              SIGEMT
+                       ,
+                       SIGEMT
 #endif
 #ifdef SIGINFO
-                              ,
-                              SIGINFO
+                       ,
+                       SIGINFO
 #endif
 };
 
-static const unsigned NumSigs = std::size(Signals);
+const unsigned NumSigs = std::size(Signals);
 
-static struct sigaction SigActions[NumSigs];
+struct sigaction SigActions[NumSigs];
 #endif // _MSC_VER
+
+} // namespace
 
 amd_comgr_status_t saveHandlers() {
 #ifndef _MSC_VER

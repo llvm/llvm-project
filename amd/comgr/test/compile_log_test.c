@@ -39,17 +39,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-# undef unsetenv
+#undef unsetenv
 #ifdef _WIN32
 #define unsetenv(name) _putenv_s(name, "")
 #else
-# if !HAVE_DECL_UNSETENV
-#  if VOID_UNSETENV
-extern void unsetenv (const char *);
-#  else
-extern int unsetenv (const char *);
-#  endif
-# endif
+#if !HAVE_DECL_UNSETENV
+#if VOID_UNSETENV
+extern void unsetenv(const char *);
+#else
+extern int unsetenv(const char *);
+#endif
+#endif
 #endif
 
 int main(int argc, char *argv[]) {
@@ -57,9 +57,9 @@ int main(int argc, char *argv[]) {
   // For this test to pass when redirecting logs to stdout,
   // we need to temporarily undo the redirect
   if (getenv("AMD_COMGR_REDIRECT_LOGS") &&
-      ( !strcmp("stdout", getenv("AMD_COMGR_REDIRECT_LOGS")) ||
-        !strcmp("stderr", getenv("AMD_COMGR_REDIRECT_LOGS")) ))
-      unsetenv("AMD_COMGR_REDIRECT_LOGS");
+      (!strcmp("stdout", getenv("AMD_COMGR_REDIRECT_LOGS")) ||
+       !strcmp("stderr", getenv("AMD_COMGR_REDIRECT_LOGS"))))
+    unsetenv("AMD_COMGR_REDIRECT_LOGS");
 
   amd_comgr_data_t DataCl, DataAsm, DataBc, DataReloc;
   amd_comgr_data_set_t DataSetOut, DataSetCl, DataSetAsm, DataSetBc,

@@ -94,57 +94,57 @@ int main(int argc, char *argv[]) {
 #if 1
   // write bitcode
   {
-    size_t bytes_size = 0;
-    char *bytes = NULL;
+    size_t BytesSize = 0;
+    char *Bytes = NULL;
 
-    Status = amd_comgr_get_data(DataBc, &bytes_size, bytes);
+    Status = amd_comgr_get_data(DataBc, &BytesSize, Bytes);
     checkError(Status, "amd_comgr_get_data");
 
-    bytes = (char *) malloc(bytes_size);
+    Bytes = (char *)malloc(BytesSize);
 
-    Status = amd_comgr_get_data(DataBc, &bytes_size, bytes);
+    Status = amd_comgr_get_data(DataBc, &BytesSize, Bytes);
     checkError(Status, "amd_comgr_get_data");
 
-    const char *bitcode_file = "comgr_mangled.bc";
-    FILE *file = fopen(bitcode_file, "wb");
+    const char *BitcodeFile = "comgr_mangled.bc";
+    FILE *File = fopen(BitcodeFile, "wb");
 
-    if (file)
-      fwrite(bytes, bytes_size, 1, file);
+    if (File)
+      fwrite(Bytes, BytesSize, 1, File);
     else
       return AMD_COMGR_STATUS_ERROR;
 
-    fclose(file);
-    free(bytes);
+    fclose(File);
+    free(Bytes);
   }
 #endif
 
-  size_t numNames;
-  Status = amd_comgr_populate_mangled_names(DataBc, &numNames);
+  size_t NumNames;
+  Status = amd_comgr_populate_mangled_names(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  char *mangledSubstr = "__hip_cuid_";
-  bool bcFound = false;
+  char *MangledSubstr = "__hip_cuid_";
+  bool BcFound = false;
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_get_mangled_name(DataBc, I, &Size, NULL);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, mName);
+    char *MName = calloc(Size, sizeof(char));
+    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, MName);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    if (strstr(mName, mangledSubstr)) {
-      bcFound = true;
+    if (strstr(MName, MangledSubstr)) {
+      BcFound = true;
     }
 
-    free(mName);
+    free(MName);
   }
 
-  if (!bcFound) {
+  if (!BcFound) {
     printf("amd_get_mangled_name from bc Failed: "
            "(expected '%s*')\n",
-           mangledSubstr);
+           MangledSubstr);
     exit(1);
   }
 
@@ -211,30 +211,30 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_action_data_get_data(
       DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, 0, &DataExec);
 
-  Status = amd_comgr_populate_mangled_names(DataExec, &numNames);
+  Status = amd_comgr_populate_mangled_names(DataExec, &NumNames);
 
-  bool execFound = false;
+  bool ExecFound = false;
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_get_mangled_name(DataExec, I, &Size, NULL);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, mName);
+    char *MName = calloc(Size, sizeof(char));
+    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, MName);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    if (strstr(mName, mangledSubstr)) {
-      execFound = true;
+    if (strstr(MName, MangledSubstr)) {
+      ExecFound = true;
     }
 
-    free(mName);
+    free(MName);
   }
 
-  if (!execFound) {
+  if (!ExecFound) {
     printf("amd_get_mangled_name from exec Failed: "
            "(expected '%s*')\n",
-           mangledSubstr);
+           MangledSubstr);
     exit(1);
   }
 

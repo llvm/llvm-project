@@ -87,9 +87,8 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_do_action");
 
     size_t Count;
-    Status = amd_comgr_action_data_count(DataSetExec,
-                                         AMD_COMGR_DATA_KIND_EXECUTABLE,
-                                         &Count);
+    Status = amd_comgr_action_data_count(
+        DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
     checkError(Status, "amd_comgr_action_data_count");
 
     if (Count != 1) {
@@ -228,9 +227,8 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_do_action");
 
     size_t Count;
-    Status = amd_comgr_action_data_count(DataSetExec,
-                                         AMD_COMGR_DATA_KIND_EXECUTABLE,
-                                         &Count);
+    Status = amd_comgr_action_data_count(
+        DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
     checkError(Status, "amd_comgr_action_data_count");
 
     if (Count != 1) {

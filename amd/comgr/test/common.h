@@ -81,7 +81,7 @@ int setBuf(const char *infile, char **buf) {
   if (fseek(fp, 0, SEEK_SET) != 0)
     fail("fseek");
 
-  *buf = (char *) malloc(size + 1);
+  *buf = (char *)malloc(size + 1);
   if (!*buf)
     fail("malloc");
   if (fread(*buf, size, 1, fp) != 1)
@@ -132,7 +132,8 @@ void dumpData(amd_comgr_data_t Data, const char *OutFile) {
 
 amd_comgr_status_t printSymbol(amd_comgr_symbol_t symbol, void *userData) {
   amd_comgr_status_t status;
-  if (userData == NULL) return AMD_COMGR_STATUS_ERROR;
+  if (userData == NULL)
+    return AMD_COMGR_STATUS_ERROR;
 
   size_t nlen;
   status = amd_comgr_symbol_get_info(symbol, AMD_COMGR_SYMBOL_INFO_NAME_LENGTH,

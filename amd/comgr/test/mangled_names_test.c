@@ -131,8 +131,7 @@ int main(int argc, char *argv[]) {
   // Get bitcode mangled names
   amd_comgr_data_t DataBc;
 
-  Status = amd_comgr_action_data_get_data(DataSetLinked,
-                                          AMD_COMGR_DATA_KIND_BC,
+  Status = amd_comgr_action_data_get_data(DataSetLinked, AMD_COMGR_DATA_KIND_BC,
                                           0, &DataBc);
   checkError(Status, "amd_comgr_action_data_get_data");
 
@@ -163,41 +162,41 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  size_t numNames;
-  Status = amd_comgr_populate_mangled_names(DataBc, &numNames);
+  size_t NumNames;
+  Status = amd_comgr_populate_mangled_names(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (numNames != 3) {
+  if (NumNames != 3) {
     printf("amd_populate_mangled_names Failed: "
            "produced %zu bitcode names (expected 2)\n",
-           numNames);
+           NumNames);
     exit(1);
   }
 
-  const char *bcNames[] = {"__oclc_ABI_version", "source1", "source2"};
+  const char *BcNames[] = {"__oclc_ABI_version", "source1", "source2"};
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_get_mangled_name(DataBc, I, &Size, NULL);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, mName);
+    char *MName = calloc(Size, sizeof(char));
+    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, MName);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    if (!bcNames[I]) {
+    if (!BcNames[I]) {
       printf("Failed, bcNames[%ld] NULL\n", I);
       return 1;
     }
 
-    if (strcmp(mName, bcNames[I])) {
+    if (strcmp(MName, BcNames[I])) {
       printf("amd_get_mangled_name from bc Failed: "
              "produced '%s' (expected '%s')\n",
-             mName, bcNames[I]);
+             MName, BcNames[I]);
       exit(1);
     }
 
-    free(mName);
+    free(MName);
   }
 
   Status = amd_comgr_create_data_set(&DataSetReloc);
@@ -242,45 +241,44 @@ int main(int argc, char *argv[]) {
   // Get Mangled Names
   amd_comgr_data_t DataExec;
 
-  Status = amd_comgr_action_data_get_data(DataSetExec,
-                                          AMD_COMGR_DATA_KIND_EXECUTABLE,
-                                          0, &DataExec);
+  Status = amd_comgr_action_data_get_data(
+      DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, 0, &DataExec);
   checkError(Status, "amd_comgr_action_data_get_data");
 
-  Status = amd_comgr_populate_mangled_names(DataExec, &numNames);
+  Status = amd_comgr_populate_mangled_names(DataExec, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (numNames != 4) {
+  if (NumNames != 4) {
     printf("amd_populate_mangled_names Failed: "
            "produced %zu executable names (expected 4)\n",
-           numNames);
+           NumNames);
     exit(1);
   }
 
-  const char *execNames[] = {"source1", "source1.kd", "source2", "source2.kd"};
+  const char *ExecNames[] = {"source1", "source1.kd", "source2", "source2.kd"};
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_get_mangled_name(DataExec, I, &Size, NULL);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, mName);
+    char *MName = calloc(Size, sizeof(char));
+    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, MName);
     checkError(Status, "amd_comgr_get_mangled_name");
 
-    if (!execNames[I]) {
+    if (!ExecNames[I]) {
       printf("Failed, execNames[%ld] NULL\n", I);
       return 1;
     }
 
-    if (strcmp(mName, execNames[I])) {
+    if (strcmp(MName, ExecNames[I])) {
       printf("amd_get_mangled_name from executable Failed: "
              "produced '%s' (expected '%s')\n",
-             mName, execNames[I]);
+             MName, ExecNames[I]);
       exit(1);
     }
 
-    free(mName);
+    free(MName);
   }
 
   Status = amd_comgr_release_data(DataSource1);

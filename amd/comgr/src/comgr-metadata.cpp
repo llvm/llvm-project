@@ -55,7 +55,8 @@ namespace metadata {
 
 template <typename ELFT> using Elf_Note = typename ELFT::Note;
 
-static Expected<std::unique_ptr<ELFObjectFileBase>>
+namespace {
+Expected<std::unique_ptr<ELFObjectFileBase>>
 getELFObjectFileBase(DataObject *DataP) {
   std::unique_ptr<MemoryBuffer> Buf =
       MemoryBuffer::getMemBuffer(StringRef(DataP->Data, DataP->Size));
@@ -82,8 +83,8 @@ getELFObjectFileBase(DataObject *DataP) {
 /// processed without @p ProcessNote returning @c true; otherwise @c
 /// AMD_COMGR_STATUS_SUCCESS.
 template <class ELFT, typename F>
-static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
-                                          F ProcessNote) {
+amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
+                                   F ProcessNote) {
   const ELFFile<ELFT> &ELFFile = Obj->getELFFile();
 
   bool Found = false;
@@ -151,11 +152,10 @@ static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
 //
 // If merge is possible the function merges Kernel records
 // to @p To and returns @c true.
-static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
-                             llvm::msgpack::DocNode &To,
-                             const StringRef VersionStrKey,
-                             const StringRef PrintfStrKey,
-                             const StringRef KernelStrKey) {
+bool mergeNoteRecords(llvm::msgpack::DocNode &From, llvm::msgpack::DocNode &To,
+                      const StringRef VersionStrKey,
+                      const StringRef PrintfStrKey,
+                      const StringRef KernelStrKey) {
   if (!From.isMap()) {
     return false;
   }
@@ -221,8 +221,8 @@ static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
 }
 
 template <class ELFT>
-static bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
-                        llvm::msgpack::DocNode &Root) {
+bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
+                 llvm::msgpack::DocNode &Root) {
   auto DescString = Note.getDescAsStringRef(4);
 
   if (Note.getName() == "AMD" && Note.getType() == ELF::NT_AMD_HSA_METADATA) {
@@ -266,8 +266,8 @@ static bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
 }
 
 template <class ELFT>
-static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
-                                             DataMeta *MetaP) {
+amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
+                                      DataMeta *MetaP) {
   bool Found = false;
   llvm::msgpack::DocNode Root;
   const ELFFile<ELFT> &ELFFile = Obj->getELFFile();
@@ -328,6 +328,7 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
 
   return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 }
+} // namespace
 
 amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *MetaP) {
   auto ObjOrErr = getELFObjectFileBase(DataP);
@@ -423,8 +424,9 @@ typedef struct amdgpu_hsa_note_isa_s {
   char vendor_and_architecture_name[1]; // NOLINT(readability-identifier-naming)
 } amdgpu_hsa_note_isa_t;
 
-static bool getMachInfo(unsigned Mach, std::string &Processor,
-                        bool &SrameccSupported, bool &XnackSupported) {
+namespace {
+bool getMachInfo(unsigned Mach, std::string &Processor, bool &SrameccSupported,
+                 bool &XnackSupported) {
   auto *IsaIterator = std::find_if(
       std::begin(IsaInfos), std::end(IsaInfos),
       [Mach](const IsaInfo &IsaInfo) { return Mach == IsaInfo.ElfMachine; });
@@ -439,9 +441,8 @@ static bool getMachInfo(unsigned Mach, std::string &Processor,
 }
 
 // This function is an exact copy of the ROCr loader function of the same name.
-static std::string convertOldTargetNameToNew(const std::string &OldName,
-                                             bool IsFinalizer,
-                                             uint32_t EFlags) {
+std::string convertOldTargetNameToNew(const std::string &OldName,
+                                      bool IsFinalizer, uint32_t EFlags) {
   assert(!OldName.empty() && "Expecting non-empty old name");
 
   unsigned Mach = 0;
@@ -530,9 +531,8 @@ static std::string convertOldTargetNameToNew(const std::string &OldName,
 }
 
 template <class ELFT>
-static amd_comgr_status_t
-getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
-                          std::string &NoteIsaName) {
+amd_comgr_status_t getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
+                                             std::string &NoteIsaName) {
 
   auto ElfHeader = Obj->getELFFile().getHeader();
 
@@ -660,9 +660,8 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
 }
 
 template <class ELFT>
-static amd_comgr_status_t
-getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
-                           std::string &ElfIsaName) {
+amd_comgr_status_t getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
+                                              std::string &ElfIsaName) {
   auto ElfHeader = Obj->getELFFile().getHeader();
 
   switch (ElfHeader.e_ident[ELF::EI_CLASS]) {
@@ -764,8 +763,8 @@ getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
 }
 
 template <class ELFT>
-static amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
-                                            std::string &IsaName) {
+amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
+                                     std::string &IsaName) {
   auto ElfHeader = Obj->getELFFile().getHeader();
 
   if (ElfHeader.e_ident[ELF::EI_ABIVERSION] ==
@@ -775,6 +774,7 @@ static amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
 
   return getElfIsaNameFromElfHeader(Obj, IsaName);
 }
+} // namespace
 
 amd_comgr_status_t getElfIsaName(DataObject *DataP, std::string &IsaName) {
   auto ObjOrErr = getELFObjectFileBase(DataP);
@@ -910,21 +910,22 @@ bool isValidIsaName(StringRef IsaString) {
   return parseTargetIdentifier(IsaString, Ident) == AMD_COMGR_STATUS_SUCCESS;
 }
 
-static size_t constexpr strLiteralLength(char const *str) {
+namespace {
+size_t constexpr strLiteralLength(char const *Str) {
   size_t I = 0;
-  while (str[I]) {
+  while (Str[I]) {
     ++I;
   }
   return I;
 }
 
-static constexpr const char *OFFLOAD_KIND_HIP = "hip";
-static constexpr const char *OFFLOAD_KIND_HIPV4 = "hipv4";
-static constexpr const char *OFFLOAD_KIND_HCC = "hcc";
-static constexpr const char *CLANG_OFFLOAD_BUNDLER_MAGIC =
-    "__CLANG_OFFLOAD_BUNDLE__";
-static constexpr size_t OffloadBundleMagicLen =
-    strLiteralLength(CLANG_OFFLOAD_BUNDLER_MAGIC);
+constexpr const char *OffloadKindHip = "hip";
+constexpr const char *OffloadKindHipV4 = "hipv4";
+constexpr const char *OffloadKindHcc = "hcc";
+constexpr const char *ClangOffloadBundlerMagic = "__CLANG_OFFLOAD_BUNDLE__";
+constexpr size_t OffloadBundleMagicLen =
+    strLiteralLength(ClangOffloadBundlerMagic);
+} // namespace
 
 bool isCompatibleIsaName(StringRef IsaName, StringRef CodeObjectIsaName) {
   if (IsaName == CodeObjectIsaName) {
@@ -1023,7 +1024,7 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     return AMD_COMGR_STATUS_ERROR;
   }
 
-  if (Magic != CLANG_OFFLOAD_BUNDLER_MAGIC) {
+  if (Magic != ClangOffloadBundlerMagic) {
     if (DataP->DataKind == AMD_COMGR_DATA_KIND_BYTES) {
       return lookUpCodeObjectInSharedObject(DataP, QueryList, QueryListSize);
     }
@@ -1065,9 +1066,9 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     }
 
     const auto OffloadAndTargetId = BundleEntryID.split('-');
-    if (OffloadAndTargetId.first != OFFLOAD_KIND_HIP &&
-        OffloadAndTargetId.first != OFFLOAD_KIND_HIPV4 &&
-        OffloadAndTargetId.first != OFFLOAD_KIND_HCC) {
+    if (OffloadAndTargetId.first != OffloadKindHip &&
+        OffloadAndTargetId.first != OffloadKindHipV4 &&
+        OffloadAndTargetId.first != OffloadKindHcc) {
       continue;
     }
 
@@ -1091,7 +1092,7 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
 
     // Stop iterating over BundleEntryIDs once we have populated the entire
     // QueryList
-    if (Seen == (int) QueryListSize) {
+    if (Seen == (int)QueryListSize) {
       break;
     }
   }

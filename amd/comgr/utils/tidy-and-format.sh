@@ -17,7 +17,7 @@ if [ ! -e compile_commands.json ]; then
   exit 1
 fi
 
-../../clang-tools-extra/clang-tidy/tool/run-clang-tidy.py -fix
+../../clang-tools-extra/clang-tidy/tool/run-clang-tidy.py -fix -checks=-*,readability-identifier-naming,llvm-else-after-return,llvm-qualified-auto,llvm-namespace-comment,misc-unused-using-decls,misc-use-anonymous-namespace 2>&1 | grep -Ev 'Suppressed|header-filter|warnings generated|clang-tidy|^$'
 
 # FIXME: Drive this off of compile_commands.json
 find src/ test/ -type f -regex '.*\.\(c\|cpp\|h\|hpp\|cl\)$' -print0 \

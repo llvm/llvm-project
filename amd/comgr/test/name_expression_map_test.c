@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
 
   Status = amd_comgr_create_action_info(&DataAction);
   checkError(Status, "amd_comgr_create_action_info");
-  Status = amd_comgr_action_info_set_language(DataAction,
-                                              AMD_COMGR_LANGUAGE_HIP);
+  Status =
+      amd_comgr_action_info_set_language(DataAction, AMD_COMGR_LANGUAGE_HIP);
   checkError(Status, "amd_comgr_action_info_set_language");
   Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx900");
@@ -75,16 +75,16 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
 
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC,
-                               DataAction, DataSetIn, DataSetBc);
+  Status = amd_comgr_do_action(
+      AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC, DataAction,
+      DataSetIn, DataSetBc);
   checkError(Status, "amd_comgr_do_action");
 
   // Check name_expression_map for Bitcodes
   amd_comgr_data_t DataBc;
 
-  Status = amd_comgr_action_data_get_data(DataSetBc,
-                                          AMD_COMGR_DATA_KIND_BC,
-                                          0, &DataBc);
+  Status = amd_comgr_action_data_get_data(DataSetBc, AMD_COMGR_DATA_KIND_BC, 0,
+                                          &DataBc);
   checkError(Status, "amd_comgr_action_data_get_data");
 
 #if 0
@@ -114,46 +114,46 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  size_t numNames;
-  Status = amd_comgr_populate_name_expression_map(DataBc, &numNames);
+  size_t NumNames;
+  Status = amd_comgr_populate_name_expression_map(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_name_expression_map");
 
-  if (numNames != 2) {
+  if (NumNames != 2) {
     printf("amd_populate_name_expression_map Failed: "
            "produced %zu bitcode names (expected 2)\n",
-           numNames);
+           NumNames);
     exit(1);
   }
 
-  char *nameExpressions[] = {"my_kernel_BOO<static_cast<int>(2+1),float >",
+  char *NameExpressions[] = {"my_kernel_BOO<static_cast<int>(2+1),float >",
                              "my_kernel_FOO<static_cast<int>(2+1),float >"};
-  char *symbolNames[] = {"_Z13my_kernel_BOOILi3EfEvPT0_",
+  char *SymbolNames[] = {"_Z13my_kernel_BOOILi3EfEvPT0_",
                          "_Z13my_kernel_FOOILi3EfEvPT0_"};
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_map_name_expression_to_symbol_name(
-      DataBc, &Size, nameExpressions[I], NULL);
+        DataBc, &Size, NameExpressions[I], NULL);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    char *symbolName = calloc(Size, sizeof(char));
+    char *SymbolName = calloc(Size, sizeof(char));
     Status = amd_comgr_map_name_expression_to_symbol_name(
-      DataBc, &Size, nameExpressions[I], symbolName);
+        DataBc, &Size, NameExpressions[I], SymbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    if (!symbolNames[I]) {
+    if (!SymbolNames[I]) {
       printf("Failed, symbolNames[%ld] NULL\n", I);
       return 1;
     }
 
-    if (strcmp(symbolName, symbolNames[I])) {
+    if (strcmp(SymbolName, SymbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from bc Failed: "
              "produced '%s' (expected '%s')\n",
-             symbolName, symbolNames[I]);
+             SymbolName, SymbolNames[I]);
       exit(1);
     }
 
-    free(symbolName);
+    free(SymbolName);
   }
 
   Status = amd_comgr_create_data_set(&DataSetLinked);
@@ -213,13 +213,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-
   // Check name_expression_map for Code Objects
   amd_comgr_data_t DataExec;
 
-  Status = amd_comgr_action_data_get_data(DataSetExec,
-                                          AMD_COMGR_DATA_KIND_EXECUTABLE,
-                                          0, &DataExec);
+  Status = amd_comgr_action_data_get_data(
+      DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, 0, &DataExec);
 #if 0
   // write code object
   {
@@ -247,40 +245,40 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  Status = amd_comgr_populate_name_expression_map(DataExec, &numNames);
+  Status = amd_comgr_populate_name_expression_map(DataExec, &NumNames);
   checkError(Status, "amd_comgr_populate_name_expression_map");
 
-  if (numNames != 2) {
+  if (NumNames != 2) {
     printf("amd_populate_name_expression_map Failed: "
            "produced %zu code object names (expected 2)\n",
-           numNames);
+           NumNames);
     exit(1);
   }
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_map_name_expression_to_symbol_name(
-        DataExec, &Size, nameExpressions[I], NULL);
+        DataExec, &Size, NameExpressions[I], NULL);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    char *symbolName = calloc(Size, sizeof(char));
+    char *SymbolName = calloc(Size, sizeof(char));
     Status = amd_comgr_map_name_expression_to_symbol_name(
-        DataExec, &Size, nameExpressions[I], symbolName);
+        DataExec, &Size, NameExpressions[I], SymbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    if (!symbolNames[I]) {
+    if (!SymbolNames[I]) {
       printf("Failed, symbolNames[%ld] NULL\n", I);
       return 1;
     }
 
-    if (strcmp(symbolName, symbolNames[I])) {
+    if (strcmp(SymbolName, SymbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "
              "produced '%s' (expected '%s')\n",
-             symbolName, symbolNames[I]);
+             SymbolName, SymbolNames[I]);
       exit(1);
     }
 
-    free(symbolName);
+    free(SymbolName);
   }
 
   //
@@ -353,40 +351,40 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  Status = amd_comgr_populate_name_expression_map(DataExec2, &numNames);
+  Status = amd_comgr_populate_name_expression_map(DataExec2, &NumNames);
   checkError(Status, "amd_comgr_populate_name_expression_map");
 
-  if (numNames != 2) {
+  if (NumNames != 2) {
     printf("amd_populate_name_expression_map Failed: "
            "produced %zu code object names (expected 2)\n",
-           numNames);
+           NumNames);
     exit(1);
   }
 
-  for (size_t I = 0; I < numNames; ++I) {
+  for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
     Status = amd_comgr_map_name_expression_to_symbol_name(
-        DataExec2, &Size, nameExpressions[I], NULL);
+        DataExec2, &Size, NameExpressions[I], NULL);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    char *symbolName = calloc(Size, sizeof(char));
+    char *SymbolName = calloc(Size, sizeof(char));
     Status = amd_comgr_map_name_expression_to_symbol_name(
-        DataExec2, &Size, nameExpressions[I], symbolName);
+        DataExec2, &Size, NameExpressions[I], SymbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    if (!symbolNames[I]) {
+    if (!SymbolNames[I]) {
       printf("Failed, symbolNames[%ld] NULL\n", I);
       return 1;
     }
 
-    if (strcmp(symbolName, symbolNames[I])) {
+    if (strcmp(SymbolName, SymbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "
              "produced '%s' (expected '%s')\n",
-             symbolName, symbolNames[I]);
+             SymbolName, SymbolNames[I]);
       exit(1);
     }
 
-    free(symbolName);
+    free(SymbolName);
   }
 
   Status = amd_comgr_release_data(DataSource);

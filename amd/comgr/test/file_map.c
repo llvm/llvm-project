@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]) {
   int Ret;
-  amd_comgr_status_t status;
+  amd_comgr_status_t Status;
 
   const char *FileName = "comgr_map_test_file.txt";
 
@@ -21,29 +21,29 @@ int main(int argc, char *argv[]) {
 
   const char *Buffer = "abcdefghi";
   size_t Length = strlen(Buffer);
-  size_t bytes = WriteFile(FD, Buffer, Length);
-  if (bytes != Length) {
-    fail("Write failed with ret %d", bytes);
+  size_t Bytes = WriteFile(FD, Buffer, Length);
+  if (Bytes != Length) {
+    fail("Write failed with ret %d", Bytes);
   }
 
-  amd_comgr_data_t data_object;
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &data_object);
-  checkError(status, "amd_comgr_create_data");
+  amd_comgr_data_t DataObject;
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataObject);
+  checkError(Status, "amd_comgr_create_data");
 
-  uint64_t offset = 2;
-  status = amd_comgr_set_data_from_file_slice(data_object, FD, offset, Length);
-  checkError(status, "amd_comgr_get_file_slice");
+  uint64_t Offset = 2;
+  Status = amd_comgr_set_data_from_file_slice(DataObject, FD, Offset, Length);
+  checkError(Status, "amd_comgr_get_file_slice");
 
   char Slice[10];
   size_t SliceLength = Length - 2;
-  status = amd_comgr_get_data(data_object, &SliceLength, Slice);
-  checkError(status, "amd_comgr_get_data");
+  Status = amd_comgr_get_data(DataObject, &SliceLength, Slice);
+  checkError(Status, "amd_comgr_get_data");
 
-  if (SliceLength != Length - offset) {
+  if (SliceLength != Length - Offset) {
     fail("File Slice Length incorrect");
   }
 
-  if (!strncmp(Slice, Buffer, Length - offset)) {
+  if (!strncmp(Slice, Buffer, Length - Offset)) {
     fail("File Slice read failed");
   }
 

@@ -31,9 +31,7 @@ public:
                     std::function<void(llvm::raw_fd_ostream *)>>
         LogF(new (std::nothrow)
                  llvm::raw_fd_ostream(LogFile, EC, llvm::sys::fs::OF_Text),
-             [](llvm::raw_fd_ostream *fp) {
-               fp->close();
-             });
+             [](llvm::raw_fd_ostream *fp) { fp->close(); });
     if (EC) {
       std::cerr << "Failed to open log file " << LogFile << "for perf stats "
                 << EC.message() << "\n ";
