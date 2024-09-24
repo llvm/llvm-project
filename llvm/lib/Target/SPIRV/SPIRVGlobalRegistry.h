@@ -64,9 +64,9 @@ class SPIRVGlobalRegistry {
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
 
-  // The last MIR inserted defining a SPIR-V Type.
+  // Stores for each function the last inserted SPIR-V Type.
   // See: SPIRVGlobalRegistry::createOpType.
-  MachineInstr *LastInsertedType = nullptr;
+  DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;
 
   // if a function returns a pointer, this is to map it into TypedPointerType
   DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
@@ -347,7 +347,6 @@ public:
   MachineFunction *setCurrentFunc(MachineFunction &MF) {
     MachineFunction *Ret = CurMF;
     CurMF = &MF;
-    LastInsertedType = nullptr;
     return Ret;
   }
 

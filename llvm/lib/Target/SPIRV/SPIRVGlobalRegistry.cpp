@@ -152,16 +152,20 @@ SPIRVType *SPIRVGlobalRegistry::createOpType(
   auto oldInsertPoint = MIRBuilder.getInsertPt();
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
 
-  if (LastInsertedType == nullptr) {
+  auto LastInsertedType = LastInsertedTypeMap.find(CurMF);
+  if (LastInsertedType != LastInsertedTypeMap.end()) {
     MIRBuilder.setInsertPt(*MIRBuilder.getMF().begin(),
-                           MIRBuilder.getMF().begin()->begin());
+                           LastInsertedType->second->getIterator());
   } else {
     MIRBuilder.setInsertPt(*MIRBuilder.getMF().begin(),
-                           LastInsertedType->getIterator());
+                           MIRBuilder.getMF().begin()->begin());
+    auto Result = LastInsertedTypeMap.try_emplace(CurMF, nullptr);
+    assert(Result.second);
+    LastInsertedType = Result.first;
   }
 
   MachineInstr *Type = Op(MIRBuilder);
-  LastInsertedType = Type;
+  LastInsertedType->second = Type;
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
   return Type;
