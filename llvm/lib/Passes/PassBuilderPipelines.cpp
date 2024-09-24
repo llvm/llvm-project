@@ -1831,6 +1831,15 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
+    // Promoting by-reference arguments to by-value exposes more constants to
+    // IPSCCP.
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true)));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
