@@ -5070,6 +5070,7 @@ public:
   enum BuiltinCheckKind {
     BCK_CTZPassedZero,
     BCK_CLZPassedZero,
+    BCK_AssumePassedFalse,
   };
 
   /// Emits an argument for a call to a builtin. If the builtin sanitizer is
