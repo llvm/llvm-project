@@ -340,8 +340,8 @@ public:
   }
 
   mlir::Value VisitMemberExpr(MemberExpr *E);
-  mlir::Value VisitCompoundLiteralEpxr(CompoundLiteralExpr *E) {
-    llvm_unreachable("NYI");
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
+    return buildLoadOfLValue(E);
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *E);
@@ -1930,7 +1930,7 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   if (NumInitElements == 0) {
     // C++11 value-initialization for the scalar.
-    llvm_unreachable("NYI");
+    return buildNullValue(E->getType(), CGF.getLoc(E->getExprLoc()));
   }
 
   return Visit(E->getInit(0));
