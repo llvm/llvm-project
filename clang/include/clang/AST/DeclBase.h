@@ -680,6 +680,9 @@ public:
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
+  /// Whether this declaration comes from global module.
+  bool isFromGlobalModule() const;
+
   /// Whether this declaration comes from a named module.
   bool isInNamedModule() const;
 
