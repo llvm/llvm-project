@@ -9986,8 +9986,8 @@ public:
         }
         Cost += ::getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
-            FixedVectorType::get(ScalarTy, CommonMask.size()), {}, CostKind,
-            Idx, FixedVectorType::get(ScalarTy, E->getVectorFactor()));
+            getWidenedType(ScalarTy, CommonMask.size()), {}, CostKind, Idx,
+            getWidenedType(ScalarTy, E->getVectorFactor()));
         if (!CommonMask.empty()) {
           std::iota(std::next(CommonMask.begin(), Idx),
                     std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
