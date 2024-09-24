@@ -27,7 +27,7 @@ Characteristics
   * Vendors: Toolchain vendors can also provide custom implementation of the
     library, which could either override or extend the given tool's upstream
     implementation, to best fit their organization's usage and privacy models.
-  * End users of such tool can also configure Telemetry(as allowed by their
+  * End users of such tool can also configure Telemetry (as allowed by their
     vendor).
 
 
