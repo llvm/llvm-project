@@ -78,7 +78,6 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-ConfigWrapper elf::config;
 Ctx elf::ctx;
 
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
@@ -91,9 +90,11 @@ void elf::errorOrWarn(const Twine &msg) {
     error(msg);
 }
 
-Ctx::Ctx() : arg(config.c), driver(*this) {}
+Ctx::Ctx() : driver(*this) {}
 
 void Ctx::reset() {
+  arg.~Config();
+  new (&arg) Config();
   driver.~LinkerDriver();
   new (&driver) LinkerDriver(*this);
   script = nullptr;
@@ -162,8 +163,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   context->e.errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
-
-  config = ConfigWrapper();
 
   LinkerScript script(ctx);
   ctx.script = &script;
