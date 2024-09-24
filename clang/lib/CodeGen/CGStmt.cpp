@@ -754,8 +754,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
       if (getLangOpts().CXXAssumptions &&
           !Assumption->HasSideEffects(getContext())) {
-        llvm::Value *AssumptionVal =
-            EmitCheckedArgForBuiltin(Assumption, BCK_AssumePassedFalse);
+        llvm::Value *AssumptionVal = EmitCheckedArgForAssume(Assumption);
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
