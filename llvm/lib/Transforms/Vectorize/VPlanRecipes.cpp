@@ -2364,6 +2364,32 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   State.set(this, Res, 0);
 }
 
+InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
+                                                  VPCostContext &Ctx) const {
+  if (!Consecutive || IsMasked) {
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+  }
+
+  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // here because the EVL recipes using EVL to replace the tail mask. But in the
+  // legacy model, it will always calculate the cost of mask.
+  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // don't need to compare to the legacy cost model.
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
+      Ingredient.getOpcode(), Ty, Alignment, AS, CostKind);
+  if (!Reverse)
+    return Cost;
+
+  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                       cast<VectorType>(Ty), {}, CostKind, 0);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                  VPSlotTracker &SlotTracker) const {
@@ -2466,39 +2492,28 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
                                                    VPCostContext &Ctx) const {
+  if (!Consecutive || IsMasked) {
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+  }
+
+  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // here because the EVL recipes using EVL to replace the tail mask. But in the
+  // legacy model, it will always calculate the cost of mask.
+  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // don't need to compare to the legacy cost model.
   Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment =
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-
-  if (!Consecutive) {
-    // TODO: Using the original IR may not be accurate.
-    // Currently, ARM will use the underlying IR to calculate gather/scatter
-    // instruction cost.
-    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-    assert(!Reverse &&
-           "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(Ty) +
-           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
-                                          IsMasked, Alignment, CostKind,
-                                          &Ingredient);
-  }
-
-  InstructionCost Cost = 0;
-  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
-  // here because the EVL recipes using EVL to replace the tail mask. But in the
-  // legacy model, it will always calculate the cost of mask.
-  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
-  // don't need to care the legacy cost model.
-  Cost += Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
-                                        AS, CostKind);
+  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
+      Ingredient.getOpcode(), Ty, Alignment, AS, CostKind);
   if (!Reverse)
     return Cost;
 
-  return Cost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                        cast<VectorType>(Ty), {}, CostKind, 0);
+  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                       cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
