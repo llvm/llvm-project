@@ -1398,7 +1398,6 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
 ; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE17:%.*]] ]
-; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 4
 ; VEC4_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
 ; VEC4_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
@@ -1443,6 +1442,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP4]], i64 0
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
 ; VEC4_INTERL2:       pred.store.if10:
+; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 4
 ; VEC4_INTERL2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
 ; VEC4_INTERL2-NEXT:    [[TMP21:%.*]] = fadd fast float [[DOTCAST2]], 4.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP21]], ptr [[TMP20]], align 4

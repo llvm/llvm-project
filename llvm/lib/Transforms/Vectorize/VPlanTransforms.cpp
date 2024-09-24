@@ -510,7 +510,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
                 [](VPValue *V) { return V->getNumUsers() == 0; });
 }
 
-static void removeDeadRecipes(VPlan &Plan) {
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
