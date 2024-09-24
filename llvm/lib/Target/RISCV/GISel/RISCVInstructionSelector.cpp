@@ -758,13 +758,21 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
                                                  MachineIRBuilder &MIB,
                                                  MachineRegisterInfo &MRI) {
   Register PtrReg = Op.getReg();
-  assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
-
+  const LLT PtrTy = MRI.getType(PtrReg);
   const LLT sXLen = LLT::scalar(STI.getXLen());
-  auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
-  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
-  Op.setReg(PtrToInt.getReg(0));
-  return select(*PtrToInt);
+  if (PtrTy.isPointer()) {
+    auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
+    MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
+    Op.setReg(PtrToInt.getReg(0));
+    return select(*PtrToInt);
+  }
+  assert(PtrTy.isPointerVector() &&
+         "Operand must be a pointer of a vector of pointers");
+  assert(PtrTy.isScalableVector() &&
+         "Currently only working for scalable vector of pointers now");
+  MRI.setType(PtrReg, LLT::scalable_vector(
+                          PtrTy.getElementCount().getKnownMinValue(), sXLen));
+  return true;
 }
 
 void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
@@ -791,17 +799,20 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
   case TargetOpcode::G_LOAD: {
     Register DstReg = MI.getOperand(0).getReg();
     const LLT DstTy = MRI.getType(DstReg);
-    if (!(DstTy.isVector() && DstTy.getElementType().isPointer()))
-        break;
-    const LLT sXLen = LLT::scalar(STI.getXLen());
-    MRI.setType(DstReg, LLT::scalable_vector(DstTy.getElementCount().getKnownMinValue(), sXLen));
+    if (!DstTy.isPointerVector() &&
+        "Destination register that's not a vector of pointers doesn't need to "
+        "go through preISelLower")
+      break;
+    replacePtrWithInt(MI.getOperand(0), MIB, MRI);
     break;
   }
   case TargetOpcode::G_STORE: {
     MachineOperand &SrcOp = MI.getOperand(0);
     const LLT SrcTy = MRI.getType(SrcOp.getReg());
-    if (!(SrcTy.isVector() && SrcTy.getElementType().isPointer()))
-        break;
+    if (!SrcTy.isPointerVector() &&
+        "Source register that's not a vector of pointers doesn't need to go "
+        "through preISelLower")
+      break;
     const LLT sXLen = LLT::scalar(STI.getXLen());
     auto Copy = MIB.buildCopy(LLT::scalable_vector(SrcTy.getElementCount().getKnownMinValue(), sXLen), SrcOp);
     Register NewSrc = Copy.getReg(0);
