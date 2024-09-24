@@ -253,7 +253,7 @@ static ParseResult parseOneOpBundle(
     SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
     SmallVector<SmallVector<Type>> &opBundleOperandTypes,
     SmallVector<std::string> &opBundleTags) {
-  auto currentParserLoc = p.getCurrentLocation();
+  SMLoc currentParserLoc = p.getCurrentLocation();
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
   SmallVector<Type> types;
   std::string tag;
@@ -1189,18 +1189,12 @@ LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
 template <typename OpType>
 static LogicalResult verifyOperandBundles(OpType &op) {
   OperandRangeRange opBundleOperands = op.getOpBundleOperands();
-  std::optional<ArrayRef<std::string>> opBundleTags = op.getOpBundleTags();
+  ArrayRef<std::string> opBundleTags = op.getOpBundleTags();
 
-  if (!opBundleTags.has_value()) {
-    if (!opBundleOperands.empty())
-      return op.emitError("expected operand bundle tags");
-    return success();
-  }
-
-  if (opBundleTags->size() != opBundleOperands.size())
+  if (opBundleTags.size() != opBundleOperands.size())
     return op.emitError("expected ")
            << opBundleOperands.size()
-           << " operand bundle tags, but actually got " << opBundleTags->size();
+           << " operand bundle tags, but actually got " << opBundleTags.size();
 
   return success();
 }
@@ -1405,12 +1399,9 @@ static ParseResult resolveOpBundleOperands(
     ArrayRef<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands,
     ArrayRef<SmallVector<Type>> opBundleOperandTypes,
     StringAttr opBundleSizesAttrName) {
-  assert(opBundleOperands.size() == opBundleOperandTypes.size() &&
-         "operand bundle operand groups and type groups should match");
-
   unsigned opBundleIndex = 0;
   for (const auto &[operands, types] :
-       llvm::zip(opBundleOperands, opBundleOperandTypes)) {
+       llvm::zip_equal(opBundleOperands, opBundleOperandTypes)) {
     if (operands.size() != types.size())
       return parser.emitError(loc, "expected ")
              << operands.size()
@@ -1422,9 +1413,8 @@ static ParseResult resolveOpBundleOperands(
 
   SmallVector<int32_t> opBundleSizes;
   opBundleSizes.reserve(opBundleOperands.size());
-  for (const auto &operands : opBundleOperands) {
+  for (const auto &operands : opBundleOperands)
     opBundleSizes.push_back(operands.size());
-  }
 
   state.addAttribute(
       opBundleSizesAttrName,
@@ -1436,10 +1426,8 @@ static ParseResult resolveOpBundleOperands(
 // <operation> ::= `llvm.call` (cconv)? (tailcallkind)? (function-id | ssa-use)
 //                             `(` ssa-use-list `)`
 //                             ( `vararg(` var-callee-type `)` )?
-//                             ( `bundlearg(` ssa-use-list-list `)` )?
-//                             ( `bundletags(` str-elements-attr `) )
+//                             ( `[` op-bundles-list `]` )?
 //                             attribute-dict? `:` (type `,`)? function-type
-//                             (`,` `bundletype(` type-list-list `)`)?
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SymbolRefAttr funcAttr;
   TypeAttr varCalleeType;
@@ -1487,10 +1475,10 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
-  auto opBundlesLoc = parser.getCurrentLocation();
-  if (auto result = parseOpBundles(parser, opBundleOperands,
-                                   opBundleOperandTypes, opBundleTags);
-      result.has_value() && failed(*result))
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
     return failure();
   if (!opBundleTags.empty())
     result.getOrAddProperties<CallOp::Properties>().op_bundle_tags =
@@ -1657,10 +1645,8 @@ void InvokeOp::print(OpAsmPrinter &p) {
 //                  `to` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
 //                  ( `vararg(` var-callee-type `)` )?
-//                  ( `bundlearg(` ssa-use-list-list `)` )?
-//                  ( `bundletags(` str-elements-attr `) )
+//                  ( `[` op-bundles-list `]` )?
 //                  attribute-dict? `:` (type `,`)? function-type
-//                  (`,` `bundletype(` type-list-list `)`)?
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   SymbolRefAttr funcAttr;
@@ -1708,10 +1694,10 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
-  auto opBundlesLoc = parser.getCurrentLocation();
-  if (auto result = parseOpBundles(parser, opBundleOperands,
-                                   opBundleOperandTypes, opBundleTags);
-      result.has_value() && failed(*result))
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
     return failure();
   if (!opBundleTags.empty())
     result.getOrAddProperties<InvokeOp::Properties>().op_bundle_tags =

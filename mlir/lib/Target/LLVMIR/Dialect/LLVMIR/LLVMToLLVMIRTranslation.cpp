@@ -107,7 +107,7 @@ convertOperandBundle(OperandRange bundleOperands, StringRef bundleTag,
                      LLVM::ModuleTranslation &moduleTranslation) {
   std::vector<llvm::Value *> operands;
   operands.reserve(bundleOperands.size());
-  for (auto bundleArg : bundleOperands)
+  for (Value bundleArg : bundleOperands)
     operands.push_back(moduleTranslation.lookupValue(bundleArg));
   return llvm::OperandBundleDef(bundleTag.str(), std::move(operands));
 }
@@ -131,7 +131,7 @@ static SmallVector<llvm::OperandBundleDef>
 convertOperandBundles(OperandRangeRange bundleOperands,
                       std::optional<ArrayRef<std::string>> bundleTags,
                       LLVM::ModuleTranslation &moduleTranslation) {
-  if (!bundleTags.has_value())
+  if (!bundleTags)
     bundleTags.emplace();
   return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
 }

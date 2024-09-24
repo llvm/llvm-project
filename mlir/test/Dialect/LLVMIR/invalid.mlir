@@ -1662,6 +1662,6 @@ llvm.func @foo()
 llvm.func @wrong_number_of_bundle_types() {
   %0 = llvm.mlir.constant(0 : i32) : i32
   // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
-  llvm.call @foo() ["tag"(%0 : i32, i32)] : () -> () bundletype((i32, i32))
+  llvm.call @foo() ["tag"(%0 : i32, i32)] : () -> ()
   llvm.return
 }
