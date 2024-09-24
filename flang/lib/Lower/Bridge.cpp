@@ -1261,9 +1261,10 @@ private:
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else if (isAllocatable &&
-               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
-      // For firstprivate allocatable variables, RHS must be copied only when
-      // LHS is allocated.
+               (flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+                flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn))) {
+      // For firstprivate and copyin allocatable variables, RHS must be copied
+      // only when LHS is allocated.
       hlfir::Entity temp =
           hlfir::derefPointersAndAllocatables(loc, *builder, lhs);
       mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
@@ -1316,7 +1317,8 @@ private:
                                      bool isUnordered) {
     if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
         sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym)) {
+      if (!shallowLookupSymbol(sym) &&
+          !sym.test(Fortran::semantics::Symbol::Flag::OmpShared)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
         mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -2597,14 +2599,12 @@ private:
             stmt.t)
             .value();
     if (lowerToHighLevelFIR()) {
-      mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-      localSymbols.pushScope();
+      mlir::OpBuilder::InsertionGuard guard(*builder);
+      Fortran::lower::SymMapScope scope(localSymbols);
       genForallNest(concurrentHeader);
       genFIR(std::get<Fortran::parser::UnlabeledStatement<
                  Fortran::parser::ForallAssignmentStmt>>(stmt.t)
                  .statement);
-      localSymbols.popScope();
-      builder->restoreInsertionPoint(insertPt);
       return;
     }
     prepareExplicitSpace(stmt);
@@ -2824,7 +2824,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
-    localSymbols.pushScope();
+    Fortran::lower::SymMapScope scope(localSymbols);
     const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
         std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
 
@@ -3015,7 +3015,6 @@ private:
 
     builder->create<fir::FirEndOp>(loc);
     builder->setInsertionPointAfter(op);
-    localSymbols.popScope();
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
@@ -3258,15 +3257,10 @@ private:
         const Fortran::parser::CharBlock &endPosition =
             eval.getLastNestedEvaluation().position;
         localSymbols.pushScope();
-        mlir::func::FuncOp stackSave = fir::factory::getLlvmStackSave(*builder);
-        mlir::func::FuncOp stackRestore =
-            fir::factory::getLlvmStackRestore(*builder);
-        mlir::Value stackPtr =
-            builder->create<fir::CallOp>(toLocation(), stackSave).getResult(0);
+        mlir::Value stackPtr = builder->genStackSave(toLocation());
         mlir::Location endLoc = genLocation(endPosition);
-        stmtCtx.attachCleanup([=]() {
-          builder->create<fir::CallOp>(endLoc, stackRestore, stackPtr);
-        });
+        stmtCtx.attachCleanup(
+            [=]() { builder->genStackRestore(endLoc, stackPtr); });
         Fortran::semantics::Scope &scope =
             bridge.getSemanticsContext().FindScope(endPosition);
         scopeBlockIdMap.try_emplace(&scope, ++blockId);

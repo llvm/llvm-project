@@ -241,8 +241,10 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
           // the post-inline cleanup and the next DevirtSCCRepeatedPass
           // iteration because the next iteration may not happen and we may
           // miss inlining it.
-          if (tryPromoteCall(*ICB))
-            NewCallee = ICB->getCalledFunction();
+          // FIXME: enable for ctxprof.
+          if (!CtxProf)
+            if (tryPromoteCall(*ICB))
+              NewCallee = ICB->getCalledFunction();
         }
         if (NewCallee)
           if (!NewCallee->isDeclaration())

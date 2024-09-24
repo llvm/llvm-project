@@ -1,7 +1,7 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
 ;
 ; RUN: llvm-mc -filetype=obj -triple avr < %s \
-; RUN:     | llvm-objdump -d - \
+; RUN:     | llvm-objdump -dr - \
 ; RUN:     | FileCheck --check-prefix=INST %s
 
 foo:

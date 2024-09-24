@@ -202,7 +202,7 @@ def CallVirt : Opcode {
 }
 
 def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr];
+  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
 }
 
 def CallPtr : Opcode {
@@ -732,6 +732,7 @@ def Flip : Opcode {
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
+def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
@@ -784,6 +785,20 @@ def AllocCN : Opcode {
 
 def Free : Opcode {
   let Args = [ArgBool];
+}
+
+def CheckNewTypeMismatch : Opcode {
+  let Args = [ArgExpr];
+}
+
+def InvalidNewDeleteExpr : Opcode {
+  let Args = [ArgExpr];
+}
+
+def CheckNewTypeMismatchArray : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgExpr];
+  let HasGroup = 1;
 }
 
 def IsConstantContext: Opcode;

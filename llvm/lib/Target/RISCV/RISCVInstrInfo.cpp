@@ -168,13 +168,23 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
-  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
-      MI.getOperand(1).isUndef() &&
-      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
-         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
-         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
-      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
-    return true;
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  case RISCV::VMV_V_X:
+  case RISCV::VFMV_V_F:
+  case RISCV::VMV_V_I:
+  case RISCV::VMV_S_X:
+  case RISCV::VFMV_S_F:
+  case RISCV::VID_V:
+    if (MI.getOperand(1).isUndef() &&
+        /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
+           and vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+           i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+        !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+      return true;
+    break;
+  default:
+    break;
+  }
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
@@ -2908,7 +2918,7 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // if any possible.
     if (MO.getTargetFlags() == RISCVII::MO_PCREL_LO &&
         (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
-         F.hasSection()))
+         F.hasSection() || F.getSectionPrefix()))
       return outliner::InstrType::Illegal;
   }
 
@@ -3015,7 +3025,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
   }
 
-  OS.flush();
   return Comment;
 }
 

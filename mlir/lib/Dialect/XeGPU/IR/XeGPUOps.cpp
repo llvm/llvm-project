@@ -37,7 +37,6 @@ static std::string makeString(T array, bool breakline = false) {
       os << "\n\t\t";
   }
   os << array.back() << "]";
-  os.flush();
   return buf;
 }
 

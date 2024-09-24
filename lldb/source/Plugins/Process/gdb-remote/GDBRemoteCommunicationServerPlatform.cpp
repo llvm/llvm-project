@@ -167,7 +167,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     if (available_port)
       port = *available_port;
     else
-      return Status(available_port.takeError());
+      return Status::FromError(available_port.takeError());
   }
 
   // Spawn a new thread to accept the port that gets bound after binding to
@@ -208,8 +208,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     port_ptr = nullptr;
   }
 
-  Status error = StartDebugserverProcess(
-      url.str().c_str(), nullptr, debugserver_launch_info, port_ptr, &args, -1);
+  Status error = StartDebugserverProcess(url.str().c_str(), nullptr,
+                                         debugserver_launch_info, port_ptr,
+                                         &args, SharedSocket::kInvalidFD);
 
   pid = debugserver_launch_info.GetProcessID();
   if (pid != LLDB_INVALID_PROCESS_ID) {

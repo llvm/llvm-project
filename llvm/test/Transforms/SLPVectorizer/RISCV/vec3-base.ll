@@ -762,6 +762,63 @@ define double @dot_product_fp64(ptr %a, ptr %b) {
   ret double %add.1
 }
 
+;; Covers a case where SLP would previous crash due to a
+;; missing bailout in TryToFindDuplicates for the case
+;; where a VL=3 list was vectorized directly (without
+;; a root instruction such as a store or reduce).
+define double @no_root_reshuffle(ptr  %ptr) {
+; CHECK-LABEL: @no_root_reshuffle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[MUL6:%.*]] = fmul fast double [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL6]], [[MUL]]
+; CHECK-NEXT:    ret double [[ADD]]
+;
+entry:
+  %0 = load double, ptr %ptr, align 8
+  %mul = fmul fast double %0, %0
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 8
+  %1 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 16
+  %2 = load double, ptr %arrayidx3, align 8
+  %3 = fmul fast double %2, %2
+  %mul6 = fmul fast double %3, %1
+  %add = fadd fast double %mul6, %mul
+  ret double %add
+}
+
+define float @reduce_fadd_after_fmul_of_buildvec(float %a, float %b, float %c) {
+; NON-POW2-LABEL: @reduce_fadd_after_fmul_of_buildvec(
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[A:%.*]], i32 0
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[B:%.*]], i32 1
+; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[C:%.*]], i32 2
+; NON-POW2-NEXT:    [[TMP4:%.*]] = fmul fast <3 x float> [[TMP3]], <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>
+; NON-POW2-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP4]])
+; NON-POW2-NEXT:    ret float [[TMP5]]
+;
+; POW2-ONLY-LABEL: @reduce_fadd_after_fmul_of_buildvec(
+; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = fmul fast float [[A:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = fmul fast float [[C:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_0]], [[MUL_1]]
+; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
+; POW2-ONLY-NEXT:    ret float [[ADD_1]]
+;
+  %mul.0 = fmul fast float %a, 10.0
+  %mul.1 = fmul fast float %b, 10.0
+  %mul.2 = fmul fast float %c, 10.0
+
+  %add.0 = fadd fast float %mul.0, %mul.1
+  %add.1 = fadd fast float %add.0, %mul.2
+  ret float %add.1
+}
+
 
 declare float @llvm.fmuladd.f32(float, float, float)
 

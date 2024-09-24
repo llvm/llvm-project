@@ -316,7 +316,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
       unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
-    return Status(accept_thread.takeError());
+    return Status::FromError(accept_thread.takeError());
 
   [applescript executeAndReturnError:nil];
 

@@ -292,6 +292,7 @@ static const LLT S160 = LLT::scalar(160);
 static const LLT S224 = LLT::scalar(224);
 static const LLT S256 = LLT::scalar(256);
 static const LLT S512 = LLT::scalar(512);
+static const LLT S1024 = LLT::scalar(1024);
 static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
 static const LLT V2S8 = LLT::fixed_vector(2, 8);
@@ -332,8 +333,8 @@ static const LLT V16S64 = LLT::fixed_vector(16, 64);
 static const LLT V2S128 = LLT::fixed_vector(2, 128);
 static const LLT V4S128 = LLT::fixed_vector(4, 128);
 
-static std::initializer_list<LLT> AllScalarTypes = {S32,  S64,  S96,  S128,
-                                                    S160, S224, S256, S512};
+static std::initializer_list<LLT> AllScalarTypes = {
+    S32, S64, S96, S128, S160, S224, S256, S512, S1024};
 
 static std::initializer_list<LLT> AllS16Vectors{
     V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
@@ -889,10 +890,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S16, S64);
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalIf(isRegisterType(0))
+      .legalIf(isRegisterClassType(0))
       // s1 and s16 are special cases because they have legal operations on
       // them, but don't really occupy registers in the normal way.
       .legalFor({S1, S16})
+      .clampNumElements(0, V16S32, V32S32)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampScalarOrElt(0, S32, MaxScalar)
       .widenScalarToNextPow2(0, 32)
@@ -5439,6 +5441,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
 
   bool IsPermLane16 = IID == Intrinsic::amdgcn_permlane16 ||
                       IID == Intrinsic::amdgcn_permlanex16;
+  bool IsSetInactive = IID == Intrinsic::amdgcn_set_inactive ||
+                       IID == Intrinsic::amdgcn_set_inactive_chain_arg;
 
   auto createLaneOp = [&IID, &B, &MI](Register Src0, Register Src1,
                                       Register Src2, LLT VT) -> Register {
@@ -5448,6 +5452,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     case Intrinsic::amdgcn_permlane64:
       return LaneOp.getReg(0);
     case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_set_inactive_chain_arg:
       return LaneOp.addUse(Src1).getReg(0);
     case Intrinsic::amdgcn_writelane:
       return LaneOp.addUse(Src1).addUse(Src2).getReg(0);
@@ -5472,7 +5478,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register Src0 = MI.getOperand(2).getReg();
   Register Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
-      IsPermLane16) {
+      IsSetInactive || IsPermLane16) {
     Src1 = MI.getOperand(3).getReg();
     if (IID == Intrinsic::amdgcn_writelane || IsPermLane16) {
       Src2 = MI.getOperand(4).getReg();
@@ -5490,7 +5496,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   if (Size < 32) {
     Src0 = B.buildAnyExt(S32, Src0).getReg(0);
 
-    if (IsPermLane16)
+    if (IsSetInactive || IsPermLane16)
       Src1 = B.buildAnyExt(LLT::scalar(32), Src1).getReg(0);
 
     if (IID == Intrinsic::amdgcn_writelane)
@@ -5526,7 +5532,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   MachineInstrBuilder Src0Parts = B.buildUnmerge(PartialResTy, Src0);
   MachineInstrBuilder Src1Parts, Src2Parts;
 
-  if (IsPermLane16)
+  if (IsSetInactive || IsPermLane16)
     Src1Parts = B.buildUnmerge(PartialResTy, Src1);
 
   if (IID == Intrinsic::amdgcn_writelane)
@@ -5535,7 +5541,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   for (unsigned i = 0; i < NumParts; ++i) {
     Src0 = Src0Parts.getReg(i);
 
-    if (IsPermLane16)
+    if (IsSetInactive || IsPermLane16)
       Src1 = Src1Parts.getReg(i);
 
     if (IID == Intrinsic::amdgcn_writelane)
@@ -6797,6 +6803,18 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
+                                                  MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
+  Observer.changingInstr(MI);
+  MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH));
+  MI.removeOperand(0); // Remove intrinsic ID
+  castBufferRsrcArgToV4I32(MI, B, 0);
+  Observer.changedInstr(MI);
+  return true;
+}
+
 // TODO: Move to selection
 bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
@@ -7484,7 +7502,11 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16:
   case Intrinsic::amdgcn_permlane64:
+  case Intrinsic::amdgcn_set_inactive:
+  case Intrinsic::amdgcn_set_inactive_chain_arg:
     return legalizeLaneOp(Helper, MI, IntrID);
+  case Intrinsic::amdgcn_s_buffer_prefetch_data:
+    return legalizeSBufferPrefetch(Helper, MI);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

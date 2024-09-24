@@ -25,9 +25,9 @@ using namespace lldb_private::plugin::dwarf;
 namespace {
 
 /// Iterate through all DIEs elaborating (i.e. reachable by a chain of
-/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
-/// convenience, the starting die is included in the sequence as the first
-/// item.
+/// DW_AT_specification, DW_AT_abstract_origin and/or DW_AT_signature
+/// attributes) a given DIE. For convenience, the starting die is included in
+/// the sequence as the first item.
 class ElaboratingDIEIterator
     : public llvm::iterator_facade_base<
           ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
@@ -50,7 +50,8 @@ class ElaboratingDIEIterator
     m_worklist.pop_back();
 
     // And add back any items that elaborate it.
-    for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    for (dw_attr_t attr :
+         {DW_AT_specification, DW_AT_abstract_origin, DW_AT_signature}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
         if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
@@ -129,10 +130,10 @@ DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
     DWARFUnit *cu = GetCU();
-    const bool check_specification_or_abstract_origin = true;
+    const bool check_elaborating_dies = true;
     DWARFFormValue form_value;
     if (m_die->GetAttributeValue(cu, attr, form_value, nullptr,
-                                 check_specification_or_abstract_origin))
+                                 check_elaborating_dies))
       return form_value.Reference();
   }
   return DWARFDIE();
@@ -377,11 +378,6 @@ static void GetDeclContextImpl(DWARFDIE die,
       die = spec;
       continue;
     }
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
 
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
@@ -434,12 +430,6 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
   while (die && seen.insert(die.GetID()).second) {
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
-
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});

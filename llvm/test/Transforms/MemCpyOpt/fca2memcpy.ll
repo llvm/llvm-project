@@ -141,4 +141,19 @@ define void @throwing_call(ptr noalias %src, ptr %dst) {
   ret void
 }
 
+define void @loop_memoryphi(ptr %a, ptr %b) {
+; CHECK-LABEL: @loop_memoryphi(
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[B:%.*]], ptr align 8 [[A:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP]]
+;
+  br label %loop
+
+loop:
+  %v = load { i64, i64 }, ptr %a
+  store { i64, i64 } %v, ptr %b
+  br label %loop
+}
+
 declare void @call()
