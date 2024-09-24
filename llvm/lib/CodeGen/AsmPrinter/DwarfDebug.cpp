@@ -2375,7 +2375,10 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
     Asm->OutStreamer->emitLabel(LineSym);
     MCDwarfLoc DwarfLoc(
         1, 1, 0, DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0);
-    MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, /*IsEndOfFunction*/ true);
+    MCDwarfLineEntry LineEntry(LineSym, DwarfLoc,
+                              /*lineStreamLabel*/ nullptr,
+                               /*streamLabelDefLoc*/ {},
+                               /*IsEndOfFunction*/ true);
     Asm->OutStreamer->getContext()
         .getMCDwarfLineTable(
             Asm->OutStreamer->getContext().getDwarfCompileUnitID())
