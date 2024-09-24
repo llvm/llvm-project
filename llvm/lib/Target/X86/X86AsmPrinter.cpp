@@ -131,6 +131,8 @@ void processInstructions(
       // Transitively apply the mappings of `Rhs` to this mapping too.
       std::set<int64_t> Other = SpillMap[RhsDwReg];
       SpillMap[LhsDwReg].insert(Other.begin(), Other.end());
+      // Also add Lhs to the mapping of Rhs.
+      SpillMap[RhsDwReg].insert(LhsDwReg);
       continue;
     }
 
