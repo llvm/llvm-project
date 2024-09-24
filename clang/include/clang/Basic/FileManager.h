@@ -286,17 +286,17 @@ public:
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
-                   bool RequiresNullTerminator = true, bool IsText = true,
+                   bool RequiresNullTerminator = true,
                    std::optional<int64_t> MaybeLimit = std::nullopt,
                    std::optional<cas::ObjectRef> *CASContents = nullptr);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true, bool IsText = true,
+                   bool RequiresNullTerminator = true,
                    std::optional<int64_t> MaybeLimit = std::nullopt,
                    std::optional<cas::ObjectRef> *CASContents = nullptr) const {
     return getBufferForFileImpl(Filename,
                                 /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
-                                isVolatile, RequiresNullTerminator, IsText,
+                                isVolatile, RequiresNullTerminator,
                                 CASContents);
   }
 
@@ -310,7 +310,7 @@ public:
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator, bool IsText,
+                       bool RequiresNullTerminator,
                        std::optional<cas::ObjectRef> *CASContents) const;
 
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);

@@ -65,9 +65,9 @@ public:
   }
 
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path, bool IsText) override {
+  openFileForRead(const Twine &Path) override {
     PREFIX_MAP_PATH(Path, MappedPath)
-    auto F = ProxyFileSystem::openFileForRead(MappedPath, IsText);
+    auto F = ProxyFileSystem::openFileForRead(MappedPath);
     // If we remapped the path, indicate the external path.
     if (DidMap && F)
       F = std::make_unique<PrefixMappingFile>(std::move(F.get()));

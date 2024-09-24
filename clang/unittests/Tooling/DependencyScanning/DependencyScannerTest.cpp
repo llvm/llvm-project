@@ -264,8 +264,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     std::optional<ObjectRef> CASContents;
     auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
                                       /*RequiresNullTerminator*/ false,
-                                      /*IsVolatile*/ false, /*IsText*/ true,
-                                      &CASContents);
+                                      /*IsVolatile*/ false, &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
@@ -333,9 +332,9 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
     }
 
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-    openFileForRead(const Twine &Path, bool IsText = true) override {
+    openFileForRead(const Twine &Path) override {
       ReadFiles.push_back(Path.str());
-      return ProxyFileSystem::openFileForRead(Path, IsText);
+      return ProxyFileSystem::openFileForRead(Path);
     }
   };
 

@@ -90,8 +90,7 @@ public:
                                        std::optional<CASID> &FileID) final;
   ErrorOr<vfs::Status> status(const Twine &Path) final;
   bool exists(const Twine &Path) final;
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path,
-                                                      bool IsText) final;
+  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
   vfs::directory_iterator dir_begin(const Twine &Dir,
                                     std::error_code &EC) final {
     auto IterOr = getDirectoryIterator(Dir);
@@ -488,7 +487,7 @@ bool CachingOnDiskFileSystemImpl::exists(const Twine &Path) {
 }
 
 ErrorOr<std::unique_ptr<vfs::File>>
-CachingOnDiskFileSystemImpl::openFileForRead(const Twine &Path, bool IsText) {
+CachingOnDiskFileSystemImpl::openFileForRead(const Twine &Path) {
   SmallString<128> Storage;
   StringRef PathRef = Path.toStringRef(Storage);
 

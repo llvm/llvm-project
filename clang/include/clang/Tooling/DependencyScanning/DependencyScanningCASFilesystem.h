@@ -65,7 +65,7 @@ public:
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path, bool IsText) override;
+  openFileForRead(const Twine &Path) override;
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.

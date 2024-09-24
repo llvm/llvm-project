@@ -61,8 +61,8 @@ public:
       : ProxyFileSystem(std::move(FS)), DB(std::move(DB)) {}
 
   ErrorOr<std::unique_ptr<vfs::File>>
-  openFileForRead(const Twine &Path, bool IsText) override {
-    auto UnderlyingFile = ProxyFileSystem::openFileForRead(Path, IsText);
+  openFileForRead(const Twine &Path) override {
+    auto UnderlyingFile = ProxyFileSystem::openFileForRead(Path);
     if (!UnderlyingFile)
       return UnderlyingFile.getError();
     return std::make_unique<CASProvidingFile>(DB, std::move(*UnderlyingFile));

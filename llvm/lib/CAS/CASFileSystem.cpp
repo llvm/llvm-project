@@ -46,8 +46,7 @@ public:
                                         bool FollowSymlinks = true);
 
   ErrorOr<vfs::Status> status(const Twine &Path) final;
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path,
-                                                      bool IsText) final;
+  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
 
   Expected<const vfs::CachedDirectoryEntry *>
   getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const final;
@@ -263,7 +262,7 @@ CASFileSystem::getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
 }
 
 ErrorOr<std::unique_ptr<vfs::File>>
-CASFileSystem::openFileForRead(const Twine &Path, bool IsText) {
+CASFileSystem::openFileForRead(const Twine &Path) {
   SmallString<128> Storage;
   StringRef PathRef = Path.toStringRef(Storage);
 

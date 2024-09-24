@@ -948,7 +948,7 @@ public:
   }
 
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path, bool IsText) override {
+  openFileForRead(const Twine &Path) override {
     SmallString<128> Filename;
     getPath(Path, Filename);
     auto MaterializedFile = materialize(Filename);

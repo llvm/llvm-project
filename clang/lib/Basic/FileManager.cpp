@@ -531,7 +531,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator, bool IsText,
+                              bool RequiresNullTerminator,
                               std::optional<int64_t> MaybeLimit,
                               std::optional<cas::ObjectRef> *CASContents) {
   const FileEntry *Entry = &FE.getFileEntry();
@@ -566,22 +566,21 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
 
   // Otherwise, open the file.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
-                              RequiresNullTerminator, IsText,  CASContents);
+                              RequiresNullTerminator, CASContents);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                                   bool isVolatile, bool RequiresNullTerminator,
-                                  bool IsText,
                                   std::optional<cas::ObjectRef> *CASContents) const {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
-                                isVolatile, IsText, CASContents);
+                                isVolatile, CASContents);
 
   SmallString<128> FilePath(Filename);
   FixupRelativePath(FilePath);
   return FS->getBufferForFile(FilePath, FileSize, RequiresNullTerminator,
-                              isVolatile, IsText, CASContents);
+                              isVolatile, CASContents);
 }
 
 llvm::ErrorOr<std::optional<cas::ObjectRef>>
