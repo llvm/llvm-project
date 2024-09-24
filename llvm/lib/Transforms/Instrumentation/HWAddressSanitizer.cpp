@@ -86,6 +86,15 @@ static const size_t kDefaultShadowScale = 4;
 
 static const unsigned kShadowBaseAlignment = 32;
 
+namespace {
+enum class OffsetKind {
+  kFixed = 0,
+  kGlobal,
+  kIfunc,
+  kTls,
+};
+}
+
 static cl::opt<std::string>
     ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
                                  cl::desc("Prefix for memory access callbacks"),
@@ -169,19 +178,14 @@ static cl::opt<bool>
 static cl::opt<uint64_t>
     ClMappingOffset("hwasan-mapping-offset",
                     cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"),
-                    cl::Hidden, cl::init(0));
+                    cl::Hidden);
 
-static cl::opt<bool>
-    ClWithIfunc("hwasan-with-ifunc",
-                cl::desc("Access dynamic shadow through an ifunc global on "
-                         "platforms that support this"),
-                cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClWithTls(
-    "hwasan-with-tls",
-    cl::desc("Access dynamic shadow through an thread-local pointer on "
-             "platforms that support this"),
-    cl::Hidden, cl::init(true));
+static cl::opt<OffsetKind> ClMappingOffsetDynamic(
+    "hwasan-mapping-offset-dynamic",
+    cl::desc("HWASan shadow mapping dynamic offset location"), cl::Hidden,
+    cl::values(clEnumValN(OffsetKind::kGlobal, "global", "Use global"),
+               clEnumValN(OffsetKind::kIfunc, "ifunc", "Use ifunc global"),
+               clEnumValN(OffsetKind::kTls, "tls", "Use TLS")));
 
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
@@ -398,12 +402,6 @@ private:
   /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
   /// ring buffer for storing stack allocations on targets that support it.
   class ShadowMapping {
-    enum class OffsetKind {
-      kFixed = 0,
-      kGlobal,
-      kIfunc,
-      kTls,
-    };
     OffsetKind Kind;
     uint64_t Offset;
     uint8_t Scale;
@@ -1940,11 +1938,8 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;
-  } else if (ClWithIfunc) {
-    Kind = OffsetKind::kIfunc;
-    WithFrameRecord = false;
-  } else if (!ClWithTls) {
-    Kind = OffsetKind::kGlobal;
-    WithFrameRecord = false;
+  } else if (ClMappingOffsetDynamic.getNumOccurrences() > 0) {
+    Kind = ClMappingOffsetDynamic;
+    WithFrameRecord = isInTls();
   }
 }
