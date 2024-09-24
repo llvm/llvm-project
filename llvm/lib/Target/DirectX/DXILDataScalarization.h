@@ -1,5 +1,5 @@
 //===- DXILDataScalarization.h - Prepare LLVM Module for DXIL Data
-//Legalization----===//
+// Legalization----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-/// A pass thattransforms Vectors to Arrays
+/// A pass that transforms Vectors to Arrays
 class DXILDataScalarization : public PassInfoMixin<DXILDataScalarization> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);

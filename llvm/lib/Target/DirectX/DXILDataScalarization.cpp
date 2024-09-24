@@ -1,5 +1,5 @@
 //===- DXILDataScalarization.cpp - Prepare LLVM Module for DXIL Data
-//Legalization----===//
+// Legalization----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,7 +77,6 @@ bool DataScalarizerVisitor::visit(Function &F) {
 }
 
 bool DataScalarizerVisitor::finish() {
-  // TODO this should do cleanup
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
   return true;
 }
@@ -104,30 +103,14 @@ bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
 }
 
 bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
-  bool ReplaceStore = false;
   for (unsigned I = 0; I < SI.getNumOperands(); ++I) {
     Value *CurrOpperand = SI.getOperand(I);
     GlobalVariable *NewGlobal = getNewGlobalIfExists(CurrOpperand);
     if (NewGlobal) {
       SI.setOperand(I, NewGlobal);
-      /*Value *StoredValue = SI.getValueOperand();
-      Type *StoredType = StoredValue->getType();
-      if (VectorType *VecTy = dyn_cast<VectorType>(StoredType)) {
-          unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
-          ArrayType *ArrayTy = ArrayType::get(VecTy->getElementType(),
-      NumElements); std::vector<Constant *> ConstElements; if (ConstantVector
-      *ConstVec = dyn_cast<ConstantVector>(StoredValue)) { for(uint I = 0; I <
-      NumElements; I++) { ConstElements.push_back(ConstVec->getOperand(I));
-              }
-          }
-          Value *ArrayValue = ConstantArray::get(ArrayTy,ConstElements);
-          IRBuilder<> Builder(&SI);
-          Builder.CreateStore(ArrayValue, SI.getPointerOperand());
-          replaceStore = true;
-      }*/
     }
   }
-  return ReplaceStore;
+  return false;
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
@@ -135,18 +118,15 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     Value *CurrOpperand = GEPI.getOperand(I);
     GlobalVariable *NewGlobal = getNewGlobalIfExists(CurrOpperand);
     if (NewGlobal) {
-      // Prepare to create a new GEP for the new global
-      IRBuilder<> Builder(&GEPI); // Create an IRBuilder at the position of GEPI
+      IRBuilder<> Builder(&GEPI);
 
       SmallVector<Value *, Max_VEC_SIZE> Indices;
       for (auto &Index : GEPI.indices())
         Indices.push_back(Index);
 
-      // Create a new GEP for the new global variable
       Value *NewGEP =
           Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices);
 
-      // Replace the old GEP with the new one
       GEPI.replaceAllUsesWith(NewGEP);
       PotentiallyDeadInstrs.emplace_back(&GEPI);
     }
@@ -154,6 +134,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   return true;
 }
 
+// Recursively Creates and Array like version of the given vector like type.
 static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
   if (auto *VecTy = dyn_cast<VectorType>(T))
     return ArrayType::get(VecTy->getElementType(),
@@ -197,7 +178,7 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
 
   // Handle array of vectors transformation
   if (auto *ArrayTy = dyn_cast<ArrayType>(OrigType)) {
-    // Recursively transform array elements
+
     auto *ArrayInit = dyn_cast<ConstantArray>(Init);
     if (!ArrayInit) {
       llvm_unreachable("Expected a ConstantArray for array initializer!");
@@ -205,6 +186,7 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
 
     SmallVector<Constant *, Max_VEC_SIZE> NewArrayElements;
     for (unsigned I = 0; I < ArrayTy->getNumElements(); ++I) {
+      // Recursively transform array elements
       Constant *NewElemInit = transformInitializer(
           ArrayInit->getOperand(I), ArrayTy->getElementType(),
           cast<ArrayType>(NewType)->getElementType(), Ctx);
@@ -224,7 +206,7 @@ static void findAndReplaceVectors(Module &M) {
   DataScalarizerVisitor Impl;
   for (GlobalVariable &G : M.globals()) {
     Type *OrigType = G.getValueType();
-    // Recursively replace vectors in the type
+
     Type *NewType = replaceVectorWithArray(OrigType, Ctx);
     if (OrigType != NewType) {
       // Create a new global variable with the updated type
@@ -251,6 +233,8 @@ static void findAndReplaceVectors(Module &M) {
       //  So instead we will use the visitor pattern
       Impl.GlobalMap[&G] = NewGlobal;
       for (User *U : G.users()) {
+        // Note: The GEPS are stored as constExprs
+        // This step flattens them out to instructions
         if (isa<ConstantExpr>(U) && isa<Operator>(U)) {
           ConstantExpr *CE = cast<ConstantExpr>(U);
           convertUsersOfConstantsToInstructions(CE,
