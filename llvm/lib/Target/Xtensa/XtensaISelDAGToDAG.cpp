@@ -229,6 +229,7 @@ bool XtensaDAGToDAGISel::SelectInlineAsmMemoryOperand(
     selectMemRegAddr(Op, Base, Offset, 4);
     OutOps.push_back(Base);
     OutOps.push_back(Offset);
+
     return false;
   }
   }

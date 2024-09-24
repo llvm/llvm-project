@@ -165,7 +165,7 @@ XtensaTargetLowering::getSingleConstraintMatchWeight(
   Value *CallOperandVal = Info.CallOperandVal;
   // If we don't have a value, we can't do a match,
   // but allow it at the lowest weight.
-  if (CallOperandVal == NULL)
+  if (!CallOperandVal)
     return CW_Default;
 
   Type *Ty = CallOperandVal->getType();
