@@ -49,10 +49,7 @@ define i64 @i64(<vscale x 1 x i64> %v, i1 %c) {
 ; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    beqz a0, .LBB0_2
 ; RV64-NEXT:  # %bb.1: # %truebb
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:  .LBB0_2: # %falsebb
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 1
@@ -84,10 +81,7 @@ define i32 @i32(<vscale x 2 x i32> %v, i1 %c) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    lw a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB1_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -119,10 +113,7 @@ define i16 @i16(<vscale x 4 x i16> %v, i1 %c) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    lh a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB2_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -154,10 +145,7 @@ define i8 @i8(<vscale x 8 x i8> %v, i1 %c) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    lb a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB3_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
