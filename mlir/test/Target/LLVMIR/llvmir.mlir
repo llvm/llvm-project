@@ -2641,6 +2641,16 @@ llvm.func @call_with_empty_opbundle() {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
+llvm.func @call_with_empty_opbundle_operands() {
+  llvm.call @foo() ["tag"()] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle_operands() {
+// CHECK-NEXT:   call void @foo() [ "tag"() ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
 llvm.func @call_with_opbundle() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.constant(2 : i32) : i32

@@ -264,15 +264,11 @@ static ParseResult parseOneOpBundle(
   if (p.parseLParen())
     return failure();
 
-  if (p.parseOperandList(operands))
-    return failure();
-  if (p.parseColon())
-    return failure();
-  if (p.parseTypeList(types))
-    return failure();
-
-  if (p.parseRParen())
-    return failure();
+  if (p.parseOptionalRParen()) {
+    if (p.parseOperandList(operands) || p.parseColon() ||
+        p.parseTypeList(types) || p.parseRParen())
+      return failure();
+  }
 
   opBundleOperands.push_back(std::move(operands));
   opBundleOperandTypes.push_back(std::move(types));
