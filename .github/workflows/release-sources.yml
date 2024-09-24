@@ -63,7 +63,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: Test-Runner
     needs:
       - inputs
     permissions:
