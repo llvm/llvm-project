@@ -1635,8 +1635,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
-  setPrefLoopAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
-  setPrefFunctionAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
+  setPrefLoopAlignment(
+      Align(1ULL << Subtarget->getPrefBranchInstLogAlignment()));
+  setPrefFunctionAlignment(
+      Align(1ULL << Subtarget->getPrefBranchInstLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 }
