@@ -343,7 +343,7 @@ LogicalResult CreateDescOp::verify() {
   auto bitsPerLane = elemBits * chunkSize;
   if (chunkSize > 1 && bitsPerLane % 32) {
     // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
-    // For 32-bit data, the hardware can support larger chunk size. So
+    // For 32-bit data, the hardware can support larger larger chunk size. So
     // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
     // But this requires the total size is 32 bit aligned to make the
     // optimization work.

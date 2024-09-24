@@ -431,6 +431,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_AddressSpaceConversion:
+  case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
@@ -1281,9 +1282,8 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
                 : E->getOpcode();
 
-  // The LHS and RHS of a comparison operator must have the same type. So we
-  // just use LHS vector element type here.
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
+  PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   // Evaluate LHS and save value to LHSOffset.
@@ -1311,7 +1311,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType PromotT = classifyPrim(PromotTy);
   PrimType OpT = NeedIntPromot ? PromotT : ElemT;
 
-  auto getElem = [=](unsigned Offset, unsigned Index) {
+  auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
     if (!this->emitArrayElemPop(ElemT, Index, E))
@@ -1341,9 +1341,9 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   }
 
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
-    if (!getElem(LHSOffset, I))
+    if (!getElem(LHSOffset, ElemT, I))
       return false;
-    if (!getElem(RHSOffset, I))
+    if (!getElem(RHSOffset, RHSElemT, I))
       return false;
     switch (Op) {
     case BO_Add:
@@ -1371,11 +1371,11 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
         return false;
       break;
     case BO_Shl:
-      if (!this->emitShl(OpT, ElemT, E))
+      if (!this->emitShl(OpT, RHSElemT, E))
         return false;
       break;
     case BO_Shr:
-      if (!this->emitShr(OpT, ElemT, E))
+      if (!this->emitShr(OpT, RHSElemT, E))
         return false;
       break;
     case BO_EQ:
@@ -3116,21 +3116,22 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (!this->discard(Arg1))
           return false;
         IsNoThrow = true;
-      } else if (Ctx.getLangOpts().CPlusPlus26 &&
-                 OperatorNew->isReservedGlobalPlacementOperator()) {
+      } else {
+        // Invalid unless we have C++26 or are in a std:: function.
+        if (!this->emitInvalidNewDeleteExpr(E, E))
+          return false;
+
         // If we have a placement-new destination, we'll later use that instead
         // of allocating.
-        PlacementDest = Arg1;
-      } else {
-        return this->emitInvalidNewDeleteExpr(E, E);
+        if (OperatorNew->isReservedGlobalPlacementOperator())
+          PlacementDest = Arg1;
       }
-
     } else {
+      // Always invalid.
       return this->emitInvalid(E);
     }
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
     return this->emitInvalidNewDeleteExpr(E, E);
-  }
 
   const Descriptor *Desc;
   if (!PlacementDest) {
