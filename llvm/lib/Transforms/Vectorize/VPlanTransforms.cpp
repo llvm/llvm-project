@@ -1610,7 +1610,6 @@ void VPlanTransforms::createInterleaveGroups(
     Instruction *IRInsertPos = IG->getInsertPos();
     auto *InsertPos =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
-    VPRecipeBase *IP = InsertPos;
 
     // Get or create the start address for the interleave group.
     auto *Start =
@@ -1618,9 +1617,9 @@ void VPlanTransforms::createInterleaveGroups(
     VPValue *Addr = Start->getAddr();
     if (!VPDT.properlyDominates(Addr->getDefiningRecipe(), InsertPos)) {
       bool InBounds = false;
-      if (auto *gep = dyn_cast<GetElementPtrInst>(
+      if (auto *Gep = dyn_cast<GetElementPtrInst>(
               getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-        InBounds = gep->isInBounds();
+        InBounds = Gep->isInBounds();
 
       // We cannot re-use the address of the first member because it does not
       // dominate the insert position. Use the address of the insert position
@@ -1631,13 +1630,13 @@ void VPlanTransforms::createInterleaveGroups(
                    /*IsSigned=*/true);
       VPValue *OffsetVPV = Plan.getOrAddLiveIn(
           ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
-      Addr = new VPInstruction(InsertPos->getAddr(), OffsetVPV, InBounds);
-      Addr->getDefiningRecipe()->insertAfter(InsertPos);
-      IP = Addr->getDefiningRecipe();
+      VPBuilder B(InsertPos);
+      Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
+                      : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
                                         InsertPos->getMask(), NeedsMaskForGaps);
-    VPIG->insertAfter(IP);
+    VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
