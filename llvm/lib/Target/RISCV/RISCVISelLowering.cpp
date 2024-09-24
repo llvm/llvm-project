@@ -10525,7 +10525,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     assert(SubRegIdx != RISCV::NoSubRegister);
     InterSubVT = getLMUL1VT(VecVT);
     Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, InterSubVT, Vec);
-    assert(false);
   }
 
   // Slide this vector register down by the desired number of elements in order
