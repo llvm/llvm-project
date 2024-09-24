@@ -95,3 +95,25 @@ define i32 @fewer_args_tail(i32 %0, i32 %1, i32 %2, i32 %3, i32  %4) {
   %ret = tail call i32 @many_args_callee(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)
   ret i32 %ret
 }
+
+declare void @sret_callee(ptr sret({ double, double }) align 8)
+
+; Functions which return by sret can be tail-called because the incoming sret
+; pointer gets passed through to the callee.
+define void @sret_caller_tail(ptr sret({ double, double }) align 8 %result) {
+; CHECK-LABEL: sret_caller_tail:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    b sret_callee
+entry:
+  tail call void @sret_callee(ptr sret({ double, double }) align 8 %result)
+  ret void
+}
+
+define void @sret_caller_musttail(ptr sret({ double, double }) align 8 %result) {
+; CHECK-LABEL: sret_caller_musttail:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    b sret_callee
+entry:
+  musttail call void @sret_callee(ptr sret({ double, double }) align 8 %result)
+  ret void
+}
