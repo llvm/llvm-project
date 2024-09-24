@@ -106,7 +106,7 @@ struct TelemetryInfo {
   // This represents a unique-id, conventionally corresponding to
   // a tool's session - i.e., every time the tool starts until it exits.
   //
-  // Note: a tool could have mutliple sessions running at once, in which
+  // Note: a tool could have multiple sessions running at once, in which
   // case, these shall be multiple sets of TelemetryInfo with multiple unique
   // ids.
   //
