@@ -347,6 +347,10 @@ protected:
   friend class ConstantPtrAuth;       // For `Val`.
   friend class ConstantExpr;          // For `Val`.
 
+  // Region needs to manipulate metadata in the underlying LLVM Value, we don't
+  // expose metadata in sandboxir.
+  friend class Region;
+
   /// All values point to the context.
   Context &Ctx;
   // This is used by eraseFromParent().
@@ -4523,9 +4527,11 @@ protected:
   friend class PointerType; // For LLVMCtx.
   friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
                         // is complete
-  friend class IntegerType;   // For LLVMCtx.
-  friend class StructType;    // For LLVMCtx.
+  friend class IntegerType;           // For LLVMCtx.
+  friend class StructType;            // For LLVMCtx.
   friend class ::llvm::TargetExtType; // For LLVMCtx.
+  friend class Region;                // For LLVMCtx.
+
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
