@@ -7,15 +7,22 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; SI-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, s0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s0, 0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
 ; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:  .LBB0_1: ; %ENDIF
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+<<<<<<< HEAD
 ; SI-NEXT:    s_and_b64 s[2:3], exec, vcc
 ; SI-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+=======
+; SI-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
+; SI-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
+>>>>>>> 357472736b45 (Update AMDGPU tests)
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; SI-NEXT:    s_cbranch_execnz .LBB0_1
 ; SI-NEXT:  ; %bb.2: ; %ENDLOOP
@@ -32,15 +39,22 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; FLAT:       ; %bb.0: ; %main_body
 ; FLAT-NEXT:    s_load_dword s0, s[4:5], 0x2c
 ; FLAT-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    v_and_b32_e32 v0, s0, v0
 ; FLAT-NEXT:    v_and_b32_e32 v0, 1, v0
 ; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
+; FLAT-NEXT:    s_bitcmp1_b32 s0, 0
+; FLAT-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; FLAT-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
 ; FLAT-NEXT:    s_mov_b64 s[0:1], 0
 ; FLAT-NEXT:  .LBB0_1: ; %ENDIF
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
+<<<<<<< HEAD
 ; FLAT-NEXT:    s_and_b64 s[2:3], exec, vcc
 ; FLAT-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+=======
+; FLAT-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
+; FLAT-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
+>>>>>>> 357472736b45 (Update AMDGPU tests)
 ; FLAT-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; FLAT-NEXT:    s_cbranch_execnz .LBB0_1
 ; FLAT-NEXT:  ; %bb.2: ; %ENDLOOP

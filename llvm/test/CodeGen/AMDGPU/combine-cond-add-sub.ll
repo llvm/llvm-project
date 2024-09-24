@@ -70,8 +70,9 @@ define i16 @add1_i16(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    v_bfe_u32 v1, v31, 10, 10
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v2, v1
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
+; GFX9-NEXT:    v_add_u16_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
