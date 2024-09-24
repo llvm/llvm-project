@@ -31,7 +31,8 @@ enum class InitializationState : u8 {
 } // namespace
 
 static StaticSpinMutex rtsan_inited_mutex;
-static atomic_uint8_t rtsan_initialized = {0};
+static atomic_uint8_t rtsan_initialized = {
+    static_cast<u8>(InitializationState::Uninitialized)};
 
 static void SetInitializationState(InitializationState state) {
   atomic_store(&rtsan_initialized, static_cast<u8>(state),
