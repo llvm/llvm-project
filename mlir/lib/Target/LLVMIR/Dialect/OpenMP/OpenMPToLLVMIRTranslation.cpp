@@ -1356,17 +1356,21 @@ private:
   unsigned privateArgEndIdx;
 };
 
-namespace {
-omp::PrivateClauseOp findPrivatizer(Operation *from, SymbolRefAttr symbolName) {
+// Looks up from the operation from and returns the PrivateClauseOp with
+// name symbolName
+static omp::PrivateClauseOp findPrivatizer(Operation *from,
+                                           SymbolRefAttr symbolName) {
   omp::PrivateClauseOp privatizer =
       SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(from,
                                                                  symbolName);
   assert(privatizer && "privatizer not found in the symbol table");
   return privatizer;
 }
-omp::PrivateClauseOp clonePrivatizer(LLVM::ModuleTranslation &moduleTranslation,
-                                     omp::PrivateClauseOp privatizer,
-                                     Operation *fromOperation) {
+// clones the given privatizer. The original privatizer is used as
+// the insert point for the clone.
+static omp::PrivateClauseOp
+clonePrivatizer(LLVM::ModuleTranslation &moduleTranslation,
+                omp::PrivateClauseOp privatizer, Operation *fromOperation) {
   MLIRContext &context = moduleTranslation.getContext();
   mlir::IRRewriter opCloner(&context);
   opCloner.setInsertionPoint(privatizer);
@@ -1387,7 +1391,6 @@ omp::PrivateClauseOp clonePrivatizer(LLVM::ModuleTranslation &moduleTranslation,
   clone.setSymName(cloneName);
   return clone;
 }
-} // namespace
 /// Converts the OpenMP parallel operation to LLVM IR.
 static LogicalResult
 convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
@@ -3458,9 +3461,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
       unsigned numMapVars = targetOp.getMapVars().size();
       Block &firstTargetBlock = targetRegion.front();
-      auto *blockArgsStart = firstTargetBlock.getArguments().begin();
-      auto *privArgsStart = blockArgsStart + numMapVars;
-      auto *privArgsEnd = privArgsStart + targetOp.getPrivateVars().size();
+      BlockArgument *blockArgsStart = firstTargetBlock.getArguments().begin();
+      BlockArgument *privArgsStart = blockArgsStart + numMapVars;
+      BlockArgument *privArgsEnd =
+          privArgsStart + targetOp.getPrivateVars().size();
       MutableArrayRef privateBlockArgs(privArgsStart, privArgsEnd);
 
       for (auto [privVar, privatizerNameAttr, privBlockArg] :
