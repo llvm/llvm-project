@@ -110,18 +110,19 @@ TEST(ASTExpr, InitListIsConstantInitialized) {
 }
 
 TEST(ASTExpr, NoUnsignedOverflowICE) {
-  auto AST = buildASTFromCode(R"cpp(
+  std::unique_ptr<ASTUnit> AST = buildASTFromCode(R"cpp(
     unsigned u = 1u * 8u;
   )cpp");
   ASTContext &Ctx = AST->getASTContext();
   const VarDecl *Var = getVariableNode(AST.get(), "u");
 
-  const auto ICE = Var->getInit()->getIntegerConstantExpr(Ctx);
+  const std::optional<llvm::APSInt> ICE =
+      Var->getInit()->getIntegerConstantExpr(Ctx);
   EXPECT_TRUE(ICE.has_value());
   EXPECT_TRUE(ICE->isUnsigned());
   EXPECT_EQ(8u, *ICE);
 
-  const auto ICEOverflowCheck =
+  const std::optional<llvm::APSInt> ICEOverflowCheck =
       Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
   EXPECT_TRUE(ICEOverflowCheck.has_value());
   EXPECT_TRUE(ICEOverflowCheck->isUnsigned());
@@ -129,18 +130,19 @@ TEST(ASTExpr, NoUnsignedOverflowICE) {
 }
 
 TEST(ASTExpr, CheckForUnsignedOverflowICE) {
-  auto AST = buildASTFromCode(R"cpp(
+  std::unique_ptr<ASTUnit> AST = buildASTFromCode(R"cpp(
     unsigned u = 1'000'000'000u * 8u;
   )cpp");
   ASTContext &Ctx = AST->getASTContext();
   const VarDecl *Var = getVariableNode(AST.get(), "u");
 
-  const auto ICE = Var->getInit()->getIntegerConstantExpr(Ctx);
+  const std::optional<llvm::APSInt> ICE =
+      Var->getInit()->getIntegerConstantExpr(Ctx);
   EXPECT_TRUE(ICE.has_value());
   EXPECT_TRUE(ICE->isUnsigned());
   EXPECT_EQ(3'705'032'704u, *ICE);
 
-  const auto ICEOverflowCheck =
+  const std::optional<llvm::APSInt> ICEOverflowCheck =
       Var->getInit()->getIntegerConstantExpr(Ctx, nullptr, true);
   EXPECT_FALSE(ICEOverflowCheck.has_value());
 }

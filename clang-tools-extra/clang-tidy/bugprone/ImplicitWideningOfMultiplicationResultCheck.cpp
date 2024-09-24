@@ -89,10 +89,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   // Is the expression a compile-time constexpr that we know can fit in the
   // source type?
   if (IgnoreConstantIntExpr && ETy->isIntegerType()) {
-    if (const auto ConstExprResult =
+    if (const std::optional<llvm::APSInt> ConstExprResult =
             E->getIntegerConstantExpr(*Context, nullptr, true)) {
-      const auto TypeSize = Context->getTypeSize(ETy);
-      const auto Unsigned = ETy->isUnsignedIntegerType();
+      const uint64_t TypeSize = Context->getTypeSize(ETy);
+      const bool Unsigned = ETy->isUnsignedIntegerType();
 
       llvm::APSInt WidenedResult = ConstExprResult->extOrTrunc(TypeSize);
       if (WidenedResult <= llvm::APSInt::getMaxValue(TypeSize, Unsigned) &&
