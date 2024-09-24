@@ -37,16 +37,32 @@ static constexpr llvm::StringLiteral TagMatchBindName = "tags";
 
 namespace {
 
-AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsGT,
+AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
                ast_matchers::internal::Matcher<FieldDecl>, InnerMatcher,
-               unsigned, N) {
-  unsigned MatchCount = 0;
-  for (const auto Field : Node.fields()) {
-    if (InnerMatcher.matches(*Field, Finder, Builder)) {
-      MatchCount += 1;
+               StringRef, BindName) {
+  // BoundNodesTreeBuilder resets itself when a match occurs.
+  // So to avoid losing previously saved binds, a temporary instance
+  // is used for matching.
+  //
+  // For precedence, see commit: 5b07de1a5faf4a22ae6fd982b877c5e7e3a76559
+  clang::ast_matchers::internal::BoundNodesTreeBuilder TempBuilder;
+
+  const FieldDecl *FirstMatch = nullptr;
+  for (const FieldDecl *Field : Node.fields()) {
+    if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
+      if (FirstMatch) {
+        return false;
+      } else {
+        FirstMatch = Field;
+      }
     }
   }
-  return MatchCount > N;
+
+  if (FirstMatch) {
+    Builder->setBinding(BindName, clang::DynTypedNode::create(*FirstMatch));
+    return true;
+  }
+  return false;
 }
 
 } // namespace
@@ -90,22 +106,19 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
-  static const auto UnionField = fieldDecl(hasType(qualType(
+  auto UnionField = fieldDecl(hasType(qualType(
       hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
 
-  static const auto EnumField = fieldDecl(hasType(
+  auto EnumField = fieldDecl(hasType(
       qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
 
-  static const auto hasMultipleUnionsOrEnums = anyOf(
-      fieldCountOfKindIsGT(UnionField, 1), fieldCountOfKindIsGT(EnumField, 1));
+  auto hasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
+  auto hasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
 
-  Finder->addMatcher(
-      recordDecl(anyOf(isStruct(), isClass()),
-                 unless(anyOf(isImplicit(), hasMultipleUnionsOrEnums)),
-                 has(UnionField.bind(UnionMatchBindName)),
-                 has(EnumField.bind(TagMatchBindName)))
-          .bind(RootMatchBindName),
-      this);
+  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), hasOneUnionField,
+                                hasOneEnumField, unless(isImplicit()))
+                         .bind(RootMatchBindName),
+                     this);
 }
 
 bool TaggedUnionMemberCountCheck::isCountingEnumLikeName(StringRef Name) const {
@@ -125,7 +138,7 @@ TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
   llvm::SmallSet<llvm::APSInt, 16> EnumValues;
 
   const EnumConstantDecl *LastEnumConstant = nullptr;
-  for (const auto Enumerator : ED->enumerators()) {
+  for (const EnumConstantDecl *Enumerator : ED->enumerators()) {
     EnumValues.insert(Enumerator->getInitVal());
     LastEnumConstant = Enumerator;
   }

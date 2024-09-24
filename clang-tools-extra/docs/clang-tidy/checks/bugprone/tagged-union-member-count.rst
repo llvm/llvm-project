@@ -61,15 +61,16 @@ enum constants are not included in the final count.
 
 Handling of counting enum constants (ones like :code:`TagCount` in the previous code example)
 is done by decreasing the number of enum values by one if the name of the last enum constant
-starts with a prefix or ends with a suffix specified in :option:`CountingEnumPrefixes/Suffixes`
-and it's value is one less than the total number of distinct values in the enum.
+starts with a prefix or ends with a suffix specified in :option:`CountingEnumPrefixes`,
+:option:`CountingEnumSuffixes` and it's value is one less than the total number of distinct
+values in the enum.
 
 When the final count is adjusted based on this heuristic then a diagnostic note is emitted
 that shows which enum constant matched the criteria.
 
 The heuristic can be disabled entirely (:option:`EnableCountingEnumHeuristic`) or
-configured to follow your naming convention (:option:`CountingEnumPrefixes/Suffixes`).
-The strings specified in (:option:`CountingEnumPrefixes/Suffixes`) are matched
+configured to follow your naming convention (:option:`CountingEnumPrefixes`, :option:`CountingEnumSuffixes`).
+The strings specified in :option:`CountingEnumPrefixes`, :option:`CountingEnumSuffixes` are matched
 case insensitively.
 
 Example counts:
@@ -100,12 +101,12 @@ Options
 
 This option enables or disables the counting enum heuristic.
 It uses the prefixes and suffixes specified in the options
-:option:`CountingEnumPrefixes/Suffixes` to find counting enum constants by
+:option:`CountingEnumPrefixes`, :option:`CountingEnumSuffixes` to find counting enum constants by
 using them for prefix and suffix matching.
 
 This option is enabled by default.
 
-When :option:`EnableCountingEnumHeuristic` is false:
+When :option:`EnableCountingEnumHeuristic` is `false`:
 
 .. code-block:: c++
 
@@ -126,7 +127,7 @@ When :option:`EnableCountingEnumHeuristic` is false:
     } Data;
   };
 
-When :option:`EnableCountingEnumHeuristic` is true:
+When :option:`EnableCountingEnumHeuristic` is `true`:
 
 .. code-block:: c++
 
@@ -147,19 +148,23 @@ When :option:`EnableCountingEnumHeuristic` is true:
     } Data;
   };
 
-.. option:: CountingEnumPrefixes/Suffixes
+.. option:: CountingEnumPrefixes
+
+See :option:`CountingEnumSuffixes` below.
+
+.. option:: CountingEnumSuffixes
 
 CountingEnumPrefixes and CountingEnumSuffixes are lists of semicolon
 separated strings that are used to search for possible counting enum constants.
 These strings are matched case insensitively as prefixes and suffixes
 respectively on the names of the enum constants.
-If :option:`EnableCountingEnumHeuristic` is false then these options do nothing.
+If :option:`EnableCountingEnumHeuristic` is `false` then these options do nothing.
 
-The default value of CountingEnumSuffixes is "count" and of
-CountingEnumPrefixes is "" (empty string).
+The default value of :option:`CountingEnumSuffixes` is `count` and of
+:option:`CountingEnumPrefixes` is the empty string.
 
-When :option:`EnableCountingEnumHeuristic` is true and CountingEnumSuffixes
-is "count;size":
+When :option:`EnableCountingEnumHeuristic` is `true` and :option:`CountingEnumSuffixes`
+is `count;size`:
 
 .. code-block:: c++
 
@@ -197,7 +202,7 @@ is "count;size":
     } Data;
   };
 
-When :option:`EnableCountingEnumHeuristic` is true and CountingEnumPrefixes is "maxsize;last_"
+When :option:`EnableCountingEnumHeuristic` is `true` and :option:`CountingEnumPrefixes` is `maxsize;last_`
 
 .. code-block:: c++
 
@@ -242,7 +247,7 @@ is greater than the number of union data members.
 
 This option is disabled by default.
 
-When :option:`StrictMode` is false:
+When :option:`StrictMode` is `false`:
 
 .. code-block:: c++
 
@@ -258,7 +263,7 @@ When :option:`StrictMode` is false:
       } Data;
     };
 
-When :option:`StrictMode` is true:
+When :option:`StrictMode` is `true`:
 
 .. code-block:: c++
 
