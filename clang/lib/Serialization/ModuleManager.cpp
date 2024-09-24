@@ -42,8 +42,8 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (Entry)
     return lookup(*Entry);
 
@@ -64,8 +64,8 @@ ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (!Entry)
     return nullptr;
   return std::move(InMemoryBuffers[*Entry]);

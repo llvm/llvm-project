@@ -207,6 +207,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getOptionalFileRef()")
   llvm::ErrorOr<const FileEntry *>
   getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
 

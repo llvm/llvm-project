@@ -190,11 +190,11 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
   statCache->InjectFile("bar.cpp", 43);
   manager.setStatCache(std::move(statCache));
 
-  auto fileFoo = manager.getFile("foo.cpp");
-  auto fileBar = manager.getFile("bar.cpp");
+  auto fileFoo = manager.getOptionalFileRef("foo.cpp");
+  auto fileBar = manager.getOptionalFileRef("bar.cpp");
   ASSERT_TRUE(fileFoo);
   ASSERT_TRUE(fileBar);
-  EXPECT_NE(*fileFoo, *fileBar);
+  EXPECT_NE(&fileFoo->getFileEntry(), &fileBar->getFileEntry());
 }
 
 // getFile() returns an error if neither a real file nor a virtual file
@@ -210,13 +210,15 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   // Create a virtual bar.cpp file.
   manager.getVirtualFile("bar.cpp", 200, 0);
 
-  auto file = manager.getFile("xyz.txt");
+  auto file = manager.getFileRef("xyz.txt");
   ASSERT_FALSE(file);
-  ASSERT_EQ(file.getError(), std::errc::no_such_file_or_directory);
+  ASSERT_EQ(llvm::errorToErrorCode(file.takeError()),
+            std::make_error_code(std::errc::no_such_file_or_directory));
 
-  auto readingDirAsFile = manager.getFile("MyDirectory");
+  auto readingDirAsFile = manager.getFileRef("MyDirectory");
   ASSERT_FALSE(readingDirAsFile);
-  ASSERT_EQ(readingDirAsFile.getError(), std::errc::is_a_directory);
+  ASSERT_EQ(llvm::errorToErrorCode(readingDirAsFile.takeError()),
+            std::make_error_code(std::errc::is_a_directory));
 
   auto readingFileAsDir = manager.getDirectory("foo.cpp");
   ASSERT_FALSE(readingFileAsDir);
@@ -236,11 +238,11 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
   statCache->InjectFile("abc/bar.cpp", 42);
   manager.setStatCache(std::move(statCache));
 
-  auto f1 = manager.getFile("abc/foo.cpp");
-  auto f2 = manager.getFile("abc/bar.cpp");
+  auto f1 = manager.getOptionalFileRef("abc/foo.cpp");
+  auto f2 = manager.getOptionalFileRef("abc/bar.cpp");
 
-  EXPECT_EQ(f1 ? *f1 : nullptr,
-            f2 ? *f2 : nullptr);
+  EXPECT_EQ(f1 ? &f1->getFileEntry() : nullptr,
+            f2 ? &f2->getFileEntry() : nullptr);
 
   // Check that getFileRef also does the right thing.
   auto r1 = manager.getFileRef("abc/foo.cpp");
@@ -338,11 +340,11 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
   statCache->InjectFile("abc/bar.cpp", 42);
   manager.setStatCache(std::move(statCache));
 
-  auto f1 = manager.getFile("abc/foo.cpp");
-  auto f2 = manager.getFile("abc/bar.cpp");
+  auto f1 = manager.getOptionalFileRef("abc/foo.cpp");
+  auto f2 = manager.getOptionalFileRef("abc/bar.cpp");
 
-  EXPECT_EQ(f1 ? *f1 : nullptr,
-            f2 ? *f2 : nullptr);
+  EXPECT_EQ(f1 ? &f1->getFileEntry() : nullptr,
+            f2 ? &f2->getFileEntry() : nullptr);
 }
 
 TEST_F(FileManagerTest, getFileRefEquality) {
@@ -426,14 +428,14 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   EXPECT_EQ(123, file1->getSize());
 
   // Lookup the virtual file with a different name:
-  auto file2 = manager.getFile("c:/tmp/test", 100, 1);
+  auto file2 = manager.getOptionalFileRef("c:/tmp/test", 100, 1);
   ASSERT_TRUE(file2);
   // Check that it's the same UFE:
   EXPECT_EQ(file1, *file2);
-  EXPECT_EQ(43U, (*file2)->getUniqueID().getFile());
+  EXPECT_EQ(43U, file2->getUniqueID().getFile());
   // Check that the contents of the UFE are not overwritten by the entry in the
   // filesystem:
-  EXPECT_EQ(123, (*file2)->getSize());
+  EXPECT_EQ(123, file2->getSize());
 }
 
 #endif  // !_WIN32
@@ -514,12 +516,12 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   Manager.setStatCache(std::move(statCache));
 
   // Check for real path.
-  auto file = Manager.getFile("/tmp/test", /*OpenFile=*/false);
+  auto file = Manager.getOptionalFileRef("/tmp/test", /*OpenFile=*/false);
   ASSERT_TRUE(file);
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
-  EXPECT_EQ((*file)->tryGetRealPathName(), ExpectedResult);
+  EXPECT_EQ(file->getFileEntry().tryGetRealPathName(), ExpectedResult);
 }
 
 TEST_F(FileManagerTest, getBypassFile) {

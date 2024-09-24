@@ -2044,14 +2044,14 @@ ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
 const FileEntry *HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   FileManager &FileMgr = Reader.getFileManager();
   if (!Key.Imported) {
-    if (auto File = FileMgr.getFile(Key.Filename))
+    if (auto File = FileMgr.getOptionalFileRef(Key.Filename))
       return *File;
     return nullptr;
   }
 
   std::string Resolved = std::string(Key.Filename);
   Reader.ResolveImportedPath(M, Resolved);
-  if (auto File = FileMgr.getFile(Resolved))
+  if (auto File = FileMgr.getOptionalFileRef(Resolved))
     return *File;
   return nullptr;
 }
@@ -4217,7 +4217,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     assert(M && M->Name == F.ModuleName && "found module with different name");
 
     // Check the primary module map file.
-    auto StoredModMap = FileMgr.getFile(F.ModuleMapPath);
+    auto StoredModMap = FileMgr.getOptionalFileRef(F.ModuleMapPath);
     if (!StoredModMap || *StoredModMap != ModMap) {
       assert(ModMap && "found module is missing module map file");
       assert((ImportedBy || F.Kind == MK_ImplicitModule) &&
