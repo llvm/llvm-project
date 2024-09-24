@@ -11035,6 +11035,7 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
       for (auto &Feat : ParseInfo.Features)
         Feats.push_back(StringRef{Feat}.substr(1));
     } else {
+      assert(S.getASTContext().getTargetInfo().getTriple().isAArch64());
       TVA->getFeatures(Feats);
     }
     for (const auto &Feat : Feats) {
