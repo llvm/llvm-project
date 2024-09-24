@@ -300,7 +300,7 @@ private:
     return false;
   }
 
-  bool parseParens(bool LookForDecls = false) {
+  bool parseParens(bool IsIf = false) {
     if (!CurrentToken)
       return false;
     assert(CurrentToken->Previous && "Unknown previous token");
@@ -468,24 +468,6 @@ private:
         OpeningParen.Previous && OpeningParen.Previous->is(tok::kw_for);
     FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
-      // LookForDecls is set when "if (" has been seen. Check for
-      // 'identifier' '*' 'identifier' followed by not '=' -- this
-      // '*' has to be a binary operator but determineStarAmpUsage() will
-      // categorize it as an unary operator, so set the right type here.
-      if (LookForDecls && CurrentToken->Next) {
-        FormatToken *Prev = CurrentToken->getPreviousNonComment();
-        if (Prev) {
-          FormatToken *PrevPrev = Prev->getPreviousNonComment();
-          FormatToken *Next = CurrentToken->Next;
-          if (PrevPrev && PrevPrev->is(tok::identifier) &&
-              PrevPrev->isNot(TT_TypeName) && Prev->isPointerOrReference() &&
-              CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
-            Prev->setType(TT_BinaryOperator);
-            LookForDecls = false;
-          }
-        }
-      }
-
       if (CurrentToken->Previous->is(TT_PointerOrReference) &&
           CurrentToken->Previous->Previous->isOneOf(tok::l_paren,
                                                     tok::coloncolon)) {
@@ -579,6 +561,15 @@ private:
         if (PossibleObjCForInToken) {
           PossibleObjCForInToken->setType(TT_Unknown);
           PossibleObjCForInToken = nullptr;
+        }
+      }
+      if (IsIf && CurrentToken->is(tok::semi)) {
+        for (auto *Tok = OpeningParen.Next;
+             Tok != CurrentToken &&
+             !Tok->isOneOf(tok::equal, tok::l_paren, tok::l_brace);
+             Tok = Tok->Next) {
+          if (Tok->isPointerOrReference())
+            Tok->setFinalizedType(TT_PointerOrReference);
         }
       }
       if (MightBeObjCForRangeLoop && CurrentToken->is(Keywords.kw_in)) {
@@ -1307,7 +1298,7 @@ private:
     // Multi-line string itself is a single annotated token.
     if (Tok->is(TT_TableGenMultiLineString))
       return true;
-    switch (Tok->Tok.getKind()) {
+    switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
       if (!Tok->Previous && Line.MustBeDeclaration)
@@ -1467,11 +1458,12 @@ private:
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier)) {
         next();
       }
+      IsIf = true;
       [[fallthrough]];
     case tok::kw_while:
       if (CurrentToken && CurrentToken->is(tok::l_paren)) {
         next();
-        if (!parseParens(/*LookForDecls=*/true))
+        if (!parseParens(IsIf))
           return false;
       }
       break;
