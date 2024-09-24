@@ -1,4 +1,5 @@
 // RUN: %clangxx -O1 %s -o %t
+// RUN: rm -rf %t.tmp
 // RUN: %run %t 1
 // RUN: %run %t 2
 
@@ -26,7 +27,6 @@ int main(int argc, char *argv[]) {
   assert(argc == 2);
   char buff[10000];
   sprintf(buff, "%s.tmp", argv[0]);
-
   if (atoi(argv[1]) == 1) {
     unlink(buff);
     test(buff, O_RDWR | O_CREAT);
