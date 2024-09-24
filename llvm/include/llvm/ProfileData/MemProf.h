@@ -310,9 +310,11 @@ struct Frame {
        << "        Inline: " << IsInlineFrame << "\n";
   }
 
-  // Return a hash value based on the contents of the frame. Here we don't use
-  // hashing from llvm ADT since we are going to persist the hash id, the hash
-  // combine algorithm in ADT uses a new randomized seed each time.
+  // Return a hash value based on the contents of the frame. Here we use a
+  // cryptographic hash function to minimize the chance of hash collisions.  We
+  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
+  // However, the deserializer never calls this function; it uses FrameIds
+  // merely as keys to look up Frames proper.
   inline FrameId hash() const {
     llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
         HashBuilder;
