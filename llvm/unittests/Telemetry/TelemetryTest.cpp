@@ -68,6 +68,31 @@ struct VendorEntryKind {
   static const KindType Exit = 170;         // 0b010101010
 };
 
+// Describes the exit signal of an event.
+// This is used by TelemetryInfo below.
+struct ExitDescription {
+  int ExitCode;
+  std::string Description;
+};
+
+// Defines a convenient type for timestamp of various events.
+// This is used by the EventStats below.
+using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
+// Various time (and possibly memory) statistics of an event.
+struct EventStats {
+  // REQUIRED: Start time of an event
+  SteadyTimePoint Start;
+  // OPTIONAL: End time of an event - may be empty if not meaningful.
+  std::optional<SteadyTimePoint> End;
+  // TBD: could add some memory stats here too?
+
+  EventStats() = default;
+  EventStats(SteadyTimePoint Start) : Start(Start) {}
+  EventStats(SteadyTimePoint Start, SteadyTimePoint End)
+      : Start(Start), End(End) {}
+};
+
 // Demonstrates that the TelemetryInfo (data courier) struct can be extended
 // by downstream code to store additional data as needed.
 // It can also define additional data serialization method.
@@ -83,6 +108,10 @@ struct VendorCommonTelemetryInfo : public TelemetryInfo {
   KindType getKind() const override { return VendorEntryKind::VendorCommon; }
 
   virtual void serializeToStream(llvm::raw_ostream &OS) const = 0;
+
+  std::optional<ExitDescription> ExitDesc;
+  EventStats Stats;
+  size_t Counter;
 };
 
 struct StartupEvent : public VendorCommonTelemetryInfo {
@@ -341,7 +370,7 @@ public:
     return Telemeter;
   }
 
-  void logStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
+  void atStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
     ToolName = ToolPath.str();
 
     // The vendor can add additional stuff to the entry before logging.
@@ -351,7 +380,7 @@ public:
     emitToDestinations(Entry);
   }
 
-  void logExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
+  void atExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) override {
     // Ensure we're shutting down the same tool we started with.
     if (ToolPath != ToolName) {
       std::string Str;
@@ -372,7 +401,7 @@ public:
     Destinations.push_back(Dest);
   }
 
-  void logMidpoint(TelemetryInfo *Entry) {
+  void atMidpoint(TelemetryInfo *Entry) {
     // The custom Telemeter can record and send additional data.
     if (auto *C = dyn_cast<CustomTelemetryEvent>(Entry)) {
       C->Msgs.push_back("Two");
@@ -475,7 +504,7 @@ void AtToolStart(std::string ToolName, vendor_code::TestTelemeter *T) {
   vendor_code::StartupEvent Entry =
       T->makeDefaultTelemetryInfo<vendor_code::StartupEvent>();
   Entry.Stats = {StartTime, InitCompleteTime};
-  T->logStartup(ToolName, &Entry);
+  T->atStartup(ToolName, &Entry);
 }
 
 void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
@@ -486,14 +515,14 @@ void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
   if (CurrentContext->HasExitError) {
     Entry.ExitDesc = {1, CurrentContext->ExitMsg};
   }
-  T->logExit(ToolName, &Entry);
+  T->atExit(ToolName, &Entry);
 }
 
 void AtToolMidPoint(vendor_code::TestTelemeter *T) {
   vendor_code::CustomTelemetryEvent Entry =
       T->makeDefaultTelemetryInfo<vendor_code::CustomTelemetryEvent>();
   Entry.Stats = {MidPointTime, MidPointCompleteTime};
-  T->logMidpoint(&Entry);
+  T->atMidpoint(&Entry);
 }
 
 // Helper function to print the given object content to string.

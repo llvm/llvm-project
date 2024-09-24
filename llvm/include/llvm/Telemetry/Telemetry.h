@@ -56,31 +56,6 @@ struct Config {
   std::vector<std::string> AdditionalDestinations;
 };
 
-/// Defines a convenient type for timestamp of various events.
-/// This is used by the EventStats below.
-using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
-
-/// Various time (and possibly memory) statistics of an event.
-struct EventStats {
-  // REQUIRED: Start time of an event
-  SteadyTimePoint Start;
-  // OPTIONAL: End time of an event - may be empty if not meaningful.
-  std::optional<SteadyTimePoint> End;
-  // TBD: could add some memory stats here too?
-
-  EventStats() = default;
-  EventStats(SteadyTimePoint Start) : Start(Start) {}
-  EventStats(SteadyTimePoint Start, SteadyTimePoint End)
-      : Start(Start), End(End) {}
-};
-
-/// Describes the exit signal of an event.
-/// This is used by TelemetryInfo below.
-struct ExitDescription {
-  int ExitCode;
-  std::string Description;
-};
-
 /// For isa, dyn_cast, etc operations on TelemetryInfo.
 typedef unsigned KindType;
 /// This struct is used by TelemetryInfo to support isa<>, dyn_cast<>
@@ -112,16 +87,6 @@ struct TelemetryInfo {
   //
   // Different usages can assign different types of IDs to this field.
   std::string SessionId;
-
-  // Time/memory statistics of this event.
-  EventStats Stats;
-
-  std::optional<ExitDescription> ExitDesc;
-
-  // Counting number of entries.
-  // (For each set of entries with the same SessionId, this value should
-  // be unique for each entry)
-  size_t Counter;
 
   TelemetryInfo() = default;
   ~TelemetryInfo() = default;
@@ -157,10 +122,10 @@ public:
 class Telemeter {
 public:
   // Invoked upon tool startup
-  virtual void logStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
+  virtual void atStartup(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
   // Invoked upon tool exit.
-  virtual void logExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
+  virtual void atExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
   virtual void addDestination(Destination *Destination) = 0;
 };
