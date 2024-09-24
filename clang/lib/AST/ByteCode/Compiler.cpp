@@ -431,6 +431,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_AddressSpaceConversion:
+  case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
