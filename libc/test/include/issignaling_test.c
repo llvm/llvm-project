@@ -12,7 +12,6 @@
 // TODO: enable the test unconditionally when issignaling macro is fixed for
 //       older compiler
 int main(void) {
-// check if macro is defined
 #ifdef issignaling
   assert(issignaling(__builtin_nans("")) == 1);
   assert(issignaling(__builtin_nansf("")) == 1);

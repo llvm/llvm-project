@@ -11,8 +11,7 @@
 
 // TODO: enable the test unconditionally when issignaling macro is fixed for
 //       older compiler
-#if (defined(__clang__) && __clang_major__ >= 18) ||                           \
-    (defined(__GNUC__) && __GNUC__ >= 13)
+#ifdef issignaling
 
 LIST_ISSIGNALING_TESTS(long double, issignaling)
 
