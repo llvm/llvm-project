@@ -1911,9 +1911,25 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   // f16 with zvfhmin and bf16 will be promoted to f32.
   // FIXME: nxv32[b]f16 will be custom lowered and split.
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
-  if (TLI->getOperationAction(ISDOpcode, LT.second) ==
-      TargetLoweringBase::LegalizeAction::Promote)
-    LT.second = TLI->getTypeToPromoteTo(ISDOpcode, LT.second);
+  InstructionCost CastCost = 0;
+  if ((LT.second.getVectorElementType() == MVT::f16 ||
+       LT.second.getVectorElementType() == MVT::bf16) &&
+      TLI->getOperationAction(ISDOpcode, LT.second) ==
+          TargetLoweringBase::LegalizeAction::Promote) {
+    MVT PromotedVT = TLI->getTypeToPromoteTo(ISDOpcode, LT.second);
+    Type *PromotedTy = EVT(PromotedVT).getTypeForEVT(Ty->getContext());
+    Type *LegalTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
+    // Add cost of extending arguments
+    CastCost += LT.first * Args.size() *
+                getCastInstrCost(Instruction::FPExt, PromotedTy, LegalTy,
+                                 TTI::CastContextHint::None, CostKind);
+    // Add cost of truncating result
+    CastCost +=
+        LT.first * getCastInstrCost(Instruction::FPTrunc, LegalTy, PromotedTy,
+                                    TTI::CastContextHint::None, CostKind);
+    // Compute cost of op in promoted type
+    LT.second = PromotedVT;
+  }
 
   auto getConstantMatCost =
     [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
@@ -1980,9 +1996,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   default:
     // Assuming all other instructions have the same cost until a need arises to
     // differentiate them.
-    return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                                           Op1Info, Op2Info,
-                                                           Args, CxtI);
+    return CastCost + ConstantMatCost +
+           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
@@ -1991,7 +2007,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   // scalar floating point ops aren't cheaper than their vector equivalents.
   if (Ty->isFPOrFPVectorTy())
     InstrCost *= 2;
-  return ConstantMatCost + LT.first * InstrCost;
+  return CastCost + ConstantMatCost + LT.first * InstrCost;
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
