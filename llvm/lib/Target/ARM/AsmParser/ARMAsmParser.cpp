@@ -113,7 +113,7 @@ class UnwindContext {
   Locs PersonalityLocs;
   Locs PersonalityIndexLocs;
   Locs HandlerDataLocs;
-  int FPReg;
+  MCRegister FPReg;
 
 public:
   UnwindContext(MCAsmParser &P) : Parser(P), FPReg(ARM::SP) {}
@@ -132,8 +132,8 @@ public:
   void recordHandlerData(SMLoc L) { HandlerDataLocs.push_back(L); }
   void recordPersonalityIndex(SMLoc L) { PersonalityIndexLocs.push_back(L); }
 
-  void saveFPReg(int Reg) { FPReg = Reg; }
-  int getFPReg() const { return FPReg; }
+  void saveFPReg(MCRegister Reg) { FPReg = Reg; }
+  MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
     for (const SMLoc &Loc : FnStartLocs)
@@ -12115,8 +12115,7 @@ bool ARMAsmParser::parseDirectiveSetFP(SMLoc L) {
   if (Parser.parseEOL())
     return true;
 
-  getTargetStreamer().emitSetFP(static_cast<unsigned>(FPReg),
-                                static_cast<unsigned>(SPReg), Offset);
+  getTargetStreamer().emitSetFP(FPReg, SPReg, Offset);
   return false;
 }
 
