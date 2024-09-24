@@ -326,6 +326,15 @@ func.func @index_from_output_column_vector_gather_load(%src: tensor<8x128xf32>) 
   return %res : tensor<8x1xf32>
 }
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
 // CHECK-LABEL:   func.func @index_from_output_column_vector_gather_load(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<8x128xf32>) -> tensor<8x1xf32> {
 // CHECK:           %[[C128:.*]] = arith.constant dense<128> : vector<1x8xindex>
@@ -341,11 +350,14 @@ func.func @index_from_output_column_vector_gather_load(%src: tensor<8x128xf32>) 
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
 // CHECK:           return %[[RES]] : tensor<8x1xf32>
 
-// Same as above, but the access indices have been swapped and hence this is
-// contiguous load. Currently not supported and lowered as vector.gather
+// -----
+
+// Same as above, but the access indices have been swapped and hence this _is_
+// a contiguous load. Currently not supported and lowered as vector.gather
 // instead.
 // TODO: Make sure that this is lowered as a contiguous load.
 
+#map = affine_map<(d0, d1) -> (d0, d1)>
 func.func @index_from_output_column_vector_contiguous_load(%src: tensor<8x128xf32>) -> tensor<8x1xf32> {
   %c0 = arith.constant 0 : index
   %0 = tensor.empty() : tensor<8x1xf32>
@@ -361,6 +373,15 @@ func.func @index_from_output_column_vector_contiguous_load(%src: tensor<8x128xf3
   return %res : tensor<8x1xf32>
 }
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
 // CHECK-LABEL:   func.func @index_from_output_column_vector_contiguous_load(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<8x128xf32>) -> tensor<8x1xf32> {
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
@@ -373,15 +394,6 @@ func.func @index_from_output_column_vector_contiguous_load(%src: tensor<8x128xf3
 // CHECK:           %[[GATHER:.*]] = vector.gather %[[SRC]]{{\[}}%[[C0]], %[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<8x128xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
 // CHECK:           return %[[RES]] : tensor<8x1xf32>
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg2: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg2 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_nd_extract} : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
 
 // -----
 

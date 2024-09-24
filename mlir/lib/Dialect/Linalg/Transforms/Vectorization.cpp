@@ -812,7 +812,7 @@ enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 
 /// Find the index of the trailing non-unit dim in linalgOp. This hook is used
 /// when checking whether `tensor.extract` Op (within a `linalg.generic` Op)
-/// represents a contiguous load operaiton.
+/// represents a contiguous load operation.
 ///
 /// Note that when calling this hook, it is assumed that the output vector is
 /// effectively 1D. Other cases (i.e. reading n-D vectors) should've been
