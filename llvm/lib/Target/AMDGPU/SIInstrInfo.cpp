@@ -6088,10 +6088,14 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     legalizeOpWithMove(MI, VOP3Idx[2]);
 }
 
-Register SIInstrInfo::readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                                         MachineRegisterInfo &MRI) const {
+Register SIInstrInfo::readlaneVGPRToSGPR(
+    Register SrcReg, MachineInstr &UseMI, MachineRegisterInfo &MRI,
+    const TargetRegisterClass *DstRC /*=nullptr*/) const {
   const TargetRegisterClass *VRC = MRI.getRegClass(SrcReg);
   const TargetRegisterClass *SRC = RI.getEquivalentSGPRClass(VRC);
+  if (DstRC)
+    SRC = RI.getCommonSubClass(SRC, DstRC);
+
   Register DstReg = MRI.createVirtualRegister(SRC);
   unsigned SubRegs = RI.getRegSizeInBits(*VRC) / 32;
 
@@ -6244,7 +6248,10 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   if (moveFlatAddrToVGPR(MI))
     return;
 
-  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI);
+  const TargetRegisterClass *DeclaredRC = getRegClass(
+      MI.getDesc(), SAddr->getOperandNo(), &RI, *MI.getParent()->getParent());
+
+  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);
 }
 
