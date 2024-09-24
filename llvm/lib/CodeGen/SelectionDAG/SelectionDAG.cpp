@@ -11237,6 +11237,12 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
   if (!N.getHasDebugValue())
     return;
 
+  auto GetLocationOperand = [](SDNode *Node, unsigned ResNo) {
+    if (auto *FISDN = dyn_cast<FrameIndexSDNode>(Node))
+      return SDDbgOperand::fromFrameIdx(FISDN->getIndex());
+    return SDDbgOperand::fromNode(Node, ResNo);
+  };
+
   SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (auto *DV : GetDbgValues(&N)) {
     if (DV->isInvalidated())
@@ -11272,7 +11278,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
           if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
               NewLocOps[i].getSDNode() != &N)
             continue;
-          NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+          NewLocOps[i] = GetLocationOperand(N0.getNode(), N0.getResNo());
           if (RHSConstant) {
             SmallVector<uint64_t, 3> ExprOps;
             DIExpression::appendOffset(ExprOps, Offset);
@@ -11327,7 +11333,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
             NewLocOps[i].getSDNode() != &N)
           continue;
 
-        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        NewLocOps[i] = GetLocationOperand(N0.getNode(), N0.getResNo());
         DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
         Changed = true;
       }
@@ -11350,7 +11356,11 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
   }
 
   for (SDDbgValue *Dbg : ClonedDVs) {
-    assert(!Dbg->getSDNodes().empty() &&
+    assert((!Dbg->getSDNodes().empty() ||
+            llvm::any_of(Dbg->getLocationOps(),
+                         [&](const SDDbgOperand &Op) {
+                           return Op.getKind() == SDDbgOperand::FRAMEIX;
+                         })) &&
            "Salvaged DbgValue should depend on a new SDNode");
     AddDbgValue(Dbg, false);
   }

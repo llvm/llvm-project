@@ -431,6 +431,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_AddressSpaceConversion:
+  case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
@@ -3116,21 +3117,22 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (!this->discard(Arg1))
           return false;
         IsNoThrow = true;
-      } else if (Ctx.getLangOpts().CPlusPlus26 &&
-                 OperatorNew->isReservedGlobalPlacementOperator()) {
+      } else {
+        // Invalid unless we have C++26 or are in a std:: function.
+        if (!this->emitInvalidNewDeleteExpr(E, E))
+          return false;
+
         // If we have a placement-new destination, we'll later use that instead
         // of allocating.
-        PlacementDest = Arg1;
-      } else {
-        return this->emitInvalidNewDeleteExpr(E, E);
+        if (OperatorNew->isReservedGlobalPlacementOperator())
+          PlacementDest = Arg1;
       }
-
     } else {
+      // Always invalid.
       return this->emitInvalid(E);
     }
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
     return this->emitInvalidNewDeleteExpr(E, E);
-  }
 
   const Descriptor *Desc;
   if (!PlacementDest) {
