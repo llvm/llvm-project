@@ -20,11 +20,11 @@ TEST(MemoryCUFTest, SimpleAllocTramsferFree) {
   int *dev = (int *)RTNAME(CUFMemAlloc)(sizeof(int), __FILE__, __LINE__);
   EXPECT_TRUE(dev != 0);
   int host = 42;
-  RTNAME(CUFDataTransferPtrPtr)((void *)dev, (void *)&host, sizeof(int),
-      kHostToDevice, __FILE__, __LINE__);
+  RTNAME(CUFDataTransferPtrPtr)
+  ((void *)dev, (void *)&host, sizeof(int), kHostToDevice, __FILE__, __LINE__);
   host = 0;
-  RTNAME(CUFDataTransferPtrPtr)((void *)&host, (void *)dev, sizeof(int),
-      kDeviceToHost, __FILE__, __LINE__);
+  RTNAME(CUFDataTransferPtrPtr)
+  ((void *)&host, (void *)dev, sizeof(int), kDeviceToHost, __FILE__, __LINE__);
   EXPECT_EQ(42, host);
   RTNAME(CUFMemFree)((void *)dev, __FILE__, __LINE__);
 }
