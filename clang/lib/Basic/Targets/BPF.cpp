@@ -37,6 +37,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   Builder.defineMacro("__BPF_FEATURE_ADDR_SPACE_CAST");
+  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
 
   if (CPU.empty())
     CPU = "v3";
@@ -48,7 +49,6 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   std::string CpuVerNumStr = CPU.substr(1);
   Builder.defineMacro("__BPF_CPU_VERSION__", CpuVerNumStr);
-  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
 
   int CpuVerNum = std::stoi(CpuVerNumStr);
   if (CpuVerNum >= 2)
