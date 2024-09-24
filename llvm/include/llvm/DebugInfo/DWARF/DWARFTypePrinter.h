@@ -19,23 +19,6 @@ namespace llvm {
 
 class raw_ostream;
 
-namespace detail {
-/// Returns True if the DIE TAG is one of the ones that is scopped.
-inline bool scopedTAGs(dwarf::Tag Tag) {
-  switch (Tag) {
-  case dwarf::DW_TAG_structure_type:
-  case dwarf::DW_TAG_class_type:
-  case dwarf::DW_TAG_union_type:
-  case dwarf::DW_TAG_namespace:
-  case dwarf::DW_TAG_enumeration_type:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-} // namespace detail
-
 // FIXME: We should have pretty printers per language. Currently we print
 // everything as if it was C++ and fall back to the TAG type name.
 template <typename DieType> struct DWARFTypePrinter {
@@ -77,6 +60,22 @@ template <typename DieType> struct DWARFTypePrinter {
                                  bool SkipFirstParamIfArtificial, bool Const,
                                  bool Volatile);
   void appendScopes(DieType D);
+
+private:
+  /// Returns True if the DIE TAG is one of the ones that is scopped.
+  static inline bool scopedTAGs(dwarf::Tag Tag) {
+    switch (Tag) {
+    case dwarf::DW_TAG_structure_type:
+    case dwarf::DW_TAG_class_type:
+    case dwarf::DW_TAG_union_type:
+    case dwarf::DW_TAG_namespace:
+    case dwarf::DW_TAG_enumeration_type:
+      return true;
+    default:
+      break;
+    }
+    return false;
+  }
 };
 
 template <typename DieType>
@@ -389,14 +388,14 @@ void DWARFTypePrinter<DieType>::appendUnqualifiedNameAfter(
 
 template <typename DieType>
 void DWARFTypePrinter<DieType>::appendQualifiedName(DieType D) {
-  if (D && detail::scopedTAGs(D.getTag()))
+  if (D && scopedTAGs(D.getTag()))
     appendScopes(D.getParent());
   appendUnqualifiedName(D);
 }
 
 template <typename DieType>
 DieType DWARFTypePrinter<DieType>::appendQualifiedNameBefore(DieType D) {
-  if (D && detail::scopedTAGs(D.getTag()))
+  if (D && scopedTAGs(D.getTag()))
     appendScopes(D.getParent());
   return appendUnqualifiedNameBefore(D);
 }
