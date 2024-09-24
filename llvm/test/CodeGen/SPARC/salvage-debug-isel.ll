@@ -7,14 +7,12 @@
 
 define dso_local zeroext i16 @a() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %b = alloca [6 x i8], align 1, !DIAssignID !24
-    #dbg_assign(i1 undef, !14, !DIExpression(), !24, ptr %b, !DIExpression(), !25)
-  call void @llvm.lifetime.start.p0(i64 6, ptr nonnull %b) #2, !dbg !26
+  %b = alloca [6 x i8], align 1
   %arrayidx = getelementptr inbounds [6 x i8], ptr %b, i32 0, i32 undef, !dbg !27
-  store i8 4, ptr %arrayidx, align 1, !dbg !28, !tbaa !29
+  store i8 4, ptr %arrayidx, align 1, !dbg !28
   %arrayidx1 = getelementptr inbounds i8, ptr %b, i32 3, !dbg !32
     #dbg_value(ptr %arrayidx1, !22, !DIExpression(), !25)
-  %0 = load i8, ptr %arrayidx1, align 1, !dbg !33, !tbaa !29
+  %0 = load i8, ptr %arrayidx1, align 1, !dbg !33
   %tobool.not = icmp eq i8 %0, 0, !dbg !35
   br i1 %tobool.not, label %if.end, label %for.cond, !dbg !36
 
@@ -22,17 +20,8 @@ for.cond:                                         ; preds = %entry, %for.cond
   br label %for.cond, !dbg !37, !llvm.loop !40
 
 if.end:                                           ; preds = %entry
-  call void @llvm.lifetime.end.p0(i64 6, ptr nonnull %b) #2, !dbg !44
   ret i16 undef, !dbg !44
 }
-
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
-
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
-
-attributes #0 = { nofree noinline norecurse nosync nounwind memory(none) "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5}
@@ -62,14 +51,9 @@ attributes #2 = { nounwind }
 !21 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !22 = !DILocalVariable(name: "d", scope: !7, file: !1, line: 6, type: !23)
 !23 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !16, size: 32)
-!24 = distinct !DIAssignID()
 !25 = !DILocation(line: 0, scope: !7)
-!26 = !DILocation(line: 3, column: 3, scope: !7)
 !27 = !DILocation(line: 5, column: 3, scope: !7)
 !28 = !DILocation(line: 5, column: 8, scope: !7)
-!29 = !{!30, !30, i64 0}
-!30 = !{!"omnipotent char", !31, i64 0}
-!31 = !{!"Simple C/C++ TBAA"}
 !32 = !DILocation(line: 6, column: 16, scope: !7)
 !33 = !DILocation(line: 7, column: 33, scope: !34)
 !34 = distinct !DILexicalBlock(scope: !7, file: !1, line: 7, column: 7)
