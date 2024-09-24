@@ -4358,6 +4358,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
         IT != FunctionToLambdasMap.end()) {
       for (auto LID : IT->second)
         GetDecl(LID);
+      FunctionToLambdasMap.erase(IT);
     }
   }
 }

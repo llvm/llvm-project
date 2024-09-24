@@ -5708,6 +5708,8 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
                       DelayedNamespaceRecord);
 
   if (!FunctionToLambdasMap.empty()) {
+    // TODO: on disk hash table for function to lambda mapping might be more
+    // efficent becuase it allows lazy deserialization.
     RecordData FunctionToLambdasMapRecord;
     for (const auto &Pair : FunctionToLambdasMap) {
       FunctionToLambdasMapRecord.push_back(

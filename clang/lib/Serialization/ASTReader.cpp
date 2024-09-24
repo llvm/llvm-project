@@ -3860,7 +3860,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
         GlobalDeclID ID = ReadDeclID(F, Record, I);
         auto &Lambdas = FunctionToLambdasMap[ID];
-        for (unsigned II = 0, NN = Record[I++]; II < NN; II++)
+        unsigned NN = Record[I++];
+        Lambdas.reserve(NN);
+        for (unsigned II = 0; II < NN; II++)
           Lambdas.push_back(ReadDeclID(F, Record, I));
       }
       break;
