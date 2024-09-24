@@ -1223,12 +1223,10 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
 
-  if (directive == llvm::omp::Directive::OMPD_target_update) {
-    cp.processMotionClauses<clause::To>(stmtCtx, clauseOps);
-    cp.processMotionClauses<clause::From>(stmtCtx, clauseOps);
-  } else {
+  if (directive == llvm::omp::Directive::OMPD_target_update)
+    cp.processMotionClauses(stmtCtx, clauseOps);
+  else
     cp.processMap(loc, stmtCtx, clauseOps);
-  }
 
   cp.processNowait(clauseOps);
 }

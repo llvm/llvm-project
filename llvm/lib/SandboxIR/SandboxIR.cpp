@@ -306,6 +306,11 @@ BBIterator &BBIterator::operator--() {
   return *this;
 }
 
+BasicBlock *BBIterator::getNodeParent() const {
+  llvm::BasicBlock *Parent = const_cast<BBIterator *>(this)->It.getNodeParent();
+  return cast<BasicBlock>(Ctx->getValue(Parent));
+}
+
 const char *Instruction::getOpcodeName(Opcode Opc) {
   switch (Opc) {
 #define OP(OPC)                                                                \
@@ -562,6 +567,10 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
       .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
                                        &Instruction::copyFastMathFlags>>(this);
   cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
+}
+
+Type *Instruction::getAccessType() const {
+  return Ctx.getType(cast<llvm::Instruction>(Val)->getAccessType());
 }
 
 void Instruction::setHasApproxFunc(bool B) {
@@ -1357,9 +1366,9 @@ BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
 PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
                          Instruction *InsertBefore, Context &Ctx,
                          const Twine &Name) {
-  llvm::PHINode *NewPHI =
-      llvm::PHINode::Create(Ty->LLVMTy, NumReservedValues, Name,
-                            InsertBefore->getTopmostLLVMInstruction());
+  llvm::PHINode *NewPHI = llvm::PHINode::Create(
+      Ty->LLVMTy, NumReservedValues, Name,
+      InsertBefore->getTopmostLLVMInstruction()->getIterator());
   return Ctx.createPHINode(NewPHI);
 }
 
@@ -2519,6 +2528,94 @@ void GlobalObject::setSection(StringRef S) {
   cast<llvm::GlobalObject>(Val)->setSection(S);
 }
 
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
+    LLVMGVToGV::operator()(LLVMGlobalT &LLVMGV) const {
+  return cast<GlobalT>(*Ctx.getValue(&LLVMGV));
+}
+
+namespace llvm::sandboxir {
+// Explicit instantiations.
+template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                                 GlobalObject, llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                                 llvm::GlobalValue>;
+} // namespace llvm::sandboxir
+
+void GlobalIFunc::setResolver(Constant *Resolver) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalIFunc::getResolver, &GlobalIFunc::setResolver>>(
+          this);
+  cast<llvm::GlobalIFunc>(Val)->setResolver(
+      cast<llvm::Constant>(Resolver->Val));
+}
+
+Constant *GlobalIFunc::getResolver() const {
+  return Ctx.getOrCreateConstant(cast<llvm::GlobalIFunc>(Val)->getResolver());
+}
+
+Function *GlobalIFunc::getResolverFunction() {
+  return cast<Function>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalIFunc>(Val)->getResolverFunction()));
+}
+
+GlobalVariable &
+GlobalVariable::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV) const {
+  return cast<GlobalVariable>(*Ctx.getValue(&LLVMGV));
+}
+
+Constant *GlobalVariable::getInitializer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::GlobalVariable>(Val)->getInitializer());
+}
+
+void GlobalVariable::setInitializer(Constant *InitVal) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getInitializer,
+                                       &GlobalVariable::setInitializer>>(this);
+  cast<llvm::GlobalVariable>(Val)->setInitializer(
+      cast<llvm::Constant>(InitVal->Val));
+}
+
+void GlobalVariable::setConstant(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::isConstant,
+                                       &GlobalVariable::setConstant>>(this);
+  cast<llvm::GlobalVariable>(Val)->setConstant(V);
+}
+
+void GlobalVariable::setExternallyInitialized(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalVariable::isExternallyInitialized,
+                        &GlobalVariable::setExternallyInitialized>>(this);
+  cast<llvm::GlobalVariable>(Val)->setExternallyInitialized(V);
+}
+
+void GlobalAlias::setAliasee(Constant *Aliasee) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalAlias::getAliasee, &GlobalAlias::setAliasee>>(
+          this);
+  cast<llvm::GlobalAlias>(Val)->setAliasee(cast<llvm::Constant>(Aliasee->Val));
+}
+
+Constant *GlobalAlias::getAliasee() const {
+  return cast<Constant>(
+      Ctx.getOrCreateConstant(cast<llvm::GlobalAlias>(Val)->getAliasee()));
+}
+
+const GlobalObject *GlobalAlias::getAliaseeObject() const {
+  return cast<GlobalObject>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalAlias>(Val)->getAliaseeObject()));
+}
+
 void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
@@ -2531,6 +2628,54 @@ void GlobalValue::setVisibility(VisibilityTypes V) {
       .emplaceIfTracking<GenericSetter<&GlobalValue::getVisibility,
                                        &GlobalValue::setVisibility>>(this);
   cast<llvm::GlobalValue>(Val)->setVisibility(V);
+}
+
+NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
+  auto *LLVMC = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(GV->Val));
+  return cast<NoCFIValue>(GV->getContext().getOrCreateConstant(LLVMC));
+}
+
+GlobalValue *NoCFIValue::getGlobalValue() const {
+  auto *LLVMC = cast<llvm::NoCFIValue>(Val)->getGlobalValue();
+  return cast<GlobalValue>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+PointerType *NoCFIValue::getType() const {
+  return cast<PointerType>(Ctx.getType(cast<llvm::NoCFIValue>(Val)->getType()));
+}
+
+ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
+                                      ConstantInt *Disc, Constant *AddrDisc) {
+  auto *LLVMC = llvm::ConstantPtrAuth::get(
+      cast<llvm::Constant>(Ptr->Val), cast<llvm::ConstantInt>(Key->Val),
+      cast<llvm::ConstantInt>(Disc->Val), cast<llvm::Constant>(AddrDisc->Val));
+  return cast<ConstantPtrAuth>(Ptr->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantPtrAuth::getPointer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getPointer());
+}
+
+ConstantInt *ConstantPtrAuth::getKey() const {
+  return cast<ConstantInt>(
+      Ctx.getOrCreateConstant(cast<llvm::ConstantPtrAuth>(Val)->getKey()));
+}
+
+ConstantInt *ConstantPtrAuth::getDiscriminator() const {
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getDiscriminator()));
+}
+
+Constant *ConstantPtrAuth::getAddrDiscriminator() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getAddrDiscriminator());
+}
+
+ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
+  auto *LLVMC = cast<llvm::ConstantPtrAuth>(Val)->getWithSameSchema(
+      cast<llvm::Constant>(Pointer->Val));
+  return cast<ConstantPtrAuth>(Ctx.getOrCreateConstant(LLVMC));
 }
 
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
@@ -2726,6 +2871,30 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(C), *this));
+      break;
+    case llvm::Value::GlobalIFuncVal:
+      It->second = std::unique_ptr<GlobalIFunc>(
+          new GlobalIFunc(cast<llvm::GlobalIFunc>(C), *this));
+      break;
+    case llvm::Value::GlobalVariableVal:
+      It->second = std::unique_ptr<GlobalVariable>(
+          new GlobalVariable(cast<llvm::GlobalVariable>(C), *this));
+      break;
+    case llvm::Value::GlobalAliasVal:
+      It->second = std::unique_ptr<GlobalAlias>(
+          new GlobalAlias(cast<llvm::GlobalAlias>(C), *this));
+      break;
+    case llvm::Value::NoCFIValueVal:
+      It->second = std::unique_ptr<NoCFIValue>(
+          new NoCFIValue(cast<llvm::NoCFIValue>(C), *this));
+      break;
+    case llvm::Value::ConstantPtrAuthVal:
+      It->second = std::unique_ptr<ConstantPtrAuth>(
+          new ConstantPtrAuth(cast<llvm::ConstantPtrAuth>(C), *this));
+      break;
+    case llvm::Value::ConstantExprVal:
+      It->second = std::unique_ptr<ConstantExpr>(
+          new ConstantExpr(cast<llvm::ConstantExpr>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
