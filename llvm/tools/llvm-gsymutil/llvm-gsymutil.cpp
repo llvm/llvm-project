@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -96,6 +97,7 @@ static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool StoreMergedFunctionInfo = false;
+static std::vector<std::string> CallSiteYamlPaths;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -177,6 +179,16 @@ static void parseArgs(int argc, char **argv) {
 
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
   StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_callsites_from_yaml_EQ))
+    if (A->getValue() && A->getValue()[0] != '\0')
+      CallSiteYamlPaths.emplace_back(A->getValue());
+    else {
+      llvm::errs()
+          << ToolName
+          << ": --callsites-from-yaml option requires a non-empty argument.\n";
+      std::exit(1);
+    }
 }
 
 /// @}
@@ -369,6 +381,13 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // Get the UUID and convert symbol table to GSYM.
   if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
+
+  // If any call site YAML files were specified, load them now.
+  for (const auto &yamlPath : CallSiteYamlPaths) {
+    if (auto Err = Gsym.loadCallSitesFromYAML(yamlPath)) {
+      return Err;
+    }
+  }
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from
