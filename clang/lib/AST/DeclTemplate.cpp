@@ -309,16 +309,16 @@ bool TemplateDecl::isTypeAlias() const {
 void RedeclarableTemplateDecl::anchor() {}
 
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
-  if (Common)
-    return Common;
+  if (CommonBase *C = getCommonPtrInternal())
+    return C;
 
   // Walk the previous-declaration chain until we either find a declaration
   // with a common pointer or we run out of previous declarations.
   SmallVector<const RedeclarableTemplateDecl *, 2> PrevDecls;
   for (const RedeclarableTemplateDecl *Prev = getPreviousDecl(); Prev;
        Prev = Prev->getPreviousDecl()) {
-    if (Prev->Common) {
-      Common = Prev->Common;
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
+      setCommonPtr(C);
       break;
     }
 
@@ -326,18 +326,18 @@ RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() c
   }
 
   // If we never found a common pointer, allocate one now.
-  if (!Common) {
+  if (!getCommonPtrInternal()) {
     // FIXME: If any of the declarations is from an AST file, we probably
     // need an update record to add the common data.
 
-    Common = newCommon(getASTContext());
+    setCommonPtr(newCommon(getASTContext()));
   }
 
   // Update any previous declarations we saw with the common pointer.
   for (const RedeclarableTemplateDecl *Prev : PrevDecls)
-    Prev->Common = Common;
+    Prev->setCommonPtr(getCommonPtrInternal());
 
-  return Common;
+  return getCommonPtrInternal();
 }
 
 void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
@@ -467,15 +467,15 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
 
   // If we haven't created a common pointer yet, then it can just be created
   // with the usual method.
-  if (!Base::Common)
+  if (!getCommonPtrInternal())
     return;
 
-  Common *ThisCommon = static_cast<Common *>(Base::Common);
+  Common *ThisCommon = static_cast<Common *>(getCommonPtrInternal());
   Common *PrevCommon = nullptr;
   SmallVector<FunctionTemplateDecl *, 8> PreviousDecls;
   for (; Prev; Prev = Prev->getPreviousDecl()) {
-    if (Prev->Base::Common) {
-      PrevCommon = static_cast<Common *>(Prev->Base::Common);
+    if (CommonBase *C = Prev->getCommonPtrInternal()) {
+      PrevCommon = static_cast<Common *>(C);
       break;
     }
     PreviousDecls.push_back(Prev);
@@ -485,7 +485,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   // use this common pointer.
   if (!PrevCommon) {
     for (auto *D : PreviousDecls)
-      D->Base::Common = ThisCommon;
+      D->setCommonPtr(ThisCommon);
     return;
   }
 
@@ -493,7 +493,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   assert(ThisCommon->Specializations.size() == 0 &&
          "Can't merge incompatible declarations!");
 
-  Base::Common = PrevCommon;
+  setCommonPtr(PrevCommon);
 }
 
 //===----------------------------------------------------------------------===//
