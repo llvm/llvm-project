@@ -801,15 +801,15 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // PPCTargetLowering can't compute the cost appropriately. So here we
   // explicitly check this case. There are also corresponding store
   // instructions.
-  unsigned MemBytes = Src->getPrimitiveSizeInBits();
+  unsigned MemBits = Src->getPrimitiveSizeInBits();
   unsigned SrcBytes = LT.second.getStoreSize();
   if (ST->hasVSX() && IsAltivecType) {
-    if (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32))
+    if (MemBits == 64 || (ST->hasP8Vector() && MemBits == 32))
       return 1;
 
     // Use lfiwax/xxspltw
     Align AlignBytes = Alignment ? *Alignment : Align(1);
-    if (Opcode == Instruction::Load && MemBytes == 32 && AlignBytes < SrcBytes)
+    if (Opcode == Instruction::Load && MemBits == 32 && AlignBytes < SrcBytes)
       return 2;
   }
 
