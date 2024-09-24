@@ -48,7 +48,7 @@ static void PrintStackTrace(uptr pc, uptr bp) {
 
 static void PrintError(const Decorator &decorator,
                        const DiagnosticsInfo &info) {
-  const auto error_type_str = [&info]() -> const char * {
+  const auto ErrorTypeStr = [&info]() -> const char * {
     switch (info.type) {
     case DiagnosticsInfoType::InterceptedCall:
       return "unsafe-library-call";
@@ -59,7 +59,7 @@ static void PrintError(const Decorator &decorator,
   };
 
   Printf("%s", decorator.Error());
-  Report("ERROR: RealtimeSanitizer: %s\n", error_type_str());
+  Report("ERROR: RealtimeSanitizer: %s\n", ErrorTypeStr());
 }
 
 static void PrintReason(const Decorator &decorator,
