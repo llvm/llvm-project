@@ -10261,7 +10261,6 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
-    assert(VLen);
     unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
     auto Decompose =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
@@ -10483,7 +10482,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
-    assert(VLen);
     unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
     auto Decompose =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
