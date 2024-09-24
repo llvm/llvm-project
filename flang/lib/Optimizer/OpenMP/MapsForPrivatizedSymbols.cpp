@@ -6,6 +6,23 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+/// \file
+/// An OpenMP dialect related pass for FIR/HLFIR which creates MapInfoOp
+/// instances for certain privatized symbols.
+/// For example, if an allocatable variable is used in a private clause attached
+/// to a omp.target op, then the allocatable variable's descriptor will be
+/// needed on the device (e.g. GPU). This descriptor needs to be separately
+/// mapped onto the device. This pass creates the necessary omp.map.info ops for
+/// this.
+//===----------------------------------------------------------------------===//
+// TODO:
+// 1. Before adding omp.map.info, check if in case we already have an
+//    omp.map.info for the variable in question.
+// 2. Generalize this for more than just omp.target ops.
+//===----------------------------------------------------------------------===//
+
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -37,8 +54,7 @@ class MapsForPrivatizedSymbolsPass
       return false;
     return true;
   }
-  omp::MapInfoOp createMapInfo(mlir::Location loc, mlir::Value var,
-                               OpBuilder &builder) {
+  omp::MapInfoOp createMapInfo(Location loc, Value var, OpBuilder &builder) {
     uint64_t mapTypeTo = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
@@ -47,39 +63,24 @@ class MapsForPrivatizedSymbolsPass
     assert(declOp &&
            "Expected defining Op of privatized var to be hlfir.declare");
     Value varPtr = declOp.getOriginalBase();
-    Value varBase = declOp.getBase();
-    llvm::errs() << "varPtr = ";
-    varPtr.dump();
-    llvm::errs() << " type -> ";
-    varPtr.getType().dump();
-    llvm::errs() << "\n";
-    llvm::errs() << "varBase = ";
-    varBase.dump();
-    llvm::errs() << " type -> ";
-    varBase.getType().dump();
-    llvm::errs() << "\n";
+
     return builder.create<omp::MapInfoOp>(
         loc, varPtr.getType(), varPtr,
-        mlir::TypeAttr::get(
-            llvm::cast<mlir::omp::PointerLikeType>(varPtr.getType())
-                .getElementType()),
-        /*varPtrPtr=*/mlir::Value{},
-        /*members=*/mlir::SmallVector<mlir::Value>{},
-        /*member_index=*/mlir::DenseIntElementsAttr{},
-        /*bounds=*/mlir::ValueRange{},
+        TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
+                          .getElementType()),
+        /*varPtrPtr=*/Value{},
+        /*members=*/SmallVector<Value>{},
+        /*member_index=*/DenseIntElementsAttr{},
+        /*bounds=*/ValueRange{},
         builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
                                mapTypeTo),
         builder.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
-        mlir::StringAttr(), builder.getBoolAttr(false));
+        StringAttr(), builder.getBoolAttr(false));
   }
   void addMapInfoOp(omp::TargetOp targetOp, omp::MapInfoOp mapInfoOp) {
-    mlir::Location loc = targetOp.getLoc();
-    llvm::errs() << "Adding mapInfoOp -> ";
-    mapInfoOp.dump();
-    llvm::errs() << "\n";
-
-    targetOp.getMapVarsMutable().append(mlir::ValueRange{mapInfoOp});
+    Location loc = targetOp.getLoc();
+    targetOp.getMapVarsMutable().append(ValueRange{mapInfoOp});
     size_t numMapVars = targetOp.getMapVars().size();
     targetOp.getRegion().insertArgument(numMapVars - 1, mapInfoOp.getType(),
                                         loc);
@@ -97,9 +98,6 @@ class MapsForPrivatizedSymbolsPass
     getOperation()->walk([&](omp::TargetOp targetOp) {
       if (targetOp.getPrivateVars().empty())
         return;
-      llvm::errs() << "Func is \n";
-      targetOp.getOperation()->getParentOp()->getParentOp()->dump();
-      llvm::errs() << "\n";
       OperandRange privVars = targetOp.getPrivateVars();
       std::optional<ArrayAttr> privSyms = targetOp.getPrivateSyms();
       SmallVector<omp::MapInfoOp, 4> mapInfoOps;
@@ -109,19 +107,11 @@ class MapsForPrivatizedSymbolsPass
         omp::PrivateClauseOp privatizer =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                 targetOp, privatizerName);
-        llvm::errs() << "privVar = ";
-        privVar.dump();
-        llvm::errs() << "\n";
-        llvm::errs() << "privVar.getType() = ";
-        privVar.getType().dump();
-        llvm::errs() << "\n";
-        // assert(mlir::isa<fir::ReferenceType>(privVar.getType()) &&
-        //        "Privatized variable should be a reference.");
         if (!privatizerNeedsMap(privatizer)) {
           continue;
         }
         builder.setInsertionPoint(targetOp);
-        mlir::Location loc = targetOp.getLoc();
+        Location loc = targetOp.getLoc();
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
         mapInfoOps.push_back(mapInfoOp);
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
