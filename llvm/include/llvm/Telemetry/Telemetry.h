@@ -99,7 +99,7 @@ struct EntryKind {
 /// Downstream implementations can add more fields as needed to describe
 /// additional events.
 ///
-/// For eg., The LLDB debugger can define a DebugCommandInfo subclass
+/// For example, The LLDB debugger can define a DebugCommandInfo subclass
 /// which has additional fields about the debug-command being instrumented,
 /// such as `CommandArguments` or `CommandName`.
 struct TelemetryInfo {
