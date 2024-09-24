@@ -1665,3 +1665,18 @@ llvm.func @wrong_number_of_bundle_types() {
   llvm.call @foo() ["tag"(%0 : i32, i32)] : () -> ()
   llvm.return
 }
+
+// -----
+
+llvm.func @foo()
+llvm.func @wrong_number_of_bundle_tags() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error@+1 {{expected 2 operand bundle tags, but actually got 1}}
+  "llvm.call"(%0, %1) <{ op_bundle_tags = ["tag"] }> {
+    callee = @foo,
+    operandSegmentSizes = array<i32: 0, 2>,
+    op_bundle_sizes = array<i32: 1, 1>
+  } : (i32, i32) -> ()
+  llvm.return
+}
