@@ -92,18 +92,21 @@ namespace llvm {
   Constant *getPredForFCmpCode(unsigned Code, Type *OpTy,
                                CmpInst::Predicate &Pred);
 
-  /// Represents the operation icmp (X & Mask) pred 0, where pred can only be
+  /// Represents the operation icmp (X & Mask) pred Cmp, where pred can only be
   /// eq or ne.
   struct DecomposedBitTest {
     Value *X;
     CmpInst::Predicate Pred;
     APInt Mask;
+    APInt Cmp;
   };
 
-  /// Decompose an icmp into the form ((X & Mask) pred 0) if possible.
+  /// Decompose an icmp into the form ((X & Mask) pred Cmp) if possible.
+  /// Unless \p AllowNonZeroCmp is true, Cmp will always be 0.
   std::optional<DecomposedBitTest>
   decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
-                       bool LookThroughTrunc = true);
+                       bool LookThroughTrunc = true,
+                       bool AllowNonZeroCmp = false);
 
 } // end namespace llvm
 
