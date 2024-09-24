@@ -406,27 +406,12 @@ bool MIRParserImpl::computeFunctionProperties(
   auto ComputedPropertyHelper =
       [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
                     MachineFunctionProperties::Property P) -> bool {
-    // Prefer whatever is set explicitly by the input MIR
-    if (ExplicitProp.has_value()) {
-      if (*ExplicitProp) {
-        // Check for conflicts with the computed value
-        if (!ComputedProp)
-          return true;
-
-        Properties.set(P);
-      } else
-        Properties.reset(P);
-
-      return false;
-    }
-
-    // No explicit value given, so use computed value
-    if (ComputedProp)
+    if (ExplicitProp.value_or(ComputedProp))
       Properties.set(P);
     else
       Properties.reset(P);
-
-    return false;
+    
+    return ExplicitProp && *ExplicitProp && !ComputedProp;
   };
 
   if (ComputedPropertyHelper(YamlMF.NoPHIs, !HasPHI,
