@@ -36,7 +36,7 @@ this is retrieved indirectly via the `TypeSystemMap` for the `Target` instance.
 
 The `TypeSystem` instance returned by the `Target` is expected to be capable of
 evaluating expressions, while the `TypeSystem` instance returned by the `Module`
-is not. If want to support expression evaluation for your language, you could
+is not. If you want to support expression evaluation for your language, you could
 consider one of the following approaches:
 * Implement a single `TypeSystem` class that supports evaluation when given an
   optional `Target`, implementing all the expression evaluation methods on the
