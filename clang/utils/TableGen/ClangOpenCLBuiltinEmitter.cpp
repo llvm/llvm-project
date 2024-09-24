@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -114,9 +113,8 @@ private:
   // \param Output (out) String containing the enums to emit in the output file.
   // \param List (out) List containing the extracted Types, except the Types in
   //        TypesSeen.
-  void ExtractEnumTypes(ArrayRef<const Record *> Types,
-                        StringMap<bool> &TypesSeen, std::string &Output,
-                        std::vector<const Record *> &List);
+  void ExtractEnumTypes(ArrayRef<const Record *> Types, StringSet<> &TypesSeen,
+                        std::string &Output, std::vector<const Record *> &List);
 
   // Emit the enum or struct used in the generated file.
   // Populate the TypeList at the same time.
@@ -364,7 +362,7 @@ void BuiltinNameEmitter::Emit() {
 }
 
 void BuiltinNameEmitter::ExtractEnumTypes(ArrayRef<const Record *> Types,
-                                          StringMap<bool> &TypesSeen,
+                                          StringSet<> &TypesSeen,
                                           std::string &Output,
                                           std::vector<const Record *> &List) {
   raw_string_ostream SS(Output);
@@ -376,7 +374,7 @@ void BuiltinNameEmitter::ExtractEnumTypes(ArrayRef<const Record *> Types,
       // the Record can be a VectorType or something else, only the name is
       // important.
       List.push_back(T);
-      TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
+      TypesSeen.insert(T->getValueAsString("Name"));
     }
   }
 }
@@ -385,7 +383,7 @@ void BuiltinNameEmitter::EmitDeclarations() {
   // Enum of scalar type names (float, int, ...) and generic type sets.
   OS << "enum OpenCLTypeID {\n";
 
-  StringMap<bool> TypesSeen;
+  StringSet<> TypesSeen;
   std::string GenTypeEnums;
   std::string TypeEnums;
 
