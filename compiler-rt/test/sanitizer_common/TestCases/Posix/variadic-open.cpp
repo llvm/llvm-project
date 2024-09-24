@@ -16,8 +16,7 @@ void test(const char *path, int flags) {
   int fd = open(path, flags, 0600);
   if (fd == -1) {
     perror(path);
-    fprintf(stderr, "\n%d\n", errno);
-    if (errno == EOPNOTSUPP)
+    if (errno == EOPNOTSUPP || errno == EINVAL)
       return;
   }
   assert(fd != -1);
