@@ -9509,6 +9509,17 @@ Sema::ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
   PushDeclContext(BodyScope, Body);
 
   for (ParmVarDecl *Param : LocalParameters) {
+    if (Param->getType()->isVoidType()) {
+      if (LocalParameters.size() > 1) {
+        Diag(Param->getBeginLoc(), diag::err_void_only_param);
+      } else if (Param->getIdentifier()) {
+        Diag(Param->getBeginLoc(), diag::err_param_with_void_type);
+      } else if (Param->getType().hasQualifiers()) {
+        Diag(Param->getBeginLoc(), diag::err_void_param_qualified);
+        Body->setInvalidDecl();
+      }
+    }
+
     if (Param->hasDefaultArg())
       // C++2a [expr.prim.req] p4
       //     [...] A local parameter of a requires-expression shall not have a
