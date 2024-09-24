@@ -35,27 +35,33 @@ using namespace llvm;
 STATISTIC(NumAssigned   , "Number of registers assigned");
 STATISTIC(NumUnassigned , "Number of registers unassigned");
 
-char LiveRegMatrix::ID = 0;
-INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix",
+char LiveRegMatrixWrapperPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperPass, "liveregmatrix",
                       "Live Register Matrix", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix",
+INITIALIZE_PASS_END(LiveRegMatrixWrapperPass, "liveregmatrix",
                     "Live Register Matrix", false, false)
 
-LiveRegMatrix::LiveRegMatrix() : MachineFunctionPass(ID) {}
-
-void LiveRegMatrix::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveRegMatrixWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.addRequiredTransitive<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
+bool LiveRegMatrixWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto *VRM = &getAnalysis<VirtRegMapWrapperPass>().getVRM();
+  LRM.init(MF, LIS, VRM);
+  return false;
+}
+
+void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals *pLIS,
+                         VirtRegMap *pVRM) {
   TRI = MF.getSubtarget().getRegisterInfo();
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LIS = pLIS;
+  VRM = pVRM;
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
@@ -64,8 +70,9 @@ bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();
-  return false;
 }
+
+void LiveRegMatrixWrapperPass::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
@@ -245,4 +252,15 @@ Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
   }
 
   return MCRegister::NoRegister;
+}
+
+AnalysisKey LiveRegMatrixAnalysis::Key;
+
+LiveRegMatrix LiveRegMatrixAnalysis::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
+  LiveRegMatrix LRM;
+  LRM.init(MF, &LIS, &VRM);
+  return LRM;
 }
