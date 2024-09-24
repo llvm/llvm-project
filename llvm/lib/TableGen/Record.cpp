@@ -838,7 +838,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.
@@ -3225,7 +3224,7 @@ Init *RecordKeeper::getNewAnonymousName() {
 // These functions implement the phase timing facility. Starting a timer
 // when one is already running stops the running one.
 
-void RecordKeeper::startTimer(StringRef Name) {
+void RecordKeeper::startTimer(StringRef Name) const {
   if (TimingGroup) {
     if (LastTimer && LastTimer->isRunning()) {
       LastTimer->stopTimer();

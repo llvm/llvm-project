@@ -695,7 +695,7 @@ bool FillStackFrames(lldb::SBThread &thread, llvm::json::Array &stack_frames,
     stack_frames.emplace_back(CreateStackFrame(frame));
   }
 
-  if (g_dap.enable_display_extended_backtrace && reached_end_of_stack) {
+  if (g_dap.display_extended_backtrace && reached_end_of_stack) {
     // Check for any extended backtraces.
     for (uint32_t bt = 0;
          bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
@@ -778,8 +778,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  g_dap.enable_display_extended_backtrace =
-      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
+  g_dap.display_extended_backtrace =
+      GetBoolean(arguments, "displayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
@@ -1568,9 +1568,16 @@ void request_evaluate(const llvm::json::Object &request) {
   lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
   std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
+  bool repeat_last_command =
+      expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && g_dap.DetectExpressionContext(frame, expression) ==
-                               ExpressionContext::Command) {
+  if (context == "repl" && (repeat_last_command ||
+                            (!expression.empty() &&
+                             g_dap.DetectExpressionContext(frame, expression) ==
+                                 ExpressionContext::Command))) {
+    // Since the current expression is not for a variable, clear the
+    // last_nonempty_var_expression field.
+    g_dap.last_nonempty_var_expression.clear();
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
@@ -1581,6 +1588,16 @@ void request_evaluate(const llvm::json::Object &request) {
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
+    if (context == "repl") {
+      // If the expression is empty and the last expression was for a
+      // variable, set the expression to the previous expression (repeat the
+      // evaluation); otherwise save the current non-empty expression for the
+      // next (possibly empty) variable expression.
+      if (expression.empty())
+        expression = g_dap.last_nonempty_var_expression;
+      else
+        g_dap.last_nonempty_var_expression = expression;
+    }
     // Always try to get the answer from the local variables if possible. If
     // this fails, then if the context is not "hover", actually evaluate an
     // expression using the expression parser.
@@ -2139,8 +2156,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  g_dap.enable_display_extended_backtrace =
-      GetBoolean(arguments, "enableDisplayExtendedBacktrace", false);
+  g_dap.display_extended_backtrace =
+      GetBoolean(arguments, "displayExtendedBacktrace", false);
   g_dap.command_escape_prefix =
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));

@@ -621,8 +621,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       BaseReg == X86::EIP) { // [disp32+rIP] in X86-64 mode
     assert(STI.hasFeature(X86::Is64Bit) &&
            "Rip-relative addressing requires 64-bit mode");
-    assert(IndexReg.getReg() == 0 && !ForceSIB &&
-           "Invalid rip-relative address");
+    assert(!IndexReg.getReg() && !ForceSIB && "Invalid rip-relative address");
     emitByte(modRMByte(0, RegOpcodeField, 5), CB);
 
     unsigned Opcode = MI.getOpcode();

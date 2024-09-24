@@ -5802,22 +5802,29 @@ SDValue RISCVTargetLowering::lowerConstantFP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   const APFloat &Imm = cast<ConstantFPSDNode>(Op)->getValueAPF();
 
-  if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return Op;
+  // Can this constant be selected by a Zfa FLI instruction?
+  bool Negate = false;
+  int Index = getLegalZfaFPImm(Imm, VT);
 
-  if (!Imm.isNegative())
-    return SDValue();
+  // If the constant is negative, try negating.
+  if (Index < 0 && Imm.isNegative()) {
+    Index = getLegalZfaFPImm(-Imm, VT);
+    Negate = true;
+  }
 
-  int Index = getLegalZfaFPImm(-Imm, VT);
+  // If we couldn't find a FLI lowering, fall back to generic code.
   if (Index < 0)
     return SDValue();
 
   // Emit an FLI+FNEG. We use a custom node to hide from constant folding.
   SDLoc DL(Op);
   SDValue Const =
-      DAG.getNode(RISCVISD::FLI, Op, VT,
+      DAG.getNode(RISCVISD::FLI, DL, VT,
                   DAG.getTargetConstant(Index, DL, Subtarget.getXLenVT()));
-  return DAG.getNode(ISD::FNEG, Op, VT, Const);
+  if (!Negate)
+    return Const;
+
+  return DAG.getNode(ISD::FNEG, DL, VT, Const);
 }
 
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
@@ -10197,17 +10204,15 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
 
+    SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                         DAG.getUNDEF(ContainerVT), SubVec,
+                         DAG.getVectorIdxConstant(0, DL));
+
     if (OrigIdx == 0 && Vec.isUndef() && VecVT.isFixedLengthVector()) {
-      SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
-                           DAG.getUNDEF(ContainerVT), SubVec,
-                           DAG.getVectorIdxConstant(0, DL));
       SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
       return DAG.getBitcast(Op.getValueType(), SubVec);
     }
 
-    SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
-                         DAG.getUNDEF(ContainerVT), SubVec,
-                         DAG.getVectorIdxConstant(0, DL));
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. Note
@@ -10381,12 +10386,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   unsigned OrigIdx = Op.getConstantOperandVal(1);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
+  // With an index of 0 this is a cast-like subvector, which can be performed
+  // with subregister operations.
+  if (OrigIdx == 0)
+    return Op;
+
   // We don't have the ability to slide mask vectors down indexed by their i1
   // elements; the smallest we can do is i8. Often we are able to bitcast to
   // equivalent i8 vectors. Note that when extracting a fixed-length vector
   // from a scalable one, we might not necessarily have enough scalable
   // elements to safely divide by 8: v8i1 = extract nxv1i1 is valid.
-  if (SubVecVT.getVectorElementType() == MVT::i1 && OrigIdx != 0) {
+  if (SubVecVT.getVectorElementType() == MVT::i1) {
     if (VecVT.getVectorMinNumElements() >= 8 &&
         SubVecVT.getVectorMinNumElements() >= 8) {
       assert(OrigIdx % 8 == 0 && "Invalid index");
@@ -10417,11 +10427,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       return DAG.getSetCC(DL, SubVecVT, Vec, SplatZero, ISD::SETNE);
     }
   }
-
-  // With an index of 0 this is a cast-like subvector, which can be performed
-  // with subregister operations.
-  if (OrigIdx == 0)
-    return Op;
 
   const auto VLen = Subtarget.getRealVLen();
 
@@ -10775,7 +10780,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     MVT WidenVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, Op.getOperand(0));
     SDValue Op2 = DAG.getNode(ISD::VECTOR_REVERSE, DL, WidenVT, Op1);
-    return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Op2);
+    return DAG.getSetCC(DL, VecVT, Op2,
+                        DAG.getConstant(0, DL, Op2.getValueType()), ISD::SETNE);
   }
 
   MVT ContainerVT = VecVT;

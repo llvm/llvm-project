@@ -587,9 +587,10 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 // matching the argument type. It is assumed that only the first argument is
 // overloaded.
 template <unsigned N>
-Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF, const CallExpr *E,
-                                        unsigned IntrinsicID,
-                                        llvm::StringRef Name = "") {
+static Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
+                                               const CallExpr *E,
+                                               unsigned IntrinsicID,
+                                               llvm::StringRef Name = "") {
   static_assert(N, "expect non-empty argument");
   SmallVector<Value *, N> Args;
   for (unsigned I = 0; I < N; ++I)
@@ -3834,6 +3835,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_floor:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::floor, "elt.floor"));
+  case Builtin::BI__builtin_elementwise_popcount:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::ctpop, "elt.ctpop"));
   case Builtin::BI__builtin_elementwise_roundeven:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::roundeven, "elt.roundeven"));
@@ -13646,7 +13650,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     else
       InitValStr = std::to_string(InitVal.getZExtValue());
     std::string EnumStr = Enumerator->getNameAsString() + ":" + InitValStr;
-    Value *EnumStrVal = Builder.CreateGlobalStringPtr(EnumStr);
+    Value *EnumStrVal = Builder.CreateGlobalString(EnumStr);
 
     ConstantInt *Flag = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
@@ -14804,22 +14808,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storesd128_mask:
     return EmitX86MaskedStore(*this, Ops, Align(1));
 
-  case X86::BI__builtin_ia32_vpopcntb_128:
-  case X86::BI__builtin_ia32_vpopcntd_128:
-  case X86::BI__builtin_ia32_vpopcntq_128:
-  case X86::BI__builtin_ia32_vpopcntw_128:
-  case X86::BI__builtin_ia32_vpopcntb_256:
-  case X86::BI__builtin_ia32_vpopcntd_256:
-  case X86::BI__builtin_ia32_vpopcntq_256:
-  case X86::BI__builtin_ia32_vpopcntw_256:
-  case X86::BI__builtin_ia32_vpopcntb_512:
-  case X86::BI__builtin_ia32_vpopcntd_512:
-  case X86::BI__builtin_ia32_vpopcntq_512:
-  case X86::BI__builtin_ia32_vpopcntw_512: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, Ops);
-  }
   case X86::BI__builtin_ia32_cvtmask2b128:
   case X86::BI__builtin_ia32_cvtmask2b256:
   case X86::BI__builtin_ia32_cvtmask2b512:
@@ -17621,15 +17609,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(
         Builder.CreateCall(CGM.getIntrinsic(ID), {Op0, Op1, Op2}), ResultType);
   }
-  case PPC::BI__builtin_altivec_vpopcntb:
-  case PPC::BI__builtin_altivec_vpopcnth:
-  case PPC::BI__builtin_altivec_vpopcntw:
-  case PPC::BI__builtin_altivec_vpopcntd: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *X = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, X);
-  }
   case PPC::BI__builtin_altivec_vadduqm:
   case PPC::BI__builtin_altivec_vsubuqm: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18197,7 +18176,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);
     Value *Call = Builder.CreateCall(F, CallOps);
-    return Builder.CreateAlignedStore(Call, Ops[0], MaybeAlign(64));
+    return Builder.CreateAlignedStore(Call, Ops[0], MaybeAlign());
   }
 
   case PPC::BI__builtin_ppc_compare_and_swap:
@@ -18591,7 +18570,7 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
 }
 
 // Return dot product intrinsic that corresponds to the QT scalar type
-Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   if (QT->isFloatingType())
     return RT.getFDotIntrinsic();
   if (QT->isSignedIntegerType())
@@ -19698,16 +19677,6 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   // to target-specific LLVM intrinsics.  The ones handled specially here can
   // be represented via standard LLVM IR, which is preferable to enable common
   // LLVM optimizations.
-
-  case SystemZ::BI__builtin_s390_vpopctb:
-  case SystemZ::BI__builtin_s390_vpopcth:
-  case SystemZ::BI__builtin_s390_vpopctf:
-  case SystemZ::BI__builtin_s390_vpopctg: {
-    llvm::Type *ResultType = ConvertType(E->getType());
-    Value *X = EmitScalarExpr(E->getArg(0));
-    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
-    return Builder.CreateCall(F, X);
-  }
 
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
@@ -21475,40 +21444,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_swizzle);
     return Builder.CreateCall(Callee, {Src, Indices});
   }
-  case WebAssembly::BI__builtin_wasm_add_sat_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_add_sat_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_add_sat_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_add_sat_u_i16x8:
-  case WebAssembly::BI__builtin_wasm_sub_sat_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_sub_sat_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_sub_sat_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_sub_sat_u_i16x8: {
-    unsigned IntNo;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_add_sat_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_add_sat_s_i16x8:
-      IntNo = Intrinsic::sadd_sat;
-      break;
-    case WebAssembly::BI__builtin_wasm_add_sat_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_add_sat_u_i16x8:
-      IntNo = Intrinsic::uadd_sat;
-      break;
-    case WebAssembly::BI__builtin_wasm_sub_sat_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_sub_sat_s_i16x8:
-      IntNo = Intrinsic::wasm_sub_sat_signed;
-      break;
-    case WebAssembly::BI__builtin_wasm_sub_sat_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_sub_sat_u_i16x8:
-      IntNo = Intrinsic::wasm_sub_sat_unsigned;
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    Value *LHS = EmitScalarExpr(E->getArg(0));
-    Value *RHS = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
-    return Builder.CreateCall(Callee, {LHS, RHS});
-  }
   case WebAssembly::BI__builtin_wasm_abs_i8x16:
   case WebAssembly::BI__builtin_wasm_abs_i16x8:
   case WebAssembly::BI__builtin_wasm_abs_i32x4:
@@ -21518,47 +21453,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Constant *Zero = llvm::Constant::getNullValue(Vec->getType());
     Value *ICmp = Builder.CreateICmpSLT(Vec, Zero, "abscond");
     return Builder.CreateSelect(ICmp, Neg, Vec, "abs");
-  }
-  case WebAssembly::BI__builtin_wasm_min_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_min_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_max_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_max_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_min_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_min_u_i16x8:
-  case WebAssembly::BI__builtin_wasm_max_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_max_u_i16x8:
-  case WebAssembly::BI__builtin_wasm_min_s_i32x4:
-  case WebAssembly::BI__builtin_wasm_min_u_i32x4:
-  case WebAssembly::BI__builtin_wasm_max_s_i32x4:
-  case WebAssembly::BI__builtin_wasm_max_u_i32x4: {
-    Value *LHS = EmitScalarExpr(E->getArg(0));
-    Value *RHS = EmitScalarExpr(E->getArg(1));
-    Value *ICmp;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_min_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_min_s_i16x8:
-    case WebAssembly::BI__builtin_wasm_min_s_i32x4:
-      ICmp = Builder.CreateICmpSLT(LHS, RHS);
-      break;
-    case WebAssembly::BI__builtin_wasm_min_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_min_u_i16x8:
-    case WebAssembly::BI__builtin_wasm_min_u_i32x4:
-      ICmp = Builder.CreateICmpULT(LHS, RHS);
-      break;
-    case WebAssembly::BI__builtin_wasm_max_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_max_s_i16x8:
-    case WebAssembly::BI__builtin_wasm_max_s_i32x4:
-      ICmp = Builder.CreateICmpSGT(LHS, RHS);
-      break;
-    case WebAssembly::BI__builtin_wasm_max_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_max_u_i16x8:
-    case WebAssembly::BI__builtin_wasm_max_u_i32x4:
-      ICmp = Builder.CreateICmpUGT(LHS, RHS);
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    return Builder.CreateSelect(ICmp, LHS, RHS);
   }
   case WebAssembly::BI__builtin_wasm_avgr_u_i8x16:
   case WebAssembly::BI__builtin_wasm_avgr_u_i16x8: {
@@ -21609,12 +21503,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *RHS = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_dot);
     return Builder.CreateCall(Callee, {LHS, RHS});
-  }
-  case WebAssembly::BI__builtin_wasm_popcnt_i8x16: {
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee =
-        CGM.getIntrinsic(Intrinsic::ctpop, ConvertType(E->getType()));
-    return Builder.CreateCall(Callee, {Vec});
   }
   case WebAssembly::BI__builtin_wasm_any_true_v128:
   case WebAssembly::BI__builtin_wasm_all_true_i8x16:
