@@ -381,6 +381,7 @@ module std_core [system] {
   // Only the truly dependency-free parts of __utility are here
   module utility_core {
     module declval  { header "__utility/declval.h" }
+    module empty    { header "__utility/empty.h" }
     module forward  { header "__utility/forward.h" }
   }
 } // module std_core
@@ -1954,7 +1955,6 @@ module std [system] {
     }
     module cmp                        { header "__utility/cmp.h" }
     module convert_to_integral        { header "__utility/convert_to_integral.h" }
-    module empty                      { header "__utility/empty.h" }
     module exception_guard            { header "__utility/exception_guard.h" }
     module exchange                   { header "__utility/exchange.h" }
     module forward_like               { header "__utility/forward_like.h" }
