@@ -687,12 +687,31 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
   return CGF.Builder.CreateICmpSLT(V, Zero);
 }
 
+/// Checks no arguments or results are passed indirectly in the ABI (i.e. via a
+/// hidden pointer). This is used to check annotating FP libcalls (that could
+/// set `errno`) with "int" TBAA metadata is safe. If any floating-point
+/// arguments are passed indirectly, setup for the call could be incorrectly
+/// optimized out.
+static bool HasNoIndirectArgumentsOrResults(CGFunctionInfo const &FnInfo) {
+  auto IsIndirect = [&](ABIArgInfo const &info) {
+    return info.isIndirect() || info.isIndirectAliased() || info.isInAlloca();
+  };
+  return !IsIndirect(FnInfo.getReturnInfo()) &&
+         llvm::none_of(FnInfo.arguments(),
+                       [&](CGFunctionInfoArgInfo const &ArgInfo) {
+                         return IsIndirect(ArgInfo.info);
+                       });
+}
+
 static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
+  llvm::CallBase *callOrInvoke = nullptr;
+  CGFunctionInfo const *FnInfo = nullptr;
   RValue Call =
-      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+                   /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Check whether a FP math builtin function, such as BI__builtin_expf
@@ -702,12 +721,12 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
     // Restrict to target with errno, for example, MacOS doesn't set errno.
     // TODO: Support builtin function with complex type returned, eg: cacosh
     if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained() && Call.isScalar()) {
+        !CGF.Builder.getIsFPConstrained() && Call.isScalar() &&
+        HasNoIndirectArgumentsOrResults(*FnInfo)) {
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
-      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+      CGF.CGM.DecorateInstructionWithTBAA(callOrInvoke, TBAAInfo);
     }
   }
   return Call;
