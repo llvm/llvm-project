@@ -45,15 +45,7 @@ static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
     // frame. But that could still be in the `std` namespace, so
     // check the namespace prefix too.
     if (!frame_name.GetStringRef().starts_with("std::") &&
-        !most_relevant_frame_sp->IsHidden()
-#ifdef LLDB_ENABLE_SWIFT
-        // In Swift-C++ interop, we generate frames with a "std."
-        // prefix for functions from libc++. We don't want to
-        // stop in those frames either.
-        && !frame_name.GetStringRef().starts_with("__C.std.") &&
-        !frame_name.GetStringRef().starts_with("std.")
-#endif
-    )
+        !most_relevant_frame_sp->IsHidden())
       return most_relevant_frame_sp;
 
     ++stack_idx;

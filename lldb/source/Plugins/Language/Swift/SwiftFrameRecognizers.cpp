@@ -188,12 +188,27 @@ public:
   RecognizeFrame(lldb::StackFrameSP frame_sp) override {
     if (!frame_sp)
       return {};
+
+    // Hide compiler-generated frames.
+    if (frame_sp->IsArtificial())
+      return m_hidden_frame;
+
     const auto &sc = frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
     if (!sc.function)
       return {};
 
+    FileSpec source_file;
+    uint32_t line_no;
+    sc.function->GetStartLineSourceInfo(source_file, line_no);
+    // FIXME: these <compiler-generated> frames should be marked artificial
+    // by the Swift compiler.
+    if (source_file.GetFilename() == "<compiler-generated>"
+        && line_no == 0)
+      return m_hidden_frame;
+
     auto symbol_name =
         sc.function->GetMangled().GetMangledName().GetStringRef();
+
     using namespace swift::Demangle;
     using namespace swift_demangle;
     Context demangle_ctx;
