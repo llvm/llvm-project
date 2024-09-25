@@ -155,12 +155,12 @@ TEST_F(SymbolFileDWARFTests, ParseArangesIgnoreEmpty) {
   // and we ensure that these are ignored by our DWARFDebugArangeSet parser
   // and not included in the descriptors that are returned.
   unsigned char binary_data[] = {
-      0, 0, 0, 0, // unit_length that will be set correctly after this
-      0, 2,       // DWARF version number (uint16_t)
+      0, 0, 0, 0,   // unit_length that will be set correctly after this
+      0, 2,         // DWARF version number (uint16_t)
       0, 0, 0, 255, // CU offset
-      4,          // address size
-      0,          // segment size
-      0, 0, 0, 0, // alignment for the first tuple
+      4,            // address size
+      0,            // segment size
+      0, 0, 0, 0,   // alignment for the first tuple
       // BEGIN TUPLES
       0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, // [0x1000-0x1100)
       0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, // [0x1100-0x1100)

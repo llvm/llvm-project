@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDebugAranges.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "DWARFUnit.h"
 #include "LogChannelDWARF.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -23,7 +23,8 @@ DWARFDebugAranges::DWARFDebugAranges() : m_aranges() {}
 
 // Extract
 void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
-  llvm::DWARFDataExtractor llvm_dwarf_data = debug_aranges_data.GetAsLLVMDWARF();
+  llvm::DWARFDataExtractor llvm_dwarf_data =
+      debug_aranges_data.GetAsLLVMDWARF();
   lldb::offset_t offset = 0;
 
   DWARFDebugArangeSet set;
