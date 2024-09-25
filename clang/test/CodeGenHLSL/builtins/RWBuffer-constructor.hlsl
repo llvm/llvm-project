@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
 
+// XFAIL: *
+// This expectedly fails because create.handle is no longer called
+// from RWBuffer constructor and the replacement has not been
+// implemented yet. This test should be updated to expect
+// dx.create.handleFromBinding as part of issue #105076.
+
 RWBuffer<float> Buf;
 
 // CHECK: define linkonce_odr noundef ptr @"??0?$RWBuffer@M@hlsl@@QAA@XZ"

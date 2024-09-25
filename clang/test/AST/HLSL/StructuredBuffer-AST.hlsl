@@ -70,7 +70,7 @@ StructuredBuffer<float> Buffer;
 // CHECK: TemplateArgument type 'float'
 // CHECK-NEXT: BuiltinType 0x{{[0-9A-Fa-f]+}} 'float'
 // CHECK-NEXT: FinalAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit final
-// CHECK-NEXT: FieldDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *
+// CHECK-NEXT: FieldDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'float *
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]

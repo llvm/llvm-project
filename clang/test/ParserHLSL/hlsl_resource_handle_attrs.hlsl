@@ -3,7 +3,7 @@
 // CHECK: -ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> class RWBuffer definition implicit_instantiation
 // CHECK: -TemplateArgument type 'float'
 // CHECK: `-BuiltinType 0x{{[0-9a-f]+}} 'float'
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *
+// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'float *
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
 // CHECK-SAME: ':'float *'
@@ -14,7 +14,7 @@ RWBuffer<float> Buffer1;
 // CHECK: -TemplateArgument type 'vector<float, 4>'
 // CHECK: `-ExtVectorType 0x{{[0-9a-f]+}} 'vector<float, 4>' 4
 // CHECK: `-BuiltinType 0x{{[0-9a-f]+}} 'float'
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'vector<float *, 4>
+// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'vector<float *, 4>
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]
 // CHECK-SAME{LITERAL}: [[hlsl::is_rov]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<float, 4>)]]
