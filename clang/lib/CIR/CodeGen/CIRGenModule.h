@@ -682,7 +682,7 @@ public:
                                 clang::GlobalDecl &Result) const;
 
   bool supportsCOMDAT() const;
-  void maybeSetTrivialComdat(const clang::Decl &D, mlir::Operation *Op);
+  void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   void emitError(const llvm::Twine &message) { theModule.emitError(message); }
 
