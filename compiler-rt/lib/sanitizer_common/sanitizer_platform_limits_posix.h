@@ -881,9 +881,24 @@ extern int ptrace_setsiginfo;
 extern int ptrace_getregset;
 extern int ptrace_setregset;
 extern int ptrace_geteventmsg;
-#endif
 
-#if SANITIZER_LINUX  && !SANITIZER_ANDROID
+// Helper for the ptrace interceptor.
+template <class T>
+inline T ptrace_data_arg(int request, T addr, T data) {
+#    if SANITIZER_LINUX && SANITIZER_SPARC
+  // As described in ptrace(2), the meanings of addr and data are reversed
+  // for the PTRACE_GETREGS, PTRACE_GETFPREGS, PTRACE_GETREGS, and
+  // PTRACE_GETFPREGS requests on Linux/sparc64.
+  if (request == ptrace_getregs || request == ptrace_getfpregs ||
+      request == ptrace_setregs || request == ptrace_setfpregs)
+    return addr;
+  else
+#    endif
+    return data;
+}
+#  endif
+
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern unsigned struct_shminfo_sz;
 extern unsigned struct_shm_info_sz;
 extern int shmctl_ipc_stat;

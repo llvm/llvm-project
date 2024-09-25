@@ -48,6 +48,7 @@
 #if SANITIZER_LINUX
 
 #  include "sanitizer_libc.h"
+#  include "sanitizer_platform_limits_posix.h"
 
 #  define PRE_SYSCALL(name) \
     SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_syscall_pre_impl_##name
@@ -2531,14 +2532,7 @@ PRE_SYSCALL(ptrace)(long request, long pid, long addr, long data) {
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
        defined(__loongarch__) || SANITIZER_RISCV64 || defined(__sparc__))
-  long data_arg = data;
-#    if defined(__sparc__)
-  // The meanings of addr and data are reversed for a few requests on
-  // Linux/sparc64.
-  if (request == ptrace_getregs || request == ptrace_getfpregs ||
-      request == ptrace_setregs || request == ptrace_setfpregs)
-    data_arg = addr;
-#    endif
+  long data_arg = ptrace_data_arg(request, addr, data);
   if (data_arg) {
     if (request == ptrace_setregs) {
       PRE_READ((void *)data_arg, struct_user_regs_struct_sz);
@@ -2561,14 +2555,7 @@ POST_SYSCALL(ptrace)(long res, long request, long pid, long addr, long data) {
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
        defined(__loongarch__) || SANITIZER_RISCV64 || defined(__sparc__))
-  long data_arg = data;
-#    if defined(__sparc__)
-  // The meanings of addr and data are reversed for a few requests on
-  // Linux/sparc64.
-  if (request == ptrace_getregs || request == ptrace_getfpregs ||
-      request == ptrace_setregs || request == ptrace_setfpregs)
-    data_arg = addr;
-#    endif
+  long data_arg = ptrace_data_arg(request, addr, data);
   if (res >= 0 && data_arg) {
     // Note that this is different from the interceptor in
     // sanitizer_common_interceptors.inc.

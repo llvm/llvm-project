@@ -41,6 +41,7 @@
 #include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
+#include "sanitizer_platform_limits_posix.h"
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_tls_get_addr.h"
 
@@ -3430,14 +3431,7 @@ INTERCEPTOR(uptr, ptrace, int request, int pid, void *addr, void *data) {
   COMMON_INTERCEPTOR_ENTER(ctx, ptrace, request, pid, addr, data);
   __sanitizer_iovec local_iovec;
 
-  void *data_arg = data;
-#  if defined(__sparc__)
-  // The meanings of addr and data are reversed for a few requests on
-  // Linux/sparc64.
-  if (request == ptrace_getregs || request == ptrace_getfpregs ||
-      request == ptrace_setregs || request == ptrace_setfpregs)
-    data_arg = addr;
-#  endif
+  void *data_arg = ptrace_data_arg(request, addr, data);
   if (data_arg) {
     if (request == ptrace_setregs) {
       COMMON_INTERCEPTOR_READ_RANGE(ctx, data_arg, struct_user_regs_struct_sz);
