@@ -2052,17 +2052,21 @@ module std [system] {
     module backends {
       module default {
         header "__pstl/backends/default.h"
+        export std_core.utility_core.empty
       }
       module libdispatch {
         header "__pstl/backends/libdispatch.h"
         export std.pstl.cpu_algos
+        export std_core.utility_core.empty
       }
       module serial {
         header "__pstl/backends/serial.h"
+        export std_core.utility_core.empty
       }
       module std_thread {
         header "__pstl/backends/std_thread.h"
         export std.pstl.cpu_algos
+        export std_core.utility_core.empty
       }
     }
     module cpu_algos {
