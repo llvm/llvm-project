@@ -107,8 +107,8 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const MCPhysReg *CSRegs = nullptr;
 
   // When interprocedural register allocation is enabled, callee saved register
-  // lit should be null, since caller saved registers are preferred over callee
-  // saved registers. Unless it has some risked CSR to be optimized out.
+  // list should be empty, since caller saved registers are preferred over
+  // callee saved registers. Unless it has some risked CSR to be optimized out.
   if (MF.getTarget().Options.EnableIPRA &&
       isSafeForNoCSROpt(MF.getFunction()) &&
       isProfitableForNoCSROpt(MF.getFunction()))
