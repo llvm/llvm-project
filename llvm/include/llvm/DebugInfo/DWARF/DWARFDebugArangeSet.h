@@ -73,6 +73,12 @@ public:
     return desc_iterator_range(ArangeDescriptors.begin(),
                                ArangeDescriptors.end());
   }
+
+  size_t getDescriptorsSize() const { return ArangeDescriptors.size(); }
+
+  const Descriptor &getDescriptiorRef(uint32_t I) const {
+    return ArangeDescriptors[I];
+  }
 };
 
 } // end namespace llvm
