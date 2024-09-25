@@ -436,4 +436,11 @@ def CufImplicitDeviceGlobal :
   ];
 }
 
+def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
+  let summary = "Add constructor to register CUDA Fortran allocators";
+  let dependentDialects = [
+    "mlir::func::FuncDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
