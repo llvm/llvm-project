@@ -1801,8 +1801,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
             return false;
           continue;
         } else if (!isSafeCheapLoadStore(&I, TTI) ||
-            SpeculatedConditionalLoadsStores.size() ==
-                HoistLoadsStoresWithCondFaultingThreshold) {
+                   SpeculatedConditionalLoadsStores.size() ==
+                       HoistLoadsStoresWithCondFaultingThreshold) {
           return false;
         }
         SpeculatedConditionalLoadsStores.push_back(&I);
