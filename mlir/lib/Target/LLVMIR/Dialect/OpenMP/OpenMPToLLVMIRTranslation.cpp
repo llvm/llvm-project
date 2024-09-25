@@ -3479,7 +3479,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            " private allocatables is not supported yet");
           bodyGenStatus = failure();
         } else {
-          llvm::errs() << "here\n";
           Region &allocRegion = privatizer.getAllocRegion();
           BlockArgument allocRegionArg = allocRegion.getArgument(0);
           moduleTranslation.mapValue(allocRegionArg,
@@ -3493,7 +3492,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                 "op in the target region");
             bodyGenStatus = failure();
           } else {
-            builder.GetInsertBlock()->getParent()->getParent()->dump();
             assert(yieldedValues.size() == 1);
             moduleTranslation.mapValue(privBlockArg, yieldedValues.front());
           }
@@ -3502,10 +3500,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
         }
       }
     }
-    llvm::errs() << builder.GetInsertBlock()->getName().str() << "\n";
     llvm::BasicBlock *exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation, bodyGenStatus);
-    builder.GetInsertBlock()->getParent()->dump();
     builder.SetInsertPoint(exitBlock);
     return builder.saveIP();
   };
