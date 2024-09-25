@@ -338,7 +338,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   }
 
   // Allow --sysroot= to override the root directory for header and library
-  // search, and -sysroot to override header search. If both are specified,
+  // search, and -isysroot to override header search. If both are specified,
   // -isysroot overrides --sysroot for header search.
   auto OverrideRoot = [&](const options::ID &Opt, std::string &Root,
                           StringRef Default) {
