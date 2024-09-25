@@ -4,7 +4,7 @@
 
 ; This test is to ensure rbp/rbx/ebp/esi is correctly saved/restored before clobbered when enable ipra.
 
-define internal void @callee_clobber_rbp() norecurse nounwind {
+define internal void @callee_clobber_rbp() nounwind norecurse {
 ; X64-LABEL: callee_clobber_rbp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbp
@@ -26,7 +26,7 @@ define internal void @callee_clobber_rbp() norecurse nounwind {
   ret void
 }
 
-define internal void @callee_clobber_rbx() norecurse nounwind {
+define internal void @callee_clobber_rbx(ptr %addr) nounwind norecurse {
 ; X64-LABEL: callee_clobber_rbx:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
@@ -39,7 +39,7 @@ define internal void @callee_clobber_rbx() norecurse nounwind {
   ret void
 }
 
-define internal void @callee_clobber_esi() norecurse nounwind {
+define internal void @callee_clobber_esi(ptr %addr) nounwind norecurse {
 ; X86-LABEL: callee_clobber_esi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
