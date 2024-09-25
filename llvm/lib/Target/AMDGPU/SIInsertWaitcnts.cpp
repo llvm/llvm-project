@@ -1752,6 +1752,14 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (IsVGPR) {
+            // Implicit VGPR defs and uses are never a part of the memory
+            // instructions description and usually present to account for
+            // super-register liveness.
+            // TODO: Most of the other instructions also have implicit uses
+            // for the liveness accounting only.
+            if (Op.isImplicit() && MI.mayLoadOrStore())
+              continue;
+
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
             // previous write and this write are the same type of VMEM
             // instruction, in which case they are (in some architectures)

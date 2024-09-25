@@ -1978,7 +1978,13 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
   if (!SplatConstantInt)
     return std::nullopt;
+
   APInt Divisor = SplatConstantInt->getValue();
+  const int64_t DivisorValue = Divisor.getSExtValue();
+  if (DivisorValue == -1)
+    return std::nullopt;
+  if (DivisorValue == 1)
+    IC.replaceInstUsesWith(II, Vec);
 
   if (Divisor.isPowerOf2()) {
     Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
@@ -2132,6 +2138,16 @@ static std::optional<Instruction *> instCombineSVESrshl(InstCombiner &IC,
                                         {II.getType()}, {Pred, Vec, Shift});
 
   return IC.replaceInstUsesWith(II, LSL);
+}
+
+static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *Vec = II.getOperand(0);
+
+  if (getSplatValue(Vec) == II.getOperand(1))
+    return IC.replaceInstUsesWith(II, Vec);
+
+  return std::nullopt;
 }
 
 std::optional<Instruction *>
@@ -2454,6 +2470,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVESrshl(IC, II);
   case Intrinsic::aarch64_sve_dupq_lane:
     return instCombineSVEDupqLane(IC, II);
+  case Intrinsic::aarch64_sve_insr:
+    return instCombineSVEInsr(IC, II);
   }
 
   return std::nullopt;
@@ -3422,15 +3440,14 @@ InstructionCost AArch64TTIImpl::getAddressComputationCost(Type *Ty,
   return 1;
 }
 
-InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                                   Type *CondTy,
-                                                   CmpInst::Predicate VecPred,
-                                                   TTI::TargetCostKind CostKind,
-                                                   const Instruction *I) {
+InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -3509,7 +3526,8 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
@@ -4152,6 +4170,26 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   };
   switch (ISD) {
   default:
+    break;
+  case ISD::FADD:
+    if (Type *EltTy = ValTy->getScalarType();
+        // FIXME: For half types without fullfp16 support, this could extend and
+        // use a fp32 faddp reduction but current codegen unrolls.
+        MTy.isVector() && (EltTy->isFloatTy() || EltTy->isDoubleTy() ||
+                           (EltTy->isHalfTy() && ST->hasFullFP16()))) {
+      const unsigned NElts = MTy.getVectorNumElements();
+      if (ValTy->getElementCount().getFixedValue() >= 2 && NElts >= 2 &&
+          isPowerOf2_32(NElts))
+        // Reduction corresponding to series of fadd instructions is lowered to
+        // series of faddp instructions. faddp has latency/throughput that
+        // matches fadd instruction and hence, every faddp instruction can be
+        // considered to have a relative cost = 1 with
+        // CostKind = TCK_RecipThroughput.
+        // An faddp will pairwise add vector elements, so the size of input
+        // vector reduces by half every time, requiring
+        // #(faddp instructions) = log2_32(NElts).
+        return (LT.first - 1) + /*No of faddp instructions*/ Log2_32(NElts);
+    }
     break;
   case ISD::ADD:
     if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))

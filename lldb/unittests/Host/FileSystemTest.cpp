@@ -59,7 +59,7 @@ public:
     return I->second;
   }
   ErrorOr<std::unique_ptr<vfs::File>>
-  openFileForRead(const Twine &Path, bool Text = true) override {
+  openFileForRead(const Twine &Path) override {
     auto S = status(Path);
     if (S)
       return std::unique_ptr<vfs::File>(new DummyFile{*S});

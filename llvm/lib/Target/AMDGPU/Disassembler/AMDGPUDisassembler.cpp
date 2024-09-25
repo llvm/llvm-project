@@ -106,10 +106,8 @@ static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
                                        const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
 
-  // Our branches take a simm16, but we need two extra bits to account for the
-  // factor of 4.
-  APInt SignedOffset(18, Imm * 4, true);
-  int64_t Offset = (SignedOffset.sext(64) + 4 + Addr).getSExtValue();
+  // Our branches take a simm16.
+  int64_t Offset = SignExtend64<16>(Imm) * 4 + 4 + Addr;
 
   if (DAsm->tryAddingSymbolicOperand(Inst, Offset, Addr, true, 2, 2, 0))
     return MCDisassembler::Success;
@@ -293,6 +291,7 @@ DECODE_OPERAND_REG_7(SReg_32_XM0_XEXEC, OPW32)
 DECODE_OPERAND_REG_7(SReg_32_XEXEC_HI, OPW32)
 DECODE_OPERAND_REG_7(SReg_64, OPW64)
 DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
+DECODE_OPERAND_REG_7(SReg_64_XEXEC_XNULL, OPW64)
 DECODE_OPERAND_REG_7(SReg_96, OPW96)
 DECODE_OPERAND_REG_7(SReg_128, OPW128)
 DECODE_OPERAND_REG_7(SReg_256, OPW256)

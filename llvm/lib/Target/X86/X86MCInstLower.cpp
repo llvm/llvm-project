@@ -1541,7 +1541,6 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   printDstRegisterName(CS, MI, SrcOp1Idx);
   CS << " = ";
   printShuffleMask(CS, Src1Name, Src2Name, Mask);
-  CS.flush();
 
   return Comment;
 }

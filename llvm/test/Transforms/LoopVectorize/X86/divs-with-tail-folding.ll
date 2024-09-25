@@ -20,6 +20,9 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sdiv i64 [[M]], [[CONV6]]
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP17]] to i32
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP17]], [[CONV61]]
+; CHECK-NEXT:    [[TMP23:%.*]] = mul i32 [[X]], [[TMP19]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -30,11 +33,8 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP17]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP17]], [[CONV61]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP5]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i32 [[X]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[TMP24]] to i64
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]

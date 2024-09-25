@@ -143,10 +143,10 @@ class AsmMatcherInfo;
 typedef std::set<const Record *, LessRecordByID> RegisterSet;
 
 class AsmMatcherEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
 public:
-  AsmMatcherEmitter(RecordKeeper &R) : Records(R) {}
+  AsmMatcherEmitter(const RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &o);
 };
@@ -739,13 +739,13 @@ struct OperandMatchEntry {
 class AsmMatcherInfo {
 public:
   /// Tracked Records
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
   /// The tablegen AsmParser record.
-  Record *AsmParser;
+  const Record *AsmParser;
 
   /// Target - The target information.
-  CodeGenTarget &Target;
+  const CodeGenTarget &Target;
 
   /// The classes which are needed for matching.
   std::forward_list<ClassInfo> Classes;
@@ -798,8 +798,8 @@ private:
                                   MatchableInfo::AsmOperand &Op);
 
 public:
-  AsmMatcherInfo(Record *AsmParser, CodeGenTarget &Target,
-                 RecordKeeper &Records);
+  AsmMatcherInfo(const Record *AsmParser, const CodeGenTarget &Target,
+                 const RecordKeeper &Records);
 
   /// Construct the various tables used during matching.
   void buildInfo();
@@ -816,7 +816,7 @@ public:
     return I == SubtargetFeatures.end() ? nullptr : &I->second;
   }
 
-  RecordKeeper &getRecords() const { return Records; }
+  const RecordKeeper &getRecords() const { return Records; }
 
   bool hasOptionalOperands() const {
     return any_of(Classes,
@@ -965,7 +965,7 @@ void MatchableInfo::initialize(
     Mnemonic = AsmOperands[0].Token;
 
   // Compute the require features.
-  for (Record *Predicate : TheDef->getValueAsListOfDefs("Predicates"))
+  for (const Record *Predicate : TheDef->getValueAsListOfDefs("Predicates"))
     if (const SubtargetFeatureInfo *Feature =
             Info.getSubtargetFeature(Predicate))
       RequiredFeatures.push_back(Feature);
@@ -1215,7 +1215,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
     }
 
     // No custom match class. Just use the register class.
-    Record *ClassRec = Rec->getValueAsDef("RegClass");
+    const Record *ClassRec = Rec->getValueAsDef("RegClass");
     if (!ClassRec)
       PrintFatalError(Rec->getLoc(),
                       "RegisterOperand `" + Rec->getName() +
@@ -1235,7 +1235,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
     PrintFatalError(Rec->getLoc(),
                     "Operand `" + Rec->getName() +
                         "' does not derive from class Operand!\n");
-  Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
+  const Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
   if (ClassInfo *CI = AsmOperandClasses[MatchClass])
     return CI;
 
@@ -1384,17 +1384,17 @@ void AsmMatcherInfo::buildRegisterClasses(
 }
 
 void AsmMatcherInfo::buildOperandClasses() {
-  std::vector<Record *> AsmOperands =
+  ArrayRef<const Record *> AsmOperands =
       Records.getAllDerivedDefinitions("AsmOperandClass");
 
   // Pre-populate AsmOperandClasses map.
-  for (Record *Rec : AsmOperands) {
+  for (const Record *Rec : AsmOperands) {
     Classes.emplace_front();
     AsmOperandClasses[Rec] = &Classes.front();
   }
 
   unsigned Index = 0;
-  for (Record *Rec : AsmOperands) {
+  for (const Record *Rec : AsmOperands) {
     ClassInfo *CI = AsmOperandClasses[Rec];
     CI->Kind = ClassInfo::UserClass0 + Index;
 
@@ -1468,14 +1468,14 @@ void AsmMatcherInfo::buildOperandClasses() {
   }
 }
 
-AsmMatcherInfo::AsmMatcherInfo(Record *asmParser, CodeGenTarget &target,
-                               RecordKeeper &records)
+AsmMatcherInfo::AsmMatcherInfo(const Record *asmParser,
+                               const CodeGenTarget &target,
+                               const RecordKeeper &records)
     : Records(records), AsmParser(asmParser), Target(target) {}
 
 /// buildOperandMatchInfo - Build the necessary information to handle user
 /// defined operand parsing methods.
 void AsmMatcherInfo::buildOperandMatchInfo() {
-
   /// Map containing a mask with all operands indices that can be found for
   /// that class inside a instruction.
   typedef std::map<ClassInfo *, unsigned, deref<std::less<>>> OpClassMaskTy;
@@ -1527,7 +1527,7 @@ void AsmMatcherInfo::buildInfo() {
   SmallPtrSet<const Record *, 16> SingletonRegisters;
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
-    Record *AsmVariant = Target.getAsmParserVariant(VC);
+    const Record *AsmVariant = Target.getAsmParserVariant(VC);
     StringRef CommentDelimiter =
         AsmVariant->getValueAsString("CommentDelimiter");
     AsmVariantInfo Variant;
@@ -1570,9 +1570,8 @@ void AsmMatcherInfo::buildInfo() {
 
     // Parse all of the InstAlias definitions and stick them in the list of
     // matchables.
-    std::vector<Record *> AllInstAliases =
-        Records.getAllDerivedDefinitions("InstAlias");
-    for (Record *InstAlias : AllInstAliases) {
+    for (const Record *InstAlias :
+         Records.getAllDerivedDefinitions("InstAlias")) {
       auto Alias = std::make_unique<CodeGenInstAlias>(InstAlias, Target);
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
@@ -1678,9 +1677,7 @@ void AsmMatcherInfo::buildInfo() {
 
   // Process token alias definitions and set up the associated superclass
   // information.
-  std::vector<Record *> AllTokenAliases =
-      Records.getAllDerivedDefinitions("TokenAlias");
-  for (Record *Rec : AllTokenAliases) {
+  for (const Record *Rec : Records.getAllDerivedDefinitions("TokenAlias")) {
     ClassInfo *FromClass = getTokenClass(Rec->getValueAsString("FromToken"));
     ClassInfo *ToClass = getTokenClass(Rec->getValueAsString("ToToken"));
     if (FromClass == ToClass)
@@ -2616,8 +2613,8 @@ static void emitMatchTokenString(CodeGenTarget &Target,
 
 /// emitMatchRegisterName - Emit the function to match a string to the target
 /// specific register enum.
-static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
-                                  raw_ostream &OS) {
+static void emitMatchRegisterName(const CodeGenTarget &Target,
+                                  const Record *AsmParser, raw_ostream &OS) {
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
@@ -2644,8 +2641,8 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
 
 /// Emit the function to match a string to the target
 /// specific register enum.
-static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
-                                     raw_ostream &OS) {
+static void emitMatchRegisterAltName(const CodeGenTarget &Target,
+                                     const Record *AsmParser, raw_ostream &OS) {
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
@@ -2744,13 +2741,13 @@ static std::string GetAliasRequiredFeatures(const Record *R,
 
 static void
 emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
-                         std::vector<Record *> &Aliases, unsigned Indent = 0,
+                         ArrayRef<const Record *> Aliases, unsigned Indent = 0,
                          StringRef AsmParserVariantName = StringRef()) {
   // Keep track of all the aliases from a mnemonic.  Use an std::map so that the
   // iteration order of the map is stable.
-  std::map<std::string, std::vector<Record *>> AliasesFromMnemonic;
+  std::map<std::string, std::vector<const Record *>> AliasesFromMnemonic;
 
-  for (Record *R : Aliases) {
+  for (const Record *R : Aliases) {
     // FIXME: Allow AssemblerVariantName to be a comma separated list.
     StringRef AsmVariantName = R->getValueAsString("AsmVariantName");
     if (AsmVariantName != AsmParserVariantName)
@@ -2827,7 +2824,7 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
   if (!MatchPrefix.empty())
     return false;
 
-  std::vector<Record *> Aliases =
+  ArrayRef<const Record *> Aliases =
       Info.getRecords().getAllDerivedDefinitions("MnemonicAlias");
   if (Aliases.empty())
     return false;
@@ -2836,7 +2833,7 @@ static bool emitMnemonicAliases(raw_ostream &OS, const AsmMatcherInfo &Info,
         "const FeatureBitset &Features, unsigned VariantID) {\n";
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
-    Record *AsmVariant = Target.getAsmParserVariant(VC);
+    const Record *AsmVariant = Target.getAsmParserVariant(VC);
     int AsmParserVariantNo = AsmVariant->getValueAsInt("Variant");
     StringRef AsmParserVariantName = AsmVariant->getValueAsString("Name");
 
@@ -3104,7 +3101,7 @@ static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "  switch (VariantID) {\n";
     OS << "  default: llvm_unreachable(\"invalid variant!\");\n";
     for (unsigned VC = 0; VC != VariantCount; ++VC) {
-      Record *AsmVariant = Target.getAsmParserVariant(VC);
+      const Record *AsmVariant = Target.getAsmParserVariant(VC);
       int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
       OS << "  case " << AsmVariantNo << ": Start = std::begin(MatchTable" << VC
          << "); End = std::end(MatchTable" << VC << "); break;\n";
@@ -3164,7 +3161,7 @@ static void emitMnemonicChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "  switch (VariantID) {\n";
     OS << "  default: llvm_unreachable(\"invalid variant!\");\n";
     for (unsigned VC = 0; VC != VariantCount; ++VC) {
-      Record *AsmVariant = Target.getAsmParserVariant(VC);
+      const Record *AsmVariant = Target.getAsmParserVariant(VC);
       int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
       OS << "  case " << AsmVariantNo << ": Start = std::begin(MatchTable" << VC
          << "); End = std::end(MatchTable" << VC << "); break;\n";
@@ -3231,7 +3228,7 @@ getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
 
 void AsmMatcherEmitter::run(raw_ostream &OS) {
   CodeGenTarget Target(Records);
-  Record *AsmParser = Target.getAsmParser();
+  const Record *AsmParser = Target.getAsmParser();
   StringRef ClassName = AsmParser->getValueAsString("AsmParserClassName");
 
   emitSourceFileHeader("Assembly Matcher Source Fragment", OS, Records);
@@ -3536,7 +3533,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
-    Record *AsmVariant = Target.getAsmParserVariant(VC);
+    const Record *AsmVariant = Target.getAsmParserVariant(VC);
     int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
     OS << "static const MatchEntry MatchTable" << VC << "[] = {\n";
@@ -3637,7 +3634,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  switch (VariantID) {\n";
   OS << "  default: llvm_unreachable(\"invalid variant!\");\n";
   for (unsigned VC = 0; VC != VariantCount; ++VC) {
-    Record *AsmVariant = Target.getAsmParserVariant(VC);
+    const Record *AsmVariant = Target.getAsmParserVariant(VC);
     int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
     OS << "  case " << AsmVariantNo << ": Start = std::begin(MatchTable" << VC
        << "); End = std::end(MatchTable" << VC << "); break;\n";

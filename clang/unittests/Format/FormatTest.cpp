@@ -9441,6 +9441,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
+               "};",
+               Style);
+
   verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    const bool &aaaaaaaaa, const void *aaaaaaaaaa\n"
                ") const {\n"

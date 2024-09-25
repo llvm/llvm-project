@@ -134,6 +134,8 @@ class GlobalIFunc;
 class GlobalVariable;
 class GlobalAlias;
 class NoCFIValue;
+class ConstantPtrAuth;
+class ConstantExpr;
 class Context;
 class Function;
 class Instruction;
@@ -342,6 +344,12 @@ protected:
   friend class GlobalVariable;        // For `Val`.
   friend class GlobalAlias;           // For `Val`.
   friend class NoCFIValue;            // For `Val`.
+  friend class ConstantPtrAuth;       // For `Val`.
+  friend class ConstantExpr;          // For `Val`.
+
+  // Region needs to manipulate metadata in the underlying LLVM Value, we don't
+  // expose metadata in sandboxir.
+  friend class Region;
 
   /// All values point to the context.
   Context &Ctx;
@@ -1603,6 +1611,75 @@ public:
 #endif
 };
 
+class ConstantPtrAuth final : public Constant {
+  ConstantPtrAuth(llvm::ConstantPtrAuth *C, Context &Ctx)
+      : Constant(ClassID::ConstantPtrAuth, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const;
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const;
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const;
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const;
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasAddressDiscriminator();
+  }
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasSpecialAddressDiscriminator(
+        Value);
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->isKnownCompatibleWith(
+        Key->Val, Discriminator->Val, DL);
+  }
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPtrAuth;
+  }
+};
+
+class ConstantExpr : public Constant {
+  ConstantExpr(llvm::ConstantExpr *C, Context &Ctx)
+      : Constant(ClassID::ConstantExpr, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantExpr;
+  }
+  // TODO: Missing functions.
+};
+
 class BlockAddress final : public Constant {
   BlockAddress(llvm::BlockAddress *C, Context &Ctx)
       : Constant(ClassID::BlockAddress, C, Ctx) {}
@@ -1858,6 +1935,22 @@ public:
   /// \Returns this Instruction's opcode. Note that SandboxIR has its own opcode
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
+
+  // TODO: Missing function getOpcodeName().
+
+  bool isTerminator() const {
+    return cast<llvm::Instruction>(Val)->isTerminator();
+  }
+  bool isUnaryOp() const { return cast<llvm::Instruction>(Val)->isUnaryOp(); }
+  bool isBinaryOp() const { return cast<llvm::Instruction>(Val)->isBinaryOp(); }
+  bool isIntDivRem() const {
+    return cast<llvm::Instruction>(Val)->isIntDivRem();
+  }
+  bool isShift() const { return cast<llvm::Instruction>(Val)->isShift(); }
+  bool isCast() const { return cast<llvm::Instruction>(Val)->isCast(); }
+
+  // TODO: More missing functions
+
   /// Detach this from its parent BasicBlock without deleting it.
   void removeFromParent();
   /// Detach this Value from its parent and delete it.
@@ -1983,6 +2076,61 @@ public:
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
   void copyFastMathFlags(FastMathFlags FMF);
+
+  bool isAssociative() const {
+    return cast<llvm::Instruction>(Val)->isAssociative();
+  }
+
+  bool isCommutative() const {
+    return cast<llvm::Instruction>(Val)->isCommutative();
+  }
+
+  bool isIdempotent() const {
+    return cast<llvm::Instruction>(Val)->isIdempotent();
+  }
+
+  bool isNilpotent() const {
+    return cast<llvm::Instruction>(Val)->isNilpotent();
+  }
+
+  bool mayWriteToMemory() const {
+    return cast<llvm::Instruction>(Val)->mayWriteToMemory();
+  }
+
+  bool mayReadFromMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadFromMemory();
+  }
+  bool mayReadOrWriteMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadOrWriteMemory();
+  }
+
+  bool isAtomic() const { return cast<llvm::Instruction>(Val)->isAtomic(); }
+
+  bool hasAtomicLoad() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicLoad();
+  }
+
+  bool hasAtomicStore() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicStore();
+  }
+
+  bool isVolatile() const { return cast<llvm::Instruction>(Val)->isVolatile(); }
+
+  Type *getAccessType() const;
+
+  bool mayThrow(bool IncludePhaseOneUnwind = false) const {
+    return cast<llvm::Instruction>(Val)->mayThrow(IncludePhaseOneUnwind);
+  }
+
+  bool isFenceLike() const {
+    return cast<llvm::Instruction>(Val)->isFenceLike();
+  }
+
+  bool mayHaveSideEffects() const {
+    return cast<llvm::Instruction>(Val)->mayHaveSideEffects();
+  }
+
+  // TODO: Missing functions.
 
   bool isStackSaveOrRestoreIntrinsic() const {
     auto *I = cast<llvm::Instruction>(Val);
@@ -4395,9 +4543,11 @@ protected:
   friend class PointerType; // For LLVMCtx.
   friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
                         // is complete
-  friend class IntegerType;   // For LLVMCtx.
-  friend class StructType;    // For LLVMCtx.
-  friend class TargetExtType; // For LLVMCtx.
+  friend class IntegerType;           // For LLVMCtx.
+  friend class StructType;            // For LLVMCtx.
+  friend class ::llvm::TargetExtType; // For LLVMCtx.
+  friend class Region;                // For LLVMCtx.
+
   Tracker IRTracker;
 
   /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all

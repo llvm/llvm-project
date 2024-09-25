@@ -885,20 +885,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addDashXForInput(Args, Input, CmdArgs);
 
-  bool FRecordCmdLine = false;
-  bool GRecordCmdLine = false;
-  if (shouldRecordCommandLine(TC, Args, FRecordCmdLine, GRecordCmdLine)) {
-    const char *CmdLine = renderEscapedCommandLine(TC, Args);
-    if (FRecordCmdLine) {
-      CmdArgs.push_back("-record-command-line");
-      CmdArgs.push_back(CmdLine);
-    }
-    if (TC.UseDwarfDebugFlags() || GRecordCmdLine) {
-      CmdArgs.push_back("-dwarf-debug-flags");
-      CmdArgs.push_back(CmdLine);
-    }
-  }
-
   CmdArgs.push_back(Input.getFilename());
 
   // TODO: Replace flang-new with flang once the new driver replaces the

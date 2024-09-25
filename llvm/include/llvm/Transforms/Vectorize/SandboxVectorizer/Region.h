@@ -9,10 +9,11 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
 
+#include <memory>
+
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/SandboxIR.h"
-#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
@@ -55,8 +56,10 @@ class Region {
   /// vectorization are part of the Region.
   SetVector<Instruction *> Insts;
 
-  /// A unique ID, used for debugging.
-  unsigned RegionID = 0;
+  /// MDNode that we'll use to mark instructions as being part of the region.
+  MDNode *RegionMDN;
+  static constexpr const char *MDKind = "sandboxvec";
+  static constexpr const char *RegionStr = "sandboxregion";
 
   Context &Ctx;
 
@@ -68,8 +71,6 @@ public:
   ~Region();
 
   Context &getContext() const { return Ctx; }
-  /// Returns the region's unique ID.
-  unsigned getID() const { return RegionID; }
 
   /// Adds I to the set.
   void add(Instruction *I);
@@ -84,6 +85,8 @@ public:
   iterator begin() { return Insts.begin(); }
   iterator end() { return Insts.end(); }
   iterator_range<iterator> insts() { return make_range(begin(), end()); }
+
+  static SmallVector<std::unique_ptr<Region>> createRegionsFromMD(Function &F);
 
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
