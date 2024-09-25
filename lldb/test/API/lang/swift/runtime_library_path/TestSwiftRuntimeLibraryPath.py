@@ -25,15 +25,5 @@ class TestSwiftRuntimeLibraryPath(lldbtest.TestBase):
             self, 'main')
 
         self.expect("expression 1")
-        import io
-        logfile = io.open(log, "r", encoding='utf-8')
-        in_expr_log = 0
-        found = 0
-        for line in logfile:
-            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration(SwiftASTContext"):
-                in_expr_log += 1
-            if in_expr_log and "Runtime library paths" in line and \
-               "2 items" in line:
-                found += 1
-        self.assertEqual(in_expr_log, 1)
-        self.assertEqual(found, 1)
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+        # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}Runtime library paths{{.*}}2 items

@@ -1033,9 +1033,7 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   // can also lead to additional Swift modules being pulled in that
   // through their dependencies can lead to dependency cycles that
   // were not a problem at build time.
-  bool is_precise = ModuleList::GetGlobalModuleListProperties()
-                        .GetUseSwiftPreciseCompilerInvocation();
-  lang_opts.ImportNonPublicDependencies = is_precise ? false : true;
+  lang_opts.ImportNonPublicDependencies = false;
   // When loading Swift types that conform to ObjC protocols that have
   // been renamed with NS_SWIFT_NAME the DwarfImporterDelegate will crash
   // during protocol conformance checks as the underlying type cannot be
@@ -2636,307 +2634,9 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
 }
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(
-    lldb::LanguageType language,
+    const SymbolContext &sc,
     TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
     const char *extra_options) {
-  if (!SwiftASTContextSupportsLanguage(language))
-    return lldb::TypeSystemSP();
-
-  if (!ModuleList::GetGlobalModuleListProperties()
-           .GetSwiftEnableASTContext())
-    return lldb::TypeSystemSP();
-
-  LLDB_SCOPED_TIMER();
-  std::string m_description = "SwiftASTContextForExpressions";
-  std::vector<swift::PluginSearchOption> plugin_search_options;
-  std::vector<std::string> module_search_paths;
-  std::vector<std::pair<std::string, bool>> framework_search_paths;
-  TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
-  if (!target_sp)
-    return lldb::TypeSystemSP();
-  Target &target = *target_sp;
-
-  // Make an AST but don't set the triple yet. We need to
-  // try and detect if we have a iOS simulator.
-  std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
-      new SwiftASTContextForExpressions(m_description, typeref_typesystem));
-  auto defer_log = llvm::make_scope_exit(
-      [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
-
-  LOG_PRINTF(GetLog(LLDBLog::Types), "(Target)");
-
-  auto logError = [&](const char *message) {
-    LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to create scratch context - %s",
-               message);
-    // Avoid spamming the user with errors.
-    if (!target.UseScratchTypesystemPerModule()) {
-      StreamSP errs_sp = target.GetDebugger().GetAsyncErrorStream();
-      errs_sp->Printf("Cannot create Swift scratch context (%s)", message);
-    }
-  };
-
-  ArchSpec arch = target.GetArchitecture();
-  if (!arch.IsValid()) {
-    logError("invalid target architecture");
-    return {};
-  }
-
-  // This is a scratch AST context, mark it as such.
-  swift_ast_sp->m_is_scratch_context = true;
-
-  swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
-      target.IsSwiftCxxInteropEnabled();
-
-  if (target.IsEmbeddedSwift())
-    swift_ast_sp->GetLanguageOptions().enableFeature(swift::Feature::Embedded);
-
-  bool handled_sdk_path = false;
-  const size_t num_images = target.GetImages().GetSize();
-
-  // Set the SDK path prior to doing search paths.  Otherwise when we
-  // create search path options we put in the wrong SDK path.
-  FileSpec &target_sdk_spec = target.GetSDKPath();
-  if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
-    swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
-    handled_sdk_path = true;
-  }
-
-  if (!handled_sdk_path) {
-    for (size_t mi = 0; mi != num_images; ++mi) {
-      ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
-      if (!HasSwiftModules(*module_sp))
-        continue;
-
-      std::string sdk_path = GetSDKPathFromDebugInfo(m_description, *module_sp);
-
-      if (sdk_path.empty())
-        continue;
-
-      handled_sdk_path = true;
-      swift_ast_sp->SetPlatformSDKPath(sdk_path);
-      break;
-    }
-  }
-
-  // First, prime the compiler with the options from the main executable:
-  bool got_serialized_options = false;
-  ModuleSP exe_module_sp(target.GetExecutableModule());
-
-  // If we're debugging a testsuite, then treat the main test bundle
-  // as the executable.
-  if (exe_module_sp && IsUnitTestExecutable(*exe_module_sp)) {
-    ModuleSP unit_test_module = GetUnitTestModule(target.GetImages());
-
-    if (unit_test_module) {
-      exe_module_sp = unit_test_module;
-    }
-  }
-
-  {
-    auto get_executable_triple = [&]() -> llvm::Triple {
-      if (!exe_module_sp)
-        return {};
-      return exe_module_sp->GetArchitecture().GetTriple();
-    };
-
-    llvm::Triple computed_triple;
-    llvm::Triple target_triple = target.GetArchitecture().GetTriple();
-
-    if (target.GetArchitecture().IsFullySpecifiedTriple()) {
-      // If a fully specified triple was passed in, for example
-      // through CreateTargetWithFileAndTargetTriple(), prefer that.
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Fully specified target triple %s.",
-                 target_triple.str().c_str());
-      computed_triple = target_triple;
-    } else {
-      // Underspecified means that one or more of vendor, os, or os
-      // version (Darwin only) is missing.
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
-                 target_triple.str().c_str());
-      llvm::VersionTuple platform_version;
-      PlatformSP platform_sp(target.GetPlatform());
-      if (platform_sp)
-        platform_version =
-            platform_sp->GetOSVersion(target.GetProcessSP().get());
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Platform version is %s",
-                 platform_version.empty()
-                     ? "<empty>"
-                     : platform_version.getAsString().c_str());
-      // Try to fill in the platform OS version. The idea behind using
-      // the platform version is to let the expression evaluator mark
-      // the expressions with the highest supported availability
-      // attribute. Don't use the platform when an environment is
-      // present, since there might be some ambiguity about the
-      // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
-      // version numbers).
-      if (!platform_version.empty() &&
-          target_triple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
-        LOG_PRINTF(GetLog(LLDBLog::Types), "Completing triple based on platform.");
-
-        llvm::SmallString<32> buffer;
-        {
-          llvm::raw_svector_ostream os(buffer);
-          os << target_triple.getArchName() << '-';
-          os << target_triple.getVendorName() << '-';
-          os << llvm::Triple::getOSTypeName(target_triple.getOS());
-          os << platform_version.getAsString();
-        }
-        computed_triple = llvm::Triple(buffer);
-      } else {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "Completing triple based on main binary load commands.");
-        computed_triple = get_executable_triple();
-      }
-    }
-
-    if (computed_triple.getOS() == llvm::Triple::MacOSX) {
-      // Handle the case where an apparent macOS binary has been
-      // force-loaded as a macCatalyst process. The Xcode test
-      // runner works this way.
-      llvm::Triple exe_triple = get_executable_triple();
-      if (exe_triple.getOS() == llvm::Triple::IOS &&
-          exe_triple.getEnvironment() == llvm::Triple::MacABI) {
-        LOG_PRINTF(GetLog(LLDBLog::Types), "Adjusting triple to macCatalyst.");
-        computed_triple.setOSAndEnvironmentName(
-            exe_triple.getOSAndEnvironmentName());
-      }
-    }
-    if (computed_triple == llvm::Triple()) {
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to compute triple.");
-      return {};
-    }
-    swift_ast_sp->SetTriple(computed_triple);
-  }
-
-  llvm::Triple triple = swift_ast_sp->GetTriple();
-  std::string resource_dir = HostInfo::GetSwiftResourceDir(
-      triple, swift_ast_sp->GetPlatformSDKPath());
-  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
-                        triple);
-  const bool discover_implicit_search_paths =
-      target.GetSwiftDiscoverImplicitSearchPaths();
-
-  const bool use_all_compiler_flags =
-      !got_serialized_options || target.GetUseAllCompilerFlags();
-
-  for (ModuleSP module_sp : target.GetImages().Modules())
-    if (module_sp) {
-      std::string error;
-      StringRef module_filter;
-      std::vector<std::string> extra_clang_args;
-      ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
-                    use_all_compiler_flags,
-                    target.GetExecutableModulePointer() == module_sp.get(),
-                    module_filter, triple, plugin_search_options,
-                    module_search_paths, framework_search_paths,
-                    extra_clang_args, error);
-      swift_ast_sp->AddExtraClangArgs(extra_clang_args,
-                                      target.GetSwiftClangOverrideOptions());
-    }
-
-  for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
-    module_search_paths.push_back(path.GetPath());
-
-  for (const FileSpec &path : target.GetSwiftFrameworkSearchPaths())
-    framework_search_paths.push_back({path.GetPath(),
-                                      /*is_system*/ false});
-
-  // Now fold any extra options we were passed. This has to be done
-  // BEFORE the ClangImporter is made by calling GetClangImporter or
-  // these options will be ignored.
-
-  swift_ast_sp->AddUserClangArgs(target);
-
-  if (extra_options) {
-    swift::CompilerInvocation &compiler_invocation =
-        swift_ast_sp->GetCompilerInvocation();
-    Args extra_args(extra_options);
-    llvm::ArrayRef<const char *> extra_args_ref(extra_args.GetArgumentVector(),
-                                                extra_args.GetArgumentCount());
-    compiler_invocation.parseArgs(extra_args_ref,
-                                  swift_ast_sp->GetDiagnosticEngine());
-  }
-
-  swift_ast_sp->ApplyDiagnosticOptions();
-
-  // Apply source path remappings found in each module's dSYM.
-  for (ModuleSP module : target.GetImages().Modules())
-    if (module)
-      swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
-
-  // Apply source path remappings found in the target settings.
-  swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
-  swift_ast_sp->FilterClangImporterOptions(
-      swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
-
-  // This needs to happen once all the import paths are set, or
-  // otherwise no modules will be found.
-  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
-                                            framework_search_paths);
-  swift_ast_sp->SetCompilerInvocationLLDBOverrides();
-
-  if (!swift_ast_sp->GetClangImporter()) {
-    logError("couldn't create a ClangImporter");
-    return {};
-  }
-
-  // Initialize the compiler plugin search paths.
-  auto &opts = swift_ast_sp->GetSearchPathOptions();
-  opts.PluginSearchOpts.insert(opts.PluginSearchOpts.end(),
-                               plugin_search_options.begin(),
-                               plugin_search_options.end());
-
-  for (size_t mi = 0; mi != num_images; ++mi) {
-    std::vector<std::string> module_names;
-    auto module_sp = target.GetImages().GetModuleAtIndex(mi);
-    swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
-  }
-
-  LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
-             static_cast<void *>(&target),
-             static_cast<void *>(swift_ast_sp.get()));
-
-  if (swift_ast_sp->HasFatalErrors()) {
-    logError(swift_ast_sp->GetFatalErrors().AsCString());
-    return {};
-  }
-
-  {
-    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
-    const bool can_create = true;
-
-    // Report progress on module importing by using a callback function in
-    // swift::ASTContext.
-    Progress progress("Importing Swift standard library");
-    swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-        [&progress](llvm::StringRef module_name,
-                    swift::ASTContext::ModuleImportKind kind) {
-          progress.Increment(1, module_name.str());
-        });
-
-    // Clear the callback function on scope exit to prevent an out-of-scope
-    // access of the progress local variable.
-    auto on_exit = llvm::make_scope_exit([&]() {
-      swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
-          [](llvm::StringRef module_name,
-             swift::ASTContext::ModuleImportKind kind) {});
-    });
-
-    swift::ModuleDecl *stdlib =
-        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
-    if (!stdlib || IsDWARFImported(*stdlib)) {
-      logError("couldn't load the Swift stdlib");
-      return {};
-    }
-  }
-
-  return swift_ast_sp;
-}
-
-
-lldb::TypeSystemSP SwiftASTContext::CreateInstance(
-    const SymbolContext &sc,
-    TypeSystemSwiftTypeRefForExpressions &typeref_typesystem) {
   LLDB_SCOPED_TIMER();
 
   if (!ModuleList::GetGlobalModuleListProperties()
@@ -2944,7 +2644,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     return lldb::TypeSystemSP();
 
   CompileUnit *cu = sc.comp_unit;
-  StringRef swift_module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(&sc);
+  StringRef swift_module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(sc);
   std::string m_description;
   {
     StreamString ss;
@@ -2959,6 +2659,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     m_description = ss.GetString();
   }
 
+  bool is_repl = extra_options;
+  if (is_repl)
+    LOG_PRINTF(GetLog(LLDBLog::Types), "REPL detected");
   TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
   if (!target_sp)
     return {};
@@ -3055,7 +2758,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
     ArchSpec preferred_arch;
     llvm::Triple preferred_triple;
-    if (module_arch && module_arch.IsFullySpecifiedTriple()) {
+    if (!is_repl && module_arch && module_arch.IsFullySpecifiedTriple()) {
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "Preferring module triple %s over target triple %s.",
                  module_triple.str().c_str(), target_triple.str().c_str());
@@ -3131,7 +2834,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to compute triple.");
       return {};
     }
-    swift_ast_sp->SetTriple(computed_triple);
+    swift_ast_sp->SetTriple(sc, computed_triple);
   }
 
   llvm::Triple triple = swift_ast_sp->GetTriple();
@@ -3177,8 +2880,18 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
   // these options will be ignored.
-
   swift_ast_sp->AddUserClangArgs(target);
+
+  if (extra_options) {
+    swift::CompilerInvocation &compiler_invocation =
+        swift_ast_sp->GetCompilerInvocation();
+    Args extra_args(extra_options);
+    llvm::ArrayRef<const char *> extra_args_ref(extra_args.GetArgumentVector(),
+                                                extra_args.GetArgumentCount());
+    compiler_invocation.parseArgs(extra_args_ref,
+                                  swift_ast_sp->GetDiagnosticEngine());
+  }
+
   swift_ast_sp->ApplyDiagnosticOptions();
 
   // Apply source path remappings found in each module's dSYM.
@@ -3418,6 +3131,11 @@ llvm::Triple SwiftASTContext::GetSwiftFriendlyTriple(llvm::Triple triple) {
   else if (arch_name == "aarch64_32")
     triple.setArchName("arm64_32");
   return triple;
+}
+
+void SwiftASTContext::SetTriple(const SymbolContext &sc,
+                                const llvm::Triple triple) {
+  SetTriple(triple, sc.module_sp.get());
 }
 
 bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
@@ -4907,39 +4625,33 @@ SwiftASTContext::ReconstructTypeImpl(ConstString mangled_typename) {
                    .getPointer();
   assert(!found_type || &found_type->getASTContext() == *ast_ctx);
 
-  // If the typeref type system is disabled GetAsClangType will eventually call
-  // ReconstructType again, eventually leading to a stack overflow.
-  if (ModuleList::GetGlobalModuleListProperties()
-          .GetUseSwiftTypeRefTypeSystem()) {
-    // Objective-C classes sometimes have private subclasses that are invisible
-    // to the Swift compiler because they are declared and defined in a .m file.
-    // If we can't reconstruct an ObjC type, walk up the type hierarchy until we
-    // find something we can import, or until we run out of types
-    while (!found_type) {
-      CompilerType clang_type = GetAsClangType(mangled_typename);
-      if (!clang_type)
-        break;
+  // Objective-C classes sometimes have private subclasses that are invisible
+  // to the Swift compiler because they are declared and defined in a .m file.
+  // If we can't reconstruct an ObjC type, walk up the type hierarchy until we
+  // find something we can import, or until we run out of types
+  while (!found_type) {
+    CompilerType clang_type = GetAsClangType(mangled_typename);
+    if (!clang_type)
+      break;
 
-      auto clang_ctx =
-          clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-      if (!clang_ctx)
-        break;
-      auto *interface_decl =
-          TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
-      if (!interface_decl)
-        break;
-      auto *super_interface_decl = interface_decl->getSuperClass();
-      if (!super_interface_decl)
-        break;
-      CompilerType super_type = clang_ctx->GetTypeForDecl(super_interface_decl);
-      if (!super_type)
-        break;
-      auto super_mangled_typename = super_type.GetMangledTypeName();
-      found_type = swift::Demangle::getTypeForMangling(
-                       **ast_ctx, super_mangled_typename.GetStringRef())
-                       .getPointer();
-      assert(!found_type || &found_type->getASTContext() == *ast_ctx);
-    }
+    auto clang_ctx =
+        clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+    if (!clang_ctx)
+      break;
+    auto *interface_decl = TypeSystemClang::GetAsObjCInterfaceDecl(clang_type);
+    if (!interface_decl)
+      break;
+    auto *super_interface_decl = interface_decl->getSuperClass();
+    if (!super_interface_decl)
+      break;
+    CompilerType super_type = clang_ctx->GetTypeForDecl(super_interface_decl);
+    if (!super_type)
+      break;
+    auto super_mangled_typename = super_type.GetMangledTypeName();
+    found_type = swift::Demangle::getTypeForMangling(
+                     **ast_ctx, super_mangled_typename.GetStringRef())
+                     .getPointer();
+    assert(!found_type || &found_type->getASTContext() == *ast_ctx);
   }
 
   if (found_type) {

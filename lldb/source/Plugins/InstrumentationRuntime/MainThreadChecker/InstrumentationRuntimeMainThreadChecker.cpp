@@ -103,7 +103,9 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
   const SymbolContext *sc = nullptr;
   if (swiftFrame)
     sc = &swiftFrame->GetSymbolContext(eSymbolContextFunction);
-  auto *ctx = ts->GetSwiftASTContext(sc);
+  if (!sc)
+    return "";
+  auto *ctx = ts->GetSwiftASTContext(*sc);
   if (!ctx)
     return "";
   swift::ClangImporter *imp = ctx->GetClangImporter();

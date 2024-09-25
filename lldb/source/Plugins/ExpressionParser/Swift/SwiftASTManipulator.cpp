@@ -897,7 +897,7 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   // When injecting a value pack or pack count into the outer
   // lldb_expr function, treat it as an opaque raw pointer.
   if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
-    auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(&m_sc);
+    auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(m_sc);
     if (!swift_ast_ctx)
       return llvm::createStringError("no typesystem for variable " +
                                      variable.GetName().str());
