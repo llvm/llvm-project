@@ -1546,6 +1546,29 @@ Fortran::lower::CallInterface<T>::getResultType() const {
   return types;
 }
 
+template <typename T>
+fir::FortranProcedureFlagsEnumAttr
+Fortran::lower::CallInterface<T>::getProcedureAttrs(
+    mlir::MLIRContext *mlirContext) const {
+  if (characteristic) {
+    fir::FortranProcedureFlagsEnum flags = fir::FortranProcedureFlagsEnum::none;
+    if (characteristic->IsBindC())
+      flags = flags | fir::FortranProcedureFlagsEnum::bind_c;
+    if (characteristic->IsPure())
+      flags = flags | fir::FortranProcedureFlagsEnum::pure;
+    if (characteristic->IsElemental())
+      flags = flags | fir::FortranProcedureFlagsEnum::elemental;
+    // TODO:
+    // - SIMPLE: F2023, not yet handled by semantics.
+    // - NON_RECURSIVE: not part of the characteristics. Maybe this should
+    //   simply not be part of FortranProcedureFlagsEnum since cannot accurately
+    //   be known on the caller side.
+    if (flags != fir::FortranProcedureFlagsEnum::none)
+      return fir::FortranProcedureFlagsEnumAttr::get(mlirContext, flags);
+  }
+  return nullptr;
+}
+
 template class Fortran::lower::CallInterface<Fortran::lower::CalleeInterface>;
 template class Fortran::lower::CallInterface<Fortran::lower::CallerInterface>;
 

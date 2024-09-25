@@ -42,6 +42,10 @@ namespace mlir {
 class Location;
 }
 
+namespace fir {
+class FortranProcedureFlagsEnumAttr;
+}
+
 namespace Fortran::lower {
 class AbstractConverter;
 class SymMap;
@@ -234,6 +238,11 @@ public:
   bool canBeCalledViaImplicitInterface() const {
     return characteristic && characteristic->CanBeCalledViaImplicitInterface();
   }
+
+  /// Translate Fortran procedure attributes into FIR attribute.
+  /// Return attribute is nullptr if the procedure has no attributes.
+  fir::FortranProcedureFlagsEnumAttr
+  getProcedureAttrs(mlir::MLIRContext *) const;
 
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
