@@ -109,10 +109,6 @@ static cl::opt<bool> NoExternalizeOnAddrTaken(
     cl::desc(
         "disables externalization of functions whose addresses are taken"));
 
-static cl::opt<bool> InlineAsmIsIndirectCall(
-    "amdgpu-module-splitting-inline-asm-is-indirect-call", cl::Hidden,
-    cl::desc("consider inline assembly as an indirect call"));
-
 static cl::opt<std::string>
     ModuleDotCfgOutput("amdgpu-module-splitting-print-module-dotcfg",
                        cl::Hidden,
@@ -519,8 +515,9 @@ void SplitGraph::buildGraph(CallGraph &CG) {
     // Keep track of this function if it contains an indirect call and/or if it
     // can be indirectly called.
     if (CallsExternal) {
-      LLVM_DEBUG(dbgs() << "  [!] callgraph is incomplete for " << Fn.getName()
-                        << " - analyzing function\n");
+      LLVM_DEBUG(dbgs() << "  [!] callgraph is incomplete for ";
+                 Fn.printAsOperand(dbgs());
+                 dbgs() << " - analyzing function\n");
 
       bool HasIndirectCall = false;
       for (const auto &Inst : instructions(Fn)) {
@@ -530,8 +527,6 @@ void SplitGraph::buildGraph(CallGraph &CG) {
           // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
           // true.
           if (CB->isInlineAsm()) {
-            if (InlineAsmIsIndirectCall)
-              HasIndirectCall = true;
             LLVM_DEBUG(dbgs() << "    found inline assembly\n");
             continue;
           }
@@ -1372,11 +1367,9 @@ static void splitAMDGPUModule(
     for (auto &Fn : M) {
       // TODO: Should aliases count? Probably not but they're so rare I'm not
       // sure it's worth fixing.
-      if (Fn.hasAddressTaken()) {
-        if (Fn.hasLocalLinkage()) {
-          LLVM_DEBUG(dbgs() << "[externalize] " << Fn.getName()
-                            << " because its address is taken\n");
-        }
+      if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
+        LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
+                   dbgs() << " because its address is taken\n");
         externalize(Fn);
       }
     }

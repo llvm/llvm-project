@@ -2,22 +2,11 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 
-; RUN: llvm-split -o %t_as_indirect %s -j 2 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-no-externalize-address-taken -amdgpu-module-splitting-inline-asm-is-indirect-call
-; RUN: llvm-dis -o - %t_as_indirect0 | FileCheck --check-prefix=CHECK-INDIRECT0 --implicit-check-not=define %s
-; RUN: llvm-dis -o - %t_as_indirect1 | FileCheck --check-prefix=CHECK-INDIRECT1 --implicit-check-not=define %s
-
 ; CHECK0: define internal void @HelperB
 ; CHECK0: define amdgpu_kernel void @B
 
 ; CHECK1: define internal void @HelperA()
 ; CHECK1: define amdgpu_kernel void @A()
-
-; CHECK-INDIRECT0: define internal void @HelperB
-; CHECK-INDIRECT0: define amdgpu_kernel void @B
-
-; CHECK-INDIRECT1: define internal void @HelperA()
-; CHECK-INDIRECT1: define internal void @HelperB()
-; CHECK-INDIRECT1: define amdgpu_kernel void @A()
 
 @addrthief = global [2 x ptr] [ptr @HelperA, ptr @HelperB]
 
