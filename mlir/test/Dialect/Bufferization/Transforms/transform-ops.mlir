@@ -1,4 +1,4 @@
-// RUN: mlir-opt --transform-interpreter="debug-payload-root-tag=payload" %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt --transform-interpreter %s -split-input-file -verify-diagnostics | FileCheck %s
 
 // Test One-Shot Bufferize.
 
@@ -12,21 +12,19 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @test_function(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
+func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
 
-    // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-    // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
-    // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-    // CHECK: memref.copy %[[A_memref]], %[[alloc]]
-    // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-    // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
+  // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
+  // CHECK: memref.copy %[[A_memref]], %[[alloc]]
+  // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
+  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-    // CHECK: return %[[res_tensor]]
-    return %0 : tensor<?xf32>
-  }
+  // CHECK: return %[[res_tensor]]
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -44,21 +42,19 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @test_function(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
 //   CHECK-NOT:   memref.copy
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
+func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
 
-    // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-    // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
-    // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-    // CHECK: linalg.copy ins(%[[A_memref]] : memref<{{.*}}>) outs(%[[alloc]]
-    // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-    // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
+  // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
+  // CHECK: linalg.copy ins(%[[A_memref]] : memref<{{.*}}>) outs(%[[alloc]]
+  // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
+  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-    // CHECK: return %[[res_tensor]]
-    return %0 : tensor<?xf32>
-  }
+  // CHECK: return %[[res_tensor]]
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -76,15 +72,13 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @test_function_analysis(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
-    // CHECK: vector.transfer_write
-    // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]}
-    // CHECK-SAME: tensor<?xf32>
-    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
-    return %0 : tensor<?xf32>
-  }
+func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.transfer_write
+  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]}
+  // CHECK-SAME: tensor<?xf32>
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -101,12 +95,10 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
-    // expected-error @+1 {{op was not bufferized}}
-    %0 = "test.dummy_op"() : () -> (tensor<?xf32>)
-    return %0 : tensor<?xf32>
-  }
+func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
+  // expected-error @+1 {{op was not bufferized}}
+  %0 = "test.dummy_op"() : () -> (tensor<?xf32>)
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -119,7 +111,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-module @payload attributes { transform.target_tag = "payload" } {
+module {
   // CHECK-LABEL: func @test_function(
   //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
   func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
@@ -154,13 +146,11 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:  %[[A:.*]]: memref<12x9xf32>,
 // CHECK-SAME:  %[[B:.*]]: memref<9x6xf32>,
 // CHECK-SAME:  %[[C:.*]]: memref<12x6xf32>) -> memref<12x6xf32> {
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32>) -> tensor<12x6xf32> {
-    // CHECK: linalg.matmul ins(%[[A]], %[[B]] : memref<12x9xf32>, memref<9x6xf32>) outs(%[[C]] : memref<12x6xf32>)
-    %D = linalg.matmul ins(%A, %B: tensor<12x9xf32>, tensor<9x6xf32>) outs(%C: tensor<12x6xf32>) -> tensor<12x6xf32>
-    // CHECK: return %[[C]] : memref<12x6xf32>
-    return %D : tensor<12x6xf32>
-  }
+func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32>) -> tensor<12x6xf32> {
+  // CHECK: linalg.matmul ins(%[[A]], %[[B]] : memref<12x9xf32>, memref<9x6xf32>) outs(%[[C]] : memref<12x6xf32>)
+  %D = linalg.matmul ins(%A, %B: tensor<12x9xf32>, tensor<9x6xf32>) outs(%C: tensor<12x6xf32>) -> tensor<12x6xf32>
+  // CHECK: return %[[C]] : memref<12x6xf32>
+  return %D : tensor<12x6xf32>
 }
 
 // -----
@@ -175,12 +165,10 @@ module attributes {transform.with_named_sequence} {
 }
 
 // Expect `bufferization.empty_tensor_to_alloc_tensor` to replace the tensor.empty.
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
-    // CHECK: bufferization.alloc_tensor
-    %0 = tensor.empty() : tensor<2x2xf32>
-    return %0 : tensor<2x2xf32>
-  }
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK: bufferization.alloc_tensor
+  %0 = tensor.empty() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
 }
 
 // -----
@@ -197,15 +185,13 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   tensor.extract_slice
 //       CHECK:   linalg.fill
 //       CHECK:   tensor.insert_slice
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @empty_tensor_elimination(
-      %t: tensor<10xf32>, %f: f32) -> tensor<10xf32> {
-    %0 = tensor.empty() : tensor<5xf32>
-    %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
-    %2 = tensor.insert_slice %1 into %t [1][5][1]
-        : tensor<5xf32> into tensor<10xf32>
-    return %2 : tensor<10xf32>
-  }
+func.func @empty_tensor_elimination(
+    %t: tensor<10xf32>, %f: f32) -> tensor<10xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %2 = tensor.insert_slice %1 into %t [1][5][1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
 }
 
 // -----
@@ -222,14 +208,12 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   memref.alloca
 //       CHECK:   scf.for
 //       CHECK:     memref.store
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %pos: index) {
-    scf.for %iv = %lb to %ub step %step {
-      %0 = memref.alloca() : memref<5xf32>
-      memref.store %f, %0[%pos] : memref<5xf32>
-    }
-    return
+func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %pos: index) {
+  scf.for %iv = %lb to %ub step %step {
+    %0 = memref.alloca() : memref<5xf32>
+    memref.store %f, %0[%pos] : memref<5xf32>
   }
+  return
 }
 
 // -----
@@ -247,12 +231,10 @@ module attributes {transform.with_named_sequence} {
 
 // Expect `bufferization.bufferize_to_allocation` to create an alloc.
 //  CHECK-LABEL: func.func @empty_to_tensor_alloc()
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
-    // CHECK-NEXT: %[[alloca:.*]] = memref.alloca() : memref<2x2xf32>
-    // CHECK-NEXT: %[[tensor:.*]] = bufferization.to_tensor %[[alloca]] restrict writable : memref<2x2xf32>
-    // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
-    %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
-    return %0 : tensor<2x2xf32>
-  }
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK-NEXT: %[[alloca:.*]] = memref.alloca() : memref<2x2xf32>
+  // CHECK-NEXT: %[[tensor:.*]] = bufferization.to_tensor %[[alloca]] restrict writable : memref<2x2xf32>
+  // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
+  %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
 }
