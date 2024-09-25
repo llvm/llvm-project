@@ -509,6 +509,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();
+  if (CodeGenOpts.OutputAsmVariant != 3) // 3 (default): not specified
+    Options.MCOptions.OutputAsmVariant = CodeGenOpts.OutputAsmVariant;
   Options.MCOptions.ABIName = TargetOpts.ABI;
   for (const auto &Entry : HSOpts.UserEntries)
     if (!Entry.IsFramework &&
