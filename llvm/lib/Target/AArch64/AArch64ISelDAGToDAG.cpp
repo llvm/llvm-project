@@ -401,7 +401,7 @@ public:
   }
 
   void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
-                             uint32_t MaxImm);
+                             uint32_t MaxImm, bool IsMultiVector = false);
 
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
@@ -1977,15 +1977,23 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
 
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
-                                                unsigned Opc, uint32_t MaxImm) {
+                                                unsigned Opc, uint32_t MaxImm,
+                                                bool IsMultiVector) {
   if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(4)))
     if (Imm->getZExtValue() > MaxImm)
       return;
 
   SDValue ZtValue;
+  SmallVector<SDValue, 4> Ops;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
-  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  Ops.push_back(ZtValue);
+  if (IsMultiVector) {
+    Ops.push_back(createZMulTuple({Node->getOperand(3), Node->getOperand(4)}));
+  } else {
+    Ops.push_back(Node->getOperand(3));
+    Ops.push_back(Node->getOperand(4));
+  }
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -5505,6 +5513,11 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::LUTI4_2ZTZI_S}))
         // Second Immediate must be <= 3:
         SelectMultiVectorLuti(Node, 2, Opc, 3);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti4_zt_x4: {
+      // Does not have immediate but it has 2ZPR input
+      SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z, 0, true);
       return;
     }
     }
