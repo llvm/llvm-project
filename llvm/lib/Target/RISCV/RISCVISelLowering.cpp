@@ -5130,6 +5130,40 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
   return DAG.getBitcast(VT, Rotate);
 }
 
+// e.g.,
+// t10 = insert_subvector undef:v16i32, t4, Constant:i64<0>
+// vector_shuffle<0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3> t10, undef:v16i32
+// ->
+// concat_vectors t4, t4, t4, t4
+static SDValue
+lowerVECTOR_SHUFFLEAsCONCAT_VECTORS(ShuffleVectorSDNode *SVN, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  assert(SVN->getOperand(1).isUndef());
+  SDValue V1 = SVN->getOperand(0);
+  if (V1.getOpcode() != ISD::INSERT_SUBVECTOR)
+    return SDValue();
+  if (!V1.getOperand(0).isUndef())
+    return SDValue();
+  SDValue InsertValue = V1.getOperand(1);
+  MVT SubVecVT = InsertValue.getSimpleValueType();
+  unsigned SubVecNumElements = SubVecVT.getVectorNumElements();
+  uint64_t InsertIndex = cast<ConstantSDNode>(V1.getOperand(2))->getZExtValue();
+  if (InsertIndex != 0)
+    return SDValue();
+  ArrayRef<int> Mask = SVN->getMask();
+  if (Mask.size() % SubVecNumElements != 0)
+    return SDValue();
+  SmallVector<int> RepeatedPattern(
+      createSequentialMask(0, SubVecNumElements, 0));
+  // Check the Mask repeatedly uses the same subvector.
+  for (unsigned I = 0; I != Mask.size(); I += SubVecNumElements)
+    if (!Mask.slice(I, SubVecNumElements).equals(RepeatedPattern))
+      return SDValue();
+  SDLoc DL(SVN);
+  SmallVector<SDValue> Ops(Mask.size() / SubVecNumElements, InsertValue);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, SVN->getSimpleValueType(0), Ops);
+}
+
 // If compiling with an exactly known VLEN, see if we can split a
 // shuffle on m2 or larger into a small number of m1 sized shuffles
 // which write each destination registers exactly once.
@@ -5430,6 +5464,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // don't have Zvkb and have to expand, the expanded sequence of approx. 2
     // shifts and a vor will have a higher throughput than a vrgather.
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
+
+    if (SDValue V = lowerVECTOR_SHUFFLEAsCONCAT_VECTORS(SVN, DAG, Subtarget))
       return V;
 
     if (VT.getScalarSizeInBits() == 8 &&

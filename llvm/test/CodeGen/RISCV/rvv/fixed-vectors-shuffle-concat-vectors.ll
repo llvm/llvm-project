@@ -4,11 +4,9 @@
 define <16 x float> @test1(<8 x float> %0) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_0)
+; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vslideup.vi v9, v8, 8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -21,23 +19,12 @@ entry:
 define <16 x i32> @test2(<4 x i32> %0) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    addi a0, a0, 273
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmv.v.i v9, 3
-; CHECK-NEXT:    vmerge.vim v10, v9, 0, v0
-; CHECK-NEXT:    lui a0, 2
-; CHECK-NEXT:    addi a0, a0, 546
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    lui a0, 4
-; CHECK-NEXT:    addi a0, a0, 1092
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
-; CHECK-NEXT:    vmv.v.v v0, v9
-; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslideup.vi v8, v9, 8
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> poison, <4 x i32> poison, i64 4)
