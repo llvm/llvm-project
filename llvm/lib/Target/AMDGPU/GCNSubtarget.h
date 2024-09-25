@@ -220,7 +220,6 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
-  bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
@@ -1315,8 +1314,6 @@ public:
   }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
-
-  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 

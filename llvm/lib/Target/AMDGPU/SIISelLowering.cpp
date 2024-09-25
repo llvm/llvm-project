@@ -9565,6 +9565,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
+      Ops.push_back(Chain);
     } else {
       Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
       SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
@@ -10193,7 +10194,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                         0);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
-    } else if (!IsInlinableBarID) {
+    } else if (IsInlinableBarID) {
+      Ops.push_back(Chain);
+    } else {
       Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 

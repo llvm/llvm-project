@@ -30,10 +30,18 @@
 //   * llvm.nvvm.max.ui  --> select(x ule y, x, y)
 //   * llvm.nvvm.max.ull --> ibid.
 //   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
-//   * llvm.nvvm.bitcast.f2i  --> bitcast
-//   * llvm.nvvm.bitcast.i2f  --> ibid.
-//   * llvm.nvvm.bitcast.d2ll --> ibid.
-//   * llvm.nvvm.bitcast.ll2d --> ibid.
+//   * llvm.nvvm.bitcast.f2i         --> bitcast
+//   * llvm.nvvm.bitcast.i2f         --> ibid.
+//   * llvm.nvvm.bitcast.d2ll        --> ibid.
+//   * llvm.nvvm.bitcast.ll2d        --> ibid.
+//   * llvm.nvvm.ptr.gen.to.global   --> addrspacecast
+//   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
+//   * llvm.nvvm.ptr.gen.to.constant --> ibid.
+//   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.global.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.constant.to.gen --> ibid.
+//   * llvm.nvvm.ptr.local.to.gen    --> ibid.
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -1601,40 +1609,6 @@ def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.p">;
-
-// Use for generic pointers
-// - These intrinsics are used to convert address spaces.
-// - The input pointer and output pointer must have the same type, except for
-//   the address-space. (This restriction is not enforced here as there is
-//   currently no way to describe it).
-// - This complements the llvm bitcast, which can be used to cast one type
-//   of pointer to another type of pointer, while the address space remains
-//   the same.
-def int_nvvm_ptr_local_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.local.to.gen">;
-def int_nvvm_ptr_shared_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.shared.to.gen">;
-def int_nvvm_ptr_global_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.global.to.gen">;
-def int_nvvm_ptr_constant_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.constant.to.gen">;
-
-def int_nvvm_ptr_gen_to_global: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.global">;
-def int_nvvm_ptr_gen_to_shared: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.shared">;
-def int_nvvm_ptr_gen_to_local: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.local">;
-def int_nvvm_ptr_gen_to_constant: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.constant">;
 
 // Used in nvvm internally to help address space opt and ptx code generation
 // This is for params that are passed to kernel functions by pointer by-val.
