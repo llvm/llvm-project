@@ -49,15 +49,15 @@ template <> struct ilist_alloc_traits<MachineBasicBlock> {
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* N);
-  void removeNodeFromList(MachineBasicBlock* N);
+  void addNodeToList(MachineBasicBlock *N);
+  void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
-  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
+  void transferNodesFromList(ilist_callback_traits &OldList, Iterator,
+                             Iterator) {
     assert(this == &OldList && "never transfer MBBs between functions");
   }
 };
-
 
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
