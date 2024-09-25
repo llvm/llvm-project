@@ -2205,7 +2205,8 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
-    SDValue Tmp = ExpandLibCall(LC, Node, false).first;
+    bool IsSignedArgument = Node->getOpcode() == ISD::FLDEXP;
+    SDValue Tmp = ExpandLibCall(LC, Node, IsSignedArgument).first;
     Results.push_back(Tmp);
   }
 }
