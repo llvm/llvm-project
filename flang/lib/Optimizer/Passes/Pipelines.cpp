@@ -11,25 +11,20 @@
 
 #include "flang/Optimizer/Passes/Pipelines.h"
 
-namespace {
+namespace fir {
 
-static void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
-                                                 PassConstructor ctor) {
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
+                                          PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
                      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
-static void
-addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
-                                                  llvm::cl::opt<bool> &disabled,
-                                                  PassConstructor ctor) {
+void addNestedPassToAllTopLevelOperationsConditionally(
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled,
+    PassConstructor ctor) {
   if (!disabled)
     addNestedPassToAllTopLevelOperations(pm, ctor);
 }
-
-} // namespace
-
-namespace fir {
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;

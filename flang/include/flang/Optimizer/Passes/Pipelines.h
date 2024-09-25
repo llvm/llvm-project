@@ -28,7 +28,7 @@
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 
-namespace {
+namespace fir {
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
@@ -59,9 +59,11 @@ void addNestedPassConditionally(mlir::PassManager &pm,
     pm.addNestedPass<OP>(ctor());
 }
 
-} // namespace
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
+                                          PassConstructor ctor);
 
-namespace fir {
+void addNestedPassToAllTopLevelOperationsConditionally(
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, PassConstructor ctor);
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
