@@ -295,7 +295,7 @@ public:
                    std::optional<int64_t> MaybeLimit = std::nullopt,
                    std::optional<cas::ObjectRef> *CASContents = nullptr) const {
     return getBufferForFileImpl(Filename,
-                                /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
+                                /*FileSize=*/MaybeLimit.value_or(-1),
                                 isVolatile, RequiresNullTerminator,
                                 CASContents);
   }
