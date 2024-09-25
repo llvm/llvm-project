@@ -1942,7 +1942,15 @@ public:
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
 
-  // TODO: Missing function getOpcodeName().
+  const char *getOpcodeName() const {
+    return getOpcodeName(Opc);
+  }
+
+  // Note that these functions below are calling into llvm::Instruction. 
+  // A sandbox IR instruction could introduce a new opcode that could change the
+  // behavior of one of these functions. It is better that these functions are only
+  // added as needed and new sandbox IR instructions must explicitly check if any
+  // of these functions could have a different behavior.
 
   bool isTerminator() const {
     return cast<llvm::Instruction>(Val)->isTerminator();
@@ -1954,6 +1962,55 @@ public:
   }
   bool isShift() const { return cast<llvm::Instruction>(Val)->isShift(); }
   bool isCast() const { return cast<llvm::Instruction>(Val)->isCast(); }
+  bool isFuncletPad() const { return cast<llvm::Instruction>(Val)->isFuncletPad(); }
+  bool isSpecialTerminator() const { return cast<llvm::Instruction>(Val)->isSpecialTerminator(); }
+  bool isOnlyUserOfAnyOperand() const { return cast<llvm::Instruction>(Val)->isOnlyUserOfAnyOperand(); }
+  bool isLogicalShift() const { return cast<llvm::Instruction>(Val)->isLogicalShift(); }
+
+  //===--------------------------------------------------------------------===//
+  // Metadata manipulation.
+  //===--------------------------------------------------------------------===//
+
+  /// Return true if the instruction has any metadata attached to it.
+  bool hasMetadata() const { return cast<llvm::Instruction>(Val)->hasMetadata(); }
+
+  /// Return true if this instruction has metadata attached to it other than a
+  /// debug location.
+  bool hasMetadataOtherThanDebugLoc() const {
+     return cast<llvm::Instruction>(Val)->hasMetadataOtherThanDebugLoc();
+  }
+
+  /// Return true if this instruction has the given type of metadata attached.
+  bool hasMetadata(unsigned KindID) const {
+    return cast<llvm::Instruction>(Val)->hasMetadata(KindID);
+  }
+
+  /// Get the metadata of given kind attached to this Instruction.
+  /// If the metadata is not found then return null.
+  MDNode *getMetadata(unsigned KindID) const {
+    return cast<llvm::Instruction>(Val)->getMetadata(KindID);
+  }
+
+   /// Get the metadata of given kind attached to this Instruction.
+  /// If the metadata is not found then return null.
+  MDNode *getMetadata(StringRef Kind) const {
+    return cast<llvm::Instruction>(Val)->getMetadata(Kind);
+  }
+
+  /// Get all metadata attached to this Instruction. The first element of each
+  /// pair returned is the KindID, the second element is the metadata value.
+  /// This list is returned sorted by the KindID.
+  void
+  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const {
+    return cast<llvm::Instruction>(Val)->getAllMetadata(MDs);
+  }
+
+  /// This does the same thing as getAllMetadata, except that it filters out the
+  /// debug location.
+  void getAllMetadataOtherThanDebugLoc(
+      SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const {
+    return cast<llvm::Instruction>(Val)->getAllMetadataOtherThanDebugLoc(MDs);
+  }
 
   // TODO: More missing functions
 
