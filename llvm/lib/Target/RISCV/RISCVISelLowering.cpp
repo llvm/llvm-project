@@ -16984,6 +16984,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Op0.getOperand(0);
     }
 
+    if (ISD::isNormalLoad(Op0.getNode()) && Op0.hasOneUse() &&
+        cast<LoadSDNode>(Op0)->isSimple()) {
+      MVT IVT = MVT::getIntegerVT(Op0.getValueSizeInBits());
+      auto *LN0 = cast<LoadSDNode>(Op0);
+      SDValue Load =
+          DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT, LN0->getChain(),
+                         LN0->getBasePtr(), IVT, LN0->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
+      return Load;
+    }
+
     // This is a target-specific version of a DAGCombine performed in
     // DAGCombiner::visitBITCAST. It performs the equivalent of:
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
