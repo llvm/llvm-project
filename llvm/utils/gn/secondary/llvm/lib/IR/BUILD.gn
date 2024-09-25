@@ -21,6 +21,7 @@ static_library("IR") {
     "BasicBlock.cpp",
     "BuiltinGCs.cpp",
     "Comdat.cpp",
+    "ConstantFPRange.cpp",
     "ConstantFold.cpp",
     "ConstantRange.cpp",
     "ConstantRangeList.cpp",
