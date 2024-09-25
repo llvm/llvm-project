@@ -4397,7 +4397,8 @@ public:
   }
   RValue EmitCall(QualType FnType, const CGCallee &Callee, const CallExpr *E,
                   ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr,
-                  llvm::CallBase **CallOrInvoke = nullptr);
+                  llvm::CallBase **CallOrInvoke = nullptr,
+                  CGFunctionInfo const **ResolvedFnInfo = nullptr);
 
   // If a Call or Invoke instruction was emitted for this CallExpr, this method
   // writes the pointer to `CallOrInvoke` if it's not null.
@@ -4645,6 +4646,8 @@ public:
                            unsigned BuiltinID);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableVectorType *VTy);
+  llvm::Value *EmitSVEPredicateTupleCast(llvm::Value *PredTuple,
+                                         llvm::StructType *Ty);
   llvm::Value *EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                  llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                  unsigned IntID);
@@ -4669,12 +4672,6 @@ public:
   llvm::Value *EmitSVEStructStore(const SVETypeFlags &TypeFlags,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
-  /// FormSVEBuiltinResult - Returns the struct of scalable vectors as a wider
-  /// vector. It extracts the scalable vector from the struct and inserts into
-  /// the wider vector. This avoids the error when allocating space in llvm
-  /// for struct of scalable vectors if a function returns struct.
-  llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
-
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
