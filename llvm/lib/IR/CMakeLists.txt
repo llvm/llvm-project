@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMCore
   BuiltinGCs.cpp
   Comdat.cpp
   ConstantFold.cpp
+  ConstantFPRange.cpp
   ConstantRange.cpp
   ConstantRangeList.cpp
   Constants.cpp
