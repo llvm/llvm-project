@@ -4715,13 +4715,13 @@ class FunctionEffect {
 public:
   /// Identifies the particular effect.
   enum class Kind : uint8_t {
-    None = 0,
-    NonBlocking = 1,
-    NonAllocating = 2,
-    Blocking = 3,
-    Allocating = 4,
+    NonBlocking = 0,
+    NonAllocating = 1,
+    Blocking = 2,
+    Allocating = 3,
+
   };
-  constexpr static size_t KindMaximum = 4;
+  constexpr static size_t KindCount = 4;
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;
@@ -4747,8 +4747,6 @@ private:
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(Kind::None) {}
-
   explicit FunctionEffect(Kind K) : FKind(K) {}
 
   /// The kind of the effect.
@@ -4777,8 +4775,6 @@ public:
     case Kind::Blocking:
     case Kind::Allocating:
       return 0;
-    case Kind::None:
-      break;
     }
     llvm_unreachable("unknown effect kind");
   }
@@ -4843,7 +4839,6 @@ struct FunctionEffectWithCondition {
   FunctionEffect Effect;
   EffectConditionExpr Cond;
 
-  FunctionEffectWithCondition() = default;
   FunctionEffectWithCondition(FunctionEffect E, const EffectConditionExpr &C)
       : Effect(E), Cond(C) {}
 
@@ -4959,7 +4954,7 @@ public:
 /// A mutable set of FunctionEffect::Kind.
 class FunctionEffectKindSet {
   // For now this only needs to be a bitmap.
-  constexpr static size_t EndBitPos = FunctionEffect::KindMaximum;
+  constexpr static size_t EndBitPos = FunctionEffect::KindCount;
   using KindBitsT = std::bitset<EndBitPos>;
 
   KindBitsT KindBits{};
@@ -4970,11 +4965,11 @@ class FunctionEffectKindSet {
   // position in the bitset.
 
   constexpr static size_t kindToPos(FunctionEffect::Kind K) {
-    return static_cast<size_t>(K) - 1;
+    return static_cast<size_t>(K);
   }
 
   constexpr static FunctionEffect::Kind posToKind(size_t Pos) {
-    return static_cast<FunctionEffect::Kind>(Pos + 1);
+    return static_cast<FunctionEffect::Kind>(Pos);
   }
 
   // Iterates through the bits which are set.

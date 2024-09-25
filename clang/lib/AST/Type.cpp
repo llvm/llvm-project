@@ -5117,8 +5117,6 @@ FunctionEffect::Kind FunctionEffect::oppositeKind() const {
     return Kind::Allocating;
   case Kind::Allocating:
     return Kind::NonAllocating;
-  case Kind::None:
-    return Kind::None;
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -5133,8 +5131,6 @@ StringRef FunctionEffect::name() const {
     return "blocking";
   case Kind::Allocating:
     return "allocating";
-  case Kind::None:
-    return "(none)";
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -5159,11 +5155,8 @@ std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
   case Kind::Blocking:
     assert(0 && "effectProhibitingInference with non-inferable effect kind");
     break;
-
-  case Kind::None:
-    break;
   }
-  llvm_unreachable("unknown effect kind or None");
+  llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
@@ -5185,10 +5178,8 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
   case Kind::Allocating:
   case Kind::Blocking:
     return false;
-  case Kind::None:
-    break;
   }
-  llvm_unreachable("unknown effect kind or None");
+  llvm_unreachable("unknown effect kind");
 }
 
 // =====

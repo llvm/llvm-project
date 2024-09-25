@@ -15028,13 +15028,15 @@ public:
 
     FunctionEffect::Kind EffectKind;
     Kind DiffKind;
-    FunctionEffectWithCondition Old; // Invalid when 'Kind' is 'Added'.
-    FunctionEffectWithCondition New; // Invalid when 'Kind' is 'Removed'.
+    std::optional<FunctionEffectWithCondition>
+        Old; // Invalid when 'Kind' is 'Added'.
+    std::optional<FunctionEffectWithCondition>
+        New; // Invalid when 'Kind' is 'Removed'.
 
     StringRef effectName() const {
-      if (Old.Effect.kind() != FunctionEffect::Kind::None)
-        return Old.Effect.name();
-      return New.Effect.name();
+      if (Old)
+        return Old.value().Effect.name();
+      return New.value().Effect.name();
     }
 
     /// Describes the result of effects differing between a base class's virtual

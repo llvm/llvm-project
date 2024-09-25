@@ -78,7 +78,7 @@ public:
 // be inferred as holding that effect.
 struct Violation {
   FunctionEffect Effect;
-  FunctionEffect
+  std::optional<FunctionEffect>
       CalleeEffectPreventingInference; // Only for certain IDs; can be None.
   ViolationID ID = ViolationID::None;
   ViolationSite Site;
@@ -86,14 +86,11 @@ struct Violation {
   const Decl *Callee =
       nullptr; // Only valid for ViolationIDs Calls{Decl,Expr}WithoutEffect.
 
-  Violation() = default;
-
   Violation(FunctionEffect Effect, ViolationID ID, ViolationSite VS,
             SourceLocation Loc, const Decl *Callee = nullptr,
             std::optional<FunctionEffect> CalleeEffect = std::nullopt)
-      : Effect(Effect), CalleeEffectPreventingInference(
-                            CalleeEffect.value_or(FunctionEffect())),
-        ID(ID), Site(VS), Loc(Loc), Callee(Callee) {}
+      : Effect(Effect), CalleeEffectPreventingInference(CalleeEffect), ID(ID),
+        Site(VS), Loc(Loc), Callee(Callee) {}
 
   unsigned diagnosticSelectIndex() const {
     return unsigned(ID) - unsigned(ViolationID::BaseDiagnosticIndex);
@@ -915,7 +912,7 @@ private:
           case ViolationID::DeclDisallowsInference:
             S.Diag(Viol2.Loc, diag::note_func_effect_call_disallows_inference)
                 << SiteDescIndex(CalleeInfo.CDecl, nullptr) << effectName
-                << Viol2.CalleeEffectPreventingInference.name();
+                << Viol2.CalleeEffectPreventingInference->name();
             break;
           case ViolationID::CallsExprWithoutEffect:
             S.Diag(Viol2.Loc, diag::note_func_effect_call_indirect)
@@ -1458,14 +1455,16 @@ Sema::FunctionEffectDiffVector::FunctionEffectDiffVector(
     if (cmp < 0) {
       // removal
       FunctionEffectWithCondition Old = *POld;
-      push_back(FunctionEffectDiff{
-          Old.Effect.kind(), FunctionEffectDiff::Kind::Removed, Old, {}});
+      push_back(FunctionEffectDiff{Old.Effect.kind(),
+                                   FunctionEffectDiff::Kind::Removed, Old,
+                                   std::nullopt});
       ++POld;
     } else if (cmp > 0) {
       // addition
       FunctionEffectWithCondition New = *PNew;
-      push_back(FunctionEffectDiff{
-          New.Effect.kind(), FunctionEffectDiff::Kind::Added, {}, New});
+      push_back(FunctionEffectDiff{New.Effect.kind(),
+                                   FunctionEffectDiff::Kind::Added,
+                                   std::nullopt, New});
       ++PNew;
     } else {
       ++POld;
@@ -1506,8 +1505,6 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseConversion(
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
-  case FunctionEffect::Kind::None:
-    break;
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -1531,8 +1528,6 @@ bool Sema::FunctionEffectDiff::shouldDiagnoseRedeclaration(
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return false;
-  case FunctionEffect::Kind::None:
-    break;
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -1563,9 +1558,6 @@ Sema::FunctionEffectDiff::shouldDiagnoseMethodOverride(
   case FunctionEffect::Kind::Blocking:
   case FunctionEffect::Kind::Allocating:
     return OverrideResult::NoAction;
-
-  case FunctionEffect::Kind::None:
-    break;
   }
   llvm_unreachable("unknown effect kind");
 }
