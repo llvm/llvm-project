@@ -816,6 +816,8 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
         // We assume that casts to 'bool' do not preserve enough information to
         // retain a local object.
       case CK_NoOp:
+      case CK_FunctionPointerConversion:
+      case CK_MemberFunctionPointerConversion:
       case CK_BitCast:
       case CK_BaseToDerived:
       case CK_DerivedToBase:

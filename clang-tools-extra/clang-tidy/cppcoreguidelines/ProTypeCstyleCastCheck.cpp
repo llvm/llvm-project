@@ -90,7 +90,9 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  if (MatchedCast->getCastKind() == CK_NoOp &&
+  if ((MatchedCast->getCastKind() == CK_NoOp ||
+       MatchedCast->getCastKind() == CK_FunctionPointerConversion ||
+       MatchedCast->getCastKind() == CK_MemberFunctionPointerConversion) &&
       needsConstCast(SourceType, MatchedCast->getType())) {
     diag(MatchedCast->getBeginLoc(),
          "do not use C-style cast to cast away constness");

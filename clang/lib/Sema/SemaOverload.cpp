@@ -330,6 +330,8 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
   while (auto *ICE = dyn_cast<ImplicitCastExpr>(Converted)) {
     switch (ICE->getCastKind()) {
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_IntegralCast:
     case CK_IntegralToBoolean:
     case CK_IntegralToFloating:
@@ -14206,7 +14208,9 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
     // was a LambdaExpr.
     Expr *SubE = E;
     auto *CE = dyn_cast<CastExpr>(SubE);
-    if (CE && CE->getCastKind() == CK_NoOp)
+    if (CE && (CE->getCastKind() == CK_NoOp ||
+               CE->getCastKind() == CK_FunctionPointerConversion ||
+               CE->getCastKind() == CK_MemberFunctionPointerConversion))
       SubE = CE->getSubExpr();
     SubE = SubE->IgnoreParens();
     if (auto *BE = dyn_cast<CXXBindTemporaryExpr>(SubE))

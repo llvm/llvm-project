@@ -1297,6 +1297,8 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
     // Non-converting casts (but not C's implicit conversion from void*).
     case CK_BitCast:
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_AddressSpaceConversion:
       if (auto PtrTy = CE->getSubExpr()->getType()->getAs<PointerType>()) {
         if (PtrTy->getPointeeType()->isVoidType())
@@ -5292,6 +5294,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralComplexToBoolean:
   case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex:
+  case CK_MemberFunctionPointerConversion:
   case CK_DerivedToBaseMemberPointer:
   case CK_BaseToDerivedMemberPointer:
   case CK_MemberPointerToBoolean:
@@ -5339,7 +5342,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_LValueToRValue:
     return EmitLValue(E->getSubExpr());
 
-  case CK_NoOp: {
+  case CK_NoOp:
+  case CK_FunctionPointerConversion: {
     // CK_NoOp can model a qualification conversion, which can remove an array
     // bound and change the IR type.
     // FIXME: Once pointee types are removed from IR, remove this.

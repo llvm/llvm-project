@@ -6247,7 +6247,9 @@ static bool MaybeHandleUnionActiveMemberChange(EvalInfo &Info,
     } else if (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       // Step over a derived-to-base conversion.
       E = ICE->getSubExpr();
-      if (ICE->getCastKind() == CK_NoOp)
+      if (ICE->getCastKind() == CK_NoOp ||
+          ICE->getCastKind() == CK_FunctionPointerConversion ||
+          ICE->getCastKind() == CK_MemberFunctionPointerConversion)
         continue;
       if (ICE->getCastKind() != CK_DerivedToBase &&
           ICE->getCastKind() != CK_UncheckedDerivedToBase)
@@ -8301,6 +8303,8 @@ public:
     }
 
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_UserDefinedConversion:
       return StmtVisitorTy::Visit(E->getSubExpr());
 
@@ -10074,6 +10078,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
          Stripped = ICE->getSubExpr())
       if (ICE->getCastKind() != CK_NoOp &&
+          ICE->getCastKind() != CK_FunctionPointerConversion &&
+          ICE->getCastKind() != CK_MemberFunctionPointerConversion &&
           ICE->getCastKind() != CK_IntegralCast)
         break;
 
@@ -12210,8 +12216,9 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
   // We only conservatively allow a few kinds of casts, because this code is
   // inherently a simple solution that seeks to support the common case.
   auto CastKind = Cast->getCastKind();
-  if (CastKind != CK_NoOp && CastKind != CK_BitCast &&
-      CastKind != CK_AddressSpaceConversion)
+  if (CastKind != CK_NoOp && CastKind != CK_FunctionPointerConversion &&
+      CastKind != CK_MemberFunctionPointerConversion &&
+      CastKind != CK_BitCast && CastKind != CK_AddressSpaceConversion)
     return NoParens;
 
   const auto *SubExpr = Cast->getSubExpr();
@@ -14448,6 +14455,8 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   QualType SrcType = SubExpr->getType();
 
   switch (E->getCastKind()) {
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_BaseToDerived:
   case CK_DerivedToBase:
   case CK_UncheckedDerivedToBase:
@@ -15288,6 +15297,8 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_BaseToDerived:
   case CK_DerivedToBase:
   case CK_UncheckedDerivedToBase:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_Dynamic:
   case CK_ToUnion:
   case CK_ArrayToPointerDecay:

@@ -24,7 +24,9 @@ namespace clang::tidy::performance {
 // case we skip the first cast expr.
 static bool isNonTrivialImplicitCast(const Stmt *ST) {
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(ST)) {
-    return (ICE->getCastKind() != CK_NoOp) ||
+    return (ICE->getCastKind() != CK_NoOp &&
+            ICE->getCastKind() != CK_FunctionPointerConversion &&
+            ICE->getCastKind() != CK_MemberFunctionPointerConversion) ||
            isNonTrivialImplicitCast(ICE->getSubExpr());
   }
   return false;

@@ -1118,6 +1118,8 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
     if (const auto *ImplicitCast = CastNode->ASTNode.get<ImplicitCastExpr>()) {
       switch (ImplicitCast->getCastKind()) {
       case CK_NoOp:
+      case CK_FunctionPointerConversion:
+      case CK_MemberFunctionPointerConversion:
       case CK_DerivedToBase:
       case CK_UncheckedDerivedToBase:
         // If it was a reference before, it's still a reference.

@@ -102,7 +102,9 @@ inline Expr *IgnoreBaseCastsSingleStep(Expr *E) {
   if (auto *CE = dyn_cast<CastExpr>(E))
     if (CE->getCastKind() == CK_DerivedToBase ||
         CE->getCastKind() == CK_UncheckedDerivedToBase ||
-        CE->getCastKind() == CK_NoOp)
+        CE->getCastKind() == CK_NoOp ||
+        CE->getCastKind() == CK_FunctionPointerConversion ||
+        CE->getCastKind() == CK_MemberFunctionPointerConversion)
       return CE->getSubExpr();
 
   return E;

@@ -12975,6 +12975,8 @@ std::optional<std::pair<
     default:
       break;
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
       return getBaseAlignmentAndOffsetFromLValue(From, Ctx);
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
@@ -13070,6 +13072,8 @@ std::optional<std::pair<
     default:
       break;
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
       return getBaseAlignmentAndOffsetFromPtr(From, Ctx);
     case CK_ArrayToPointerDecay:
       return getBaseAlignmentAndOffsetFromLValue(From, Ctx);

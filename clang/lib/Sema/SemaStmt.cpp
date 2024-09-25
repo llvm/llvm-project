@@ -282,6 +282,8 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   E = WarnExpr;
   if (const auto *Cast = dyn_cast<CastExpr>(E))
     if (Cast->getCastKind() == CK_NoOp ||
+        Cast->getCastKind() == CK_FunctionPointerConversion ||
+        Cast->getCastKind() == CK_MemberFunctionPointerConversion ||
         Cast->getCastKind() == CK_ConstructorConversion ||
         Cast->getCastKind() == CK_IntegralCast)
       E = Cast->getSubExpr()->IgnoreImpCasts();
