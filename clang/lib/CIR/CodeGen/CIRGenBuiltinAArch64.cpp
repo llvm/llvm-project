@@ -2186,42 +2186,76 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
 
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vdupb_lane_i8:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt8Ty, 8));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i8:
   case NEON::BI__builtin_neon_vdupb_laneq_i8:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt8Ty, 16));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vduph_lane_i16:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt16Ty, 4));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i16:
   case NEON::BI__builtin_neon_vduph_laneq_i16:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt16Ty, 8));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i32:
   case NEON::BI__builtin_neon_vdups_lane_i32:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt32Ty, 2));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
+  case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vdups_lane_f32:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), FloatTy, 2));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i32:
   case NEON::BI__builtin_neon_vdups_laneq_i32:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt32Ty, 4));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i64:
   case NEON::BI__builtin_neon_vdupd_lane_i64:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt64Ty, 1));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vdupd_lane_f64:
-    llvm_unreachable("NYI");
+  case NEON::BI__builtin_neon_vget_lane_f64:
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), DoubleTy, 1));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i64:
   case NEON::BI__builtin_neon_vdupd_laneq_i64:
-    llvm_unreachable("NYI");
-  case NEON::BI__builtin_neon_vget_lane_f32:
-    llvm_unreachable("NYI");
-  case NEON::BI__builtin_neon_vget_lane_f64:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt64Ty, 2));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_f32:
   case NEON::BI__builtin_neon_vdups_laneq_f32:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), FloatTy, 4));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_f64:
   case NEON::BI__builtin_neon_vdupd_laneq_f64:
-    llvm_unreachable("NYI");
+    Ops[0] = builder.createBitcast(
+        Ops[0], mlir::cir::VectorType::get(builder.getContext(), DoubleTy, 2));
+    return builder.create<mlir::cir::VecExtractOp>(
+        getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vaddh_f16:
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vsubh_f16:
