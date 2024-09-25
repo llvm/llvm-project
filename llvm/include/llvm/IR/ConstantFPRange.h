@@ -175,9 +175,6 @@ public:
   /// Return the FPClassTest which will return true for the value.
   FPClassTest classify() const;
 
-  /// Return known floating-point classes for values in this range.
-  KnownFPClass toKnownFPClass() const;
-
   /// Print out the bounds to a stream.
   void print(raw_ostream &OS) const;
 
