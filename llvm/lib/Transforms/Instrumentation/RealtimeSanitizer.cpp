@@ -20,13 +20,10 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 
-#include <vector>
-
 using namespace llvm;
 
-static std::vector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
-  std::vector<Type *> Types;
-  Types.reserve(FunctionArgs.size());
+static SmallVector<Type *> getArgTypes(ArrayRef<Value *> FunctionArgs) {
+  SmallVector<Type *> Types;
   for (Value *Arg : FunctionArgs)
     Types.push_back(Arg->getType());
   return Types;
