@@ -1,4 +1,5 @@
-
+#ifndef BRIDGING_HEADER
+#define BRIDGING_HEADER
 typedef struct TwoAnonymousStructs {
         struct {
             float x;
@@ -35,3 +36,4 @@ typedef struct TwoAnonymousUnions {
 
 TwoAnonymousStructs makeTwoAnonymousStructs();
 TwoAnonymousUnions makeTwoAnonymousUnions();
+#endif
