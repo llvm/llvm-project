@@ -178,21 +178,24 @@ public:
     }
 
     switch (Inst.getOpcode()) {
-    default: {
-      // Clear the state of all defined registers for instructions that we don't
-      // explicitly support.
-      auto NumDefs = Info->get(Inst.getOpcode()).getNumDefs();
-      for (unsigned I = 0; I < NumDefs; ++I) {
-        auto DefReg = Inst.getOperand(I).getReg();
-        if (isGPR(DefReg))
-          setGPRState(DefReg, std::nullopt);
+      default: {
+        // Clear the state of all defined registers for instructions that we don't
+        // explicitly support.
+        auto NumDefs = Info->get(Inst.getOpcode()).getNumDefs();
+        for (unsigned I = 0; I < NumDefs; ++I) {
+          auto DefReg = Inst.getOperand(I).getReg();
+          if (isGPR(DefReg))
+            setGPRState(DefReg, std::nullopt);
+        }
+        break;
       }
-      break;
-    }
-    case RISCV::AUIPC:
-      setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + (Inst.getOperand(1).getImm() << 12));
-      break;
+      case RISCV::AUIPC:
+      case RISCV::LUI:
+      {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    Inst.getOperand(1).getImm() << 12);
+        break;
+      }
     }
   }
 
@@ -228,6 +231,44 @@ public:
     }
 
     return false;
+  }
+
+  bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    switch(Inst.getOpcode()) {
+      default:
+        return false;
+      case RISCV::ADDI:
+      case RISCV::ADDIW: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          Target  = *TargetRegState + Inst.getOperand(2).getImm();
+          return true;
+        }
+        break;
+      }
+      case RISCV::LB:
+      case RISCV::LH:
+      case RISCV::LW:
+      case RISCV::LBU:
+      case RISCV::LHU:
+      case RISCV::LWU:
+      case RISCV::LD:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SW:
+      case RISCV::FSW:
+      case RISCV::SD:
+      case RISCV::FSD: {
+        int64_t Offset = Inst.getOperand(2).getImm();
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg()))
+          Target = *TargetRegState + Offset;
+        else
+          Target = Offset;
+        return true;
+      }
+    }
   }
 
   bool isTerminator(const MCInst &Inst) const override {

@@ -1513,7 +1513,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     if (MIA) {
       if (Disassembled) {
         uint64_t Target;
-        bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+        bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target) || MIA->evaluateInstruction(Inst, Index, Size, Target);
         if (TargetKnown && (Target >= Start && Target < End) &&
             !Labels.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
