@@ -14,7 +14,6 @@
 
 #include "DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -48,7 +47,7 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
                                        const mlir::DataLayout &dl)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)) {
+      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -189,8 +188,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   std::uint64_t offset = 0;
-  LLVMTypeConverter llvmTypeConverter(module, false, false, *dataLayout);
-
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     mlir::Type llvmTy;
     if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
