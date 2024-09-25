@@ -2075,12 +2075,9 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   RecurKind RdxKind = RdxDesc.getRecurrenceKind();
   Type *ElementTy = RdxDesc.getRecurrenceType();
-  auto *VectorTy = dyn_cast<VectorType>(ToVectorTy(ElementTy, VF));
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
-
-  if (VectorTy == nullptr)
-    return InstructionCost::getInvalid();
 
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =
