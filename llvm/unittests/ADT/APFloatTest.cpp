@@ -607,6 +607,7 @@ TEST(APFloatTest, Minimum) {
   APFloat zp(0.0);
   APFloat zn(-0.0);
   APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
+  APFloat snan = APFloat::getSNaN(APFloat::IEEEdouble());
 
   EXPECT_EQ(1.0, minimum(f1, f2).convertToDouble());
   EXPECT_EQ(1.0, minimum(f2, f1).convertToDouble());
@@ -614,6 +615,10 @@ TEST(APFloatTest, Minimum) {
   EXPECT_EQ(-0.0, minimum(zn, zp).convertToDouble());
   EXPECT_TRUE(std::isnan(minimum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(minimum(nan, f1).convertToDouble()));
+  EXPECT_TRUE(maximum(snan, f1).isNaN());
+  // FIXME: the langref and IEEE spec indicate the returned NaN should be
+  // quiet rather than signaling.
+  EXPECT_TRUE(maximum(snan, f1).isSignaling());
 }
 
 TEST(APFloatTest, Maximum) {
@@ -622,6 +627,7 @@ TEST(APFloatTest, Maximum) {
   APFloat zp(0.0);
   APFloat zn(-0.0);
   APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
+  APFloat snan = APFloat::getSNaN(APFloat::IEEEdouble());
 
   EXPECT_EQ(2.0, maximum(f1, f2).convertToDouble());
   EXPECT_EQ(2.0, maximum(f2, f1).convertToDouble());
@@ -629,6 +635,10 @@ TEST(APFloatTest, Maximum) {
   EXPECT_EQ(0.0, maximum(zn, zp).convertToDouble());
   EXPECT_TRUE(std::isnan(maximum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(maximum(nan, f1).convertToDouble()));
+  EXPECT_TRUE(maximum(snan, f1).isNaN());
+  // FIXME: the langref and IEEE spec indicate the returned NaN should be
+  // quiet rather than signaling.
+  EXPECT_TRUE(maximum(snan, f1).isSignaling());
 }
 
 TEST(APFloatTest, MinimumNumber) {
