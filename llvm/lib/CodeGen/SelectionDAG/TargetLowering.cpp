@@ -8372,7 +8372,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   // If the input is known to be non-negative and SINT_TO_FP is legal then use
   // it.
   if (Node->getFlags().hasNonNeg() &&
-      isOperationLegalOrCustom(ISD::SINT_TO_FP, DstVT)) {
+      isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
     Result =
         DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Node->getOperand(0));
     return true;
