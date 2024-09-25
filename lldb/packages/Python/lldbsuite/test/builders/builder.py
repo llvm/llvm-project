@@ -166,7 +166,6 @@ class Builder:
         utils = []
 
         # Required by API TestBSDArchives.py tests.
-        # TODO don't forget to fix the test's Makefile when porting to mainline
         if not os.getenv("LLVM_AR"):
             utils.extend(["LLVM_AR=%s" % getToolchainUtil("llvm-ar")])
 
