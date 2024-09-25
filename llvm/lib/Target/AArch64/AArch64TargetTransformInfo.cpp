@@ -4159,6 +4159,26 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   switch (ISD) {
   default:
     break;
+  case ISD::FADD:
+    if (Type *EltTy = ValTy->getScalarType();
+        // FIXME: For half types without fullfp16 support, this could extend and
+        // use a fp32 faddp reduction but current codegen unrolls.
+        MTy.isVector() && (EltTy->isFloatTy() || EltTy->isDoubleTy() ||
+                           (EltTy->isHalfTy() && ST->hasFullFP16()))) {
+      const unsigned NElts = MTy.getVectorNumElements();
+      if (ValTy->getElementCount().getFixedValue() >= 2 && NElts >= 2 &&
+          isPowerOf2_32(NElts))
+        // Reduction corresponding to series of fadd instructions is lowered to
+        // series of faddp instructions. faddp has latency/throughput that
+        // matches fadd instruction and hence, every faddp instruction can be
+        // considered to have a relative cost = 1 with
+        // CostKind = TCK_RecipThroughput.
+        // An faddp will pairwise add vector elements, so the size of input
+        // vector reduces by half every time, requiring
+        // #(faddp instructions) = log2_32(NElts).
+        return (LT.first - 1) + /*No of faddp instructions*/ Log2_32(NElts);
+    }
+    break;
   case ISD::ADD:
     if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
       return (LT.first - 1) + Entry->Cost;

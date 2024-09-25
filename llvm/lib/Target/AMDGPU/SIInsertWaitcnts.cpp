@@ -969,8 +969,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Match the score to the VGPR destination or source registers as
     // appropriate
-    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-      auto &Op = Inst.getOperand(I);
+    for (const MachineOperand &Op : Inst.operands()) {
       if (!Op.isReg() || (T == VA_VDST && Op.isUse()) ||
           (T == VM_VSRC && Op.isDef()))
         continue;
