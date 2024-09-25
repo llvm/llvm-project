@@ -361,7 +361,11 @@ multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
     defvar src_s = FixedVString<src_lmul, num, "v">.S;
     def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
                                              dst_v # src_s,
-                                             "csilxfd">;
+                                             "csilfd">;
+    let RequiredFeatures = ["Zvfhmin"] in
+      def vcreate_h # src_v # dst_v : RVVBuiltin<src_v # dst_v,
+                                                 dst_v # src_s,
+                                                 "x", dst_v>;
     let RequiredFeatures = ["Zvfbfmin"] in
       def vcreate_bf16 # src_v # dst_v : RVVBuiltin<src_v # dst_v,
                                                     dst_v # src_s,
@@ -2474,7 +2478,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
         return llvm::PoisonValue::get(ResultType);
       }] in {
-    def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
+    def vundefined : RVVBuiltin<"v", "v", "csilfd">;
+    let RequiredFeatures = ["Zvfhmin"] in
+      def vundefined_h : RVVBuiltin<"v", "v", "x">;
     let RequiredFeatures = ["Zvfbfmin"] in
       def vundefined_bf16 : RVVBuiltin<"v", "v", "y">;
     def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
@@ -2482,7 +2488,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach nf = NFList in {
       let NF = nf in {
         defvar T = "(Tuple:" # nf # ")";
-        def : RVVBuiltin<T # "v", T # "v", "csilxfd">;
+        def : RVVBuiltin<T # "v", T # "v", "csilfd">;
+        let RequiredFeatures = ["Zvfhmin"] in
+          def : RVVBuiltin<T # "v", T # "v", "x">;
         let RequiredFeatures = ["Zvfbfmin"] in
           def : RVVBuiltin<T # "v", T # "v", "y">;
         def : RVVBuiltin<T # "Uv", T # "Uv", "csil">;
@@ -2502,7 +2510,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach dst_lmul = ["(SFixedLog2LMUL:-3)", "(SFixedLog2LMUL:-2)", "(SFixedLog2LMUL:-1)",
                         "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
       def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
-                                              dst_lmul # "vv", "csilxfd", dst_lmul # "v">;
+                                              dst_lmul # "vv", "csilfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def vlmul_trunc_h # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                                  dst_lmul # "vv", "x", dst_lmul # "v">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def vlmul_trunc_bf16 # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
                                                      dst_lmul # "vv", "y", dst_lmul # "v">;
@@ -2523,7 +2534,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach dst_lmul = ["(LFixedLog2LMUL:-2)", "(LFixedLog2LMUL:-1)", "(LFixedLog2LMUL:-0)",
                         "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
       def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
-                                            dst_lmul # "vv", "csilxfd", dst_lmul # "v">;
+                                            dst_lmul # "vv", "csilfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def vlmul_ext_h # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                                dst_lmul # "vv", "x", dst_lmul # "v">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def vlmul_ext_bf16 # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
                                                    dst_lmul # "vv", "y", dst_lmul # "v">;
@@ -2555,14 +2569,18 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
-      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "x", dst_lmul # "v">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "y", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
-      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfd", "v">;
+      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilfd", "v">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def : RVVBuiltin<T # "vv", "v" # T # "vKz", "x", "v">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def : RVVBuiltin<T # "vv", "v" # T # "vKz", "y", "v">;
       def : RVVBuiltin<T # "UvUv", "Uv" # T # "UvKz", "csil", "Uv">;
@@ -2592,14 +2610,18 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
-      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilfd">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "x">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "y">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
-      def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "csilxfd">;
+      def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "csilfd">;
+      let RequiredFeatures = ["Zvfhmin"] in
+        def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "x">;
       let RequiredFeatures = ["Zvfbfmin"] in
         def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "y">;
       def : RVVBuiltin<"Uv" # T # "Uv", T # "Uv" # T # "UvKzUv", "csil">;
@@ -2646,7 +2668,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         defvar T = "(Tuple:" # nf # ")";
         defvar V = VString<nf, /*signed=*/true>.S;
         defvar UV = VString<nf, /*signed=*/false>.S;
-        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfd">;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilfd">;
+        let RequiredFeatures = ["Zvfhmin"] in
+          def : RVVBuiltin<T # "v", T # "v" # V, "x">;
         let RequiredFeatures = ["Zvfbfmin"] in
           def : RVVBuiltin<T # "v", T # "v" # V, "y">;
         def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
