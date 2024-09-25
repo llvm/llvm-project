@@ -84,6 +84,12 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FASIN:       R = SoftenFloatRes_FASIN(N); break;
     case ISD::STRICT_FATAN:
     case ISD::FATAN:       R = SoftenFloatRes_FATAN(N); break;
+    case ISD::STRICT_FACOSH:
+    case ISD::FACOSH:      R = SoftenFloatRes_FACOSH(N); break;
+    case ISD::STRICT_FASINH:
+    case ISD::FASINH:      R = SoftenFloatRes_FASINH(N); break;
+    case ISD::STRICT_FATANH:
+    case ISD::FATANH:      R = SoftenFloatRes_FATANH(N); break;
     case ISD::FCBRT:       R = SoftenFloatRes_FCBRT(N); break;
     case ISD::STRICT_FCEIL:
     case ISD::FCEIL:       R = SoftenFloatRes_FCEIL(N); break;
@@ -354,16 +360,37 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FACOS(SDNode *N) {
                       RTLIB::ACOS_F80, RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FACOSH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::ACOSH_F32, RTLIB::ACOSH_F64,
+                   RTLIB::ACOSH_F80, RTLIB::ACOSH_F128, RTLIB::ACOSH_PPCF128));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FASIN(SDNode *N) {
   return SoftenFloatRes_Unary(
       N, GetFPLibCall(N->getValueType(0), RTLIB::ASIN_F32, RTLIB::ASIN_F64,
                       RTLIB::ASIN_F80, RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FASINH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::ASINH_F32, RTLIB::ASINH_F64,
+                   RTLIB::ASINH_F80, RTLIB::ASINH_F128, RTLIB::ASINH_PPCF128));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FATAN(SDNode *N) {
   return SoftenFloatRes_Unary(
       N, GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32, RTLIB::ATAN_F64,
                       RTLIB::ATAN_F80, RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FATANH(SDNode *N) {
+  return SoftenFloatRes_Unary(
+      N,
+      GetFPLibCall(N->getValueType(0), RTLIB::ATANH_F32, RTLIB::ATANH_F64,
+                   RTLIB::ATANH_F80, RTLIB::ATANH_F128, RTLIB::ATANH_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCBRT(SDNode *N) {
@@ -1430,6 +1457,12 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FASIN:      ExpandFloatRes_FASIN(N, Lo, Hi); break;
   case ISD::STRICT_FATAN:
   case ISD::FATAN:      ExpandFloatRes_FATAN(N, Lo, Hi); break;
+  case ISD::STRICT_FACOSH:
+  case ISD::FACOSH:     ExpandFloatRes_FACOSH(N, Lo, Hi); break;
+  case ISD::STRICT_FASINH:
+  case ISD::FASINH:     ExpandFloatRes_FASINH(N, Lo, Hi); break;
+  case ISD::STRICT_FATANH:
+  case ISD::FATANH:     ExpandFloatRes_FATANH(N, Lo, Hi); break;
   case ISD::FCBRT:      ExpandFloatRes_FCBRT(N, Lo, Hi); break;
   case ISD::STRICT_FCEIL:
   case ISD::FCEIL:      ExpandFloatRes_FCEIL(N, Lo, Hi); break;
@@ -1478,7 +1511,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FSIN:
   case ISD::FSIN:       ExpandFloatRes_FSIN(N, Lo, Hi); break;
   case ISD::STRICT_FSINH:
-  case ISD::FSINH:       ExpandFloatRes_FSINH(N, Lo, Hi); break;
+  case ISD::FSINH:      ExpandFloatRes_FSINH(N, Lo, Hi); break;
   case ISD::STRICT_FSQRT:
   case ISD::FSQRT:      ExpandFloatRes_FSQRT(N, Lo, Hi); break;
   case ISD::STRICT_FSUB:
@@ -1486,7 +1519,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FTAN:
   case ISD::FTAN:       ExpandFloatRes_FTAN(N, Lo, Hi); break;
   case ISD::STRICT_FTANH:
-  case ISD::FTANH:       ExpandFloatRes_FTANH(N, Lo, Hi); break;
+  case ISD::FTANH:      ExpandFloatRes_FTANH(N, Lo, Hi); break;
   case ISD::STRICT_FTRUNC:
   case ISD::FTRUNC:     ExpandFloatRes_FTRUNC(N, Lo, Hi); break;
   case ISD::LOAD:       ExpandFloatRes_LOAD(N, Lo, Hi); break;
@@ -1613,6 +1646,15 @@ void DAGTypeLegalizer::ExpandFloatRes_FACOS(SDNode *N, SDValue &Lo,
                        Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_FACOSH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ACOSH_F32,
+                                    RTLIB::ACOSH_F64, RTLIB::ACOSH_F80,
+                                    RTLIB::ACOSH_F128, RTLIB::ACOSH_PPCF128),
+                       Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N, SDValue &Lo,
                                             SDValue &Hi) {
   ExpandFloatRes_Unary(N,
@@ -1622,12 +1664,30 @@ void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N, SDValue &Lo,
                        Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandFloatRes_FASINH(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ASINH_F32,
+                                    RTLIB::ASINH_F64, RTLIB::ASINH_F80,
+                                    RTLIB::ASINH_F128, RTLIB::ASINH_PPCF128),
+                       Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandFloatRes_FATAN(SDNode *N, SDValue &Lo,
                                             SDValue &Hi) {
   ExpandFloatRes_Unary(N,
                        GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32,
                                     RTLIB::ATAN_F64, RTLIB::ATAN_F80,
                                     RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128),
+                       Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FATANH(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ATANH_F32,
+                                    RTLIB::ATANH_F64, RTLIB::ATANH_F80,
+                                    RTLIB::ATANH_F128, RTLIB::ATANH_PPCF128),
                        Lo, Hi);
 }
 
@@ -2636,6 +2696,9 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FACOS:
     case ISD::FASIN:
     case ISD::FATAN:
+    case ISD::FACOSH:
+    case ISD::FASINH:
+    case ISD::FATANH:
     case ISD::FCBRT:
     case ISD::FCEIL:
     case ISD::FCOS:
@@ -3079,6 +3142,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
+  case ISD::FACOSH:
+  case ISD::FASINH:
+  case ISD::FATANH:
   case ISD::FCBRT:
   case ISD::FCEIL:
   case ISD::FCOS:

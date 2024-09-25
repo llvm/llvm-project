@@ -233,6 +233,12 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FCOSH:               return "strict_fcosh";
   case ISD::FTANH:                      return "ftanh";
   case ISD::STRICT_FTANH:               return "strict_ftanh";
+  case ISD::FASINH:                     return "fasinh";
+  case ISD::STRICT_FASINH:              return "strict_fasinh";
+  case ISD::FACOSH:                     return "facosh";
+  case ISD::STRICT_FACOSH:              return "strict_facosh";
+  case ISD::FATANH:                     return "fatanh";
+  case ISD::STRICT_FATANH:              return "strict_fatanh";
   case ISD::FTRUNC:                     return "ftrunc";
   case ISD::STRICT_FTRUNC:              return "strict_ftrunc";
   case ISD::FFLOOR:                     return "ffloor";

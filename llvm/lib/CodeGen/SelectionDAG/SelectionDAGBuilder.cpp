@@ -6809,6 +6809,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::sinh:
   case Intrinsic::cosh:
   case Intrinsic::tanh:
+  case Intrinsic::asinh:
+  case Intrinsic::acosh:
+  case Intrinsic::atanh:
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -6833,6 +6836,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::sinh:         Opcode = ISD::FSINH;         break;
     case Intrinsic::cosh:         Opcode = ISD::FCOSH;         break;
     case Intrinsic::tanh:         Opcode = ISD::FTANH;         break;
+    case Intrinsic::asinh:        Opcode = ISD::FASINH;        break;
+    case Intrinsic::acosh:        Opcode = ISD::FACOSH;        break;
+    case Intrinsic::atanh:        Opcode = ISD::FATANH;        break;
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
@@ -9358,6 +9364,24 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_tanhf:
       case LibFunc_tanhl:
         if (visitUnaryFloatCall(I, ISD::FTANH))
+          return;
+        break;
+      case LibFunc_asinh:
+      case LibFunc_asinhf:
+      case LibFunc_asinhl:
+        if (visitUnaryFloatCall(I, ISD::FASINH))
+          return;
+        break;
+      case LibFunc_acosh:
+      case LibFunc_acoshf:
+      case LibFunc_acoshl:
+        if (visitUnaryFloatCall(I, ISD::FACOSH))
+          return;
+        break;
+      case LibFunc_atanh:
+      case LibFunc_atanhf:
+      case LibFunc_atanhl:
+        if (visitUnaryFloatCall(I, ISD::FATANH))
           return;
         break;
       case LibFunc_sqrt:

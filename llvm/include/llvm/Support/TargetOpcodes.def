@@ -821,6 +821,15 @@ HANDLE_TARGET_OPCODE(G_FASIN)
 /// Floating point arctangent.
 HANDLE_TARGET_OPCODE(G_FATAN)
 
+/// Floating point hyperbolic arccosine.
+HANDLE_TARGET_OPCODE(G_FACOSH)
+
+/// Floating point hyperbolic arcsine.
+HANDLE_TARGET_OPCODE(G_FASINH)
+
+/// Floating point hyperbolic arctangent.
+HANDLE_TARGET_OPCODE(G_FATANH)
+
 /// Floating point hyperbolic cosine.
 HANDLE_TARGET_OPCODE(G_FCOSH)
 

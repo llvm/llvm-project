@@ -88,6 +88,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
+  case ISD::FACOSH:
+  case ISD::FASINH:
+  case ISD::FATANH:
   case ISD::FCEIL:
   case ISD::FCOS:
   case ISD::FCOSH:
@@ -1195,6 +1198,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
+  case ISD::FACOSH:
+  case ISD::FASINH:
+  case ISD::FATANH:
   case ISD::FCEIL:
   case ISD::VP_FCEIL:
   case ISD::FCOS:
@@ -4681,6 +4687,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
+  case ISD::FACOSH:
+  case ISD::FASINH:
+  case ISD::FATANH:
   case ISD::FCEIL:
   case ISD::FCOS:
   case ISD::FCOSH:

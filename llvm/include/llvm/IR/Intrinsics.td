@@ -1019,6 +1019,9 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_asinh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_acosh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atanh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_sinh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cosh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tanh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -1234,6 +1237,18 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in 
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
   def int_experimental_constrained_tan  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                    [ LLVMMatchType<0>,
+                                                      llvm_metadata_ty,
+                                                      llvm_metadata_ty ]>;
+  def int_experimental_constrained_asinh : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                   [ LLVMMatchType<0>,
+                                                     llvm_metadata_ty,
+                                                     llvm_metadata_ty ]>;
+  def int_experimental_constrained_acosh : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                   [ LLVMMatchType<0>,
+                                                     llvm_metadata_ty,
+                                                     llvm_metadata_ty ]>;
+  def int_experimental_constrained_atanh : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;

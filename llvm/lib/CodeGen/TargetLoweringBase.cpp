@@ -783,7 +783,8 @@ void TargetLoweringBase::initActions() {
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
            ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
            ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-           ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+           ISD::FCOSH, ISD::FSINH, ISD::FTANH, ISD::FACOSH, ISD::FASINH,
+           ISD::FATANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -838,11 +839,12 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
-                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
-                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
-                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,   ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2,  ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL,  ISD::FRINT,  ISD::FTRUNC,
+                      ISD::FROUNDEVEN, ISD::FTAN,   ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH,  ISD::FSINH,  ISD::FTANH,
+                      ISD::FACOSH,     ISD::FASINH, ISD::FATANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // FIXME: Query RuntimeLibCalls to make the decision.
@@ -850,7 +852,8 @@ void TargetLoweringBase::initActions() {
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
-                      ISD::FSINH, ISD::FTANH},
+                      ISD::FSINH, ISD::FTANH, ISD::FACOSH, ISD::FASINH,
+                      ISD::FATANH},
                      MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);

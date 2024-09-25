@@ -2560,8 +2560,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // clang-format off
    for (ISD::NodeType Op :
          {ISD::FACOS,  ISD::STRICT_FACOS,
+          ISD::FACOSH, ISD::STRICT_FACOSH,
           ISD::FASIN,  ISD::STRICT_FASIN,
+          ISD::FASINH, ISD::STRICT_FASINH,
           ISD::FATAN,  ISD::STRICT_FATAN,
+          ISD::FATANH, ISD::STRICT_FATANH,
           ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
           ISD::FCOSH,  ISD::STRICT_FCOSH,

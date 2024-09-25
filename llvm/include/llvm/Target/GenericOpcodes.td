@@ -1069,6 +1069,27 @@ def G_FTANH : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point hyperbolic arccosine of a value.
+def G_FACOSH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic arcsine of a value.
+def G_FASINH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic arctangent of a value.
+def G_FATANH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point square root of a value.
 // This returns NaN for negative nonzero values.
 // NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's
