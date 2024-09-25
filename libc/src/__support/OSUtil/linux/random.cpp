@@ -214,22 +214,7 @@ class StateFactory {
     return true;
   }
 
-  static StateFactory *instance() {
-    alignas(StateFactory) static char storage[sizeof(StateFactory)]{};
-    static CallOnceFlag flag = callonce_impl::NOT_CALLED;
-    static bool valid = false;
-    callonce(&flag, []() {
-      auto *factory = new (storage) StateFactory();
-      valid = factory->prepare();
-      if (valid)
-        atexit([]() {
-          auto factory = reinterpret_cast<StateFactory *>(storage);
-          factory->~StateFactory();
-          valid = false;
-        });
-    });
-    return valid ? reinterpret_cast<StateFactory *>(storage) : nullptr;
-  }
+  static StateFactory *instance();
 
   void *acquire() {
     cpp::lock_guard guard{mutex};
@@ -263,32 +248,62 @@ public:
   static size_t size_of_opaque_state() {
     return instance()->params.size_of_opaque_state;
   }
+  static void postfork_cleanup();
 };
 
+thread_local bool fork_inflight = false;
+thread_local void *tls_state = nullptr;
+alignas(StateFactory) static char factory_storage[sizeof(StateFactory)]{};
+static CallOnceFlag factory_onceflag = callonce_impl::NOT_CALLED;
+static bool factory_valid = false;
+
+StateFactory *StateFactory::instance() {
+  callonce(&factory_onceflag, []() {
+    auto *factory = new (factory_storage) StateFactory();
+    factory_valid = factory->prepare();
+    if (factory_valid)
+      atexit([]() {
+        auto factory = reinterpret_cast<StateFactory *>(factory_storage);
+        factory->~StateFactory();
+        factory_valid = false;
+      });
+  });
+  return factory_valid ? reinterpret_cast<StateFactory *>(factory_storage)
+                       : nullptr;
+}
+
+void StateFactory::postfork_cleanup() {
+  if (factory_valid)
+    reinterpret_cast<StateFactory *>(factory_storage)->~StateFactory();
+  factory_onceflag = callonce_impl::NOT_CALLED;
+  factory_valid = false;
+}
+
 void *acquire_tls() {
-  static thread_local void *state = nullptr;
+  if (fork_inflight)
+    return nullptr;
   // previous acquire failed, do not try again
-  if (state == MAP_FAILED)
+  if (tls_state == MAP_FAILED)
     return nullptr;
   // first acquirement
-  if (state == nullptr) {
-    state = StateFactory::acquire_global();
+  if (tls_state == nullptr) {
+    tls_state = StateFactory::acquire_global();
     // if still fails, remember the failure
-    if (state == nullptr) {
-      state = MAP_FAILED;
+    if (tls_state == nullptr) {
+      tls_state = MAP_FAILED;
       return nullptr;
     } else {
       // register the release callback.
       if (__cxa_thread_atexit_impl(
-              [](void *s) { StateFactory::release_global(s); }, state,
+              [](void *s) { StateFactory::release_global(s); }, tls_state,
               __dso_handle)) {
-        StateFactory::release_global(state);
-        state = MAP_FAILED;
+        StateFactory::release_global(tls_state);
+        tls_state = MAP_FAILED;
         return nullptr;
       }
     }
   }
-  return state;
+  return tls_state;
 }
 
 template <class F> void random_fill_impl(F gen, void *buf, size_t size) {
@@ -329,6 +344,14 @@ void random_fill(void *buf, size_t size) {
         },
         buf, size);
   }
+}
+
+void random_prefork() { fork_inflight = true; }
+void random_postfork_parent() { fork_inflight = false; }
+void random_postfork_child() {
+  tls_state = nullptr;
+  StateFactory::postfork_cleanup();
+  fork_inflight = false;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

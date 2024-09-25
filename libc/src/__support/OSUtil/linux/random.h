@@ -16,5 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 void random_fill(void *buf, unsigned long size);
+void random_prefork();
+void random_postfork_parent();
+void random_postfork_child();
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_RANDOMNESS_H
