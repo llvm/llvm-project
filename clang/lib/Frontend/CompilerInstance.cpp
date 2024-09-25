@@ -1921,7 +1921,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     M = HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
     // Check whether M refers to the file in the prebuilt module path.
-    if (M && M->getASTFile() && M->getASTFile())
+    if (M && M->getASTFile())
       if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename))
         if (*ModuleFile == M->getASTFile())
           return M;
