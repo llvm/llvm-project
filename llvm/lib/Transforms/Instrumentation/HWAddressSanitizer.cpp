@@ -83,8 +83,6 @@ const char kHwasanShadowMemoryDynamicAddress[] =
 static const size_t kNumberOfAccessSizes = 5;
 
 static const size_t kDefaultShadowScale = 4;
-static const uint64_t kDynamicShadowSentinel =
-    std::numeric_limits<uint64_t>::max();
 
 static const unsigned kShadowBaseAlignment = 32;
 
@@ -385,44 +383,44 @@ private:
   std::unique_ptr<RandomNumberGenerator> Rng;
 
   /// This struct defines the shadow mapping using the rule:
+  /// If `kFixed`, then
   ///   shadow = (mem >> Scale) + Offset.
-  /// If InGlobal is true, then
+  /// If `kGlobal`, then
+  ///   extern char* __hwasan_shadow_memory_dynamic_address;
+  ///   shadow = (mem >> Scale) + __hwasan_shadow_memory_dynamic_address
+  /// If `kIfunc`, then
   ///   extern char __hwasan_shadow[];
   ///   shadow = (mem >> Scale) + &__hwasan_shadow
-  /// If InTls is true, then
+  /// If `kTls`, then
   ///   extern char *__hwasan_tls;
   ///   shadow = (mem>>Scale) + align_up(__hwasan_shadow, kShadowBaseAlignment)
   ///
   /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
   /// ring buffer for storing stack allocations on targets that support it.
   class ShadowMapping {
-    uint8_t Scale;
+    enum class OffsetKind {
+      kFixed = 0,
+      kGlobal,
+      kIfunc,
+      kTls,
+    };
+    OffsetKind Kind;
     uint64_t Offset;
-    bool InGlobal;
-    bool InTls;
+    uint8_t Scale;
     bool WithFrameRecord;
+
+    void SetFixed(uint64_t O) {
+      Kind = OffsetKind::kFixed;
+      Offset = O;
+    }
 
   public:
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
-    bool isInGlobal() const {
-      return !InGlobal && !InTls && Offset == kDynamicShadowSentinel;
-    }
-    bool isInIfunc() const {
-      assert(!InGlobal || !InTls);
-      assert(!InGlobal || Offset == kDynamicShadowSentinel);
-      return InGlobal;
-    }
-    bool isInTls() const {
-      assert(!InTls || !InGlobal);
-      assert(!InTls || Offset == kDynamicShadowSentinel);
-      return InTls;
-    }
-    bool isFixed() const {
-      assert(Offset == kDynamicShadowSentinel || !InTls);
-      assert(Offset == kDynamicShadowSentinel || !InGlobal);
-      return Offset != kDynamicShadowSentinel;
-    }
+    bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
+    bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
+    bool isInTls() const { return Kind == OffsetKind::kTls; }
+    bool isFixed() const { return Kind == OffsetKind::kFixed; }
     uint8_t scale() const { return Scale; };
     uint64_t offset() const {
       assert(isFixed());
@@ -1930,34 +1928,22 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    InGlobal = false;
-    InTls = false;
-    Offset = 0;
+    SetFixed(0);
     WithFrameRecord = true;
   } else if (ClMappingOffset.getNumOccurrences() > 0) {
-    InGlobal = false;
-    InTls = false;
-    Offset = ClMappingOffset;
+    SetFixed(ClMappingOffset);
     WithFrameRecord = false;
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
-    InGlobal = false;
-    InTls = false;
-    Offset = 0;
+    SetFixed(0);
     WithFrameRecord = false;
   } else if (ClWithIfunc) {
-    InGlobal = true;
-    InTls = false;
-    Offset = kDynamicShadowSentinel;
+    Kind = OffsetKind::kIfunc;
     WithFrameRecord = false;
   } else if (ClWithTls) {
-    InGlobal = false;
-    InTls = true;
-    Offset = kDynamicShadowSentinel;
+    Kind = OffsetKind::kTls;
     WithFrameRecord = true;
   } else {
-    InGlobal = false;
-    InTls = false;
-    Offset = kDynamicShadowSentinel;
+    Kind = OffsetKind::kGlobal;
     WithFrameRecord = false;
   }
 }
