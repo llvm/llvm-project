@@ -2145,6 +2145,9 @@ public:
   /// Return exception behavior specified by operand bundles.
   std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
 
+  // Does the called function access floating-point environment?
+  bool isConstrained() const;
+
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.
   struct BundleOpInfo {

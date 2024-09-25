@@ -14,7 +14,6 @@ declare <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x f
 declare <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half>, <32 x half>, <32 x half>, metadata, metadata)
 declare <32 x half> @llvm.experimental.constrained.ceil.v32f16(<32 x half>, metadata)
 declare <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half>, metadata)
-declare <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half>, metadata)
 declare <32 x half> @llvm.experimental.constrained.rint.v32f16(<32 x half>, metadata, metadata)
 declare <32 x half> @llvm.experimental.constrained.nearbyint.v32f16(<32 x half>, metadata, metadata)
 
@@ -155,7 +154,7 @@ define <32 x half> @strict_vector_ftrunc_v32f16(<32 x half> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscaleph $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half> %f, metadata !"fpexcept.strict") #0
+  %res = call <32 x half> @llvm.trunc.v32f16(<32 x half> %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret <32 x half> %res
 }
 

@@ -792,7 +792,7 @@ float64x1_t test_vrndx_f64(float64x1_t a) {
 // COMMON-LABEL: test_vrnd_f64
 // COMMONIR:      [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // UNCONSTRAINED: [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.trunc.v1f64(<1 x double> %a)
-// CONSTRAINED:   [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double> %a, metadata !"fpexcept.strict")
+// CONSTRAINED:   [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.trunc.v1f64(<1 x double> %a) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
 // COMMONIR:      ret <1 x double> [[VRNDZ1_I]]
 float64x1_t test_vrnd_f64(float64x1_t a) {
   return vrnd_f64(a);

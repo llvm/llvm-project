@@ -1061,9 +1061,7 @@ define ppc_fp128 @test_trunc_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-NEXT:    mtlr 0
 ; PC64-NEXT:    blr
 entry:
-  %trunc = call ppc_fp128 @llvm.experimental.constrained.trunc.ppcf128(
-                    ppc_fp128 %first,
-                    metadata !"fpexcept.strict") #1
+  %trunc = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %first) #1 [ "fpe.except"(metadata !"strict") ]
   ret ppc_fp128 %trunc
 }
 
@@ -2187,7 +2185,6 @@ declare ppc_fp128 @llvm.experimental.constrained.sqrt.ppcf128(ppc_fp128, metadat
 declare ppc_fp128 @llvm.experimental.constrained.fsub.ppcf128(ppc_fp128, ppc_fp128, metadata, metadata)
 declare ppc_fp128 @llvm.experimental.constrained.tan.ppcf128(ppc_fp128, metadata, metadata)
 declare ppc_fp128 @llvm.experimental.constrained.atan2.ppcf128(ppc_fp128, ppc_fp128, metadata, metadata)
-declare ppc_fp128 @llvm.experimental.constrained.trunc.ppcf128(ppc_fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.ppcf128(ppc_fp128, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128, metadata)
 declare i1 @llvm.experimental.constrained.fptosi.i1.ppcf128(ppc_fp128, metadata)

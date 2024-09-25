@@ -291,7 +291,7 @@ define float @round_f32(float %x) #0 {
 ; CHECK-SP-NOV8: bl truncf
 ; CHECK-SP-V8: vrintz.f32
 define float @trunc_f32(float %x) #0 {
-  %val = call float @llvm.experimental.constrained.trunc.f32(float %x, metadata !"fpexcept.strict") #0
+  %val = call float @llvm.trunc.f32(float %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret float %val
 }
 
@@ -762,7 +762,7 @@ define double @round_f64(double %x) #0 {
 ; CHECK-DP-NOV8: bl trunc
 ; CHECK-DP-V8: vrintz.f64
 define double @trunc_f64(double %x) #0 {
-  %val = call double @llvm.experimental.constrained.trunc.f64(double %x, metadata !"fpexcept.strict") #0
+  %val = call double @llvm.trunc.f64(double %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret double %val
 }
 

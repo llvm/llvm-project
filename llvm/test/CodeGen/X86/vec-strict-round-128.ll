@@ -10,8 +10,6 @@ declare <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float>, metad
 declare <2 x double>  @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata)
 declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
-declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 declare <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float>, metadata, metadata)
@@ -87,8 +85,7 @@ define <4 x float> @ftruncv4f32(<4 x float> %f) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %res = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(
-                          <4 x float> %f, metadata !"fpexcept.strict") #0
+  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret <4 x float> %res
 }
 
@@ -102,8 +99,7 @@ define <2 x double> @ftruncv2f64(<2 x double> %f) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %res = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
-                        <2 x double> %f, metadata !"fpexcept.strict") #0
+  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret <2 x double> %res
 }
 

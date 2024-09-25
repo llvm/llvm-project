@@ -495,16 +495,16 @@ void test_float(void) {
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 7
 
   vf = vec_roundz(vf);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfisb %{{.*}}, %{{.*}}, 4, 5
   vf = vec_trunc(vf);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfisb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_roundz(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_trunc(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
 
   vf = vec_roundc(vf);
@@ -541,3 +541,5 @@ void test_float(void) {
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vftcidb(<2 x double> %{{.*}}, i32 4095)
   // CHECK-ASM: vftcidb
 }
+
+// CHECK: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }

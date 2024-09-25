@@ -1407,7 +1407,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl $4
 entry:
-  %trunc = call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  %trunc = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret fp128 %trunc
 }
 
@@ -1993,7 +1993,6 @@ declare fp128 @llvm.experimental.constrained.atan.f128(fp128, metadata, metadata
 declare fp128 @llvm.experimental.constrained.atan2.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.tanh.f128(fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f128(fp128, metadata)

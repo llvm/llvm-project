@@ -1324,6 +1324,7 @@ public:
       default: llvm_unreachable("Unexpected FP pseudo-opcode");
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN: EqOpc = ISD::DAGN; break;
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #define CMP_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN: EqOpc = ISD::SETCC; break;
 #include "llvm/IR/ConstrainedOps.def"

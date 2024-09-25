@@ -85,13 +85,13 @@ void test_float(void) {
   vf = __builtin_vsx_xvrspiz(vf);
   // CHECK-LABEL: try-xvrspiz
   // CHECK-UNCONSTRAINED: @llvm.trunc.v4f32(<4 x float> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK-CONSTRAINED: @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: xvrspiz
 
   vd = __builtin_vsx_xvrdpiz(vd);
   // CHECK-LABEL: try-xvrdpiz
   // CHECK-UNCONSTRAINED: @llvm.trunc.v2f64(<2 x double> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK-CONSTRAINED: @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: xvrdpiz
 
   vf = __builtin_vsx_xvmaddasp(vf, vf, vf);
@@ -156,3 +156,5 @@ void test_float(void) {
   // CHECK-CONSTRAINED: fneg <2 x double> [[RESULT1]]
   // CHECK-ASM: xvnmsubadp
 }
+
+// CHECK-CONSTRAINED: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }

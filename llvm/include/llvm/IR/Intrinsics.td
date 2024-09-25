@@ -1352,9 +1352,6 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in 
   def int_experimental_constrained_roundeven : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty ]>;
-  def int_experimental_constrained_trunc : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ LLVMMatchType<0>,
-                                                       llvm_metadata_ty ]>;
 
   // Constrained floating-point comparison (quiet and signaling variants).
   // Third operand is the predicate represented as a metadata string.

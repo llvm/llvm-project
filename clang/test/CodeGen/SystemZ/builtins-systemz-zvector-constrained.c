@@ -303,10 +303,10 @@ void test_float(void) {
   // CHECK: call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 7
   vd = vec_roundz(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_trunc(vd);
-  // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR]] [ "fpe.except"(metadata !"strict") ]
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 5
   vd = vec_roundc(vd);
   // CHECK: call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
@@ -316,3 +316,5 @@ void test_float(void) {
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 0, 0
   vd = vec_round(vd);
 }
+
+// CHECK: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }

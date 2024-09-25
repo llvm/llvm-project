@@ -199,6 +199,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
 
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
     R = ScalarizeVecRes_StrictFPOp(N);
     break;
@@ -1337,6 +1338,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
 
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
     SplitVecRes_StrictFPOp(N, Lo, Hi);
     break;
@@ -4639,6 +4641,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
     Res = WidenVecRes_StrictFP(N);
     break;

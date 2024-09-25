@@ -10,8 +10,6 @@ declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
 declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
 declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 declare double @llvm.experimental.constrained.floor.f64(double, metadata)
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare float @llvm.experimental.constrained.rint.f32(float, metadata, metadata)
 declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadata)
 declare float @llvm.experimental.constrained.nearbyint.f32(float, metadata, metadata)
@@ -245,8 +243,7 @@ define float @ftrunc32(float %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
-  %res = call float @llvm.experimental.constrained.trunc.f32(
-                        float %f, metadata !"fpexcept.strict") #0
+  %res = call float @llvm.trunc.f32(float %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret float %res
 }
 
@@ -298,8 +295,7 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
-  %res = call double @llvm.experimental.constrained.trunc.f64(
-                        double %f, metadata !"fpexcept.strict") #0
+  %res = call double @llvm.trunc.f64(double %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret double %res
 }
 

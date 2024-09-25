@@ -215,9 +215,7 @@ define void @func(double %a, double %b, double %c, i32 %i) strictfp {
                                                double %a,
                                                metadata !"fpexcept.strict")
 
-  %trunc = call double @llvm.experimental.constrained.trunc.f64(
-                                               double %a,
-                                               metadata !"fpexcept.strict")
+  %trunc = call double @llvm.trunc.f64(double %a) strictfp [ "fpe.except"(metadata !"strict") ]
 
   %q1 = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %a, double %b,
@@ -368,15 +366,15 @@ declare double @llvm.experimental.constrained.round.f64(double, metadata)
 declare double @llvm.experimental.constrained.roundeven.f64(double, metadata)
 ; CHECK: @llvm.experimental.constrained.roundeven.f64({{.*}}) #[[ATTR1]]
 
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.trunc.f64({{.*}}) #[[ATTR1]]
-
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.fcmp.f64({{.*}}) #[[ATTR1]]
 
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.fcmps.f64({{.*}}) #[[ATTR1]]
 
+declare double @llvm.trunc.f64(double)
+; CHECK: declare double @llvm.trunc.f64(double) #[[ATTR2:[0-9]+]]
+
 ; CHECK: attributes #[[ATTR0]] = {{{.*}} strictfp {{.*}}}
 ; CHECK: attributes #[[ATTR1]] = { {{.*}} strictfp {{.*}} }
-
+; CHECK: attributes #[[ATTR2]] = { {{.*}} memory(none) }

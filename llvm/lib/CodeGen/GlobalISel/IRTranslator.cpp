@@ -2155,6 +2155,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
   }
 
+  // Process constrained intrinsics in a way compatible with the pre-bundle
+  // implementation..
+  if (CI.isConstrained() &&
+      !Intrinsic::isLegacyConstrainedIntrinsic(CI.getIntrinsicID()))
+    return false;
+
   // If this is a simple intrinsic (that is, we just need to add a def of
   // a vreg, and uses for each arg operand, then translate it.
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
