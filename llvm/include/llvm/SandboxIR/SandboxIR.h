@@ -346,6 +346,7 @@ protected:
   friend class NoCFIValue;            // For `Val`.
   friend class ConstantPtrAuth;       // For `Val`.
   friend class ConstantExpr;          // For `Val`.
+  friend class Utils;                 // For `Val`.
 
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
