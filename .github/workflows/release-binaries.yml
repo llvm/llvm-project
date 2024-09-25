@@ -126,7 +126,7 @@ jobs:
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
         if [ "${{ runner.os }}" = "macOS" ]; then
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF -DLLVM_USE_STATIC_ZSTD=ON"
           if [ "${{ runner.arch }}" = "ARM64" ]; then
             arches=arm64
           else
