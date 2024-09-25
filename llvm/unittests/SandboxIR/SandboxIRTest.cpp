@@ -1957,11 +1957,6 @@ bb1:
     // Check hasMetadataOtherThanDebugLoc().
     EXPECT_EQ(LLVMI.hasMetadataOtherThanDebugLoc(),
               I.hasMetadataOtherThanDebugLoc());
-    // Check getMetadata(unsigned).
-    EXPECT_EQ(LLVMI.getMetadata(LLVMContext::MD_dbg),
-              I.getMetadata(LLVMContext::MD_dbg));
-    // Check getMetadata(StringRef).
-    EXPECT_EQ(LLVMI.getMetadata("dbg"), I.getMetadata("dbg"));
     // Check isAssociative().
     EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
     // Check isCommutative().

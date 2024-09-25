@@ -1993,32 +1993,8 @@ public:
     return cast<llvm::Instruction>(Val)->hasMetadata(KindID);
   }
 
-  /// Get the metadata of given kind attached to this Instruction.
-  /// If the metadata is not found then return null.
-  MDNode *getMetadata(unsigned KindID) const {
-    return cast<llvm::Instruction>(Val)->getMetadata(KindID);
-  }
-
-  /// Get the metadata of given kind attached to this Instruction.
-  /// If the metadata is not found then return null.
-  MDNode *getMetadata(StringRef Kind) const {
-    return cast<llvm::Instruction>(Val)->getMetadata(Kind);
-  }
-
-  /// Get all metadata attached to this Instruction. The first element of each
-  /// pair returned is the KindID, the second element is the metadata value.
-  /// This list is returned sorted by the KindID.
-  void
-  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const {
-    return cast<llvm::Instruction>(Val)->getAllMetadata(MDs);
-  }
-
-  /// This does the same thing as getAllMetadata, except that it filters out the
-  /// debug location.
-  void getAllMetadataOtherThanDebugLoc(
-      SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const {
-    return cast<llvm::Instruction>(Val)->getAllMetadataOtherThanDebugLoc(MDs);
-  }
+  // TODO: Implement getMetadata and getAllMetadata after sandboxir::MDNode is
+  // available.
 
   // TODO: More missing functions
 
