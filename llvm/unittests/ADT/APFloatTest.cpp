@@ -616,9 +616,7 @@ TEST(APFloatTest, Minimum) {
   EXPECT_TRUE(std::isnan(minimum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(minimum(nan, f1).convertToDouble()));
   EXPECT_TRUE(maximum(snan, f1).isNaN());
-  // FIXME: the langref and IEEE spec indicate the returned NaN should be
-  // quiet rather than signaling.
-  EXPECT_TRUE(maximum(snan, f1).isSignaling());
+  EXPECT_FALSE(maximum(snan, f1).isSignaling());
 }
 
 TEST(APFloatTest, Maximum) {
@@ -636,9 +634,7 @@ TEST(APFloatTest, Maximum) {
   EXPECT_TRUE(std::isnan(maximum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(maximum(nan, f1).convertToDouble()));
   EXPECT_TRUE(maximum(snan, f1).isNaN());
-  // FIXME: the langref and IEEE spec indicate the returned NaN should be
-  // quiet rather than signaling.
-  EXPECT_TRUE(maximum(snan, f1).isSignaling());
+  EXPECT_FALSE(maximum(snan, f1).isSignaling());
 }
 
 TEST(APFloatTest, MinimumNumber) {
