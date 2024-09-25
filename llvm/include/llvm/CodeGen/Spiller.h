@@ -30,6 +30,8 @@ public:
   /// spill - Spill the LRE.getParent() live interval.
   virtual void spill(LiveRangeEdit &LRE) = 0;
 
+  virtual ArrayRef<Register> getReplacedRegs() = 0;
+
   virtual void postOptimization() {}
 };
 

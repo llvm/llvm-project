@@ -167,6 +167,10 @@ class InlineSpiller : public Spiller {
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
 
+  // All registers that were replaced by the spiller. This includes registers
+  // that were rematerialized; rematted regs are removed from RegsToSpill.
+  SmallVector<Register, 8> RegsReplaced;
+
   // All COPY instructions to/from snippets.
   // They are ignored since both operands refer to the same stack slot.
   // For bundled copies, this will only include the first header copy.
@@ -199,6 +203,7 @@ public:
         HSpiller(Pass, MF, VRM), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &) override;
+  ArrayRef<Register> getReplacedRegs() override { return RegsReplaced; }
   void postOptimization() override;
 
 private:
@@ -385,6 +390,7 @@ void InlineSpiller::collectRegsToSpill() {
   // Main register always spills.
   RegsToSpill.assign(1, Reg);
   SnippetCopies.clear();
+  RegsReplaced.assign(RegsToSpill);
 
   // Snippets all have the same original, so there can't be any for an original
   // register.
@@ -405,6 +411,8 @@ void InlineSpiller::collectRegsToSpill() {
     LLVM_DEBUG(dbgs() << "\talso spill snippet " << SnipLI << '\n');
     ++NumSnippets;
   }
+
+  RegsReplaced.assign(RegsToSpill);
 }
 
 bool InlineSpiller::isSibling(Register Reg) {
@@ -1255,8 +1263,13 @@ void InlineSpiller::spillAll() {
   LLVM_DEBUG(dbgs() << "Merged spilled regs: " << *StackInt << '\n');
 
   // Spill around uses of all RegsToSpill.
-  for (Register Reg : RegsToSpill)
+  for (Register Reg : RegsToSpill) {
     spillAroundUses(Reg);
+    // Assign all of the spilled registers to the slot so that
+    // LiveDebugVariables knows about these locations later on.
+    if (VRM.getStackSlot(Reg) == VirtRegMap::NO_STACK_SLOT)
+      VRM.assignVirt2StackSlot(Reg, StackSlot);
+  }
 
   // Hoisted spills may cause dead code.
   if (!DeadDefs.empty()) {
