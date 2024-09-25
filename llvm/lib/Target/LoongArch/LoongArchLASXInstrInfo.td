@@ -9,8 +9,17 @@
 // This file describes the Advanced SIMD extension instructions.
 //
 //===----------------------------------------------------------------------===//
+def SDT_LoongArchXVFRECIPE_S : SDTypeProfile<1, 1, [SDTCisVT<0, v8f32>, SDTCisVT<1, v8f32>]>;
+def SDT_LoongArchXVFRECIPE_D : SDTypeProfile<1, 1, [SDTCisVT<0, v4f64>, SDTCisVT<1, v4f64>]>;
 
+// Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
+
+def loongarch_xvfrecipe_s: SDNode<"LoongArchISD::XVFRECIPE_S", SDT_LoongArchXVFRECIPE_S>;
+def loongarch_xvfrecipe_d: SDNode<"LoongArchISD::XVFRECIPE_D", SDT_LoongArchXVFRECIPE_D>;
+def loongarch_xvfrsqrte_s: SDNode<"LoongArchISD::XVFRSQRTE_S", SDT_LoongArchXVFRECIPE_S>;
+def loongarch_xvfrsqrte_d: SDNode<"LoongArchISD::XVFRSQRTE_D", SDT_LoongArchXVFRECIPE_D>;
+
 
 def lasxsplati8
   : PatFrag<(ops node:$e0),
@@ -2094,6 +2103,15 @@ foreach Inst = ["XVFRECIPE_S", "XVFRSQRTE_S"] in
 foreach Inst = ["XVFRECIPE_D", "XVFRSQRTE_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
+
+def : Pat<(loongarch_xvfrecipe_s v8f32:$src), 
+          (XVFRECIPE_S v8f32:$src)>;
+def : Pat<(loongarch_xvfrecipe_d v4f64:$src), 
+          (XVFRECIPE_D v4f64:$src)>;
+def : Pat<(loongarch_xvfrsqrte_s v8f32:$src), 
+          (XVFRSQRTE_S v8f32:$src)>;
+def : Pat<(loongarch_xvfrsqrte_d v4f64:$src), 
+          (XVFRSQRTE_D v4f64:$src)>;
 }
 
 def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),

@@ -10,6 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ===----------------------------------------------------------------------===//
+// LoongArch specific DAG Nodes.
+// ===----------------------------------------------------------------------===//
+
+def loongarch_frecipe_d : SDNode<"LoongArchISD::FRECIPE_D", SDT_LoongArchFRECIPE>;
+def loongarch_frsqrte_d : SDNode<"LoongArchISD::FRSQRTE_D", SDT_LoongArchFRECIPE>;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -253,6 +260,8 @@ let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation
 def : Pat<(int_loongarch_frecipe_d FPR64:$src), (FRECIPE_D FPR64:$src)>;
 def : Pat<(int_loongarch_frsqrte_d FPR64:$src), (FRSQRTE_D FPR64:$src)>;
+def : Pat<(loongarch_frecipe_d FPR64:$src), (FRECIPE_D FPR64:$src)>;
+def : Pat<(loongarch_frsqrte_d FPR64:$src), (FRSQRTE_D FPR64:$src)>;
 }
 
 // fmadd.d: fj * fk + fa

@@ -5373,6 +5373,10 @@ def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
 def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
   Flags<[TargetSpecific]>,
   HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
+def mfrecipe : Flag<["-"], "mfrecipe">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable frecipe.{s/d} and frsqrte.{s/d}">;
+def mno_frecipe : Flag<["-"], "mno-frecipe">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable frecipe.{s/d} and frsqrte.{s/d}">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
