@@ -1576,13 +1576,13 @@ static void emitPredicates(const CodeGenSchedTransition &T,
   unsigned NumNonTruePreds =
       T.PredTerm.size() - count_if(T.PredTerm, isTruePredicate);
 
-  SS.indent(PE.getIndentLevel() * 2);
+  SS << PE.getIndent();
 
   if (NumNonTruePreds) {
     bool FirstNonTruePredicate = true;
     SS << "if (";
 
-    PE.setIndentLevel(PE.getIndentLevel() + 2);
+    PE.getIndent() += 2;
 
     for (const Record *Rec : T.PredTerm) {
       // Skip predicates that evaluate to "true".
@@ -1593,7 +1593,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         FirstNonTruePredicate = false;
       } else {
         SS << "\n";
-        SS.indent(PE.getIndentLevel() * 2);
+        SS << PE.getIndent();
         SS << "&& ";
       }
 
@@ -1610,9 +1610,9 @@ static void emitPredicates(const CodeGenSchedTransition &T,
     }
 
     SS << ")\n"; // end of if-stmt
-    PE.decreaseIndentLevel();
-    SS.indent(PE.getIndentLevel() * 2);
-    PE.decreaseIndentLevel();
+    --PE.getIndent();
+    SS << PE.getIndent();
+    --PE.getIndent();
   }
 
   SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
@@ -1736,7 +1736,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
           FinalT = &T;
           continue;
         }
-        PE.setIndentLevel(3);
+        PE.getIndent() = 3;
         emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
       }
       if (FinalT)
@@ -1780,11 +1780,10 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
-  STIPredicateExpander PE(Target);
+  STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setClassPrefix(ClassName);
   PE.setExpandDefinition(true);
   PE.setByRef(false);
-  PE.setIndentLevel(0);
 
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
@@ -1962,7 +1961,7 @@ void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {
   OS << "\n#ifdef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n";
   OS << "#undef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
 
-  STIPredicateExpander PE(Target);
+  STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setExpandForMC(true);
   PE.setByRef(true);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
@@ -1976,7 +1975,6 @@ void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {
   std::string ClassPrefix = Target + "MCInstrAnalysis";
   PE.setExpandDefinition(true);
   PE.setClassPrefix(ClassPrefix);
-  PE.setIndentLevel(0);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
 
