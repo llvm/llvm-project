@@ -35,7 +35,7 @@ struct ErrnoProtect {
 };
 
 // parameters for allocating per-thread random state
-struct Params {
+struct RandomStateMMapParams {
   unsigned size_of_opaque_state;
   unsigned mmap_prot;
   unsigned mmap_flags;
@@ -143,11 +143,11 @@ public:
   }
 };
 
-class StateFactory {
+class RandomStateFactory {
   RawMutex mutex{};
   MMapContainer allocations{};
   MMapContainer freelist{};
-  Params params{};
+  RandomStateMMapParams params{};
   size_t states_per_page = 0;
   size_t pages_per_allocation = 0;
   size_t page_size = 0;
@@ -214,7 +214,7 @@ class StateFactory {
     return true;
   }
 
-  static StateFactory *instance();
+  static RandomStateFactory *instance();
 
   void *acquire() {
     cpp::lock_guard guard{mutex};
@@ -227,7 +227,7 @@ class StateFactory {
     // there should be no need to check this pushing
     freelist.push_unchecked(state);
   }
-  ~StateFactory() {
+  ~RandomStateFactory() {
     for (auto *allocation : allocations)
       munmap(allocation, page_size * pages_per_allocation);
   }
@@ -253,28 +253,30 @@ public:
 
 thread_local bool fork_inflight = false;
 thread_local void *tls_state = nullptr;
-alignas(StateFactory) static char factory_storage[sizeof(StateFactory)]{};
+alignas(RandomStateFactory) static char factory_storage[sizeof(
+    RandomStateFactory)]{};
 static CallOnceFlag factory_onceflag = callonce_impl::NOT_CALLED;
 static bool factory_valid = false;
 
-StateFactory *StateFactory::instance() {
+RandomStateFactory *RandomStateFactory::instance() {
   callonce(&factory_onceflag, []() {
-    auto *factory = new (factory_storage) StateFactory();
+    auto *factory = new (factory_storage) RandomStateFactory();
     factory_valid = factory->prepare();
     if (factory_valid)
       atexit([]() {
-        auto factory = reinterpret_cast<StateFactory *>(factory_storage);
-        factory->~StateFactory();
+        auto factory = reinterpret_cast<RandomStateFactory *>(factory_storage);
+        factory->~RandomStateFactory();
         factory_valid = false;
       });
   });
-  return factory_valid ? reinterpret_cast<StateFactory *>(factory_storage)
+  return factory_valid ? reinterpret_cast<RandomStateFactory *>(factory_storage)
                        : nullptr;
 }
 
-void StateFactory::postfork_cleanup() {
+void RandomStateFactory::postfork_cleanup() {
   if (factory_valid)
-    reinterpret_cast<StateFactory *>(factory_storage)->~StateFactory();
+    reinterpret_cast<RandomStateFactory *>(factory_storage)
+        ->~RandomStateFactory();
   factory_onceflag = callonce_impl::NOT_CALLED;
   factory_valid = false;
 }
@@ -287,7 +289,7 @@ void *acquire_tls() {
     return nullptr;
   // first acquirement
   if (tls_state == nullptr) {
-    tls_state = StateFactory::acquire_global();
+    tls_state = RandomStateFactory::acquire_global();
     // if still fails, remember the failure
     if (tls_state == nullptr) {
       tls_state = MAP_FAILED;
@@ -295,9 +297,9 @@ void *acquire_tls() {
     } else {
       // register the release callback.
       if (__cxa_thread_atexit_impl(
-              [](void *s) { StateFactory::release_global(s); }, tls_state,
+              [](void *s) { RandomStateFactory::release_global(s); }, tls_state,
               __dso_handle)) {
-        StateFactory::release_global(tls_state);
+        RandomStateFactory::release_global(tls_state);
         tls_state = MAP_FAILED;
         return nullptr;
       }
@@ -329,7 +331,7 @@ void random_fill(void *buf, size_t size) {
         [state](void *buf, size_t size) {
           vdso::TypedSymbol<vdso::VDSOSym::GetRandom> vgetrandom;
           int res = vgetrandom(buf, size, 0, state,
-                               StateFactory::size_of_opaque_state());
+                               RandomStateFactory::size_of_opaque_state());
           if (res < 0) {
             libc_errno = -res;
             return -1;
@@ -350,7 +352,7 @@ void random_prefork() { fork_inflight = true; }
 void random_postfork_parent() { fork_inflight = false; }
 void random_postfork_child() {
   tls_state = nullptr;
-  StateFactory::postfork_cleanup();
+  RandomStateFactory::postfork_cleanup();
   fork_inflight = false;
 }
 
