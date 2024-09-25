@@ -156,8 +156,8 @@ declare void @undef_func()
 ; GCN-LABEL: {{^}}kernel_call_undef_func:
 ; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr), 1, 0)
 ; GFX90A: .amdhsa_accum_offset ((((((alignto(max(1, kernel_call_undef_func.num_vgpr), 4))/4)-1)&(~65536))&63)+1)*4
-; GCN:    .set kernel_call_undef_func.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:    .set kernel_call_undef_func.num_agpr, max(0, amdgcn.max_num_agpr)
+; GCN:    .set kernel_call_undef_func.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:    .set kernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
 ; GCN:    NumVgprs: kernel_call_undef_func.num_vgpr
 ; GCN:    NumAgprs: kernel_call_undef_func.num_agpr
 ; GCN:    TotalNumVgprs: totalnumvgprs(kernel_call_undef_func.num_agpr, kernel_call_undef_func.num_vgpr)
@@ -174,8 +174,8 @@ bb:
   ret void
 }
 
-; GCN:      .set amdgcn.max_num_vgpr, 32
-; GCN-NEXT: .set amdgcn.max_num_agpr, 32
-; GCN-NEXT: .set amdgcn.max_num_sgpr, 34
+; GCN:      .set amdgpu.max_num_vgpr, 32
+; GCN-NEXT: .set amdgpu.max_num_agpr, 32
+; GCN-NEXT: .set amdgpu.max_num_sgpr, 34
 
 attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

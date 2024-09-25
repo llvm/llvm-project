@@ -355,9 +355,9 @@ define amdgpu_kernel void @multi_call_use_use_stack() #0 {
 declare void @external() #0
 
 ; GCN-LABEL: {{^}}multi_call_with_external:
-; GCN:	.set multi_call_with_external.num_vgpr, max(41, amdgcn.max_num_vgpr)
-; GCN:	.set multi_call_with_external.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set multi_call_with_external.numbered_sgpr, max(42, amdgcn.max_num_sgpr)
+; GCN:	.set multi_call_with_external.num_vgpr, max(41, amdgpu.max_num_vgpr)
+; GCN:	.set multi_call_with_external.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set multi_call_with_external.numbered_sgpr, max(42, amdgpu.max_num_sgpr)
 ; GCN:	.set multi_call_with_external.private_seg_size, 0
 ; GCN:	.set multi_call_with_external.uses_vcc, 1
 ; GCN:	.set multi_call_with_external.uses_flat_scratch, 1
@@ -375,9 +375,9 @@ define amdgpu_kernel void @multi_call_with_external() #0 {
 }
 
 ; GCN-LABEL: {{^}}usage_external:
-; GCN:	.set usage_external.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:	.set usage_external.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set usage_external.numbered_sgpr, max(33, amdgcn.max_num_sgpr)
+; GCN:	.set usage_external.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:	.set usage_external.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set usage_external.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; GCN:	.set usage_external.private_seg_size, 0
 ; GCN:	.set usage_external.uses_vcc, 1
 ; GCN:	.set usage_external.uses_flat_scratch, 1
@@ -395,9 +395,9 @@ define amdgpu_kernel void @usage_external() #0 {
 declare void @external_recurse() #2
 
 ; GCN-LABEL: {{^}}usage_external_recurse:
-; GCN:	.set usage_external_recurse.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:	.set usage_external_recurse.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set usage_external_recurse.numbered_sgpr, max(33, amdgcn.max_num_sgpr)
+; GCN:	.set usage_external_recurse.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:	.set usage_external_recurse.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set usage_external_recurse.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; GCN:	.set usage_external_recurse.private_seg_size, 0
 ; GCN:	.set usage_external_recurse.uses_vcc, 1
 ; GCN:	.set usage_external_recurse.uses_flat_scratch, 1
@@ -460,9 +460,9 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 
 ; Make sure there's no assert when a sgpr96 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
-; GCN:	.set count_use_sgpr96_external_call.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:	.set count_use_sgpr96_external_call.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set count_use_sgpr96_external_call.numbered_sgpr, max(33, amdgcn.max_num_sgpr)
+; GCN:	.set count_use_sgpr96_external_call.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:	.set count_use_sgpr96_external_call.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set count_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; GCN:	.set count_use_sgpr96_external_call.private_seg_size, 0
 ; GCN:	.set count_use_sgpr96_external_call.uses_vcc, 1
 ; GCN:	.set count_use_sgpr96_external_call.uses_flat_scratch, 1
@@ -481,9 +481,9 @@ entry:
 
 ; Make sure there's no assert when a sgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
-; GCN:	.set count_use_sgpr160_external_call.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:	.set count_use_sgpr160_external_call.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set count_use_sgpr160_external_call.numbered_sgpr, max(33, amdgcn.max_num_sgpr)
+; GCN:	.set count_use_sgpr160_external_call.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:	.set count_use_sgpr160_external_call.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set count_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; GCN:	.set count_use_sgpr160_external_call.private_seg_size, 0
 ; GCN:	.set count_use_sgpr160_external_call.uses_vcc, 1
 ; GCN:	.set count_use_sgpr160_external_call.uses_flat_scratch, 1
@@ -502,9 +502,9 @@ entry:
 
 ; Make sure there's no assert when a vgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
-; GCN:	.set count_use_vgpr160_external_call.num_vgpr, max(32, amdgcn.max_num_vgpr)
-; GCN:	.set count_use_vgpr160_external_call.num_agpr, max(0, amdgcn.max_num_agpr)
-; GCN:	.set count_use_vgpr160_external_call.numbered_sgpr, max(33, amdgcn.max_num_sgpr)
+; GCN:	.set count_use_vgpr160_external_call.num_vgpr, max(32, amdgpu.max_num_vgpr)
+; GCN:	.set count_use_vgpr160_external_call.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set count_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
 ; GCN:	.set count_use_vgpr160_external_call.private_seg_size, 0
 ; GCN:	.set count_use_vgpr160_external_call.uses_vcc, 1
 ; GCN:	.set count_use_vgpr160_external_call.uses_flat_scratch, 1
@@ -522,9 +522,9 @@ entry:
 }
 
 ; Added at the of the .s are the module level maximums
-; GCN:	.set amdgcn.max_num_vgpr, 50
-; GCN:	.set amdgcn.max_num_agpr, 0
-; GCN:	.set amdgcn.max_num_sgpr, 80
+; GCN:	.set amdgpu.max_num_vgpr, 50
+; GCN:	.set amdgpu.max_num_agpr, 0
+; GCN:	.set amdgpu.max_num_sgpr, 80
 
 attributes #0 = { nounwind noinline norecurse }
 attributes #1 = { nounwind noinline norecurse }
