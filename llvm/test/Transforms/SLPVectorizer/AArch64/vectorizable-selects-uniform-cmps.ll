@@ -259,10 +259,12 @@ define void @select_uniform_ugt_16xi8(ptr %ptr, i8 %x) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP6]], <8 x i8> [[TMP0]], i64 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v4i8(<16 x i8> [[TMP7]], <4 x i8> [[TMP3]], i64 12)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <16 x i8> [[TMP8]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> poison, i8 [[X]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x i8> [[TMP10]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP9]], <16 x i8> [[TMP8]], <16 x i8> [[TMP11]]
-; CHECK-NEXT:    store <16 x i8> [[TMP12]], ptr [[PTR]], align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP8]], <8 x i8> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v4i8(<16 x i8> [[TMP10]], <4 x i8> [[TMP3]], i64 12)
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> poison, i8 [[X]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i8> [[TMP12]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = select <16 x i1> [[TMP9]], <16 x i8> [[TMP11]], <16 x i8> [[TMP13]]
+; CHECK-NEXT:    store <16 x i8> [[TMP14]], ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
