@@ -86,6 +86,43 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
+                                    ArrayRef<Value *> Args,
+                                    ArrayRef<OperandBundleDef> OpBundles,
+                                    const Twine &Name, MDNode *FPMathTag) {
+  ArrayRef<OperandBundleDef> ActualBundlesRef = OpBundles;
+  SmallVector<OperandBundleDef, 2> ActualBundles;
+
+  if (IsFPConstrained) {
+    if (const auto *Func = dyn_cast<Function>(Callee)) {
+      if (Intrinsic::ID ID = Func->getIntrinsicID()) {
+        if (IntrinsicInst::canAccessFPEnvironment(ID)) {
+          bool NeedRound = true, NeedExcept = true;
+          for (const auto &Item : OpBundles) {
+            if (NeedRound && Item.getTag() == "fpe.round")
+              NeedRound = false;
+            else if (NeedExcept && Item.getTag() == "fpe.except")
+              NeedExcept = false;
+            ActualBundles.push_back(Item);
+          }
+          if (NeedRound && Intrinsic::hasConstrainedFPRoundingModeOperand(ID))
+            createFPRoundingBundle(ActualBundles);
+          if (NeedExcept)
+            createFPExceptionBundle(ActualBundles);
+          ActualBundlesRef = ActualBundles;
+        }
+      }
+    }
+  }
+
+  CallInst *CI = CallInst::Create(FTy, Callee, Args, ActualBundlesRef);
+  if (IsFPConstrained)
+    setConstrainedFPCallAttr(CI);
+  if (isa<FPMathOperator>(CI))
+    setFPAttrs(CI, FPMathTag, FMF);
+  return Insert(CI, Name);
+}
+
 Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
   assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
   if (cast<ConstantInt>(Scaling)->isZero())
@@ -914,7 +951,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                          Instruction *FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getDeclaration(M, ID, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Types);
   return createCallHelper(Fn, Args, Name, FMFSource, OpBundles);
 }
 
@@ -972,9 +1009,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
 
-  SmallVector<OperandBundleDef, 2> OpBundles;
-  int EB = getEffectiveExceptionBehavior(Except);
-  OpBundles.emplace_back("fpe.except", getInt32(EB));
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  createFPExceptionBundle(OpBundles, Except);
 
   CallInst *C = CreateIntrinsic(ID, {L->getType()}, {L, R, ExceptV}, OpBundles,
                                 nullptr, Name);
@@ -1051,8 +1087,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   SmallVector<OperandBundleDef, 1> OpBundles;
-  int EB = getEffectiveExceptionBehavior(Except);
-  OpBundles.emplace_back("fpe.except", getInt32(EB));
+  createFPExceptionBundle(OpBundles, Except);
 
   CallInst *C = CreateIntrinsic(ID, {L->getType()}, {L, R, PredicateV, ExceptV},
                                 OpBundles, nullptr, Name);
@@ -1324,6 +1359,20 @@ CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
   return CreateAssumption(ConstantInt::getTrue(getContext()),
                           {DereferenceableOpB});
+}
+
+void IRBuilderBase::createFPRoundingBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles,
+    std::optional<RoundingMode> Rounding) {
+  addFPRoundingBundle(Context, Bundles,
+                      Rounding.value_or(DefaultConstrainedRounding));
+}
+
+void IRBuilderBase::createFPExceptionBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles,
+    std::optional<fp::ExceptionBehavior> Except) {
+  addFPExceptionBundle(Context, Bundles,
+                       Except.value_or(DefaultConstrainedExcept));
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

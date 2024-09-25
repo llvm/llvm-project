@@ -3065,19 +3065,36 @@ Floating-point Environment Operand Bundles
 These operand bundles provide details on how the operation interacts with the
 :ref:`floating-point environment <_floatenv>`. There are two kinds of such
 operand bundles, which characterize interaction with floating-point control
-modes and status bits.
+modes and status bits respectively.
 
-An operand bundle tagged with "fpe.round" may be associated with the operations
-that may depend on rounding mode. It has an integer value, which represents
-the rounding mode with the same encoding as ``llvm::RoundingMode`` uses. If it
-is present and is not equal to ``llvm::Dynamic``, it specifies the rounding
-mode, which will be used for the operation evaluation. The value
-``llvm::RoundingMode`` indicates that the rounding mode used by the operation is
-specified in a floating-point control register.
+An operand bundle tagged with "fpe.control" keeps information about control
+modes used by the operation. Only rounding mode is supported now. It is
+represented by a metadata string value and specifies the rounding mode, which
+will be used for the operation evaluation. Possible values are:
+
+::
+
+    "rtz"  - toward zero
+    "rte"  - to nearest, ties to even
+    "rtp"  - toward positive infinity
+    "rtn"  - toward negative infinity
+    "rmm"  - to nearest, ties away from zero
+    "dyn"  - rounding mode is taken from control register
+
+If "fpe.control" is absent, default rounding rounding to nearest, ties to even
+is assumed. 
 
 An operand bundle tagged with "fpe.except" may be associated with the operations
-that may read or write floating-point exception flags. It has the same meaning
-and encoding as the corresponding argument in
+that may read or write floating-point exception flags. It has a single metadata
+string value, which may have one of the values:
+
+::
+
+    "ignore"
+    "strict"
+    "maytrap"
+
+It has the same meaning as the corresponding argument in
 :ref:`constrained intrinsics <_constrainedfp>`.
 
 .. _moduleasm:

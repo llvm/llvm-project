@@ -1344,15 +1344,6 @@ private:
     return I;
   }
 
-  RoundingMode
-  getEffectiveRounding(std::optional<RoundingMode> Rounding = std::nullopt) {
-    RoundingMode RM = DefaultConstrainedRounding;
-
-    if (Rounding)
-      RM = *Rounding;
-    return RM;
-  }
-
   Value *getConstrainedFPRounding(std::optional<RoundingMode> Rounding) {
     RoundingMode UseRounding = DefaultConstrainedRounding;
 
@@ -1365,14 +1356,6 @@ private:
     auto *RoundingMDS = MDString::get(Context, *RoundingStr);
 
     return MetadataAsValue::get(Context, RoundingMDS);
-  }
-
-  fp::ExceptionBehavior getEffectiveExceptionBehavior(
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt) {
-    fp::ExceptionBehavior EB = DefaultConstrainedExcept;
-    if (Except)
-      EB = *Except;
-    return EB;
   }
 
   Value *getConstrainedFPExcept(std::optional<fp::ExceptionBehavior> Except) {
@@ -2479,24 +2462,13 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
-  }
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr);
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
@@ -2513,10 +2485,6 @@ public:
 
   CallInst *CreateConstrainedFPCall(
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
-      std::optional<RoundingMode> Rounding = std::nullopt,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
-  CallInst *CreateConstrainedFPCall(
-      Intrinsic::ID ID, ArrayRef<Value *> Args, const Twine &Name = "",
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
@@ -2725,17 +2693,10 @@ public:
 
   void
   createFPRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
-                         std::optional<RoundingMode> Rounding = std::nullopt) {
-    int RM = static_cast<int32_t>(getEffectiveRounding(Rounding));
-    Bundles.emplace_back("fpe.round", getInt32(RM));
-  }
-
+                         std::optional<RoundingMode> Rounding = std::nullopt);
   void createFPExceptionBundle(
       SmallVectorImpl<OperandBundleDef> &Bundles,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt) {
-    int EB = getEffectiveExceptionBehavior(Except);
-    Bundles.emplace_back("fpe.except", getInt32(EB));
-  }
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 };
 
 /// This provides a uniform API for creating instructions and inserting

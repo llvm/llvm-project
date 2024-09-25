@@ -1203,6 +1203,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           F->getParent(), ID, F->getFunctionType()->getReturnType());
       return true;
     }
+    if (Name.starts_with("experimental.constrained."))
+      return true;
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -4328,34 +4330,24 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
 
 static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
                                                  IRBuilder<> &Builder) {
-  if (CB->getOperandBundle(LLVMContext::OB_fpe_round))
+  if (CB->getOperandBundle(LLVMContext::OB_fpe_control) ||
+      CB->getOperandBundle(LLVMContext::OB_fpe_except))
     return nullptr;
 
-  auto *CFPI = cast<ConstrainedFPIntrinsic>(F);
   SmallVector<OperandBundleDef, 2> NewBundles;
-  LLVMContext &C = CB->getContext();
 
-  auto RM = CFPI->getRoundingMode();
+  auto RM = getRoundingModeArg(*CB);
   if (RM) {
     auto CurrentRM = CB->getRoundingMode();
-    if (CurrentRM) {
-      assert(*RM == *CurrentRM);
-    } else {
-      int RMValue = static_cast<int>(*RM);
-      NewBundles.emplace_back("fpe.round",
-                              ConstantInt::get(Type::getInt32Ty(C), RMValue));
-    }
+    assert(!CurrentRM && "unexpected rounding bundle");
+    Builder.createFPRoundingBundle(NewBundles, RM);
   }
 
-  auto EB = CFPI->getExceptionBehavior();
+  auto EB = getExceptionBehaviorArg(*CB);
   if (EB) {
     auto CurrentEB = CB->getExceptionBehavior();
-    if (CurrentEB) {
-      assert(*EB == *CurrentEB);
-    } else {
-      NewBundles.emplace_back("fpe.except",
-                              ConstantInt::get(Type::getInt32Ty(C), *EB));
-    }
+    assert(!CurrentEB && "unexpected exception bundle");
+    Builder.createFPExceptionBundle(NewBundles, EB);
   }
 
   CallInst *NewCB = nullptr;
@@ -4376,9 +4368,11 @@ static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
       FastMathFlags FMF = CB->getFastMathFlags();
       NewCB->setFastMathFlags(FMF);
     }
+
     MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
-    auto A = Attribute::getWithMemoryEffects(C, ME);
+    auto A = Attribute::getWithMemoryEffects(CB->getContext(), ME);
     NewCB->addFnAttr(A);
+    NewCB->addFnAttr(Attribute::StrictFP);
   }
 
   return NewCB;
@@ -4412,7 +4406,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
-    bool IsConstrained = Name.starts_with("experimental.constrained.");
+    bool IsConstrained = Name.consume_front("experimental.constrained.");
     Value *Rep = nullptr;
 
     if (!IsX86 && Name == "stackprotectorcheck") {
@@ -4443,6 +4437,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
     } else if (IsConstrained) {
       Rep = upgradeConstrainedIntrinsicCall(CI, F, Builder);
+      if (!Rep)
+        return;
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -4963,7 +4959,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (NewFn)
+      F->eraseFromParent();
   }
 }
 
@@ -5784,21 +5781,4 @@ void llvm::UpgradeOperandBundles(std::vector<OperandBundleDef> &Bundles) {
     return OBD.getTag() == "clang.arc.attachedcall" &&
            OBD.inputs().empty();
   });
-}
-
-CallBase *llvm::upgradeConstrainedFunctionCall(CallBase *CB) {
-  Function *F = dyn_cast<Function>(CB->getCalledOperand());
-  if (!F)
-    return nullptr;
-
-  if (CB->getNumOperands() < 1)
-    return nullptr;
-
-  StringRef Name = F->getName();
-  if (!Name.starts_with("experimental.constrained."))
-    return nullptr;
-
-  LLVMContext &C = CB->getContext();
-  IRBuilder<> Builder(C);
-  return upgradeConstrainedIntrinsicCall(CB, F, Builder);
 }

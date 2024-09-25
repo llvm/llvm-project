@@ -436,7 +436,6 @@ public:
 Instruction *
 PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   const Instruction &OldInst = *II;
-  Instruction *NewInst = nullptr;
   if (HostFuncIsStrictFP) {
     Intrinsic::ID CIID = getConstrainedIntrinsicID(OldInst);
     if (CIID != Intrinsic::not_intrinsic) {
@@ -494,24 +493,21 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID)) {
         Args.push_back(
             MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
-        Bundles.emplace_back(
-            "fpe.round",
-            ConstantInt::get(
-                Type::getInt32Ty(Ctx),
-                static_cast<int>(RoundingMode::NearestTiesToEven)));
+        addFPRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
       }
       Args.push_back(
           MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
-      Bundles.emplace_back("fpe.except",
-                           ConstantInt::get(Type::getInt32Ty(Ctx),
-                                            fp::ExceptionBehavior::ebIgnore));
-      NewInst =
+        addFPExceptionBundle(Ctx, Bundles, fp::ExceptionBehavior::ebIgnore);
+      auto *NewConstrainedInst =
           CallInst::Create(IFn, Args, Bundles, OldInst.getName() + ".strict");
+
+      MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+      auto A = Attribute::getWithMemoryEffects(Ctx, ME);
+      NewConstrainedInst->addFnAttr(A);
+      return NewConstrainedInst;
     }
   }
-  if (!NewInst)
-    NewInst = II->clone();
-  return NewInst;
+  return OldInst.clone();
 }
 
 /// The specified block is found to be reachable, clone it and

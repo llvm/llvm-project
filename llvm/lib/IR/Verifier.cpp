@@ -3796,23 +3796,32 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_fpe_round) {
+    } else if (Tag == LLVMContext::OB_fpe_control) {
       Check(!FoundFpeRoundBundle, "Multiple fpe.round operand bundles", Call);
       Check(BU.Inputs.size() == 1,
             "Expected exactly one fpe.round bundle operand", Call);
-      auto RM = dyn_cast<ConstantInt>(BU.Inputs.front());
-      Check(RM, "Value of fpe.round bundle operand must be an integer", Call);
-      Check(isValidRoundingMode(RM->getSExtValue()),
-            "Invalid value of fpe.round bundle operand", Call);
+      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
+      Check(V, "Value of fpe.round bundle operand must be a metadata", Call);
+      auto *MDS = dyn_cast<MDString>(V->getMetadata());
+      Check(MDS, "Value of fpe.round bundle operand must be a string", Call);
+      auto RM = convertStrToRoundingMode(MDS->getString(), true);
+      Check(RM.has_value(),
+            "Value of fpe.round bundle operand is not a correct rounding mode",
+            Call);
       FoundFpeRoundBundle = true;
     } else if (Tag == LLVMContext::OB_fpe_except) {
       Check(!FoundFpeExceptBundle, "Multiple fpe.except operand bundles", Call);
       Check(BU.Inputs.size() == 1,
             "Expected exactly one fpe.except bundle operand", Call);
-      auto EB = dyn_cast<ConstantInt>(BU.Inputs.front());
-      Check(EB, "Value of fpe.except bundle operand must be an integer", Call);
-      Check(isValidExceptionBehavior(EB->getZExtValue()),
-            "Invalid value of fpe.except bundle operand", Call);
+      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
+      Check(V, "Value of fpe.except bundle operand must be a metadata", Call);
+      auto *MDS = dyn_cast<MDString>(V->getMetadata());
+      Check(MDS, "Value of fpe.except bundle operand must be a string", Call);
+      auto EB = convertStrToExceptionBehavior(MDS->getString(), true);
+      Check(EB.has_value(),
+            "Value of fpe.except bundle operand is not a correct exception "
+            "behavior",
+            Call);
       FoundFpeExceptBundle = true;
     }
   }
@@ -3854,23 +3863,25 @@ void Verifier::verifyConstrainedInstrinsicCall(const CallBase &CB) {
 
   // FP metadata arguments must not conflict with the corresponding
   // operand bundles.
-  if (std::optional<RoundingMode> RM = CFPI->getRoundingMode()) {
+  if (std::optional<RoundingMode> RM = getRoundingModeArg(CB)) {
     RoundingMode Rounding = *RM;
-    auto RoundingBundle = CB.getOperandBundle(LLVMContext::OB_fpe_round);
+    auto RoundingBundle = CB.getOperandBundle(LLVMContext::OB_fpe_control);
     Check(RoundingBundle,
           "Constrained intrinsic has a rounding argument but the call does not",
           CB);
     if (RoundingBundle) {
-      OperandBundleUse OBU = *RoundingBundle;
-      uint64_t BundleRM = cast<ConstantInt>(OBU.Inputs.front())->getZExtValue();
-      Check(BundleRM == static_cast<uint64_t>(Rounding),
-            "Rounding mode of the constrained intrinsic differs from that in "
-            "operand bundle",
-            CB);
+      std::optional<RoundingMode> RMByBundle = CB.getRoundingMode();
+      Check(RMByBundle, "Invalid value of rounding mode bundle", CB);
+      if (RMByBundle) {
+        Check(*RMByBundle == Rounding,
+              "Rounding mode of the constrained intrinsic differs from that in "
+              "operand bundle",
+              CB);
+      }
     }
   }
 
-  if (std::optional<fp::ExceptionBehavior> EB = CFPI->getExceptionBehavior()) {
+  if (std::optional<fp::ExceptionBehavior> EB = getExceptionBehaviorArg(CB)) {
     fp::ExceptionBehavior Excepts = *EB;
     auto ExceptionBundle = CB.getOperandBundle(LLVMContext::OB_fpe_except);
     Check(ExceptionBundle,
@@ -3878,12 +3889,16 @@ void Verifier::verifyConstrainedInstrinsicCall(const CallBase &CB) {
           "call does not",
           CB);
     if (ExceptionBundle) {
-      OperandBundleUse OBU = *ExceptionBundle;
-      uint64_t BundleEB = cast<ConstantInt>(OBU.Inputs.front())->getZExtValue();
-      Check(BundleEB == static_cast<uint64_t>(Excepts),
+      std::optional<fp::ExceptionBehavior> EBByBundle =
+          CB.getExceptionBehavior();
+      Check(EBByBundle, "Invalid value of exception behavior bundle", CB);
+      if (EBByBundle) {
+        Check(
+            *EBByBundle == Excepts,
             "Exception behavior of the constrained intrinsic differs from that "
             "in operand bundle",
             CB);
+      }
     }
   }
 }

@@ -1092,6 +1092,13 @@ public:
 using OperandBundleDef = OperandBundleDefT<Value *>;
 using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
+void addFPRoundingBundle(LLVMContext &Ctx,
+                         SmallVectorImpl<OperandBundleDef> &Bundles,
+                         RoundingMode Rounding);
+void addFPExceptionBundle(LLVMContext &Ctx,
+                          SmallVectorImpl<OperandBundleDef> &Bundles,
+                          fp::ExceptionBehavior Except);
+
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
 //===----------------------------------------------------------------------===//

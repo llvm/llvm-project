@@ -82,8 +82,8 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
   }
 
-  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fpe.round");
-  assert(RoundingEntry->second == LLVMContext::OB_fpe_round &&
+  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fpe.control");
+  assert(RoundingEntry->second == LLVMContext::OB_fpe_control &&
          "fpe.round operand bundle id drifted!");
   (void)RoundingEntry;
 

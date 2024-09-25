@@ -622,19 +622,19 @@ bool CallBase::hasClobberingOperandBundles() const {
 }
 
 std::optional<RoundingMode> CallBase::getRoundingMode() const {
-  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_round)) {
-    uint64_t RM =
-        cast<ConstantInt>(RoundingBundle->Inputs.front())->getSExtValue();
-    return castToRoundingMode(RM);
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_control)) {
+    Value *V = RoundingBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToRoundingMode(cast<MDString>(MD)->getString(), true);
   }
   return std::nullopt;
 }
 
 std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
   if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fpe_except)) {
-    uint64_t EB =
-        cast<ConstantInt>(ExceptionBundle->Inputs.front())->getZExtValue();
-    return castToExceptionBehavior(EB);
+    Value *V = ExceptionBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToExceptionBehavior(cast<MDString>(MD)->getString(), true);
   }
   return std::nullopt;
 }
@@ -741,6 +741,26 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
       return true;
   }
   return false;
+}
+
+void llvm::addFPRoundingBundle(LLVMContext &Ctx,
+                               SmallVectorImpl<OperandBundleDef> &Bundles,
+                               RoundingMode Rounding) {
+  std::optional<StringRef> RndStr = convertRoundingModeToStr(Rounding, true);
+  assert(RndStr && "Garbage rounding mode!");
+  auto *RoundingMDS = MDString::get(Ctx, *RndStr);
+  auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
+  Bundles.emplace_back("fpe.control", RM);
+}
+
+void llvm::addFPExceptionBundle(LLVMContext &Ctx,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                fp::ExceptionBehavior Except) {
+  std::optional<StringRef> ExcStr = convertExceptionBehaviorToStr(Except, true);
+  assert(ExcStr && "Garbage exception behavior!");
+  auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
+  auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
+  Bundles.emplace_back("fpe.except", EB);
 }
 
 //===----------------------------------------------------------------------===//

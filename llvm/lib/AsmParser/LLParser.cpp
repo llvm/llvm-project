@@ -6419,16 +6419,19 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
          FnID == Intrinsic::dbg_assign;
 }
 
-bool updateConstrainedIntrinsic(StringRef Name, ArrayRef<Value *> Args,
-                                SmallVectorImpl<OperandBundleDef> &Bundles,
-                                LLVMContext &C) {
+void LLParser::updateConstrainedIntrinsic(
+    ValID &CalleeID, SmallVectorImpl<LLParser::ParamInfo> &Args,
+    SmallVectorImpl<OperandBundleDef> &Bundles, AttrBuilder &FnAttrs) {
   if (Args.empty())
-    return false;
-  if (!Name.starts_with("llvm.experimental.constrained."))
-    return false;
+    return;
+
+  StringRef Name = CalleeID.StrVal;
+  if (!Name.consume_front("llvm.experimental.constrained."))
+    return;
+
   for (auto &B : Bundles) {
     if (B.getTag().starts_with("fpe."))
-      return false;
+      return;
   }
 
   const auto getMetadataArgumentValue = [](Value *Arg) -> StringRef {
@@ -6442,25 +6445,24 @@ bool updateConstrainedIntrinsic(StringRef Name, ArrayRef<Value *> Args,
   };
 
   if (Args.size() > 1) {
-    Value *V = Args.take_back(2).front();
-    if (StringRef VStr = getMetadataArgumentValue(V); !VStr.empty()) {
-      if (auto RM = convertStrToRoundingMode(VStr)) {
-        int RMVal = static_cast<int>(*RM);
-        Bundles.emplace_back("fpe.round",
-                             ConstantInt::get(Type::getInt32Ty(C), RMVal));
-      }
+    Value *V = Args[Args.size() - 2].V;
+    StringRef VStr = getMetadataArgumentValue(V);
+    if (!VStr.empty()) {
+      if (auto RM = convertStrToRoundingMode(VStr))
+        addFPRoundingBundle(Context, Bundles, *RM);
     }
   }
 
-  Value *V = Args.back();
-  if (StringRef VStr = getMetadataArgumentValue(V); !VStr.empty()) {
-    if (auto EB = convertStrToExceptionBehavior(VStr)) {
-      Bundles.emplace_back("fpe.except",
-                           ConstantInt::get(Type::getInt32Ty(C), *EB));
-    }
+  Value *V = Args.back().V;
+  StringRef VStr = getMetadataArgumentValue(V);
+  if (!VStr.empty()) {
+    if (auto EB = convertStrToExceptionBehavior(VStr))
+      addFPExceptionBundle(Context, Bundles, *EB);
   }
 
-  return true;
+  MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+  FnAttrs.addAttribute(Attribute::getWithMemoryEffects(Context, ME));
+  FnAttrs.addAttribute(Attribute::StrictFP);
 }
 
 /// FunctionHeader
@@ -8190,6 +8192,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
       parseOptionalOperandBundles(BundleList, PFS))
     return true;
 
+  updateConstrainedIntrinsic(CalleeID, ArgList, BundleList, FnAttrs);
+
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
   // rest of the function argument types from the arguments that are present.
@@ -8236,8 +8240,6 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   AttributeList PAL =
       AttributeList::get(Context, AttributeSet::get(Context, FnAttrs),
                          AttributeSet::get(Context, RetAttrs), Attrs);
-
-  updateConstrainedIntrinsic(CalleeID.StrVal, Args, BundleList, Context);
 
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);
