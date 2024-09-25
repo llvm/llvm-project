@@ -48,6 +48,8 @@ TEST(Attributes, Ordering) {
   EXPECT_TRUE(Align4 < Deref4);
   EXPECT_TRUE(Align4 < Deref5);
   EXPECT_TRUE(Align5 < Deref4);
+  EXPECT_EQ(Deref5.cmpKind(Deref4), 0);
+  EXPECT_EQ(Align4.cmpKind(Align5), 0);
 
   Attribute ByVal = Attribute::get(C, Attribute::ByVal, Type::getInt32Ty(C));
   EXPECT_FALSE(ByVal < Attribute::get(C, Attribute::ZExt));

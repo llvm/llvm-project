@@ -117,6 +117,7 @@ public:
   static bool canUseAsParamAttr(AttrKind Kind);
   static bool canUseAsRetAttr(AttrKind Kind);
 
+  static bool intersectMustPreserve(AttrKind Kind);
   static bool intersectWithAnd(AttrKind Kind);
   static bool intersectWithMin(AttrKind Kind);
   static bool intersectWithCustom(AttrKind Kind);
@@ -214,10 +215,7 @@ public:
 
   /// Returns true if the attribute's kind can be represented as an enum (Enum,
   /// Integer, Type, ConstantRange, or ConstantRangeList attribute).
-  bool hasKindAsEnum() const {
-    return isEnumAttribute() || isIntAttribute() || isTypeAttribute() ||
-           isConstantRangeAttribute() || isConstantRangeListAttribute();
-  }
+  bool hasKindAsEnum() const { return !isStringAttribute(); }
 
   /// Return the attribute's kind as an enum (Attribute::AttrKind). This
   /// requires the attribute be representable as an enum (see: `hasKindAsEnum`).
@@ -305,6 +303,9 @@ public:
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
   bool operator!=(Attribute A) const { return pImpl != A.pImpl; }
+
+  /// Used to sort attribute by kind.
+  int cmpKind(Attribute A) const;
 
   /// Less-than operator. Useful for sorting the attributes list.
   bool operator<(Attribute A) const;

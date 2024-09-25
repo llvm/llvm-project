@@ -126,7 +126,7 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
         if (!AllowIntersectAnd &&
             cast<DefInit>(P)->getDef()->getName() == "IntersectAnd")
           PrintFatalError(
-              "'IntersectAnd' only compatible with 'EnumAttr' or 'TypeAttr'");
+              "'IntersectAnd' only compatible with 'EnumAttr'");
         if (!AllowIntersectMin &&
             cast<DefInit>(P)->getDef()->getName() == "IntersectMin")
           PrintFatalError("'IntersectMin' only compatible with 'IntAttr'");
