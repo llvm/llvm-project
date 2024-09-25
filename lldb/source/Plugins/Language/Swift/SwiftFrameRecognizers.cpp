@@ -202,8 +202,7 @@ public:
     sc.function->GetStartLineSourceInfo(source_file, line_no);
     // FIXME: these <compiler-generated> frames should be marked artificial
     // by the Swift compiler.
-    if (source_file.GetFilename() == "<compiler-generated>"
-        && line_no == 0)
+    if (source_file.GetFilename() == "<compiler-generated>" && line_no == 0)
       return m_hidden_frame;
 
     auto symbol_name =
