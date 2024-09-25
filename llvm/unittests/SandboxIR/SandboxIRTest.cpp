@@ -1868,13 +1868,13 @@ bb1:
   EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
 
   // Check getOpcodeName().
-  EXPECT_EQ(I0->getOpcodeName(), "Add");
-  EXPECT_EQ(I1->getOpcodeName(), "Sub");
-  EXPECT_EQ(Ret->getOpcodeName(), "Ret");
+  EXPECT_STREQ(I0->getOpcodeName(), "Add");
+  EXPECT_STREQ(I1->getOpcodeName(), "Sub");
+  EXPECT_STREQ(Ret->getOpcodeName(), "Ret");
 
-  EXPECT_EQ(sandboxir::Instruction::getOpcodeName(
-                sandboxir::Instruction::Opcode::Alloca),
-            "Alloca");
+  EXPECT_STREQ(sandboxir::Instruction::getOpcodeName(
+                   sandboxir::Instruction::Opcode::Alloca),
+               "Alloca");
 
   // Check moveBefore(I).
   I1->moveBefore(I0);
