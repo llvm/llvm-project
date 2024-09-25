@@ -255,7 +255,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           CI->isNoTailCall() ||
           CI->hasOperandBundlesOtherThan(
               {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth,
-               LLVMContext::OB_kcfi, LLVMContext::OB_fpe_round,
+               LLVMContext::OB_kcfi, LLVMContext::OB_fpe_control,
                LLVMContext::OB_fpe_except});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {

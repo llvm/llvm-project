@@ -43,31 +43,26 @@ enum ExceptionBehavior : uint8_t {
 
 }
 
-inline bool isValidExceptionBehavior(unsigned X) {
-  return X <= fp::ExceptionBehavior::ebStrict;
-}
-
-inline fp::ExceptionBehavior castToExceptionBehavior(unsigned X) {
-  assert(isValidExceptionBehavior(X));
-  return static_cast<fp::ExceptionBehavior>(X);
-}
-
 /// Returns a valid RoundingMode enumerator when given a string
 /// that is valid as input in constrained intrinsic rounding mode
 /// metadata.
-std::optional<RoundingMode> convertStrToRoundingMode(StringRef);
+std::optional<RoundingMode> convertStrToRoundingMode(StringRef,
+                                                     bool InBundle = false);
 
 /// For any RoundingMode enumerator, returns a string valid as input in
 /// constrained intrinsic rounding mode metadata.
-std::optional<StringRef> convertRoundingModeToStr(RoundingMode);
+std::optional<StringRef> convertRoundingModeToStr(RoundingMode,
+                                                  bool InBundle = false);
 
 /// Returns a valid ExceptionBehavior enumerator when given a string
 /// valid as input in constrained intrinsic exception behavior metadata.
-std::optional<fp::ExceptionBehavior> convertStrToExceptionBehavior(StringRef);
+std::optional<fp::ExceptionBehavior>
+convertStrToExceptionBehavior(StringRef, bool InBundle = false);
 
 /// For any ExceptionBehavior enumerator, returns a string valid as
 /// input in constrained intrinsic exception behavior metadata.
-std::optional<StringRef> convertExceptionBehaviorToStr(fp::ExceptionBehavior);
+std::optional<StringRef> convertExceptionBehaviorToStr(fp::ExceptionBehavior,
+                                                       bool InBundle = false);
 
 /// Returns true if the exception handling behavior and rounding mode
 /// match what is used in the default floating point environment.
