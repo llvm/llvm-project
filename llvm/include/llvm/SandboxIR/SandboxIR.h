@@ -135,6 +135,7 @@ class GlobalVariable;
 class GlobalAlias;
 class NoCFIValue;
 class ConstantPtrAuth;
+class ConstantExpr;
 class Context;
 class Function;
 class Instruction;
@@ -344,6 +345,7 @@ protected:
   friend class GlobalAlias;           // For `Val`.
   friend class NoCFIValue;            // For `Val`.
   friend class ConstantPtrAuth;       // For `Val`.
+  friend class ConstantExpr;          // For `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -1659,6 +1661,19 @@ public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::ConstantPtrAuth;
   }
+};
+
+class ConstantExpr : public Constant {
+  ConstantExpr(llvm::ConstantExpr *C, Context &Ctx)
+      : Constant(ClassID::ConstantExpr, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantExpr;
+  }
+  // TODO: Missing functions.
 };
 
 class BlockAddress final : public Constant {
