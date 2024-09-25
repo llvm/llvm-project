@@ -163,14 +163,15 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
   // Handle vector to array transformation
   if (isa<VectorType>(OrigType) && isa<ArrayType>(NewType)) {
     // Convert vector initializer to array initializer
-    auto *VecInit = dyn_cast<ConstantVector>(Init);
-    if (!VecInit) {
-      llvm_unreachable("Expected a ConstantVector for vector initializer!");
-    }
-
     SmallVector<Constant *, Max_VEC_SIZE> ArrayElements;
-    for (unsigned I = 0; I < VecInit->getNumOperands(); ++I) {
-      ArrayElements.push_back(VecInit->getOperand(I));
+    if( ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
+        for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I) 
+            ArrayElements.push_back(ConstVecInit->getOperand(I));
+    } else if (ConstantDataVector *ConstDataVecInit = llvm::dyn_cast<llvm::ConstantDataVector>(Init)) {
+        for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I) 
+            ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
+    }  else {
+      llvm_unreachable("Expected a ConstantVector or ConstantDataVector for vector initializer!");
     }
 
     return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);

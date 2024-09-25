@@ -2,11 +2,14 @@
 ; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
 @"arrayofVecData" = local_unnamed_addr addrspace(3) global [2 x <3 x float>] zeroinitializer, align 16
 @"vecData" = external addrspace(3) global <4 x i32>, align 4
-@staticArrayOfVecData = internal global [3 x <4 x i32>] zeroinitializer, align 4
+;@staticArrayOfVecData = internal global [3 x <4 x i32>] zeroinitializer, align 4
+@staticArrayOfVecData = internal global [3 x <4 x i32>] [<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>], align 4
+
 
 ; CHECK: @arrayofVecData.scalarized = local_unnamed_addr addrspace(3) global [2 x [3 x float]] zeroinitializer, align 16
 ; CHECK: @vecData.scalarized = external addrspace(3) global [4 x i32], align 4
-; CHECK: @staticArrayOfVecData.scalarized = internal global [3 x [4 x i32]] zeroinitializer, align 4
+; CHECK: @staticArrayOfVecData.scalarized = internal global [3 x [4 x i32]] {{\[}}[4 x i32] [i32 1, i32 2, i32 3, i32 4], [4 x i32] [i32 5, i32 6, i32 7, i32 8], [4 x i32] [i32 9, i32 10, i32 11, i32 12]], align 4
+
 ; CHECK-NOT: @arrayofVecData
 ; CHECK-NOT: @vecData
 ; CHECK-NOT: @staticArrayOfVecData
