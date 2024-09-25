@@ -206,10 +206,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return (!IsILP32 &&
-              Target.getAccessVariant() == MCSymbolRefExpr::VK_GOTPCREL)
-                 ? ELF::R_AARCH64_GOTPCREL32
-                 : R_CLS(ABS32);
+      return R_CLS(ABS32);
     case FK_Data_8: {
       bool IsAuth = (RefKind == AArch64MCExpr::VK_AUTH ||
                      RefKind == AArch64MCExpr::VK_AUTHADDR);
