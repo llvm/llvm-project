@@ -290,6 +290,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
 template <class _Cp, bool _IsConst>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false>
 copy(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
+  if (__builtin_constant_p(
+          __result.__ctz_ == 0 && __first.__seg_ == __last.__seg_ && __last.__seg_ == __result.__seg_) &&
+      __result.__ctz_ == 0 && __first.__seg_ == __last.__seg_ && __last.__seg_ == __result.__seg_) {
+    if (__first == __last)
+      return __result;
+    *__result.__seg_ >>= __first.__ctz_;
+    return __result + (__last - __first);
+  }
+
   if (__first.__ctz_ == __result.__ctz_)
     return std::__copy_aligned(__first, __last, __result);
   return std::__copy_unaligned(__first, __last, __result);
@@ -418,6 +427,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
 template <class _Cp, bool _IsConst>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false> copy_backward(
     __bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
+  if (__builtin_constant_p(
+          __first.__ctz_ == 0 && __first.__seg_ == __last.__seg_ && __last.__seg_ == __result.__seg_) &&
+      __first.__ctz_ == 0 && __first.__seg_ == __last.__seg_ && __last.__seg_ == __result.__seg_) {
+    if (__first == __last)
+      return __result;
+    *__result.__seg_ <<= __result.__ctz_ - __last.__ctz_;
+    return __result - (__last - __first);
+  }
+
   if (__last.__ctz_ == __result.__ctz_)
     return std::__copy_backward_aligned(__first, __last, __result);
   return std::__copy_backward_unaligned(__first, __last, __result);
