@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -1698,6 +1699,17 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // Prepare a 'this' for CXXDefaultInitExprs.
   CodeGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
+  const bool ZeroInitPadding =
+      CGF.CGM.shouldZeroInitPadding() && !Dest.isZeroed();
+  const Address BaseLoc = Dest.getAddress().withElementType(CGF.Int8Ty);
+  auto DoZeroInitPadding = [&](CharUnits Offset, CharUnits Size) {
+    if (Size.isPositive()) {
+      Address Loc = CGF.Builder.CreateConstGEP(BaseLoc, Offset.getQuantity());
+      llvm::Constant *SizeVal = CGF.Builder.getInt64(Size.getQuantity());
+      CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
+    }
+  };
+
   if (record->isUnion()) {
     // Only initialize one field of a union. The field itself is
     // specified by the initializer list.
@@ -1722,16 +1734,27 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (NumInitElements) {
       // Store the initializer into the field
       EmitInitializationToLValue(InitExprs[0], FieldLoc);
+      if (ZeroInitPadding) {
+        CharUnits TotalSize =
+            Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
+        CharUnits FieldSize =
+            CGF.getContext().getTypeSizeInChars(FieldLoc.getType());
+        DoZeroInitPadding(FieldSize, TotalSize - FieldSize);
+      }
     } else {
       // Default-initialize to null.
-      EmitNullInitializationToLValue(FieldLoc);
+      if (ZeroInitPadding)
+        EmitNullInitializationToLValue(DestLV);
+      else
+        EmitNullInitializationToLValue(FieldLoc);
     }
-
     return;
   }
 
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
+  const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(record);
+  CharUnits SizeSoFar = CharUnits::Zero();
   for (const auto *field : record->fields()) {
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
@@ -1748,6 +1771,26 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
         CGF.getTypes().isZeroInitializable(ExprToVisit->getType()))
       break;
 
+    if (ZeroInitPadding) {
+      uint64_t StartBitOffset = Layout.getFieldOffset(field->getFieldIndex());
+      CharUnits StartOffset =
+          CGF.getContext().toCharUnitsFromBits(StartBitOffset);
+      DoZeroInitPadding(SizeSoFar, StartOffset - SizeSoFar);
+      if (!field->isBitField()) {
+        CharUnits FieldSize =
+            CGF.getContext().getTypeSizeInChars(field->getType());
+        SizeSoFar = StartOffset + FieldSize;
+      } else {
+        const CGRecordLayout &RL =
+            CGF.getTypes().getCGRecordLayout(field->getParent());
+        const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
+        uint64_t EndBitOffset = StartBitOffset + Info.Size;
+        SizeSoFar = CGF.getContext().toCharUnitsFromBits(EndBitOffset);
+        if (EndBitOffset % CGF.getContext().getCharWidth() != 0) {
+          SizeSoFar++;
+        }
+      }
+    }
 
     LValue LV = CGF.EmitLValueForFieldInitialization(DestLV, field);
     // We never generate write-barries for initialized fields.
@@ -1773,6 +1816,11 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
                                             CGF.getDestroyer(dtorKind), false);
       }
     }
+  }
+  if (ZeroInitPadding) {
+    CharUnits TotalSize =
+        Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
+    DoZeroInitPadding(SizeSoFar, TotalSize - SizeSoFar);
   }
 }
 
