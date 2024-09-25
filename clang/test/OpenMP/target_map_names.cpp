@@ -201,9 +201,7 @@ void secondMapNameInClause() {
 // DEBUG: store ptr @[[NAME:.offload_mapnames.[0-9]+]], ptr %[[ARG:.+]]
 // CHECK-NOT: store ptr @[[NAME:.offload_mapnames.[0-9]+]], ptr %[[ARG:.+]]
 
-// DEBUG: void @.omp_mapper._ZTS2S3.id(ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, ptr noundef [[NAME_ARG:%.+]])
-// DEBUG: store ptr [[NAME_ARG]], ptr [[NAME_STACK:%.+]]
-// DEBUG: [[MAPPER_NAME:%.+]] = load ptr, ptr [[NAME_STACK]]
+// DEBUG: void @.omp_mapper._ZTS2S3.id(ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, ptr noundef [[MAPPER_NAME:%.+]])
 // DEBUG: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr [[MAPPER_NAME]])
 
 #endif
