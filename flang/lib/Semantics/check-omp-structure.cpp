@@ -187,14 +187,14 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
     // Only report it if there is a later version that allows it.
     // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion != 0) {
-      std::string thisVersion{std::to_string(version / 10) + "." +
-                              std::to_string(version % 10)};
+      std::string thisVersion{
+          std::to_string(version / 10) + "." + std::to_string(version % 10)};
       std::string goodVersion{std::to_string(allowedInVersion)};
 
       context_.Say(dirCtx.clauseSource,
-                   "%s clause is not allowed on directive %s in OpenMP v%s, "
-                   "try -fopenmp-version=%d"_err_en_US,
-                   clauseName, dirName, thisVersion, allowedInVersion);
+          "%s clause is not allowed on directive %s in OpenMP v%s, "
+          "try -fopenmp-version=%d"_err_en_US,
+          clauseName, dirName, thisVersion, allowedInVersion);
     }
   }
   return CheckAllowed(clause);
