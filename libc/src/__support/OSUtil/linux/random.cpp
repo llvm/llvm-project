@@ -1,9 +1,15 @@
+//===- Linux implementation of secure random buffer generation --*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "src/__support/OSUtil/linux/random.h"
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/OSUtil/linux/vdso.h"
-#include "src/__support/OSUtil/linux/x86_64/vdso.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/memory_size.h"
 #include "src/__support/threads/callonce.h"
@@ -307,8 +313,13 @@ void random_fill(void *buf, size_t size) {
     random_fill_impl(
         [state](void *buf, size_t size) {
           vdso::TypedSymbol<vdso::VDSOSym::GetRandom> vgetrandom;
-          return vgetrandom(buf, size, 0, state,
-                            StateFactory::size_of_opaque_state());
+          int res = vgetrandom(buf, size, 0, state,
+                               StateFactory::size_of_opaque_state());
+          if (res < 0) {
+            libc_errno = -res;
+            return -1;
+          }
+          return res;
         },
         buf, size);
   } else {
