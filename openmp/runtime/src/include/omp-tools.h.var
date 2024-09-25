@@ -60,6 +60,23 @@
     macro(ompt_get_target_info)             \
     macro(ompt_get_num_devices)
 
+#define FOREACH_OMPT_DEVICE_INQUIRY_FN(macro) \
+    macro (ompt_get_device_num_procs)         \
+    macro (ompt_get_device_time)              \
+    macro (ompt_translate_time)               \
+    macro (ompt_set_trace_ompt)               \
+    macro (ompt_set_trace_native)             \
+    /* macro (ompt_get_buffer_limits) */      \
+    macro (ompt_start_trace)                  \
+    macro (ompt_pause_trace)                  \
+    macro (ompt_flush_trace)                  \
+    macro (ompt_stop_trace)                   \
+    macro (ompt_advance_buffer_cursor)        \
+    macro (ompt_get_record_type)              \
+    /* macro (ompt_get_record_ompt) */        \
+    macro (ompt_get_record_native)            \
+    macro (ompt_get_record_abstract)
+
 #define FOREACH_OMPT_STATE(macro)                                                                \
                                                                                                 \
     /* first available state */                                                                 \
