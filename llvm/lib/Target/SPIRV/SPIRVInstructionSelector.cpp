@@ -1250,36 +1250,87 @@ static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
 bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I) const {
-  // If the AddrSpaceCast user is single and in OpConstantComposite or
-  // OpVariable, we should select OpSpecConstantOp.
-  auto UIs = MRI->use_instructions(ResVReg);
-  if (!UIs.empty() && ++UIs.begin() == UIs.end() &&
-      (UIs.begin()->getOpcode() == SPIRV::OpConstantComposite ||
-       UIs.begin()->getOpcode() == SPIRV::OpVariable ||
-       isSpvIntrinsic(*UIs.begin(), Intrinsic::spv_init_global))) {
-    Register NewReg = I.getOperand(1).getReg();
-    MachineBasicBlock &BB = *I.getParent();
-    SPIRVType *SpvBaseTy = GR.getOrCreateSPIRVIntegerType(8, I, TII);
-    ResType = GR.getOrCreateSPIRVPointerType(SpvBaseTy, I, TII,
-                                             SPIRV::StorageClass::Generic);
-    bool Result =
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
-            .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addImm(static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric))
-            .addUse(NewReg)
-            .constrainAllUses(TII, TRI, RBI);
-    return Result;
-  }
+  MachineBasicBlock &BB = *I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
   Register SrcPtr = I.getOperand(1).getReg();
   SPIRVType *SrcPtrTy = GR.getSPIRVTypeForVReg(SrcPtr);
-  SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtr);
-  SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResVReg);
+  // don't generate a cast for a null that is represented by OpTypeInt
+  if (SrcPtrTy->getOpcode() != SPIRV::OpTypePointer ||
+      ResType->getOpcode() != SPIRV::OpTypePointer)
+    return BuildMI(BB, I, DL, TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcPtr)
+        .constrainAllUses(TII, TRI, RBI);
+
+  SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtrTy);
+  SPIRV::StorageClass::StorageClass DstSC = GR.getPointerStorageClass(ResType);
+
+  // AddrSpaceCast uses within OpVariable and OpConstantComposite instructions
+  // are expressed by OpSpecConstantOp with an Opcode.
+  bool IsGRef = false;
+  bool IsAllowedRefs =
+      std::all_of(MRI->use_instr_begin(ResVReg), MRI->use_instr_end(),
+                  [&IsGRef](auto const &It) {
+                    unsigned Opcode = It.getOpcode();
+                    if (Opcode == SPIRV::OpConstantComposite ||
+                        Opcode == SPIRV::OpVariable ||
+                        isSpvIntrinsic(It, Intrinsic::spv_init_global))
+                      return IsGRef = true;
+                    return Opcode == SPIRV::OpName;
+                  });
+  if (IsAllowedRefs && IsGRef) {
+    // TODO: insert a check whether the Kernel capability was declared.
+    unsigned SpecOpcode =
+        DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC)
+            ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
+            : (SrcSC == SPIRV::StorageClass::Generic &&
+                       isGenericCastablePtr(DstSC)
+                   ? static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr)
+                   : 0);
+    if (SpecOpcode) {
+      // TODO: OpConstantComposite expects i8*, so we are forced to forget a
+      // correct value of ResType and use general i8* instead. Maybe this should
+      // be addressed in the emit-intrinsic step to infer a correct
+      // OpConstantComposite type.
+      SPIRVType *NewResType = GR.getOrCreateSPIRVPointerType(
+          GR.getOrCreateSPIRVIntegerType(8, I, TII), I, TII, DstSC);
+      bool Result = BuildMI(BB, I, DL, TII.get(SPIRV::OpSpecConstantOp))
+                        .addDef(ResVReg)
+                        .addUse(GR.getSPIRVTypeID(NewResType))
+                        .addImm(SpecOpcode)
+                        .addUse(SrcPtr)
+                        .constrainAllUses(TII, TRI, RBI);
+      return Result;
+    } else if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
+      SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
+          GR.getPointeeType(SrcPtrTy), I, TII, SPIRV::StorageClass::Generic);
+      Register Tmp = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
+      MRI->setType(Tmp, LLT::pointer(0, 64));
+      GR.assignSPIRVTypeToVReg(GenericPtrTy, Tmp, *BB.getParent());
+      MachineInstrBuilder MIB =
+          BuildMI(BB, I, DL, TII.get(SPIRV::OpSpecConstantOp))
+              .addDef(Tmp)
+              .addUse(GR.getSPIRVTypeID(GenericPtrTy))
+              .addImm(static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric))
+              .addUse(SrcPtr);
+      GR.add(MIB.getInstr(), BB.getParent(), Tmp);
+      bool Result = MIB.constrainAllUses(TII, TRI, RBI);
+      SPIRVType *NewResType = GR.getOrCreateSPIRVPointerType(
+          GR.getOrCreateSPIRVIntegerType(8, I, TII), I, TII, DstSC);
+      return Result &&
+             BuildMI(BB, I, DL, TII.get(SPIRV::OpSpecConstantOp))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(NewResType))
+                 .addImm(static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr))
+                 .addUse(Tmp)
+                 .constrainAllUses(TII, TRI, RBI);
+    }
+  }
 
   // don't generate a cast between identical storage classes
   if (SrcSC == DstSC)
-    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                   TII.get(TargetOpcode::COPY))
+    return BuildMI(BB, I, DL, TII.get(TargetOpcode::COPY))
         .addDef(ResVReg)
         .addUse(SrcPtr)
         .constrainAllUses(TII, TRI, RBI);
@@ -1295,8 +1346,6 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     Register Tmp = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
     SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
         GR.getPointeeType(SrcPtrTy), I, TII, SPIRV::StorageClass::Generic);
-    MachineBasicBlock &BB = *I.getParent();
-    const DebugLoc &DL = I.getDebugLoc();
     bool Success = BuildMI(BB, I, DL, TII.get(SPIRV::OpPtrCastToGeneric))
                        .addDef(Tmp)
                        .addUse(GR.getSPIRVTypeID(GenericPtrTy))

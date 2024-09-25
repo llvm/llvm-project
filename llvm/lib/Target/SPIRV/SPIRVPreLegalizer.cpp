@@ -294,8 +294,21 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       default:
         break;
       }
-      if (SpvType)
+      if (SpvType) {
+        // check if the address space needs correction
+        LLT RegType = MRI.getType(Reg);
+        if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
+            RegType.isPointer() &&
+            storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
+                RegType.getAddressSpace()) {
+          const SPIRVSubtarget &ST =
+              MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
+          SpvType = GR->getOrCreateSPIRVPointerType(
+              GR->getPointeeType(SpvType), *MI, *ST.getInstrInfo(),
+              addressSpaceToStorageClass(RegType.getAddressSpace(), ST));
+        }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
+      }
       if (!MRI.getRegClassOrNull(Reg))
         MRI.setRegClass(Reg, SpvType ? GR->getRegClass(SpvType)
                                      : &SPIRV::iIDRegClass);
