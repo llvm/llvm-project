@@ -1977,6 +1977,58 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
   ErrIfAllocatableVariable(var);
 }
 
+// TODO: Allow cond-update-stmt once compare clause is supported.
+void OmpStructureChecker::CheckAtomicCaptureConstruct(
+    const parser::OmpAtomicCapture &atomicCaptureConstruct) {
+  const Fortran::parser::AssignmentStmt &stmt1 =
+      std::get<Fortran::parser::OmpAtomicCapture::Stmt1>(
+          atomicCaptureConstruct.t)
+          .v.statement;
+  const auto &stmt1Var{std::get<Fortran::parser::Variable>(stmt1.t)};
+  const auto &stmt1Expr{std::get<Fortran::parser::Expr>(stmt1.t)};
+
+  const Fortran::parser::AssignmentStmt &stmt2 =
+      std::get<Fortran::parser::OmpAtomicCapture::Stmt2>(
+          atomicCaptureConstruct.t)
+          .v.statement;
+  const auto &stmt2Var{std::get<Fortran::parser::Variable>(stmt2.t)};
+  const auto &stmt2Expr{std::get<Fortran::parser::Expr>(stmt2.t)};
+
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    CheckAtomicCaptureStmt(stmt1);
+    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+      // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
+      CheckAtomicUpdateStmt(stmt2);
+    } else {
+      // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
+      CheckAtomicWriteStmt(stmt2);
+    }
+    auto *v{stmt2Var.typedExpr.get()};
+    auto *e{stmt1Expr.typedExpr.get()};
+    if (v && e && !(v->v == e->v)) {
+      context_.Say(stmt1Expr.source,
+          "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+          stmt1Expr.source);
+    }
+  } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
+      Fortran::semantics::checkForSingleVariableOnRHS(stmt2)) {
+    // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
+    CheckAtomicUpdateStmt(stmt1);
+    CheckAtomicCaptureStmt(stmt2);
+    // Variable updated in stmt1 should be captured in stmt2
+    auto *v{stmt1Var.typedExpr.get()};
+    auto *e{stmt2Expr.typedExpr.get()};
+    if (v && e && !(v->v == e->v)) {
+      context_.Say(stmt1Var.GetSource(),
+          "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+          stmt1Var.GetSource());
+    }
+  } else {
+    context_.Say(stmt1Expr.source,
+        "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
+  }
+}
+
 void OmpStructureChecker::CheckAtomicMemoryOrderClause(
     const parser::OmpAtomicClauseList *leftHandClauseList,
     const parser::OmpAtomicClauseList *rightHandClauseList) {
@@ -2060,15 +2112,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
                     atomicWrite.t)
                     .statement);
           },
-          [&](const auto &atomicConstruct) {
-            const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
+          [&](const parser::OmpAtomicCapture &atomicCapture) {
+            const auto &dir{std::get<parser::Verbatim>(atomicCapture.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicMemoryOrderClause(&std::get<0>(atomicConstruct.t),
-                &std::get<2>(atomicConstruct.t));
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicCapture.t), &std::get<2>(atomicCapture.t));
             CheckHintClause<const parser::OmpAtomicClauseList>(
-                &std::get<0>(atomicConstruct.t),
-                &std::get<2>(atomicConstruct.t));
+                &std::get<0>(atomicCapture.t), &std::get<2>(atomicCapture.t));
+            CheckAtomicCaptureConstruct(atomicCapture);
           },
       },
       x.u);

@@ -293,7 +293,7 @@ public:
                    bool RequiresNullTerminator = true,
                    std::optional<int64_t> MaybeLimit = std::nullopt) const {
     return getBufferForFileImpl(Filename,
-                                /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
+                                /*FileSize=*/MaybeLimit.value_or(-1),
                                 isVolatile, RequiresNullTerminator);
   }
 

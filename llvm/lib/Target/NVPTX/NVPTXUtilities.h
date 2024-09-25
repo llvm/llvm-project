@@ -32,11 +32,6 @@ class TargetMachine;
 
 void clearAnnotationCache(const Module *);
 
-bool findOneNVVMAnnotation(const GlobalValue *, const std::string &,
-                           unsigned &);
-bool findAllNVVMAnnotation(const GlobalValue *, const std::string &,
-                           std::vector<unsigned> &);
-
 bool isTexture(const Value &);
 bool isSurface(const Value &);
 bool isSampler(const Value &);
@@ -46,23 +41,23 @@ bool isImageWriteOnly(const Value &);
 bool isImageReadWrite(const Value &);
 bool isManaged(const Value &);
 
-std::string getTextureName(const Value &);
-std::string getSurfaceName(const Value &);
-std::string getSamplerName(const Value &);
+StringRef getTextureName(const Value &);
+StringRef getSurfaceName(const Value &);
+StringRef getSamplerName(const Value &);
 
 std::optional<unsigned> getMaxNTIDx(const Function &);
 std::optional<unsigned> getMaxNTIDy(const Function &);
 std::optional<unsigned> getMaxNTIDz(const Function &);
-std::optional<unsigned> getMaxNTID(const Function &F);
+std::optional<unsigned> getMaxNTID(const Function &);
 
 std::optional<unsigned> getReqNTIDx(const Function &);
 std::optional<unsigned> getReqNTIDy(const Function &);
 std::optional<unsigned> getReqNTIDz(const Function &);
 std::optional<unsigned> getReqNTID(const Function &);
 
-bool getMaxClusterRank(const Function &, unsigned &);
-bool getMinCTASm(const Function &, unsigned &);
-bool getMaxNReg(const Function &, unsigned &);
+std::optional<unsigned> getMaxClusterRank(const Function &);
+std::optional<unsigned> getMinCTASm(const Function &);
+std::optional<unsigned> getMaxNReg(const Function &);
 bool isKernelFunction(const Function &);
 bool isParamGridConstant(const Value &);
 
@@ -75,10 +70,9 @@ Function *getMaybeBitcastedCallee(const CallBase *CB);
 inline unsigned promoteScalarArgumentSize(unsigned size) {
   if (size <= 32)
     return 32;
-  else if (size <= 64)
+  if (size <= 64)
     return 64;
-  else
-    return size;
+  return size;
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);

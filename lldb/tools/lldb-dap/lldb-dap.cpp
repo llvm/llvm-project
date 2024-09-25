@@ -4422,14 +4422,6 @@ void request_readMemory(const llvm::json::Object &request) {
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
 
-  lldb::SBProcess process = g_dap.target.GetProcess();
-  if (!process.IsValid()) {
-    response["success"] = false;
-    response["message"] = "No process running";
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
   llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
   auto addr_opt = DecodeMemoryReference(memoryReference);
   if (!addr_opt.has_value()) {
@@ -4439,57 +4431,32 @@ void request_readMemory(const llvm::json::Object &request) {
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
-  lldb::addr_t addr = *addr_opt;
+  lldb::addr_t addr_int = *addr_opt;
+  addr_int += GetSigned(arguments, "offset", 0);
+  const uint64_t count_requested = GetUnsigned(arguments, "count", 0);
 
-  addr += GetSigned(arguments, "offset", 0);
-  const uint64_t requested_count = GetUnsigned(arguments, "count", 0);
-  lldb::SBMemoryRegionInfo region_info;
-  lldb::SBError memreg_error = process.GetMemoryRegionInfo(addr, region_info);
-  if (memreg_error.Fail()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message",
-                      "Unable to find memory region: " +
-                          std::string(memreg_error.GetCString()));
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-  if (!region_info.IsReadable()) {
-    response["success"] = false;
-    response.try_emplace("message", "Memory region is not readable");
-    g_dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-  const uint64_t available_count =
-      std::min(requested_count, region_info.GetRegionEnd() - addr);
-  const uint64_t unavailable_count = requested_count - available_count;
-
+  // We also need support reading 0 bytes
+  // VS Code sends those requests to check if a `memoryReference`
+  // can be dereferenced.
+  const uint64_t count_read = std::max<uint64_t>(count_requested, 1);
   std::vector<uint8_t> buf;
-  buf.resize(available_count);
-  if (available_count > 0) {
-    lldb::SBError memread_error;
-    uint64_t bytes_read =
-        process.ReadMemory(addr, buf.data(), available_count, memread_error);
-    if (memread_error.Fail()) {
-      response["success"] = false;
-      EmplaceSafeString(response, "message",
-                        "Unable to read memory: " +
-                            std::string(memread_error.GetCString()));
-      g_dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
-    if (bytes_read != available_count) {
-      response["success"] = false;
-      EmplaceSafeString(response, "message", "Unexpected, short read");
-      g_dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
+  buf.resize(count_read);
+  lldb::SBError error;
+  lldb::SBAddress addr{addr_int, g_dap.target};
+  size_t count_result =
+      g_dap.target.ReadMemory(addr, buf.data(), count_read, error);
+  if (count_result == 0) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", error.GetCString());
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
   }
+  buf.resize(std::min(count_result, count_requested));
 
   llvm::json::Object body;
-  std::string formatted_addr = "0x" + llvm::utohexstr(addr);
+  std::string formatted_addr = "0x" + llvm::utohexstr(addr_int);
   body.try_emplace("address", formatted_addr);
   body.try_emplace("data", llvm::encodeBase64(buf));
-  body.try_emplace("unreadableBytes", unavailable_count);
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }

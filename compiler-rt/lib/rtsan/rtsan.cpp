@@ -22,30 +22,47 @@
 using namespace __rtsan;
 using namespace __sanitizer;
 
-static StaticSpinMutex rtsan_inited_mutex;
-static atomic_uint8_t rtsan_initialized = {0};
+namespace {
+enum class InitializationState : u8 {
+  Uninitialized,
+  Initializing,
+  Initialized,
+};
+} // namespace
 
-static void SetInitialized() {
-  atomic_store(&rtsan_initialized, 1, memory_order_release);
+static StaticSpinMutex rtsan_inited_mutex;
+static atomic_uint8_t rtsan_initialized = {
+    static_cast<u8>(InitializationState::Uninitialized)};
+
+static void SetInitializationState(InitializationState state) {
+  atomic_store(&rtsan_initialized, static_cast<u8>(state),
+               memory_order_release);
 }
 
-static auto PrintDiagnosticsAndDieAction(DiagnosticsInfo info) {
+static InitializationState GetInitializationState() {
+  return static_cast<InitializationState>(
+      atomic_load(&rtsan_initialized, memory_order_acquire));
+}
+
+static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
     __rtsan::PrintDiagnostics(info);
-    Die();
+    if (flags().halt_on_error)
+      Die();
   };
 }
 
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  CHECK(!__rtsan_is_initialized());
+  CHECK(GetInitializationState() == InitializationState::Uninitialized);
+  SetInitializationState(InitializationState::Initializing);
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
   InitializeInterceptors();
 
-  SetInitialized();
+  SetInitializationState(InitializationState::Initialized);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized() {
@@ -62,7 +79,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized() {
-  return atomic_load(&rtsan_initialized, memory_order_acquire) == 1;
+  return GetInitializationState() == InitializationState::Initialized;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter() {
@@ -83,20 +100,24 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
 
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_notify_intercepted_call(const char *func_name) {
+  // While initializing, we need all intercepted functions to behave normally
+  if (GetInitializationState() == InitializationState::Initializing)
+    return;
+
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
-  ExpectNotRealtime(
-      GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({InterceptedCallInfo{func_name}, pc, bp}));
+  ExpectNotRealtime(GetContextForThisThread(),
+                    OnViolationAction({DiagnosticsInfoType::InterceptedCall,
+                                       func_name, pc, bp}));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_notify_blocking_call(const char *func_name) {
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
-  ExpectNotRealtime(
-      GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({BlockingCallInfo{func_name}, pc, bp}));
+  ExpectNotRealtime(GetContextForThisThread(),
+                    OnViolationAction({DiagnosticsInfoType::BlockingCall,
+                                       func_name, pc, bp}));
 }
 
 } // extern "C"

@@ -390,3 +390,28 @@ define void @select() {
 
   ret void
 }
+
+define void @select_of_constants() {
+; CHECK-LABEL: 'select_of_constants'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %1 = select i1 undef, <2 x i64> <i64 128, i64 128>, <2 x i64> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = select i1 undef, <2 x i64> <i64 128, i64 127>, <2 x i64> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = select i1 undef, <2 x i64> <i64 0, i64 1>, <2 x i64> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = select i1 undef, <2 x i64> <i64 128, i64 533>, <2 x i64> <i64 0, i64 573>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = select <4 x i1> undef, <4 x i32> <i32 524288, i32 262144, i32 131072, i32 65536>, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  ; Splat constants
+  select i1 undef, <2 x i64> <i64 128, i64 128>, <2 x i64> zeroinitializer
+  ; LHS is a VID patern
+  select i1 undef, <2 x i64> <i64 128, i64 127>, <2 x i64> zeroinitializer
+  select i1 undef, <2 x i64> <i64 0, i64 1>, <2 x i64> zeroinitializer
+  ; 2x general (expensive) constants
+  select i1 undef, <2 x i64> <i64 128, i64 533>, <2 x i64> <i64 0, i64 573>
+
+  ; powers of two (still expensive)
+  select <4 x i1> undef, <4 x i32> <i32 524288, i32 262144, i32 131072, i32 65536>, <4 x i32> zeroinitializer
+
+  ret void
+}
+
+
