@@ -363,14 +363,11 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomeNeg.classify(), fcNegFinite);
   EXPECT_EQ(PosInf.classify(), fcPosInf);
   EXPECT_EQ(NegInf.classify(), fcNegInf);
-  EXPECT_TRUE(SomePos.toKnownFPClass().cannotBeOrderedLessThanZero());
   EXPECT_EQ(Finite.getSignBit(), std::nullopt);
   EXPECT_EQ(PosZero.getSignBit(), false);
   EXPECT_EQ(NegZero.getSignBit(), true);
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
-  EXPECT_EQ(SomePos.toKnownFPClass().SignBit, false);
-  EXPECT_EQ(SomeNeg.toKnownFPClass().SignBit, true);
 
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {

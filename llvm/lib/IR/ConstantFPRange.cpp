@@ -196,13 +196,6 @@ FPClassTest ConstantFPRange::classify() const {
   return static_cast<FPClassTest>(Mask);
 }
 
-KnownFPClass ConstantFPRange::toKnownFPClass() const {
-  KnownFPClass Result;
-  Result.KnownFPClasses = classify();
-  Result.SignBit = getSignBit();
-  return Result;
-}
-
 void ConstantFPRange::print(raw_ostream &OS) const {
   if (isFullSet())
     OS << "full-set";
