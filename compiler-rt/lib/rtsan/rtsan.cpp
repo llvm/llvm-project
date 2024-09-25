@@ -8,11 +8,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <rtsan/rtsan.h>
-#include <rtsan/rtsan_assertions.h>
-#include <rtsan/rtsan_diagnostics.h>
-#include <rtsan/rtsan_flags.h>
-#include <rtsan/rtsan_interceptors.h>
+#include "rtsan/rtsan.h"
+#include "rtsan/rtsan_assertions.h"
+#include "rtsan/rtsan_diagnostics.h"
+#include "rtsan/rtsan_flags.h"
+#include "rtsan/rtsan_interceptors.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"

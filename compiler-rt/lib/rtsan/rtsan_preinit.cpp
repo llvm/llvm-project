@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include <rtsan/rtsan.h>
+#include "rtsan/rtsan.h"
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 
