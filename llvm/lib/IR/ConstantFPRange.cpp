@@ -8,7 +8,6 @@
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -194,13 +193,6 @@ FPClassTest ConstantFPRange::classify() const {
       Mask |= I;
   }
   return static_cast<FPClassTest>(Mask);
-}
-
-KnownFPClass ConstantFPRange::toKnownFPClass() const {
-  KnownFPClass Result;
-  Result.KnownFPClasses = classify();
-  Result.SignBit = getSignBit();
-  return Result;
 }
 
 void ConstantFPRange::print(raw_ostream &OS) const {
