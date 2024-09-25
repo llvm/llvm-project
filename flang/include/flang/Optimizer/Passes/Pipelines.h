@@ -12,10 +12,10 @@
 #ifndef FORTRAN_OPTIMIZER_PASSES_PIPELINES_H
 #define FORTRAN_OPTIMIZER_PASSES_PIPELINES_H
 
-#include "flang/Common/CommandLineOpts.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -62,6 +62,38 @@ void addNestedPassConditionally(mlir::PassManager &pm,
 } // namespace
 
 namespace fir {
+
+/// Add MLIR Canonicalizer pass with region simplification disabled.
+/// FIR does not support the promotion of some SSA value to block arguments (or
+/// into arith.select operands) that may be done by mlir block merging in the
+/// region simplification (e.g., !fir.shape<> SSA values are not supported as
+/// block arguments).
+/// Aside from the fir.shape issue, moving some abstract SSA value into block
+/// arguments may have a heavy cost since it forces their code generation that
+/// may be expensive (array temporary). The MLIR pass does not take these
+/// extra costs into account when doing block merging.
+void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
+
+void addCfgConversionPass(mlir::PassManager &pm,
+                          const MLIRToLLVMPassPipelineConfig &config);
+
+void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
+
+void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
+
+void addTargetRewritePass(mlir::PassManager &pm);
+
+mlir::LLVM::DIEmissionKind
+getEmissionKind(llvm::codegenoptions::DebugInfoKind kind);
+
+void addBoxedProcedurePass(mlir::PassManager &pm);
+
+void addExternalNameConversionPass(mlir::PassManager &pm,
+                                   bool appendUnderscore = true);
+
+void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 
 void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,

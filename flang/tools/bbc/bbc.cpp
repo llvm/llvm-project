@@ -233,7 +233,7 @@ static llvm::cl::opt<bool>
            llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
-#include "flang/Common/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
 
 //===----------------------------------------------------------------------===//

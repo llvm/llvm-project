@@ -35,7 +35,6 @@ if(FLANG_VENDOR)
 endif()
 
 add_flang_library(FortranCommon
-  CommandLineOpts.cpp
   Fortran.cpp
   Fortran-features.cpp
   default-kinds.cpp
@@ -44,6 +43,5 @@ add_flang_library(FortranCommon
   ${version_inc}
 
   LINK_COMPONENTS
-  Passes
   Support
 )

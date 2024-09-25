@@ -1,4 +1,5 @@
-add_flang_library(FIRPasses
+add_flang_library(flangPasses
+  CommandLineOpts.cpp
   Pipelines.cpp
 
   DEPENDS

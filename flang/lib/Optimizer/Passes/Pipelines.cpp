@@ -31,24 +31,14 @@ addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
 
 namespace fir {
 
-// Add MLIR Canonicalizer pass with region simplification disabled.
-// FIR does not support the promotion of some SSA value to block arguments (or
-// into arith.select operands) that may be done by mlir block merging in the
-// region simplification (e.g., !fir.shape<> SSA values are not supported as
-// block arguments).
-// Aside from the fir.shape issue, moving some abstract SSA value into block
-// arguments may have a heavy cost since it forces their code generation that
-// may be expensive (array temporary). The MLIR pass does not take these
-// extra costs into account when doing block merging.
-static void
-addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
+void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
-static void addCfgConversionPass(mlir::PassManager &pm,
-                                 const MLIRToLLVMPassPipelineConfig &config) {
+void addCfgConversionPass(mlir::PassManager &pm,
+                          const MLIRToLLVMPassPipelineConfig &config) {
   if (config.NSWOnLoopVarInc)
     addNestedPassToAllTopLevelOperationsConditionally(
         pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
@@ -57,34 +47,33 @@ static void addCfgConversionPass(mlir::PassManager &pm,
                                                       fir::createCFGConversion);
 }
 
-static void addAVC(mlir::PassManager &pm,
-                   const llvm::OptimizationLevel &optLevel) {
+void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
   ArrayValueCopyOptions options;
   options.optimizeConflicts = optLevel.isOptimizingForSpeed();
   addNestedPassConditionally<mlir::func::FuncOp>(
       pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
 }
 
-static void addMemoryAllocationOpt(mlir::PassManager &pm) {
+void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
     return fir::createMemoryAllocationOpt(
         {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
 }
 
-static void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
+void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
   addPassConditionally(pm, disableCodeGenRewrite,
                        [&]() { return fir::createCodeGenRewrite(options); });
 }
 
-static void addTargetRewritePass(mlir::PassManager &pm) {
+void addTargetRewritePass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableTargetRewrite,
                        []() { return fir::createTargetRewritePass(); });
 }
 
-static mlir::LLVM::DIEmissionKind
+mlir::LLVM::DIEmissionKind
 getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
   switch (kind) {
   case llvm::codegenoptions::DebugInfoKind::FullDebugInfo:
@@ -132,19 +121,19 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm,
   });
 }
 
-static void addBoxedProcedurePass(mlir::PassManager &pm) {
+void addBoxedProcedurePass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableBoxedProcedureRewrite,
                        [&]() { return fir::createBoxedProcedurePass(); });
 }
 
-static void addExternalNameConversionPass(mlir::PassManager &pm,
-                                          bool appendUnderscore = true) {
+void addExternalNameConversionPass(mlir::PassManager &pm,
+                                          bool appendUnderscore) {
   addPassConditionally(pm, disableExternalNameConversion, [&]() {
     return fir::createExternalNameConversion({appendUnderscore});
   });
 }
 
-static void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm) {
+void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableCompilerGeneratedNamesConversion, [&]() {
     return fir::createCompilerGeneratedNamesConversion();
   });

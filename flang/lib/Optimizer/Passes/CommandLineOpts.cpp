@@ -9,7 +9,7 @@
 /// This file defines some shared command-line options that can be used when
 /// debugging the test tools.
 
-#include "flang/Common/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 
 using namespace llvm;
 

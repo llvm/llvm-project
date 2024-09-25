@@ -1,4 +1,4 @@
-//===-- CommandLineOptions.h -- shared command line options -----*- C++ -*-===//
+//===-- CommandLineOpts.h -- shared command line options --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 /// This file declares some shared command-line options that can be used when
 /// debugging the test tools.
 
-#ifndef FORTRAN_COMMON_COMMANDLINEOPTS_H
-#define FORTRAN_COMMON_COMMANDLINEOPTS_H
+#ifndef FORTRAN_OPTIMIZER_PASSES_COMMANDLINEOPTS_H
+#define FORTRAN_OPTIMIZER_PASSES_COMMANDLINEOPTS_H
 
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -57,4 +57,4 @@ extern llvm::cl::opt<bool> disableExternalNameConversion;
 extern llvm::cl::opt<bool> enableConstantArgumentGlobalisation;
 extern llvm::cl::opt<bool> disableCompilerGeneratedNamesConversion;
 
-#endif // FORTRAN_COMMON_COMMANDLINE_OPTS_H
+#endif // FORTRAN_OPTIMIZER_PASSES_COMMANDLINE_OPTS_H
