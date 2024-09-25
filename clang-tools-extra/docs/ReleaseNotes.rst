@@ -130,6 +130,11 @@ Changes in existing checks
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
   subtracting from a pointer.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
+  `bsl::optional` and `bdlb::NullableValue` from
+  <https://github.com/bloomberg/bde>_.
+
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment
   expression.
@@ -160,6 +165,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
   initializer list.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
+  ``NULL``/``__null`` (but not ``0``) when used with a templated type.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing

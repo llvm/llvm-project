@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -61,6 +62,13 @@ public:
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
+  }
+
+  StringRef getFunctionName(GlobalValue::GUID GUID) const {
+    auto It = FuncInfo.find(GUID);
+    if (It == FuncInfo.end())
+      return "";
+    return It->second.Name;
   }
 
   uint32_t getNumCounters(const Function &F) const {
@@ -120,6 +128,11 @@ public:
 
   /// Get the step instrumentation associated with a `select`
   static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
+
+  // FIXME: refactor to an advisor model, and separate
+  static void collectIndirectCallPromotionList(
+      CallBase &IC, Result &Profile,
+      SetVector<std::pair<CallBase *, Function *>> &Candidates);
 };
 
 class CtxProfAnalysisPrinterPass
