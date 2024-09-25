@@ -87,7 +87,8 @@ __rtsan_notify_intercepted_call(const char *func_name) {
   GET_CALLER_PC_BP;
   ExpectNotRealtime(
       GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({InterceptedCallInfo{func_name}, pc, bp}));
+      PrintDiagnosticsAndDieAction(
+          {DiagnosticsInfoType::InterceptedCall, func_name, pc, bp}));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
@@ -96,7 +97,8 @@ __rtsan_notify_blocking_call(const char *func_name) {
   GET_CALLER_PC_BP;
   ExpectNotRealtime(
       GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({BlockingCallInfo{func_name}, pc, bp}));
+      PrintDiagnosticsAndDieAction(
+          {DiagnosticsInfoType::BlockingCall, func_name, pc, bp}));
 }
 
 } // extern "C"
