@@ -68,6 +68,8 @@ using namespace llvm;
 namespace {
 namespace stats {
 
+STATISTIC(ELFHeaderBytes, "Total size of ELF headers");
+STATISTIC(SectionHeaderBytes, "Total size of section headers table");
 STATISTIC(AllocTextBytes, "Total size of SHF_ALLOC text sections");
 STATISTIC(AllocROBytes, "Total size of SHF_ALLOC readonly sections");
 STATISTIC(AllocRWBytes, "Total size of SHF_ALLOC read-write sections");
@@ -945,6 +947,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
 }
 
 void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
+  uint64_t Start = W.OS.tell();
   const unsigned NumSections = SectionTable.size();
 
   // Null section first.
@@ -1008,6 +1011,8 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
 
     writeSectionHeader(GroupSymbolIndex, Offsets.first, Size, *Section);
   }
+
+  stats::SectionHeaderBytes += W.OS.tell() - Start;
 }
 
 uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
@@ -1022,6 +1027,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
 
   // Write out the ELF header ...
   writeHeader(Asm);
+
+  stats::ELFHeaderBytes += W.OS.tell() - StartOffset;
 
   // ... then the sections ...
   SmallVector<std::pair<MCSectionELF *, SmallVector<unsigned>>, 0> Groups;

@@ -83,7 +83,7 @@ void funky(inout int3 X) {
   X.z += 3;
 }
 
-// ALL-LABEL: define noundef <3 x i32> {{.*}}case4
+// ALL-LABEL: define noundef {{.*}}<3 x i32> {{.*}}case4
 
 // This block initializes V = 0.xxx.
 // CHECK:  [[V:%.*]] = alloca <3 x i32>

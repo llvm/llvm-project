@@ -1578,20 +1578,6 @@ def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
           (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
 
 //
-// Bitcast
-//
-
-def INT_NVVM_BITCAST_F2I : F_MATH_1<"mov.b32 \t$dst, $src0;", Int32Regs,
-  Float32Regs, int_nvvm_bitcast_f2i>;
-def INT_NVVM_BITCAST_I2F : F_MATH_1<"mov.b32 \t$dst, $src0;", Float32Regs,
-  Int32Regs, int_nvvm_bitcast_i2f>;
-
-def INT_NVVM_BITCAST_LL2D : F_MATH_1<"mov.b64 \t$dst, $src0;", Float64Regs,
-  Int64Regs, int_nvvm_bitcast_ll2d>;
-def INT_NVVM_BITCAST_D2LL : F_MATH_1<"mov.b64 \t$dst, $src0;", Int64Regs,
-  Float64Regs, int_nvvm_bitcast_d2ll>;
-
-//
 // FNS
 //
 

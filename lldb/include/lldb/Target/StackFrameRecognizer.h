@@ -124,12 +124,14 @@ public:
                      Mangled::NamePreference symbol_mangling,
                      bool first_instruction_only = true);
 
-  void ForEach(std::function<
-               void(uint32_t recognizer_id, std::string recognizer_name,
-                    std::string module, llvm::ArrayRef<ConstString> symbols,
-                    Mangled::NamePreference name_reference, bool regexp)> const
-                   &callback);
+  void
+  ForEach(std::function<void(uint32_t recognizer_id, bool enabled,
+                             std::string recognizer_name, std::string module,
+                             llvm::ArrayRef<ConstString> symbols,
+                             Mangled::NamePreference name_preference,
+                             bool regexp)> const &callback);
 
+  bool SetEnabledForID(uint32_t recognizer_id, bool enabled);
   bool RemoveRecognizerWithID(uint32_t recognizer_id);
 
   void RemoveAllRecognizers();
@@ -155,6 +157,7 @@ private:
     lldb::RegularExpressionSP symbol_regexp;
     Mangled::NamePreference symbol_mangling;
     bool first_instruction_only;
+    bool enabled;
   };
 
   std::deque<RegisteredEntry> m_recognizers;

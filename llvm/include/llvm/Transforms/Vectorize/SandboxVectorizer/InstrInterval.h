@@ -80,6 +80,17 @@ public:
     assert((FromI == ToI || FromI->comesBefore(ToI)) &&
            "FromI should come before TopI!");
   }
+  InstrInterval(ArrayRef<Instruction *> Instrs) {
+    assert(!Instrs.empty() && "Expected non-empty Instrs!");
+    FromI = Instrs[0];
+    ToI = Instrs[0];
+    for (auto *I : drop_begin(Instrs)) {
+      if (I->comesBefore(FromI))
+        FromI = I;
+      else if (ToI->comesBefore(I))
+        ToI = I;
+    }
+  }
   bool empty() const {
     assert(((FromI == nullptr && ToI == nullptr) ||
             (FromI != nullptr && ToI != nullptr)) &&
@@ -92,6 +103,8 @@ public:
     return (FromI == I || FromI->comesBefore(I)) &&
            (I == ToI || I->comesBefore(ToI));
   }
+  Instruction *top() const { return FromI; }
+  Instruction *bottom() const { return ToI; }
 
   using iterator =
       InstrIntervalIterator<sandboxir::Instruction &, InstrInterval>;

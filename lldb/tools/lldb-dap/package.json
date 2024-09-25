@@ -268,7 +268,7 @@
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
                 "default": false
               },
-              "enableDisplayExtendedBacktrace": {
+              "displayExtendedBacktrace": {
                 "type": "boolean",
                 "description": "Enable language specific extended backtraces.",
                 "default": false
@@ -393,7 +393,7 @@
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
                 "default": false
               },
-              "enableDisplayExtendedBacktrace": {
+              "displayExtendedBacktrace": {
                 "type": "boolean",
                 "description": "Enable language specific extended backtraces.",
                 "default": false

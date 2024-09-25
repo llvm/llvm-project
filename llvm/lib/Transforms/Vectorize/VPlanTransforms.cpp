@@ -21,6 +21,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -509,7 +510,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
                 [](VPValue *V) { return V->getNumUsers() == 0; });
 }
 
-static void removeDeadRecipes(VPlan &Plan) {
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
@@ -592,12 +593,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
           nullptr, StartV, StepV, Builder);
 
-      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
-                                       {PtrIV->getStartValue(), Steps},
-                                       PtrIV->getDebugLoc(), "next.gep");
+      VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                                             PtrIV->getDebugLoc(), "next.gep");
 
-      Recipe->insertAfter(Steps);
-      PtrIV->replaceAllUsesWith(Recipe);
+      PtrIV->replaceAllUsesWith(PtrAdd);
       continue;
     }
 
@@ -1158,7 +1157,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan);
-  licm(Plan);
   legalizeAndOptimizeInductions(Plan);
   removeDeadRecipes(Plan);
 
@@ -1166,6 +1164,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+  licm(Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -1424,7 +1423,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 /// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
 ///                                               [ %NextEVLIV, %vector.body ]
-/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
+/// %AVL = sub original TC, %EVLPhi
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %AVL
 /// ...
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
@@ -1454,9 +1454,14 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
-                                  {EVLPhi, Plan.getTripCount()});
-  VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
+  // TODO: Add support for MaxSafeDist for correct loop emission.
+  // Compute original TC - IV as the AVL (application vector length).
+  auto *AVL = new VPInstruction(Instruction::Sub, {Plan.getTripCount(), EVLPhi},
+                                DebugLoc(), "avl");
+  AVL->insertBefore(*Header, Header->getFirstNonPhi());
+  auto *VPEVL =
+      new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
+  VPEVL->insertAfter(AVL);
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());

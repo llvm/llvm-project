@@ -206,7 +206,6 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[ADD2:.*]], %vector.body ]
 ; CHECK-VF4UF2: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
-; CHECK-VF4UF2: %[[ADD2]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
 ; CHECK-VF4UF2: middle.block
 ; CHECK-VF4UF2: %[[VSCALE3:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL3:.*]] = mul i32 %[[VSCALE3]], 4

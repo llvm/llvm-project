@@ -483,7 +483,6 @@ std::string convertGlobToRegex(llvm::StringRef Glob) {
     }
   }
   RegStream << '$';
-  RegStream.flush();
   return RegText;
 }
 

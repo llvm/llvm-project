@@ -67,7 +67,7 @@ public:
     return I->second;
   }
   ErrorOr<std::unique_ptr<vfs::File>>
-  openFileForRead(const Twine &Path, bool IsText = true) override {
+  openFileForRead(const Twine &Path) override {
     auto S = status(Path);
     if (S)
       return std::unique_ptr<vfs::File>(new DummyFile{*S});
@@ -3389,9 +3389,9 @@ TEST(RedirectingFileSystemTest, ExternalPaths) {
     }
 
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-    openFileForRead(const Twine &Path, bool IsText = true) override {
+    openFileForRead(const Twine &Path) override {
       SeenPaths.push_back(Path.str());
-      return ProxyFileSystem::openFileForRead(Path, IsText);
+      return ProxyFileSystem::openFileForRead(Path);
     }
 
     std::error_code isLocal(const Twine &Path, bool &Result) override {
