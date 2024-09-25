@@ -8,10 +8,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <rtsan/rtsan.h>
-#include <rtsan/rtsan_context.h>
+#include "rtsan/rtsan_context.h"
+#include "rtsan/rtsan.h"
 
-#include <sanitizer_common/sanitizer_allocator_internal.h>
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 
 #include <new>
 #include <pthread.h>

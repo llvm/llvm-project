@@ -626,7 +626,7 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
-  list<list<int>> TypeSig = !listconcat(
+  list<int> TypeSig = !listflatten(!listconcat(
     [IIT_RetNumbers[!size(RetTypes)]],
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
@@ -634,7 +634,7 @@ class TypeInfoGen<
           MappingRIdxs,
           ArgCodes,
           ACIdxs[i],
-          a>.ret)));
+          a>.ret))));
 }
 
 //===----------------------------------------------------------------------===//
