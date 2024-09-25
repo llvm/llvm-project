@@ -850,7 +850,7 @@ static ICFLevel getICF(opt::InputArgList &args) {
   return ICFLevel::All;
 }
 
-static StripPolicy getStrip(opt::InputArgList &args) {
+static StripPolicy getStrip(Ctx &ctx, opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
   if (!ctx.arg.zSectionHeader)
@@ -953,7 +953,7 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &args) {
   return {false, false};
 }
 
-static void readCallGraph(MemoryBufferRef mb) {
+static void readCallGraph(Ctx &ctx, MemoryBufferRef mb) {
   // Build a map from symbol name to section
   DenseMap<StringRef, Symbol *> map;
   for (ELFFileBase *file : ctx.objectFiles)
@@ -1041,7 +1041,7 @@ processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
   return !symbolIndices.empty();
 }
 
-template <class ELFT> static void readCallGraphsFromObjectFiles() {
+template <class ELFT> static void readCallGraphsFromObjectFiles(Ctx &ctx) {
   SmallVector<uint32_t, 32> symbolIndices;
   ArrayRef<typename ELFT::CGProfile> cgProfile;
   for (auto file : ctx.objectFiles) {
@@ -1070,7 +1070,8 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
 }
 
 template <class ELFT>
-static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
+static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
+                                               opt::InputArgList &args) {
   DenseSet<StringRef> typeInfoSymbols;
   SmallSetVector<StringRef, 0> vtableSymbols;
   auto processVtableAndTypeInfoSymbols = [&](StringRef name) {
@@ -1184,7 +1185,8 @@ getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
 }
 
 // Parse the symbol ordering file and warn for any duplicate entries.
-static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
+static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
+                                                       MemoryBufferRef mb) {
   SetVector<StringRef, SmallVector<StringRef, 0>> names;
   for (StringRef s : args::getLines(mb))
     if (!names.insert(s) && ctx.arg.warnSymbolOrdering)
@@ -1193,7 +1195,7 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
   return names.takeVector();
 }
 
-static bool getIsRela(opt::InputArgList &args) {
+static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
   bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
                             EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
@@ -1212,7 +1214,7 @@ static bool getIsRela(opt::InputArgList &args) {
   return rela;
 }
 
-static void parseClangOption(StringRef opt, const Twine &msg) {
+static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   std::string err;
   raw_string_ostream os(err);
 
@@ -1228,7 +1230,7 @@ static bool isValidReportString(StringRef arg) {
 }
 
 // Process a remap pattern 'from-glob=to-file'.
-static bool remapInputs(StringRef line, const Twine &location) {
+static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   SmallVector<StringRef, 0> fields;
   line.split(fields, '=');
   if (fields.size() != 2 || fields[1].empty()) {
@@ -1440,7 +1442,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args::getInteger(args, OPT_split_stack_adjust_size, 16384);
   ctx.arg.zSectionHeader =
       getZFlag(args, "sectionheader", "nosectionheader", true);
-  ctx.arg.strip = getStrip(args); // needs zSectionHeader
+  ctx.arg.strip = getStrip(ctx, args); // needs zSectionHeader
   ctx.arg.sysroot = args.getLastArgValue(OPT_sysroot);
   ctx.arg.target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
   ctx.arg.target2 = getTarget2(args);
@@ -1535,7 +1537,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   for (opt::Arg *arg : args.filtered(OPT_remap_inputs)) {
     StringRef value(arg->getValue());
-    remapInputs(value, arg->getSpelling());
+    remapInputs(ctx, value, arg->getSpelling());
   }
   for (opt::Arg *arg : args.filtered(OPT_remap_inputs_file)) {
     StringRef filename(arg->getValue());
@@ -1544,7 +1546,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       continue;
     // Parse 'from-glob=to-file' lines, ignoring #-led comments.
     for (auto [lineno, line] : llvm::enumerate(args::getLines(*buffer)))
-      if (remapInputs(line, filename + ":" + Twine(lineno + 1)))
+      if (remapInputs(ctx, line, filename + ":" + Twine(lineno + 1)))
         break;
   }
 
@@ -1637,11 +1639,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(ctx, saver().save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
-    parseClangOption(std::string("-") + arg->getValue(), arg->getSpelling());
+    parseClangOption(ctx, std::string("-") + arg->getValue(),
+                     arg->getSpelling());
 
   // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
   // relative path. Just ignore. If not ended with "lto-wrapper" (or
@@ -1658,7 +1661,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
-    parseClangOption(arg->getValue(), arg->getSpelling());
+    parseClangOption(ctx, arg->getValue(), arg->getSpelling());
     ctx.arg.mllvmOpts.emplace_back(arg->getValue());
   }
 
@@ -1758,7 +1761,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       error("--symbol-ordering-file and --call-graph-order-file "
             "may not be used together");
     if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue())) {
-      ctx.arg.symbolOrderingFile = getSymbolOrderingFile(*buffer);
+      ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
       // Also need to disable CallGraphProfileSort to prevent
       // LLD order symbols with CGProfile
       ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
@@ -1851,7 +1854,7 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   // We pick the format for dynamic relocations according to the psABI for each
   // processor, but a contrary choice can be made if the dynamic loader
   // supports.
-  ctx.arg.isRela = getIsRela(args);
+  ctx.arg.isRela = getIsRela(ctx, args);
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -2146,7 +2149,7 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
-static void excludeLibs(opt::InputArgList &args) {
+static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
   bool all = libs.count("ALL");
 
@@ -2441,7 +2444,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
 // are used to control which partition a symbol is allocated to. See
 // https://lld.llvm.org/Partitions.html for more details on partitions.
 template <typename ELFT>
-static void readSymbolPartitionSection(InputSectionBase *s) {
+static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   // Read the relocation that refers to the partition's entry point symbol.
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
@@ -2961,7 +2964,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // 'has undefined version' error in -shared --exclude-libs=ALL mode (PR36295).
   // GNU ld errors in this case.
   if (args.hasArg(OPT_exclude_libs))
-    excludeLibs(args);
+    excludeLibs(ctx, args);
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
@@ -2994,7 +2997,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --lto-validate-all-vtables-have-type-infos.
   if (ctx.arg.ltoValidateAllVtablesHaveTypeInfos)
-    ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
+    ltoValidateAllVtablesHaveTypeInfos<ELFT>(ctx, args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -3045,7 +3048,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // libcalls symbols defined in an excluded archive. This may override
   // versionId set by scanVersionScript().
   if (args.hasArg(OPT_exclude_libs))
-    excludeLibs(args);
+    excludeLibs(ctx, args);
 
   // Record [__acle_se_<sym>, <sym>] pairs for later processing.
   processArmCmseSymbols();
@@ -3079,10 +3082,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   {
     llvm::TimeTraceScope timeScope("Strip sections");
     if (ctx.hasSympart.load(std::memory_order_relaxed)) {
-      llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
+      llvm::erase_if(ctx.inputSections, [&ctx = ctx](InputSectionBase *s) {
         if (s->type != SHT_LLVM_SYMPART)
           return false;
-        readSymbolPartitionSection<ELFT>(s);
+        readSymbolPartitionSection<ELFT>(ctx, s);
         return true;
       });
     }
@@ -3204,8 +3207,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-        readCallGraph(*buffer);
-    readCallGraphsFromObjectFiles<ELFT>();
+        readCallGraph(ctx, *buffer);
+    readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.
