@@ -61,9 +61,18 @@ public:
   memoryLocationGetOrNone(const Instruction *I) {
     return llvm::MemoryLocation::getOrNone(cast<llvm::Instruction>(I->Val));
   }
+  /// \Returns true if \p I1 accesses a memory location lower than \p I2.
+  template <typename LoadOrStoreT>
+  static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
+                             ScalarEvolution &SE, const DataLayout &DL) {
+    auto Diff = getPointerDiffInBytes(I0, I1, SE, DL);
+    if (!Diff)
+      return false;
+    return *Diff > 0;
+  }
 
-  /// \Returns the number of bytes between the memory locations accessed by \p
-  /// I0 and \p I1 in bytes.
+  /// \Returns the number gap between the memory locations accessed by \p I0 and
+  /// \p I1 in bytes.
   template <typename LoadOrStoreT>
   static std::optional<int>
   getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
