@@ -253,6 +253,32 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  // Named by
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+  // We don't need aliases for Invocation and CrossDevice, as we already have
+  // them covered by "singlethread" and "" strings respectively (see
+  // implementation of LLVMContext::LLVMContext()).
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
+
+  if (Id == llvm::SyncScope::SingleThread)
+    return SPIRV::Scope::Invocation;
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SubGroup)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == WorkGroup)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == Device)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);

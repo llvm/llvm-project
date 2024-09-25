@@ -33,7 +33,6 @@ class WebAssemblyAsmTypeCheck final {
   SmallVector<wasm::ValType, 16> LocalTypes;
   SmallVector<wasm::ValType, 4> ReturnTypes;
   wasm::WasmSignature LastSig;
-  bool TypeErrorThisFunction = false;
   bool Unreachable = false;
   bool Is64;
 
@@ -68,7 +67,6 @@ public:
     BrStack.clear();
     LocalTypes.clear();
     ReturnTypes.clear();
-    TypeErrorThisFunction = false;
     Unreachable = false;
   }
 };

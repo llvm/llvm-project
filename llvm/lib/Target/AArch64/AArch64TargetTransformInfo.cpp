@@ -2140,6 +2140,16 @@ static std::optional<Instruction *> instCombineSVESrshl(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, LSL);
 }
 
+static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *Vec = II.getOperand(0);
+
+  if (getSplatValue(Vec) == II.getOperand(1))
+    return IC.replaceInstUsesWith(II, Vec);
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2460,6 +2470,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVESrshl(IC, II);
   case Intrinsic::aarch64_sve_dupq_lane:
     return instCombineSVEDupqLane(IC, II);
+  case Intrinsic::aarch64_sve_insr:
+    return instCombineSVEInsr(IC, II);
   }
 
   return std::nullopt;

@@ -316,17 +316,6 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
 
-  /// Set whether opaque pointers are enabled. The method may be called multiple
-  /// times, but only with the same value. Note that creating a pointer type or
-  /// otherwise querying the opaque pointer mode performs an implicit set to
-  /// the default value.
-  [[deprecated("Opaque pointers are always enabled")]]
-  void setOpaquePointers(bool Enable) const;
-
-  /// Whether typed pointers are supported. If false, all pointers are opaque.
-  [[deprecated("Always returns false")]]
-  bool supportsTypedPointers() const;
-
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value
   /// that reflects the attribute that a function would get "by default" without

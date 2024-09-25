@@ -311,12 +311,6 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
-// Enable GFX11.5+ s_singleuse_vdst insertion
-static cl::opt<bool>
-    EnableInsertSingleUseVDST("amdgpu-enable-single-use-vdst",
-                              cl::desc("Enable s_singleuse_vdst insertion"),
-                              cl::init(false), cl::Hidden);
-
 // Enable GFX11+ s_delay_alu insertion
 static cl::opt<bool>
     EnableInsertDelayAlu("amdgpu-enable-delay-alu",
@@ -466,7 +460,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
-  initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeAMDGPULowerVGPREncodingPass(*PR);
   initializeAMDGPUIdxRegAllocPass(*PR);
@@ -1554,9 +1547,6 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&AMDGPULowerVGPREncodingID);
-
-  if (isPassEnabled(EnableInsertSingleUseVDST, CodeGenOptLevel::Less))
-    addPass(&AMDGPUInsertSingleUseVDSTID);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);

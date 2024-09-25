@@ -1223,7 +1223,7 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(interpreter, "frame",
                              "Commands for selecting and "
-                             "examing the current "
+                             "examining the current "
                              "thread's stack frames.",
                              "frame <subcommand> [<subcommand-options>]") {
   LoadSubCommand("diagnose",
