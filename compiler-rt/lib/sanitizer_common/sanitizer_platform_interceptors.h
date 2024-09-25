@@ -606,6 +606,7 @@
 // FIXME: also available from musl 1.2.5
 #define SANITIZER_INTERCEPT_PREADV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
 #define SANITIZER_INTERCEPT_PWRITEV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
+#define SANITIZER_INTERCEPT_FREADLINK SI_MAC
 
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have

@@ -88,7 +88,7 @@ program requires
   ! CHECK: OmpMemoryOrderClause -> OmpClause -> AcqRel
   !$omp atomic capture
   i = j
-  i = j
+  j = j + 1
   !$omp end atomic
 
   ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicCapture
@@ -96,7 +96,7 @@ program requires
   ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
   !$omp atomic relaxed capture
   i = j
-  i = j
+  j = j + 1
   !$omp end atomic
 
   ! CHECK-LABEL: OpenMPAtomicConstruct -> OmpAtomicCapture
@@ -104,6 +104,6 @@ program requires
   ! CHECK: OmpMemoryOrderClause -> OmpClause -> Relaxed
   !$omp atomic capture relaxed
   i = j
-  i = j
+  j = j + 1
   !$omp end atomic
 end program requires
