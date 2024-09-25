@@ -466,7 +466,7 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
-let IsInvalidSingleUseConsumer = 1, IsDPMACCInstruction = 1 in {
+let IsDPMACCInstruction = 1 in {
   multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
     VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 }
@@ -506,7 +506,7 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
-let IsInvalidSingleUseConsumer = 1, IsDPMACCInstruction = 1 in {
+let IsDPMACCInstruction = 1 in {
   multiclass VOPCX_I64 <string opName, string revOp = opName> :
     VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
 }

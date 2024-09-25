@@ -15,25 +15,16 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#include <variant>
-
 namespace __rtsan {
 
-struct InterceptedCallInfo {
-  const char *intercepted_function_name_;
+enum class DiagnosticsInfoType {
+  InterceptedCall,
+  BlockingCall,
 };
-
-struct BlockingCallInfo {
-public:
-  const char *blocking_function_name_;
-};
-
-using DiagnosticsCallerInfo =
-    std::variant<InterceptedCallInfo, BlockingCallInfo>;
 
 struct DiagnosticsInfo {
-  DiagnosticsCallerInfo call_info;
-
+  DiagnosticsInfoType type;
+  const char *func_name;
   __sanitizer::uptr pc;
   __sanitizer::uptr bp;
 };

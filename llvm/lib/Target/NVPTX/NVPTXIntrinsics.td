@@ -2537,59 +2537,45 @@ defm INT_PTX_LDG_G_v4f32_ELE
   : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
 
 
-multiclass NG_TO_G<string Str, Intrinsic Intrin, Predicate ShortPtr> {
+multiclass NG_TO_G<string Str> {
    def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          !strconcat("cvta.", Str, ".u32 \t$result, $src;"),
-      [(set Int32Regs:$result, (Intrin Int32Regs:$src))]>;
+          "cvta." # Str # ".u32 \t$result, $src;", []>;
    def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          !strconcat("cvta.", Str, ".u64 \t$result, $src;"),
-      [(set Int64Regs:$result, (Intrin Int64Regs:$src))]>;
-   def _6432 : NVPTXInst<(outs Int64Regs:$result), (ins Int32Regs:$src),
-          "{{ .reg .b64 %tmp;\n\t"
-          #"  cvt.u64.u32 \t%tmp, $src;\n\t"
-          #"  cvta." # Str # ".u64 \t$result, %tmp; }}",
-      [(set Int64Regs:$result, (Intrin Int32Regs:$src))]>,
-      Requires<[ShortPtr]>;
+          "cvta." # Str # ".u64 \t$result, $src;", []>;
 }
 
-multiclass G_TO_NG<string Str, Intrinsic Intrin, Predicate ShortPtr> {
+multiclass G_TO_NG<string Str> {
    def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          !strconcat("cvta.to.", Str, ".u32 \t$result, $src;"),
-      [(set Int32Regs:$result, (Intrin Int32Regs:$src))]>;
+          "cvta.to." # Str # ".u32 \t$result, $src;", []>;
    def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          !strconcat("cvta.to.", Str, ".u64 \t$result, $src;"),
-      [(set Int64Regs:$result, (Intrin Int64Regs:$src))]>;
-   def _3264 : NVPTXInst<(outs Int32Regs:$result), (ins Int64Regs:$src),
-          "{{ .reg .b64 %tmp;\n\t"
-          #"  cvta.to." # Str # ".u64 \t%tmp, $src;\n\t"
-          #"  cvt.u32.u64 \t$result, %tmp; }}",
-      [(set Int32Regs:$result, (Intrin Int64Regs:$src))]>,
-      Requires<[ShortPtr]>;
+          "cvta.to." # Str # ".u64 \t$result, $src;", []>;
 }
 
-defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen, useShortPtrLocal>;
-defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen, useShortPtrShared>;
-defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen, False>;
-defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen, useShortPtrConst>;
-defm cvta_param  : NG_TO_G<"param", int_nvvm_ptr_param_to_gen, False>;
+defm cvta_local  : NG_TO_G<"local">;
+defm cvta_shared : NG_TO_G<"shared">;
+defm cvta_global : NG_TO_G<"global">;
+defm cvta_const  : NG_TO_G<"const">;
 
-defm cvta_to_local  : G_TO_NG<"local", int_nvvm_ptr_gen_to_local, useShortPtrLocal>;
-defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared, useShortPtrShared>;
-defm cvta_to_global : G_TO_NG<"global", int_nvvm_ptr_gen_to_global, False>;
-defm cvta_to_const  : G_TO_NG<"const", int_nvvm_ptr_gen_to_constant, useShortPtrConst>;
+defm cvta_to_local  : G_TO_NG<"local">;
+defm cvta_to_shared : G_TO_NG<"shared">;
+defm cvta_to_global : G_TO_NG<"global">;
+defm cvta_to_const  : G_TO_NG<"const">;
+
+// nvvm.ptr.param.to.gen
+defm cvta_param : NG_TO_G<"param">;
+
+def : Pat<(int_nvvm_ptr_param_to_gen Int32Regs:$src),
+          (cvta_param Int32Regs:$src)>;
+
+def : Pat<(int_nvvm_ptr_param_to_gen Int64Regs:$src),
+          (cvta_param_64 Int64Regs:$src)>;
 
 // nvvm.ptr.gen.to.param
-def nvvm_ptr_gen_to_param : NVPTXInst<(outs Int32Regs:$result),
-  (ins Int32Regs:$src),
-                        "mov.u32 \t$result, $src;",
-                              [(set Int32Regs:$result,
-                                (int_nvvm_ptr_gen_to_param Int32Regs:$src))]>;
-def nvvm_ptr_gen_to_param_64 : NVPTXInst<(outs Int64Regs:$result),
-  (ins Int64Regs:$src),
-                        "mov.u64 \t$result, $src;",
-                              [(set Int64Regs:$result,
-                                (int_nvvm_ptr_gen_to_param Int64Regs:$src))]>;
+def : Pat<(int_nvvm_ptr_gen_to_param Int32Regs:$src),
+          (IMOV32rr Int32Regs:$src)>;
 
+def : Pat<(int_nvvm_ptr_gen_to_param Int64Regs:$src),
+          (IMOV64rr Int64Regs:$src)>;
 
 // nvvm.move intrinsicc
 def nvvm_move_i16 : NVPTXInst<(outs Int16Regs:$r), (ins Int16Regs:$s),
@@ -2631,24 +2617,6 @@ def nvvm_move_sym64 : NVPTXInst<(outs Int64Regs:$r), (ins imem:$s),
                              "mov.u64 \t$r, $s;",
                              [(set Int64Regs:$r,
                              (int_nvvm_move_ptr texternalsym:$s))]>;*/
-
-
-// MoveParam        %r1, param
-// ptr_local_to_gen %r2, %r1
-// ptr_gen_to_local %r3, %r2
-// ->
-// mov %r1, param
-
-// @TODO: Revisit this.  There is a type
-// contradiction between iPTRAny and iPTR for the addr defs, so the move_sym
-// instructions are not currently defined. However, we can use the ptr
-// variants and the asm printer will do the right thing.
-def : Pat<(i64 (int_nvvm_ptr_gen_to_local (int_nvvm_ptr_local_to_gen
-                (MoveParam texternalsym:$src)))),
-               (nvvm_move_ptr64  texternalsym:$src)>;
-def : Pat<(i32 (int_nvvm_ptr_gen_to_local (int_nvvm_ptr_local_to_gen
-                (MoveParam texternalsym:$src)))),
-               (nvvm_move_ptr32  texternalsym:$src)>;
 
 def texsurf_handles
   : NVPTXInst<(outs Int64Regs:$result), (ins imem:$src),

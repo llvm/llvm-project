@@ -7,9 +7,9 @@
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-TLS-HISTORY
 ; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=tls -hwasan-record-stack-history=none < %s | \
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-TLS-NOHISTORY
-; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=global < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=global -hwasan-with-frame-record=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=NOIFUNC-NOTLS
-; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=ifunc < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-mapping-offset-dynamic=ifunc -hwasan-with-frame-record=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=IFUNC-NOTLS
 ; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia < %s | \
 ; RUN:     FileCheck %s --check-prefixes=FUCHSIA
