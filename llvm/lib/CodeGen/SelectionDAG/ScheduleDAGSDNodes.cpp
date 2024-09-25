@@ -737,7 +737,7 @@ void ScheduleDAGSDNodes::VerifyScheduledSequence(bool isBottomUp) {
 static void
 ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
                    SmallVectorImpl<std::pair<unsigned, MachineInstr*> > &Orders,
-                   InstrEmitter::VRBaseMapType &VRBaseMap, unsigned Order) {
+                   DenseMap<SDValue, Register> &VRBaseMap, unsigned Order) {
   if (!N->getHasDebugValue())
     return;
 
@@ -782,7 +782,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 // instructions in the right order.
 static void
 ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
-                  InstrEmitter::VRBaseMapType &VRBaseMap,
+                  DenseMap<SDValue, Register> &VRBaseMap,
                   SmallVectorImpl<std::pair<unsigned, MachineInstr *>> &Orders,
                   SmallSet<Register, 8> &Seen, MachineInstr *NewInsn) {
   unsigned Order = N->getIROrder();
@@ -808,7 +808,7 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 }
 
 void ScheduleDAGSDNodes::
-EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
+EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
                 MachineBasicBlock::iterator InsertPos) {
   for (const SDep &Pred : SU->Preds) {
     if (Pred.isCtrl())
@@ -851,8 +851,8 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  InstrEmitter::VRBaseMapType VRBaseMap;
-  SmallDenseMap<SUnit *, Register, 16> CopyVRBaseMap;
+  DenseMap<SDValue, Register> VRBaseMap;
+  DenseMap<SUnit*, Register> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;
   SmallSet<Register, 8> Seen;
   bool HasDbg = DAG->hasDebugValues();
@@ -861,7 +861,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   // Zero, one, or multiple instructions can be created when emitting a node.
   auto EmitNode =
       [&](SDNode *Node, bool IsClone, bool IsCloned,
-          InstrEmitter::VRBaseMapType &VRBaseMap) -> MachineInstr * {
+          DenseMap<SDValue, Register> &VRBaseMap) -> MachineInstr * {
     // Fetch instruction prior to this, or end() if nonexistant.
     auto GetPrevInsn = [&](MachineBasicBlock::iterator I) {
       if (I == BB->begin())
