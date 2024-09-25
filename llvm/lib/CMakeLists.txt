@@ -1,6 +1,6 @@
 include(LLVM-Build)
 
-# `Demangle', `Support' and `TableGen' libraries are added on the top-level
+# `CompilerAssistedFuzzing`, `Demangle', `Support' and `TableGen' libraries are added on the top-level
 # CMakeLists.txt
 
 add_subdirectory(IR)

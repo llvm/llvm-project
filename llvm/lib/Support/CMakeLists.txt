@@ -299,6 +299,7 @@ add_llvm_component_library(LLVMSupport
 
   LINK_COMPONENTS
   Demangle
+  CompilerAssistedFuzzing
   )
 
 set(llvm_system_libs ${system_libs})

@@ -7646,11 +7646,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
-  if (!StatsFile.empty()) {
-    CmdArgs.push_back(Args.MakeArgString(Twine("-stats-file=") + StatsFile));
-    if (D.CCPrintInternalStats)
-      CmdArgs.push_back("-stats-file-append");
-  }
+  auto FuzzStatsDump = Args.hasFlag(options::OPT_fuzz_stats_dump,
+                                    options::OPT_fno_fuzz_stats_dump, false);
+  if (!StatsFile.empty() || FuzzStatsDump) {
+    if (FuzzStatsDump) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-fuzz-only-stats");
+    }
+    if (StatsFile.empty()) {
+      StatsFile.assign(Output.getFilename());
+      llvm::sys::path::replace_extension(StatsFile, "stats");
+    }
 
   // Forward -Xclang arguments to -cc1, and -mllvm arguments to the LLVM option
   // parser.
@@ -8048,6 +8054,61 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Input.getFilename());
     else
       Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
+
+  // Handle --fuzz=<fuzz options>
+  StringRef FuzzOptions = Args.getLastArgValue(options::OPT_fuzz_EQ).trim();
+  if (!FuzzOptions.empty()) {
+    auto Tail = FuzzOptions;
+    llvm::SmallVector<StringRef> ActualOpts;
+
+    do {
+      auto Pair = Tail.split('|');
+
+      StringRef Fst = Pair.first.trim();
+      Tail = Pair.second.trim();
+
+      if (!Fst.empty()) {
+        ActualOpts.push_back(Fst);
+      }
+    } while (!Tail.empty());
+
+    if (ActualOpts.empty()) {
+      D.Diag(diag::err_empty_option_value) << "fuzz";
+    }
+
+    llvm::SmallVector<StringRef> CorrectOpts = {
+        "all", "scheduler", "mbb-placement", "regalloc", "isel", "alloca"};
+
+    for (const auto &ActualOpt : ActualOpts)
+      if (llvm::find(CorrectOpts, ActualOpt) == CorrectOpts.end())
+        D.Diag(diag::err_analyzer_checker_option_unknown)
+            << "fuzzer" << ActualOpt;
+
+    // Pass correct arguments to LLVM
+    CmdArgs.push_back("-mllvm");
+    std::string FuzzComponentsArgStr = "-fuzz-components=";
+    const char *FuzzComponentsArg =
+        Args.MakeArgStringRef(FuzzComponentsArgStr + FuzzOptions.data());
+    CmdArgs.push_back(FuzzComponentsArg);
+
+    StringRef FuzzSeedStr = Args.getLastArgValue(options::OPT_fseed_EQ).trim();
+    int64_t SeedValue;
+    if (FuzzSeedStr.empty() ||
+        FuzzSeedStr.getAsInteger<int64_t>(0, SeedValue)) {
+      SeedValue = std::chrono::system_clock::now().time_since_epoch().count();
+    }
+
+    auto StrSeed = std::to_string(SeedValue);
+
+    if (Args.hasFlag(options::OPT_fseed_dump, options::OPT_fno_fseed_dump,
+                     false))
+      D.Diag(diag::warn_use_fseed) << StrSeed;
+
+    CmdArgs.push_back("-mllvm");
+    std::string FuzzSeedArgStr = "-fuzz-seed=";
+    const char *FuzzSeedArg = Args.MakeArgStringRef(FuzzSeedArgStr + StrSeed);
+    CmdArgs.push_back(FuzzSeedArg);
   }
 
   if (D.CC1Main && !D.CCGenDiagnostics) {

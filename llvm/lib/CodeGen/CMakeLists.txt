@@ -270,6 +270,7 @@ add_llvm_component_library(LLVMCodeGen
   BitWriter
   CGData
   CodeGenTypes
+  CompilerAssistedFuzzing
   Core
   MC
   ObjCARC

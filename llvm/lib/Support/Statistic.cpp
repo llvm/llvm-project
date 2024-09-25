@@ -25,6 +25,7 @@
 #include "DebugOptions.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CompilerAssistedFuzzing/FuzzInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -45,6 +46,7 @@ static bool EnableStats;
 static bool StatsAsJSON;
 static bool Enabled;
 static bool PrintOnExit;
+static bool FuzzOnlyStats;
 
 void llvm::initStatisticOptions() {
   static cl::opt<bool, true> registerEnableStats{
@@ -55,6 +57,9 @@ void llvm::initStatisticOptions() {
   static cl::opt<bool, true> registerStatsAsJson{
       "stats-json", cl::desc("Display statistics as json data"),
       cl::location(StatsAsJSON), cl::Hidden};
+  static cl::opt<bool, true> registerFuzzOnlyStats{
+      "fuzz-only-stats", cl::desc("Dump only fuzz stats."),
+      cl::location(FuzzOnlyStats), cl::Hidden};
 }
 
 namespace {
@@ -173,6 +178,14 @@ void StatisticInfo::reset() {
   Stats.clear();
 }
 
+static bool isPrintValid(const TrackingStatistic *Stat) {
+  if (!FuzzOnlyStats) {
+    return true;
+  }
+
+  return fuzz::CheckStat(*Stat);
+}
+
 void llvm::PrintStatistics(raw_ostream &OS) {
   StatisticInfo &Stats = *StatInfo;
 
@@ -192,9 +205,12 @@ void llvm::PrintStatistics(raw_ostream &OS) {
      << "===" << std::string(73, '-') << "===\n\n";
 
   // Print all of the statistics.
-  for (TrackingStatistic *Stat : Stats.Stats)
+  for (TrackingStatistic *Stat : Stats.Stats) {
+    if (!isPrintValid(Stat))
+      continue;
     OS << format("%*" PRIu64 " %-*s - %s\n", MaxValLen, Stat->getValue(),
                  MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
+  }
 
   OS << '\n';  // Flush the output stream.
   OS.flush();
@@ -210,6 +226,8 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   OS << "{\n";
   const char *delim = "";
   for (const TrackingStatistic *Stat : Stats.Stats) {
+    if (!isPrintValid(Stat))
+      continue;
     OS << delim;
     assert(yaml::needsQuotes(Stat->getDebugType()) == yaml::QuotingType::None &&
            "Statistic group/type name is simple.");

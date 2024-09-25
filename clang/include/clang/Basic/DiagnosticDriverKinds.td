@@ -826,6 +826,12 @@ def warn_android_unversioned_fallback : Warning<
 def err_drv_triple_version_invalid : Error<
   "version '%0' in target triple '%1' is invalid">;
 
+def err_empty_option_value : Error<
+  "empty value for %0 option">;
+
+def warn_use_fseed : Warning<"Fuzzing with seed: %0">,
+  InGroup<DiagGroup<"fuzzing">>;
+
 def warn_missing_include_dirs : Warning<
   "no such include directory: '%0'">, InGroup<MissingIncludeDirs>, DefaultIgnore;
 }

@@ -6730,6 +6730,33 @@ let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 } // let Flags = [TargetSpecific]
 
+// Compiler-assisted fuzzing options
+def fuzz_EQ : Joined<["--"], "fuzz=">,
+  Flags<[NoXarchOption, HelpHidden]>, Group<f_Group>,
+  HelpText<"Fuzz selected compiler components, RISC-V only."
+  "Usage: --fuzz=\"<component1>[|<component2>...]\"">,
+  Values<"all, scheduler, mbb-placement, regalloc, isel, alloca">;
+
+def fseed_EQ : Joined<["--"], "fseed=">,
+  Flags<[NoXarchOption, HelpHidden]>, Group<f_Group>,
+  HelpText<"Specify fuzzing seed. (RISC-V only)">;
+
+def fseed_dump : Flag<["-"], "fseed-dump">,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Dump fuzz seed. (RISC-V only)">;
+
+def fno_fseed_dump : Flag<["-"], "fno-fseed-dump">,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Disable fuzz seed dump. (RISC-V only)">;
+
+def fuzz_stats_dump : Flag<["-"], "fuzz-stats-dump">,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Dump only fuzz statistics.">;
+
+def fno_fuzz_stats_dump : Flag<["-"], "fno-fuzz-stats-dump">,
+  Visibility<[ClangOption, CLOption]>,
+  Group<sycl_Group>, HelpText<"Dump not only fuzz statistics.">;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
 //===----------------------------------------------------------------------===//
