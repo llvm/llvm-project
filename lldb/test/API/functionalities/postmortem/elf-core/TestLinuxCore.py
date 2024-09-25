@@ -10,6 +10,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from fblldb import fbvscode
 
 
 class LinuxCoreTestCase(TestBase):
@@ -832,6 +833,22 @@ class LinuxCoreTestCase(TestBase):
             matching=False,
             substrs=["registers were unavailable"],
         )
+
+    def test_sigsev_stopreason(self):
+        """
+        Test that the address is included in the stop reason for a SIGSEV
+        """
+        src = self.getSourcePath("linux-x64-sigsev.yaml")
+        obj_file = self.getBuildArtifact("sigsev.out")
+        fbvscode.set_trace()
+        self.yaml2obj(src, obj_file)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(obj_file)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        stop_reason = process.GetThreadAtIndex(0).GetStopDescription(128)
+        self.assertEqual(process.GetNumThreads(), 1)
+        self.assertIn("SIGSEGV: address not mapped to object (fault address: 0x1000)", stop_reason)
+
 
     def test_get_core_file_api(self):
         """

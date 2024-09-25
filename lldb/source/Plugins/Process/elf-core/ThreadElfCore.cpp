@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Process/POSIX/CrashReason.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -41,6 +43,7 @@
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
 
+#include "bits/types/siginfo_t.h"
 #include <memory>
 
 using namespace lldb;
@@ -49,8 +52,8 @@ using namespace lldb_private;
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_code(td.code), m_gpregset_data(td.gpregset),
-      m_notes(td.notes) {}
+      m_signo(td.signo), m_code(td.code), m_sig_description(td.description),
+      m_gpregset_data(td.gpregset), m_notes(td.notes) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -241,7 +244,7 @@ bool ThreadElfCore::CalculateStopInfo() {
     return false;
 
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_signo, /*description=*/nullptr, m_code));
+      *this, m_signo, m_sig_description.c_str(), m_code));
   return true;
 }
 
@@ -543,7 +546,8 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
 
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   Status error;
-  if (GetSize(arch) > data.GetByteSize()) {
+  uint64_t size = GetSize(arch);
+  if (size > data.GetByteSize()) {
     error = Status::FromErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
@@ -556,6 +560,36 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   si_signo = data.GetU32(&offset);
   si_errno = data.GetU32(&offset);
   si_code = data.GetU32(&offset);
+  // 64b ELF have a 4 byte pad.
+  if (data.GetAddressByteSize() == 8)
+    offset += 4;
+  switch (si_signo) {
+    case SIGFPE:
+    case SIGILL:
+    case SIGSEGV:
+    case SIGBUS:
+    case SIGTRAP:
+      addr = (void*)data.GetAddress(&offset);
+      addr_lsb = data.GetU16(&offset);
+      return error;
+    default:
+      return error;
+  }
+}
 
-  return error;
+std::string ELFLinuxSigInfo::GetDescription() {
+  switch (si_signo) {
+    case SIGFPE:
+    case SIGILL:
+    case SIGSEGV:
+    case SIGBUS:
+    case SIGTRAP:
+      return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+        si_signo, si_code,
+        reinterpret_cast<uintptr_t>(addr));
+    default:
+      return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+        si_signo, si_code
+      );
+  }
 }

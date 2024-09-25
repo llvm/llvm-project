@@ -931,6 +931,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.signo = siginfo.si_signo;
       thread_data.code = siginfo.si_code;
+      thread_data.description = siginfo.GetDescription();
       break;
     }
     case ELF::NT_FILE: {

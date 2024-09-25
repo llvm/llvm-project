@@ -75,15 +75,24 @@ struct ELFLinuxPrStatus {
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
+union ELFSigval { 
+  int sival_int; 
+  void *sival_ptr; 
+};
+
 struct ELFLinuxSigInfo {
-  int32_t si_signo;
-  int32_t si_code;
+  int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
+  int32_t si_code;
+  void *addr;         /* faulting insn/memory ref. */
+  int32_t addr_lsb; /* Valid LSB of the reported address.  */
 
   ELFLinuxSigInfo();
 
   lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch);
+
+  std::string GetDescription();
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -93,7 +102,7 @@ struct ELFLinuxSigInfo {
   static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
-static_assert(sizeof(ELFLinuxSigInfo) == 12,
+static_assert(sizeof(ELFLinuxSigInfo) == 32,
               "sizeof ELFLinuxSigInfo is not correct!");
 
 // PRPSINFO structure's size differs based on architecture.
@@ -144,7 +153,9 @@ struct ThreadData {
   lldb::tid_t tid;
   int signo = 0;
   int code = 0;
+  void* sigaddr = nullptr;
   int prstatus_sig = 0;
+  std::string description;
   std::string name;
 };
 
@@ -183,6 +194,7 @@ protected:
 
   int m_signo;
   int m_code;
+  std::string m_sig_description;
 
   lldb_private::DataExtractor m_gpregset_data;
   std::vector<lldb_private::CoreNote> m_notes;
