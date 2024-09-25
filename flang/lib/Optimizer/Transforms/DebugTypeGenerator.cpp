@@ -159,6 +159,70 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       dataLocation, /*rank=*/nullptr, allocated, associated);
 }
 
+// If the type is a pointer or array type then gets its underlying type.
+static mlir::LLVM::DITypeAttr getUnderlyingType(mlir::LLVM::DITypeAttr Ty) {
+  if (auto ptrTy =
+          mlir::dyn_cast_if_present<mlir::LLVM::DIDerivedTypeAttr>(Ty)) {
+    if (ptrTy.getTag() == llvm::dwarf::DW_TAG_pointer_type)
+      Ty = getUnderlyingType(ptrTy.getBaseType());
+  }
+  if (auto comTy =
+          mlir::dyn_cast_if_present<mlir::LLVM::DICompositeTypeAttr>(Ty)) {
+    if (comTy.getTag() == llvm::dwarf::DW_TAG_array_type)
+      Ty = getUnderlyingType(comTy.getBaseType());
+  }
+  return Ty;
+}
+
+// Currently, the handling of recursive debug type in mlir has some limitations.
+// Those limitations were discussed at the end of the thread for following PR.
+// https://github.com/llvm/llvm-project/pull/106571
+//
+// Problem could be explained with the following example code:
+//  type t2
+//   type(t1), pointer :: p1
+// end type
+// type t1
+//   type(t2), pointer :: p2
+// end type
+// In the description below, type_self means a temporary type that is generated
+// as a place holder while the members of that type are being processed.
+//
+// If we process t1 first then we will have the following structure after it has
+// been processed.
+// t1 -> t2 -> t1_self
+// This is because when we started processing t2, we did not have the complete
+// t1 but its place holder t1_self.
+// Now if some entity requires t2, we will already have that in cache and will
+// return it. But this t2 refers to t1_self and not to t1. In mlir handling,
+// only those types are allowed to have _self reference which are wrapped by
+// entity whose reference it is. So t1 -> t2 -> t1_self is ok because the
+// t1_self reference can be resolved by the outer t1. But standalone t2 is not
+// because there will be no way to resolve it. Until this is fixed in mlir, we
+// avoid caching such types. Please see DebugTranslation::translateRecursive for
+// details on how mlir handles recursive types.
+static bool canCacheThisType(mlir::LLVM::DICompositeTypeAttr comTy) {
+  for (auto el : comTy.getElements()) {
+    if (auto mem =
+            mlir::dyn_cast_if_present<mlir::LLVM::DIDerivedTypeAttr>(el)) {
+      mlir::LLVM::DITypeAttr memTy = getUnderlyingType(mem.getBaseType());
+      if (auto baseTy =
+              mlir::dyn_cast_if_present<mlir::LLVM::DICompositeTypeAttr>(
+                  memTy)) {
+        // We will not cache a type if one of its member meets the following
+        // conditions:
+        // 1. It is a structure type
+        // 2. It is a place holder type (getIsRecSelf() is true)
+        // 3. It is not a self reference. It is ok to have t1_self in t1.
+        if (baseTy.getTag() == llvm::dwarf::DW_TAG_structure_type &&
+            baseTy.getIsRecSelf() && (comTy.getRecId() != baseTy.getRecId()))
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     fir::RecordType Ty, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
@@ -217,7 +281,13 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr);
-  typeCache[Ty] = finalAttr;
+  if (canCacheThisType(finalAttr)) {
+    typeCache[Ty] = finalAttr;
+  } else {
+    auto iter = typeCache.find(Ty);
+    if (iter != typeCache.end())
+      typeCache.erase(iter);
+  }
   return finalAttr;
 }
 
