@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMSandboxIR
+  Module.cpp
   Pass.cpp
   PassManager.cpp
   SandboxIR.cpp
@@ -11,5 +12,6 @@ add_llvm_component_library(LLVMSandboxIR
   LINK_COMPONENTS
   Core
   Support
+  Analysis
   )
 

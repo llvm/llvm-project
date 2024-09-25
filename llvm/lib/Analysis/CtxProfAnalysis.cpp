@@ -21,6 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Transforms/Utils/CallPromotionUtils.h"
 
 #define DEBUG_TYPE "ctx_prof"
 
@@ -308,4 +309,26 @@ const CtxProfFlatProfile PGOContextualProfile::flatten() const {
           It->second[I] += Ctx.counters()[I];
       });
   return Flat;
+}
+
+void CtxProfAnalysis::collectIndirectCallPromotionList(
+    CallBase &IC, Result &Profile,
+    SetVector<std::pair<CallBase *, Function *>> &Candidates) {
+  const auto *Instr = CtxProfAnalysis::getCallsiteInstrumentation(IC);
+  if (!Instr)
+    return;
+  Module &M = *IC.getParent()->getModule();
+  const uint32_t CallID = Instr->getIndex()->getZExtValue();
+  Profile.visit(
+      [&](const PGOCtxProfContext &Ctx) {
+        const auto &Targets = Ctx.callsites().find(CallID);
+        if (Targets == Ctx.callsites().end())
+          return;
+        for (const auto &[Guid, _] : Targets->second)
+          if (auto Name = Profile.getFunctionName(Guid); !Name.empty())
+            if (auto *Target = M.getFunction(Name))
+              if (Target->hasFnAttribute(Attribute::AlwaysInline))
+                Candidates.insert({&IC, Target});
+      },
+      IC.getCaller());
 }

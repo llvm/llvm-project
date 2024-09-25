@@ -1685,6 +1685,64 @@ bb1:
 #endif // NDEBUG
 }
 
+TEST_F(SandboxIRTest, Module) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+@internal0 = internal global i32 42
+@const0 = constant i32 42
+@alias0 = dso_local alias void(), ptr @foo
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  ret void
+}
+define void @bar() {
+  ret void
+}
+)IR");
+  llvm::Module *LLVMM = &*M;
+  llvm::Function *LLVMFFoo = &*M->getFunction("foo");
+  llvm::Function *LLVMFBar = &*M->getFunction("bar");
+
+  sandboxir::Context Ctx(C);
+  auto *M = Ctx.createModule(LLVMM);
+  // Check getContext().
+  EXPECT_EQ(&M->getContext(), &Ctx);
+  // Check getFunction().
+  auto *FFoo = M->getFunction("foo");
+  auto *FBar = M->getFunction("bar");
+  EXPECT_EQ(FFoo, Ctx.getValue(LLVMFFoo));
+  EXPECT_EQ(FBar, Ctx.getValue(LLVMFBar));
+  // Check getDataLayout().
+  EXPECT_EQ(&M->getDataLayout(), &LLVMM->getDataLayout());
+  // Check getSourceFileName().
+  EXPECT_EQ(M->getSourceFileName(), LLVMM->getSourceFileName());
+  // Check getGlobalVariable().
+  for (const char *Name : {"global0", "global1", "internal0"})
+    EXPECT_EQ(M->getGlobalVariable(Name),
+              Ctx.getValue(LLVMM->getGlobalVariable(Name)));
+  // Check getGlobalVariable(AllowInternal).
+  {
+    auto *Internal0 = M->getGlobalVariable("internal0", /*AllowInternal=*/true);
+    EXPECT_TRUE(Internal0 != nullptr);
+    EXPECT_EQ(Internal0, Ctx.getValue(LLVMM->getNamedGlobal("internal0")));
+  }
+  // Check getNamedGlobal().
+  {
+    auto *Internal = M->getNamedGlobal("internal0");
+    EXPECT_TRUE(Internal != nullptr);
+    EXPECT_EQ(Internal, Ctx.getValue(LLVMM->getNamedGlobal("internal0")));
+  }
+  // Check getNamedAlias().
+  auto *Alias0 = M->getNamedAlias("alias0");
+  EXPECT_EQ(Alias0, Ctx.getValue(LLVMM->getNamedAlias("alias0")));
+  EXPECT_EQ(M->getNamedAlias("aliasFOO"), nullptr);
+  // Check getNamedIFunc().
+  auto *IFunc0 = M->getNamedIFunc("ifunc0");
+  EXPECT_EQ(IFunc0, Ctx.getValue(LLVMM->getNamedAlias("ifunc0")));
+  EXPECT_EQ(M->getNamedIFunc("ifuncFOO"), nullptr);
+}
+
 TEST_F(SandboxIRTest, BasicBlock) {
   parseIR(C, R"IR(
 define void @foo(i32 %v1) {

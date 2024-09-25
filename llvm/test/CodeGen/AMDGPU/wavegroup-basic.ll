@@ -4,7 +4,7 @@
 
 ; CUMODE-ERR: LLVM ERROR: cannot enable cumode when wavegroup is enabled
 
-define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
+define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
@@ -42,6 +42,8 @@ entry:
   store i32 0, ptr addrspace(1) %p0
   ret void
 }
+
+attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 
 ; KERNEL:      .amdhsa_kernel wavegroup_kernel
 ; KERNEL-NEXT:         .amdhsa_group_segment_fixed_size 0
@@ -88,7 +90,7 @@ entry:
 ; KERNEL-NEXT:    .kernarg_segment_align: 8
 ; KERNEL-NEXT:    .kernarg_segment_size: 8
 ; KERNEL-NEXT:    .laneshared_segment_fixed_size: 0
-; KERNEL-NEXT:    .max_flat_workgroup_size: 1024
+; KERNEL-NEXT:    .max_flat_workgroup_size: 256
 ; KERNEL-NEXT:    .name:           wavegroup_kernel
 ; KERNEL-NEXT:    .private_segment_fixed_size: 0
 ; KERNEL-NEXT:    .reqd_workgroup_size:
