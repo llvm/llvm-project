@@ -477,27 +477,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
   case VPInstruction::ExplicitVectorLength: {
-    // Compute EVL
-    auto GetEVL = [=](VPTransformState &State, Value *AVL) {
-      assert(AVL->getType()->isIntegerTy() &&
-             "Requested vector length should be an integer.");
-
-      // TODO: Add support for MaxSafeDist for correct loop emission.
-      assert(State.VF.isScalable() && "Expected scalable vector factor.");
-      Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
-
-      Value *EVL = State.Builder.CreateIntrinsic(
-          State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
-          {AVL, VFArg, State.Builder.getTrue()});
-      return EVL;
-    };
     // TODO: Restructure this code with an explicit remainder loop, vsetvli can
     // be outside of the main loop.
-    // Compute VTC - IV as the AVL (requested vector length).
-    Value *Index = State.get(getOperand(0), VPIteration(0, 0));
-    Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
-    Value *AVL = State.Builder.CreateSub(TripCount, Index);
-    Value *EVL = GetEVL(State, AVL);
+    Value *AVL = State.get(getOperand(0), VPIteration(0, 0));
+    // Compute EVL
+    assert(AVL->getType()->isIntegerTy() &&
+           "Requested vector length should be an integer.");
+
+    assert(State.VF.isScalable() && "Expected scalable vector factor.");
+    Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
+
+    Value *EVL = State.Builder.CreateIntrinsic(
+        State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
+        {AVL, VFArg, State.Builder.getTrue()});
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
