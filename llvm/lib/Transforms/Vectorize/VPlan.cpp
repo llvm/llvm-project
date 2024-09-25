@@ -333,10 +333,10 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
 
   // However, if we are vectorizing, we need to construct the vector values.
   // If the value is known to be uniform after vectorization, we can just
-  // broadcast the scalar value corresponding to lane zero for each unroll
-  // iteration. Otherwise, we construct the vector values using
-  // insertelement instructions. Since the resulting vectors are stored in
-  // State, we will only generate the insertelements once.
+  // broadcast the scalar value corresponding to lane zero. Otherwise, we
+  // construct the vector values using insertelement instructions. Since the
+  // resulting vectors are stored in State, we will only generate the
+  // insertelements once.
   Value *VectorValue = nullptr;
   if (IsUniform) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
@@ -769,15 +769,15 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   // Enter replicating mode.
   State->Instance = VPIteration(0, 0);
-    assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
-    for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
-         ++Lane) {
-      State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
-      // Visit the VPBlocks connected to \p this, starting from it.
-      for (VPBlockBase *Block : RPOT) {
-        LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
-        Block->execute(State);
-      }
+  assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
+  for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
+       ++Lane) {
+    State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
+    // Visit the VPBlocks connected to \p this, starting from it.
+    for (VPBlockBase *Block : RPOT) {
+      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+      Block->execute(State);
+    }
   }
 
   // Exit replicating mode.
