@@ -497,16 +497,22 @@ Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
   }
 
   if (isa<IntRecTy>(Ty)) {
-    int64_t Result = 0;
-    for (unsigned i = 0, e = getNumBits(); i != e; ++i)
-      if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
-        Result |= static_cast<int64_t>(Bit->getValue()) << i;
-      else
-        return nullptr;
-    return IntInit::get(getRecordKeeper(), Result);
+    std::optional<int64_t> Result = convertInitializerToInt();
+    if (Result)
+      return IntInit::get(getRecordKeeper(), *Result);
   }
 
   return nullptr;
+}
+
+std::optional<int64_t> BitsInit::convertInitializerToInt() const {
+  int64_t Result = 0;
+  for (unsigned i = 0, e = getNumBits(); i != e; ++i)
+    if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
+      Result |= static_cast<int64_t>(Bit->getValue()) << i;
+    else
+      return std::nullopt;
+  return Result;
 }
 
 Init *
@@ -832,7 +838,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.
@@ -981,6 +986,32 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       }
     }
     break;
+
+  case LISTFLATTEN:
+    if (ListInit *LHSList = dyn_cast<ListInit>(LHS)) {
+      ListRecTy *InnerListTy = dyn_cast<ListRecTy>(LHSList->getElementType());
+      // list of non-lists, !listflatten() is a NOP.
+      if (!InnerListTy)
+        return LHS;
+
+      auto Flatten = [](ListInit *List) -> std::optional<std::vector<Init *>> {
+        std::vector<Init *> Flattened;
+        // Concatenate elements of all the inner lists.
+        for (Init *InnerInit : List->getValues()) {
+          ListInit *InnerList = dyn_cast<ListInit>(InnerInit);
+          if (!InnerList)
+            return std::nullopt;
+          for (Init *InnerElem : InnerList->getValues())
+            Flattened.push_back(InnerElem);
+        };
+        return Flattened;
+      };
+
+      auto Flattened = Flatten(LHSList);
+      if (Flattened)
+        return ListInit::get(*Flattened, InnerListTy->getElementType());
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -1005,6 +1036,9 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case LISTFLATTEN:
+    Result = "!listflatten";
+    break;
   case REPR:
     Result = "!repr";
     break;
@@ -3219,7 +3253,7 @@ Init *RecordKeeper::getNewAnonymousName() {
 // These functions implement the phase timing facility. Starting a timer
 // when one is already running stops the running one.
 
-void RecordKeeper::startTimer(StringRef Name) {
+void RecordKeeper::startTimer(StringRef Name) const {
   if (TimingGroup) {
     if (LastTimer && LastTimer->isRunning()) {
       LastTimer->stopTimer();

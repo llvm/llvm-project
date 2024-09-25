@@ -730,13 +730,19 @@ void IdataContents::create(COFFLinkerContext &ctx) {
         auto chunk = make<AuxImportChunk>(s->file);
         auxIat.push_back(chunk);
         s->file->impECSym->setLocation(chunk);
+
+        chunk = make<AuxImportChunk>(s->file);
+        auxIatCopy.push_back(chunk);
+        s->file->auxImpCopySym->setLocation(chunk);
       }
     }
     // Terminate with null values.
     lookups.push_back(make<NullChunk>(ctx.config.wordsize));
     addresses.push_back(make<NullChunk>(ctx.config.wordsize));
-    if (ctx.config.machine == ARM64EC)
+    if (ctx.config.machine == ARM64EC) {
       auxIat.push_back(make<NullChunk>(ctx.config.wordsize));
+      auxIatCopy.push_back(make<NullChunk>(ctx.config.wordsize));
+    }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
       syms[i]->setLocation(addresses[base + i]);

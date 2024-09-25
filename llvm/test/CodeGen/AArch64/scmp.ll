@@ -136,11 +136,9 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
 define <8 x i8> @s_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: s_v8i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.8b, #1
-; CHECK-SD-NEXT:    cmgt v3.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    cmgt v2.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    cmgt v0.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-SD-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    sub v0.8b, v0.8b, v2.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v8i8:
@@ -160,11 +158,9 @@ entry:
 define <16 x i8> @s_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD-LABEL: s_v16i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.16b, #1
-; CHECK-SD-NEXT:    cmgt v3.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    cmgt v2.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    cmgt v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    sub v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v16i8:
@@ -184,11 +180,9 @@ entry:
 define <4 x i16> @s_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: s_v4i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.4h, #1
-; CHECK-SD-NEXT:    cmgt v3.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    cmgt v2.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    cmgt v0.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-SD-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    sub v0.4h, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v4i16:
@@ -208,11 +202,9 @@ entry:
 define <8 x i16> @s_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: s_v8i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.8h, #1
-; CHECK-SD-NEXT:    cmgt v3.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    cmgt v2.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    cmgt v0.8h, v1.8h, v0.8h
-; CHECK-SD-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    sub v0.8h, v0.8h, v2.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v8i16:
@@ -232,15 +224,12 @@ entry:
 define <16 x i16> @s_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-SD-LABEL: s_v16i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v4.8h, #1
+; CHECK-SD-NEXT:    cmgt v4.8h, v1.8h, v3.8h
 ; CHECK-SD-NEXT:    cmgt v5.8h, v0.8h, v2.8h
-; CHECK-SD-NEXT:    cmgt v6.8h, v1.8h, v3.8h
 ; CHECK-SD-NEXT:    cmgt v0.8h, v2.8h, v0.8h
 ; CHECK-SD-NEXT:    cmgt v1.8h, v3.8h, v1.8h
-; CHECK-SD-NEXT:    and v2.16b, v5.16b, v4.16b
-; CHECK-SD-NEXT:    and v3.16b, v6.16b, v4.16b
-; CHECK-SD-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    sub v0.8h, v0.8h, v5.8h
+; CHECK-SD-NEXT:    sub v1.8h, v1.8h, v4.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v16i16:
@@ -264,11 +253,9 @@ entry:
 define <2 x i32> @s_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-SD-LABEL: s_v2i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.2s, #1
-; CHECK-SD-NEXT:    cmgt v3.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    cmgt v2.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    cmgt v0.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    and v1.8b, v3.8b, v2.8b
-; CHECK-SD-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    sub v0.2s, v0.2s, v2.2s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v2i32:
@@ -288,11 +275,9 @@ entry:
 define <4 x i32> @s_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-LABEL: s_v4i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v2.4s, #1
-; CHECK-SD-NEXT:    cmgt v3.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmgt v2.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    sub v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v4i32:
@@ -312,15 +297,12 @@ entry:
 define <8 x i32> @s_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-SD-LABEL: s_v8i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v4.4s, #1
+; CHECK-SD-NEXT:    cmgt v4.4s, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    cmgt v5.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    cmgt v6.4s, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    cmgt v0.4s, v2.4s, v0.4s
 ; CHECK-SD-NEXT:    cmgt v1.4s, v3.4s, v1.4s
-; CHECK-SD-NEXT:    and v2.16b, v5.16b, v4.16b
-; CHECK-SD-NEXT:    and v3.16b, v6.16b, v4.16b
-; CHECK-SD-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    sub v0.4s, v0.4s, v5.4s
+; CHECK-SD-NEXT:    sub v1.4s, v1.4s, v4.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v8i32:
@@ -344,12 +326,9 @@ entry:
 define <2 x i64> @s_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-SD-LABEL: s_v2i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    cmgt v2.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    cmgt v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    dup v3.2d, x8
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    sub v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v2i64:
@@ -370,16 +349,12 @@ entry:
 define <4 x i64> @s_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-SD-LABEL: s_v4i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    cmgt v6.2d, v1.2d, v3.2d
-; CHECK-SD-NEXT:    dup v5.2d, x8
+; CHECK-SD-NEXT:    cmgt v4.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    cmgt v5.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    cmgt v0.2d, v2.2d, v0.2d
 ; CHECK-SD-NEXT:    cmgt v1.2d, v3.2d, v1.2d
-; CHECK-SD-NEXT:    and v2.16b, v4.16b, v5.16b
-; CHECK-SD-NEXT:    and v3.16b, v6.16b, v5.16b
-; CHECK-SD-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    sub v0.2d, v0.2d, v5.2d
+; CHECK-SD-NEXT:    sub v1.2d, v1.2d, v4.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_v4i64:
@@ -404,122 +379,13 @@ entry:
 define <16 x i8> @signOf_neon_scmp(<8 x i16> %s0_lo, <8 x i16> %s0_hi, <8 x i16> %s1_lo, <8 x i16> %s1_hi) {
 ; CHECK-SD-LABEL: signOf_neon_scmp:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmgt v5.8h, v0.8h, v2.8h
-; CHECK-SD-NEXT:    cmgt v2.8h, v2.8h, v0.8h
 ; CHECK-SD-NEXT:    cmgt v4.8h, v1.8h, v3.8h
 ; CHECK-SD-NEXT:    cmgt v1.8h, v3.8h, v1.8h
-; CHECK-SD-NEXT:    umov w8, v5.h[1]
-; CHECK-SD-NEXT:    umov w9, v2.h[1]
-; CHECK-SD-NEXT:    umov w10, v5.h[0]
-; CHECK-SD-NEXT:    umov w11, v2.h[0]
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    cset w8, ne
-; CHECK-SD-NEXT:    tst w9, #0xffff
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v5.h[2]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w11, #0xffff
-; CHECK-SD-NEXT:    umov w11, v2.h[2]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v2.h[3]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w11, #0xffff
-; CHECK-SD-NEXT:    mov v0.b[1], w8
-; CHECK-SD-NEXT:    umov w8, v5.h[3]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[2], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v5.h[4]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v2.h[4]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[3], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v5.h[5]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v2.h[5]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[4], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v5.h[6]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v2.h[6]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[5], w9
-; CHECK-SD-NEXT:    umov w9, v5.h[7]
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    cset w8, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v2.h[7]
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[6], w8
-; CHECK-SD-NEXT:    tst w9, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[0]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[0]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[7], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[1]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[1]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[8], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[2]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[2]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[9], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[3]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[3]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[10], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[4]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[4]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[11], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[5]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[5]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[12], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[6]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[6]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[13], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    umov w8, v4.h[7]
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    umov w10, v1.h[7]
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[14], w9
-; CHECK-SD-NEXT:    tst w8, #0xffff
-; CHECK-SD-NEXT:    cset w8, ne
-; CHECK-SD-NEXT:    tst w10, #0xffff
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, eq
-; CHECK-SD-NEXT:    mov v0.b[15], w8
+; CHECK-SD-NEXT:    cmgt v3.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    cmgt v0.8h, v2.8h, v0.8h
+; CHECK-SD-NEXT:    sub v1.8h, v1.8h, v4.8h
+; CHECK-SD-NEXT:    sub v0.8h, v0.8h, v3.8h
+; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: signOf_neon_scmp:

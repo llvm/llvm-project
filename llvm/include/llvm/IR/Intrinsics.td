@@ -1016,6 +1016,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -1632,12 +1633,16 @@ def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
                                                   llvm_vararg_ty],
-                                                  [Throws]>;
+                                                  [Throws, ImmArg<ArgIndex<0>>,
+                                                   ImmArg<ArgIndex<1>>,
+                                                   ImmArg<ArgIndex<3>>]>;
 def int_experimental_patchpoint : Intrinsic<[llvm_any_ty],
                                             [llvm_i64_ty, llvm_i32_ty,
                                              llvm_ptr_ty, llvm_i32_ty,
                                              llvm_vararg_ty],
-                                            [Throws]>;
+                                            [Throws, ImmArg<ArgIndex<0>>,
+                                             ImmArg<ArgIndex<1>>,
+                                             ImmArg<ArgIndex<3>>]>;
 
 
 //===------------------------ Garbage Collection Intrinsics ---------------===//

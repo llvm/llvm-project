@@ -736,8 +736,6 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
     VirtRegMap *VRM) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
@@ -763,6 +761,29 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       LoadOpc = RISCV::LBU;
       break;
     }
+    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
+      unsigned Log2SEW =
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+      if (STI.getXLen() < (1 << Log2SEW))
+        return nullptr;
+      switch (Log2SEW) {
+      case 3:
+        LoadOpc = RISCV::LB;
+        break;
+      case 4:
+        LoadOpc = RISCV::LH;
+        break;
+      case 5:
+        LoadOpc = RISCV::LW;
+        break;
+      case 6:
+        LoadOpc = RISCV::LD;
+        break;
+      default:
+        llvm_unreachable("Unexpected SEW");
+      }
+      break;
+    }
     return nullptr;
   case RISCV::SEXT_H:
     LoadOpc = RISCV::LH;
@@ -776,17 +797,11 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     break;
   }
 
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlign(FrameIndex));
-
   Register DstReg = MI.getOperand(0).getReg();
   return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
                  DstReg)
       .addFrameIndex(FrameIndex)
-      .addImm(0)
-      .addMemOperand(MMO);
+      .addImm(0);
 }
 
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
@@ -3025,7 +3040,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
   }
 
-  OS.flush();
   return Comment;
 }
 

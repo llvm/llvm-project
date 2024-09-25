@@ -579,8 +579,13 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
-TEST_F(FormatTestJS, GoogAnonymousClass) {
+TEST_F(FormatTestJS, ClassExtends) {
   verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+  verifyFormat("a = class Foo extends goog.structs.a {\n"
                "  a() {\n"
                "    return 0;\n"
                "  }\n"
@@ -2864,6 +2869,11 @@ TEST_F(FormatTestJS, BreakAfterOpenBracket) {
                Style);
   verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
                "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("for await (const packageId of ops.api.iterateEmbeddedFiles(\n"
+               "    this.getFileId().getDriveFile(),\n"
+               "    )) {\n"
+               "}",
                Style);
 }
 

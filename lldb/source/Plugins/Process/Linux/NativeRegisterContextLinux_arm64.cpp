@@ -60,9 +60,15 @@
 #define NT_ARM_TAGGED_ADDR_CTRL 0x409 /* Tagged address control register */
 #endif
 
+#ifndef NT_ARM_FPMR
+#define NT_ARM_FPMR 0x40e /* Floating point mode register */
+#endif
+
 #define HWCAP_PACA (1 << 30)
 
 #define HWCAP2_MTE (1 << 18)
+
+#define HWCAP2_FPMR (1UL << 48)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -139,8 +145,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     std::optional<uint64_t> auxv_at_hwcap2 =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
-    if (auxv_at_hwcap2 && (*auxv_at_hwcap2 & HWCAP2_MTE))
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+    if (auxv_at_hwcap2) {
+      if (*auxv_at_hwcap2 & HWCAP2_MTE)
+        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+      if (*auxv_at_hwcap2 & HWCAP2_FPMR)
+        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
+    }
 
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
 
@@ -186,6 +196,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   std::fill(m_zt_reg.begin(), m_zt_reg.end(), 0);
 
   m_mte_ctrl_reg = 0;
+  m_fpmr_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -201,6 +212,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_mte_ctrl_is_valid = false;
   m_tls_is_valid = false;
   m_zt_buffer_is_valid = false;
+  m_fpmr_is_valid = false;
 
   // SME adds the tpidr2 register
   m_tls_size = GetRegisterInfo().IsSSVEPresent() ? sizeof(m_tls_regs)
@@ -413,6 +425,14 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       assert(offset < GetSMEPseudoBufferSize());
       src = (uint8_t *)GetSMEPseudoBuffer() + offset;
     }
+  } else if (IsFPMR(reg)) {
+    error = ReadFPMR();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetFPMROffset();
+    assert(offset < GetFPMRBufferSize());
+    src = (uint8_t *)GetFPMRBuffer() + offset;
   } else
     return Status::FromErrorString(
         "failed - register wasn't recognized to be a GPR or an FPR, "
@@ -626,6 +646,17 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     } else
       return Status::FromErrorString(
           "Writing to SVG or SVCR is not supported.");
+  } else if (IsFPMR(reg)) {
+    error = ReadFPMR();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetFPMROffset();
+    assert(offset < GetFPMRBufferSize());
+    dst = (uint8_t *)GetFPMRBuffer() + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteFPMR();
   }
 
   return Status::FromErrorString("Failed to write register value");
@@ -640,6 +671,7 @@ enum RegisterSetType : uint32_t {
   TLS,
   SME,  // ZA only, because SVCR and SVG are pseudo registers.
   SME2, // ZT only.
+  FPMR,
 };
 
 static uint8_t *AddRegisterSetType(uint8_t *dst,
@@ -716,6 +748,13 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   if (GetRegisterInfo().IsMTEPresent()) {
     cached_size += sizeof(RegisterSetType) + GetMTEControlSize();
     error = ReadMTEControl();
+    if (error.Fail())
+      return error;
+  }
+
+  if (GetRegisterInfo().IsFPMRPresent()) {
+    cached_size += sizeof(RegisterSetType) + GetFPMRBufferSize();
+    error = ReadFPMR();
     if (error.Fail())
       return error;
   }
@@ -821,6 +860,11 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if (GetRegisterInfo().IsMTEPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::MTE, GetMTEControl(),
                             GetMTEControlSize());
+  }
+
+  if (GetRegisterInfo().IsFPMRPresent()) {
+    dst = AddSavedRegisters(dst, RegisterSetType::FPMR, GetFPMRBuffer(),
+                            GetFPMRBufferSize());
   }
 
   dst = AddSavedRegisters(dst, RegisterSetType::TLS, GetTLSBuffer(),
@@ -971,6 +1015,11 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           GetZTBuffer(), &src, GetZTBufferSize(), m_zt_buffer_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteZT, this));
       break;
+    case RegisterSetType::FPMR:
+      error = RestoreRegisters(
+          GetFPMRBuffer(), &src, GetFPMRBufferSize(), m_fpmr_is_valid,
+          std::bind(&NativeRegisterContextLinux_arm64::WriteFPMR, this));
+      break;
     }
 
     if (error.Fail())
@@ -1012,6 +1061,10 @@ bool NativeRegisterContextLinux_arm64::IsMTE(unsigned reg) const {
 
 bool NativeRegisterContextLinux_arm64::IsTLS(unsigned reg) const {
   return GetRegisterInfo().IsTLSReg(reg);
+}
+
+bool NativeRegisterContextLinux_arm64::IsFPMR(unsigned reg) const {
+  return GetRegisterInfo().IsFPMRReg(reg);
 }
 
 llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
@@ -1161,6 +1214,7 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_mte_ctrl_is_valid = false;
   m_tls_is_valid = false;
   m_zt_buffer_is_valid = false;
+  m_fpmr_is_valid = false;
 
   // Update SVE and ZA registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -1438,6 +1492,40 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
   m_za_header_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetZTBufferSize(), NT_ARM_ZT);
+}
+
+Status NativeRegisterContextLinux_arm64::ReadFPMR() {
+  Status error;
+
+  if (m_fpmr_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetFPMRBuffer();
+  ioVec.iov_len = GetFPMRBufferSize();
+
+  error = ReadRegisterSet(&ioVec, GetFPMRBufferSize(), NT_ARM_FPMR);
+
+  if (error.Success())
+    m_fpmr_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WriteFPMR() {
+  Status error;
+
+  error = ReadFPMR();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetFPMRBuffer();
+  ioVec.iov_len = GetFPMRBufferSize();
+
+  m_fpmr_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetFPMRBufferSize(), NT_ARM_FPMR);
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {

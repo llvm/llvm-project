@@ -900,13 +900,12 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId)        \
   case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
-          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
-                                     MangledName, TheCU, TheCU->getFile(), 0); \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
+                                     TheCU, TheCU->getFile(), 0);              \
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1250,8 +1249,12 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
+  const BTFTagAttributedType *BTFAttrTy;
+  if (auto *Atomic = PointeeTy->getAs<AtomicType>())
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
+  else
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
   SmallVector<llvm::Metadata *, 4> Annots;
-  auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
   while (BTFAttrTy) {
     StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
     if (!Tag.empty()) {

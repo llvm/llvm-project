@@ -749,6 +749,14 @@ struct __can_be_converted_to_string_view
 struct __uninitialized_size_tag {};
 struct __init_with_sentinel_tag {};
 
+template <size_t _PaddingSize>
+struct __padding {
+  char __padding_[_PaddingSize];
+};
+
+template <>
+struct __padding<0> {};
+
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
@@ -853,7 +861,7 @@ private:
 
   struct __short {
     value_type __data_[__min_cap];
-    unsigned char __padding_[sizeof(value_type) - 1];
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
     unsigned char __size_    : 7;
     unsigned char __is_long_ : 1;
   };
@@ -905,7 +913,7 @@ private:
       unsigned char __is_long_ : 1;
       unsigned char __size_    : 7;
     };
-    char __padding_[sizeof(value_type) - 1];
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
     value_type __data_[__min_cap];
   };
 

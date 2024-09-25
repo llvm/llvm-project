@@ -18,6 +18,7 @@
 #include <__memory/destruct_n.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/unique_temporary_buffer.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <new>

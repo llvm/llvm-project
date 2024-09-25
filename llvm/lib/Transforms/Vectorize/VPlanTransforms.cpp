@@ -21,6 +21,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -509,7 +510,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
                 [](VPValue *V) { return V->getNumUsers() == 0; });
 }
 
-static void removeDeadRecipes(VPlan &Plan) {
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
@@ -592,12 +593,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
           Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
           nullptr, StartV, StepV, Builder);
 
-      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
-                                       {PtrIV->getStartValue(), Steps},
-                                       PtrIV->getDebugLoc(), "next.gep");
+      VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                                             PtrIV->getDebugLoc(), "next.gep");
 
-      Recipe->insertAfter(Steps);
-      PtrIV->replaceAllUsesWith(Recipe);
+      PtrIV->replaceAllUsesWith(PtrAdd);
       continue;
     }
 
@@ -685,10 +684,11 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
              m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
     return;
 
-  Type *IdxTy =
-      Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
-  const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
   ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *TripCount =
+      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+         "Trip count SCEV must be computable");
   ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
   const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
   if (TripCount->isZero() ||
@@ -970,6 +970,41 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 
+/// Move loop-invariant recipes out of the vector loop region in \p Plan.
+static void licm(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Preheader =
+      cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
+
+  // Return true if we do not know how to (mechanically) hoist a given recipe
+  // out of a loop region. Does not address legality concerns such as aliasing
+  // or speculation safety.
+  auto CannotHoistRecipe = [](VPRecipeBase &R) {
+    // Allocas cannot be hoisted.
+    auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+    return RepR && RepR->getOpcode() == Instruction::Alloca;
+  };
+
+  // Hoist any loop invariant recipes from the vector loop region to the
+  // preheader. Preform a shallow traversal of the vector loop region, to
+  // exclude recipes in replicate regions.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (CannotHoistRecipe(R))
+        continue;
+      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
+      // their memory location is not modified in the vector loop.
+      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
+          any_of(R.operands(), [](VPValue *Op) {
+            return !Op->isDefinedOutsideLoopRegions();
+          }))
+        continue;
+      R.moveBefore(*Preheader, Preheader->end());
+    }
+  }
+}
+
 /// Try to simplify the recipes in \p Plan.
 static void simplifyRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
@@ -1129,6 +1164,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   removeRedundantExpandSCEVRecipes(Plan);
   mergeBlocksIntoPredecessors(Plan);
+  licm(Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -1418,9 +1454,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  // Compute original TC - IV as the AVL (requested vector length).
-  auto *AVL = new VPInstruction(Instruction::Sub, {Plan.getTripCount(), EVLPhi},
-                                DebugLoc(), "avl");
+  // TODO: Add support for MaxSafeDist for correct loop emission.
+  // Compute original TC - IV as the AVL (application vector length).
+  auto *AVL = new VPInstruction(
+      Instruction::Sub, {Plan.getTripCount(), EVLPhi},
+      DebugLoc(), "avl");
   AVL->insertBefore(*Header, Header->getFirstNonPhi());
   auto *VPEVL =
       new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());

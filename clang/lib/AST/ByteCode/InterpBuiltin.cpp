@@ -1306,7 +1306,16 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // FIXME: CheckArraySize for NumElems?
+  // NB: The same check we're using in CheckArraySize()
+  if (NumElems.getActiveBits() >
+          ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
+      NumElems.ugt(Descriptor::MaxArrayElemBytes / ElemSize.getQuantity())) {
+    // FIXME: NoThrow check?
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+        << NumElems.getZExtValue();
+    return false;
+  }
 
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
@@ -1336,8 +1345,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(),
-      NumElems.ule(1) ? std::nullopt : Descriptor::InlineDescMD,
+      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 

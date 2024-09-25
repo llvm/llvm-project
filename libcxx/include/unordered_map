@@ -586,6 +586,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__algorithm/is_permutation.h>
 #include <__assert>
 #include <__config>
+#include <__functional/hash.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__hash_table>
@@ -595,6 +596,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__iterator/ranges_iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/pointer_traits.h>
+#include <__memory/unique_ptr.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__node_handle>
 #include <__ranges/concepts.h>
@@ -603,8 +607,11 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/remove_const.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
+#include <__utility/pair.h>
+#include <new> // launder
 #include <stdexcept>
 #include <tuple>
 #include <version>

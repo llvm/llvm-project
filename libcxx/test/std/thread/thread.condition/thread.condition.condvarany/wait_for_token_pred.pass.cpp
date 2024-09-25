@@ -19,6 +19,7 @@
 //   bool wait_for(Lock& lock, stop_token stoken,
 //                 const chrono::duration<Rep, Period>& rel_time, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <concepts>

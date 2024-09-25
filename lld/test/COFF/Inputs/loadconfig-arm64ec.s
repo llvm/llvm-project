@@ -84,7 +84,7 @@ __chpe_metadata:
         .rva __arm64x_extra_rfe_table
         .word __arm64x_extra_rfe_table_size
         .rva __os_arm64x_dispatch_fptr
-        .word 0 // __hybrid_auxiliary_iat_copy
+        .rva __hybrid_auxiliary_iat_copy
         .rva __os_arm64x_helper0
         .rva __os_arm64x_helper1
         .rva __os_arm64x_helper2
