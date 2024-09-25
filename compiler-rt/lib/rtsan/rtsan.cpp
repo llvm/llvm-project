@@ -45,8 +45,6 @@ static InitializationState GetInitializationState() {
       atomic_load(&rtsan_initialized, memory_order_acquire));
 }
 
-static void RtsanAtexit() { PrintStatisticsSummary(); }
-
 static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
     if (flags().print_stats_on_exit)
@@ -70,7 +68,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   InitializeInterceptors();
 
   if (flags().print_stats_on_exit)
-    Atexit(RtsanAtexit);
+    Atexit(PrintStatisticsSummary);
 
   SetInitializationState(InitializationState::Initialized);
 }
