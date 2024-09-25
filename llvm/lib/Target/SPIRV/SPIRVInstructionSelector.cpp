@@ -1255,7 +1255,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   Register SrcPtr = I.getOperand(1).getReg();
   SPIRVType *SrcPtrTy = GR.getSPIRVTypeForVReg(SrcPtr);
-  // don't generate a cast for a null that is represented by OpTypeInt
+  // don't generate a cast for a null that may be represented by OpTypeInt
   if (SrcPtrTy->getOpcode() != SPIRV::OpTypePointer ||
       ResType->getOpcode() != SPIRV::OpTypePointer)
     return BuildMI(BB, I, DL, TII.get(TargetOpcode::COPY))
