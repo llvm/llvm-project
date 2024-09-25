@@ -1,0 +1,51 @@
+# This file defines an action that builds the various Docker images used to run
+# libc++ CI whenever modifications to those Docker files are pushed to `main`.
+#
+# The images are pushed to the LLVM package registry at https://github.com/orgs/llvm/packages
+# and tagged appropriately. The selection of which Docker image version is used by the libc++
+# CI nodes at any given point is controlled by the libc++ maintainers using a mechanism that
+# is not publicly visible for safety purposes.
+
+name: Build Docker images for libc++ CI
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'libcxx/utils/ci/**'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'llvm'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push the Linux builder image
+      working-directory: libcxx/utils/ci
+      run:
+        - docker compose build actions-builder
+        - docker compose push actions-builder
+      env:
+        TAG: libcxx-linux-builder:${{ github.sha }}
+
+    - name: Build and push the Android builder image
+      working-directory: libcxx/utils/ci
+      run:
+        - docker compose build android-buildkite-builder
+        - docker compose push android-buildkite-builder
+      env:
+        TAG: libcxx-android-builder:${{ github.sha }}
