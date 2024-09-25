@@ -117,6 +117,10 @@ private:
     pointer __end_ptr     = std::__to_address(__end);
     _LIBCPP_ASSUME(__begin_ptr <= __current_ptr);
     _LIBCPP_ASSUME(__current_ptr <= __end_ptr);
+    // Silence warnings when assumptions are disabled.
+    (void)__begin_ptr;
+    (void)__current_ptr;
+    (void)__end_ptr;
   }
 
   template <class _It>
