@@ -7361,8 +7361,9 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
     SDValue Op0 = N->getOperand(0);
     EVT VecVT = Op0.getValueType();
-    return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
-                          IndexN->getZExtValue(), DCI, false);
+    if (canTreatAsByteVector(VecVT))
+      return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
+                            IndexN->getZExtValue(), DCI, false);
   }
   return SDValue();
 }
