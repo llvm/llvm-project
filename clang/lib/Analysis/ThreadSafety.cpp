@@ -2103,8 +2103,10 @@ void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
 
 static const Expr *UnpackConstruction(const Expr *E) {
   if (auto *CE = dyn_cast<CastExpr>(E))
-    if (CE->getCastKind() == CK_NoOp)
-      E = CE->getSubExpr()->IgnoreParens();
+    if (CE->getCastKind() == CK_NoOp ||
+        CE->getCastKind() == CK_FunctionPointerConversion ||
+        CE->getCastKind() == CK_MemberFunctionPointerConversion)
+        E = CE->getSubExpr()->IgnoreParens();
   if (auto *CE = dyn_cast<CastExpr>(E))
     if (CE->getCastKind() == CK_ConstructorConversion ||
         CE->getCastKind() == CK_UserDefinedConversion)

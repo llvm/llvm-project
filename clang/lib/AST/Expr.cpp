@@ -98,7 +98,9 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
         continue;
       }
 
-      if (CE->getCastKind() == CK_NoOp) {
+      if (CE->getCastKind() == CK_NoOp ||
+          CE->getCastKind() == CK_FunctionPointerConversion ||
+          CE->getCastKind() == CK_MemberFunctionPointerConversion) {
         E = CE->getSubExpr();
         continue;
       }
@@ -1926,6 +1928,8 @@ bool CastExpr::CastConsistency() const {
   case CK_Dependent:
   case CK_LValueToRValue:
   case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
   case CK_PointerToBoolean:
@@ -3188,7 +3192,9 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
     E = M->getSubExpr();
 
   while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ICE->getCastKind() == CK_NoOp)
+    if (ICE->getCastKind() == CK_NoOp ||
+        ICE->getCastKind() == CK_FunctionPointerConversion ||
+        ICE->getCastKind() == CK_MemberFunctionPointerConversion)
       E = ICE->getSubExpr();
     else
       break;
@@ -3198,7 +3204,9 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
     E = BE->getSubExpr();
 
   while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ICE->getCastKind() == CK_NoOp)
+    if (ICE->getCastKind() == CK_NoOp ||
+        ICE->getCastKind() == CK_FunctionPointerConversion ||
+        ICE->getCastKind() == CK_MemberFunctionPointerConversion)
       E = ICE->getSubExpr();
     else
       break;
@@ -3263,6 +3271,8 @@ bool Expr::isImplicitCXXThis() const {
 
     if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       if (ICE->getCastKind() == CK_NoOp ||
+          ICE->getCastKind() == CK_FunctionPointerConversion ||
+          ICE->getCastKind() == CK_MemberFunctionPointerConversion ||
           ICE->getCastKind() == CK_LValueToRValue ||
           ICE->getCastKind() == CK_DerivedToBase ||
           ICE->getCastKind() == CK_UncheckedDerivedToBase) {
@@ -3478,6 +3488,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     // Handle misc casts we want to ignore.
     if (CE->getCastKind() == CK_NoOp ||
+        CE->getCastKind() == CK_FunctionPointerConversion ||
+        CE->getCastKind() == CK_MemberFunctionPointerConversion ||
         CE->getCastKind() == CK_LValueToRValue ||
         CE->getCastKind() == CK_ToUnion ||
         CE->getCastKind() == CK_ConstructorConversion ||
@@ -4113,7 +4125,10 @@ FieldDecl *Expr::getSourceBitField() {
 
   while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_LValueToRValue ||
-        (ICE->isGLValue() && ICE->getCastKind() == CK_NoOp))
+        (ICE->isGLValue() &&
+         (ICE->getCastKind() == CK_NoOp ||
+          ICE->getCastKind() == CK_FunctionPointerConversion ||
+          ICE->getCastKind() == CK_MemberFunctionPointerConversion)))
       E = ICE->getSubExpr()->IgnoreParens();
     else
       break;
@@ -4167,7 +4182,10 @@ bool Expr::refersToVectorElement() const {
   const Expr *E = this->IgnoreParens();
 
   while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ICE->isGLValue() && ICE->getCastKind() == CK_NoOp)
+    if (ICE->isGLValue() &&
+        (ICE->getCastKind() == CK_NoOp ||
+         ICE->getCastKind() == CK_FunctionPointerConversion ||
+         ICE->getCastKind() == CK_MemberFunctionPointerConversion))
       E = ICE->getSubExpr()->IgnoreParens();
     else
       break;

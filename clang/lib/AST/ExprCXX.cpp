@@ -344,8 +344,12 @@ QualType CXXDeleteExpr::getDestroyedType() const {
   while (const auto *ICE = dyn_cast<ImplicitCastExpr>(Arg)) {
     if (ICE->getCastKind() == CK_DerivedToBase ||
         ICE->getCastKind() == CK_UncheckedDerivedToBase ||
-        ICE->getCastKind() == CK_NoOp) {
+        ICE->getCastKind() == CK_NoOp ||
+        ICE->getCastKind() == CK_FunctionPointerConversion ||
+        ICE->getCastKind() == CK_MemberFunctionPointerConversion) {
       assert((ICE->getCastKind() == CK_NoOp ||
+              ICE->getCastKind() == CK_FunctionPointerConversion ||
+              ICE->getCastKind() == CK_MemberFunctionPointerConversion ||
               getOperatorDelete()->isDestroyingOperatorDelete()) &&
              "only a destroying operator delete can have a converted arg");
       Arg = ICE->getSubExpr();

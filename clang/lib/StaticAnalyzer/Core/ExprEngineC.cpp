@@ -327,6 +327,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_NonAtomicToAtomic:
         // True no-ops.
       case CK_NoOp:
+      case CK_FunctionPointerConversion:
+      case CK_MemberFunctionPointerConversion:
       case CK_ConstructorConversion:
       case CK_UserDefinedConversion:
       case CK_FunctionToPointerDecay:

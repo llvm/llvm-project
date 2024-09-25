@@ -560,6 +560,8 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   }
 
   case CK_BitCast:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_BaseToDerived:
   case CK_DerivedToBase:
   case CK_UncheckedDerivedToBase:

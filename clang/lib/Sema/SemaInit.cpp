@@ -8016,8 +8016,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_FunctionReferenceConversion:
       assert(CurInit.get()->isLValue() &&
              "function reference should be lvalue");
-      CurInit =
-          S.ImpCastExprToType(CurInit.get(), Step->Type, CK_NoOp, VK_LValue);
+      CurInit = S.ImpCastExprToType(CurInit.get(), Step->Type,
+                                    CK_FunctionPointerConversion, VK_LValue);
       break;
 
     case SK_AtomicConversion: {

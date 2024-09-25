@@ -429,6 +429,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FunctionToPointerDecay:
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_UserDefinedConversion:
   case CK_AddressSpaceConversion:
     return this->delegate(SubExpr);
@@ -3067,6 +3069,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
          Stripped = ICE->getSubExpr())
       if (ICE->getCastKind() != CK_NoOp &&
+          ICE->getCastKind() != CK_FunctionPointerConversion &&
+          ICE->getCastKind() != CK_MemberFunctionPointerConversion &&
           ICE->getCastKind() != CK_IntegralCast)
         break;
 

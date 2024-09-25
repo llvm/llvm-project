@@ -27,6 +27,8 @@ void SwappedArgumentsCheck::registerMatchers(MatchFinder *Finder) {
 static const Expr *ignoreNoOpCasts(const Expr *E) {
   if (auto *Cast = dyn_cast<CastExpr>(E))
     if (Cast->getCastKind() == CK_LValueToRValue ||
+        Cast->getCastKind() == CK_FunctionPointerConversion ||
+        Cast->getCastKind() == CK_MemberFunctionPointerConversion ||
         Cast->getCastKind() == CK_NoOp)
       return ignoreNoOpCasts(Cast->getSubExpr());
   return E;

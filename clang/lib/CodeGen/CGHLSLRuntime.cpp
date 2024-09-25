@@ -338,7 +338,6 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 NumThreadsAttr->getZ());
     Fn->addFnAttr(NumThreadsKindStr, NumThreadsStr);
   }
-  Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {

@@ -1739,7 +1739,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     if (IndexOp.getImm() != 0 &&
-        Src1Ty.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+        IndexOp.getImm() % Src1Ty.getElementCount().getKnownMinValue() != 0) {
       report("Index must be a multiple of the second source vector's "
              "minimum vector length",
              MI);

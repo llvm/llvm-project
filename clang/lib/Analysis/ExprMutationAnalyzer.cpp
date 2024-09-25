@@ -377,11 +377,13 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
   // We're assuming 'Exp' is mutated as soon as its address is taken, though in
   // theory we can follow the pointer and see whether it escaped `Stm` or is
   // dereferenced and then mutated. This is left for future improvements.
-  const auto AsAmpersandOperand =
-      unaryOperator(hasOperatorName("&"),
-                    // A NoOp implicit cast is adding const.
-                    unless(hasParent(implicitCastExpr(hasCastKind(CK_NoOp)))),
-                    hasUnaryOperand(canResolveToExpr(Exp)));
+  const auto AsAmpersandOperand = unaryOperator(
+      hasOperatorName("&"),
+      // A NoOp implicit cast is adding const.
+      unless(hasParent(implicitCastExpr(
+          anyOf(hasCastKind(CK_NoOp), hasCastKind(CK_FunctionPointerConversion),
+                hasCastKind(CK_MemberFunctionPointerConversion))))),
+      hasUnaryOperand(canResolveToExpr(Exp)));
   const auto AsPointerFromArrayDecay = castExpr(
       hasCastKind(CK_ArrayToPointerDecay),
       unless(hasParent(arraySubscriptExpr())), has(canResolveToExpr(Exp)));

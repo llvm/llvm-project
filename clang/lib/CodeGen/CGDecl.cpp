@@ -697,6 +697,8 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
     switch (castExpr->getCastKind()) {
     // Look through casts that don't require representation changes.
     case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion:
     case CK_BitCast:
     case CK_BlockPointerToObjCPointerCast:
       needsCast = true;

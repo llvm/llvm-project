@@ -620,6 +620,8 @@ til::SExpr *SExprBuilder::translateCastExpr(const CastExpr *CE,
     // return new (Arena) til::Load(E0);
   }
   case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion:
   case CK_DerivedToBase:
   case CK_UncheckedDerivedToBase:
   case CK_ArrayToPointerDecay:

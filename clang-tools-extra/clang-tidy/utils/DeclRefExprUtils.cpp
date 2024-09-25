@@ -240,6 +240,8 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
         case CK_BaseToDerived:
         case CK_DerivedToBase:
         case CK_UncheckedDerivedToBase:
+        case CK_FunctionPointerConversion:
+        case CK_MemberFunctionPointerConversion:
         case CK_Dynamic:
         case CK_BaseToDerivedMemberPointer:
         case CK_DerivedToBaseMemberPointer:
