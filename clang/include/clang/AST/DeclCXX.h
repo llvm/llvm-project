@@ -1159,11 +1159,6 @@ public:
   /// structs).
   bool hasInClassInitializer() const { return data().HasInClassInitializer; }
 
-  bool hasUninitializedExplicitInitFields() const {
-    return !isUnion() && !hasUserProvidedDefaultConstructor() &&
-           data().HasUninitializedExplicitInitFields;
-  }
-
   /// Whether this class or any of its subobjects has any members of
   /// reference type which would make value-initialization ill-formed.
   ///

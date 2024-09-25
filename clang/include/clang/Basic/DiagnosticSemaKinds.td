@@ -2352,8 +2352,8 @@ def err_init_reference_member_uninitialized : Error<
 def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
 def warn_field_requires_explicit_init : Warning<
-  "field %0 is not explicitly initialized, but was marked as requiring "
-  "explicit initialization">, InGroup<UninitializedExplicitInit>;
+  "field %select{%1|in %1}0 is not explicitly initialized, but was marked as "
+  "requiring explicit initialization">, InGroup<UninitializedExplicitInit>;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -3154,6 +3154,10 @@ def warn_auto_var_is_id : Warning<
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
+  InGroup<IgnoredAttributes>;
+
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
   InGroup<IgnoredAttributes>;
 
 def warn_attribute_ignored_non_function_pointer: Warning<

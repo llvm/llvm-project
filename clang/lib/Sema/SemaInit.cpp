@@ -264,6 +264,14 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   updateStringLiteralType(Str, DeclT);
 }
 
+void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
+  for (const FieldDecl *Field : R->fields()) {
+    if (Field->hasAttr<ExplicitInitAttr>()) {
+      S.Diag(Field->getLocation(), diag::note_entity_declared_at) << Field;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Semantic checking for initializer lists.
 //===----------------------------------------------------------------------===//
@@ -741,7 +749,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
     if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
       SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
-          << Field;
+          << /* Var-in-Record */ 0 << Field;
       SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
           << Field;
     }
@@ -4575,7 +4583,8 @@ static void TryConstructorInitialization(Sema &S,
         DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
-          << "in class";
+          << /* Var-in-Record */ 1 << DestRecordDecl;
+      emitUninitializedExplicitInitFields(S, DestRecordDecl);
     }
 
     // C++11 [dcl.init]p6:
@@ -6474,6 +6483,19 @@ void InitializationSequence::InitializeFrom(Sema &S,
       TryListInitialization(S, Entity, Kind, InitList, *this,
                             TreatUnavailableAsInvalid);
       return;
+    }
+  }
+
+  if (!S.getLangOpts().CPlusPlus &&
+      Kind.getKind() == InitializationKind::IK_Default) {
+    RecordDecl *Rec = DestType->getAsRecordDecl();
+    if (Rec && Rec->hasUninitializedExplicitInitFields()) {
+      VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
+      if (Var && !Initializer) {
+        S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
+            << /* Var-in-Record */ 1 << Rec;
+        emitUninitializedExplicitInitFields(S, Rec);
+      }
     }
   }
 

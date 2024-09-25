@@ -81,7 +81,6 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
       HasOnlyCMembers(true), HasInitMethod(false), HasInClassInitializer(false),
-      HasUninitializedExplicitInitFields(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
       HasInheritedConstructor(false), HasInheritedDefaultConstructor(false),
       HasInheritedAssignment(false),
@@ -458,6 +457,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields())
       data().HasMutableFields = true;
+
+    if (BaseClassDecl->hasUninitializedExplicitInitFields() &&
+        BaseClassDecl->isAggregate())
+      setHasUninitializedExplicitInitFields(true);
 
     if (BaseClassDecl->hasUninitializedReferenceMember())
       data().HasUninitializedReferenceMember = true;
@@ -1116,7 +1119,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       data().PlainOldData = false;
 
     if (Field->hasAttr<ExplicitInitAttr>() && !Field->hasInClassInitializer()) {
-      data().HasUninitializedExplicitInitFields = true;
+      setHasUninitializedExplicitInitFields(true);
     }
 
     if (T->isReferenceType()) {
@@ -1380,7 +1383,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         if (FieldRec->hasUninitializedExplicitInitFields() &&
             FieldRec->isAggregate() && !Field->hasInClassInitializer())
-          data().HasUninitializedExplicitInitFields = true;
+          setHasUninitializedExplicitInitFields(true);
 
         if (FieldRec->hasUninitializedReferenceMember() &&
             !Field->hasInClassInitializer())
@@ -2200,17 +2203,32 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
     I.setAccess((*I)->getAccess());
 
   ASTContext &Context = getASTContext();
-  if (!Context.getLangOpts().CPlusPlus20 && isAggregate() &&
-      hasUserDeclaredConstructor()) {
+
+  if (isAggregate() && hasUserDeclaredConstructor() &&
+      !Context.getLangOpts().CPlusPlus20) {
     // Diagnose any aggregate behavior changes in C++20
     for (field_iterator I = field_begin(), E = field_end(); I != E; ++I) {
       if (const auto *attr = I->getAttr<ExplicitInitAttr>()) {
         Context.getDiagnostics().Report(
-            getLocation(),
+            attr->getLocation(),
             diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
-            << attr->getRange() << Context.getRecordType(this);
+            << attr << Context.getRecordType(this);
       }
     }
+  }
+
+  if (!isAggregate() && hasUninitializedExplicitInitFields()) {
+    // Diagnose any fields that required explicit initialization in a
+    // non-aggregate type. (Note that the fields may not be directly in this
+    // type, but in a subobject. In such cases we don't emit diagnoses here.)
+    for (field_iterator I = field_begin(), E = field_end(); I != E; ++I) {
+      if (const auto *attr = I->getAttr<ExplicitInitAttr>()) {
+        Context.getDiagnostics().Report(attr->getLocation(),
+                                        diag::warn_attribute_needs_aggregate)
+            << attr << Context.getRecordType(this);
+      }
+    }
+    setHasUninitializedExplicitInitFields(false);
   }
 }
 

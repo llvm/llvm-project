@@ -119,15 +119,6 @@ FIELD(HasInitMethod, 1, NO_MERGE)
 /// within anonymous unions or structs.
 FIELD(HasInClassInitializer, 1, NO_MERGE)
 
-/// Custom attribute that is True if any field is marked as requiring explicit
-/// initialization with [[clang::requires_explicit_initialization]] in a type
-/// without a user-provided default constructor, or if this is the case for any
-/// base classes and/or member variables whose types are aggregates.
-///
-/// In this case, default-construction is diagnosed, as it would not explicitly
-/// initialize the field.
-FIELD(HasUninitializedExplicitInitFields, 1, NO_MERGE)
-
 /// True if any field is of reference type, and does not have an
 /// in-class initializer.
 ///
