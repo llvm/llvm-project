@@ -382,4 +382,8 @@ def err_ast_action_on_llvm_ir : Error<
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;
 
+def warn_hlsl_langstd_minimal :
+  Warning<"support for HLSL language version %0 is incomplete, "
+          "recommend using %1 instead">,
+  InGroup<HLSLDXCCompat>;
 }

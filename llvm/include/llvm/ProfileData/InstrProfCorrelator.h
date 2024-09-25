@@ -40,7 +40,7 @@ public:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(StringRef Filename, ProfCorrelatorKind FileKind,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
-      const ArrayRef<llvm::object::BuildID> BIs = std::nullopt);
+      const ArrayRef<llvm::object::BuildID> BIs = {});
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.

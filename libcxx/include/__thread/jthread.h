@@ -11,17 +11,19 @@
 #define _LIBCPP___THREAD_JTHREAD_H
 
 #include <__config>
-#include <__functional/invoke.h>
 #include <__stop_token/stop_source.h>
 #include <__stop_token/stop_token.h>
+#include <__thread/id.h>
 #include <__thread/support.h>
 #include <__thread/thread.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

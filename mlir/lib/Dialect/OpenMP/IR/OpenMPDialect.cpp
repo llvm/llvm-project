@@ -1258,7 +1258,7 @@ static void printCaptureType(OpAsmPrinter &p, Operation *op,
     typeCap << "VLAType";
   if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::This)
     typeCap << "This";
-  p << typeCap.str();
+  p << typeCapStr;
 }
 
 static ParseResult parseCaptureType(OpAsmParser &parser,

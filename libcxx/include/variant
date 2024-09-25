@@ -214,11 +214,11 @@ namespace std {
 
 #include <__compare/common_comparison_category.h>
 #include <__compare/compare_three_way_result.h>
+#include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__exception/exception.h>
 #include <__functional/hash.h>
-#include <__functional/invoke.h>
 #include <__functional/operations.h>
 #include <__functional/unary_function.h>
 #include <__fwd/variant.h>
@@ -231,8 +231,12 @@ namespace std {
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/add_volatile.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
+#include <__type_traits/decay.h>
 #include <__type_traits/dependent_type.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -241,6 +245,7 @@ namespace std {
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
@@ -248,6 +253,7 @@ namespace std {
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>

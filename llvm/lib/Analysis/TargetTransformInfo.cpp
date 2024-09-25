@@ -587,6 +587,11 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
 }
 
+bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
+    Intrinsic::ID ID) const {
+  return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
+}
+
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind) const {

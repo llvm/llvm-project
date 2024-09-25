@@ -7,8 +7,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <bitset>
@@ -308,24 +310,19 @@ struct Frame {
        << "        Inline: " << IsInlineFrame << "\n";
   }
 
-  // Return a hash value based on the contents of the frame. Here we don't use
-  // hashing from llvm ADT since we are going to persist the hash id, the hash
-  // combine algorithm in ADT uses a new randomized seed each time.
+  // Return a hash value based on the contents of the frame. Here we use a
+  // cryptographic hash function to minimize the chance of hash collisions.  We
+  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
+  // However, the deserializer never calls this function; it uses FrameIds
+  // merely as keys to look up Frames proper.
   inline FrameId hash() const {
-    auto HashCombine = [](auto Value, size_t Seed) {
-      std::hash<decltype(Value)> Hasher;
-      // The constant used below is the 64 bit representation of the fractional
-      // part of the golden ratio. Used here for the randomness in their bit
-      // pattern.
-      return Hasher(Value) + 0x9e3779b97f4a7c15 + (Seed << 6) + (Seed >> 2);
-    };
-
-    size_t Result = 0;
-    Result ^= HashCombine(Function, Result);
-    Result ^= HashCombine(LineOffset, Result);
-    Result ^= HashCombine(Column, Result);
-    Result ^= HashCombine(IsInlineFrame, Result);
-    return static_cast<FrameId>(Result);
+    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+        HashBuilder;
+    HashBuilder.add(Function, LineOffset, Column, IsInlineFrame);
+    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+    FrameId Id;
+    std::memcpy(&Id, Hash.data(), sizeof(Hash));
+    return Id;
   }
 };
 
