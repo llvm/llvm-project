@@ -1167,10 +1167,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
 
 void VPWidenSelectEVLRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                          "explicit vector length.");
-
-  Value *EVLArg = State.get(getEVL(), 0, /*NeedsScalar=*/true);
+  Value *EVLArg = State.get(getEVL(), /*NeedsScalar=*/true);
   IRBuilderBase &BuilderIR = State.Builder;
   VectorBuilder Builder(BuilderIR);
   Builder.setEVL(EVLArg);
@@ -1179,11 +1176,10 @@ void VPWidenSelectEVLRecipe::execute(VPTransformState &State) {
   // We have to take the 'vectorized' value and pick the first lane.
   // Instcombine will make this a no-op.
   auto *InvarCond =
-      isInvariantCond() ? State.get(getCond(), VPIteration(0, 0)) : nullptr;
+      isInvariantCond() ? State.get(getCond(), VPLane(0)) : nullptr;
 
   Value *Cond = InvarCond ? InvarCond : State.get(getCond(), 0);
-  if (!isa<VectorType>(Cond->getType()))
-    Cond = BuilderIR.CreateVectorSplat(State.VF, Cond, "splat.cond");
+  assert(isa<VectorType>(Cond->getType()) && "CondType must be vector Type.");
 
   Value *Op0 = State.get(getOperand(1), 0);
   Value *Op1 = State.get(getOperand(2), 0);
