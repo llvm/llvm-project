@@ -637,7 +637,7 @@ static void handleInvalidBuiltin(InvalidBuiltinData *Data, ReportOptions Opts) {
     Diag(Loc, DL_Error, ET, "assumption is violated during execution");
   else
     Diag(Loc, DL_Error, ET,
-        "passing zero to __builtin_%0(), which is not a valid argument")
+         "passing zero to __builtin_%0(), which is not a valid argument")
         << ((Data->Kind == BCK_CTZPassedZero) ? "ctz" : "clz");
 }
 
