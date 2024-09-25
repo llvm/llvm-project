@@ -1328,7 +1328,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     setTLSMode(GV, *D);
   }
 
-  // TODO(cir): maybeSetTrivialComdat(*D, *GV);
+  maybeSetTrivialComdat(*D, GV);
 
   // TODO(cir):
   // Emit the initializer function if necessary.
@@ -3008,11 +3008,14 @@ bool CIRGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-void CIRGenModule::maybeSetTrivialComdat(const Decl &D, mlir::Operation *Op) {
-  if (!shouldBeInCOMDAT(*this, D))
+void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
+  if (!shouldBeInCOMDAT(*this, d))
     return;
-
-  // TODO: Op.setComdat
+  auto globalOp = dyn_cast_or_null<mlir::cir::GlobalOp>(op);
+  if (globalOp)
+    globalOp.setComdat(true);
+  // Keep it as missing feature as we need to implement comdat for FuncOp.
+  // in the future.
   assert(!MissingFeatures::setComdat() && "NYI");
 }
 

@@ -23,7 +23,7 @@ void active (void)
 // LLVM-NEXT:  call void @B()
 
 int __attribute__((selectany)) y;
-// CIR:      cir.global weak_odr @y
+// CIR:      cir.global weak_odr comdat @y
 
 int __attribute__((weak)) x;
 // CIR:      cir.global weak
