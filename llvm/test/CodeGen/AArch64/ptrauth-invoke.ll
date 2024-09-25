@@ -173,6 +173,7 @@ continuebb:
 ; ELF-NEXT:         blrab x19, x17
 ; ELF-NEXT: [[POSTCALL:.L.*]]:
 ; ELF-NEXT: // %bb.1:
+; ELF-NEXT:         brk #0x1
 ; ELF-NEXT: [[LPADBB:.LBB[0-9_]+]]:
 ; ELF-NEXT: [[LPAD:.L.*]]:
 ; ELF-NEXT:         mov x19, x1

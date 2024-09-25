@@ -44,12 +44,11 @@ define void @f1(i64 %a0, i64 %a1) {
 ; CHECK-NEXT:    vrepig %v1, 1
 ; CHECK-NEXT:    vx %v0, %v0, %v1
 ; CHECK-NEXT:    vlgvg %r0, %v0, 0
-; CHECK-NEXT:    cgijlh %r0, 0, .LBB1_3
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cgiblh %r0, 0, 0(%r14)
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    vlgvg %r0, %v0, 1
-; CHECK-NEXT:    cgijlh %r0, 0, .LBB1_3
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    cghi %r0, 0
+; CHECK-NEXT:    br %r14
   %1 = and i64 %a0, 1
   %2 = and i64 %a1, 1
   %3 = insertelement <2 x i64> undef, i64 %1, i32 0
@@ -67,8 +66,8 @@ define void @f1(i64 %a0, i64 %a1) {
   br i1 %12, label %13, label %14
 
 ; <label>:13:                                      ; preds = %0
-  unreachable
+  ret void
 
 ; <label>:14:                                      ; preds = %0
-  unreachable
+  ret void
 }

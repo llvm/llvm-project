@@ -565,6 +565,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    trap
 ;
 ; CHECK-P9-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P9:       # %bb.0: # %test_entry
@@ -578,6 +579,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9-NEXT:    xxlxor f0, f0, f0
 ; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P9-NEXT:    stxv vs0, 0(r30)
+; CHECK-P9-NEXT:    trap
 ;
 ; CHECK-P9-BE-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P9-BE:       # %bb.0: # %test_entry
@@ -591,6 +593,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P9-BE-NEXT:    xxlxor f0, f0, f0
 ; CHECK-P9-BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; CHECK-P9-BE-NEXT:    stxv vs0, 0(r30)
+; CHECK-P9-BE-NEXT:    trap
 ;
 ; CHECK-NOVSX-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-NOVSX:       # %bb.0: # %test_entry
@@ -604,6 +607,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-NOVSX-NEXT:    li r3, 0
 ; CHECK-NOVSX-NEXT:    stfd f1, 8(r30)
 ; CHECK-NOVSX-NEXT:    std r3, 0(r30)
+; CHECK-NOVSX-NEXT:    trap
 ;
 ; CHECK-P7-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-P7:       # %bb.0: # %test_entry
@@ -618,6 +622,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; CHECK-P7-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P7-NEXT:    xxswapd vs0, vs0
 ; CHECK-P7-NEXT:    stxvd2x vs0, 0, r30
+; CHECK-P7-NEXT:    trap
 ;
 ; P8-AIX-64-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-64:       # %bb.0: # %test_entry
@@ -631,6 +636,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-64-NEXT:    xxlxor f0, f0, f0
 ; P8-AIX-64-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8-AIX-64-NEXT:    stxvd2x vs0, 0, r31
+; P8-AIX-64-NEXT:    trap
 ;
 ; P8-AIX-32-LABEL: no_crash_elt0_from_RHS:
 ; P8-AIX-32:       # %bb.0: # %test_entry
@@ -644,6 +650,7 @@ define dso_local void @no_crash_elt0_from_RHS(ptr noalias nocapture dereferencea
 ; P8-AIX-32-NEXT:    xxlxor f0, f0, f0
 ; P8-AIX-32-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8-AIX-32-NEXT:    stxvd2x vs0, 0, r31
+; P8-AIX-32-NEXT:    trap
 test_entry:
   %_div_result = tail call double @dummy()
   %oldret = insertvalue { double, double } undef, double %_div_result, 0

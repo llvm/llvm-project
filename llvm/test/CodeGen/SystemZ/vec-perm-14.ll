@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 ; Test that no vperm of the vector compare is needed for the extracts.
-define void @fun() {
+define i32 @fun() {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    vlrepf %v0, 0(%r1)
@@ -13,11 +13,15 @@ define void @fun() {
 ; CHECK-NEXT:    tmll %r0, 1
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
+; CHECK-NEXT:    lhi %r2, 1
+; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    vlgvf %r0, %v0, 1
 ; CHECK-NEXT:    tmll %r0, 1
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %bb3
+; CHECK-NEXT:    lhi %r2, 2
+; CHECK-NEXT:    br %r14
 ; CHECK-NEXT:  .LBB0_4: # %bb4
 bb:
   %tmp = load <4 x i8>, ptr undef
@@ -26,17 +30,17 @@ bb:
   br i1 %tmp2, label %bb1, label %bb2
 
 bb1:
-  unreachable
+  ret i32 1
 
 bb2:
   %tmp3 = extractelement <4 x i1> %tmp1, i32 1
   br i1 %tmp3, label %bb3, label %bb4
 
 bb3:
-  unreachable
+  ret i32 2
 
 bb4:
-  unreachable
+  ret i32 3
 }
 
 ; Test that a zero index in the permute vector is used instead of VGBM, with

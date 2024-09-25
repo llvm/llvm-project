@@ -146,6 +146,8 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
+extern cl::opt<bool> EnableTrapUnreachable;
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -284,6 +286,11 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
+  // FIXME: If the user has not explicitly enabled TrapUnreachable,
+  // disable it. We currently seem to have problems with EH_RETURN lowering.
+  if (!EnableTrapUnreachable.getNumOccurrences())
+    this->Options.TrapUnreachable = false;
+
   initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initializeHexagonLoopAlignPass(*PassRegistry::getPassRegistry());

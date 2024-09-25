@@ -1,10 +1,13 @@
-; RUN: llc -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK
-; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK
-; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
 ; RUN: llc -o - %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
-; RUN: llc --trap-unreachable -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
-; RUN: llc --trap-unreachable -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
-; RUN: llc --trap-unreachable -fast-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn -fast-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn=false -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn=false -global-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc --trap-unreachable --no-trap-after-noreturn=false -fast-isel -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 
 ; CHECK-LABEL: call_exit:
 ; CHECK: callq {{_?}}exit

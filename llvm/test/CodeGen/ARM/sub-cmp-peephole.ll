@@ -270,8 +270,11 @@ define i32 @cmp_slt0(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:  @ %bb.1: @ %if.else
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    bl exit
-; CHECK-NEXT:  .LBB11_2: @ %if.then
+; CHECK-NEXT:    .inst 0xe7ffdefe
+; CHECK-NEXT:  .LBB11_2: @ trap
+; CHECK-NEXT:    @ %if.then
 ; CHECK-NEXT:    bl abort
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
@@ -302,9 +305,12 @@ define i32 @cmp_ult0(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:    bhs .LBB12_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.then
 ; CHECK-NEXT:    bl abort
-; CHECK-NEXT:  .LBB12_2: @ %if.else
+; CHECK-NEXT:    .inst 0xe7ffdefe
+; CHECK-NEXT:  .LBB12_2: @ trap
+; CHECK-NEXT:    @ %if.else
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    bl exit
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17

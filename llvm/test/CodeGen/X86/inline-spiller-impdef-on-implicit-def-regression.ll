@@ -33,7 +33,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    movl %esi, %r15d
 ; CHECK-NEXT:    # implicit-def: $r12d
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    jne .LBB0_6
+; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    movl %ecx, %r12d
 ; CHECK-NEXT:    andl $1, %r12d
@@ -73,13 +73,13 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.5: # %bb19
+; CHECK-NEXT:    je .LBB0_7
+; CHECK-NEXT:  # %bb.4: # %bb19
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movabsq $87960930222080, %r14 # imm = 0x500000000000
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  .LBB0_6: # %if.end69
+; CHECK-NEXT:    jne .LBB0_6
+; CHECK-NEXT:  .LBB0_5: # %if.end69
 ; CHECK-NEXT:    movl %r13d, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %esi, %esi
@@ -91,7 +91,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    movslq %r12d, %rax
 ; CHECK-NEXT:    movzbl (%r15), %ecx
 ; CHECK-NEXT:    movb %cl, 544(%rax)
-; CHECK-NEXT:  .LBB0_7: # %land.lhs.true56
+; CHECK-NEXT:  .LBB0_6: # %land.lhs.true56
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
@@ -102,7 +102,9 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_4: # %bb
+; CHECK-NEXT:  .LBB0_7: # %bb
+; CHECK-NEXT:    .cfi_def_cfa %rbp, 16
+; CHECK-NEXT:    ud2
 entry:
   %i = load i32, ptr null, align 8
   br i1 %cmp54, label %if.end69, label %if.else

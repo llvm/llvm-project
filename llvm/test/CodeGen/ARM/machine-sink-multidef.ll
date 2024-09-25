@@ -23,7 +23,8 @@ define arm_aapcscc void @g() {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    ldr r1, [r1, #4]
 ; CHECK-NEXT:    bl k
-; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:    .inst 0xe7ffdefe
+; CHECK-NEXT:    .p2align 2 @ trap
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    .long f

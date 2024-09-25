@@ -8,13 +8,13 @@ define void @foo(i16 %finder_idx) {
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    bltz a0, .LBB0_4
+; CHECK-NEXT:    bltz a0, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    bnez zero, .LBB0_1
-; CHECK-NEXT:  # %bb.3: # %while.body
-; CHECK-NEXT:  .LBB0_4: # %while.cond1.preheader.i
+; CHECK-NEXT:  .LBB0_3: # %while.cond1.preheader.i
+; CHECK-NEXT:    unimp
 entry:
   br label %for.body
 
@@ -49,13 +49,13 @@ define void @bar(i16 %finder_idx) {
 ; CHECK-NEXT:  .LBB1_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    bgez a0, .LBB1_4
+; CHECK-NEXT:    bgez a0, .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    bnez zero, .LBB1_1
-; CHECK-NEXT:  # %bb.3: # %while.body
-; CHECK-NEXT:  .LBB1_4: # %while.cond1.preheader.i
+; CHECK-NEXT:  .LBB1_3: # %while.cond1.preheader.i
+; CHECK-NEXT:    unimp
 entry:
   br label %for.body
 

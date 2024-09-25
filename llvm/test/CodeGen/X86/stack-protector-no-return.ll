@@ -28,6 +28,7 @@ define void @_Z7catchesv() #0 personality ptr null {
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:  # %bb.3: # %invoke.cont2
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB0_4: # %lpad1
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    movq %fs:40, %rax
@@ -61,6 +62,7 @@ define void @_Z7catchesv() #0 personality ptr null {
 ; DISNOTET-NEXT:    callq *%rax
 ; DISNOTET-NEXT:  .Ltmp3:
 ; DISNOTET-NEXT:  # %bb.2: # %invoke.cont2
+; DISNOTET-NEXT:    ud2
 ; DISNOTET-NEXT:  .LBB0_3: # %lpad1
 ; DISNOTET-NEXT:  .Ltmp4:
 ; DISNOTET-NEXT:    movq %fs:40, %rax

@@ -728,6 +728,7 @@ define i16 @vmullWithInconsistentExtensions(<8 x i8> %vec) {
 define void @vmull_buildvector() nounwind optsize ssp align 2 {
 ; CHECK-LABEL: vmull_buildvector:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   br i1 undef, label %for.end179, label %for.body.lr.ph
 
@@ -804,6 +805,7 @@ declare <8 x i8> @llvm.arm.neon.vqmovnu.v8i8(<8 x i16>) nounwind readnone
 define void @no_illegal_types_vmull_sext(<4 x i32> %a) {
 ; CHECK-LABEL: no_illegal_types_vmull_sext:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   %wide.load283.i = load <4 x i8>, ptr undef, align 1
   %0 = sext <4 x i8> %wide.load283.i to <4 x i32>
@@ -816,6 +818,7 @@ entry:
 define void @no_illegal_types_vmull_zext(<4 x i32> %a) {
 ; CHECK-LABEL: no_illegal_types_vmull_zext:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   %wide.load283.i = load <4 x i8>, ptr undef, align 1
   %0 = zext <4 x i8> %wide.load283.i to <4 x i32>

@@ -20,6 +20,7 @@ define void @other_regression(i1 %cmp.not.i.i.i) {
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    ud2
 entry:
   br label %for.cond10.preheader
 

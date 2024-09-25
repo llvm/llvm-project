@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=mips -mcpu=mips32 | FileCheck %s
-; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s
-; RUN: llc < %s -mtriple=mips -mattr=mips16 | FileCheck %s
+; RUN: llc < %s -trap-unreachable=false -mtriple=mips -mcpu=mips32 | FileCheck %s
+; RUN: llc < %s -trap-unreachable=false -mtriple=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s
+; RUN: llc < %s -trap-unreachable=false -mtriple=mips -mattr=mips16 | FileCheck %s
 
 ; Verify that we emit the .insn directive for zero-sized (empty) basic blocks.
 ; This only really matters for microMIPS and MIPS16.

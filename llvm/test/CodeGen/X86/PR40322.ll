@@ -72,16 +72,17 @@ define void @_Z2ami(i32) #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-MINGW-X86-NEXT:    addl $12, %esp
 ; CHECK-MINGW-X86-NEXT:    .cfi_adjust_cfa_offset -12
 ; CHECK-MINGW-X86-NEXT:  Ltmp4:
-; CHECK-MINGW-X86-NEXT:  # %bb.8: # %unreachable
-; CHECK-MINGW-X86-NEXT:  LBB0_5: # %lpad
+; CHECK-MINGW-X86-NEXT:  # %bb.5: # %unreachable
+; CHECK-MINGW-X86-NEXT:    ud2
+; CHECK-MINGW-X86-NEXT:  LBB0_6: # %lpad
 ; CHECK-MINGW-X86-NEXT:  Ltmp2:
 ; CHECK-MINGW-X86-NEXT:    movl %eax, %edi
 ; CHECK-MINGW-X86-NEXT:    .cfi_escape 0x2e, 0x04
 ; CHECK-MINGW-X86-NEXT:    pushl $__ZGVZ2amiE2au
 ; CHECK-MINGW-X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-MINGW-X86-NEXT:    calll ___cxa_guard_abort
-; CHECK-MINGW-X86-NEXT:    jmp LBB0_7
-; CHECK-MINGW-X86-NEXT:  LBB0_6: # %lpad1
+; CHECK-MINGW-X86-NEXT:    jmp LBB0_8
+; CHECK-MINGW-X86-NEXT:  LBB0_7: # %lpad1
 ; CHECK-MINGW-X86-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-MINGW-X86-NEXT:  Ltmp5:
 ; CHECK-MINGW-X86-NEXT:    movl %eax, %edi
@@ -89,7 +90,7 @@ define void @_Z2ami(i32) #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-MINGW-X86-NEXT:    pushl %esi
 ; CHECK-MINGW-X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-MINGW-X86-NEXT:    calll __ZdlPv
-; CHECK-MINGW-X86-NEXT:  LBB0_7: # %eh.resume
+; CHECK-MINGW-X86-NEXT:  LBB0_8: # %eh.resume
 ; CHECK-MINGW-X86-NEXT:    addl $4, %esp
 ; CHECK-MINGW-X86-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-MINGW-X86-NEXT:    .cfi_escape 0x2e, 0x04

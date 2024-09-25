@@ -21,6 +21,7 @@ define i32 @func1(i32 %x) #0 {
 ; CHECK-NEXT:    addi a1, a1, %lo(_ZTIi)
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    call __cxa_throw
+; CHECK-NEXT:    unimp
 entry:
   %mul = mul i32 %x, %x
   %add = add i32 %mul, 1
@@ -48,6 +49,7 @@ define i32 @func2(i32 %x) #0 {
 ; CHECK-NEXT:    addi a1, a1, %lo(_ZTIi)
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    call __cxa_throw
+; CHECK-NEXT:    unimp
 entry:
   %mul = mul i32 %x, %x
   %add = add i32 %mul, 1

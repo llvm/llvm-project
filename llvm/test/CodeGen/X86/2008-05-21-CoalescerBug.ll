@@ -98,6 +98,7 @@ define ptr @tree_redirect_edge_and_branch(ptr %e1, ptr %dest2) nounwind  {
 ; CHECK-NEXT:    movl $0, (%esi)
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:  .LBB0_5: # %bb841
+; CHECK-NEXT:    ud2
 entry:
 	br label %bb497
 

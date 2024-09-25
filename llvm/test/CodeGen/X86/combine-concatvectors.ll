@@ -28,6 +28,7 @@ define void @d(i1 %cmp) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq fun@PLT
+; CHECK-NEXT:    ud2
 bar:
   %val = call { i8, double } @fun()
   %extr = extractvalue { i8, double } %val, 1

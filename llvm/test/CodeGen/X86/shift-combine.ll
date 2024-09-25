@@ -387,14 +387,18 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, ptr %p1, ptr %p2) n
 
 %"class.QPainterPath" = type { double, double, i32 }
 
-define dso_local void @PR42880(i32 %t0) {
+define dso_local i32 @PR42880(i32 %t0) {
 ; X86-LABEL: PR42880:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    je .LBB16_1
 ; X86-NEXT:  # %bb.2: # %if
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
 ; X86-NEXT:  .LBB16_1: # %then
+; X86-NEXT:    movl $4, %eax
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR42880:
 ; X64:       # %bb.0:
@@ -402,7 +406,11 @@ define dso_local void @PR42880(i32 %t0) {
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    je .LBB16_1
 ; X64-NEXT:  # %bb.2: # %if
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
 ; X64-NEXT:  .LBB16_1: # %then
+; X64-NEXT:    movl $4, %eax
+; X64-NEXT:    retq
   %sub = add nsw i32 %t0, -1
   %add.ptr.i94 = getelementptr inbounds %"class.QPainterPath", ptr null, i32 %sub
   %x = ptrtoint ptr %add.ptr.i94 to i32
@@ -412,10 +420,10 @@ define dso_local void @PR42880(i32 %t0) {
 
 then:
   %t1 = xor i32 %div, -1
-  unreachable
+  ret i32 4
 
 if:
-  unreachable
+  ret i32 0
 }
 
 ; The mul here is the equivalent of (neg (shl X, 32)).

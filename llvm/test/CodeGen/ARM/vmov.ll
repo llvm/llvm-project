@@ -678,6 +678,7 @@ define arm_aapcs_vfpcc void @any_extend(<4 x i1> %x, <4 x i32> %y) nounwind ssp 
 ; CHECK-LE-NEXT:    vsub.i32 q8, q8, q1
 ; CHECK-LE-NEXT:    vmovn.i32 d16, q8
 ; CHECK-LE-NEXT:    vst1.16 {d16}, [r0]
+; CHECK-LE-NEXT:    .inst 0xe7ffdefe
 ;
 ; CHECK-BE-LABEL: any_extend:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -689,6 +690,7 @@ define arm_aapcs_vfpcc void @any_extend(<4 x i1> %x, <4 x i32> %y) nounwind ssp 
 ; CHECK-BE-NEXT:    vsub.i32 q8, q8, q9
 ; CHECK-BE-NEXT:    vmovn.i32 d16, q8
 ; CHECK-BE-NEXT:    vst1.16 {d16}, [r0]
+; CHECK-BE-NEXT:    .inst 0xe7ffdefe
 entry:
   %and.i186 = zext <4 x i1> %x to <4 x i32>
   %add.i185 = sub <4 x i32> %and.i186, %y

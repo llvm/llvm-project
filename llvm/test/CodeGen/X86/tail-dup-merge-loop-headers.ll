@@ -113,7 +113,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    movq %r15, %rdx
 ; CHECK-NEXT:    callq memcpy@PLT
 ; CHECK-NEXT:    cmpl $4, %ebp
-; CHECK-NEXT:    jb .LBB1_19
+; CHECK-NEXT:    jb .LBB1_7
 ; CHECK-NEXT:  # %bb.3: # %shared_preheader
 ; CHECK-NEXT:    movb $32, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -132,7 +132,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    jne .LBB1_18
+; CHECK-NEXT:    jne .LBB1_7
 ; CHECK-NEXT:  # %bb.9: # %inner_loop_body
 ; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    testb %al, %al
@@ -167,6 +167,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    decb %cl
 ; CHECK-NEXT:    jne .LBB1_12
 ; CHECK-NEXT:  .LBB1_7: # %if.end41.us1436.i
+; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  .LBB1_11: # %if.then99.i
 ; CHECK-NEXT:    movq .str.6@GOTPCREL(%rip), %rdi
 ; CHECK-NEXT:    xorl %ebx, %ebx
@@ -180,8 +181,6 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_18: # %wunpsect.exit.thread.loopexit389
-; CHECK-NEXT:  .LBB1_19: # %wunpsect.exit.thread.loopexit391
 entry:
   %0 = load i32, ptr undef, align 4
   %mul = shl nsw i32 %0, 2

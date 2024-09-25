@@ -25,54 +25,50 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NEXT:    andi. 6, 10, 1
 ; CHECK-NEXT:    crmove 8, 1
 ; CHECK-NEXT:    andi. 6, 9, 1
-; CHECK-NEXT:    bc 4, 20, .LBB0_24
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.1: # %do.body
-; CHECK-NEXT:    bc 4, 20, .LBB0_25
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.2: # %trace_jbd2_start_commit.exit
 ; CHECK-NEXT:    mr 30, 8
 ; CHECK-NEXT:    mr 29, 7
 ; CHECK-NEXT:    bc 12, 20, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %do.body.i1116
-; CHECK-NEXT:    bc 4, 20, .LBB0_26
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  .LBB0_4: # %trace_jbd2_commit_locking.exit
-; CHECK-NEXT:    bc 4, 20, .LBB0_27
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.5: # %spin_unlock.exit1146
-; CHECK-NEXT:    bc 4, 20, .LBB0_28
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.6: # %trace_jbd2_commit_flushing.exit
-; CHECK-NEXT:    bc 4, 20, .LBB0_29
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.7: # %for.end.i
-; CHECK-NEXT:    bc 4, 20, .LBB0_31
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.8: # %journal_submit_data_buffers.exit
-; CHECK-NEXT:    bc 4, 20, .LBB0_32
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.9: # %if.end103
-; CHECK-NEXT:    bc 4, 20, .LBB0_33
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.10: # %trace_jbd2_commit_logging.exit
-; CHECK-NEXT:    bc 4, 20, .LBB0_34
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.11: # %for.end.i1287
-; CHECK-NEXT:    bc 4, 20, .LBB0_35
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.12: # %journal_finish_inode_data_buffers.exit
-; CHECK-NEXT:    bc 4, 20, .LBB0_36
+; CHECK-NEXT:    bc 4, 20, .LBB0_22
 ; CHECK-NEXT:  # %bb.13: # %if.end256
 ; CHECK-NEXT:    cmpdi 1, 4, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_14: # %while.body318
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    bc 4, 6, .LBB0_19
+; CHECK-NEXT:    bc 4, 6, .LBB0_22
 ; CHECK-NEXT:  # %bb.15: # %wait_on_buffer.exit
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 4, 1, .LBB0_14
 ; CHECK-NEXT:  # %bb.16: # %do.body378
-; CHECK-NEXT:    bc 4, 8, .LBB0_20
-; CHECK-NEXT:  # %bb.17: # %while.end418
-; CHECK-NEXT:    bc 4, 8, .LBB0_23
-; CHECK-NEXT:  .LBB0_18: # %if.end421
-; CHECK-NEXT:  .LBB0_19: # %if.then.i1296
-; CHECK-NEXT:  .LBB0_20: # %while.body392.lr.ph
+; CHECK-NEXT:    bc 12, 8, .LBB0_20
+; CHECK-NEXT:  # %bb.17: # %while.body392.lr.ph
 ; CHECK-NEXT:    lis 26, 4
 ; CHECK-NEXT:    mr 27, 5
 ; CHECK-NEXT:    mr 28, 3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_21: # %while.body392
+; CHECK-NEXT:  .LBB0_18: # %while.body392
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    ldu 25, -72(3)
@@ -88,33 +84,21 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NEXT:    std 3, 0(30)
 ; CHECK-NEXT:    bl __brelse
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    bc 4, 9, .LBB0_21
-; CHECK-NEXT:  # %bb.22: # %while.end418.loopexit
+; CHECK-NEXT:    bc 4, 9, .LBB0_18
+; CHECK-NEXT:  # %bb.19: # %while.end418.loopexit
 ; CHECK-NEXT:    andi. 3, 25, 1
 ; CHECK-NEXT:    li 3, -5
 ; CHECK-NEXT:    mr 5, 27
 ; CHECK-NEXT:    iselgt 5, 5, 3
 ; CHECK-NEXT:    mr 3, 28
-; CHECK-NEXT:    bc 12, 8, .LBB0_18
-; CHECK-NEXT:  .LBB0_23: # %if.then420
+; CHECK-NEXT:  .LBB0_20: # %while.end418
+; CHECK-NEXT:    bc 12, 8, .LBB0_22
+; CHECK-NEXT:  # %bb.21: # %if.then420
 ; CHECK-NEXT:    extsw 4, 5
 ; CHECK-NEXT:    bl jbd2_journal_abort
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .LBB0_24: # %if.then5
-; CHECK-NEXT:  .LBB0_25: # %do.body.i
-; CHECK-NEXT:  .LBB0_26: # %do.body5.i1122
-; CHECK-NEXT:  .LBB0_27: # %if.then.i.i.i.i1144
-; CHECK-NEXT:  .LBB0_28: # %do.body.i1159
-; CHECK-NEXT:  .LBB0_29: # %for.body.lr.ph.i
-; CHECK-NEXT:    bc 4, 20, .LBB0_37
-; CHECK-NEXT:  # %bb.30: # %spin_unlock.exit.i
-; CHECK-NEXT:  .LBB0_31: # %if.then.i.i.i.i31.i
-; CHECK-NEXT:  .LBB0_32: # %if.then102
-; CHECK-NEXT:  .LBB0_33: # %do.body.i1182
-; CHECK-NEXT:  .LBB0_34: # %for.body.i1277
-; CHECK-NEXT:  .LBB0_35: # %if.then.i.i.i.i84.i
-; CHECK-NEXT:  .LBB0_36: # %if.then249
-; CHECK-NEXT:  .LBB0_37: # %if.then.i.i.i.i.i
+; CHECK-NEXT:  .LBB0_22: # %if.then5
+; CHECK-NEXT:    trap
 ;
 ; CHECK-NO-ISEL-LABEL: jbd2_journal_commit_transaction:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
@@ -135,54 +119,50 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NO-ISEL-NEXT:    andi. 6, 10, 1
 ; CHECK-NO-ISEL-NEXT:    crmove 8, 1
 ; CHECK-NO-ISEL-NEXT:    andi. 6, 9, 1
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_26
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %do.body
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_27
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.2: # %trace_jbd2_start_commit.exit
 ; CHECK-NO-ISEL-NEXT:    mr 30, 8
 ; CHECK-NO-ISEL-NEXT:    mr 29, 7
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB0_4
 ; CHECK-NO-ISEL-NEXT:  # %bb.3: # %do.body.i1116
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_28
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  .LBB0_4: # %trace_jbd2_commit_locking.exit
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_29
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.5: # %spin_unlock.exit1146
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_30
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.6: # %trace_jbd2_commit_flushing.exit
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_31
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.7: # %for.end.i
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_33
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.8: # %journal_submit_data_buffers.exit
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_34
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.9: # %if.end103
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_35
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.10: # %trace_jbd2_commit_logging.exit
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_36
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.11: # %for.end.i1287
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_37
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.12: # %journal_finish_inode_data_buffers.exit
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_38
+; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.13: # %if.end256
 ; CHECK-NO-ISEL-NEXT:    cmpdi 1, 4, 0
 ; CHECK-NO-ISEL-NEXT:    .p2align 4
 ; CHECK-NO-ISEL-NEXT:  .LBB0_14: # %while.body318
 ; CHECK-NO-ISEL-NEXT:    #
-; CHECK-NO-ISEL-NEXT:    bc 4, 6, .LBB0_19
+; CHECK-NO-ISEL-NEXT:    bc 4, 6, .LBB0_24
 ; CHECK-NO-ISEL-NEXT:  # %bb.15: # %wait_on_buffer.exit
 ; CHECK-NO-ISEL-NEXT:    #
 ; CHECK-NO-ISEL-NEXT:    bc 4, 1, .LBB0_14
 ; CHECK-NO-ISEL-NEXT:  # %bb.16: # %do.body378
-; CHECK-NO-ISEL-NEXT:    bc 4, 8, .LBB0_20
-; CHECK-NO-ISEL-NEXT:  # %bb.17: # %while.end418
-; CHECK-NO-ISEL-NEXT:    bc 4, 8, .LBB0_25
-; CHECK-NO-ISEL-NEXT:  .LBB0_18: # %if.end421
-; CHECK-NO-ISEL-NEXT:  .LBB0_19: # %if.then.i1296
-; CHECK-NO-ISEL-NEXT:  .LBB0_20: # %while.body392.lr.ph
+; CHECK-NO-ISEL-NEXT:    bc 12, 8, .LBB0_22
+; CHECK-NO-ISEL-NEXT:  # %bb.17: # %while.body392.lr.ph
 ; CHECK-NO-ISEL-NEXT:    lis 26, 4
 ; CHECK-NO-ISEL-NEXT:    mr 27, 5
 ; CHECK-NO-ISEL-NEXT:    mr 28, 3
 ; CHECK-NO-ISEL-NEXT:    .p2align 4
-; CHECK-NO-ISEL-NEXT:  .LBB0_21: # %while.body392
+; CHECK-NO-ISEL-NEXT:  .LBB0_18: # %while.body392
 ; CHECK-NO-ISEL-NEXT:    #
 ; CHECK-NO-ISEL-NEXT:    ld 3, 0(3)
 ; CHECK-NO-ISEL-NEXT:    ldu 25, -72(3)
@@ -198,35 +178,23 @@ define void @jbd2_journal_commit_transaction(ptr %journal, i64 %inp1, i32 %inp2,
 ; CHECK-NO-ISEL-NEXT:    std 3, 0(30)
 ; CHECK-NO-ISEL-NEXT:    bl __brelse
 ; CHECK-NO-ISEL-NEXT:    nop
-; CHECK-NO-ISEL-NEXT:    bc 4, 9, .LBB0_21
-; CHECK-NO-ISEL-NEXT:  # %bb.22: # %while.end418.loopexit
+; CHECK-NO-ISEL-NEXT:    bc 4, 9, .LBB0_18
+; CHECK-NO-ISEL-NEXT:  # %bb.19: # %while.end418.loopexit
 ; CHECK-NO-ISEL-NEXT:    andi. 3, 25, 1
 ; CHECK-NO-ISEL-NEXT:    mr 5, 27
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_24
-; CHECK-NO-ISEL-NEXT:  # %bb.23: # %while.end418.loopexit
+; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_21
+; CHECK-NO-ISEL-NEXT:  # %bb.20: # %while.end418.loopexit
 ; CHECK-NO-ISEL-NEXT:    li 5, -5
-; CHECK-NO-ISEL-NEXT:  .LBB0_24: # %while.end418.loopexit
+; CHECK-NO-ISEL-NEXT:  .LBB0_21: # %while.end418.loopexit
 ; CHECK-NO-ISEL-NEXT:    mr 3, 28
-; CHECK-NO-ISEL-NEXT:    bc 12, 8, .LBB0_18
-; CHECK-NO-ISEL-NEXT:  .LBB0_25: # %if.then420
+; CHECK-NO-ISEL-NEXT:  .LBB0_22: # %while.end418
+; CHECK-NO-ISEL-NEXT:    bc 12, 8, .LBB0_24
+; CHECK-NO-ISEL-NEXT:  # %bb.23: # %if.then420
 ; CHECK-NO-ISEL-NEXT:    extsw 4, 5
 ; CHECK-NO-ISEL-NEXT:    bl jbd2_journal_abort
 ; CHECK-NO-ISEL-NEXT:    nop
-; CHECK-NO-ISEL-NEXT:  .LBB0_26: # %if.then5
-; CHECK-NO-ISEL-NEXT:  .LBB0_27: # %do.body.i
-; CHECK-NO-ISEL-NEXT:  .LBB0_28: # %do.body5.i1122
-; CHECK-NO-ISEL-NEXT:  .LBB0_29: # %if.then.i.i.i.i1144
-; CHECK-NO-ISEL-NEXT:  .LBB0_30: # %do.body.i1159
-; CHECK-NO-ISEL-NEXT:  .LBB0_31: # %for.body.lr.ph.i
-; CHECK-NO-ISEL-NEXT:    bc 4, 20, .LBB0_39
-; CHECK-NO-ISEL-NEXT:  # %bb.32: # %spin_unlock.exit.i
-; CHECK-NO-ISEL-NEXT:  .LBB0_33: # %if.then.i.i.i.i31.i
-; CHECK-NO-ISEL-NEXT:  .LBB0_34: # %if.then102
-; CHECK-NO-ISEL-NEXT:  .LBB0_35: # %do.body.i1182
-; CHECK-NO-ISEL-NEXT:  .LBB0_36: # %for.body.i1277
-; CHECK-NO-ISEL-NEXT:  .LBB0_37: # %if.then.i.i.i.i84.i
-; CHECK-NO-ISEL-NEXT:  .LBB0_38: # %if.then249
-; CHECK-NO-ISEL-NEXT:  .LBB0_39: # %if.then.i.i.i.i.i
+; CHECK-NO-ISEL-NEXT:  .LBB0_24: # %if.then5
+; CHECK-NO-ISEL-NEXT:    trap
                                              ptr %inp3, ptr %inp4,
                                              ptr %inp5, i1 %inp6,
                                              i1 %inp7, i1 %inp8) #0 {

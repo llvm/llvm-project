@@ -541,6 +541,7 @@ define void @no_and_cmp0_fold() nounwind {
 ; X86-NEXT:  # %bb.2: # %if.end
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB18_1: # %if.then
+; X86-NEXT:    ud2
 ;
 ; X64-LABEL: no_and_cmp0_fold:
 ; X64:       # %bb.0: # %entry
@@ -551,6 +552,7 @@ define void @no_and_cmp0_fold() nounwind {
 ; X64-NEXT:  # %bb.2: # %if.end
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB18_1: # %if.then
+; X64-NEXT:    ud2
 entry:
   %0 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %and = and i32 %0, 8

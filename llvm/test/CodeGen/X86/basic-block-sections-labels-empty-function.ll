@@ -1,6 +1,7 @@
 ;; Verify that the BB address map is not emitted for empty functions.
-; RUN: llc < %s -mtriple=x86_64 -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,BASIC
-; RUN: llc < %s -mtriple=x86_64 -basic-block-sections=labels -pgo-analysis-map=func-entry-count,bb-freq | FileCheck %s --check-prefixes=CHECK,PGO
+;; Set trap-unreachable to false so that we test this behavior correctly.
+; RUN: llc < %s -mtriple=x86_64 -trap-unreachable=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,BASIC
+; RUN: llc < %s -mtriple=x86_64 -trap-unreachable=false -basic-block-sections=labels -pgo-analysis-map=func-entry-count,bb-freq | FileCheck %s --check-prefixes=CHECK,PGO
 
 define void @empty_func() {
 entry:

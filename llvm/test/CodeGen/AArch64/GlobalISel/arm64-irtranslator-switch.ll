@@ -137,6 +137,8 @@ define i32 @test_cfg_remap_multiple_preds(i32 %in) {
   ; CHECK-NEXT: bb.2.odd:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.next:
   ; CHECK-NEXT:   G_BR %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -1147,17 +1149,27 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT: bb.2.if.then:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.sw.bb2.i41:
   ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.sw.bb7.i44:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.sw.bb8.i45:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.sw.bb13.i47:
   ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.sw.bb14.i48:
   ; CHECK-NEXT:   [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[DEF1]](s32), [[C5]]
@@ -1202,6 +1214,8 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT: bb.8.sw.default.i49:
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_TRAP
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9.sw.bb1.i:
   ; CHECK-NEXT:   G_BR %bb.16
   ; CHECK-NEXT: {{  $}}
@@ -1234,6 +1248,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @jt_2_tables_phi_edge_from_second, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.while.end:
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C21]](s32), %bb.30, [[PHI]](s32), %bb.16
@@ -1460,6 +1475,7 @@ define i1 @i1_value_cmp_is_signed(i1) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   G_TRAP
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.OkValue:
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC1]](s1)

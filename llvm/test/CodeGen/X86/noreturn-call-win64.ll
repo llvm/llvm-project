@@ -109,5 +109,5 @@ declare dso_local void @"??1MakeCleanup@@QEAA@XZ"(ptr)
 ; CHECK: callq _CxxThrowException
 ; CHECK-NOT: {{(addq|subq) .*, %rsp}}
 ; CHECK: # %unreachable
-; CHECK: int3
+; CHECK: ud2
 ; CHECK: .seh_handlerdata

@@ -21,7 +21,7 @@
 ; CHECK: # %eh.resume
 ; CHECK: callq _Unwind_Resume
 ; CHECK-NEXT: # %unreachable
-; CHECK-NEXT: int3
+; CHECK-NEXT: ud2
 ; CHECK-NEXT: .Lfunc_end0:
 
 %struct.as = type { ptr }

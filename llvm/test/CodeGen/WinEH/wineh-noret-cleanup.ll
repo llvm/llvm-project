@@ -68,13 +68,13 @@ catch.body.2:
 ; SEH-NEXT:    .long   .Ltmp0@IMGREL
 ; SEH-NEXT:    .long   .Ltmp1@IMGREL+1
 ; SEH-NEXT:    .long   dummy_filter@IMGREL
-; SEH-NEXT:    .long   .LBB0_5@IMGREL
+; SEH-NEXT:    .long   .LBB0_2@IMGREL
 ; SEH-NEXT:    .long   .Ltmp2@IMGREL
 ; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
-; SEH-NEXT:    .long   "?dtor$2@?0?test@4HA"@IMGREL
+; SEH-NEXT:    .long   "?dtor$5@?0?test@4HA"@IMGREL
 ; SEH-NEXT:    .long   0
 ; SEH-NEXT:    .long   .Ltmp2@IMGREL
 ; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
 ; SEH-NEXT:    .long   dummy_filter@IMGREL
-; SEH-NEXT:    .long   .LBB0_5@IMGREL
+; SEH-NEXT:    .long   .LBB0_2@IMGREL
 ; SEH-NEXT:  .Llsda_end0:

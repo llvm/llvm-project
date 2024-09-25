@@ -289,6 +289,7 @@ define void @test_vclez_fp(ptr %A) nounwind optsize {
 ; CHECK-NEXT:    vuzp.8 d16, d18
 ; CHECK-NEXT:    vadd.i8 d16, d16, d17
 ; CHECK-NEXT:    vst1.8 {d16}, [r0]
+; CHECK-NEXT:    .inst 0xe7ffdefe
 entry:
   %ld = load <4 x float>, ptr %A
   %0 = fcmp ole <4 x float> %ld, zeroinitializer

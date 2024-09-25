@@ -321,7 +321,7 @@ unreachable:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[test2_after_f2:.+]]:
-; CHECK: int3
+; CHECK: ud2
 ; CHECK: [[test2_end:.*func_end.*]]:
 
 
@@ -513,7 +513,7 @@ unreachable:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[test3_after_f4:.+]]:
-; CHECK: int3
+; CHECK: ud2
 ; CHECK: .seh_proc [[test3_fault2:[^ ]+]]
 ; CHECK: # %fault2
 ; CHECK: .seh_endprologue
@@ -521,7 +521,7 @@ unreachable:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[test3_after_f3:.+]]:
-; CHECK: int3
+; CHECK: ud2
 ; CHECK: .seh_proc [[test3_fault1:[^ ]+]]
 ; CHECK: # %fault1
 ; CHECK: .seh_endprologue
@@ -529,7 +529,7 @@ unreachable:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
 ; CHECK-NEXT: [[test3_after_f2:.+]]:
-; CHECK: int3
+; CHECK: ud2
 ; CHECK: [[test3_end:.*func_end.*]]:
 }
 

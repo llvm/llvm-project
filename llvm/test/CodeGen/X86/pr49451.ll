@@ -19,8 +19,8 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:  .LBB0_1: # %for.body612
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    testb %dl, %dl
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.3: # %if.end1401
+; X86-NEXT:    je .LBB0_3
+; X86-NEXT:  # %bb.2: # %if.end1401
 ; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movw %si, s_2
@@ -29,8 +29,8 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    incl %ebx
 ; X86-NEXT:    cmpw $73, %cx
 ; X86-NEXT:    jl .LBB0_1
-; X86-NEXT:  # %bb.4: # %for.body1703
-; X86-NEXT:  .LBB0_2: # %if.then671
+; X86-NEXT:  .LBB0_3: # %if.then671
+; X86-NEXT:    ud2
 ;
 ; X64-LABEL: func_6:
 ; X64:       # %bb.0: # %entry
@@ -41,8 +41,8 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:  .LBB0_1: # %for.body612
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testb %cl, %cl
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.3: # %if.end1401
+; X64-NEXT:    je .LBB0_3
+; X64-NEXT:  # %bb.2: # %if.end1401
 ; X64-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; X64-NEXT:    addl %esi, %edx
 ; X64-NEXT:    movw %dx, s_2(%rip)
@@ -52,8 +52,8 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    leal -23091(%rax), %edi
 ; X64-NEXT:    cmpw $73, %di
 ; X64-NEXT:    jl .LBB0_1
-; X64-NEXT:  # %bb.4: # %for.body1703
-; X64-NEXT:  .LBB0_2: # %if.then671
+; X64-NEXT:  .LBB0_3: # %if.then671
+; X64-NEXT:    ud2
 entry:
   %conv649 = zext i8 %uc_8 to i64
   %xor650 = xor i64 %conv649, 296357731680175678

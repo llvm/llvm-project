@@ -9,17 +9,16 @@
 ;   https://github.com/llvm/llvm-project/issues/64420
 
 ; CHECK-LABEL: func:
-; CHECK:       # %bb.1:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vbrd %v0, 0
 ; CHECK-NEXT:    or %s1, 4, (0)1
 ; CHECK-NEXT:    lvl %s1
-; CHECK-NEXT:    vstl %v0, 4, %s0
-; CHECK-NEXT:    b.l.t (, %s10)
 
 ; SCALAR-LABEL: func:
-; SCALAR:       # %bb.1:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    or %s1, 0, (0)1
 ; SCALAR-NEXT:    st %s1, 8(, %s0)
 ; SCALAR-NEXT:    st %s1, (, %s0)
 ; SCALAR-NEXT:    b.l.t (, %s10)
@@ -31,14 +30,8 @@ target triple = "ve-unknown-linux-gnu"
 
 define dso_local void @func(ptr %_0) unnamed_addr #0 {
 start:
-  br i1 poison, label %bb7, label %panic3
-
-bb7:                                              ; preds = %start
   store <4 x i32> zeroinitializer, ptr %_0, align 4
   ret void
-
-panic3:                                           ; preds = %start
-  unreachable
 }
 
 attributes #0 = { "target-features"="+vpu" }
