@@ -5589,11 +5589,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FSINCOS: {
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FSINCOS, dl, {NVT, NVT}, Tmp1);
+    Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
 
     for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)
       Results.push_back(
-          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2.getValue(ResNum),
-                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
+          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2.getValue(ResNum), Tmp3));
     break;
   }
   case ISD::FFLOOR:
