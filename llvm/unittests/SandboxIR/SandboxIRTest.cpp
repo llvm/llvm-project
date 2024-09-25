@@ -1828,9 +1828,12 @@ bb1:
   %atomicrmw = atomicrmw add ptr %ptr, i8 %v1 acquire
   %udiv = udiv i8 %ld0, %v1
   %urem = urem i8 %ld0, %v1
-  call void @foo()
-  ret void
+  call void @foo(), !dbg !1
+  ret void, !tbaa !2
 }
+
+!1 = !{}
+!2 = !{}
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
   llvm::BasicBlock *LLVMBB1 = getBasicBlockByName(*LLVMF, "bb1");
@@ -1863,6 +1866,15 @@ bb1:
   EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Add);
   EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Sub);
   EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
+
+  // Check getOpcodeName().
+  EXPECT_EQ(I0->getOpcodeName(), "Add");
+  EXPECT_EQ(I1->getOpcodeName(), "Sub");
+  EXPECT_EQ(Ret->getOpcodeName(), "Ret");
+
+  EXPECT_EQ(sandboxir::Instruction::getOpcodeName(
+                sandboxir::Instruction::Opcode::Alloca),
+            "Alloca");
 
   // Check moveBefore(I).
   I1->moveBefore(I0);
@@ -1932,6 +1944,19 @@ bb1:
     EXPECT_EQ(LLVMI.isShift(), I.isShift());
     // Check isCast().
     EXPECT_EQ(LLVMI.isCast(), I.isCast());
+    // Check isFuncletPad().
+    EXPECT_EQ(LLVMI.isFuncletPad(), I.isFuncletPad());
+    // Check isSpecialTerminator().
+    EXPECT_EQ(LLVMI.isSpecialTerminator(), I.isSpecialTerminator());
+    // Check isOnlyUserOfAnyOperand().
+    EXPECT_EQ(LLVMI.isOnlyUserOfAnyOperand(), I.isOnlyUserOfAnyOperand());
+    // Check isLogicalShift().
+    EXPECT_EQ(LLVMI.isLogicalShift(), I.isLogicalShift());
+    // Check hasMetadata().
+    EXPECT_EQ(LLVMI.hasMetadata(), I.hasMetadata());
+    // Check hasMetadataOtherThanDebugLoc().
+    EXPECT_EQ(LLVMI.hasMetadataOtherThanDebugLoc(),
+              I.hasMetadataOtherThanDebugLoc());
     // Check isAssociative().
     EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
     // Check isCommutative().
