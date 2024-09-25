@@ -3203,22 +3203,24 @@ def int_amdgcn_pext_b32 :
 
 // void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
 // The %sem argument must be uniform, otherwise behavior is undefined.
+// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %limit in codegen.
 def int_amdgcn_s_sema_set_limit :
   ClangBuiltin<"__builtin_amdgcn_s_sema_set_limit">,
   Intrinsic<
     [],
     [local_ptr_ty, llvm_i32_ty],
-    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
 // void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %count)
 // The %sem argument must be uniform, otherwise behavior is undefined.
+// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %count in codegen.
 def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
     [],
     [local_ptr_ty, llvm_i32_ty],
-    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
 // void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) %sem)
