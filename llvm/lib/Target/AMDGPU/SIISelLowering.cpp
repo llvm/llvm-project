@@ -15500,6 +15500,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         Failed |= !RegName.consume_back("]");
         if (!Failed) {
           uint32_t Width = (End - Idx + 1) * 32;
+          // Prohibit constraints for register ranges with a width that does not
+          // match the required type.
+          if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
+            return std::pair(0U, nullptr);
           MCRegister Reg = RC->getRegister(Idx);
           if (SIRegisterInfo::isVGPRClass(RC))
             RC = TRI->getVGPRClassForBitWidth(Width);
@@ -15513,6 +15517,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
           }
         }
       } else {
+        // Check for lossy scalar/vector conversions.
+        if (VT.isVector() && VT.getSizeInBits() != 32)
+          return std::pair(0U, nullptr);
         bool Failed = RegName.getAsInteger(10, Idx);
         if (!Failed && Idx < RC->getNumRegs())
           return std::pair(RC->getRegister(Idx), RC);
