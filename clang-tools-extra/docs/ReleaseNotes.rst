@@ -166,6 +166,10 @@ Changes in existing checks
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
+  ``NULL``/``__null`` (but not ``0``) when used with a templated type.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
