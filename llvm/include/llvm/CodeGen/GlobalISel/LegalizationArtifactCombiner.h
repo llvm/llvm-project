@@ -1090,6 +1090,10 @@ public:
       LegalizeActionStep ActionStep = LI.getAction(
           {TargetOpcode::G_UNMERGE_VALUES, {OpTy, SrcUnmergeSrcTy}});
       switch (ActionStep.Action) {
+      case LegalizeActions::Legal:
+        if (!OpTy.isVector() || !LI.isLegal({TargetOpcode::G_UNMERGE_VALUES,
+                                             {DestTy, SrcUnmergeSrcTy}}))
+          return false;
       case LegalizeActions::Lower:
       case LegalizeActions::Unsupported:
         break;
