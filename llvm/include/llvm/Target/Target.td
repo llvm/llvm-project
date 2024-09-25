@@ -635,6 +635,7 @@ class Instruction : InstructionEncoding {
   bit isBitcast    = false;     // Is this instruction a bitcast instruction?
   bit isSelect     = false;     // Is this instruction a select instruction?
   bit isBarrier    = false;     // Can control flow fall through this instruction?
+  bit isPhi        = false;     // Is this instruction a phi instruction?
   bit isCall       = false;     // Is this instruction a call instruction?
   bit isAdd        = false;     // Is this instruction an add instruction?
   bit isTrap       = false;     // Is this instruction a trap instruction?
@@ -1174,6 +1175,7 @@ def PHI : StandardPseudoInstruction {
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
   let hasSideEffects = false;
+  let isPhi = true;
 }
 def INLINEASM : StandardPseudoInstruction {
   let OutOperandList = (outs);

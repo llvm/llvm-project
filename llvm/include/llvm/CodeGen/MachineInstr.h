@@ -1394,10 +1394,19 @@ public:
     return getOpcode() == TargetOpcode::JUMP_TABLE_DEBUG_INFO;
   }
 
-  bool isPHI() const {
-    return getOpcode() == TargetOpcode::PHI ||
-           getOpcode() == TargetOpcode::G_PHI;
+  bool isPHI() const { return getDesc().isPhi(); }
+
+  unsigned getIndexFirstPHIPair() const {
+    assert(isPHI());
+
+    if (getOpcode() == TargetOpcode::G_PHI || getOpcode() == TargetOpcode::PHI)
+      return 1;
+    // The only other instruction marked as PHI node is OpPhi, in the SPIR-V
+    // backend. The only difference is the [reg, BB] pairs starts at index 2,
+    // not 1.
+    return 2;
   }
+
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const {

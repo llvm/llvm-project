@@ -96,6 +96,7 @@ def G_PHI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
   let hasSideEffects = false;
+  let isPhi = true;
 }
 
 def G_FRAME_INDEX : GenericInstruction {
