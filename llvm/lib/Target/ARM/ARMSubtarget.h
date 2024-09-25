@@ -105,6 +105,18 @@ public:
     /// vpush {d8-d15}
     /// push {r11, lr}
     SplitR11WindowsSEH,
+
+    /// When generating AAPCS-compilant frame chains, R11 is the frame pointer,
+    /// and must be pushed adjacent to the return address (LR). Normally this
+    /// isn't a problem, because the only register between them is r12, which is
+    /// the intra-procedure-call scratch register, so doesn't need to be saved.
+    /// However, when PACBTI is in use, r12 contains the authentication code, so
+    /// does need to be saved. This means that we need a separate push for R11
+    /// and LR.
+    /// push {r0-r10, r12}
+    /// push {r11, lr}
+    /// vpush {d8-d15}
+    SplitR11AAPCSSignRA,
   };
 
 protected:

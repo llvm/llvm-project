@@ -4,25 +4,27 @@
 ; int test1() {
 ;     return 0;
 ; }
-; Here, r11 is used as the frame pointer before it is pushed to the stack, so
-; it's value isn't preserved.
 define i32 @test1() "sign-return-address"="non-leaf" {
 ; CHECK-LABEL: test1:
 ; CHECK:         .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r11, ra_auth_code, lr}
-; CHECK-NEXT:    push.w {r11, r12, lr}
+; CHECK-NEXT:    .save {ra_auth_code}
+; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -4
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push.w {r11, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset lr, -8
 ; CHECK-NEXT:    .cfi_offset r11, -12
 ; CHECK-NEXT:    .setfp r11, sp
 ; CHECK-NEXT:    mov r11, sp
 ; CHECK-NEXT:    .cfi_def_cfa_register r11
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    pop.w {r11, r12, lr}
+; CHECK-NEXT:    pop.w {r11, lr}
+; CHECK-NEXT:    ldr r12, [sp], #4
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -38,17 +40,20 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r7, r11, ra_auth_code, lr}
-; CHECK-NEXT:    push.w {r4, r7, r11, r12, lr}
+; CHECK-NEXT:    .save {r4, r7, ra_auth_code}
+; CHECK-NEXT:    push.w {r4, r7, r12}
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -4
+; CHECK-NEXT:    .cfi_offset r7, -8
+; CHECK-NEXT:    .cfi_offset r4, -12
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push.w {r11, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
-; CHECK-NEXT:    .cfi_offset r11, -12
-; CHECK-NEXT:    .cfi_offset r7, -16
-; CHECK-NEXT:    .cfi_offset r4, -20
-; CHECK-NEXT:    .setfp r11, sp, #8
-; CHECK-NEXT:    add.w r11, sp, #8
-; CHECK-NEXT:    .cfi_def_cfa r11, 12
+; CHECK-NEXT:    .cfi_offset lr, -16
+; CHECK-NEXT:    .cfi_offset r11, -20
+; CHECK-NEXT:    .setfp r11, sp
+; CHECK-NEXT:    mov r11, sp
+; CHECK-NEXT:    .cfi_def_cfa_register r11
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    movs r1, #7
@@ -57,9 +62,9 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; CHECK-NEXT:    sub.w r0, sp, r0
 ; CHECK-NEXT:    mov sp, r0
 ; CHECK-NEXT:    bl take_ptr
-; CHECK-NEXT:    sub.w r4, r11, #8
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop.w {r4, r7, r11, r12, lr}
+; CHECK-NEXT:    mov sp, r11
+; CHECK-NEXT:    pop.w {r11, lr}
+; CHECK-NEXT:    pop.w {r4, r7, r12}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -80,19 +85,22 @@ define void @test3(i32 noundef %c, float noundef %e, i32 noundef %z) "sign-retur
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, ra_auth_code, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r11, r12, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, ra_auth_code}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r12}
+; CHECK-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -4
+; CHECK-NEXT:    .cfi_offset r7, -8
+; CHECK-NEXT:    .cfi_offset r6, -12
+; CHECK-NEXT:    .cfi_offset r5, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push.w {r11, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 28
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
-; CHECK-NEXT:    .cfi_offset r11, -12
-; CHECK-NEXT:    .cfi_offset r7, -16
-; CHECK-NEXT:    .cfi_offset r6, -20
-; CHECK-NEXT:    .cfi_offset r5, -24
-; CHECK-NEXT:    .cfi_offset r4, -28
-; CHECK-NEXT:    .setfp r11, sp, #16
-; CHECK-NEXT:    add.w r11, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa r11, 12
+; CHECK-NEXT:    .cfi_offset lr, -24
+; CHECK-NEXT:    .cfi_offset r11, -28
+; CHECK-NEXT:    .setfp r11, sp
+; CHECK-NEXT:    mov r11, sp
+; CHECK-NEXT:    .cfi_def_cfa_register r11
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    cmp r0, #0
@@ -111,9 +119,9 @@ define void @test3(i32 noundef %c, float noundef %e, i32 noundef %z) "sign-retur
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bleq knr
-; CHECK-NEXT:    sub.w r4, r11, #16
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r11, r12, lr}
+; CHECK-NEXT:    mov sp, r11
+; CHECK-NEXT:    pop.w {r11, lr}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r12}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
