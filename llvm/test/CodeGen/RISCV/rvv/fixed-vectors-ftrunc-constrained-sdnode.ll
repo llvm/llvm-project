@@ -20,10 +20,9 @@ define <1 x half> @trunc_v1f16(<1 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <1 x half> @llvm.experimental.constrained.trunc.v1f16(<1 x half> %x, metadata !"fpexcept.strict")
+  %a = call <1 x half> @llvm.trunc.v1f16(<1 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <1 x half> %a
 }
-declare <1 x half> @llvm.experimental.constrained.trunc.v1f16(<1 x half>, metadata)
 
 define <2 x half> @trunc_v2f16(<2 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_v2f16:
@@ -41,10 +40,9 @@ define <2 x half> @trunc_v2f16(<2 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <2 x half> @llvm.experimental.constrained.trunc.v2f16(<2 x half> %x, metadata !"fpexcept.strict")
+  %a = call <2 x half> @llvm.trunc.v2f16(<2 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <2 x half> %a
 }
-declare <2 x half> @llvm.experimental.constrained.trunc.v2f16(<2 x half>, metadata)
 
 define <4 x half> @trunc_v4f16(<4 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_v4f16:
@@ -62,10 +60,9 @@ define <4 x half> @trunc_v4f16(<4 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <4 x half> @llvm.experimental.constrained.trunc.v4f16(<4 x half> %x, metadata !"fpexcept.strict")
+  %a = call <4 x half> @llvm.trunc.v4f16(<4 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <4 x half> %a
 }
-declare <4 x half> @llvm.experimental.constrained.trunc.v4f16(<4 x half>, metadata)
 
 define <8 x half> @trunc_v8f16(<8 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_v8f16:
@@ -83,10 +80,9 @@ define <8 x half> @trunc_v8f16(<8 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <8 x half> @llvm.experimental.constrained.trunc.v8f16(<8 x half> %x, metadata !"fpexcept.strict")
+  %a = call <8 x half> @llvm.trunc.v8f16(<8 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <8 x half> %a
 }
-declare <8 x half> @llvm.experimental.constrained.trunc.v8f16(<8 x half>, metadata)
 
 define <16 x half> @trunc_v16f16(<16 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_v16f16:
@@ -104,10 +100,9 @@ define <16 x half> @trunc_v16f16(<16 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <16 x half> @llvm.experimental.constrained.trunc.v16f16(<16 x half> %x, metadata !"fpexcept.strict")
+  %a = call <16 x half> @llvm.trunc.v16f16(<16 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <16 x half> %a
 }
-declare <16 x half> @llvm.experimental.constrained.trunc.v16f16(<16 x half>, metadata)
 
 define <32 x half> @trunc_v32f16(<32 x half> %x) strictfp {
 ; CHECK-LABEL: trunc_v32f16:
@@ -126,10 +121,9 @@ define <32 x half> @trunc_v32f16(<32 x half> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half> %x, metadata !"fpexcept.strict")
+  %a = call <32 x half> @llvm.trunc.v32f16(<32 x half> %x) [ "fpe.except"(metadata !"strict") ]
   ret <32 x half> %a
 }
-declare <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half>, metadata)
 
 define <1 x float> @trunc_v1f32(<1 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_v1f32:
@@ -147,10 +141,9 @@ define <1 x float> @trunc_v1f32(<1 x float> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float> %x, metadata !"fpexcept.strict")
+  %a = call <1 x float> @llvm.trunc.v1f32(<1 x float> %x) [ "fpe.except"(metadata !"strict") ]
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata)
 
 define <2 x float> @trunc_v2f32(<2 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_v2f32:
@@ -168,10 +161,9 @@ define <2 x float> @trunc_v2f32(<2 x float> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <2 x float> @llvm.experimental.constrained.trunc.v2f32(<2 x float> %x, metadata !"fpexcept.strict")
+  %a = call <2 x float> @llvm.trunc.v2f32(<2 x float> %x) [ "fpe.except"(metadata !"strict") ]
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.experimental.constrained.trunc.v2f32(<2 x float>, metadata)
 
 define <4 x float> @trunc_v4f32(<4 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_v4f32:
@@ -189,10 +181,9 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
+  %a = call <4 x float> @llvm.trunc.v4f32(<4 x float> %x) [ "fpe.except"(metadata !"strict") ]
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
 
 define <8 x float> @trunc_v8f32(<8 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_v8f32:
@@ -210,10 +201,9 @@ define <8 x float> @trunc_v8f32(<8 x float> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float> %x, metadata !"fpexcept.strict")
+  %a = call <8 x float> @llvm.trunc.v8f32(<8 x float> %x) [ "fpe.except"(metadata !"strict") ]
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.experimental.constrained.trunc.v8f32(<8 x float>, metadata)
 
 define <16 x float> @trunc_v16f32(<16 x float> %x) strictfp {
 ; CHECK-LABEL: trunc_v16f32:
@@ -231,10 +221,9 @@ define <16 x float> @trunc_v16f32(<16 x float> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <16 x float> @llvm.experimental.constrained.trunc.v16f32(<16 x float> %x, metadata !"fpexcept.strict")
+  %a = call <16 x float> @llvm.trunc.v16f32(<16 x float> %x) [ "fpe.except"(metadata !"strict") ]
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.experimental.constrained.trunc.v16f32(<16 x float>, metadata)
 
 define <1 x double> @trunc_v1f64(<1 x double> %x) strictfp {
 ; CHECK-LABEL: trunc_v1f64:
@@ -252,10 +241,9 @@ define <1 x double> @trunc_v1f64(<1 x double> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double> %x, metadata !"fpexcept.strict")
+  %a = call <1 x double> @llvm.trunc.v1f64(<1 x double> %x) [ "fpe.except"(metadata !"strict") ]
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double>, metadata)
 
 define <2 x double> @trunc_v2f64(<2 x double> %x) strictfp {
 ; CHECK-LABEL: trunc_v2f64:
@@ -273,10 +261,9 @@ define <2 x double> @trunc_v2f64(<2 x double> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %x, metadata !"fpexcept.strict")
+  %a = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x) [ "fpe.except"(metadata !"strict") ]
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 
 define <4 x double> @trunc_v4f64(<4 x double> %x) strictfp {
 ; CHECK-LABEL: trunc_v4f64:
@@ -294,10 +281,9 @@ define <4 x double> @trunc_v4f64(<4 x double> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double> %x, metadata !"fpexcept.strict")
+  %a = call <4 x double> @llvm.trunc.v4f64(<4 x double> %x) [ "fpe.except"(metadata !"strict") ]
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata)
 
 define <8 x double> @trunc_v8f64(<8 x double> %x) strictfp {
 ; CHECK-LABEL: trunc_v8f64:
@@ -315,7 +301,6 @@ define <8 x double> @trunc_v8f64(<8 x double> %x) strictfp {
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <8 x double> @llvm.experimental.constrained.trunc.v8f64(<8 x double> %x, metadata !"fpexcept.strict")
+  %a = call <8 x double> @llvm.trunc.v8f64(<8 x double> %x) [ "fpe.except"(metadata !"strict") ]
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.experimental.constrained.trunc.v8f64(<8 x double>, metadata)

@@ -20,8 +20,6 @@ declare <16 x float> @llvm.experimental.constrained.ceil.v16f32(<16 x float>, me
 declare <8 x double>  @llvm.experimental.constrained.ceil.v8f64(<8 x double>, metadata)
 declare <16 x float> @llvm.experimental.constrained.floor.v16f32(<16 x float>, metadata)
 declare <8 x double> @llvm.experimental.constrained.floor.v8f64(<8 x double>, metadata)
-declare <16 x float> @llvm.experimental.constrained.trunc.v16f32(<16 x float>, metadata)
-declare <8 x double> @llvm.experimental.constrained.trunc.v8f64(<8 x double>, metadata)
 declare <16 x float> @llvm.experimental.constrained.rint.v16f32(<16 x float>, metadata, metadata)
 declare <8 x double> @llvm.experimental.constrained.rint.v8f64(<8 x double>, metadata, metadata)
 declare <16 x float> @llvm.experimental.constrained.nearbyint.v16f32(<16 x float>, metadata, metadata)
@@ -227,7 +225,7 @@ define <16 x float> @strict_vector_ftrunc_v16f32(<16 x float> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <16 x float> @llvm.experimental.constrained.trunc.v16f32(<16 x float> %f, metadata !"fpexcept.strict") #0
+  %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret <16 x float> %res
 }
 
@@ -236,7 +234,7 @@ define <8 x double> @strict_vector_ftrunc_v8f64(<8 x double> %f) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <8 x double> @llvm.experimental.constrained.trunc.v8f64(<8 x double> %f, metadata !"fpexcept.strict") #0
+  %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret <8 x double> %res
 }
 

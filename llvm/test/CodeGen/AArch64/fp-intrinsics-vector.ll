@@ -300,7 +300,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NEXT:    ret
-  %val = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
+  %val = call <4 x float> @llvm.trunc.v4f32(<4 x float> %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret <4 x float> %val
 }
 
@@ -571,7 +571,7 @@ define <2 x double> @trunc_v2f64(<2 x double> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz v0.2d, v0.2d
 ; CHECK-NEXT:    ret
-  %val = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %x, metadata !"fpexcept.strict") #0
+  %val = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret <2 x double> %val
 }
 
@@ -829,7 +829,7 @@ define <1 x double> @trunc_v1f64(<1 x double> %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
-  %val = call <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double> %x, metadata !"fpexcept.strict") #0
+  %val = call <1 x double> @llvm.trunc.v1f64(<1 x double> %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret <1 x double> %val
 }
 
@@ -901,7 +901,6 @@ declare <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float>, metad
 declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, metadata)
 declare <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float>, metadata)
 declare <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float>, metadata)
-declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
 declare <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 
@@ -927,7 +926,6 @@ declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, met
 declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double>, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmps.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 
@@ -953,7 +951,6 @@ declare <1 x double> @llvm.experimental.constrained.ceil.v1f64(<1 x double>, met
 declare <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double>, metadata)
 declare <1 x double> @llvm.experimental.constrained.round.v1f64(<1 x double>, metadata)
 declare <1 x double> @llvm.experimental.constrained.roundeven.v1f64(<1 x double>, metadata)
-declare <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double>, metadata)
 declare <1 x i1> @llvm.experimental.constrained.fcmp.v1f64(<1 x double>, <1 x double>, metadata, metadata)
 declare <1 x i1> @llvm.experimental.constrained.fcmps.v1f64(<1 x double>, <1 x double>, metadata, metadata)
 

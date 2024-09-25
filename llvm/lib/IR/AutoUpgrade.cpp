@@ -1203,8 +1203,31 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           F->getParent(), ID, F->getFunctionType()->getReturnType());
       return true;
     }
-    if (Name.starts_with("experimental.constrained."))
+    if (Name.consume_front("experimental.constrained.")) {
+      Name = Name.take_while(
+          [](char Ch) -> bool { return isAlnum(Ch) || Ch == '_'; });
+      auto [NewID, NumMetadataArgs] = getIntrinsicForConstrained(Name);
+      if (NewID != Intrinsic::not_intrinsic) {
+        auto *OldTy = cast<FunctionType>(F->getFunctionType());
+        SmallVector<Type *, 4> ParamTys;
+        for (unsigned i = 0, e = OldTy->getNumParams() - NumMetadataArgs;
+             i != e; ++i) {
+          ParamTys.push_back(OldTy->getParamType(i));
+        }
+        auto *NewTy =
+            FunctionType::get(OldTy->getReturnType(), ParamTys, false);
+
+        SmallVector<Type *> OverloadTys;
+        bool Success =
+            Intrinsic::getIntrinsicSignature(NewID, NewTy, OverloadTys);
+        (void)Success;
+        assert(Success && "cannot get intrinsic signature");
+
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), NewID,
+                                              OverloadTys);
+      }
       return true;
+    }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -4334,16 +4357,12 @@ static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
     return nullptr;
 
   SmallVector<OperandBundleDef, 2> NewBundles;
-
-  auto RM = getRoundingModeArg(*CB);
-  if (RM) {
+  if (auto RM = getRoundingModeArg(*CB)) {
     auto CurrentRM = CB->getRoundingMode();
     assert(!CurrentRM && "unexpected rounding bundle");
     Builder.createFPRoundingBundle(NewBundles, RM);
   }
-
-  auto EB = getExceptionBehaviorArg(*CB);
-  if (EB) {
+  if (auto EB = getExceptionBehaviorArg(*CB)) {
     auto CurrentEB = CB->getExceptionBehavior();
     assert(!CurrentEB && "unexpected exception bundle");
     Builder.createFPExceptionBundle(NewBundles, EB);
@@ -4932,6 +4951,44 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     // Memcpy/Memmove also support source alignment.
     if (auto *MTI = dyn_cast<MemTransferInst>(MemCI))
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
+    break;
+  }
+#define LEGACY_FUNCTION(NAME, A, R, I, D)                                      \
+  case Intrinsic::NAME:
+#include "llvm/IR/ConstrainedOps.def"
+  {
+    SmallVector<OperandBundleDef, 2> Bundles;
+    unsigned NumMetadataArgs = 0;
+
+    if (auto RM = getRoundingModeArg(*CI)) {
+      auto CurrentRM = CI->getRoundingMode();
+      assert(!CurrentRM && "unexpected rounding bundle");
+      Builder.createFPRoundingBundle(Bundles, RM);
+      ++NumMetadataArgs;
+    }
+
+    if (auto EB = getExceptionBehaviorArg(*CI)) {
+      auto CurrentEB = CI->getExceptionBehavior();
+      assert(!CurrentEB && "unexpected exception bundle");
+      Builder.createFPExceptionBundle(Bundles, EB);
+      ++NumMetadataArgs;
+    }
+
+    SmallVector<Value *, 4> Args(CI->args());
+    Args.pop_back_n(NumMetadataArgs);
+    NewCall = Builder.CreateCall(NewFn, Args, Bundles, CI->getName());
+    NewCall->copyMetadata(*CI);
+    AttributeList Attrs = CI->getAttributes();
+    NewCall->setAttributes(Attrs);
+    if (isa<FPMathOperator>(CI)) {
+      FastMathFlags FMF = CI->getFastMathFlags();
+      NewCall->setFastMathFlags(FMF);
+    }
+
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    auto A = Attribute::getWithMemoryEffects(CI->getContext(), ME);
+    NewCall->addFnAttr(A);
+    NewCall->addFnAttr(Attribute::StrictFP);
     break;
   }
   }

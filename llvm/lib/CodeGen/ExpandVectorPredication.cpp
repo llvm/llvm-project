@@ -309,7 +309,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
-    if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
+    if (Intrinsic::isLegacyConstrainedIntrinsic(UnpredicatedIntrinsicID))
       NewOp =
           Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
     else

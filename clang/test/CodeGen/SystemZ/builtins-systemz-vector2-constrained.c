@@ -62,7 +62,7 @@ void test_float(void) {
   vf = __builtin_s390_vfisb(vf, 4, 4);
   // CHECK: call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 5);
-  // CHECK: call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
   vf = __builtin_s390_vfisb(vf, 4, 6);
   // CHECK: call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 7);
@@ -71,3 +71,4 @@ void test_float(void) {
   // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 3)
 }
 
+// CHECK: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }

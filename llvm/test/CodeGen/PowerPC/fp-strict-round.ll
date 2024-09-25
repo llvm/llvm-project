@@ -34,11 +34,6 @@ declare double @llvm.experimental.constrained.round.f64(double, metadata)
 declare <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
 
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
-declare <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float>, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
-
 define float @ceil_f32(float %f1) strictfp {
 ; P8-LABEL: ceil_f32:
 ; P8:       # %bb.0:
@@ -567,9 +562,7 @@ define float @trunc_f32(float %f1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xsrdpiz f1, f1
 ; P9-NEXT:    blr
-  %res = call float @llvm.experimental.constrained.trunc.f32(
-                        float %f1,
-                        metadata !"fpexcept.strict")
+  %res = call float @llvm.trunc.f32(float %f1) [ "fpe.except"(metadata !"strict") ]
   ret float %res
 }
 
@@ -583,9 +576,7 @@ define double @trunc_f64(double %f1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xsrdpiz f1, f1
 ; P9-NEXT:    blr
-  %res = call double @llvm.experimental.constrained.trunc.f64(
-                        double %f1,
-                        metadata !"fpexcept.strict")
+  %res = call double @llvm.trunc.f64(double %f1) [ "fpe.except"(metadata !"strict") ] 
   ret double %res
 }
 
@@ -599,9 +590,7 @@ define <4 x float> @trunc_v4f32(<4 x float> %vf1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xvrspiz v2, v2
 ; P9-NEXT:    blr
-  %res = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(
-                        <4 x float> %vf1,
-                        metadata !"fpexcept.strict")
+  %res = call <4 x float> @llvm.trunc.v4f32(<4 x float> %vf1) [ "fpe.except"(metadata !"strict") ]
   ret <4 x float> %res
 }
 
@@ -615,8 +604,6 @@ define <2 x double> @trunc_v2f64(<2 x double> %vf1) strictfp {
 ; P9:       # %bb.0:
 ; P9-NEXT:    xvrdpiz v2, v2
 ; P9-NEXT:    blr
-  %res = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
-                        <2 x double> %vf1,
-                        metadata !"fpexcept.strict")
+  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %vf1) [ "fpe.except"(metadata !"strict") ]
   ret <2 x double> %res
 }

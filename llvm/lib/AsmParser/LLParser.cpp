@@ -6444,10 +6444,12 @@ void LLParser::updateConstrainedIntrinsic(
     return StringRef();
   };
 
+  unsigned NumMetadataArgs = 0;
   if (Args.size() > 1) {
     Value *V = Args[Args.size() - 2].V;
     StringRef VStr = getMetadataArgumentValue(V);
     if (!VStr.empty()) {
+      NumMetadataArgs++;
       if (auto RM = convertStrToRoundingMode(VStr))
         addFPRoundingBundle(Context, Bundles, *RM);
     }
@@ -6456,10 +6458,17 @@ void LLParser::updateConstrainedIntrinsic(
   Value *V = Args.back().V;
   StringRef VStr = getMetadataArgumentValue(V);
   if (!VStr.empty()) {
+    NumMetadataArgs++;
     if (auto EB = convertStrToExceptionBehavior(VStr))
       addFPExceptionBundle(Context, Bundles, *EB);
   }
 
+  if (hadConstrainedVariant(Name)) {
+    Args.pop_back_n(NumMetadataArgs);
+    CalleeID.StrVal = "llvm." + Name.str();
+  }
+
+  FnAttrs.addAttribute(Attribute::StrictFP);
   MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
   FnAttrs.addAttribute(Attribute::getWithMemoryEffects(Context, ME));
   FnAttrs.addAttribute(Attribute::StrictFP);

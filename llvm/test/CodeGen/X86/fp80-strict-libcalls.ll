@@ -729,7 +729,7 @@ define x86_fp80 @trunc(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
-  %trunc = call x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80 %x, metadata !"fpexcept.strict") #0
+  %trunc = call x86_fp80 @llvm.trunc.f80(x86_fp80 %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret x86_fp80 %trunc
 }
 
@@ -862,7 +862,6 @@ declare x86_fp80 @llvm.experimental.constrained.atan.f80(x86_fp80, metadata, met
 declare x86_fp80 @llvm.experimental.constrained.atan2.f80(x86_fp80, x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.tanh.f80(x86_fp80, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f80(x86_fp80, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f80(x86_fp80, metadata, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f80(x86_fp80, metadata)

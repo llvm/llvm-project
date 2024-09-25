@@ -707,6 +707,7 @@ public:
       case ISD::STRICT_FP_TO_BF16:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
         return true;
     }

@@ -687,6 +687,17 @@ static Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   }
 }
 
+// Emit a simple mangled intrinsic that has 1 argument and a return type
+// matching the argument type.
+static Value *emitUnaryFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                 unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, Src0);
+}
+
 // Emit an intrinsic that has 2 operands of the same type as its result.
 // Depending on mode, this may be a constrained floating-point intrinsic.
 static Value *emitBinaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
@@ -3430,9 +3441,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncf16:
     case Builtin::BI__builtin_truncl:
     case Builtin::BI__builtin_truncf128:
-      return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::trunc,
-                                   Intrinsic::experimental_constrained_trunc));
+      return RValue::get(emitUnaryFPBuiltin(*this, E, Intrinsic::trunc));
 
     case Builtin::BIlround:
     case Builtin::BIlroundf:
@@ -6879,7 +6888,7 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
   unsigned j = 0;
   for (Function::const_arg_iterator ai = F->arg_begin(), ae = F->arg_end();
        ai != ae; ++ai, ++j) {
-    if (F->isConstrainedFPIntrinsic())
+    if (F->isLegacyConstrainedIntrinsic())
       if (ai->getType()->isMetadataTy())
         continue;
     if (shift > 0 && shift == j)
@@ -6888,7 +6897,7 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
       Ops[j] = Builder.CreateBitCast(Ops[j], ai->getType(), name);
   }
 
-  if (F->isConstrainedFPIntrinsic())
+  if (F->isLegacyConstrainedIntrinsic())
     return Builder.CreateConstrainedFPCall(F, Ops, name);
   else
     return Builder.CreateCall(F, Ops, name);
@@ -13211,13 +13220,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
               : Intrinsic::rint;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndx");
   }
-  case NEON::BI__builtin_neon_vrndh_f16: {
+  case NEON::BI__builtin_neon_vrndh_f16:
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_trunc
-              : Intrinsic::trunc;
-    return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndz");
-  }
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::trunc, HalfTy), Ops,
+                        "vrndz");
+
   case NEON::BI__builtin_neon_vrnd32x_f32:
   case NEON::BI__builtin_neon_vrnd32xq_f32:
   case NEON::BI__builtin_neon_vrnd32x_f64:
@@ -13251,12 +13258,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrnd64z");
   }
   case NEON::BI__builtin_neon_vrnd_v:
-  case NEON::BI__builtin_neon_vrndq_v: {
-    Int = Builder.getIsFPConstrained()
-              ? Intrinsic::experimental_constrained_trunc
-              : Intrinsic::trunc;
-    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndz");
-  }
+  case NEON::BI__builtin_neon_vrndq_v:
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::trunc, Ty), Ops, "vrndz");
+
   case NEON::BI__builtin_neon_vcvt_f64_v:
   case NEON::BI__builtin_neon_vcvtq_f64_v:
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
@@ -18611,9 +18615,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                : Intrinsic::ceil;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpiz ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspiz)
-      ID = Builder.getIsFPConstrained()
-               ? Intrinsic::experimental_constrained_trunc
-               : Intrinsic::trunc;
+      return emitUnaryFPBuiltin(*this, E, Intrinsic::trunc);
+
     llvm::Function *F = CGM.getIntrinsic(ID, ResultType);
     return Builder.getIsFPConstrained() ? Builder.CreateConstrainedFPCall(F, X)
                                         : Builder.CreateCall(F, X);
@@ -19114,9 +19117,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         .getScalarVal();
   case PPC::BI__builtin_ppc_friz:
   case PPC::BI__builtin_ppc_frizs:
-    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
-                           *this, E, Intrinsic::trunc,
-                           Intrinsic::experimental_constrained_trunc))
+    return RValue::get(emitUnaryFPBuiltin(*this, E, Intrinsic::trunc))
         .getScalarVal();
   case PPC::BI__builtin_ppc_fsqrt:
   case PPC::BI__builtin_ppc_fsqrts:
@@ -21024,8 +21025,7 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_round; break;
       case 4: ID = Intrinsic::roundeven;
               CI = Intrinsic::experimental_constrained_roundeven; break;
-      case 5: ID = Intrinsic::trunc;
-              CI = Intrinsic::experimental_constrained_trunc; break;
+      case 5: ID = Intrinsic::trunc; break;
       case 6: ID = Intrinsic::ceil;
               CI = Intrinsic::experimental_constrained_ceil; break;
       case 7: ID = Intrinsic::floor;
@@ -21034,7 +21034,7 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
       break;
     }
     if (ID != Intrinsic::not_intrinsic) {
-      if (Builder.getIsFPConstrained()) {
+      if (Builder.getIsFPConstrained() && ID != Intrinsic::trunc) {
         Function *F = CGM.getIntrinsic(CI, ResultType);
         return Builder.CreateConstrainedFPCall(F, X);
       } else {

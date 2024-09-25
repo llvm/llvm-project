@@ -554,8 +554,8 @@ static MutableArrayRef<Argument> makeArgArray(Argument *Args, size_t Count) {
   return MutableArrayRef<Argument>(Args, Count);
 }
 
-bool Function::isConstrainedFPIntrinsic() const {
-  return Intrinsic::isConstrainedFPIntrinsic(getIntrinsicID());
+bool Function::isLegacyConstrainedIntrinsic() const {
+  return Intrinsic::isLegacyConstrainedIntrinsic(getIntrinsicID());
 }
 
 void Function::clearArguments() {

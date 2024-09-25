@@ -169,31 +169,24 @@ define void @f12(ptr %ptr) #0 {
 }
 
 ; Test trunc for f32.
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 define float @f13(float %f) #0 {
 ; CHECK-LABEL: f13:
 ; CHECK: fiebra %f0, 5, %f0, 4
 ; CHECK: br %r14
-  %res = call float @llvm.experimental.constrained.trunc.f32(
-                        float %f,
-                        metadata !"fpexcept.strict") #0
+  %res = call float @llvm.trunc.f32(float %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret float %res
 }
 
 ; Test trunc for f64.
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 define double @f14(double %f) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK: fidbra %f0, 5, %f0, 4
 ; CHECK: br %r14
-  %res = call double @llvm.experimental.constrained.trunc.f64(
-                        double %f,
-                        metadata !"fpexcept.strict") #0
+  %res = call double @llvm.trunc.f64(double %f) #0 [ "fpe.except"(metadata !"strict") ]
   ret double %res
 }
 
 ; Test trunc for f128.
-declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 define void @f15(ptr %ptr) #0 {
 ; CHECK-LABEL: f15:
 ; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
@@ -201,9 +194,7 @@ define void @f15(ptr %ptr) #0 {
 ; CHECK: vst [[RES]], 0(%r2)
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
-  %res = call fp128 @llvm.experimental.constrained.trunc.f128(
-                        fp128 %src,
-                        metadata !"fpexcept.strict") #0
+  %res = call fp128 @llvm.trunc.f128(fp128 %src) #0 [ "fpe.except"(metadata !"strict") ]
   store fp128 %res, ptr %ptr
   ret void
 }

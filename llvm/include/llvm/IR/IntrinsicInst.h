@@ -146,6 +146,18 @@ public:
 std::optional<RoundingMode> getRoundingModeArg(const CallBase &I);
 std::optional<fp::ExceptionBehavior> getExceptionBehaviorArg(const CallBase &I);
 
+/// Return true if the argument specifies an intrinsic that had a constrained
+/// variant (like 'trunc.f32').
+bool hadConstrainedVariant(StringRef Name);
+
+/// If the given string specifies some legacy constrained intrinsic (like
+/// 'llvm.experimental.constrained.trunc.f32'), return corresponding intrinsic
+/// id (like 'Intrinsic::trunc') and the number of FP metadata arguments.
+///
+/// \param Name Intrinsic name without prefix 'llvm.experimental.constrained'
+///             (like 'trunc.f32').
+std::pair<Intrinsic::ID, unsigned> getIntrinsicForConstrained(StringRef Name);
+
 /// Check if \p ID corresponds to a lifetime intrinsic.
 static inline bool isLifetimeIntrinsic(Intrinsic::ID ID) {
   switch (ID) {

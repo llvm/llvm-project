@@ -830,7 +830,7 @@ define half @trunc_f16(half %x) #0 {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    frintz h0, h0
 ; CHECK-FP16-NEXT:    ret
-  %val = call half @llvm.experimental.constrained.trunc.f16(half %x, metadata !"fpexcept.strict") #0
+  %val = call half @llvm.trunc.f16(half %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret half %val
 }
 
@@ -1376,7 +1376,6 @@ declare i32 @llvm.experimental.constrained.lround.i32.f16(half, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f16(half, metadata)
 declare half @llvm.experimental.constrained.round.f16(half, metadata)
 declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
-declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f16(half, half, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 

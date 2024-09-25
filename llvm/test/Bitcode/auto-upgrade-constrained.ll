@@ -322,6 +322,6 @@ define float @test_trunc(float %a) strictfp {
   ret float %res
 }
 ; CHECK-LABEL: define float @test_trunc(
-; CHECK: call float @llvm.experimental.constrained.trunc.f32(float {{.*}}, metadata !"fpexcept.strict") #[[ATTR0]] [ "fp.except"(metadata !"strict") ]
+; CHECK: call float @llvm.trunc.f32(float {{.*}}) #[[ATTR0]] [ "fp.except"(metadata !"strict") ]
 
 ; CHECK: attributes #[[ATTR0]] = { strictfp memory(inaccessiblemem: readwrite) }
