@@ -6228,13 +6228,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_sections_EQ)) {
     StringRef Val = A->getValue();
-    if (Val == "labels") {
-      D.Diag(diag::warn_drv_deprecated_arg)
-          << A->getAsString(Args) << /*hasReplacement=*/true
-          << "-fbasic-block-address-map";
-      CmdArgs.push_back("-fbasic-block-address-map");
-    } else if (Triple.isX86() && Triple.isOSBinFormatELF()) {
-      if (Val != "all" && Val != "none" && !Val.starts_with("list="))
+    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      if (Val != "all" && Val != "labels" && Val != "none" &&
+          !Val.starts_with("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
       else
