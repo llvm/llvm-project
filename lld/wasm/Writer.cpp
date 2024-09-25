@@ -1875,7 +1875,6 @@ void Writer::createHeader() {
   raw_string_ostream os(header);
   writeBytes(os, WasmMagic, sizeof(WasmMagic), "wasm magic");
   writeU32(os, WasmVersion, "wasm version");
-  os.flush();
   fileSize += header.size();
 }
 

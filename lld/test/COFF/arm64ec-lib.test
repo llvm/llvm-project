@@ -1,0 +1,47 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows symref.s -o symref-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows nsymref.s -o nsymref-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows nsymref.s -o nsymref-aarch64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows sym.s -o sym-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows sym.s -o sym-x86_64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows nsym.s -o nsym-aarch64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+RUN: llvm-lib -machine:arm64ec -out:sym-arm64ec.lib sym-arm64ec.obj nsym-aarch64.obj
+RUN: llvm-lib -machine:amd64 -out:sym-x86_64.lib sym-x86_64.obj
+
+Verify that a symbol can be referenced from ECSYMBOLS.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:test.dll symref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj
+
+Verify that a symbol can be referenced from a regular archive map when ECSYMBOLS is absent (using an x86_64 archive).
+RUN: lld-link -machine:arm64ec -dll -noentry -out:test2.dll symref-arm64ec.obj sym-x86_64.lib loadconfig-arm64ec.obj
+
+Verify that both native and EC symbols can be referenced in a hybrid target.
+RUN: lld-link -machine:arm64x -dll -noentry -out:test3.dll symref-arm64ec.obj nsymref-aarch64.obj sym-arm64ec.lib loadconfig-arm64ec.obj
+
+Ensure that an EC symbol is not resolved using a regular symbol map.
+RUN: not lld-link -machine:arm64ec -dll -noentry -out:test-err.dll nsymref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj 2>&1 |\
+RUN:              FileCheck --check-prefix=ERR %s
+ERR: error: undefined symbol: nsym
+
+#--- symref.s
+    .data
+    .rva sym
+
+#--- nsymref.s
+    .data
+    .rva nsym
+
+#--- sym.s
+     .data
+     .globl sym
+sym:
+     .word 0
+
+#--- nsym.s
+     .data
+     .globl nsym
+nsym:
+     .word 0

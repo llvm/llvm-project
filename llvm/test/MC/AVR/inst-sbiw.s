@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=addsubiw -show-encoding < %s | FileCheck %s
 ; RUN: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump --no-print-imm-hex -dr --mattr=addsubiw - | FileCheck --check-prefix=CHECK-INST %s
 
-
 foo:
-
   sbiw r26, 54
   sbiw X,   63
 

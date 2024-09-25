@@ -1521,6 +1521,11 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
+    // For lambdas inside canonical FunctionDecl remember the mapping.
+    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && FD->isCanonicalDecl()) {
+      Writer.FunctionToLambdasMap[FD].push_back(Writer.GetDeclRef(D));
+    }
   } else {
     Record.push_back(CXXRecNotTemplate);
   }

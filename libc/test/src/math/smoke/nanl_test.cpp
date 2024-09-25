@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/math/nanl.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <signal.h>
 
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_LONG_DOUBLE(val, _, __) val
@@ -70,8 +71,8 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("123 ", expected);
 }
 
-#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if !defined(LIBC_HAS_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }
-#endif // LIBC_HAVE_ADDRESS_SANITIZER
+#endif // LIBC_HAS_ADDRESS_SANITIZER

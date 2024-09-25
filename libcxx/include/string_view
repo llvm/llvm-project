@@ -396,7 +396,7 @@ public:
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {

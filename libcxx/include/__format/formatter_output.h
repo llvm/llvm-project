@@ -326,7 +326,7 @@ _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __pre
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

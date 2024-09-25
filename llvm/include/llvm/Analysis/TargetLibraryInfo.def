@@ -2067,6 +2067,21 @@ TLI_DEFINE_ENUM_INTERNAL(remquol)
 TLI_DEFINE_STRING_INTERNAL("remquol")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl, Ptr)
 
+/// double fdim(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(fdim)
+TLI_DEFINE_STRING_INTERNAL("fdim")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl)
+
+/// float fdimf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(fdimf)
+TLI_DEFINE_STRING_INTERNAL("fdimf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt)
+
+/// long double fdiml(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(fdiml)
+TLI_DEFINE_STRING_INTERNAL("fdiml")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
 /// int remove(const char *path);
 TLI_DEFINE_ENUM_INTERNAL(remove)
 TLI_DEFINE_STRING_INTERNAL("remove")
@@ -2182,6 +2197,21 @@ TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 TLI_DEFINE_ENUM_INTERNAL(sinl)
 TLI_DEFINE_STRING_INTERNAL("sinl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
+/// void sincos(double x, double *sin_out, double *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincos)
+TLI_DEFINE_STRING_INTERNAL("sincos")
+TLI_DEFINE_SIG_INTERNAL(Void, Dbl, Ptr, Ptr)
+
+/// void sincosf(float x, float *sin_out, float *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincosf)
+TLI_DEFINE_STRING_INTERNAL("sincosf")
+TLI_DEFINE_SIG_INTERNAL(Void, Flt, Ptr, Ptr)
+
+/// void sincosl(long double x, long double *sin_out, long double *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincosl)
+TLI_DEFINE_STRING_INTERNAL("sincosl")
+TLI_DEFINE_SIG_INTERNAL(Void, LDbl, Ptr, Ptr)
 
 /// int siprintf(char *str, const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(siprintf)

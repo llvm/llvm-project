@@ -600,10 +600,12 @@
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
 
 // RUN: %clang -### -S -fjmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
-// RUN: %clang -### -S -fjmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -g -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
+// RUN: %clang -### -S -fjmc -g -fno-jmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc -g -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
 // RUN: %clang -### -S -fjmc -g -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
-// RUN: %clang -### -fjmc -g -flto -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC_LTO %s
 // RUN: %clang -### -fjmc -g -flto -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // CHECK_JMC_WARN: -fjmc requires debug info. Use -g or debug options that enable debugger's stepping function; option ignored
@@ -621,6 +623,10 @@
 // RUN: %clang -### --target=aarch64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // CHECK-MS-VOLATILE: -fms-volatile
 // CHECK-NO-MS-VOLATILE-NOT: -fms-volatile
 

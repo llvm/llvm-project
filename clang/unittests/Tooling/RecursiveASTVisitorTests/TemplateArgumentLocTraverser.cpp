@@ -21,7 +21,7 @@ public:
     const TemplateArgument &Arg = ArgLoc.getArgument();
 
     Arg.print(Context->getPrintingPolicy(), Stream, /*IncludeType*/ true);
-    Match(Stream.str(), ArgLoc.getLocation());
+    Match(ArgStr, ArgLoc.getLocation());
     return ExpectedLocationVisitor<TemplateArgumentLocTraverser>::
       TraverseTemplateArgumentLoc(ArgLoc);
   }

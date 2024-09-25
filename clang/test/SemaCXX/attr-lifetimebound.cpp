@@ -238,6 +238,16 @@ template <class T> T *addressof(T &arg) {
         &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
 }
 
+template<typename T>
+struct basic_string_view {
+  basic_string_view(const T *);
+};
+
+template <class T> struct span {
+  template<size_t _ArrayExtent>
+	span(const T (&__arr)[_ArrayExtent]) noexcept;
+};
+
 } // namespace foo
 } // namespace std
 
@@ -266,3 +276,34 @@ namespace move_forward_et_al_examples {
   S *AddressOfOk = std::addressof(X);
 } // namespace move_forward_et_al_examples
 
+namespace ctor_cases {
+std::basic_string_view<char> test1() {
+  char abc[10];
+  return abc;  // expected-warning {{address of stack memory associated with local variable}}
+}
+
+std::span<int> test2() {
+  int abc[10];
+  return abc; // expected-warning {{address of stack memory associated with local variable}}
+}
+} // namespace ctor_cases
+
+namespace GH106372 {
+class [[gsl::Owner]] Foo {};
+class [[gsl::Pointer]] FooView {};
+
+class NonAnnotatedFoo {};
+class NonAnnotatedFooView {};
+
+template <typename T>
+struct StatusOr {
+  template <typename U = T>
+  StatusOr& operator=(U&& v [[clang::lifetimebound]]);
+};
+
+void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
+  foo1 = Foo(); // expected-warning {{object backing the pointer foo1 will be destroyed at the end}}
+  // No warning on non-gsl annotated types.
+  foo2 = NonAnnotatedFoo();
+}
+} // namespace GH106372

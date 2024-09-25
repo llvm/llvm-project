@@ -464,7 +464,9 @@ LANGOPT(FixedPoint, 1, 0, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
 
-LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
+ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
+             RegisterStaticDestructorsKind::All,
+             "Register C++ static destructors")
 
 LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")
 

@@ -2911,6 +2911,19 @@ void ASTStmtWriter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtWriter::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  Record.AddStmt(S->getOpaqueArgLValue());
+  Record.AddStmt(S->getCastedTemporary());
+  Record.AddStmt(S->getWritebackCast());
+  Record.writeBool(S->isInOut());
+  Code = serialization::EXPR_HLSL_OUT_ARG;
+}
+
+//===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
 

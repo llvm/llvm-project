@@ -1656,7 +1656,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1496] = {
 
 } // namespace __extended_grapheme_custer_property_boundary
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -692,6 +692,14 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   NullConstraint Nullness = getNullConstraint(*RetSVal, State);
 
   Nullability RequiredNullability = getNullabilityAnnotation(RequiredRetType);
+  if (const auto *FunDecl = C.getLocationContext()->getDecl();
+      FunDecl && FunDecl->getAttr<ReturnsNonNullAttr>() &&
+      (RequiredNullability == Nullability::Unspecified ||
+       RequiredNullability == Nullability::Nullable)) {
+    // If a function is marked with the returns_nonnull attribute,
+    // the return value must be non-null.
+    RequiredNullability = Nullability::Nonnull;
+  }
 
   // If the returned value is null but the type of the expression
   // generating it is nonnull then we will suppress the diagnostic.
@@ -705,7 +713,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
                                   Nullness == NullConstraint::IsNull);
   if (ChecksEnabled[CK_NullReturnedFromNonnull] && NullReturnedFromNonNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
-      !InSuppressedMethodFamily && C.getLocationContext()->inTopFrame()) {
+      !InSuppressedMethodFamily) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)

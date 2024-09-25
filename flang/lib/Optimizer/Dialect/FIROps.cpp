@@ -1387,7 +1387,7 @@ bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
 bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
   return mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
                    fir::LLVMPointerType, mlir::MemRefType, mlir::FunctionType,
-                   fir::TypeDescType>(ty);
+                   fir::TypeDescType, mlir::LLVM::LLVMPointerType>(ty);
 }
 
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {

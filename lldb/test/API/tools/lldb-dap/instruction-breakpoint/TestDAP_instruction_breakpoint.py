@@ -17,6 +17,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
+    @skipIfWindows
     def test_instruction_breakpoint(self):
         self.build()
         self.instruction_breakpoint_test()
@@ -34,7 +35,7 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         # Set source breakpoint 1
         response = self.dap_server.request_setBreakpoints(self.main_path, [main_line])
         breakpoints = response["body"]["breakpoints"]
-        self.assertEquals(len(breakpoints), 1)
+        self.assertEqual(len(breakpoints), 1)
         breakpoint = breakpoints[0]
         self.assertEqual(
             breakpoint["line"], main_line, "incorrect breakpoint source line"

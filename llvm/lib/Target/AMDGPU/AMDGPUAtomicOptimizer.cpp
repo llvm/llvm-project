@@ -421,9 +421,10 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
 
   // Reduce within each pair of rows (i.e. 32 lanes).
   assert(ST->hasPermLaneX16());
-  Value *Permlanex16Call = B.CreateIntrinsic(
-      V->getType(), Intrinsic::amdgcn_permlanex16,
-      {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
+  Value *Permlanex16Call =
+      B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
+                        {PoisonValue::get(AtomicTy), V, B.getInt32(0),
+                         B.getInt32(0), B.getFalse(), B.getFalse()});
   V = buildNonAtomicBinOp(B, Op, V, Permlanex16Call);
   if (ST->isWave32()) {
     return V;
@@ -432,7 +433,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   if (ST->hasPermLane64()) {
     // Reduce across the upper and lower 32 lanes.
     Value *Permlane64Call =
-        B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane64, V);
+        B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlane64, V);
     return buildNonAtomicBinOp(B, Op, V, Permlane64Call);
   }
 
@@ -481,9 +482,10 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
     assert(ST->hasPermLaneX16());
-    Value *PermX = B.CreateIntrinsic(
-        V->getType(), Intrinsic::amdgcn_permlanex16,
-        {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
+    Value *PermX =
+        B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
+                          {PoisonValue::get(AtomicTy), V, B.getInt32(-1),
+                           B.getInt32(-1), B.getFalse(), B.getFalse()});
 
     Value *UpdateDPPCall = B.CreateCall(
         UpdateDPP, {Identity, PermX, B.getInt32(DPP::QUAD_PERM_ID),
@@ -493,7 +495,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
       Value *const Lane31 = B.CreateIntrinsic(
-          V->getType(), Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
+          AtomicTy, Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
 
       Value *UpdateDPPCall = B.CreateCall(
           UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),

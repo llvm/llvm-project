@@ -31,6 +31,14 @@ class InterpState;
 /// For all array allocations, we need to allocate new Descriptor instances,
 /// so the DynamicAllocator has a llvm::BumpPtrAllocator similar to Program.
 class DynamicAllocator final {
+public:
+  enum class Form : uint8_t {
+    NonArray,
+    Array,
+    Operator,
+  };
+
+private:
   struct Allocation {
     std::unique_ptr<std::byte[]> Memory;
     Allocation(std::unique_ptr<std::byte[]> Memory)
@@ -39,10 +47,10 @@ class DynamicAllocator final {
 
   struct AllocationSite {
     llvm::SmallVector<Allocation> Allocations;
-    bool IsArrayAllocation = false;
+    Form AllocForm;
 
-    AllocationSite(std::unique_ptr<std::byte[]> Memory, bool Array)
-        : IsArrayAllocation(Array) {
+    AllocationSite(std::unique_ptr<std::byte[]> Memory, Form AllocForm)
+        : AllocForm(AllocForm) {
       Allocations.push_back({std::move(Memory)});
     }
 
@@ -58,12 +66,13 @@ public:
   unsigned getNumAllocations() const { return AllocationSites.size(); }
 
   /// Allocate ONE element of the given descriptor.
-  Block *allocate(const Descriptor *D, unsigned EvalID);
+  Block *allocate(const Descriptor *D, unsigned EvalID, Form AllocForm);
   /// Allocate \p NumElements primitive elements of the given type.
   Block *allocate(const Expr *Source, PrimType T, size_t NumElements,
-                  unsigned EvalID);
+                  unsigned EvalID, Form AllocForm);
   /// Allocate \p NumElements elements of the given descriptor.
-  Block *allocate(const Descriptor *D, size_t NumElements, unsigned EvalID);
+  Block *allocate(const Descriptor *D, size_t NumElements, unsigned EvalID,
+                  Form AllocForm);
 
   /// Deallocate the given source+block combination.
   /// Returns \c true if anything has been deallocatd, \c false otherwise.
@@ -72,10 +81,10 @@ public:
 
   /// Checks whether the allocation done at the given source is an array
   /// allocation.
-  bool isArrayAllocation(const Expr *Source) const {
+  std::optional<Form> getAllocationForm(const Expr *Source) const {
     if (auto It = AllocationSites.find(Source); It != AllocationSites.end())
-      return It->second.IsArrayAllocation;
-    return false;
+      return It->second.AllocForm;
+    return std::nullopt;
   }
 
   /// Allocation site iterator.

@@ -30,7 +30,7 @@ using namespace mlir::tblgen;
 /// Find all the AttrOrTypeDef for the specified dialect. If no dialect
 /// specified and can only find one dialect's defs, use that.
 static void collectAllDefs(StringRef selectedDialect,
-                           std::vector<llvm::Record *> records,
+                           ArrayRef<const llvm::Record *> records,
                            SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
   // Nothing to do if no defs were found.
   if (records.empty())
@@ -690,14 +690,15 @@ public:
   bool emitDefs(StringRef selectedDialect);
 
 protected:
-  DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
+  DefGenerator(ArrayRef<const llvm::Record *> defs, raw_ostream &os,
                StringRef defType, StringRef valueType, bool isAttrGenerator)
-      : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {
+      : defRecords(defs), os(os), defType(defType), valueType(valueType),
+        isAttrGenerator(isAttrGenerator) {
     // Sort by occurrence in file.
-    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
-      return lhs->getID() < rhs->getID();
-    });
+    llvm::sort(defRecords,
+               [](const llvm::Record *lhs, const llvm::Record *rhs) {
+                 return lhs->getID() < rhs->getID();
+               });
   }
 
   /// Emit the list of def type names.
@@ -706,7 +707,7 @@ protected:
   void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
 
   /// The set of def records to emit.
-  std::vector<llvm::Record *> defRecords;
+  std::vector<const llvm::Record *> defRecords;
   /// The attribute or type class to emit.
   /// The stream to emit to.
   raw_ostream &os;
@@ -1031,7 +1032,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 static std::vector<Constraint>
 getAllTypeConstraints(const llvm::RecordKeeper &records) {
   std::vector<Constraint> result;
-  for (llvm::Record *def :
+  for (const llvm::Record *def :
        records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
     // Ignore constraints defined outside of the top-level file.
     if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=

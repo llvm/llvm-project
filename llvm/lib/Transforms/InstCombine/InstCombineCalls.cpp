@@ -3067,7 +3067,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         LHS->getOpcode() == Instruction::Load &&
         LHS->getType()->isPointerTy() &&
         isValidAssumeForContext(II, LHS, &DT)) {
-      MDNode *MD = MDNode::get(II->getContext(), std::nullopt);
+      MDNode *MD = MDNode::get(II->getContext(), {});
       LHS->setMetadata(LLVMContext::MD_nonnull, MD);
       LHS->setMetadata(LLVMContext::MD_noundef, MD);
       return RemoveConditionFromAssume(II);
@@ -3711,8 +3711,8 @@ Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   auto InstCombineErase = [this](Instruction *I) {
     eraseInstFromFunction(*I);
   };
-  LibCallSimplifier Simplifier(DL, &TLI, &AC, ORE, BFI, PSI, InstCombineRAUW,
-                               InstCombineErase);
+  LibCallSimplifier Simplifier(DL, &TLI, &DT, &DC, &AC, ORE, BFI, PSI,
+                               InstCombineRAUW, InstCombineErase);
   if (Value *With = Simplifier.optimizeCall(CI, Builder)) {
     ++NumSimplified;
     return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);

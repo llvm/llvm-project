@@ -169,16 +169,17 @@ ValueObjectConstResult::ValueObjectConstResult(
 }
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
-                                             const Status &error) {
+                                             Status &&error) {
   auto manager_sp = ValueObjectManager::Create();
-  return (new ValueObjectConstResult(exe_scope, *manager_sp, error))->GetSP();
+  return (new ValueObjectConstResult(exe_scope, *manager_sp, std::move(error)))
+      ->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
                                                ValueObjectManager &manager,
-                                               const Status &error)
+                                               Status &&error)
     : ValueObject(exe_scope, manager), m_impl(this) {
-  m_error = error;
+  m_error = std::move(error);
   SetIsConstant();
 }
 

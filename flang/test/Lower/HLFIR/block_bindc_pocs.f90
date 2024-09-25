@@ -8,9 +8,9 @@ module m
        end subroutine test_proc
     end interface
 end module m
-!CHECK-DAG: %[[S0:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
+!CHECK-DAG: %[[S0:.*]] = llvm.intr.stacksave : !llvm.ptr
 !CHECK-DAG: fir.call @test_proc() proc_attrs<bind_c> fastmath<contract> : () -> ()
-!CHECK-DAG: fir.call @llvm.stackrestore.p0(%[[S0]]) fastmath<contract> : (!fir.ref<i8>) -> ()
+!CHECK-DAG: llvm.intr.stackrestore %[[S0]] : !llvm.ptr
 !CHECK-DAG: func.func private @test_proc() attributes {fir.bindc_name = "test_proc"}
 subroutine test
     BLOCK

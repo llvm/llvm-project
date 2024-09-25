@@ -596,8 +596,6 @@ namespace ImplicitFunction {
                                     // both-note {{in call to 'callMe()'}}
 }
 
-/// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
-/// which we don't support yet.
 namespace std {
   class strong_ordering {
   public:
@@ -641,7 +639,7 @@ namespace ThreeWayCmp {
   constexpr const int *pa2 = &a[2];
   constexpr const int *pb1 = &b[1];
   static_assert(pa1 <=> pb1 != 0, ""); // both-error {{not an integral constant expression}} \
-                                       // both-note {{has unspecified value}} \
+                                       // both-note {{has unspecified value}}
   static_assert(pa1 <=> pa1 == 0, "");
   static_assert(pa1 <=> pa2 == -1, "");
   static_assert(pa2 <=> pa1 == 1, "");

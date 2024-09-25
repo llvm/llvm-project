@@ -112,7 +112,9 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVPreLegalizerCombiner.cpp",
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
+    "RISCVCallingConv.cpp",
     "RISCVCodeGenPrepare.cpp",
+    "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
@@ -140,6 +142,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
     "RISCVVectorPeephole.cpp",
+    "RISCVZacasABIFix.cpp",
   ]
 }
 

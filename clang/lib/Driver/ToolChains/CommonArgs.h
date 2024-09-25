@@ -35,9 +35,6 @@ void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
 
-void addGPULibraries(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                     llvm::opt::ArgStringList &CmdArgs);
-
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,

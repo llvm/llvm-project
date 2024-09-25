@@ -23,6 +23,8 @@ class ValueType<int size, int value> {
   bit isFP = false;
   bit isVector = false;
   bit isScalable = false;
+  int NF = 0;
+  bit isRISCVVecTuple = false;
   // Indicates this VT should be included in the
   // [FIRST_VALUETYPE,LAST_VALUETYPE] range.
   bit isNormalValueType = true;
@@ -54,6 +56,13 @@ class VTVec<int nelem, ValueType elt, int value>
 class VTScalableVec<int nelem, ValueType elt, int value>
     : VTVec<nelem, elt, value> {
   let isScalable = true;
+}
+
+class VTVecTup<int size, int nf, ValueType dummy_elt, int value>
+    : ValueType<size, value> {
+  let NF = nf;
+  let ElementType = dummy_elt;
+  let isRISCVVecTuple = true;
 }
 
 defset list<ValueType> ValueTypes = {
@@ -273,20 +282,54 @@ def nxv2f64  : VTScalableVec<2,  f64, 187>;  // n x  2 x  f64 vector value
 def nxv4f64  : VTScalableVec<4,  f64, 188>;  // n x  4 x  f64 vector value
 def nxv8f64  : VTScalableVec<8,  f64, 189>;  // n x  8 x  f64 vector value
 
-def x86mmx    : ValueType<64,   190>;  // X86 MMX value
-def Glue      : ValueType<0,    191>;  // Pre-RA sched glue
-def isVoid    : ValueType<0,    192>;  // Produces no value
-def untyped   : ValueType<8,    193> { // Produces an untyped value
+// Sz = NF * MinNumElts * 8(bits)
+def riscv_nxv1i8x2   : VTVecTup<16, 2, i8, 190>;  // RISCV vector tuple(min_num_elts=1, nf=2)
+def riscv_nxv1i8x3   : VTVecTup<24, 3, i8, 191>;  // RISCV vector tuple(min_num_elts=1, nf=3)
+def riscv_nxv1i8x4   : VTVecTup<32, 4, i8, 192>;  // RISCV vector tuple(min_num_elts=1, nf=4)
+def riscv_nxv1i8x5   : VTVecTup<40, 5, i8, 193>;  // RISCV vector tuple(min_num_elts=1, nf=5)
+def riscv_nxv1i8x6   : VTVecTup<48, 6, i8, 194>;  // RISCV vector tuple(min_num_elts=1, nf=6)
+def riscv_nxv1i8x7   : VTVecTup<56, 7, i8, 195>;  // RISCV vector tuple(min_num_elts=1, nf=7)
+def riscv_nxv1i8x8   : VTVecTup<64, 8, i8, 196>;  // RISCV vector tuple(min_num_elts=1, nf=8)
+def riscv_nxv2i8x2   : VTVecTup<32, 2, i8, 197>;  // RISCV vector tuple(min_num_elts=2, nf=2)
+def riscv_nxv2i8x3   : VTVecTup<48, 3, i8, 198>;  // RISCV vector tuple(min_num_elts=2, nf=3)
+def riscv_nxv2i8x4   : VTVecTup<64, 4, i8, 199>;  // RISCV vector tuple(min_num_elts=2, nf=4)
+def riscv_nxv2i8x5   : VTVecTup<80, 5, i8, 200>;  // RISCV vector tuple(min_num_elts=2, nf=5)
+def riscv_nxv2i8x6   : VTVecTup<96, 6, i8, 201>;  // RISCV vector tuple(min_num_elts=2, nf=6)
+def riscv_nxv2i8x7   : VTVecTup<112, 7, i8, 202>; // RISCV vector tuple(min_num_elts=2, nf=7)
+def riscv_nxv2i8x8   : VTVecTup<128, 8, i8, 203>; // RISCV vector tuple(min_num_elts=2, nf=8)
+def riscv_nxv4i8x2   : VTVecTup<64, 2, i8, 204>;  // RISCV vector tuple(min_num_elts=4, nf=2)
+def riscv_nxv4i8x3   : VTVecTup<96, 3, i8, 205>;  // RISCV vector tuple(min_num_elts=4, nf=3)
+def riscv_nxv4i8x4   : VTVecTup<128, 4, i8, 206>; // RISCV vector tuple(min_num_elts=4, nf=4)
+def riscv_nxv4i8x5   : VTVecTup<160, 5, i8, 207>; // RISCV vector tuple(min_num_elts=4, nf=5)
+def riscv_nxv4i8x6   : VTVecTup<192, 6, i8, 208>; // RISCV vector tuple(min_num_elts=4, nf=6)
+def riscv_nxv4i8x7   : VTVecTup<224, 7, i8, 209>; // RISCV vector tuple(min_num_elts=4, nf=7)
+def riscv_nxv4i8x8   : VTVecTup<256, 8, i8, 210>; // RISCV vector tuple(min_num_elts=4, nf=8)
+def riscv_nxv8i8x2   : VTVecTup<128, 2, i8, 211>; // RISCV vector tuple(min_num_elts=8, nf=2)
+def riscv_nxv8i8x3   : VTVecTup<192, 3, i8, 212>; // RISCV vector tuple(min_num_elts=8, nf=3)
+def riscv_nxv8i8x4   : VTVecTup<256, 4, i8, 213>; // RISCV vector tuple(min_num_elts=8, nf=4)
+def riscv_nxv8i8x5   : VTVecTup<320, 5, i8, 214>; // RISCV vector tuple(min_num_elts=8, nf=5)
+def riscv_nxv8i8x6   : VTVecTup<384, 6, i8, 215>; // RISCV vector tuple(min_num_elts=8, nf=6)
+def riscv_nxv8i8x7   : VTVecTup<448, 7, i8, 216>; // RISCV vector tuple(min_num_elts=8, nf=7)
+def riscv_nxv8i8x8   : VTVecTup<512, 8, i8, 217>; // RISCV vector tuple(min_num_elts=8, nf=8)
+def riscv_nxv16i8x2  : VTVecTup<256, 2, i8, 218>; // RISCV vector tuple(min_num_elts=16, nf=2)
+def riscv_nxv16i8x3  : VTVecTup<384, 3, i8, 219>; // RISCV vector tuple(min_num_elts=16, nf=3)
+def riscv_nxv16i8x4  : VTVecTup<512, 4, i8, 220>; // RISCV vector tuple(min_num_elts=16, nf=4)
+def riscv_nxv32i8x2  : VTVecTup<512, 2, i8, 221>; // RISCV vector tuple(min_num_elts=32, nf=2)
+
+def x86mmx    : ValueType<64,   222>;  // X86 MMX value
+def Glue      : ValueType<0,    223>;  // Pre-RA sched glue
+def isVoid    : ValueType<0,    224>;  // Produces no value
+def untyped   : ValueType<8,    225> { // Produces an untyped value
   let LLVMName = "Untyped";
 }
-def funcref   : ValueType<0,    194>;  // WebAssembly's funcref type
-def externref : ValueType<0,    195>;  // WebAssembly's externref type
-def exnref    : ValueType<0,    196>;  // WebAssembly's exnref type
-def x86amx    : ValueType<8192, 197>;  // X86 AMX value
-def i64x8     : ValueType<512,  198>;  // 8 Consecutive GPRs (AArch64)
+def funcref   : ValueType<0,    226>;  // WebAssembly's funcref type
+def externref : ValueType<0,    227>;  // WebAssembly's externref type
+def exnref    : ValueType<0,    228>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 229>;  // X86 AMX value
+def i64x8     : ValueType<512,  230>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  199>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
+              : ValueType<16,  231>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 232>; // SPIR-V's builtin type
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy

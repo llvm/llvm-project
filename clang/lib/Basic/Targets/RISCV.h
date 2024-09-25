@@ -130,6 +130,10 @@ public:
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
   bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
   bool validateCpuSupports(StringRef Feature) const override;
+  bool isValidFeatureName(StringRef Name) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

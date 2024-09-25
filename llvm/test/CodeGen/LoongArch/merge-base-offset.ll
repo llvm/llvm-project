@@ -1128,8 +1128,7 @@ define dso_local ptr @load_addr_offset_614750729487779976() nounwind {
 ; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(g_a64)
 ; LA64-NEXT:    lu12i.w $a1, 279556
 ; LA64-NEXT:    ori $a1, $a1, 1088
-; LA64-NEXT:    lu32i.d $a1, 17472
-; LA64-NEXT:    lu52i.d $a1, $a1, 1092
+; LA64-NEXT:    bstrins.d $a1, $a1, 62, 32
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 ;
@@ -1142,8 +1141,7 @@ define dso_local ptr @load_addr_offset_614750729487779976() nounwind {
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
 ; LA64-LARGE-NEXT:    lu12i.w $a1, 279556
 ; LA64-LARGE-NEXT:    ori $a1, $a1, 1088
-; LA64-LARGE-NEXT:    lu32i.d $a1, 17472
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, 1092
+; LA64-LARGE-NEXT:    bstrins.d $a1, $a1, 62, 32
 ; LA64-LARGE-NEXT:    add.d $a0, $a0, $a1
 ; LA64-LARGE-NEXT:    ret
 entry:

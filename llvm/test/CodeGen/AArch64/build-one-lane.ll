@@ -318,9 +318,9 @@ define void @v2f64st(ptr %p, double %s) nounwind {
 define <32 x i8> @test_lanex_32xi8(<32 x i8> %a, i32 %x) {
 ; CHECK-LABEL: test_lanex_32xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1f
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov w10, #30 // =0x1e
