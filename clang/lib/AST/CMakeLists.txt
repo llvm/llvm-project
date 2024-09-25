@@ -53,6 +53,7 @@ add_clang_library(clangAST
   DeclOpenMP.cpp
   DeclPrinter.cpp
   DeclTemplate.cpp
+  DynamicRecursiveASTVisitor.cpp
   ParentMapContext.cpp
   Expr.cpp
   ExprClassification.cpp
