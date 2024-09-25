@@ -57,6 +57,10 @@ static auto OnViolationAction(DiagnosticsInfo info) {
     StackDepotHandle handle = StackDepotPut_WithHandle(stack);
 
     const bool is_stack_novel = handle.use_count() == 0;
+
+    // Marked UNLIKELY as if user is runing with halt_on_error=false
+    // we expect a high number of duplicate stacks. We are willing
+    // To pay for the first insertion.
     if (UNLIKELY(is_stack_novel)) {
       IncrementUniqueErrorCount();
 
