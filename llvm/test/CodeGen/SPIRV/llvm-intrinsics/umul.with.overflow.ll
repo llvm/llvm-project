@@ -42,7 +42,7 @@ define dso_local spir_func void @umulo_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-SPIRV: %[[#VAR_B:]] = OpFunctionParameter %[[#]]
 ; CHECK-SPIRV: %[[#MUL_RES:]] = OpIMul %[[#]] %[[#VAR_A]] %[[#VAR_B]]
 ; CHECK-SPIRV: %[[#DIV_RES:]] = OpUDiv %[[#]] %[[#MUL_RES]] %[[#VAR_A]]
-; CHECK-SPIRV: %[[#CMP_RES:]] = OpINotEqual %[[#]] %[[#VAR_A]] %[[#DIV_RES]]
+; CHECK-SPIRV: %[[#CMP_RES:]] = OpINotEqual %[[#]] %[[#DIV_RES]] %[[#VAR_B]]
 ; CHECK-SPIRV: %[[#INSERT_RES:]] = OpCompositeInsert %[[#]] %[[#MUL_RES]]
 ; CHECK-SPIRV: %[[#INSERT_RES_1:]] = OpCompositeInsert %[[#]] %[[#CMP_RES]] %[[#INSERT_RES]]
 ; CHECK-SPIRV: OpReturnValue %[[#INSERT_RES_1]]

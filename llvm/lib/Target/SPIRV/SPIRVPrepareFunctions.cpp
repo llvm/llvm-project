@@ -342,26 +342,70 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   FSHIntrinsic->setCalledFunction(FSHFunc);
 }
 
-static void buildUMulWithOverflowFunc(Function *UMulFunc) {
-  // The function body is already created.
-  if (!UMulFunc->empty())
+static void buildArithWithOverflowFunc(Function *Func, Intrinsic::ID ID) {
+  if (!Func->empty())
     return;
 
-  BasicBlock *EntryBB = BasicBlock::Create(UMulFunc->getParent()->getContext(),
-                                           "entry", UMulFunc);
+  BasicBlock *EntryBB =
+      BasicBlock::Create(Func->getParent()->getContext(), "entry", Func);
   IRBuilder<> IRB(EntryBB);
-  // Build the actual unsigned multiplication logic with the overflow
-  // indication. Do unsigned multiplication Mul = A * B. Then check
-  // if unsigned division Div = Mul / A is not equal to B. If so,
-  // then overflow has happened.
-  Value *Mul = IRB.CreateNUWMul(UMulFunc->getArg(0), UMulFunc->getArg(1));
-  Value *Div = IRB.CreateUDiv(Mul, UMulFunc->getArg(0));
-  Value *Overflow = IRB.CreateICmpNE(UMulFunc->getArg(0), Div);
+  Value *LHS = Func->getArg(0);
+  Value *RHS = Func->getArg(1);
 
-  // umul.with.overflow intrinsic return a structure, where the first element
-  // is the multiplication result, and the second is an overflow bit.
-  Type *StructTy = UMulFunc->getReturnType();
-  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Mul, {0});
+  Value *Result;
+  Value *Overflow;
+  Type *StructTy = Func->getReturnType();
+
+  switch (ID) {
+  case Intrinsic::smul_with_overflow:
+    Result = IRB.CreateNSWMul(LHS, RHS);
+    Overflow = IRB.CreateICmpNE(IRB.CreateSDiv(Result, LHS), RHS);
+    break;
+  case Intrinsic::umul_with_overflow:
+    Result = IRB.CreateNUWMul(LHS, RHS);
+    Overflow = IRB.CreateICmpNE(IRB.CreateUDiv(Result, LHS), RHS);
+    break;
+  case Intrinsic::sadd_with_overflow:
+    // TODO: Implement using OpIAddCarry
+    Result = IRB.CreateNSWAdd(LHS, RHS);
+    // Overflow if (LHS > 0 && RHS > 0 && Result < 0) || (LHS < 0 && RHS < 0 &&
+    // Result > 0)
+    Overflow = IRB.CreateOr(
+        IRB.CreateAnd(IRB.CreateAnd(IRB.CreateICmpSGT(LHS, IRB.getInt32(0)),
+                                    IRB.CreateICmpSGT(RHS, IRB.getInt32(0))),
+                      IRB.CreateICmpSLT(Result, IRB.getInt32(0))),
+        IRB.CreateAnd(IRB.CreateAnd(IRB.CreateICmpSLT(LHS, IRB.getInt32(0)),
+                                    IRB.CreateICmpSLT(RHS, IRB.getInt32(0))),
+                      IRB.CreateICmpSGT(Result, IRB.getInt32(0))));
+    break;
+  case Intrinsic::uadd_with_overflow:
+    Result = IRB.CreateNUWAdd(LHS, RHS);
+    // Overflow occurs if the result is less than either of the operands.
+    Overflow = IRB.CreateICmpULT(Result, LHS);
+    break;
+  case Intrinsic::ssub_with_overflow:
+    Result = IRB.CreateNSWSub(LHS, RHS);
+    // Overflow if (LHS < 0 && RHS > 0 && Result > 0) || (LHS > 0 && RHS < 0 &&
+    // Result < 0)
+    Overflow = IRB.CreateOr(
+        IRB.CreateAnd(IRB.CreateAnd(IRB.CreateICmpSLT(LHS, IRB.getInt32(0)),
+                                    IRB.CreateICmpSGT(RHS, IRB.getInt32(0))),
+                      IRB.CreateICmpSGT(Result, IRB.getInt32(0))),
+        IRB.CreateAnd(IRB.CreateAnd(IRB.CreateICmpSGT(LHS, IRB.getInt32(0)),
+                                    IRB.CreateICmpSLT(RHS, IRB.getInt32(0))),
+                      IRB.CreateICmpSLT(Result, IRB.getInt32(0))));
+    break;
+  case Intrinsic::usub_with_overflow:
+    Result = IRB.CreateNUWSub(LHS, RHS);
+    // Overflow occurs if the result is greater than the left-hand-side operand.
+    Overflow = IRB.CreateICmpUGT(Result, LHS);
+    break;
+
+  default:
+    llvm_unreachable("Unsupported arithmetic with overflow intrinsic.");
+  }
+
+  Value *Agg = IRB.CreateInsertValue(PoisonValue::get(StructTy), Result, {0});
   Value *Res = IRB.CreateInsertValue(Agg, Overflow, {1});
   IRB.CreateRet(Res);
 }
@@ -407,18 +451,17 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
   return true;
 }
 
-static void lowerUMulWithOverflow(IntrinsicInst *UMulIntrinsic) {
+static void lowerArithWithOverflow(IntrinsicInst *ArithIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
   // current one. Then simply replace the intrinsic uses with a call to the new
   // function.
-  Module *M = UMulIntrinsic->getModule();
-  FunctionType *UMulFuncTy = UMulIntrinsic->getFunctionType();
-  Type *FSHLRetTy = UMulFuncTy->getReturnType();
-  const std::string FuncName = lowerLLVMIntrinsicName(UMulIntrinsic);
-  Function *UMulFunc =
-      getOrCreateFunction(M, FSHLRetTy, UMulFuncTy->params(), FuncName);
-  buildUMulWithOverflowFunc(UMulFunc);
-  UMulIntrinsic->setCalledFunction(UMulFunc);
+  Module *M = ArithIntrinsic->getModule();
+  FunctionType *FuncTy = ArithIntrinsic->getFunctionType();
+  Type *RetTy = FuncTy->getReturnType();
+  const std::string FuncName = lowerLLVMIntrinsicName(ArithIntrinsic);
+  Function *Func = getOrCreateFunction(M, RetTy, FuncTy->params(), FuncName);
+  buildArithWithOverflowFunc(Func, ArithIntrinsic->getIntrinsicID());
+  ArithIntrinsic->setCalledFunction(Func);
 }
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
@@ -444,8 +487,13 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerFunnelShifts(II);
         Changed = true;
         break;
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::uadd_with_overflow:
       case Intrinsic::umul_with_overflow:
-        lowerUMulWithOverflow(II);
+      case Intrinsic::usub_with_overflow:
+        lowerArithWithOverflow(II);
         Changed = true;
         break;
       case Intrinsic::assume:
