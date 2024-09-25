@@ -55,6 +55,10 @@ std::optional<unsigned> getReqNTIDy(const Function &);
 std::optional<unsigned> getReqNTIDz(const Function &);
 std::optional<unsigned> getReqNTID(const Function &);
 
+std::optional<unsigned> getClusterDimx(const Function &);
+std::optional<unsigned> getClusterDimy(const Function &);
+std::optional<unsigned> getClusterDimz(const Function &);
+
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
 std::optional<unsigned> getMaxNReg(const Function &);
