@@ -14,5 +14,5 @@
 #ifdef issignaling
 LIST_ISSIGNALING_TESTS(long double, issignaling)
 #else
-TEST(LlvmLibcIsSignalingTest, Skip) { }
+TEST(LlvmLibcIsSignalingTest, Skip) {}
 #endif
