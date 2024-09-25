@@ -7,7 +7,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++20 -fprebuilt-module-path=%t -verify %t/C.cpp
 
 //--- A.cppm
-module;
 export module A;
 export extern "C" void foo(struct Bar);
 
@@ -22,5 +21,5 @@ struct Bar {};
 void test() {
   foo(Bar());
   // expected-error@-1 {{declaration of 'foo' must be imported}}
-  // expected-note@A.cppm:3 {{declaration here is not visible}}
+  // expected-note@A.cppm:2 {{declaration here is not visible}}
 }
