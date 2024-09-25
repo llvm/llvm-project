@@ -55,9 +55,8 @@ using namespace llvm;
 static const int backlog = 100;
 static const int socket_error = -1;
 static int g_debug = 0;
-static int g_verbose = 0; // Note it is unused.
+static int g_verbose = 0;
 static int g_server = 0;
-static std::unique_ptr<MainLoop> g_main_loop = std::make_unique<MainLoop>();
 
 // option descriptors for getopt_long_only()
 static struct option g_long_options[] = {
@@ -194,43 +193,40 @@ static Status ListenGdbConnectionsIfNeeded(
   return Status();
 }
 
-static Status
-AcceptGdbConnectionsIfNeeded(const Socket::SocketProtocol protocol,
-                             std::unique_ptr<TCPSocket> &gdb_sock,
-                             std::vector<MainLoopBase::ReadHandleUP> &handles,
-                             const uint16_t gdbserver_port,
-                             const lldb_private::Args &inferior_arguments) {
+static Status AcceptGdbConnectionsIfNeeded(
+    const Socket::SocketProtocol protocol, std::unique_ptr<TCPSocket> &gdb_sock,
+    std::vector<MainLoopBase::ReadHandleUP> &handles, MainLoop &main_loop,
+    const uint16_t gdbserver_port, const lldb_private::Args &args) {
   if (protocol != Socket::ProtocolTcp)
     return Status();
 
   llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> handles_or_err =
-      gdb_sock->Accept(*g_main_loop, [gdbserver_port, &inferior_arguments](
-                                         std::unique_ptr<Socket> sock_up) {
-        Log *log = GetLog(LLDBLog::Platform);
-        Status error;
-        SharedSocket shared_socket(sock_up.get(), error);
-        if (error.Fail()) {
-          LLDB_LOGF(log, "gdbserver SharedSocket failed: %s",
-                    error.AsCString());
-          return;
-        }
-        lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
-        std::string socket_name;
-        GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
-                                                      gdbserver_port);
-        error =
-            platform.LaunchGDBServer(inferior_arguments, child_pid, socket_name,
-                                     shared_socket.GetSendableFD());
-        if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
-          error = shared_socket.CompleteSending(child_pid);
-          if (error.Fail()) {
-            Host::Kill(child_pid, SIGTERM);
-            LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
-                      error.AsCString());
-            return;
-          }
-        }
-      });
+      gdb_sock->Accept(
+          main_loop, [gdbserver_port, &args](std::unique_ptr<Socket> sock_up) {
+            Log *log = GetLog(LLDBLog::Platform);
+            Status error;
+            SharedSocket shared_socket(sock_up.get(), error);
+            if (error.Fail()) {
+              LLDB_LOGF(log, "gdbserver SharedSocket failed: %s",
+                        error.AsCString());
+              return;
+            }
+            lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
+            std::string socket_name;
+            GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
+                                                          gdbserver_port);
+            error = platform.LaunchGDBServer(args, child_pid, socket_name,
+                                             shared_socket.GetSendableFD());
+            if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
+              error = shared_socket.CompleteSending(child_pid);
+              if (error.Fail()) {
+                Host::Kill(child_pid, SIGTERM);
+                LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
+                          error.AsCString());
+                return;
+              }
+            }
+          });
   if (!handles_or_err)
     return Status::FromError(handles_or_err.takeError());
 
@@ -268,21 +264,11 @@ static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
   printf("Disconnected.\n");
 }
 
-static void dummy_process_reaped(lldb::pid_t /*pid*/, int /*signal*/,
-                                 int /*status*/) {}
-
-// This callback is called from the MonitorChildProcessThread.
-static void single_process_reaped(lldb::pid_t /*pid*/, int /*signal*/,
-                                  int /*status*/) {
-  // If not running as a server and the platform connection is closed
-  g_main_loop->AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-}
-
 static Status spawn_process(const char *progname, const Socket *conn_socket,
                             uint16_t gdb_port, const lldb_private::Args &args,
                             const std::string &log_file,
-                            const StringRef log_channels) {
+                            const StringRef log_channels, MainLoop &main_loop,
+                            std::promise<void> &child_exited) {
   Status error;
   SharedSocket shared_socket(conn_socket, error);
   if (error.Fail())
@@ -320,9 +306,14 @@ static Status spawn_process(const char *progname, const Socket *conn_socket,
   launch_info.SetLaunchInSeparateProcessGroup(false);
 
   if (g_server)
-    launch_info.SetMonitorProcessCallback(&dummy_process_reaped);
+    launch_info.SetMonitorProcessCallback([](lldb::pid_t, int, int) {});
   else
-    launch_info.SetMonitorProcessCallback(&single_process_reaped);
+    launch_info.SetMonitorProcessCallback(
+        [&child_exited, &main_loop](lldb::pid_t, int, int) {
+          main_loop.AddPendingCallback(
+              [](MainLoopBase &loop) { loop.RequestTermination(); });
+          child_exited.set_value();
+        });
 
   // Copy the current environment.
   launch_info.GetEnvironment() = Host::GetEnvironment();
@@ -566,30 +557,30 @@ int main_platform(int argc, char *argv[]) {
     return socket_error;
   }
 
+  std::promise<void> child_exited;
+  MainLoop main_loop;
   {
     llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> platform_handles =
         platform_sock->Accept(
-            *g_main_loop,
-            [progname, gdbserver_port, &inferior_arguments, log_file,
-             log_channels](std::unique_ptr<Socket> sock_up) {
-              // If not running as a server, this process will not accept
-              // connections while a connection is active.
-              if (g_server < 0)
-                return;
+            main_loop, [progname, gdbserver_port, &inferior_arguments, log_file,
+                        log_channels, &main_loop, &child_exited,
+                        &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
-              Status error =
-                  spawn_process(progname, sock_up.get(), gdbserver_port,
-                                inferior_arguments, log_file, log_channels);
+              Status error = spawn_process(
+                  progname, sock_up.get(), gdbserver_port, inferior_arguments,
+                  log_file, log_channels, main_loop, child_exited);
               if (error.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
                 LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
                 WithColor::error()
                     << "spawn_process failed: " << error.AsCString() << "\n";
-                if (!g_server)
-                  g_main_loop->RequestTermination();
+                if (!g_server) {
+                  main_loop.RequestTermination();
+                  child_exited.set_value();
+                }
               }
               if (!g_server)
-                g_server = -1;
+                platform_handles->clear();
             });
     if (!platform_handles) {
       printf("Failed to accept platform: %s\n",
@@ -598,14 +589,17 @@ int main_platform(int argc, char *argv[]) {
     }
 
     std::vector<MainLoopBase::ReadHandleUP> gdb_handles;
-    error = AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_handles,
-                                         gdbserver_port, inferior_arguments);
+    error =
+        AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_handles, main_loop,
+                                     gdbserver_port, inferior_arguments);
     if (error.Fail()) {
       printf("Failed to accept gdb: %s\n", error.AsCString());
       return socket_error;
     }
-    g_main_loop->Run();
+
+    main_loop.Run();
   }
+  child_exited.get_future().get();
 
   fprintf(stderr, "lldb-server exiting...\n");
 
