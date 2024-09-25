@@ -459,7 +459,7 @@ public:
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend() const;
 
-  void computeRaw(SymbolTableBaseSection *symtab);
+  void computeRaw(SymbolTableBaseSection *symt);
 
   Symbol *sym;
   const OutputSection *outputSec = nullptr;

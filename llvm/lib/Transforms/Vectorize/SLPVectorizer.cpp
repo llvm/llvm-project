@@ -1930,30 +1930,38 @@ public:
     /// elements in the lane, it will be vectorized with higher probability
     /// after removing duplicates. Currently the SLP vectorizer supports only
     /// vectorization of the power-of-2 number of unique scalars.
-    int getSplatScore(unsigned Lane, unsigned OpIdx, unsigned Idx) const {
+    int getSplatScore(unsigned Lane, unsigned OpIdx, unsigned Idx,
+                      const SmallBitVector &UsedLanes) const {
       Value *IdxLaneV = getData(Idx, Lane).V;
-      if (!isa<Instruction>(IdxLaneV) || IdxLaneV == getData(OpIdx, Lane).V)
+      if (!isa<Instruction>(IdxLaneV) || IdxLaneV == getData(OpIdx, Lane).V ||
+          isa<ExtractElementInst>(IdxLaneV))
         return 0;
-      SmallPtrSet<Value *, 4> Uniques;
-      for (unsigned Ln = 0, E = getNumLanes(); Ln < E; ++Ln) {
+      SmallDenseMap<Value *, unsigned, 4> Uniques;
+      for (unsigned Ln : seq<unsigned>(getNumLanes())) {
         if (Ln == Lane)
           continue;
         Value *OpIdxLnV = getData(OpIdx, Ln).V;
         if (!isa<Instruction>(OpIdxLnV))
           return 0;
-        Uniques.insert(OpIdxLnV);
+        Uniques.try_emplace(OpIdxLnV, Ln);
       }
-      int UniquesCount = Uniques.size();
-      int UniquesCntWithIdxLaneV =
-          Uniques.contains(IdxLaneV) ? UniquesCount : UniquesCount + 1;
+      unsigned UniquesCount = Uniques.size();
+      auto IdxIt = Uniques.find(IdxLaneV);
+      unsigned UniquesCntWithIdxLaneV =
+          IdxIt != Uniques.end() ? UniquesCount : UniquesCount + 1;
       Value *OpIdxLaneV = getData(OpIdx, Lane).V;
-      int UniquesCntWithOpIdxLaneV =
-          Uniques.contains(OpIdxLaneV) ? UniquesCount : UniquesCount + 1;
+      auto OpIdxIt = Uniques.find(OpIdxLaneV);
+      unsigned UniquesCntWithOpIdxLaneV =
+          OpIdxIt != Uniques.end() ? UniquesCount : UniquesCount + 1;
       if (UniquesCntWithIdxLaneV == UniquesCntWithOpIdxLaneV)
         return 0;
-      return (PowerOf2Ceil(UniquesCntWithOpIdxLaneV) -
-              UniquesCntWithOpIdxLaneV) -
-             (PowerOf2Ceil(UniquesCntWithIdxLaneV) - UniquesCntWithIdxLaneV);
+      return std::min(bit_ceil(UniquesCntWithOpIdxLaneV) -
+                          UniquesCntWithOpIdxLaneV,
+                      UniquesCntWithOpIdxLaneV -
+                          bit_floor(UniquesCntWithOpIdxLaneV)) -
+             ((IdxIt != Uniques.end() && UsedLanes.test(IdxIt->second))
+                  ? UniquesCntWithIdxLaneV - bit_floor(UniquesCntWithIdxLaneV)
+                  : bit_ceil(UniquesCntWithIdxLaneV) - UniquesCntWithIdxLaneV);
     }
 
     /// \param Lane lane of the operands under analysis.
@@ -1993,7 +2001,7 @@ public:
     /// predecessors.
     int getLookAheadScore(Value *LHS, Value *RHS, ArrayRef<Value *> MainAltOps,
                           int Lane, unsigned OpIdx, unsigned Idx,
-                          bool &IsUsed) {
+                          bool &IsUsed, const SmallBitVector &UsedLanes) {
       LookAheadHeuristics LookAhead(TLI, DL, SE, R, getNumLanes(),
                                     LookAheadMaxDepth);
       // Keep track of the instruction stack as we recurse into the operands
@@ -2002,11 +2010,10 @@ public:
           LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
                                        /*CurrLevel=*/1, MainAltOps);
       if (Score) {
-        int SplatScore = getSplatScore(Lane, OpIdx, Idx);
+        int SplatScore = getSplatScore(Lane, OpIdx, Idx, UsedLanes);
         if (Score <= -SplatScore) {
-          // Set the minimum score for splat-like sequence to avoid setting
-          // failed state.
-          Score = 1;
+          // Failed score.
+          Score = 0;
         } else {
           Score += SplatScore;
           // Scale score to see the difference between different operands
@@ -2036,7 +2043,8 @@ public:
     std::optional<unsigned>
     getBestOperand(unsigned OpIdx, int Lane, int LastLane,
                    ArrayRef<ReorderingMode> ReorderingModes,
-                   ArrayRef<Value *> MainAltOps) {
+                   ArrayRef<Value *> MainAltOps,
+                   const SmallBitVector &UsedLanes) {
       unsigned NumOperands = getNumOperands();
 
       // The operand of the previous lane at OpIdx.
@@ -2092,7 +2100,7 @@ public:
           Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
           Value *OpRight = (LeftToRight) ? Op : OpLastLane;
           int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
-                                        OpIdx, Idx, IsUsed);
+                                        OpIdx, Idx, IsUsed, UsedLanes);
           if (Score > static_cast<int>(BestOp.Score) ||
               (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
                Idx == OpIdx)) {
@@ -2507,20 +2515,24 @@ public:
         for (unsigned I = 0; I < NumOperands; ++I)
           MainAltOps[I].push_back(getData(I, FirstLane).V);
 
+        SmallBitVector UsedLanes(NumLanes);
+        UsedLanes.set(FirstLane);
         for (unsigned Distance = 1; Distance != NumLanes; ++Distance) {
           // Visit the lane on the right and then the lane on the left.
           for (int Direction : {+1, -1}) {
             int Lane = FirstLane + Direction * Distance;
             if (Lane < 0 || Lane >= (int)NumLanes)
               continue;
+            UsedLanes.set(Lane);
             int LastLane = Lane - Direction;
             assert(LastLane >= 0 && LastLane < (int)NumLanes &&
                    "Out of bounds");
             // Look for a good match for each operand.
             for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
               // Search for the operand that matches SortedOps[OpIdx][Lane-1].
-              std::optional<unsigned> BestIdx = getBestOperand(
-                  OpIdx, Lane, LastLane, ReorderingModes, MainAltOps[OpIdx]);
+              std::optional<unsigned> BestIdx =
+                  getBestOperand(OpIdx, Lane, LastLane, ReorderingModes,
+                                 MainAltOps[OpIdx], UsedLanes);
               // By not selecting a value, we allow the operands that follow to
               // select a better matching value. We will get a non-null value in
               // the next run of getBestOperand().
@@ -9986,8 +9998,8 @@ public:
         }
         Cost += ::getShuffleCost(
             TTI, TTI::SK_InsertSubvector,
-            FixedVectorType::get(ScalarTy, CommonMask.size()), {}, CostKind,
-            Idx, FixedVectorType::get(ScalarTy, E->getVectorFactor()));
+            getWidenedType(ScalarTy, CommonMask.size()), {}, CostKind, Idx,
+            getWidenedType(ScalarTy, E->getVectorFactor()));
         if (!CommonMask.empty()) {
           std::iota(std::next(CommonMask.begin(), Idx),
                     std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
@@ -12326,8 +12338,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-  APInt ShuffledElements = APInt::getZero(VecTy->getNumElements());
+  APInt ShuffledElements = APInt::getZero(VL.size());
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -12347,8 +12358,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBits(I * ScalarTyNumElements,
-                               I * ScalarTyNumElements + ScalarTyNumElements);
+      ShuffledElements.setBit(I);
       ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
       continue;
     }
@@ -12361,14 +12371,27 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     }
 
     DuplicateNonConst = true;
-    ShuffledElements.setBits(I * ScalarTyNumElements,
-                             I * ScalarTyNumElements + ScalarTyNumElements);
+    ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (ForPoisonSrc)
-    Cost =
-        TTI->getScalarizationOverhead(VecTy, ~ShuffledElements, /*Insert*/ true,
-                                      /*Extract*/ false, CostKind);
+  if (ForPoisonSrc) {
+    if (isa<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      // We don't need to insert elements one by one. Instead, we can insert the
+      // entire vector into the destination.
+      Cost = 0;
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+      for (unsigned I : seq<unsigned>(VL.size()))
+        if (!ShuffledElements[I])
+          Cost += TTI->getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
+              I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
+    } else {
+      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+                                           /*Insert*/ true,
+                                           /*Extract*/ false, CostKind);
+    }
+  }
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                              VecTy, ShuffleMask);
@@ -18668,6 +18691,14 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot =
             V.vectorizeTree(LocalExternallyUsedValues, InsertPt);
+        // Update TrackedToOrig mapping, since the tracked values might be
+        // updated.
+        for (Value *RdxVal : Candidates) {
+          Value *OrigVal = TrackedToOrig.at(RdxVal);
+          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
+          if (TransformedRdxVal != RdxVal)
+            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
+        }
 
         Builder.SetInsertPoint(InsertPt);
 

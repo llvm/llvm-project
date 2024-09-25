@@ -168,9 +168,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
-        descShape, elementType, /*scattered=*/false, /*array_length=*/1,
-        xegpu::MemoryScope::Global,
-        /*boundary_check=*/isOutOfBounds);
+        descShape, elementType, /*array_length=*/1,
+        /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
 
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
@@ -212,10 +211,10 @@ struct TransferWriteLowering
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
     VectorType vecTy = writeOp.getVectorType();
-    auto descType = xegpu::TensorDescType::get(
-        vecTy.getShape(), vecTy.getElementType(),
-        /*scattered=*/false, /*array_length=*/1, xegpu::MemoryScope::Global,
-        /*boundary_check=*/false);
+    auto descType =
+        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
+                                   /*array_length=*/1, /*boundary_check=*/false,
+                                   xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType,
         dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),

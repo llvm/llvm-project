@@ -377,19 +377,19 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has a speculative early exit, i.e. an
+  /// Returns true if the loop has an uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasSpeculativeEarlyExit() const { return HasSpeculativeEarlyExit; }
+  bool hasUncountableEarlyExit() const { return HasUncountableEarlyExit; }
 
-  /// Returns the speculative early exiting block.
-  BasicBlock *getSpeculativeEarlyExitingBlock() const {
+  /// Returns the uncountable early exiting block.
+  BasicBlock *getUncountableEarlyExitingBlock() const {
     assert(getUncountableExitingBlocks().size() == 1 &&
            "Expected only a single uncountable exiting block");
     return getUncountableExitingBlocks()[0];
   }
 
-  /// Returns the destination of a speculative early exiting block.
-  BasicBlock *getSpeculativeEarlyExitBlock() const {
+  /// Returns the destination of an uncountable early exiting block.
+  BasicBlock *getUncountableEarlyExitBlock() const {
     assert(getUncountableExitBlocks().size() == 1 &&
            "Expected only a single uncountable exit block");
     return getUncountableExitBlocks()[0];
@@ -603,15 +603,17 @@ private:
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
 
-  /// Indicates whether this loop has a speculative early exit, i.e. an
+  /// Indicates whether this loop has an uncountable early exit, i.e. an
   /// uncountable exiting block that is not the latch.
-  bool HasSpeculativeEarlyExit = false;
+  bool HasUncountableEarlyExit = false;
 
-  /// Keep track of all the loop exiting blocks.
+  /// Keep track of all the countable and uncountable exiting blocks if
+  /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
   SmallVector<BasicBlock *, 4> UncountableExitingBlocks;
 
-  /// Keep track of the destinations of all uncountable exits.
+  /// Keep track of the destinations of all uncountable exits if the
+  /// exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> UncountableExitBlocks;
 };
 

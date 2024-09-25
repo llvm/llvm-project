@@ -43,7 +43,7 @@ code bases.
   still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
   `config file
   <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
-  
+
 - The ``clang-rename`` tool has been removed.
 
 C/C++ Language Potentially Breaking Changes
@@ -115,7 +115,7 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
-- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension
   of temporary created by aggregate initialization using a default member
   initializer.
 
@@ -268,6 +268,14 @@ Attribute Changes in Clang
 - Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
   to propagate safe elide context to arguments if such function is also under a safe elide context.
 
+- The documentation of the ``[[clang::musttail]]`` attribute was updated to
+  note that the lifetimes of all local variables end before the call. This does
+  not change the behaviour of the compiler, as this was true for previous
+  versions.
+
+- Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
+  ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -323,6 +331,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnose when importing module implementation partition units in module interface units.
 
 - Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+
+- The ``-Wreturn-stack-address`` warning now also warns about addresses of
+  local variables passed to function calls using the ``[[clang::musttail]]``
+  attribute.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -439,6 +451,9 @@ Miscellaneous Clang Crashes Fixed
   Now a diagnostic is emitted. (#GH35741)
 
 - Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
+
+- Fixed internal assertion firing when a declaration in the implicit global
+  module is found through ADL. (GH#109879)
 
 OpenACC Specific Changes
 ------------------------
@@ -625,6 +640,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
+- Added support for 'omp scope' directive.
 
 Improvements
 ^^^^^^^^^^^^

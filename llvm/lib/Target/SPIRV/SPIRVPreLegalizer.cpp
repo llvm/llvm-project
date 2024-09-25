@@ -389,9 +389,7 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
       createNewIdReg(nullptr, MI.getOperand(0).getReg(), MRI, *GR).first;
   AssignTypeInst.getOperand(1).setReg(NewReg);
   MI.getOperand(0).setReg(NewReg);
-  MIB.setInsertPt(*MI.getParent(),
-                  (MI.getNextNode() ? MI.getNextNode()->getIterator()
-                                    : MI.getParent()->end()));
+  MIB.setInsertPt(*MI.getParent(), MI.getIterator());
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
