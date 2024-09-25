@@ -257,3 +257,13 @@ SourceRange InterpFrame::getRange(CodePtr PC) const {
 
   return S.getRange(Func, PC);
 }
+
+bool InterpFrame::isStdFunction() const {
+  if (!Func)
+    return false;
+  for (const DeclContext *DC = Func->getDecl(); DC; DC = DC->getParent())
+    if (DC->isStdNamespace())
+      return true;
+
+  return false;
+}

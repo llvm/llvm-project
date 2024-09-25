@@ -2726,7 +2726,7 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 // For AArch64 PAuth-enabled object files, the core info of all of them must
 // match. Missing info for some object files with matching info for remaining
 // ones can be allowed (see -z pauth-report).
-static void readSecurityNotes() {
+static void readSecurityNotes(Ctx &ctx) {
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.emachine != EM_AARCH64)
     return;
@@ -2969,7 +2969,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
-    addReservedSymbols();
+    addReservedSymbols(ctx);
 
   // Apply version scripts.
   //
@@ -3113,7 +3113,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  readSecurityNotes();
+  readSecurityNotes(ctx);
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
@@ -3147,7 +3147,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Make copies of any input sections that need to be copied into each
   // partition.
-  copySectionsIntoPartitions();
+  copySectionsIntoPartitions(ctx);
 
   if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");

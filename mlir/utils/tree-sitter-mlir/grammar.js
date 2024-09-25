@@ -231,7 +231,7 @@ const common = {
       token(seq(choice('si', 'ui', 'i'), /[1-9]/, repeat(/[0-9]/))),
   float_type : $ => token(
       choice('f16', 'f32', 'f64', 'f80', 'f128', 'bf16', 'f8E3M4', 'f8E4M3FN',
-             'f8E4M3', 'f8E5M2', 'f6E2M3FN', 'f6E3M2FN')),
+             'f8E4M3', 'f8E5M2', 'f4E2M1FN', 'f6E2M3FN', 'f6E3M2FN')),
   index_type : $ => token('index'),
   none_type : $ => token('none'),
   complex_type : $ => seq(token('complex'), '<', $._prim_type, '>'),

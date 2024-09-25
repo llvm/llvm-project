@@ -1345,8 +1345,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(),
-      NumElems.ule(1) ? std::nullopt : Descriptor::InlineDescMD,
+      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 

@@ -3856,6 +3856,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case FUNCTION_DECL_TO_LAMBDAS_MAP:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
+        GlobalDeclID ID = ReadDeclID(F, Record, I);
+        auto &Lambdas = FunctionToLambdasMap[ID];
+        unsigned NN = Record[I++];
+        Lambdas.reserve(NN);
+        for (unsigned II = 0; II < NN; II++)
+          Lambdas.push_back(ReadDeclID(F, Record, I));
+      }
+      break;
+
     case OBJC_CATEGORIES_MAP:
       if (F.LocalNumObjCCategoriesInMap != 0)
         return llvm::createStringError(
