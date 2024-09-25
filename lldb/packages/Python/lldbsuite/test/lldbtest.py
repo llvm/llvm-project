@@ -1370,6 +1370,9 @@ class Base(unittest.TestCase):
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
 
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":

@@ -724,6 +724,12 @@ enum ASTRecordTypes {
 
   /// Record code for vtables to emit.
   VTABLES_TO_EMIT = 70,
+
+  /// Record code for the FunctionDecl to lambdas mapping. These lambdas have to
+  /// be loaded right after the function they belong to. It is required to have
+  /// canonical declaration for the lambda class from the same module as
+  /// enclosing function.
+  FUNCTION_DECL_TO_LAMBDAS_MAP = 71,
 };
 
 /// Record types used within a source manager block.
