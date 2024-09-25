@@ -158,17 +158,30 @@ auto begin(C &c) -> decltype(c.begin());
 template<typename T, int N>
 T *begin(T (&array)[N]);
 
+using size_t = decltype(sizeof(0));
+
+template<typename T>
+struct initializer_list {
+  const T* ptr; size_t sz;
+};
 template <typename T>
 struct vector {
   typedef __gnu_cxx::basic_iterator<T> iterator;
   iterator begin();
   iterator end();
   const T *data() const;
+  vector();
+  vector(initializer_list<T> __l);
+
+  template<typename InputIterator>
+	vector(InputIterator first, InputIterator __last);
+
   T &at(int n);
 };
 
 template<typename T>
 struct basic_string_view {
+  basic_string_view();
   basic_string_view(const T *);
   const T *begin() const;
 };
@@ -203,11 +216,21 @@ template<typename T>
 struct optional {
   optional();
   optional(const T&);
+
+  template<typename U = T>
+  optional(U&& t);
+
+  template<typename U>
+  optional(optional<U>&& __t);
+
   T &operator*() &;
   T &&operator*() &&;
   T &value() &;
   T &&value() &&;
 };
+template<typename T>
+optional<__decay(T)> make_optional(T&&);
+
 
 template<typename T>
 struct stack {
@@ -587,3 +610,170 @@ std::string_view test2() {
   return k.value(); // expected-warning {{address of stack memory associated}}
 }
 } // namespace GH108272
+
+namespace GH100526 {
+void test() {
+  std::vector<std::string_view> v1({std::string()}); // expected-warning {{object backing the pointer will be destroyed at the end}}
+  std::vector<std::string_view> v2({
+    std::string(), // expected-warning {{object backing the pointer will be destroyed at the end}}
+    std::string_view()
+  });
+  std::vector<std::string_view> v3({
+    std::string_view(),
+    std::string()  // expected-warning {{object backing the pointer will be destroyed at the end}}
+  });
+
+  std::optional<std::string_view> o1 = std::string(); // expected-warning {{object backing the pointer}}
+
+  std::string s;
+  // This is a tricky use-after-free case, what it does:
+  //   1. make_optional creates a temporary "optional<string>"" object
+  //   2. the temporary object owns the underlying string which is copied from s.
+  //   3. the t3 object holds the view to the underlying string of the temporary object.
+  std::optional<std::string_view> o2 = std::make_optional(s); // expected-warning {{object backing the pointer}}
+  std::optional<std::string_view> o3 = std::optional<std::string>(s); // expected-warning {{object backing the pointer}}
+  std::optional<std::string_view> o4 = std::optional<std::string_view>(s);
+
+  // FIXME: should work for assignment cases
+  v1 = {std::string()};
+  o1 = std::string();
+
+  // no warning on copying pointers.
+  std::vector<std::string_view> n1 = {std::string_view()};
+  std::optional<std::string_view> n2 = {std::string_view()};
+  std::optional<std::string_view> n3 = std::string_view();
+  std::optional<std::string_view> n4 = std::make_optional(std::string_view());
+  const char* b = "";
+  std::optional<std::string_view> n5 = std::make_optional(b);
+  std::optional<std::string_view> n6 = std::make_optional("test");
+}
+
+std::vector<std::string_view> test2(int i) {
+  std::vector<std::string_view> t;
+  if (i)
+    return t; // this is fine, no dangling
+  return std::vector<std::string_view>(t.begin(), t.end());
+}
+
+class Foo {
+  public:
+   operator std::string_view() const { return ""; }
+};
+class [[gsl::Owner]] FooOwner {
+  public:
+   operator std::string_view() const { return ""; }
+};
+std::optional<Foo> GetFoo();
+std::optional<FooOwner> GetFooOwner();
+
+template <typename T>
+struct [[gsl::Owner]] Container1 {
+   Container1();
+};
+template <typename T>
+struct [[gsl::Owner]] Container2 {
+  template<typename U>
+  Container2(const Container1<U>& C2);
+};
+
+std::optional<std::string_view> test3(int i) {
+  std::string s;
+  std::string_view sv;
+  if (i)
+   return s; // expected-warning {{address of stack memory associated}}
+  return sv; // fine
+  Container2<std::string_view> c1 = Container1<Foo>(); // no diagnostic as Foo is not an Owner.
+  Container2<std::string_view> c2 = Container1<FooOwner>(); // expected-warning {{object backing the pointer will be destroyed}}
+  return GetFoo(); // fine, we don't know Foo is owner or not, be conservative.
+  return GetFooOwner(); // expected-warning {{returning address of local temporary object}}
+}
+
+std::optional<int*> test4(int a) {
+  return std::make_optional(nullptr); // fine
+}
+
+
+template <typename T>
+struct [[gsl::Owner]] StatusOr {
+  const T &valueLB() const [[clang::lifetimebound]];
+  const T &valueNoLB() const;
+};
+
+template<typename T>
+struct [[gsl::Pointer]] Span {
+  Span(const std::vector<T> &V);
+
+  const int& getFieldLB() const [[clang::lifetimebound]];
+  const int& getFieldNoLB() const;
+};
+
+
+/////// From Owner<Pointer> ///////
+
+// Pointer from Owner<Pointer>
+std::string_view test5() {
+  std::string_view a = StatusOr<std::string_view>().valueLB(); // expected-warning {{object backing the pointer will be dest}}
+return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning address of local temporary}}
+
+  // No dangling diagnostics on non-lifetimebound methods.
+  std::string_view b = StatusOr<std::string_view>().valueNoLB();
+  return StatusOr<std::string_view>().valueNoLB();
+}
+
+// Pointer<Pointer> from Owner<Pointer>
+// Prevent regression GH108463
+Span<int*> test6(std::vector<int*> v) {
+  Span<int *> dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
+  return v; // expected-warning {{address of stack memory}}
+}
+
+/////// From Owner<Owner<Pointer>> ///////
+
+// Pointer from Owner<Owner<Pointer>>
+int* test7(StatusOr<StatusOr<int*>> aa) {
+  // No dangling diagnostic on pointer.
+  return aa.valueLB().valueLB(); // OK.
+}
+
+// Owner<Pointer> from Owner<Owner<Pointer>>
+std::vector<int*> test8(StatusOr<std::vector<int*>> aa) {
+  return aa.valueLB(); // OK, no pointer being construct on this case.
+  return aa.valueNoLB();
+}
+
+// Pointer<Pointer> from Owner<Owner<Pointer>>
+Span<int*> test9(StatusOr<std::vector<int*>> aa) {
+  return aa.valueLB(); // expected-warning {{address of stack memory associated}}
+  return aa.valueNoLB(); // OK.
+}
+
+/////// From Owner<Owner> ///////
+
+// Pointer<Owner>> from Owner<Owner>
+Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
+  return aa.valueLB(); // expected-warning {{address of stack memory}}
+  return aa.valueNoLB(); // OK.
+}
+
+/////// From Owner<Pointer<Owner>> ///////
+
+// Pointer<Owner>> from Owner<Pointer<Owner>>
+Span<std::string> test11(StatusOr<Span<std::string>> aa) {
+  return aa.valueLB(); // expected-warning {{address of stack memory}}
+  return aa.valueNoLB(); // OK.
+}
+
+// Lifetimebound and gsl::Pointer.
+const int& test12(Span<int> a) {
+  return a.getFieldLB(); // expected-warning {{reference to stack memory associated}}
+  return a.getFieldNoLB(); // OK.
+}
+
+void test13() {
+  // FIXME: RHS is Owner<Pointer>, we skip this case to avoid false positives.
+  std::optional<Span<int*>> abc = std::vector<int*>{};
+
+  std::optional<Span<int>> t = std::vector<int> {}; // expected-warning {{object backing the pointer will be destroyed}}
+}
+
+} // namespace GH100526
