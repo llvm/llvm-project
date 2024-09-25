@@ -59,6 +59,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
   llvm.return
 }
 
+
 // CHECK: define internal void @__omp_offloading_fd00
 // CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, i64 1, align 4
 // CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, i64 1, align 4
@@ -68,3 +69,31 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
 // CHECK: %[[CAST_TO_FLOAT:.*]] = sitofp i32 %[[LOAD_I32_AGAIN]] to float
 // CHECK: %[[ADD_FLOAT:.*]] = fadd contract float %[[CAST_TO_FLOAT]], 1.100000e+01
 // CHECK: store float %[[ADD_FLOAT]], ptr %[[PRIV_FLOAT_ALLOC]], align 4
+
+// An entirely artifical privatizer that is meant to check multi-block
+// privatizers. The idea here is to prove that we set the correct
+// insertion points for the builder when generating, first, LLVM IR for the
+// privatizer and then for the actual target region.
+omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  llvm.br ^bb1(%c1 : i32)
+
+^bb1(%arg1: i32):
+  %0 = llvm.alloca %arg1 x f32 : (i32) -> !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+
+llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
+  omp.target private(@multi_block.privatizer %arg0 -> %arg2 : !llvm.ptr) {
+  ^bb0(%arg2: !llvm.ptr):
+    %0 = llvm.load %arg2 : !llvm.ptr -> f32
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK: define internal void @__omp_offloading_fd00
+// CHECK: %[[ONE:.*]] = phi i32 [ 1, {{.*}} ]
+// CHECK: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[ONE]], align 4
+// CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
+// CHECK: %[[RESULT:.*]] = load float, ptr %[[PHI_ALLOCA]], align 4

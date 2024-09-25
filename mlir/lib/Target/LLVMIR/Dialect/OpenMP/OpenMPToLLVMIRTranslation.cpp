@@ -3454,7 +3454,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     // Do privatization after moduleTranslation has already recorded
     // mapped values.
     if (!targetOp.getPrivateVars().empty()) {
-      auto oldIP = builder.saveIP();
       builder.restoreIP(allocaIP);
 
       OperandRange privateVars = targetOp.getPrivateVars();
@@ -3480,11 +3479,11 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            " private allocatables is not supported yet");
           bodyGenStatus = failure();
         } else {
-          omp::PrivateClauseOp clonedPrivatizer =
-              clonePrivatizer(moduleTranslation, privatizer, &opInst);
-          Region &allocRegion = clonedPrivatizer.getAllocRegion();
+          llvm::errs() << "here\n";
+          Region &allocRegion = privatizer.getAllocRegion();
           BlockArgument allocRegionArg = allocRegion.getArgument(0);
-          replaceAllUsesInRegionWith(allocRegionArg, privVar, allocRegion);
+          moduleTranslation.mapValue(allocRegionArg,
+                                     moduleTranslation.lookupValue(privVar));
           SmallVector<llvm::Value *, 1> yieldedValues;
           if (failed(inlineConvertOmpRegions(
                   allocRegion, "omp.targetop.privatizer", builder,
@@ -3494,17 +3493,19 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                 "op in the target region");
             bodyGenStatus = failure();
           } else {
+            builder.GetInsertBlock()->getParent()->getParent()->dump();
             assert(yieldedValues.size() == 1);
             moduleTranslation.mapValue(privBlockArg, yieldedValues.front());
           }
-          clonedPrivatizer.erase();
-          builder.restoreIP(oldIP);
+          moduleTranslation.forgetMapping(allocRegion);
+          builder.restoreIP(builder.saveIP());
         }
       }
     }
-    builder.restoreIP(codeGenIP);
+    llvm::errs() << builder.GetInsertBlock()->getName().str() << "\n";
     llvm::BasicBlock *exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation, bodyGenStatus);
+    builder.GetInsertBlock()->getParent()->dump();
     builder.SetInsertPoint(exitBlock);
     return builder.saveIP();
   };
