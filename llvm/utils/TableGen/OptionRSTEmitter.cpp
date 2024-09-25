@@ -1,4 +1,4 @@
-//===- OptParserEmitter.cpp - Table Driven Command Line Parsing -----------===//
+//===- OptionRSTEmitter.cpp - Table Driven Command Line Option Parsing ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,9 +14,9 @@
 
 using namespace llvm;
 
-/// OptParserEmitter - This tablegen backend takes an input .td file
-/// describing a list of options and emits a RST man page.
-static void EmitOptRST(const RecordKeeper &Records, raw_ostream &OS) {
+/// This tablegen backend takes an input .td file describing a list of options
+/// and emits a RST man page.
+static void EmitOptionRST(const RecordKeeper &Records, raw_ostream &OS) {
   llvm::StringMap<std::vector<const Record *>> OptionsByGroup;
   std::vector<Record *> OptionsWithoutGroup;
 
@@ -97,5 +97,5 @@ static void EmitOptRST(const RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
-static TableGen::Emitter::Opt X("gen-opt-rst", EmitOptRST,
+static TableGen::Emitter::Opt X("gen-opt-rst", EmitOptionRST,
                                 "Generate option RST");
