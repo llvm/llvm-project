@@ -97,9 +97,8 @@ public:
       if (!parent_sc.function)
         return {};
       if (parent_sc.function->GetNameNoArguments().GetStringRef().starts_with(
-              "std::")) {
+              "std::"))
         return m_hidden_frame;
-      }
     }
 
     return {};
