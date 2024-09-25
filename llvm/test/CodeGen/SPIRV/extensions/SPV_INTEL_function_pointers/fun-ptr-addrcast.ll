@@ -5,6 +5,9 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; Running with -verify-machineinstrs would lead to "Reading virtual register without a def"
+; error, because OpConstantFunctionPointerINTEL forward-refers to a function definition.
+
 ; CHECK-COUNT-3: %[[#]] = OpSpecConstantOp %[[#]] 121 %[[#]]
 ; CHECK-COUNT-3: OpPtrCastToGeneric
 
