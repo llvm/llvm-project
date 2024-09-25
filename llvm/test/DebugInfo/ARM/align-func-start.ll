@@ -1,8 +1,9 @@
 ; RUN: llc -mtriple=arm-none-eabi < %s | FileCheck %s
 ; RUN: llc -mtriple=arm-none-eabi < %s | llvm-mc --triple=arm-none-eabi -mcpu=cortex-m3
 
-; CHECK-NOT: .loc    0 0 0
+; CHECK-NOT: .loc    0
 ; CHECK: .loc    1 2 3 prologue_end
+; CHECK-NOT: .loc 0
 
 define dso_local void @foo() "target-cpu"="cortex-m3" !dbg !8 {
 entry:
