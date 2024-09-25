@@ -570,7 +570,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
                                 NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                                  Keywords.kw_as));
           ProbablyBracedList =
-              ProbablyBracedList || (IsCpp && NextTok->is(tok::l_paren));
+              ProbablyBracedList || (IsCpp && (PrevTok->Tok.isLiteral() ||
+                                               NextTok->is(tok::l_paren)));
 
           // If there is a comma, semicolon or right paren after the closing
           // brace, we assume this is a braced initializer list.
@@ -2682,6 +2683,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
@@ -4029,6 +4031,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
       if (!JSPastExtendsOrImplements && !ClassName &&
@@ -4039,7 +4042,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   }
 
   auto IsListInitialization = [&] {
-    if (!ClassName || IsDerived)
+    if (!ClassName || IsDerived || JSPastExtendsOrImplements)
       return false;
     assert(FormatTok->is(tok::l_brace));
     const auto *Prev = FormatTok->getPreviousNonComment();

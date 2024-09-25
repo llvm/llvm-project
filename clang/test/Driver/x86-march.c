@@ -242,6 +242,10 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver4 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=znver4
 // znver4: "-target-cpu" "znver4"
+//
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver5 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=znver5
+// znver5: "-target-cpu" "znver5"
 
 // RUN: %clang -target x86_64 -c -### %s -march=x86-64 2>&1 | FileCheck %s --check-prefix=x86-64
 // x86-64: "-target-cpu" "x86-64"

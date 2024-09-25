@@ -72,8 +72,8 @@ template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<void*> = true;
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<const void*> = true;
-#  endif //_LIBCPP_STD_VER >= 23
-#endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

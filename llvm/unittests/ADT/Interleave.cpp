@@ -25,7 +25,7 @@ TEST(InterleaveTest, Interleave) {
   interleave(
       Doodles, OS, [&](const char *Name) { OS << Name << "doodle"; }, ", ");
 
-  EXPECT_EQ(OS.str(), "goldendoodle, bernadoodle, labradoodle");
+  EXPECT_EQ(Str, "goldendoodle, bernadoodle, labradoodle");
 }
 
 TEST(InterleaveTest, InterleaveComma) {
@@ -36,7 +36,7 @@ TEST(InterleaveTest, InterleaveComma) {
   const StringRef LongDogs[] = {"dachshund", "doxie", "dackel", "teckel"};
   interleaveComma(LongDogs, OS);
 
-  EXPECT_EQ(OS.str(), "dachshund, doxie, dackel, teckel");
+  EXPECT_EQ(Str, "dachshund, doxie, dackel, teckel");
 }
 
 } // anonymous namespace

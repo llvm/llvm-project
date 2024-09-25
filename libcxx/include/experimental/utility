@@ -30,7 +30,7 @@ inline namespace fundamentals_v1 {
 
  */
 
-#include <experimental/__config>
+#include <__config>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

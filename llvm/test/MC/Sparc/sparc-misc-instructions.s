@@ -6,3 +6,9 @@
 
         ! CHECK: unimp 0   ! encoding: [0x00,0x00,0x00,0x00]
         unimp 0
+
+        ! CHECK: unimp 0   ! encoding: [0x00,0x00,0x00,0x00]
+        illtrap
+
+        ! CHECK: unimp 0   ! encoding: [0x00,0x00,0x00,0x00]
+        illtrap 0

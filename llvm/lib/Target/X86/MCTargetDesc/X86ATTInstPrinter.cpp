@@ -167,6 +167,15 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   case X86::VCMPPHZrmbi:     case X86::VCMPPHZrmbik:
   case X86::VCMPPHZrrib:     case X86::VCMPPHZrribk:
   case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
+  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
+  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
+  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
+  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
+  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
+  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
+  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
+  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
+  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);
@@ -205,9 +214,8 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
               printwordmem(MI, CurOp--, OS);
             else
               printdwordmem(MI, CurOp--, OS);
-          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD) {
-            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
-                   "Unexpected op map!");
+          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD &&
+                     (Desc.TSFlags & X86II::OpMapMask) != X86II::TA) {
             printqwordmem(MI, CurOp--, OS);
           } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp--, OS);
@@ -508,8 +516,7 @@ void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86ATTInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     markup(OS, Markup::Register) << "%st(0)";

@@ -438,12 +438,6 @@ public:
     visitAllDependencies([&](const Node &N) { BV.set(N.getID()); });
   }
 
-  /// Uses \ref visitAllDependencies to aggregate the individual cost of this
-  /// node and all of its dependencies.
-  ///
-  /// This is cached.
-  CostType getFullCost() const;
-
 private:
   void markAsGraphEntry() { IsGraphEntry = true; }
 
@@ -453,9 +447,6 @@ private:
   bool IsNonCopyable : 1;
   bool IsEntryFnCC : 1;
   bool IsGraphEntry : 1;
-
-  // TODO: Cache dependencies as well?
-  mutable CostType FullCost = 0;
 
   // TODO: Use a single sorted vector (with all incoming/outgoing edges grouped
   // together)
@@ -483,16 +474,6 @@ void SplitGraph::Node::visitAllDependencies(
       WorkList.push_back(E->Dst);
     }
   }
-}
-
-CostType SplitGraph::Node::getFullCost() const {
-  if (FullCost)
-    return FullCost;
-
-  assert(FullCost == 0);
-  visitAllDependencies(
-      [&](const Node &N) { FullCost += N.getIndividualCost(); });
-  return FullCost;
 }
 
 void SplitGraph::buildGraph(CallGraph &CG) {
@@ -1001,8 +982,17 @@ void RecursiveSearchSplitting::setupWorkList() {
     }
   }
 
-  sort(WorkList, [](const WorkListEntry &LHS, const WorkListEntry &RHS) {
-    return LHS.TotalCost > RHS.TotalCost;
+  stable_sort(WorkList, [](const WorkListEntry &A, const WorkListEntry &B) {
+    if (A.TotalCost != B.TotalCost)
+      return A.TotalCost > B.TotalCost;
+
+    if (A.CostExcludingGraphEntryPoints != B.CostExcludingGraphEntryPoints)
+      return A.CostExcludingGraphEntryPoints > B.CostExcludingGraphEntryPoints;
+
+    if (A.NumNonEntryNodes != B.NumNonEntryNodes)
+      return A.NumNonEntryNodes > B.NumNonEntryNodes;
+
+    return A.Cluster.count() > B.Cluster.count();
   });
 
   LLVM_DEBUG({
@@ -1261,8 +1251,6 @@ static void printPartitionSummary(raw_ostream &OS, unsigned N, const Module &M,
 static void evaluateProposal(SplitProposal &Best, SplitProposal New) {
   SplitModuleTimer SMT("proposal_evaluation", "proposal ranking algorithm");
 
-  New.calculateScores();
-
   LLVM_DEBUG({
     New.verifyCompleteness();
     if (DebugProposalSearch)
@@ -1390,6 +1378,7 @@ static void splitAMDGPUModule(
 
   std::optional<SplitProposal> Proposal;
   const auto EvaluateProposal = [&](SplitProposal SP) {
+    SP.calculateScores();
     if (!Proposal)
       Proposal = std::move(SP);
     else

@@ -34,6 +34,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -559,6 +560,11 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
@@ -897,6 +903,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
+  RECORD(FUNCTION_DECL_TO_LAMBDAS_MAP);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
   RECORD(CUDA_SPECIAL_DECL_REFS);
@@ -3213,7 +3220,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
         // Skip default mappings. We have a mapping for every diagnostic ever
         // emitted, regardless of whether it was customized.
         if (!I.second.isPragma() &&
-            I.second == DiagnosticIDs::getDefaultMapping(I.first))
+            I.second == Diag.getDiagnosticIDs()->getDefaultMapping(I.first))
           continue;
         Mappings.push_back(I);
       }
@@ -5045,6 +5052,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
   RegisterPredefDecl(Context.TypePackElementDecl,
                      PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
+  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 
@@ -5699,6 +5707,27 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   if (!DelayedNamespaceRecord.empty())
     Stream.EmitRecord(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD,
                       DelayedNamespaceRecord);
+
+  if (!FunctionToLambdasMap.empty()) {
+    // TODO: on disk hash table for function to lambda mapping might be more
+    // efficent becuase it allows lazy deserialization.
+    RecordData FunctionToLambdasMapRecord;
+    for (const auto &Pair : FunctionToLambdasMap) {
+      FunctionToLambdasMapRecord.push_back(
+          GetDeclRef(Pair.first).getRawValue());
+      FunctionToLambdasMapRecord.push_back(Pair.second.size());
+      for (const auto &Lambda : Pair.second)
+        FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
+    }
+
+    auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(FUNCTION_DECL_TO_LAMBDAS_MAP));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+    unsigned FunctionToLambdaMapAbbrev = Stream.EmitAbbrev(std::move(Abv));
+    Stream.EmitRecord(FUNCTION_DECL_TO_LAMBDAS_MAP, FunctionToLambdasMapRecord,
+                      FunctionToLambdaMapAbbrev);
+  }
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the

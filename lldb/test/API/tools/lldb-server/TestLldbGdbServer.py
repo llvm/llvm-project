@@ -468,6 +468,7 @@ class LldbGdbServerTestCase(
         self.Hg_fails_on_pid(0)
 
     @add_test_categories(["llgs"])
+    @skipIfWindows  # Sometimes returns '$E37'.
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()

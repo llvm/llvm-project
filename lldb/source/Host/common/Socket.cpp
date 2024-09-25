@@ -10,6 +10,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
@@ -386,11 +387,7 @@ Status Socket::Close() {
   LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
-#if defined(_WIN32)
-  bool success = closesocket(m_socket) == 0;
-#else
-  bool success = ::close(m_socket) == 0;
-#endif
+  bool success = CloseSocket(m_socket) == 0;
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;
   if (!success) {
@@ -400,18 +397,20 @@ Status Socket::Close() {
   return error;
 }
 
-int Socket::GetOption(int level, int option_name, int &option_value) {
+int Socket::GetOption(NativeSocket sockfd, int level, int option_name,
+                      int &option_value) {
   get_socket_option_arg_type option_value_p =
       reinterpret_cast<get_socket_option_arg_type>(&option_value);
   socklen_t option_value_size = sizeof(int);
-  return ::getsockopt(m_socket, level, option_name, option_value_p,
+  return ::getsockopt(sockfd, level, option_name, option_value_p,
                       &option_value_size);
 }
 
-int Socket::SetOption(int level, int option_name, int option_value) {
+int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
+                      int option_value) {
   set_socket_option_arg_type option_value_p =
-      reinterpret_cast<get_socket_option_arg_type>(&option_value);
-  return ::setsockopt(m_socket, level, option_name, option_value_p,
+      reinterpret_cast<set_socket_option_arg_type>(&option_value);
+  return ::setsockopt(sockfd, level, option_name, option_value_p,
                       sizeof(option_value));
 }
 
@@ -424,6 +423,24 @@ void Socket::SetLastError(Status &error) {
   error = Status(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
   error = Status::FromErrno();
+#endif
+}
+
+Status Socket::GetLastError() {
+  std::error_code EC;
+#ifdef _WIN32
+  EC = llvm::mapWindowsError(WSAGetLastError());
+#else
+  EC = std::error_code(errno, std::generic_category());
+#endif
+  return EC;
+}
+
+int Socket::CloseSocket(NativeSocket sockfd) {
+#ifdef _WIN32
+  return ::closesocket(sockfd);
+#else
+  return ::close(sockfd);
 #endif
 }
 
@@ -441,6 +458,19 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
     SetLastError(error);
 
   return sock;
+}
+
+Status Socket::Accept(Socket *&socket) {
+  MainLoop accept_loop;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
+      Accept(accept_loop,
+             [&accept_loop, &socket](std::unique_ptr<Socket> sock) {
+               socket = sock.release();
+               accept_loop.RequestTermination();
+             });
+  if (!expected_handles)
+    return Status::FromError(expected_handles.takeError());
+  return accept_loop.Run();
 }
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,

@@ -364,6 +364,15 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;type:heap;");
+  EXPECT_TRUE(result.get().Success());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsStackMemory());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {

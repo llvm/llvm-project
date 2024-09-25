@@ -1,5 +1,10 @@
-#include <stdio.h>
-#include <memory>
+#include "a.h"
+
+void A::doSomething(A &anotherA) {
+  printf("In A %p doing something with %d.\n", this, m_a_value);
+  int tmp_value = anotherA.Value();
+  printf("Also have another A at %p: %d.\n", &anotherA, tmp_value); // Break here in doSomething.
+}
 
 class Extra
 {
@@ -9,33 +14,6 @@ public:
 private:
   int m_extra_one;
   int m_extra_two;
-};
-
-class A
-{
-public:
-  A(int value) : m_a_value (value) {}
-  A(int value, A* client_A) : m_a_value (value), m_client_A (client_A) {}
-
-  virtual ~A() {}
-
-  virtual void
-  doSomething (A &anotherA)
-  {
-    printf ("In A %p doing something with %d.\n", this, m_a_value);
-    int tmp_value = anotherA.Value();
-    printf ("Also have another A at %p: %d.\n", &anotherA, tmp_value); // Break here in doSomething.
-  }
-
-  int 
-  Value()
-  {
-    return m_a_value;
-  }
-
-private:
-  int m_a_value;
-  std::auto_ptr<A> m_client_A;
 };
 
 class B : public Extra, public virtual A
@@ -64,6 +42,8 @@ main (int argc, char **argv)
 
   A reallyA (500);
   myB.doSomething (reallyA);  // Break here and get real address of reallyA.
+
+  myB.doSomething(*make_anonymous_B());
 
   return 0;
 }

@@ -2052,7 +2052,6 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(float4));
   static_assert(__builtin_is_implicit_lifetime(align_value_int));
   static_assert(__builtin_is_implicit_lifetime(int[[clang::annotate_type("category2")]] *));
-  static_assert(__builtin_is_implicit_lifetime(int __attribute__((btf_type_tag("user"))) *));
   static_assert(__builtin_is_implicit_lifetime(EnforceReadOnlyPlacement));
   static_assert(__builtin_is_implicit_lifetime(int __attribute__((noderef)) *));
   static_assert(__builtin_is_implicit_lifetime(TypeVisibility));
@@ -4147,6 +4146,24 @@ class Template {};
 
 // Make sure we don't crash when instantiating a type
 static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
+
+
+struct S operator==(S, S);
+
+template <class> struct basic_string_view {};
+
+struct basic_string {
+  operator basic_string_view<int>() const;
+};
+
+template <class T>
+const bool is_trivially_equality_comparable = __is_trivially_equality_comparable(T);
+
+template <int = is_trivially_equality_comparable<basic_string> >
+void find();
+
+void func() { find(); }
+
 
 namespace hidden_friend {
 

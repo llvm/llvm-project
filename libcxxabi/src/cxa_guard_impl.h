@@ -676,8 +676,8 @@ static_assert(CurrentImplementation != Implementation::Futex || PlatformSupports
 
 using SelectedImplementation = SelectImplementation<CurrentImplementation>::type;
 
-} // end namespace
-} // end namespace __cxxabiv1
+} // namespace
+} // namespace __cxxabiv1
 
 #if defined(__clang__)
 #  pragma clang diagnostic pop

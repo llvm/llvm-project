@@ -1654,12 +1654,12 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
           dir->shouldBeQualified() ? qualifiedTypeParserCode : typeParserCode;
       TypeSwitch<FormatElement *>(dir->getArg())
           .Case<OperandVariable, ResultVariable>([&](auto operand) {
-            body << formatv(parserCode,
+            body << formatv(false, parserCode,
                             operand->getVar()->constraint.getCppType(),
                             listName);
           })
           .Default([&](auto operand) {
-            body << formatv(parserCode, "::mlir::Type", listName);
+            body << formatv(false, parserCode, "::mlir::Type", listName);
           });
     }
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {

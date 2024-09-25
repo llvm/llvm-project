@@ -7,7 +7,7 @@
 namespace std {
 namespace __lldb {
 
-// Post-c88580c layout
+#if COMPRESSED_PAIR_REV == 0 // Post-c88580c layout
 struct __value_init_tag {};
 struct __default_init_tag {};
 
@@ -52,6 +52,53 @@ public:
 
   _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
 };
+#elif COMPRESSED_PAIR_REV == 1
+// From libc++ datasizeof.h
+template <class _Tp> struct _FirstPaddingByte {
+  [[no_unique_address]] _Tp __v_;
+  char __first_padding_byte_;
+};
+
+template <class _Tp>
+inline const size_t __datasizeof_v =
+    __builtin_offsetof(_FirstPaddingByte<_Tp>, __first_padding_byte_);
+
+template <class _Tp>
+struct __lldb_is_final : public integral_constant<bool, __is_final(_Tp)> {};
+
+template <class _ToPad> class __compressed_pair_padding {
+  char __padding_[((is_empty<_ToPad>::value &&
+                    !__lldb_is_final<_ToPad>::value) ||
+                   is_reference<_ToPad>::value)
+                      ? 0
+                      : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
+};
+
+#define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
+  [[__gnu__::__aligned__(alignof(T2))]] [[no_unique_address]] T1 Initializer1; \
+  [[no_unique_address]] __compressed_pair_padding<T1> __padding1_;             \
+  [[no_unique_address]] T2 Initializer2;                                       \
+  [[no_unique_address]] __compressed_pair_padding<T2> __padding2_;
+
+#define _LLDB_COMPRESSED_TRIPLE(T1, Initializer1, T2, Initializer2, T3,        \
+                                Initializer3)                                  \
+  [[using __gnu__: __aligned__(alignof(T2)),                                   \
+    __aligned__(alignof(T3))]] [[no_unique_address]] T1 Initializer1;          \
+  [[no_unique_address]] __compressed_pair_padding<T1> __padding1_;             \
+  [[no_unique_address]] T2 Initializer2;                                       \
+  [[no_unique_address]] __compressed_pair_padding<T2> __padding2_;             \
+  [[no_unique_address]] T3 Initializer3;                                       \
+  [[no_unique_address]] __compressed_pair_padding<T3> __padding3_;
+#elif COMPRESSED_PAIR_REV == 2
+#define _LLDB_COMPRESSED_PAIR(T1, Name1, T2, Name2)                            \
+  [[no_unique_address]] T1 Name1;                                              \
+  [[no_unique_address]] T2 Name2
+
+#define _LLDB_COMPRESSED_TRIPLE(T1, Name1, T2, Name2, T3, Name3)               \
+  [[no_unique_address]] T1 Name1;                                              \
+  [[no_unique_address]] T2 Name2;                                              \
+  [[no_unique_address]] T3 Name3
+#endif
 } // namespace __lldb
 } // namespace std
 

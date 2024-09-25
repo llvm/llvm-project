@@ -36,11 +36,11 @@ void initializeAMDGPURegBankSelectPass(PassRegistry &);
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
-FunctionPass *createSIPeepholeSDWAPass();
+FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createSIShrinkInstructionsPass();
-FunctionPass *createSILoadStoreOptimizerPass();
+FunctionPass *createSIShrinkInstructionsLegacyPass();
+FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
@@ -163,11 +163,11 @@ extern char &GCNDPPCombineLegacyID;
 void initializeSIFoldOperandsLegacyPass(PassRegistry &);
 extern char &SIFoldOperandsLegacyID;
 
-void initializeSIPeepholeSDWAPass(PassRegistry &);
-extern char &SIPeepholeSDWAID;
+void initializeSIPeepholeSDWALegacyPass(PassRegistry &);
+extern char &SIPeepholeSDWALegacyID;
 
-void initializeSIShrinkInstructionsPass(PassRegistry&);
-extern char &SIShrinkInstructionsID;
+void initializeSIShrinkInstructionsLegacyPass(PassRegistry &);
+extern char &SIShrinkInstructionsLegacyID;
 
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
@@ -187,11 +187,11 @@ extern char &AMDGPUGlobalISelDivergenceLoweringID;
 void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
-void initializeSILowerSGPRSpillsPass(PassRegistry &);
-extern char &SILowerSGPRSpillsID;
+void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
+extern char &SILowerSGPRSpillsLegacyID;
 
-void initializeSILoadStoreOptimizerPass(PassRegistry &);
-extern char &SILoadStoreOptimizerID;
+void initializeSILoadStoreOptimizerLegacyPass(PassRegistry &);
+extern char &SILoadStoreOptimizerLegacyID;
 
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
@@ -405,9 +405,6 @@ extern char &SIModeRegisterID;
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
-void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
-extern char &AMDGPUInsertSingleUseVDSTID;
-
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
@@ -460,20 +457,6 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD2,
   TI_SCRATCH_RSRC_DWORD3
 };
-
-// FIXME: Missing constant_32bit
-inline bool isFlatGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
-
-inline bool isExtendedGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
