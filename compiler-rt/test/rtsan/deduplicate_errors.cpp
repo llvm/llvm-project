@@ -1,6 +1,5 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
 // RUN: env RTSAN_OPTIONS="halt_on_error=false,print_stats_on_exit=true" %run %t 2>&1 | FileCheck %s
-// RUN: env RTSAN_OPTIONS="halt_on_error=false" %run %t 2>&1 | grep "==ERROR: RealtimeSanitizer:" | wc -l | awk '{exit $1 != 4}'
 
 // UNSUPPORTED: ios
 
@@ -31,6 +30,13 @@ int main() {
   double_violation(); // 2 unique errors here, but 110 total
   return 0;
 }
+
+// CHECK: ==ERROR:
+// CHECK: ==ERROR:
+// CHECK: ==ERROR:
+// CHECK: ==ERROR:
+
+// CHECK-NOT: ==ERROR:
 
 // CHECK: RealtimeSanitizer exit stats:
 // CHECK-NEXT: Total error count: 220
