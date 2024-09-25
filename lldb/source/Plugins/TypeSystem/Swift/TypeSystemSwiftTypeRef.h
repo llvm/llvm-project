@@ -68,7 +68,7 @@ public:
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
-  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override;
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
   /// Convenience helpers.
   SwiftASTContext *
   GetSwiftASTContextFromExecutionScope(ExecutionContextScope *exe_scope) const;
@@ -76,7 +76,7 @@ public:
   GetSwiftASTContextFromExecutionContext(const ExecutionContext *exe_ctx) const;
   /// Return SwiftASTContext, iff one has already been created.
   virtual SwiftASTContext *
-  GetSwiftASTContextOrNull(const SymbolContext *sc) const;
+  GetSwiftASTContextOrNull(const SymbolContext &sc) const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
     return *this;
@@ -84,7 +84,7 @@ public:
   SwiftDWARFImporterForClangTypes &GetSwiftDWARFImporterForClangTypes();
   ClangNameImporter *GetNameImporter() const;
   llvm::Triple GetTriple() const;
-  void SetTriple(const llvm::Triple triple) override;
+  void SetTriple(const SymbolContext &sc, const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
 
@@ -133,7 +133,7 @@ public:
   Module *GetModule() const { return m_module; }
 
   /// Return the owning Swift module for a function.
-  static ConstString GetSwiftModuleFor(const SymbolContext *sc);
+  static ConstString GetSwiftModuleFor(const SymbolContext &sc);
 
   // Tests
 #ifndef NDEBUG
@@ -530,9 +530,9 @@ public:
   TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
                                        Target &target, Module &module);
 
-  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override;
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override;
   SwiftASTContext *
-  GetSwiftASTContextOrNull(const SymbolContext *sc) const override;
+  GetSwiftASTContextOrNull(const SymbolContext &sc) const override;
   lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
 
   void ModulesDidLoad(ModuleList &module_list);

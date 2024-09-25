@@ -834,7 +834,7 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       // BEGIN SWIFT
       if (m_in_populate_symtab)
         if (lldb::ModuleSP module_sp = m_jit_module_wp.lock())
-        images.Remove(module_sp);
+          images.Remove(module_sp);
       // END SWIFT
 
       SymbolContextList sc_list;

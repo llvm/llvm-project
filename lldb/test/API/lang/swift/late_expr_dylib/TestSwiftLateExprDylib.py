@@ -21,9 +21,9 @@ class TestSwiftLateDylib(TestBase):
         self.expect("expr -- import Dylib")
         # Scan through the types log.
         self.filecheck('platform shell cat "%s"' % log, __file__)
-# CHECK: SwiftASTContextForExpressions::LogConfiguration(){{.*}}Architecture{{.*}}-apple-macosx11.0.0
+# CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}Architecture{{.*}}-apple-macosx11.0.0
 # CHECK-NOT: __PATH_FROM_DYLIB__
 #       Verify that the deployment target didn't change:
-# CHECK: SwiftASTContextForExpressions::LogConfiguration(){{.*}}Architecture{{.*}}-apple-macosx11.0.0
+# CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}Architecture{{.*}}-apple-macosx11.0.0
 #       But LLDB has picked up extra paths:
-# CHECK: SwiftASTContextForExpressions::LogConfiguration(){{.*}}__PATH_FROM_DYLIB__
+# CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}__PATH_FROM_DYLIB__

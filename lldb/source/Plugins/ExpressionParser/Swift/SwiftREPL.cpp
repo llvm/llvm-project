@@ -569,7 +569,8 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
             type_system_or_err->get());
     auto *target_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-            swift_ts->GetSwiftASTContext(nullptr));
+            swift_ts->GetSwiftASTContext(SymbolContext(
+                m_target.shared_from_this(), m_target.GetExecutableModule())));
     m_swift_ast = target_swift_ast;
   }
   SwiftASTContextForExpressions *swift_ast = m_swift_ast;

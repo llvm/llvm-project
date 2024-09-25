@@ -80,13 +80,10 @@ public:
   bool GetUseSwiftClangImporter() const;
   bool GetUseSwiftDWARFImporter() const;
   bool SetUseSwiftDWARFImporter(bool new_value);
-  bool GetUseSwiftTypeRefTypeSystem() const;
-  bool SetUseSwiftTypeRefTypeSystem(bool new_value);
   bool GetSwiftValidateTypeSystem() const;
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
 
-  bool GetUseSwiftPreciseCompilerInvocation() const;
   bool GetEnableSwiftMetadataCache() const;
   uint64_t GetSwiftMetadataCacheMaxByteSize();
   uint64_t GetSwiftMetadataCacheExpirationDays();

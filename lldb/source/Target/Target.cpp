@@ -2681,7 +2681,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                 type_system_or_err->get())) {
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContextOrNull(nullptr));
+              swift_scratch_ctx->GetSwiftASTContextOrNull(
+                  SymbolContext(GetExecutableModule())));
       // Replace the scratch context if it contains fatal errors or
       // needs to be replaced because new lldb::Modules were loaded.
       if (swift_ast_ctx && (swift_ast_ctx->CheckProcessChanged() ||
@@ -2729,8 +2730,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
               type_system_or_err = llvm::make_error<llvm::StringError>(
                   message, llvm::inconvertibleErrorCode());
             };
-            auto *new_swift_ast_ctx =
-                new_swift_scratch_ctx->GetSwiftASTContext(nullptr);
+            auto *new_swift_ast_ctx = new_swift_scratch_ctx->GetSwiftASTContext(
+                SymbolContext(GetExecutableModule()));
             if (!new_swift_ast_ctx)
               report_error("Failed to construct SwiftASTContextForExpressions");
             else if (new_swift_ast_ctx->HasFatalErrors()) {
@@ -2860,8 +2861,9 @@ UserExpression *Target::GetUserExpressionForLanguage(
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  auto type_system_or_err =
-      GetScratchTypeSystemForLanguage(language.AsLanguageType());
+  auto type_system_or_err = GetScratchTypeSystemForLanguage(
+      language.AsLanguageType(), true,
+      options.GetPlaygroundTransformEnabled() ? "" : nullptr);
   if (auto err = type_system_or_err.takeError()) {
     error = Status::FromErrorStringWithFormat(
         "Could not find type system for language %s: %s",
@@ -2945,54 +2947,29 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-std::optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
-    Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
+std::optional<SwiftScratchContextReader>
+Target::GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
+                               bool create_on_demand, bool for_playground) {
   Log *log = GetLog(LLDBLog::Target | LLDBLog::Types | LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
-  const SymbolContext *sc = nullptr;
+  SymbolContext sc;
   Module *lldb_module = nullptr;
-  if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
-    sc = &stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-    lldb_module = sc->module_sp.get();
-  }
-  
-  // Opt into the per-module scratch context if we find incompatible triples.
-  if (!m_use_scratch_typesystem_per_module &&
-      !ModuleList::GetGlobalModuleListProperties()
-           .GetUseSwiftPreciseCompilerInvocation()) {
-    TargetSP target_sp = exe_scope.CalculateTarget();
-    if (lldb_module) {
-      auto module_arch = lldb_module->GetArchitecture();
-      auto target_arch = target_sp->GetArchitecture();
-      auto module_triple = module_arch.GetTriple();
-      auto target_triple = target_arch.GetTriple();
-      if (!module_arch.IsCompatibleMatch(target_arch) ||
-          (module_triple.isArm64e() != target_triple.isArm64e())) {
-        m_use_scratch_typesystem_per_module = true;
-        std::string module_name = lldb_module->GetSpecificationDescription();
-        const char *msg = "%sModule \"%s\" uses triple \"%s\", which is "
-                          "not compatible with the target triple \"%s\". "
-                          "Enabling per-module Swift scratch context.\n";
-
-        StreamSP errs = GetDebugger().GetAsyncErrorStream();
-        if (errs)
-          errs->Printf(msg, "warning: ", module_name.c_str(),
-                       module_triple.str().c_str(),
-                       target_triple.str().c_str());
-        if (log)
-          log->Printf(msg, "", module_name.c_str(), module_triple.str().c_str(),
-                      target_triple.str().c_str());
-      }
+  if (!for_playground)
+    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+      sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+      lldb_module = sc.module_sp.get();
     }
-  }
+  if (!sc.module_sp)
+    sc = SymbolContext(GetExecutableModule());
 
   auto get_cached_module_ts =
       [&](Module *lldb_module) -> TypeSystemSwiftTypeRefForExpressions * {
     ModuleLanguage key = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(key);
     if (cached != m_scratch_typesystem_for_module.end())
-      return llvm::cast<TypeSystemSwiftTypeRefForExpressions>(cached->second.get());
+      return llvm::cast<TypeSystemSwiftTypeRefForExpressions>(
+          cached->second.get());
     return nullptr;
   };
 
@@ -3090,8 +3067,8 @@ std::optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   // module-wide one.
   if (!reader) {
     std::shared_lock<std::shared_mutex> lock(GetSwiftScratchContextLock());
-    auto type_system_or_err =
-        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, create_on_demand);
+    auto type_system_or_err = GetScratchTypeSystemForLanguage(
+        eLanguageTypeSwift, create_on_demand, for_playground ? "" : nullptr);
     if (type_system_or_err) {
       if (auto *ts = llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
               type_system_or_err->get())) {
