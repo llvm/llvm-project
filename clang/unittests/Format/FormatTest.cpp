@@ -28428,226 +28428,223 @@ TEST_F(FormatTest, ShortNamespacesOption) {
 }
 
 TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesNever) {
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
   Style.FixNamespaceComments = false;
-  Style.ShortNamespaceLines = 0;
-  Style.MaxEmptyLinesToKeep = 2;
-  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Never;
-  Style.CompactNamespaces = false;
 
-  // Empty namespace
-  verifyNoChange("namespace N {};", Style);
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
 
-  // Single namespace
-  verifyNoChange("namespace N {\n"
-                 "int f1(int a) { return 2 * a; }\n"
-                 "};",
-                 Style);
+  // Single namespace.
+  verifyFormat("namespace N {\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "}",
+               Style);
 
-  // Nested namespace
-  verifyNoChange("namespace N1 {\n"
-                 "namespace N2 {\n"
-                 "namespace N3 {\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "}\n"
-                 "}\n"
-                 "}",
-                 Style);
-
-  Style.CompactNamespaces = true;
-
-  // Empty namespace
-  verifyNoChange("namespace N1 { namespace N2 {\n"
-                 "}};",
-                 Style);
-
-  // Single namespace
-  verifyNoChange("namespace N {\n"
-                 "int f1(int a) { return 2 * a; }\n"
-                 "};",
-                 Style);
-
-  // Nested namespace
-  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "}}}",
-                 Style);
-}
-
-TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
-  FormatStyle Style = getLLVMStyle();
-  Style.FixNamespaceComments = false;
-  Style.ShortNamespaceLines = 0;
-  Style.MaxEmptyLinesToKeep = 0;
-  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Always;
-  Style.CompactNamespaces = false;
-
-  // Empty namespace
-  verifyNoChange("namespace N {};", Style);
-
-  // Single namespace
-  verifyNoChange("namespace N {\n"
-                 "\n"
-                 "int f1(int a) { return 2 * a; }\n"
-                 "\n"
-                 "};",
-                 Style);
-
-  // Nested namespace
-  verifyNoChange("namespace N1 {\n"
-                 "namespace N2 {\n"
-                 "namespace N3 {\n"
-                 "\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "\n"
-                 "}\n"
-                 "}\n"
-                 "}",
-                 Style);
-
-  Style.CompactNamespaces = true;
-
-  // Nested namespace
-  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
-                 "\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "\n"
-                 "}}}",
-                 Style);
-
-  Style.MaxEmptyLinesToKeep = 2;
-  Style.CompactNamespaces = false;
-
-  // Empty namespace
-  verifyNoChange("namespace N {};", Style);
-
-  // Single namespace
-  verifyNoChange("namespace N {\n"
-                 "\n"
-                 "\n"
-                 "void function()\n"
-                 "\n"
-                 "\n"
-                 "};",
-                 Style);
-
-  // Nested namespace
+  // Nested namespace.
   verifyFormat("namespace N1 {\n"
                "namespace N2 {\n"
-               "namespace N3 {\n"
-               "\n"
-               "\n"
-               "int f1() {\n"
-               "  int a = 1;\n"
-               "  return a;\n"
-               "}\n"
-               "\n"
-               "\n"
-               "}\n"
-               "}\n"
-               "}",
-               "namespace N1 {\n"
-               "namespace N2 {\n"
-               "\n"
-               "namespace N3 {\n"
-               "\n"
-               "\n"
-               "int f1() {\n"
-               "  int a = 1;\n"
-               "  return a;\n"
-               "}\n"
-               "\n"
-               "\n"
-               "}\n"
-               "\n"
+               "int a = 1;\n"
                "}\n"
                "}",
                Style);
 
   Style.CompactNamespaces = true;
 
-  // Nested namespace
-  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
+  verifyFormat("namespace N1 { namespace N2 {\n"
+               "int a = 1;\n"
+               "}}",
+               Style);
+
+  // Removing empty lines.
+  verifyFormat("namespace N {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}",
+               "namespace N {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+
+  Style.MaxEmptyLinesToKeep = 0;
+
+  verifyFormat("namespace N {\n"
+               "int a = 1;\n"
+               "}",
+               "namespace N {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
+  auto Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Always;
+
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
+
+  // Single namespace.
+  verifyFormat("namespace N {\n"
+               "\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "\n"
+               "}",
+               Style);
+
+  // Nested namespace.
+  verifyFormat("namespace N1 {\n"
+               "namespace N2 {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}\n"
+               "}",
+               Style);
+
+  // Removing empty lines.
+  verifyFormat("namespace N {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}",
+               "namespace N {"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+
+  Style.CompactNamespaces = true;
+
+  // Nested namespace.
+  verifyFormat("namespace N1 { namespace N2 {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}}",
+               Style);
+
+  Style.MaxEmptyLinesToKeep = 2;
+
+  // Nested namespace.
+  verifyNoChange("namespace N1 { namespace N2 {\n"
                  "\n"
                  "\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
+                 "int a = 1;\n"
+                 "\n"
+                 "\n"
+                 "}}",
+                 Style);
+
+  Style.CompactNamespaces = false;
+
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
+
+  // Single namespace.
+  verifyNoChange("namespace N {\n"
+                 "\n"
+                 "\n"
+                 "int a = 1;\n"
+                 "\n"
+                 "\n"
+                 "}",
+                 Style);
+
+  // Nested namespace.
+  verifyNoChange("namespace N1 {\n"
+                 "namespace N2 {\n"
+                 "\n"
+                 "\n"
+                 "int a = 1;\n"
+                 "\n"
+                 "\n"
                  "}\n"
-                 "\n"
-                 "\n"
-                 "}}}",
+                 "}",
                  Style);
 }
 
 TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesLeave) {
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
   Style.FixNamespaceComments = false;
-  Style.ShortNamespaceLines = 0;
+
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
+
+  // Single namespace.
+  verifyFormat("namespace N {\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "}",
+               Style);
+
+  // Nested namespace.
+  verifyFormat("namespace N1 {\n"
+               "namespace N2 {\n"
+               "int a = 1;\n"
+               "}\n"
+               "}",
+               Style);
+
+  // Removing empty lines.
+  verifyFormat("namespace N {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}",
+               "namespace N {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+
   Style.MaxEmptyLinesToKeep = 0;
-  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Leave;
-  Style.CompactNamespaces = false;
 
-  // Empty namespace
-  verifyNoChange("namespace N {};", Style);
-
-  // Single namespace
-  verifyNoChange("namespace N {\n"
-                 "int f1(int a) { return 2 * a; }\n"
-                 "};",
-                 Style);
-
-  // Nested namespace
-  verifyNoChange("namespace N1 {\n"
-                 "namespace N2 {\n"
-                 "namespace N3 {\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "}\n"
-                 "}\n"
-                 "}",
-                 Style);
+  verifyFormat("namespace N {\n"
+               "int a = 1;\n"
+               "}",
+               "namespace N {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
 
   Style.MaxEmptyLinesToKeep = 2;
 
-  // Single namespace
+  // Single namespace.
   verifyNoChange("namespace N {\n"
                  "\n"
                  "\n"
                  "int f1(int a) { return 2 * a; }\n"
                  "\n"
                  "\n"
-                 "};",
+                 "}",
                  Style);
 
-  // Nested namespace
+  // Nested namespace.
   verifyNoChange("namespace N1 {\n"
                  "namespace N2 {\n"
                  "\n"
-                 "namespace N3 {\n"
                  "\n"
+                 "int a = 1;\n"
                  "\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
-                 "\n"
-                 "\n"
-                 "}\n"
                  "\n"
                  "}\n"
                  "}",
@@ -28655,22 +28652,14 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesLeave) {
 
   Style.CompactNamespaces = true;
 
-  // Empty namespace
+  // Nested namespace.
   verifyNoChange("namespace N1 { namespace N2 {\n"
-                 "}};",
-                 Style);
-
-  // Nested namespace
-  verifyNoChange("namespace N1 { namespace N2 { namespace N3 {\n"
                  "\n"
                  "\n"
-                 "int f1() {\n"
-                 "  int a = 1;\n"
-                 "  return a;\n"
-                 "}\n"
+                 "int a = 1;\n"
                  "\n"
                  "\n"
-                 "}}}",
+                 "}}",
                  Style);
 }
 
