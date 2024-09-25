@@ -551,11 +551,15 @@ public:
   /// and fill in Loc (if specified) with the location of the invalid
   /// expression.
   ///
+  /// If CheckUnsignedOverflow is true, the i-c-e is of an unsigned type, and
+  /// the i-c-e result cannot fit into the expression type without overflowing,
+  /// std::nullopt is returned.
+  ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
+  getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc = nullptr,
+                         bool CheckUnsignedOverflow = false) const;
   bool isIntegerConstantExpr(const ASTContext &Ctx,
                              SourceLocation *Loc = nullptr) const;
 
@@ -569,7 +573,8 @@ public:
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+                           SourceLocation *Loc = nullptr,
+                           bool CheckUnsignedOverflow = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked

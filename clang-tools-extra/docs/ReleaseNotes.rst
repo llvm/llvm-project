@@ -125,6 +125,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by allowing the `IgnoreConstantIntExpr` option to apply to both signed and
+  unsigned integer types.
+
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
