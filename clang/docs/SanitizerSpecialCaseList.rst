@@ -75,12 +75,13 @@ Supplying ``ignorelist.txt`` with ``-fsanitize-ignorelist=ignorelist.txt``
 disables overflow sanitizer instrumentation for arithmetic operations
 containing values of type ``int``, for example. Custom types may be used.
 
-The following SCL categories are supported: ``=allow``, ``=skip`` and
-``=forbid``. The ``allow`` category is the default for any entry and specifies
-that the query, if matched, will have its sanitizer instrumentation ignored.
-Conversely, both ``skip`` and ``forbid`` cause their queries, if matched, to be
-left out of the ignorelist -- essentially ensuring sanitizer instrumentation
-remains for those types. This is useful for whitelisting specific types.
+The following SCL categories are supported: ``=no_sanitize`` and ``=sanitize``.
+The ``no_sanitize`` category is the default for any entry within an ignorelist
+and specifies that the query, if matched, will have its sanitizer
+instrumentation ignored. Conversely, ``sanitize`` causes its queries, if
+matched, to be left out of the ignorelist -- essentially ensuring sanitizer
+instrumentation remains for those types. This is useful for whitelisting
+specific types.
 
 With this, one may disable instrumentation for all types and specifically allow
 instrumentation for one or many types.
@@ -89,8 +90,8 @@ instrumentation for one or many types.
 
   $ cat ignorelist.txt
   [implicit-signed-integer-truncation]
-  type:*=allow
-  type:T=skip
+  type:*=no_sanitize
+  type:T=sanitize
   $ cat foo.c
   typedef char T;
   typedef char U;
@@ -99,12 +100,6 @@ instrumentation for one or many types.
     U b = toobig;    // not instrumented
     char c = toobig; // also not instrumented
   }
-
-Note that ``skip`` and ``forbid`` operate exactly the same in this context and
-both options exist simply for conformity with the `-fprofile-list
-<https://clang.llvm.org/docs/UsersManual.html#instrumenting-only-selected-files-or-functions>`_
-syntax for adjusting profile instrumentation. You do not need to specify any
-`default:<type>` for ``-fsanitize-ignorelist`` SSCLs, though.
 
 Format
 ======

@@ -4,7 +4,7 @@
 // Verify ubsan doesn't emit checks for ignorelisted types
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/int.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/nosection.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/allow-same-as-no-category.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/nosan-same-as-no-category.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/myty.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=MYTY
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/trunc.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC
 
@@ -20,13 +20,13 @@ type:int
 //--- nosection.ignorelist
 type:int
 
-//--- allow-same-as-no-category.ignorelist
-type:int=allow
+//--- nosan-same-as-no-category.ignorelist
+type:int=no_sanitize
 
 //--- myty.ignorelist
 [{unsigned-integer-overflow,signed-integer-overflow}]
 type:*
-type:myty=skip
+type:myty=sanitize
 
 //--- trunc.ignorelist
 [{implicit-signed-integer-truncation,implicit-unsigned-integer-truncation}]
