@@ -15,6 +15,7 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 
 #include "llvm/Demangle/Demangle.h"
@@ -51,10 +52,9 @@ static void insertCallAtFunctionEntryPoint(Function &Fn,
 static void insertCallAtAllFunctionExitPoints(Function &Fn,
                                               const char *InsertFnName,
                                               ArrayRef<Value *> FunctionArgs) {
-  for (auto &BB : Fn)
-    for (auto &I : BB)
-      if (isa<ReturnInst>(&I))
-        insertCallBeforeInstruction(Fn, I, InsertFnName, FunctionArgs);
+  for (auto &I : instructions(Fn))
+    if (isa<ReturnInst>(&I))
+      insertCallBeforeInstruction(Fn, I, InsertFnName, FunctionArgs);
 }
 
 static PreservedAnalyses rtsanPreservedCFGAnalyses() {
