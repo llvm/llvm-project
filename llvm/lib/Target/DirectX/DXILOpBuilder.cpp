@@ -85,7 +85,8 @@ static const char *getOverloadTypeName(OverloadKind Kind) {
   llvm_unreachable("invalid overload type for name");
 }
 
-static OverloadKind getOverloadKind(Type *Ty) {
+static OverloadKind getOverloadKind(Type *Ty,
+                                    bool AllowVectorOverloads = false) {
   if (!Ty)
     return OverloadKind::VOID;
 
@@ -126,6 +127,12 @@ static OverloadKind getOverloadKind(Type *Ty) {
     StructType *ST = cast<StructType>(Ty);
     return getOverloadKind(ST->getElementType(0));
   }
+  case Type::FixedVectorTyID: {
+    if (!AllowVectorOverloads)
+      return OverloadKind::UNDEFINED;
+    FixedVectorType *VT = cast<FixedVectorType>(Ty);
+    return getOverloadKind(VT->getElementType());
+  }
   default:
     return OverloadKind::UNDEFINED;
   }
@@ -157,6 +164,7 @@ struct OpCodeProperty {
   // Offset in DXILOpCodeClassNameTable.
   unsigned OpCodeClassNameOffset;
   llvm::SmallVector<OpOverload> Overloads;
+  bool AllowVectorOverloads;
   llvm::SmallVector<OpStage> Stages;
   llvm::SmallVector<OpAttribute> Attributes;
   int OverloadParamIndex; // parameter index which control the overload.
@@ -169,13 +177,25 @@ struct OpCodeProperty {
 #include "DXILOperation.inc"
 #undef DXIL_OP_OPERATION_TABLE
 
+static Twine getTypePrefix(Type *Ty) {
+  Type::TypeID T = Ty->getTypeID();
+  switch (T) {
+  case Type::FixedVectorTyID: {
+    FixedVectorType *VT = cast<FixedVectorType>(Ty);
+    return "v" + Twine(std::to_string(VT->getNumElements()));
+  }
+  default:
+    return "";
+  }
+}
+
 static std::string constructOverloadName(OverloadKind Kind, Type *Ty,
                                          const OpCodeProperty &Prop) {
   if (Kind == OverloadKind::VOID) {
     return (Twine(DXILOpNamePrefix) + getOpCodeClassName(Prop)).str();
   }
   return (Twine(DXILOpNamePrefix) + getOpCodeClassName(Prop) + "." +
-          getTypeName(Kind, Ty))
+          getTypePrefix(Ty) + getTypeName(Kind, Ty))
       .str();
 }
 
@@ -414,13 +434,15 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   uint16_t ValidTyMask = Prop->Overloads[*OlIndexOrErr].ValidTys;
 
-  OverloadKind Kind = getOverloadKind(OverloadTy);
+  OverloadKind Kind = getOverloadKind(OverloadTy, Prop->AllowVectorOverloads);
 
   // Check if the operation supports overload types and OverloadTy is valid
   // per the specified types for the operation
   if ((ValidTyMask != OverloadKind::UNDEFINED) &&
-      (ValidTyMask & (uint16_t)Kind) == 0)
+      (ValidTyMask & (uint16_t)Kind) == 0) {
+    OverloadTy->print(llvm::errs());
     return makeOpError(OpCode, "Invalid overload type");
+  }
 
   // Perform necessary checks to ensure Opcode is valid in the targeted shader
   // kind

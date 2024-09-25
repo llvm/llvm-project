@@ -316,6 +316,9 @@ class DXILOp<int opcode, DXILOpClass opclass> {
   // List of valid overload types predicated by DXIL version
   list<Overloads> overloads = [];
 
+  // Denote if overloads also permit vector equivalents.
+  bit AllowVectorOverloads = 0;
+
   // List of valid shader stages predicated by DXIL version
   list<Stages> stages;
 
@@ -798,6 +801,17 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let LLVMIntrinsic = int_dx_wave_is_first_lane;
   let arguments = [];
   let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveReadLaneAt :  DXILOp<117, waveReadLaneAt> {
+  let Doc = "returns the value from the specified lane";
+  let LLVMIntrinsic = int_dx_wave_read_lane_at;
+  let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty]>];
+  let AllowVectorOverloads = 1;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

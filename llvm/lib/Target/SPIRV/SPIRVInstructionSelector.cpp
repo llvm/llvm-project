@@ -2653,6 +2653,21 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
+  case Intrinsic::spv_wave_read_lane_at: {
+    assert(I.getNumOperands() == 4);
+    assert(I.getOperand(2).isReg());
+    assert(I.getOperand(3).isReg());
+
+    // Defines the execution scope currently 2 for group, see scope table
+    SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+    return BuildMI(BB, I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpGroupNonUniformShuffle))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg())
+        .addUse(I.getOperand(3).getReg())
+        .addUse(GR.getOrCreateConstInt(2, I, IntTy, TII));
+  }
   case Intrinsic::spv_step:
     return selectStep(ResVReg, ResType, I);
   // Discard intrinsics which we do not expect to actually represent code after

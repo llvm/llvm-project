@@ -41,6 +41,7 @@ struct DXILOperationDesc {
   // Vector of operand type records - return type is at index 0
   SmallVector<const Record *> OpTypes;
   SmallVector<const Record *> OverloadRecs;
+  bool AllowVectorOverloads;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
   StringRef Intrinsic; // The llvm intrinsic map to OpName. Default is "" which
@@ -124,6 +125,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   for (const Record *CR : Recs) {
     OverloadRecs.push_back(CR);
   }
+
+  AllowVectorOverloads = R->getValueAsBit("AllowVectorOverloads");
 
   // Get stage records
   Recs = R->getValueAsListOfConstDefs("stages");
@@ -421,9 +424,9 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
-       << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeMaskString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
-       << " }";
+       << Op.AllowVectorOverloads << ", " << getStageMaskString(Op.StageRecs)
+       << ", " << getAttributeMaskString(Op.AttrRecs) << ", "
+       << Op.OverloadParamIndex << " }";
     Prefix = ",\n";
   }
   OS << "  };\n";
