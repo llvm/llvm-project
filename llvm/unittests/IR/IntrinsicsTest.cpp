@@ -31,10 +31,6 @@ using namespace llvm;
 
 namespace {
 
-static const char *const NameTable1[] = {
-    "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
-};
-
 class IntrinsicsTest : public ::testing::Test {
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -67,18 +63,24 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  int I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.f64");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b");
-  EXPECT_EQ(2, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b.a");
-  EXPECT_EQ(3, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c");
-  EXPECT_EQ(4, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c.f64");
-  EXPECT_EQ(4, I);
+  static constexpr const char *const NameTable1[] = {
+      "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
+  };
+
+  static constexpr std::pair<const char *, int> Tests[] = {
+      {"llvm.foo", 0},     {"llvm.foo.f64", 0}, {"llvm.foo.b", 2},
+      {"llvm.foo.b.a", 3}, {"llvm.foo.c", 4},   {"llvm.foo.c.f64", 4},
+      {"llvm.bar", -1},
+  };
+
+  for (const auto &[Name, ExpectedIdx] : Tests) {
+    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name);
+    EXPECT_EQ(ExpectedIdx, Idx);
+    if (!StringRef(Name).starts_with("llvm.foo"))
+      continue;
+    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name, "foo");
+    EXPECT_EQ(ExpectedIdx, Idx);
+  }
 }
 
 // Tests to verify getIntrinsicForClangBuiltin.
