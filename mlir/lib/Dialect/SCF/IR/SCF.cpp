@@ -1478,6 +1478,45 @@ struct DimOfForallOp : public OpRewritePattern<tensor::DimOp> {
   }
 };
 
+/// Fold dim ops of iter_args to dim ops of their respective init args. E.g.:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// scf.forall ... shared_outs(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   %1 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+///   ...
+/// }
+/// ```
+///
+/// is folded to:
+///
+/// ```
+/// %0 = ... : tensor<?x?xf32>
+/// scf.forall ... shared_outs(%arg0 = %0) -> (tensor<?x?xf32>) {
+///   %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
+///   ...
+/// }
+/// ```
+struct DimOfForallIterArg : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const final {
+    auto blockArg = dyn_cast<BlockArgument>(dimOp.getSource());
+    if (!blockArg)
+      return failure();
+    auto forallOp =
+        dyn_cast<ForallOp>(blockArg.getParentBlock()->getParentOp());
+    if (!forallOp)
+      return failure();
+    Value initArg = forallOp.getTiedLoopInit(blockArg)->get();
+    rewriter.modifyOpInPlace(
+        dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
+
+    return success();
+  }
+};
+
 class ForallOpControlOperandsFolder : public OpRewritePattern<ForallOp> {
 public:
   using OpRewritePattern<ForallOp>::OpRewritePattern;
@@ -1851,9 +1890,10 @@ struct FoldTensorCastOfOutputIntoForallOp
 
 void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<DimOfForallOp, FoldTensorCastOfOutputIntoForallOp,
-              ForallOpControlOperandsFolder, ForallOpIterArgsFolder,
-              ForallOpSingleOrZeroIterationDimsFolder>(context);
+  results.add<DimOfForallOp, DimOfForallIterArg,
+              FoldTensorCastOfOutputIntoForallOp, ForallOpControlOperandsFolder,
+              ForallOpIterArgsFolder, ForallOpSingleOrZeroIterationDimsFolder>(
+      context);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
