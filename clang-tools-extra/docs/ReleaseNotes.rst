@@ -130,6 +130,11 @@ Changes in existing checks
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
   subtracting from a pointer.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
+  `bsl::optional` and `bdlb::NullableValue` from
+  <https://github.com/bloomberg/bde>_.
+
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment
   expression.
