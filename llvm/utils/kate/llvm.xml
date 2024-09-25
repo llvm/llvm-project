@@ -87,6 +87,7 @@
       <item> dereferenceable_or_null </item>
       <item> extern_weak </item>
       <item> hhvmcc </item>
+      <item> has_fake_uses </item>
       <item> hot </item>
       <item> inaccessiblemem_or_argmemonly </item>
       <item> inaccessiblememonly </item>

@@ -24,4 +24,4 @@ entry:
 
 declare void @llvm.fake.use(...)
 
-attributes #0 = { "target-cpu"="btver2" optdebug }
+attributes #0 = { "target-cpu"="btver2" has_fake_uses }

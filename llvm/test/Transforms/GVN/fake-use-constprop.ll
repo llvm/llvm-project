@@ -37,7 +37,7 @@
 ; CHECK: call {{.+}} @bees(i8 0)
 ; CHECK: call {{.+}} @llvm.fake.use(i8 %[[CONV_VAR]])
 
-define i32 @foo(float %f) optdebug {
+define i32 @foo(float %f) has_fake_uses {
   %conv = fptosi float %f to i8
   %tobool3 = icmp eq i8 %conv, 0
   br i1 %tobool3, label %if.end, label %lab

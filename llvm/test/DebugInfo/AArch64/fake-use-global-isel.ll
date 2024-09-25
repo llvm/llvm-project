@@ -33,7 +33,7 @@ source_filename = "t2.c"
 @glob = common local_unnamed_addr global [10 x i32] zeroinitializer, align 16, !dbg !0
 
 ; Function Attrs: nounwind sspstrong uwtable
-define i32 @foo(i32 %b, i32 %i) local_unnamed_addr optdebug !dbg !13 {
+define i32 @foo(i32 %b, i32 %i) local_unnamed_addr has_fake_uses !dbg !13 {
 entry:
     #dbg_value(i32 %b, !17, !20, !21)
   %c = add i32 %b, 42

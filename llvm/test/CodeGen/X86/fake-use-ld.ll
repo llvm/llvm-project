@@ -10,7 +10,7 @@
 ; }
 ; /*******************************************************************/
 
-define x86_fp80 @actual(x86_fp80 %p1, x86_fp80 %p2, x86_fp80 %p3) optdebug {
+define x86_fp80 @actual(x86_fp80 %p1, x86_fp80 %p2, x86_fp80 %p3) has_fake_uses {
 ;
 ; CHECK: actual
 ;

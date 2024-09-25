@@ -26,7 +26,7 @@
   
   @glb = common dso_local local_unnamed_addr global [100 x i32] zeroinitializer, align 16
   
-  define dso_local i64 @foo(ptr %p) local_unnamed_addr optdebug {
+  define dso_local i64 @foo(ptr %p) local_unnamed_addr has_fake_uses {
   entry:
     %0 = load i32, ptr @glb, align 16
     store i32 %0, ptr %p, align 4
@@ -43,7 +43,7 @@
     ret i64 %add3
   }
   
-  define dso_local i64 @bar(ptr %p) local_unnamed_addr optdebug {
+  define dso_local i64 @bar(ptr %p) local_unnamed_addr has_fake_uses {
   entry:
     %0 = load i32, ptr @glb, align 16
     store i32 %0, ptr %p, align 4

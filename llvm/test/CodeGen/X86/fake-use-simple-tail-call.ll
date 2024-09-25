@@ -14,7 +14,7 @@
 ; ModuleID = 'test.cpp'
 source_filename = "test.cpp"
 
-define i32 @_Z4foo1i(i32 %i) local_unnamed_addr optdebug {
+define i32 @_Z4foo1i(i32 %i) local_unnamed_addr has_fake_uses {
 entry:
   %call = tail call i32 @_Z3bari(i32 %i)
   tail call void (...) @llvm.fake.use(i32 %i)

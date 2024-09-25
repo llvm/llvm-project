@@ -8,7 +8,7 @@
 ;
 target triple = "x86_64-unknown-unknown"
 
-define void @_Z6doTestv() local_unnamed_addr optdebug {
+define void @_Z6doTestv() local_unnamed_addr has_fake_uses {
 entry:
   tail call void (...) @llvm.fake.use(half 0xH0000)
   ret void

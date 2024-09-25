@@ -923,6 +923,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
       case Attribute::FnRetThunkExtern:
+      case Attribute::HasFakeUses:
       case Attribute::Hot:
       case Attribute::HybridPatchable:
       case Attribute::NoRecurse:

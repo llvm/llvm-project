@@ -17,7 +17,7 @@
 
 declare i32 @_Z3bari(i32) local_unnamed_addr
 
-define i32 @_Z4foo2i(i32 %i) local_unnamed_addr optdebug {
+define i32 @_Z4foo2i(i32 %i) local_unnamed_addr has_fake_uses {
 entry:
   %dec = add nsw i32 %i, -1
   %cmp = icmp slt i32 %i, 2

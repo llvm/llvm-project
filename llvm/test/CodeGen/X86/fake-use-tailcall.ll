@@ -17,7 +17,7 @@
 ; CHECK: FAKE_USE %0
 ; CHECK: TCRETURN
 
-define void @bar(i32 %v) optdebug {
+define void @bar(i32 %v) has_fake_uses {
 entry:
   %call = tail call i32 @_Z3fooi(i32 %v)
   %mul = mul nsw i32 %call, 3
@@ -27,7 +27,7 @@ entry:
   ret void
 }
 
-define i32 @baz(i32 %v) optdebug {
+define i32 @baz(i32 %v) has_fake_uses {
 entry:
   %call = tail call i32 @_Z3fooi(i32 %v)
   notail call void (...) @llvm.fake.use(i32 %v)

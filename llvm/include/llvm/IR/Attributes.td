@@ -112,6 +112,9 @@ def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 /// symbol.
 def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 
+/// Function uses fake use intrinsics to extend variable lifetimes.
+def HasFakeUses : EnumAttr<"has_fake_uses", [FnAttr]>;
+
 /// Function has a hybrid patchable thunk.
 def HybridPatchable : EnumAttr<"hybrid_patchable", [FnAttr]>;
 

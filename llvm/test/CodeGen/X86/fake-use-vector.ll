@@ -36,4 +36,4 @@ declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)
 ; Function Attrs: nounwind
 declare void @llvm.fake.use(...)
 
-attributes #0 = { "target-cpu"="btver2" optdebug }
+attributes #0 = { "target-cpu"="btver2" has_fake_uses }

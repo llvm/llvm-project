@@ -94,6 +94,7 @@ syn keyword llvmKeyword
       \ from
       \ gc
       \ global
+      \ has_fake_uses
       \ hhvm_ccc
       \ hhvmcc
       \ hidden

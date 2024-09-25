@@ -35,7 +35,7 @@
 # CHECK-NEXT: ret
 
 --- |
-  define hidden i32 @foo(i32 %i) local_unnamed_addr optdebug {
+  define hidden i32 @foo(i32 %i) local_unnamed_addr has_fake_uses {
   entry:
     %cmp = icmp eq i32 %i, 0
     br i1 %cmp, label %if.then, label %if.else

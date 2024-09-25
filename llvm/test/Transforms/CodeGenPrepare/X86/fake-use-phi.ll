@@ -25,7 +25,7 @@ source_filename = "test.ll"
 declare i32 @foo(ptr nonnull dereferenceable(1)) local_unnamed_addr
 declare i32 @bar(ptr nonnull dereferenceable(1)) local_unnamed_addr
 
-define hidden void @func(ptr nonnull dereferenceable(1) %this) local_unnamed_addr align 2 optdebug {
+define hidden void @func(ptr nonnull dereferenceable(1) %this) local_unnamed_addr align 2 has_fake_uses {
 entry:
   %b = getelementptr inbounds %class.a, ptr %this, i64 0, i32 0
   %0 = load i8, i8* %b, align 1
