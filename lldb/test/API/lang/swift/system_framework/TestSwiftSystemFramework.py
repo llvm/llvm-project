@@ -18,9 +18,7 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
 
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
-        self.expect("settings set target.use-all-compiler-flags true")
         self.expect("expression -- 0")
         self.filecheck('platform shell cat "%s"' % log, __file__)
-#       CHECK: SwiftASTContextForExpressions{{.*}}-- rejecting framework path
 #       CHECK: SwiftASTContextForExpressions{{.*}}LogConfiguration()
 #       CHECK-NOT: LogConfiguration(){{.*}}/System/Library/Frameworks

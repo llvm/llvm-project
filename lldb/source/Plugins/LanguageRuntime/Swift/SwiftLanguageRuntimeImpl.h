@@ -300,12 +300,12 @@ protected:
     std::optional<CompilerType> m_compiler_type;
 
   public:
-    CompilerType FulfillTypePromise(const SymbolContext *sc,
+    CompilerType FulfillTypePromise(const SymbolContext &sc,
                                     Status *error = nullptr);
   };
   typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
 
-  MetadataPromiseSP GetMetadataPromise(const SymbolContext *sc,
+  MetadataPromiseSP GetMetadataPromise(const SymbolContext &sc,
                                        lldb::addr_t addr,
                                        ValueObject &for_object);
   MetadataPromiseSP

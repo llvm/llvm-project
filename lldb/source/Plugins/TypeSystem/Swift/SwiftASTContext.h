@@ -203,18 +203,12 @@ public:
   CreateInstance(lldb::LanguageType language, Module &module,
                  TypeSystemSwiftTypeRef &typeref_typesystem,
                  bool fallback = false);
-  /// Create a SwiftASTContext from a Target.  This context is global
-  /// and used for the expression evaluator.
-  static lldb::TypeSystemSP
-  CreateInstance(lldb::LanguageType language,
-                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
-                 const char *extra_options);
-
   /// Create a SwiftASTContextForExpressions taylored to a specific symbol
   /// context.
   static lldb::TypeSystemSP
   CreateInstance(const SymbolContext &sc,
-                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem);
+                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
+                 const char *extra_options = nullptr);
 
   /// Returns true if Swift C++ interop is enabled for the given compiler unit.
   static bool ShouldEnableCXXInterop(CompileUnit *cu);
@@ -228,7 +222,7 @@ public:
   
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override {
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext &sc) const override {
     return GetTypeSystemSwiftTypeRef().GetSwiftASTContext(sc);
   }
 
@@ -422,9 +416,7 @@ public:
   llvm::Triple GetTriple() const;
 
   bool SetTriple(const llvm::Triple triple, lldb_private::Module *module);
-  void SetTriple(const llvm::Triple triple) override {
-    SetTriple(triple, nullptr);
-  }
+  void SetTriple(const SymbolContext &sc, const llvm::Triple triple) override;
 
   /// Condition a triple to be safe for use with Swift.  Swift is
   /// really peculiar about what CPU types it thinks it has standard

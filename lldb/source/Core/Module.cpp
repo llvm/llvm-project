@@ -1635,7 +1635,7 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
 #ifdef LLDB_ENABLE_SWIFT
     if (auto ts =
             llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get()))
-      ts->SetTriple(new_arch.GetTriple());
+      ts->SetTriple(SymbolContext(shared_from_this()), new_arch.GetTriple());
 #endif // LLDB_ENABLE_SWIFT
     return true;
   }

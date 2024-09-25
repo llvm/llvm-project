@@ -25,15 +25,9 @@ let Definition = "modulelist" in {
   def UseSwiftDWARFImporter: Property<"use-swift-dwarfimporter", "Boolean">,
     DefaultTrue,
     Desc<"Reconstruct Clang module dependencies from DWARF when debugging Swift code">;
-  def UseSwiftTypeRefTypeSystem: Property<"use-swift-typeref-typesystem", "Boolean">,
-    DefaultTrue,
-    Desc<"Prefer Swift Remote Mirrors over Remote AST">;
   def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
-  def UseSwiftPreciseCompilerInvocation: Property<"swift-precise-compiler-invocation", "Boolean">,
-    DefaultTrue,
-    Desc<"In the Swift expression evaluator, create many Swift compiler instances with the precise invocation for the current context, instead of a single compiler instance that merges all flags from the entire project.">;
   def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,

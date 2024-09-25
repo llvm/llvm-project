@@ -1306,7 +1306,8 @@ public:
 
   std::optional<SwiftScratchContextReader>
   GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
-                         bool create_on_demand = true);
+                         bool create_on_demand = true,
+                         bool for_playground = false);
 
   /// Return whether this is the Swift REPL.
   bool IsSwiftREPL();

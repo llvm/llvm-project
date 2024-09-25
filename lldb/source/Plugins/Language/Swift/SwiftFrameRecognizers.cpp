@@ -122,7 +122,7 @@ public:
       }
       auto &sc = most_relevant_frame_sp->GetSymbolContext(
           lldb::eSymbolContextFunction);
-      ConstString module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(&sc);
+      ConstString module_name = TypeSystemSwiftTypeRef::GetSwiftModuleFor(sc);
       if (!module_name)
         continue;
       if (module_name == swift::STDLIB_NAME)
