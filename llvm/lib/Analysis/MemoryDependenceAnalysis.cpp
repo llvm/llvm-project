@@ -888,7 +888,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   // each block.  Because of critical edges, we currently bail out if querying
   // a block with multiple different pointers.  This can happen during PHI
   // translation.
-  SmallDenseMap<BasicBlock *, Value *, 16> Visited;
+  DenseMap<BasicBlock *, Value *> Visited;
   if (getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
                                    Result, Visited, true))
     return;
@@ -1038,7 +1038,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     Instruction *QueryInst, const PHITransAddr &Pointer,
     const MemoryLocation &Loc, bool isLoad, BasicBlock *StartBB,
     SmallVectorImpl<NonLocalDepResult> &Result,
-    SmallDenseMap<BasicBlock *, Value *, 16> &Visited, bool SkipFirstBlock,
+    DenseMap<BasicBlock *, Value *> &Visited, bool SkipFirstBlock,
     bool IsIncomplete) {
   // Look up the cached info for Pointer.
   ValueIsLoadPair CacheKey(Pointer.getAddr(), isLoad);
