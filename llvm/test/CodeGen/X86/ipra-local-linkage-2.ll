@@ -115,19 +115,15 @@ define void @caller_use_rbx(i32 %X) nounwind ssp {
   ret void
 }
 
-define void @caller_use_esi(i32 %X) ssp {
+define void @caller_use_esi(i32 %X) nounwind ssp {
 ; X86-LABEL: caller_use_esi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    movl %esp, %esi
-; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl __stack_chk_guard, %ecx
 ; X86-NEXT:    movl %ecx, 16(%esi)
@@ -146,10 +142,8 @@ define void @caller_use_esi(i32 %X) ssp {
 ; X86-NEXT:    leal -4(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB5_2:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    calll __stack_chk_fail
   %realign = alloca i32, align 32
   %addr = alloca i32, i32 %X
