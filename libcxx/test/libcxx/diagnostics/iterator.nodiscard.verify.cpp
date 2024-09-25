@@ -30,5 +30,5 @@ void test() {
   std::ranges::next(pv, 2, container.begin());       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::next(c_array);                        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   auto nv = std::ranges::next(container.begin(), 2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::next(pv, 1, container.end());         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::next(nv, 1, container.end());         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
