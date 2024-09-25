@@ -46,4 +46,4 @@ class TestObjCGlobalVar(TestBase):
 
         dyn_value = g_obj_ptr.GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertTrue(dyn_value.GetError().Success(), "Dynamic value is valid")
-        self.assertEquals(dyn_value.GetObjectDescription(), "Some NSString")
+        self.assertEqual(dyn_value.GetObjectDescription(), "Some NSString")

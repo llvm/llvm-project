@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=store -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=store -polly-print-instructions '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ;      void func(int *A, int *B){
 ;        for (int i = 0; i < 1024; i+=1) {

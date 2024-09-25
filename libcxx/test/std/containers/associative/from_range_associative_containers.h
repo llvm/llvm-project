@@ -59,9 +59,8 @@ template <template <class ...> class Container,
           class Alloc,
           class ValueType = std::pair<const K, V>>
 void test_associative_map_with_input(std::vector<ValueType>&& input) {
-  auto in = wrap_input<Iter, Sent>(input);
-
   { // (range)
+    auto in = wrap_input<Iter, Sent>(input);
     Container<K, V> c(std::from_range, in);
 
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
@@ -69,6 +68,7 @@ void test_associative_map_with_input(std::vector<ValueType>&& input) {
   }
 
   { // (range, comp)
+    auto in = wrap_input<Iter, Sent>(input);
     Comp comp;
     Container<K, V, Comp> c(std::from_range, in, comp);
 
@@ -78,6 +78,7 @@ void test_associative_map_with_input(std::vector<ValueType>&& input) {
   }
 
   { // (range, allocator)
+    auto in = wrap_input<Iter, Sent>(input);
     Alloc alloc;
     Container<K, V, std::less<K>, Alloc> c(std::from_range, in, alloc);
 
@@ -87,6 +88,7 @@ void test_associative_map_with_input(std::vector<ValueType>&& input) {
   }
 
   { // (range, comp, allocator)
+    auto in = wrap_input<Iter, Sent>(input);
     Comp comp;
     Alloc alloc;
     Container<K, V, Comp, Alloc> c(std::from_range, in, comp, alloc);
@@ -199,11 +201,8 @@ template <template <class ...> class Container,
           class Comp,
           class Alloc>
 void test_associative_set_with_input(std::vector<T>&& input) {
-  auto b = Iter(input.data());
-  auto e = Iter(input.data() + input.size());
-  std::ranges::subrange in(std::move(b), Sent(std::move(e)));
-
   { // (range)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Container<T> c(std::from_range, in);
 
     assert(c.size() == static_cast<std::size_t>(std::distance(c.begin(), c.end())));
@@ -211,6 +210,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
   }
 
   { // (range, comp)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Comp comp;
     Container<T, Comp> c(std::from_range, in, comp);
 
@@ -220,6 +220,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
   }
 
   { // (range, allocator)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Alloc alloc;
     Container<T, std::less<T>, Alloc> c(std::from_range, in, alloc);
 
@@ -229,6 +230,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
   }
 
   { // (range, comp, allocator)
+    std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Comp comp;
     Alloc alloc;
     Container<T, Comp, Alloc> c(std::from_range, in, comp, alloc);

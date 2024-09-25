@@ -13,14 +13,6 @@ spirv.func @cooperative_matrix_length() -> i32 "None" {
 
 // -----
 
-spirv.func @cooperative_matrix_length_wrong_matrix() -> i32 "None" {
-  // expected-error @+1 {{'cooperative_matrix_type' failed to satisfy constraint: type attribute of any SPIR-V cooperative matrix type}}
-  %0 = spirv.KHR.CooperativeMatrixLength : !spirv.NV.coopmatrix<8x16xi32, Subgroup>
-  spirv.ReturnValue %0 : i32
-}
-
-// -----
-
 // CHECK-LABEL: @cooperative_matrix_load
 spirv.func @cooperative_matrix_load(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32) "None" {
   // CHECK:      {{%.*}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <RowMajor> :
@@ -113,24 +105,6 @@ spirv.func @cooperative_matrix_load_missing_attr(%ptr : !spirv.ptr<i32, StorageB
   // expected-error @+1 {{expected ','}}
   %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride :
     !spirv.ptr<i32, StorageBuffer>, i32 -> !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
-  spirv.Return
-}
-
-// -----
-
-spirv.func @cooperative_matrix_load_missing_attr(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32) "None" {
-  // expected-error @+1 {{expected '<'}}
-  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, :
-    !spirv.ptr<i32, StorageBuffer>, i32 -> !spirv.NV.coopmatrix<8x16xi32, Subgroup, MatrixA>
-  spirv.Return
-}
-
-// -----
-
-spirv.func @cooperative_matrix_load_bad_result(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32) "None" {
-  // expected-error @+1 {{op result #0 must be any SPIR-V cooperative matrix type}}
-  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor> :
-    !spirv.ptr<i32, StorageBuffer>, i32 -> !spirv.NV.coopmatrix<8x16xi32, Subgroup>
   spirv.Return
 }
 

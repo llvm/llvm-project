@@ -1,4 +1,4 @@
-// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacosx-version-min=10.6 -fblocks -x objective-c %s
+// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 -fblocks -x objective-c %s
 // RUN: c-index-test -test-load-tu %t.ast all > %t 2>&1 && FileCheck --input-file=%t %s
 // REQUIRES: x86-registered-target
 @interface Foo 
@@ -130,7 +130,7 @@ struct X0  {};
 // CHECK: c-index-api-loadTU-test.m:50:13: VarDecl=d:50:13 (Definition) Extent=[50:2 - 50:14]
 // CHECK: c-index-api-loadTU-test.m:50:2: TypeRef=id:0:0 Extent=[50:2 - 50:4]
 // CHECK: c-index-api-loadTU-test.m:50:6: ObjCProtocolRef=Proto:25:11 Extent=[50:6 - 50:11]
-// CHECK: c-index-api-loadTU-test.m:51:2: BinaryOperator= Extent=[51:2 - 51:7]
+// CHECK: c-index-api-loadTU-test.m:51:2: BinaryOperator== Extent=[51:2 - 51:7]
 // CHECK: c-index-api-loadTU-test.m:51:2: DeclRefExpr=d:50:13 Extent=[51:2 - 51:3]
 // CHECK: c-index-api-loadTU-test.m:51:6: UnexposedExpr=c:49:12 Extent=[51:6 - 51:7]
 // CHECK: c-index-api-loadTU-test.m:51:6: UnexposedExpr=c:49:12 Extent=[51:6 - 51:7]

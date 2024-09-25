@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass=machine-cp -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=machine-cp -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: mcp_aligned_vgprs
 # GCN: $vgpr0_vgpr1 = V_PK_MUL_F32 0, $sgpr0_sgpr1

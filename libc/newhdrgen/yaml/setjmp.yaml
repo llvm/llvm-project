@@ -1,0 +1,20 @@
+header: setjmp.h
+macros: []
+types:
+  - type_name: jmp_buf
+enums: []
+objects: []
+functions:
+  - name: longjmp
+    standards:
+      - stdc
+    return_type: _Noreturn void
+    arguments:
+      - type: jmp_buf
+      - type: int
+  - name: setjmp
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: jmp_buf

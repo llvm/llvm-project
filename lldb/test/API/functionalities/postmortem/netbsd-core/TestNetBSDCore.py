@@ -147,12 +147,12 @@ class NetBSD1LWPCoreTestCase(NetBSDCoreCommonTestCase):
         self.check_backtrace(thread, filename, backtrace)
 
     @skipIfLLVMTargetMissing("AArch64")
-    def test_aarch64(self):
+    def test_aarch64_single_threaded(self):
         """Test single-threaded aarch64 core dump."""
         self.do_test("1lwp_SIGSEGV.aarch64", pid=8339, region_count=32)
 
     @skipIfLLVMTargetMissing("X86")
-    def test_amd64(self):
+    def test_amd64_single_threaded(self):
         """Test single-threaded amd64 core dump."""
         self.do_test("1lwp_SIGSEGV.amd64", pid=693, region_count=21)
 
@@ -177,12 +177,12 @@ class NetBSD2LWPT2CoreTestCase(NetBSDCoreCommonTestCase):
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), 0)
 
     @skipIfLLVMTargetMissing("AArch64")
-    def test_aarch64(self):
+    def test_aarch64_thread_signaled(self):
         """Test double-threaded aarch64 core dump where thread 2 is signalled."""
         self.do_test("2lwp_t2_SIGSEGV.aarch64", pid=14142, region_count=31)
 
     @skipIfLLVMTargetMissing("X86")
-    def test_amd64(self):
+    def test_amd64_thread_signaled(self):
         """Test double-threaded amd64 core dump where thread 2 is signalled."""
         self.do_test("2lwp_t2_SIGSEGV.amd64", pid=622, region_count=24)
 
@@ -207,11 +207,11 @@ class NetBSD2LWPProcessSigCoreTestCase(NetBSDCoreCommonTestCase):
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), signal.SIGSEGV)
 
     @skipIfLLVMTargetMissing("AArch64")
-    def test_aarch64(self):
+    def test_aarch64_process_signaled(self):
         """Test double-threaded aarch64 core dump where process is signalled."""
         self.do_test("2lwp_process_SIGSEGV.aarch64", pid=1403, region_count=30)
 
     @skipIfLLVMTargetMissing("X86")
-    def test_amd64(self):
+    def test_amd64_process_signaled(self):
         """Test double-threaded amd64 core dump where process is signalled."""
         self.do_test("2lwp_process_SIGSEGV.amd64", pid=665, region_count=24)

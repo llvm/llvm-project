@@ -257,6 +257,17 @@ extern void NSLog(NSString *format, ...) __attribute__((format(__NSString__, 1, 
 @implementation MissingInvalidationMethod
 @end
 
+@interface SuppressedMissingInvalidationMethod : Foo <FooBar_Protocol>
+@property (assign) [[clang::suppress]] SuppressedMissingInvalidationMethod *foobar16_warn;
+// FIXME: Suppression should have worked but decl-with-issue is the ivar, not the property.
+#if RUN_IVAR_INVALIDATION
+// expected-warning@-3 {{Property foobar16_warn needs to be invalidated; no invalidation method is defined in the @implementation for SuppressedMissingInvalidationMethod}}
+#endif
+
+@end
+@implementation SuppressedMissingInvalidationMethod
+@end
+
 @interface MissingInvalidationMethod2 : Foo <FooBar_Protocol> {
   Foo *Ivar1;
 #if RUN_IVAR_INVALIDATION
@@ -290,8 +301,10 @@ extern void NSLog(NSString *format, ...) __attribute__((format(__NSString__, 1, 
 @end
 
 @interface InvalidatedInPartial : SomeInvalidationImplementingObject {
-  SomeInvalidationImplementingObject *Ivar1; 
-  SomeInvalidationImplementingObject *Ivar2; 
+  SomeInvalidationImplementingObject *Ivar1;
+  SomeInvalidationImplementingObject *Ivar2;
+  [[clang::suppress]]
+  SomeInvalidationImplementingObject *Ivar3; // no-warning
 }
 -(void)partialInvalidator __attribute__((annotate("objc_instance_variable_invalidator_partial")));
 @end

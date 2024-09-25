@@ -9,20 +9,23 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMSET_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace x86 {
 // Size of one cache line for software prefetching
-LIBC_INLINE_VAR constexpr size_t kOneCachelineSize = 64;
-LIBC_INLINE_VAR constexpr size_t kTwoCachelinesSize = kOneCachelineSize * 2;
-LIBC_INLINE_VAR constexpr size_t kFiveCachelinesSize = kOneCachelineSize * 5;
+LIBC_INLINE_VAR constexpr size_t K_ONE_CACHELINE_SIZE = 64;
+LIBC_INLINE_VAR constexpr size_t K_TWO_CACHELINES_SIZE =
+    K_ONE_CACHELINE_SIZE * 2;
+LIBC_INLINE_VAR constexpr size_t K_FIVE_CACHELINES_SIZE =
+    K_ONE_CACHELINE_SIZE * 5;
 
-LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
+LIBC_INLINE_VAR constexpr bool K_USE_SOFTWARE_PREFETCHING_MEMSET =
     LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING);
 
 } // namespace x86
@@ -47,15 +50,15 @@ using uint512_t = cpp::array<uint64_t, 8>;
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86_gt64_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
-  constexpr size_t PREFETCH_DISTANCE = x86::kFiveCachelinesSize;
-  constexpr size_t PREFETCH_DEGREE = x86::kTwoCachelinesSize;
+  constexpr size_t PREFETCH_DISTANCE = x86::K_FIVE_CACHELINES_SIZE;
+  constexpr size_t PREFETCH_DEGREE = x86::K_TWO_CACHELINES_SIZE;
   constexpr size_t SIZE = sizeof(uint256_t);
   // Prefetch one cache line
-  prefetch_for_write(dst + x86::kOneCachelineSize);
+  prefetch_for_write(dst + x86::K_ONE_CACHELINE_SIZE);
   if (count <= 128)
     return generic::Memset<uint512_t>::head_tail(dst, value, count);
   // Prefetch the second cache line
-  prefetch_for_write(dst + x86::kTwoCachelinesSize);
+  prefetch_for_write(dst + x86::K_TWO_CACHELINES_SIZE);
   // Aligned loop
   generic::Memset<uint256_t>::block(dst, value);
   align_to_next_boundary<32>(dst, count);
@@ -67,7 +70,7 @@ inline_memset_x86_gt64_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
     while (offset + PREFETCH_DEGREE + SIZE <= count) {
       prefetch_for_write(dst + offset + PREFETCH_DISTANCE);
       prefetch_for_write(dst + offset + PREFETCH_DISTANCE +
-                         x86::kOneCachelineSize);
+                         x86::K_ONE_CACHELINE_SIZE);
       for (size_t i = 0; i < PREFETCH_DEGREE; i += SIZE, offset += SIZE)
         generic::Memset<uint256_t>::block(dst + offset, value);
     }
@@ -93,7 +96,7 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
     return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= 64)
     return generic::Memset<uint256_t>::head_tail(dst, value, count);
-  if constexpr (x86::kUseSoftwarePrefetchingMemset)
+  if constexpr (x86::K_USE_SOFTWARE_PREFETCHING_MEMSET)
     return inline_memset_x86_gt64_sw_prefetching(dst, value, count);
   if (count <= 128)
     return generic::Memset<uint512_t>::head_tail(dst, value, count);
@@ -102,6 +105,6 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   align_to_next_boundary<32>(dst, count);
   return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMSET_H

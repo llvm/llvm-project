@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=i386-linux-gnu -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL
+; RUN: llc -mtriple=i386-linux-gnu -global-isel -verify-machineinstrs < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=ALL
 
 ; This file is the output of clang -g -O2
 ; int test_dbg_trunc(unsigned long long a) { return a; }

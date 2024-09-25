@@ -330,12 +330,12 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
   ValueWithRealFlags<Real> result;
+  bool isNegative{IsNegative()};
   if (IsFinite()) {
     Fraction fraction{GetFraction()};
     int expo{Exponent()};
     Fraction one{1};
     Fraction nearest;
-    bool isNegative{IsNegative()};
     if (upward != isNegative) { // upward in magnitude
       auto next{fraction.AddUnsigned(one)};
       if (next.carry) {
@@ -358,8 +358,15 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
         }
       }
     }
-    result.flags = result.value.Normalize(isNegative, expo, nearest);
-  } else {
+    result.value.Normalize(isNegative, expo, nearest);
+  } else if (IsInfinite()) {
+    if (upward == isNegative) {
+      result.value =
+          isNegative ? HUGE().Negate() : HUGE(); // largest mag finite
+    } else {
+      result.value = *this;
+    }
+  } else { // NaN
     result.flags.set(RealFlag::InvalidArgument);
     result.value = *this;
   }
@@ -401,48 +408,59 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
   return result;
 }
 
-// MOD(x,y) = x - AINT(x/y)*y
+// MOD(x,y) = x - AINT(x/y)*y in the standard; unfortunately, this definition
+// can be pretty inaccurate when x is much larger than y in magnitude due to
+// cancellation.  Implement instead with (essentially) arbitrary precision
+// long division, discarding the quotient and returning the remainder.
+// See runtime/numeric.cpp for more details.
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MOD(
-    const Real &y, Rounding rounding) const {
+    const Real &p, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
-  auto quotient{Divide(y, rounding)};
-  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
-      !y.IsZero()) {
-    // x/y overflowed -- so it must be an integer in this representation and
-    // the result must be a zero.
-    if (IsNegative()) {
-      result.value = Real{}.Negate(); // -0.
-    }
+  if (IsNotANumber() || p.IsNotANumber() || IsInfinite()) {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = NotANumber();
+  } else if (p.IsZero()) {
+    result.flags.set(RealFlag::DivideByZero);
+    result.value = NotANumber();
+  } else if (p.IsInfinite()) {
+    result.value = *this;
   } else {
-    Real toInt{quotient.AccumulateFlags(result.flags)
-                   .ToWholeNumber(common::RoundingMode::ToZero)
-                   .AccumulateFlags(result.flags)};
-    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+    result.value = ABS();
+    auto pAbs{p.ABS()};
+    Real half, adj;
+    half.Normalize(false, exponentBias - 1, Fraction::MASKL(1)); // 0.5
+    for (adj.Normalize(false, Exponent(), pAbs.GetFraction());
+         result.value.Compare(pAbs) != Relation::Less;
+         adj = adj.Multiply(half).value) {
+      if (result.value.Compare(adj) != Relation::Less) {
+        result.value =
+            result.value.Subtract(adj, rounding).AccumulateFlags(result.flags);
+        if (result.value.IsZero()) {
+          break;
+        }
+      }
+    }
+    if (IsNegative()) {
+      result.value = result.value.Negate();
+    }
   }
   return result;
 }
 
-// MODULO(x,y) = x - FLOOR(x/y)*y
+// MODULO(x,y) = x - FLOOR(x/y)*y in the standard; here, it is defined
+// in terms of MOD() with adjustment of the result.
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
-    const Real &y, Rounding rounding) const {
-  ValueWithRealFlags<Real> result;
-  auto quotient{Divide(y, rounding)};
-  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
-      !y.IsZero()) {
-    // x/y overflowed -- so it must be an integer in this representation and
-    // the result must be a zero.
-    if (y.IsNegative()) {
-      result.value = Real{}.Negate(); // -0.
+    const Real &p, Rounding rounding) const {
+  ValueWithRealFlags<Real> result{MOD(p, rounding)};
+  if (IsNegative() != p.IsNegative()) {
+    if (result.value.IsZero()) {
+      result.value = result.value.Negate();
+    } else {
+      result.value =
+          result.value.Add(p, rounding).AccumulateFlags(result.flags);
     }
-  } else {
-    Real toInt{quotient.AccumulateFlags(result.flags)
-                   .ToWholeNumber(common::RoundingMode::Down)
-                   .AccumulateFlags(result.flags)};
-    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
   }
   return result;
 }
@@ -513,10 +531,16 @@ RealFlags Real<W, P>::Normalize(bool negative, int exponent,
         (rounding.mode == common::RoundingMode::Up && !negative) ||
         (rounding.mode == common::RoundingMode::Down && negative)) {
       word_ = Word{maxExponent}.SHIFTL(significandBits); // Inf
+      if constexpr (!isImplicitMSB) {
+        word_ = word_.IBSET(significandBits - 1);
+      }
     } else {
       // directed rounding: round to largest finite value rather than infinity
       // (x86 does this, not sure whether it's standard behavior)
-      word_ = Word{word_.MASKR(word_.bits - 1)}.IBCLR(significandBits);
+      word_ = Word{word_.MASKR(word_.bits - 1)};
+      if constexpr (isImplicitMSB) {
+        word_ = word_.IBCLR(significandBits);
+      }
     }
     if (negative) {
       word_ = word_.IBSET(bits - 1);
@@ -746,11 +770,13 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
   } else if (IsInfinite()) {
     return NotANumber();
   } else if (IsZero() || IsSubnormal()) {
-    return TINY(); // mandated by standard
+    return TINY(); // standard & 100% portable
   } else {
     Real result;
     result.Normalize(false, Exponent(), Fraction::MASKR(1));
-    return result.IsZero() ? TINY() : result;
+    // Can the result be less than TINY()?  No, with five commonly
+    // used compilers; yes, with two less commonly used ones.
+    return result.IsZero() || result.IsSubnormal() ? TINY() : result;
   }
 }
 
@@ -777,6 +803,6 @@ template class Real<Integer<16>, 11>;
 template class Real<Integer<16>, 8>;
 template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
-template class Real<Integer<80>, 64>;
+template class Real<X87IntegerContainer, 64>;
 template class Real<Integer<128>, 113>;
 } // namespace Fortran::evaluate::value

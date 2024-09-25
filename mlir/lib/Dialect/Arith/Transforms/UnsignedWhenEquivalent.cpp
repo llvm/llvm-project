@@ -125,12 +125,11 @@ struct ArithUnsignedWhenEquivalentPass
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<ArithDialect>();
-    target
-        .addDynamicallyLegalOp<DivSIOp, CeilDivSIOp, CeilDivUIOp, FloorDivSIOp,
-                               RemSIOp, MinSIOp, MaxSIOp, ExtSIOp>(
-            [&solver](Operation *op) -> std::optional<bool> {
-              return failed(staticallyNonNegative(solver, op));
-            });
+    target.addDynamicallyLegalOp<DivSIOp, CeilDivSIOp, FloorDivSIOp, RemSIOp,
+                                 MinSIOp, MaxSIOp, ExtSIOp>(
+        [&solver](Operation *op) -> std::optional<bool> {
+          return failed(staticallyNonNegative(solver, op));
+        });
     target.addDynamicallyLegalOp<CmpIOp>(
         [&solver](CmpIOp op) -> std::optional<bool> {
           return failed(isCmpIConvertable(solver, op));

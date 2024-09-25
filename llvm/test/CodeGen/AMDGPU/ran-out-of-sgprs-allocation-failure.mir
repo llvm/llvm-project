@@ -24,6 +24,7 @@ registers:
   - { id: 10, class: sreg_64_xexec, preferred-register: '$vcc' }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   maxKernArgAlign: 1
@@ -96,7 +97,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr93 = COPY renamable $sgpr60
   ; CHECK-NEXT:   renamable $sgpr94 = COPY renamable $sgpr60
   ; CHECK-NEXT:   renamable $sgpr95 = COPY renamable $sgpr60
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024_align2 = COPY killed renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.11, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -225,7 +226,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.15(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x0000000F00000000
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15:
   ; CHECK-NEXT:   successors: %bb.11(0x40000000), %bb.16(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x0000000000000003, $sgpr10_sgpr11, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x0000000F00000000
@@ -306,7 +306,7 @@ body:             |
 
   bb.3:
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    dead $sgpr30_sgpr31 = SI_CALL undef %24:sreg_64_xexec, 0, CustomRegMask($sgpr60,$sgpr62)
+    dead $sgpr30_sgpr31 = SI_CALL undef %24:sreg_64_xexec_xnull, 0, CustomRegMask($sgpr60,$sgpr62)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
 
   bb.4:
@@ -338,7 +338,7 @@ body:             |
 
   bb.9:
     %31:vreg_64_align2 = COPY %19.sub16_sub17, implicit $exec
-    GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, %31, undef %24:sreg_64_xexec, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    GLOBAL_STORE_DWORDX2_SADDR undef %18:vgpr_32, %31, undef %24:sreg_64_xexec_xnull, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     %32:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %5, implicit $exec
     dead %33:sreg_64_xexec = V_CMP_NE_U32_e64 1, %32, implicit $exec
     undef %34.sub0:sreg_64 = S_ADD_U32 %15.sub0, 32, implicit-def dead $scc

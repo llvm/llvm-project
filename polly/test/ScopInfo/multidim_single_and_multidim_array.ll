@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-delinearize=false -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-print-scops -polly-delinearize=false -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=DELIN
-; RUN: opt %loadPolly -polly-print-scops -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=DELIN
-; RUN: opt %loadPolly -polly-print-function-scops -polly-delinearize=false -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-print-function-scops -polly-delinearize=false -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-print-function-scops -disable-output < %s | FileCheck %s --check-prefix=DELIN
-; RUN: opt %loadPolly -polly-print-function-scops -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-delinearize=false -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-delinearize=false -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-delinearize=false -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-delinearize=false -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s --check-prefix=DELIN
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

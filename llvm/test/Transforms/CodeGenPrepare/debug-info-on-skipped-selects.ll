@@ -5,8 +5,7 @@
 ; Test that when we skip over multiple selects in CGP, that the debug-info
 ; attached to those selects is still fixed up.
 
-; CHECK: declare void @llvm.dbg.value(metadata,
-; CHECK: call void @llvm.dbg.value(metadata ptr %sunkaddr,
+; CHECK: #dbg_value(ptr %sunkaddr,
 
 source_filename = "reduced.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

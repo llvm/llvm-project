@@ -180,8 +180,6 @@ void NativeThreadNetBSD::SetStepping() {
 }
 
 std::string NativeThreadNetBSD::GetName() {
-  Log *log = GetLog(POSIXLog::Thread);
-
 #ifdef PT_LWPSTATUS
   struct ptrace_lwpstatus info = {};
   info.pl_lwpid = m_tid;
@@ -193,6 +191,8 @@ std::string NativeThreadNetBSD::GetName() {
   return info.pl_name;
 #else
   std::vector<struct kinfo_lwp> infos;
+  Log *log = GetLog(POSIXLog::Thread);
+
   int mib[5] = {CTL_KERN, KERN_LWP, static_cast<int>(m_process.GetID()),
                 sizeof(struct kinfo_lwp), 0};
   size_t size;
@@ -264,14 +264,14 @@ Status NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
                                          uint32_t watch_flags, bool hardware) {
   assert(m_state == eStateStopped);
   if (!hardware)
-    return Status("not implemented");
+    return Status::FromErrorString("not implemented");
   Status error = RemoveWatchpoint(addr);
   if (error.Fail())
     return error;
   uint32_t wp_index =
       GetRegisterContext().SetHardwareWatchpoint(addr, size, watch_flags);
   if (wp_index == LLDB_INVALID_INDEX32)
-    return Status("Setting hardware watchpoint failed.");
+    return Status::FromErrorString("Setting hardware watchpoint failed.");
   m_watchpoint_index_map.insert({addr, wp_index});
   return Status();
 }
@@ -284,7 +284,7 @@ Status NativeThreadNetBSD::RemoveWatchpoint(lldb::addr_t addr) {
   m_watchpoint_index_map.erase(wp);
   if (GetRegisterContext().ClearHardwareWatchpoint(wp_index))
     return Status();
-  return Status("Clearing hardware watchpoint failed.");
+  return Status::FromErrorString("Clearing hardware watchpoint failed.");
 }
 
 Status NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
@@ -297,7 +297,7 @@ Status NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
   uint32_t bp_index = GetRegisterContext().SetHardwareBreakpoint(addr, size);
 
   if (bp_index == LLDB_INVALID_INDEX32)
-    return Status("Setting hardware breakpoint failed.");
+    return Status::FromErrorString("Setting hardware breakpoint failed.");
 
   m_hw_break_index_map.insert({addr, bp_index});
   return Status();
@@ -314,7 +314,7 @@ Status NativeThreadNetBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
     return Status();
   }
 
-  return Status("Clearing hardware breakpoint failed.");
+  return Status::FromErrorString("Clearing hardware breakpoint failed.");
 }
 
 llvm::Error

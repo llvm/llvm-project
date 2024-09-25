@@ -10,9 +10,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: unreachable
 define void @novel_algorithm() {
 entry:
-  %a = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr undef, i32 1, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> undef, i1 true, i32 0), <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8> undef)
+  %a = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr undef, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> undef)
   %b = add <vscale x 16 x i8> undef, %a
-  call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %b, ptr undef, i32 1, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> undef, i1 true, i32 0), <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer))
+  call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %b, ptr undef, i32 1, <vscale x 16 x i1> splat (i1 true))
   unreachable
 }
 

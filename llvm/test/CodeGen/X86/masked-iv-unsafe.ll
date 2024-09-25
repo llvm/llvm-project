@@ -8,9 +8,9 @@ define void @count_up(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: count_up:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $10, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -61,9 +61,9 @@ define void @count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: count_down:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $10, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -117,9 +117,9 @@ define void @count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movl $10, %eax
 ; CHECK-NEXT:    movl $167772160, %ecx # imm = 0xA000000
 ; CHECK-NEXT:    movl $2560, %edx # imm = 0xA00
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -177,9 +177,9 @@ define void @count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movq $-10, %rax
 ; CHECK-NEXT:    movl $167772160, %ecx # imm = 0xA000000
 ; CHECK-NEXT:    movl $2560, %edx # imm = 0xA00
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -235,9 +235,9 @@ define void @another_count_up(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_up:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -288,9 +288,9 @@ return:
 define void @another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_down:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB5_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -342,9 +342,9 @@ define void @another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_up_signed:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -406,9 +406,9 @@ define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movq %rsi, %rcx
 ; CHECK-NEXT:    shlq $24, %rcx
 ; CHECK-NEXT:    shlq $8, %rsi
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB7_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -464,9 +464,9 @@ define void @yet_another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: yet_another_count_down:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $-2040, %rax # imm = 0xF808
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -518,9 +518,9 @@ define void @yet_another_count_up(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: yet_another_count_up:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB9_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -572,9 +572,9 @@ define void @still_another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: still_another_count_down:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $10, %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB10_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -626,9 +626,9 @@ define void @yet_another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $-10, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB11_1: # %loop
@@ -687,9 +687,9 @@ define void @yet_another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movl $10, %eax
 ; CHECK-NEXT:    movl $167772160, %ecx # imm = 0xA000000
 ; CHECK-NEXT:    movl $2560, %edx # imm = 0xA00
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB12_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

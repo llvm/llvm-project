@@ -17,7 +17,7 @@ llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %cou
 llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i32, %pred : i1) {
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r"
   nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount : !llvm.ptr<3>, i32
-  //CHECK :  llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r,b "
+  //CHECK:  llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r,b"
   nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
   llvm.return
 }
@@ -129,7 +129,7 @@ func.func @tma_load_5d_all(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %bar
 func.func @tma_load_1d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.tensor.1d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2} ], [$3];", "r,l,r,r"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor, %barrier, box[%crd0] : !llvm.ptr<3>, !llvm.ptr
-  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "@$4 cp.async.bulk.tensor.1d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2} ], [$3];", "l,r,r,r,b"
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$4 cp.async.bulk.tensor.1d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2} ], [$3];", "r,l,r,r,b"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0] predicate=%p : !llvm.ptr<3>, !llvm.ptr
   return
 }
@@ -138,7 +138,7 @@ func.func @tma_load_1d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier
 func.func @tma_load_2d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3} ], [$4];", "r,l,r,r,r"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor, %barrier, box[%crd0,%crd1] : !llvm.ptr<3>, !llvm.ptr
-  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "@$5 cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3} ], [$4];", "l,r,r,r,r,b"
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$5 cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3} ], [$4];", "r,l,r,r,r,b"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor, %barrier, box[%crd0,%crd1] predicate=%p  : !llvm.ptr<3>, !llvm.ptr
   return
 }
@@ -147,7 +147,7 @@ func.func @tma_load_2d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier
 func.func @tma_load_3d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4} ], [$5];", "r,l,r,r,r,r"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2] : !llvm.ptr<3>, !llvm.ptr
-  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "@$6 cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4}], [$5];", "l,r,r,r,r,r,b"
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$6 cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4} ], [$5];", "r,l,r,r,r,r,b"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2] predicate=%p  : !llvm.ptr<3>, !llvm.ptr
   return
 }
@@ -156,7 +156,7 @@ func.func @tma_load_3d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier
 func.func @tma_load_4d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.tensor.4d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5} ], [$6];", "r,l,r,r,r,r,r"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] : !llvm.ptr<3>, !llvm.ptr
-  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "@$7 cp.async.bulk.tensor.4d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5}], [$6];", "l,r,r,r,r,r,r,b"
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$7 cp.async.bulk.tensor.4d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5} ], [$6];", "r,l,r,r,r,r,r,b"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] predicate=%p  : !llvm.ptr<3>, !llvm.ptr
   return
 }
@@ -165,7 +165,7 @@ func.func @tma_load_4d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier
 func.func @tma_load_5d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %crd4: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.tensor.5d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5,$6} ], [$7];", "r,l,r,r,r,r,r,r"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd4] : !llvm.ptr<3>, !llvm.ptr
-  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "@$8 cp.async.bulk.tensor.5d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5,$6}], [$7];", "l,r,r,r,r,r,r,r,b"
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$8 cp.async.bulk.tensor.5d.shared::cluster.global.mbarrier::complete_tx::bytes [$0], [$1, {$2,$3,$4,$5,$6} ], [$7];", "r,l,r,r,r,r,r,r,b"
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd4] predicate=%p  : !llvm.ptr<3>, !llvm.ptr
   return
 }
@@ -329,9 +329,9 @@ func.func @wgmma_f32_f16_f16(%descA : i64, %descB : i64) -> !mat64f32{
     // CHECK-SAME: %[[V0_2]], %{{.*}}, %{{.*}}, %{{.*}}, %[[V4_2]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[V11_2]], %{{.*}}, %[[V13_2]], %{{.*}}, %{{.*}}, %[[DESCa]], %[[DESCb]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} 
   %result = llvm.mlir.undef : !mat64f32
   %result1 = nvvm.wgmma.mma_async 
-      %descA, %descB, 
+      %descA, %descB, %result,
       #nvvm.shape<m = 64, n = 32, k = 16>, 
-      D [%result, #nvvm.wgmma_scale_out<zero>],
+      D [<f32>, #nvvm.wgmma_scale_out<zero>],
       A [<f16>, #nvvm.wgmma_scale_in<neg>, <col>], 
       B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
       :!mat64f32 -> !mat64f32
@@ -339,9 +339,9 @@ func.func @wgmma_f32_f16_f16(%descA : i64, %descB : i64) -> !mat64f32{
   %descAnext = arith.addi %descA, %c2 : i64
   %descBnext = arith.addi %descB, %c2 : i64
   %result2 = nvvm.wgmma.mma_async 
-      %descAnext, %descBnext, 
+      %descAnext, %descBnext, %result1,
       #nvvm.shape<m = 64, n = 32, k = 16>, 
-      D [%result1, #nvvm.wgmma_scale_out<zero>],
+      D [<f32>, #nvvm.wgmma_scale_out<zero>],
       A [<f16>, #nvvm.wgmma_scale_in<neg>, <col>], 
       B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
       : !mat64f32 -> !mat64f32
@@ -393,23 +393,23 @@ func.func @wgmma_s32_s8_s8_satfinite(%descA : i64, %descB : i64) -> !mat16i32{
 // CHECK-SAME: wgmma.mma_async.sync.aligned.m64n8k32.s32.s8.s8.satfinite
 // CHECK-SAME: {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" 
 // CHECK-SAME: %[[V0_3]], %[[V1_3]], %[[V2_3]], %[[V3_3]], %[[ARG0]], %[[ARG1]], %{{.*}} 
-  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, %result, 
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>, <satfinite>],
       A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
-  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, %result1, 
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result1, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>, <satfinite>],
       A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
-  %result3 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result3 = nvvm.wgmma.mma_async %descA, %descB, %result2, 
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result2, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>, <satfinite>],
       A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
   return %result3 : !mat16i32
 }
@@ -454,23 +454,23 @@ func.func @wgmma_s32_u8_u8(%descA : i64, %descB : i64) -> !mat16i32 {
 // CHECK-SAME:}\0A", 
 // CHECK-SAME:"=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0_3]], %[[V1_3]], %[[V2_3]], %[[V3_3]], %[[ARG0]], %[[ARG1]], %{{.*}} 
   %result = llvm.mlir.undef : !mat16i32
-  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, %result,
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result, #nvvm.wgmma_scale_out<one>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>],
       A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
-  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, %result1,
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result1, #nvvm.wgmma_scale_out<one>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>],
       A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
-  %result3 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result3 = nvvm.wgmma.mma_async %descA, %descB, %result2,
       #nvvm.shape<m = 64, n = 8, k = 32>, 
-      D [%result2, #nvvm.wgmma_scale_out<one>],
+      D [<s32>, #nvvm.wgmma_scale_out<one>],
       A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
-      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <col>]
       : !mat16i32 -> !mat16i32
   return %result3 : !mat16i32
 }
@@ -496,17 +496,17 @@ func.func @wgmma_f32_tf32_tf32(%descA : i64, %descB : i64) -> !mat32f32 {
   // CHECK-SAME: setp.ne.b32 p, $66, 0;
   // CHECK-SAME: wgmma.mma_async.sync.aligned.m64n64k8.f32.tf32.tf32 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
   %result = llvm.mlir.undef : !mat32f32
-  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, %result,
       #nvvm.shape<m = 64, n = 64, k = 8>, 
-      D [%result, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
        : !mat32f32 -> !mat32f32
-  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, %result1,
       #nvvm.shape<m = 64, n = 64, k = 8>, 
-      D [%result1, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
       : !mat32f32 -> !mat32f32
   return %result2 : !mat32f32
 }
@@ -529,17 +529,17 @@ func.func @wgmma_f32_e4m3_e4m3(%descA : i64, %descB : i64) -> !mat32f32 {
   // CHECK-SAME: "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;
   // CHECK-SAME: wgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
   %result = llvm.mlir.undef : !mat32f32
-  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, %result,
       #nvvm.shape<m = 64, n = 64, k = 32>, 
-      D [%result, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
        : !mat32f32 -> !mat32f32
-  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, %result1,
       #nvvm.shape<m = 64, n = 64, k = 32>, 
-      D [%result1, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
       : !mat32f32 -> !mat32f32
   return %result2 : !mat32f32
 }
@@ -561,17 +561,17 @@ func.func @wgmma_f32_e5m2_e4m3(%descA : i64, %descB : i64) -> !mat32f32 {
   // CHECK-SAME: "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;
   // CHECK-SAME: wgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
   %result = llvm.mlir.undef : !mat32f32
-  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, %result,
       #nvvm.shape<m = 64, n = 64, k = 32>, 
-      D [%result, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<e5m2>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
        : !mat32f32 -> !mat32f32
-  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, %result1,
       #nvvm.shape<m = 64, n = 64, k = 32>, 
-      D [%result1, #nvvm.wgmma_scale_out<one>],
+      D [#nvvm.wgmma_type<f32>, #nvvm.wgmma_scale_out<one>],
       A [#nvvm.wgmma_type<e5m2>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
-      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<col>]
       : !mat32f32 -> !mat32f32
   return %result2 : !mat32f32
 }
@@ -599,11 +599,11 @@ func.func @elect_one_leader_sync() {
 // CHECK-SAME: %[[arg3:[a-zA-Z0-9_]+]]: i32,
 // CHECK-SAME: %[[arg4:[a-zA-Z0-9_]+]]: i32)
 llvm.func @stmatrix(%arg0 : !llvm.ptr<3>, %m1 : i32, %m2 : i32, %m3 : i32, %m4 : i32) {
-// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x1.m8n8.shared.b16 [$0], {$1}", "r,r" %[[arg0]], %[[arg1]] : (!llvm.ptr<3>, i32) -> ()
-// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x2.m8n8.shared.b16 [$0], {$1, $2}", "r,r,r" %[[arg0]], %[[arg1]], %[[arg2]] : (!llvm.ptr<3>, i32, i32) -> ()
+// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x1.m8n8.shared.b16 [$0], {$1};", "r,r" %[[arg0]], %[[arg1]] : (!llvm.ptr<3>, i32) -> ()
+// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x2.m8n8.shared.b16 [$0], {$1, $2};", "r,r,r" %[[arg0]], %[[arg1]], %[[arg2]] : (!llvm.ptr<3>, i32, i32) -> ()
 // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x4.m8n8.shared.b16 [$0], {$1, $2, $3, $4};", "r,r,r,r,r" %[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]], %[[arg4]] : (!llvm.ptr<3>, i32, i32, i32, i32) -> ()
-// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x1.trans.m8n8.shared.b16 [$0], {$1}", "r,r" %[[arg0]], %[[arg1]] : (!llvm.ptr<3>, i32) -> ()
-// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x2.trans.m8n8.shared.b16 [$0], {$1, $2}", "r,r,r" %[[arg0]], %[[arg1]], %[[arg2]] : (!llvm.ptr<3>, i32, i32) -> ()
+// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x1.trans.m8n8.shared.b16 [$0], {$1};", "r,r" %[[arg0]], %[[arg1]] : (!llvm.ptr<3>, i32) -> ()
+// CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x2.trans.m8n8.shared.b16 [$0], {$1, $2};", "r,r,r" %[[arg0]], %[[arg1]], %[[arg2]] : (!llvm.ptr<3>, i32, i32) -> ()
 // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "stmatrix.sync.aligned.x4.trans.m8n8.shared.b16 [$0], {$1, $2, $3, $4};", "r,r,r,r,r" %[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]], %[[arg4]] : (!llvm.ptr<3>, i32, i32, i32, i32) -> ()
   nvvm.stmatrix %arg0, %m1 {layout = #nvvm.mma_layout<row>} : !llvm.ptr<3>, i32
   nvvm.stmatrix %arg0, %m1, %m2 {layout = #nvvm.mma_layout<row>} : !llvm.ptr<3>, i32, i32
@@ -628,21 +628,35 @@ llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
 // -----
 
 func.func @set_max_register() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.inc.sync.aligned.u32 $0;", "n"
+  // CHECK: nvvm.setmaxregister increase 232
   nvvm.setmaxregister increase 232
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.dec.sync.aligned.u32 $0;", "n"
+
+  // CHECK: nvvm.setmaxregister decrease 40
   nvvm.setmaxregister decrease 40
   func.return
 }
 
 // -----
 
-func.func @cp_bulk_commit() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.commit_group;"
+func.func @cp_async_bulk_commit() {
+  // CHECK: nvvm.cp.async.bulk.commit.group
   nvvm.cp.async.bulk.commit.group
   func.return
 }
 
+// -----
+
+func.func @cp_async_bulk_wait_group() {
+  // CHECK: nvvm.cp.async.bulk.wait_group 1
+  // CHECK: nvvm.cp.async.bulk.wait_group 0
+  // CHECK: nvvm.cp.async.bulk.wait_group 5 {read}
+  // CHECK: nvvm.cp.async.bulk.wait_group 0 {read}
+  nvvm.cp.async.bulk.wait_group 1
+  nvvm.cp.async.bulk.wait_group 0
+  nvvm.cp.async.bulk.wait_group 5 {read}
+  nvvm.cp.async.bulk.wait_group 0 {read}
+  func.return
+}
 
 // -----
 
@@ -665,4 +679,16 @@ func.func @fence_proxy() {
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cluster;", ""  : () -> ()
   nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: @llvm_nvvm_barrier_arrive
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive 0, $0;", "r" %[[numberOfThreads]] : (i32) -> ()
+  nvvm.barrier.arrive number_of_threads = %numberOfThreads
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive $0, $1;", "r,r" %[[barId]], %[[numberOfThreads]] : (i32, i32) -> ()
+  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
+  llvm.return
 }

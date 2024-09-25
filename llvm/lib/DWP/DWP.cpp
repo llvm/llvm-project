@@ -415,6 +415,17 @@ Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info) {
   return Header;
 }
 
+static void writeNewOffsetsTo(MCStreamer &Out, DataExtractor &Data,
+                              DenseMap<uint64_t, uint32_t> &OffsetRemapping,
+                              uint64_t &Offset, uint64_t &Size) {
+
+  while (Offset < Size) {
+    auto OldOffset = Data.getU32(&Offset);
+    auto NewOffset = OffsetRemapping[OldOffset];
+    Out.emitIntValue(NewOffset, 4);
+  }
+}
+
 void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                             MCSection *StrOffsetSection,
                             StringRef CurStrSection,
@@ -439,17 +450,30 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   Out.switchSection(StrOffsetSection);
 
-  uint64_t HeaderSize = debugStrOffsetsHeaderSize(Data, Version);
   uint64_t Offset = 0;
   uint64_t Size = CurStrOffsetSection.size();
-  // FIXME: This can be caused by bad input and should be handled as such.
-  assert(HeaderSize <= Size && "StrOffsetSection size is less than its header");
-  // Copy the header to the output.
-  Out.emitBytes(Data.getBytes(&Offset, HeaderSize));
-  while (Offset < Size) {
-    auto OldOffset = Data.getU32(&Offset);
-    auto NewOffset = OffsetRemapping[OldOffset];
-    Out.emitIntValue(NewOffset, 4);
+  if (Version > 4) {
+    while (Offset < Size) {
+      uint64_t HeaderSize = debugStrOffsetsHeaderSize(Data, Version);
+      assert(HeaderSize <= Size - Offset &&
+             "StrOffsetSection size is less than its header");
+
+      uint64_t ContributionEnd = 0;
+      uint64_t ContributionSize = 0;
+      uint64_t HeaderLengthOffset = Offset;
+      if (HeaderSize == 8) {
+        ContributionSize = Data.getU32(&HeaderLengthOffset);
+      } else if (HeaderSize == 16) {
+        HeaderLengthOffset += 4; // skip the dwarf64 marker
+        ContributionSize = Data.getU64(&HeaderLengthOffset);
+      }
+      ContributionEnd = ContributionSize + HeaderLengthOffset;
+      Out.emitBytes(Data.getBytes(&Offset, HeaderSize));
+      writeNewOffsetsTo(Out, Data, OffsetRemapping, Offset, ContributionEnd);
+    }
+
+  } else {
+    writeNewOffsetsTo(Out, Data, OffsetRemapping, Offset, Size);
   }
 }
 

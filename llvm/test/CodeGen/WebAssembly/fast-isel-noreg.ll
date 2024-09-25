@@ -5,34 +5,6 @@
 
 target triple = "wasm32-unknown-unknown"
 
-; CHECK: i32.const $push0=, 0
-define hidden i32 @a() #0 {
-entry:
-  %ext = zext i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32
-  ret i32 %ext
-}
-
-; CHECK: i32.const $push0=, 1
-; CHECK: br_if 0, $pop0
-define hidden i32 @b() #0 {
-entry:
-  br i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null), label %a, label %b
-a:
-  unreachable
-b:
-  ret i32 0
-}
-
-; CHECK: i32.const $push1=, 0
-; CHECK: i32.const $push2=, 0
-; CHECK: i32.store 0($pop1), $pop2
-define hidden i32 @c() #0 {
-entry:
-  %ext = zext i1 icmp eq (ptr inttoptr (i32 10 to ptr), ptr null) to i32
-  store i32 %ext, ptr inttoptr (i32 0 to ptr)
-  ret i32 0
-}
-
 ; CHECK: i32.const {{.*}}, addr
 ; CHECK: i32.const {{.*}}, 24
 ; CHECK: i32.shl

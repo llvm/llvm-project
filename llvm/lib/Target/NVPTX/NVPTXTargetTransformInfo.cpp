@@ -180,10 +180,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::ceil, FTZ_MustBeOn};
     case Intrinsic::nvvm_fabs_d:
       return {Intrinsic::fabs, FTZ_Any};
-    case Intrinsic::nvvm_fabs_f:
-      return {Intrinsic::fabs, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fabs_ftz_f:
-      return {Intrinsic::fabs, FTZ_MustBeOn};
     case Intrinsic::nvvm_floor_d:
       return {Intrinsic::floor, FTZ_Any};
     case Intrinsic::nvvm_floor_f:
@@ -264,12 +260,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::minimum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_nan_f16x2:
       return {Intrinsic::minimum, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_round_d:
-      return {Intrinsic::round, FTZ_Any};
-    case Intrinsic::nvvm_round_f:
-      return {Intrinsic::round, FTZ_MustBeOff};
-    case Intrinsic::nvvm_round_ftz_f:
-      return {Intrinsic::round, FTZ_MustBeOn};
     case Intrinsic::nvvm_sqrt_rn_d:
       return {Intrinsic::sqrt, FTZ_Any};
     case Intrinsic::nvvm_sqrt_f:
@@ -278,10 +268,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       // the ftz-ness of the surrounding code.  sqrt_rn_f and sqrt_rn_ftz_f are
       // the versions with explicit ftz-ness.
       return {Intrinsic::sqrt, FTZ_Any};
-    case Intrinsic::nvvm_sqrt_rn_f:
-      return {Intrinsic::sqrt, FTZ_MustBeOff};
-    case Intrinsic::nvvm_sqrt_rn_ftz_f:
-      return {Intrinsic::sqrt, FTZ_MustBeOn};
     case Intrinsic::nvvm_trunc_d:
       return {Intrinsic::trunc, FTZ_Any};
     case Intrinsic::nvvm_trunc_f:
@@ -304,36 +290,21 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     case Intrinsic::nvvm_d2ull_rz:
     case Intrinsic::nvvm_f2ull_rz:
       return {Instruction::FPToUI};
-    case Intrinsic::nvvm_i2d_rz:
-    case Intrinsic::nvvm_i2f_rz:
-    case Intrinsic::nvvm_ll2d_rz:
-    case Intrinsic::nvvm_ll2f_rz:
+    // Integer to floating-point uses RN rounding, not RZ
+    case Intrinsic::nvvm_i2d_rn:
+    case Intrinsic::nvvm_i2f_rn:
+    case Intrinsic::nvvm_ll2d_rn:
+    case Intrinsic::nvvm_ll2f_rn:
       return {Instruction::SIToFP};
-    case Intrinsic::nvvm_ui2d_rz:
-    case Intrinsic::nvvm_ui2f_rz:
-    case Intrinsic::nvvm_ull2d_rz:
-    case Intrinsic::nvvm_ull2f_rz:
+    case Intrinsic::nvvm_ui2d_rn:
+    case Intrinsic::nvvm_ui2f_rn:
+    case Intrinsic::nvvm_ull2d_rn:
+    case Intrinsic::nvvm_ull2f_rn:
       return {Instruction::UIToFP};
 
     // NVVM intrinsics that map to LLVM binary ops.
-    case Intrinsic::nvvm_add_rn_d:
-      return {Instruction::FAdd, FTZ_Any};
-    case Intrinsic::nvvm_add_rn_f:
-      return {Instruction::FAdd, FTZ_MustBeOff};
-    case Intrinsic::nvvm_add_rn_ftz_f:
-      return {Instruction::FAdd, FTZ_MustBeOn};
-    case Intrinsic::nvvm_mul_rn_d:
-      return {Instruction::FMul, FTZ_Any};
-    case Intrinsic::nvvm_mul_rn_f:
-      return {Instruction::FMul, FTZ_MustBeOff};
-    case Intrinsic::nvvm_mul_rn_ftz_f:
-      return {Instruction::FMul, FTZ_MustBeOn};
     case Intrinsic::nvvm_div_rn_d:
       return {Instruction::FDiv, FTZ_Any};
-    case Intrinsic::nvvm_div_rn_f:
-      return {Instruction::FDiv, FTZ_MustBeOff};
-    case Intrinsic::nvvm_div_rn_ftz_f:
-      return {Instruction::FDiv, FTZ_MustBeOn};
 
     // The remainder of cases are NVVM intrinsics that map to LLVM idioms, but
     // need special handling.
@@ -342,10 +313,6 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // as well.
     case Intrinsic::nvvm_rcp_rn_d:
       return {SPC_Reciprocal, FTZ_Any};
-    case Intrinsic::nvvm_rcp_rn_f:
-      return {SPC_Reciprocal, FTZ_MustBeOff};
-    case Intrinsic::nvvm_rcp_rn_ftz_f:
-      return {SPC_Reciprocal, FTZ_MustBeOn};
 
       // We do not currently simplify intrinsics that give an approximate
       // answer. These include:

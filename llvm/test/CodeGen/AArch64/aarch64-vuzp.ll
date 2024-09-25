@@ -3,18 +3,18 @@
 declare <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8>, <16 x i8>)
 
 ; CHECK-LABEL: fun1:
-; CHECK: uzp1 {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+; CHECK: uzp1 {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
 define i32 @fun1() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)
-  %vuzp.i212.1 = shufflevector <16 x i8> %vtbl1.i.1, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-  %scevgep = getelementptr <8 x i8>, ptr undef, i64 1
-  store <8 x i8> %vuzp.i212.1, ptr %scevgep, align 1
+  %vuzp.i212.1 = shufflevector <16 x i8> %vtbl1.i.1, <16 x i8> %vtbl1.i.1, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  %scevgep = getelementptr <16 x i8>, ptr undef, i64 1
+  store <16 x i8> %vuzp.i212.1, ptr %scevgep, align 1
   ret i32 undef
 }
 
 ; CHECK-LABEL: fun2:
-; CHECK: uzp2 {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+; CHECK: uzp2 {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
 define i32 @fun2() {
 entry:
   %vtbl1.i.1 = tail call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> <i8 0, i8 16, i8 19, i8 4, i8 -65, i8 -65, i8 -71, i8 -71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> undef)

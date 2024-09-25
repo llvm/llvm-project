@@ -56,8 +56,8 @@ def testAttrEq():
         print("a1 == a2:", a1 == a2)
         # CHECK: a1 == a3: True
         print("a1 == a3:", a1 == a3)
-        # CHECK: a1 == None: False
-        print("a1 == None:", a1 == None)
+        # CHECK: a1 is None: False
+        print("a1 is None:", a1 is None)
 
 
 # CHECK-LABEL: TEST: testAttrHash
@@ -109,9 +109,9 @@ def testAttrEqDoesNotRaise():
         # CHECK: False
         print(a1 == not_an_attr)
         # CHECK: False
-        print(a1 == None)
+        print(a1 is None)
         # CHECK: True
-        print(a1 != None)
+        print(a1 is not None)
 
 
 # CHECK-LABEL: TEST: testAttrCapsule
@@ -156,6 +156,24 @@ def testAffineMapAttr():
 
         # CHECK: affine_map<(d0, d1)[s0, s1, s2] -> ()>
         attr_built = AffineMapAttr.get(map0)
+        print(str(attr_built))
+        assert attr_built.value == map0
+        attr_parsed = Attribute.parse(str(attr_built))
+        assert attr_built == attr_parsed
+
+
+# CHECK-LABEL: TEST: testIntegerSetAttr
+@run
+def testIntegerSetAttr():
+    with Context() as ctx:
+        d0 = AffineDimExpr.get(0)
+        d1 = AffineDimExpr.get(1)
+        s0 = AffineSymbolExpr.get(0)
+        c42 = AffineConstantExpr.get(42)
+        set0 = IntegerSet.get(2, 1, [d0 - d1, s0 - c42], [True, False])
+
+        # CHECK: affine_set<(d0, d1)[s0] : (d0 - d1 == 0, s0 - 42 >= 0)>
+        attr_built = IntegerSetAttr.get(set0)
         print(str(attr_built))
 
         attr_parsed = Attribute.parse(str(attr_built))
@@ -514,7 +532,7 @@ def testDictAttr():
 
         a = DictAttr.get(dict_attr)
 
-        # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+        # CHECK: attr: {integerattr = 42 : i32, stringattr = "string"}
         print("attr:", a)
 
         assert len(a) == 2
@@ -546,7 +564,7 @@ def testDictAttr():
         else:
             assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
-        # CHECK "empty: {}"
+        # CHECK: empty: {}
         print("empty: ", DictAttr.get())
 
 

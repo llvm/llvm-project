@@ -17,6 +17,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
@@ -41,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
@@ -89,6 +91,15 @@ public:
   /// \return
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics();
+
+  /// Returns a dump of the collected statistics.
+  ///
+  /// \param[in] options
+  ///   An objects object that contains all options for the statistics dumping.
+  ///
+  /// \return
+  ///     A SBStructuredData with the statistics collected.
+  lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
   /// Return the platform object associated with the target.
   ///
@@ -868,6 +879,10 @@ public:
                                            uint32_t count,
                                            const char *flavor_string);
 
+  lldb::SBInstructionList ReadInstructions(lldb::SBAddress start_addr,
+                                           lldb::SBAddress end_addr,
+                                           const char *flavor_string);
+
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
                                           const void *buf, size_t size);
 
@@ -928,6 +943,7 @@ public:
 
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointList;
@@ -943,6 +959,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
 

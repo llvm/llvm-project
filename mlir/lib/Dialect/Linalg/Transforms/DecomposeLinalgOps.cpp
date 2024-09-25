@@ -258,7 +258,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   // TODO: this could be generalized to handle `linalg.generic` with buffer
   // operands too but requires allocation for intermediates. Punt on this for
   // now.
-  if (!genericOp.hasTensorSemantics()) {
+  if (!genericOp.hasPureTensorSemantics()) {
     return rewriter.notifyMatchFailure(
         genericOp, "only operations with tensor semantics are handled");
   }
@@ -370,8 +370,8 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
       scalarReplacements.push_back(
           residualGenericOpBody->getArgument(num + origNumInputs));
     bool allUsesReplaced = false;
-    rewriter.replaceOpWithinBlock(peeledScalarOperation, scalarReplacements,
-                                  residualGenericOpBody, &allUsesReplaced);
+    rewriter.replaceOpUsesWithinBlock(peeledScalarOperation, scalarReplacements,
+                                      residualGenericOpBody, &allUsesReplaced);
     assert(!allUsesReplaced &&
            "peeled scalar operation is erased when it wasnt expected to be");
   }

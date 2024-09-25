@@ -34,9 +34,16 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
     return true;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
-  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
+  // On Gentoo, the path is g++-*, so there's *not* a missing /.
+  if (file && (internal_strstr(file, "/compiler-rt/lib/") ||
+               internal_strstr(file, "/include/c++/") ||
+               internal_strstr(file, "/include/g++")))
+    return true;
+  if (file && internal_strstr(file, "\\compiler-rt\\lib\\"))
     return true;
   if (module && (internal_strstr(module, "libclang_rt.")))
+    return true;
+  if (module && (internal_strstr(module, "clang_rt.")))
     return true;
   return false;
 }
@@ -95,17 +102,33 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;
-  if (stack->size == 0) {
-    ReportErrorSummary(error_type);
-    return;
+
+  // Find first non-internal stack frame.
+  for (uptr i = 0; i < stack->size; ++i) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[i]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      if (const SymbolizedStack *summary_frame = SkipInternalFrames(frame)) {
+        ReportErrorSummary(error_type, summary_frame->info, alt_tool_name);
+        return;
+      }
+    }
   }
-  // Currently, we include the first stack frame into the report summary.
-  // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
-  uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStackHolder symbolized_stack(
-      Symbolizer::GetOrInit()->SymbolizePC(pc));
-  const SymbolizedStack *frame = symbolized_stack.get();
-  ReportErrorSummary(error_type, frame->info, alt_tool_name);
+
+  // Fallback to the top one.
+  if (stack->size) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      ReportErrorSummary(error_type, frame->info, alt_tool_name);
+      return;
+    }
+  }
+
+  // Fallback to a summary without location.
+  ReportErrorSummary(error_type);
 #endif
 }
 
@@ -204,12 +227,15 @@ static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
          SanitizerToolName, kDescription, (void *)sig.addr, (void *)sig.pc,
          (void *)sig.bp, (void *)sig.sp, tid);
   Printf("%s", d.Default());
-  InternalMmapVector<BufferedStackTrace> stack_buffer(1);
-  BufferedStackTrace *stack = stack_buffer.data();
-  stack->Reset();
-  unwind(sig, unwind_context, stack);
-  stack->Print();
-  ReportErrorSummary(kDescription, stack);
+  // Avoid SEGVs in the unwinder when bp couldn't be determined.
+  if (sig.bp) {
+    InternalMmapVector<BufferedStackTrace> stack_buffer(1);
+    BufferedStackTrace *stack = stack_buffer.data();
+    stack->Reset();
+    unwind(sig, unwind_context, stack);
+    stack->Print();
+    ReportErrorSummary(kDescription, stack);
+  }
 }
 
 static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,

@@ -56,8 +56,10 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
+class ConstantRangeAttributeImpl;
+class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
-class DPMarker;
+class DbgMarker;
 class ElementCount;
 class Function;
 class GlobalObject;
@@ -440,7 +442,7 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
   bool IsUnsigned;
 
   MDNodeKeyImpl(APInt Value, bool IsUnsigned, MDString *Name)
-      : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
+      : Value(std::move(Value)), Name(Name), IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
       : Value(APInt(64, Value, !IsUnsigned)), Name(Name),
         IsUnsigned(IsUnsigned) {}
@@ -539,6 +541,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   uint64_t OffsetInBits;
   uint32_t AlignInBits;
   std::optional<unsigned> DWARFAddressSpace;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   unsigned Flags;
   Metadata *ExtraData;
   Metadata *Annotations;
@@ -546,18 +549,21 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
-                std::optional<unsigned> DWARFAddressSpace, unsigned Flags,
-                Metadata *ExtraData, Metadata *Annotations)
+                std::optional<unsigned> DWARFAddressSpace,
+                std::optional<DIDerivedType::PtrAuthData> PtrAuthData,
+                unsigned Flags, Metadata *ExtraData, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
-        Flags(Flags), ExtraData(ExtraData), Annotations(Annotations) {}
+        PtrAuthData(PtrAuthData), Flags(Flags), ExtraData(ExtraData),
+        Annotations(Annotations) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
-        DWARFAddressSpace(N->getDWARFAddressSpace()), Flags(N->getFlags()),
+        DWARFAddressSpace(N->getDWARFAddressSpace()),
+        PtrAuthData(N->getPtrAuthData()), Flags(N->getFlags()),
         ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
@@ -568,7 +574,8 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            AlignInBits == RHS->getAlignInBits() &&
            OffsetInBits == RHS->getOffsetInBits() &&
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
-           Flags == RHS->getFlags() && ExtraData == RHS->getRawExtraData() &&
+           PtrAuthData == RHS->getPtrAuthData() && Flags == RHS->getFlags() &&
+           ExtraData == RHS->getRawExtraData() &&
            Annotations == RHS->getRawAnnotations();
   }
 
@@ -819,19 +826,26 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
 
   unsigned getHashValue() const {
+    // Use the Scope's linkage name instead of using the scope directly, as the
+    // scope may be a temporary one which can replaced, which would produce a
+    // different hash for the same DISubprogram.
+    llvm::StringRef ScopeLinkageName;
+    if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *ID = CT->getRawIdentifier())
+        ScopeLinkageName = ID->getString();
+
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!isDefinition() && LinkageName)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
-        if (CT->getRawIdentifier())
-          return hash_combine(LinkageName, Scope);
+    if (!isDefinition() && LinkageName &&
+        isa_and_nonnull<DICompositeType>(Scope))
+      return hash_combine(LinkageName, ScopeLinkageName);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Name, Scope, File, Type, Line);
+    return hash_combine(Name, ScopeLinkageName, File, Type, Line);
   }
 };
 
@@ -1444,6 +1458,10 @@ public:
   /// will be automatically deleted if this context is deleted.
   SmallPtrSet<Module *, 4> OwnedModules;
 
+  /// MachineFunctionNums - Keep the next available unique number available for
+  /// a MachineFunction in given module. Module must in OwnedModules.
+  DenseMap<Module *, unsigned> MachineFunctionNums;
+
   /// The main remark streamer used by all the other streamers (e.g. IR, MIR,
   /// frontends, etc.). This should only be used by the specific streamers, and
   /// never directly.
@@ -1488,8 +1506,12 @@ public:
   DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
   DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
   DenseMap<APInt, std::unique_ptr<ConstantInt>> IntConstants;
+  DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantInt>>
+      IntSplatConstants;
 
   DenseMap<APFloat, std::unique_ptr<ConstantFP>> FPConstants;
+  DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
+      FPSplatConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
@@ -1512,6 +1534,13 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since this is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
 
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 
@@ -1541,6 +1570,8 @@ public:
 
   DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
 
+  ConstantUniqueMap<ConstantPtrAuth> ConstantPtrAuths;
+
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
   ConstantUniqueMap<InlineAsm> InlineAsms;
@@ -1551,13 +1582,15 @@ public:
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
-  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
+  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
   BumpPtrAllocator Alloc;
   UniqueStringSaver Saver{Alloc};
+  SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
+      ConstantRangeAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
@@ -1575,7 +1608,6 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   PointerType *AS0PointerType = nullptr; // AddrSpace = 0
   DenseMap<unsigned, PointerType *> PointerTypes;
-  DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;
   DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
@@ -1663,35 +1695,36 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate &);
 
-  /// Mapping of blocks to collections of "trailing" DPValues. As part of the
-  /// "RemoveDIs" project, debug-info variable location records are going to
-  /// cease being instructions... which raises the problem of where should they
-  /// be recorded when we remove the terminator of a blocks, such as:
+  /// Mapping of blocks to collections of "trailing" DbgVariableRecords. As part
+  /// of the "RemoveDIs" project, debug-info variable location records are going
+  /// to cease being instructions... which raises the problem of where should
+  /// they be recorded when we remove the terminator of a blocks, such as:
   ///
   ///    %foo = add i32 0, 0
   ///    br label %bar
   ///
   /// If the branch is removed, a legitimate transient state while editing a
   /// block, any debug-records between those two instructions will not have a
-  /// location. Each block thus records any DPValue records that "trail" in
-  /// such a way. These are stored in LLVMContext because typically LLVM only
-  /// edits a small number of blocks at a time, so there's no need to bloat
-  /// BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDPValues;
+  /// location. Each block thus records any DbgVariableRecord records that
+  /// "trail" in such a way. These are stored in LLVMContext because typically
+  /// LLVM only edits a small number of blocks at a time, so there's no need to
+  /// bloat BasicBlock with such a data structure.
+  SmallDenseMap<BasicBlock *, DbgMarker *> TrailingDbgRecords;
 
-  // Set, get and delete operations for TrailingDPValues.
-  void setTrailingDPValues(BasicBlock *B, DPMarker *M) {
-    assert(!TrailingDPValues.count(B));
-    TrailingDPValues[B] = M;
+  // Set, get and delete operations for TrailingDbgRecords.
+  void setTrailingDbgRecords(BasicBlock *B, DbgMarker *M) {
+    assert(!TrailingDbgRecords.count(B));
+    TrailingDbgRecords[B] = M;
   }
 
-  DPMarker *getTrailingDPValues(BasicBlock *B) {
-    return TrailingDPValues.lookup(B);
+  DbgMarker *getTrailingDbgRecords(BasicBlock *B) {
+    return TrailingDbgRecords.lookup(B);
   }
 
-  void deleteTrailingDPValues(BasicBlock *B) {
-    TrailingDPValues.erase(B);
-  }
+  void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
+
+  std::string DefaultTargetCPU;
+  std::string DefaultTargetFeatures;
 };
 
 } // end namespace llvm

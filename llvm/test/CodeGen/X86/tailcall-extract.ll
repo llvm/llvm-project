@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
-; RUN: opt -codegenprepare -S -mtriple=x86_64-linux < %s | FileCheck %s --check-prefix OPT
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64-linux < %s | FileCheck %s --check-prefix OPT
 
 
 ; The exit block containing extractvalue can be duplicated into the BB

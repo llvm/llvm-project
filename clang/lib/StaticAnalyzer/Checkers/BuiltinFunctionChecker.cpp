@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This checker evaluates clang builtin functions.
+// This checker evaluates "standalone" clang builtin functions that are not
+// just special-cased variants of well-known non-builtin functions.
+// Builtin functions like __builtin_memcpy and __builtin_alloca should be
+// evaluated by the same checker that handles their non-builtin variant to
+// ensure that the two variants are handled consistently.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +18,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
@@ -26,8 +31,40 @@ namespace {
 class BuiltinFunctionChecker : public Checker<eval::Call> {
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+
+private:
+  // From: clang/include/clang/Basic/Builtins.def
+  // C++ standard library builtins in namespace 'std'.
+  const CallDescriptionSet BuiltinLikeStdFunctions{
+      {CDM::SimpleFunc, {"std", "addressof"}},        //
+      {CDM::SimpleFunc, {"std", "__addressof"}},      //
+      {CDM::SimpleFunc, {"std", "as_const"}},         //
+      {CDM::SimpleFunc, {"std", "forward"}},          //
+      {CDM::SimpleFunc, {"std", "forward_like"}},     //
+      {CDM::SimpleFunc, {"std", "move"}},             //
+      {CDM::SimpleFunc, {"std", "move_if_noexcept"}}, //
+  };
+
+  bool isBuiltinLikeFunction(const CallEvent &Call) const;
 };
 
+} // namespace
+
+bool BuiltinFunctionChecker::isBuiltinLikeFunction(
+    const CallEvent &Call) const {
+  const auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  if (!FD || FD->getNumParams() != 1)
+    return false;
+
+  if (QualType RetTy = FD->getReturnType();
+      !RetTy->isPointerType() && !RetTy->isReferenceType())
+    return false;
+
+  if (QualType ParmTy = FD->getParamDecl(0)->getType();
+      !ParmTy->isPointerType() && !ParmTy->isReferenceType())
+    return false;
+
+  return BuiltinLikeStdFunctions.contains(Call);
 }
 
 bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
@@ -40,11 +77,17 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   const LocationContext *LCtx = C.getLocationContext();
   const Expr *CE = Call.getOriginExpr();
 
+  if (isBuiltinLikeFunction(Call)) {
+    C.addTransition(state->BindExpr(CE, LCtx, Call.getArgSVal(0)));
+    return true;
+  }
+
   switch (FD->getBuiltinID()) {
   default:
     return false;
 
-  case Builtin::BI__builtin_assume: {
+  case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume: {
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     if (Arg.isUndef())
@@ -76,25 +119,6 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     assert (Call.getNumArgs() > 0);
     SVal Arg = Call.getArgSVal(0);
     C.addTransition(state->BindExpr(CE, LCtx, Arg));
-    return true;
-  }
-
-  case Builtin::BI__builtin_alloca_with_align:
-  case Builtin::BI__builtin_alloca: {
-    SValBuilder &SVB = C.getSValBuilder();
-    const loc::MemRegionVal R =
-        SVB.getAllocaRegionVal(CE, C.getLocationContext(), C.blockCount());
-
-    // Set the extent of the region in bytes. This enables us to use the SVal
-    // of the argument directly. If we saved the extent in bits, it'd be more
-    // difficult to reason about values like symbol*8.
-    auto Size = Call.getArgSVal(0);
-    if (auto DefSize = Size.getAs<DefinedOrUnknownSVal>()) {
-      // This `getAs()` is mostly paranoia, because core.CallAndMessage reports
-      // undefined function arguments (unless it's disabled somehow).
-      state = setDynamicExtent(state, R.getRegion(), *DefSize, SVB);
-    }
-    C.addTransition(state->BindExpr(CE, LCtx, R));
     return true;
   }
 

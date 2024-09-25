@@ -2689,7 +2689,7 @@ void __kmp_spin_backoff(kmp_backoff_t *boff) {
 // lock word.
 static void __kmp_init_direct_lock(kmp_dyna_lock_t *lck,
                                    kmp_dyna_lockseq_t seq) {
-  TCW_4(*lck, KMP_GET_D_TAG(seq));
+  TCW_4(((kmp_base_tas_lock_t *)lck)->poll, KMP_GET_D_TAG(seq));
   KA_TRACE(
       20,
       ("__kmp_init_direct_lock: initialized direct lock with type#%d\n", seq));
@@ -3180,8 +3180,8 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
   lck->type = tag;
 
   if (OMP_LOCK_T_SIZE < sizeof(void *)) {
-    *((kmp_lock_index_t *)user_lock) = idx
-                                       << 1; // indirect lock word must be even
+    *(kmp_lock_index_t *)&(((kmp_base_tas_lock_t *)user_lock)->poll) =
+        idx << 1; // indirect lock word must be even
   } else {
     *((kmp_indirect_lock_t **)user_lock) = lck;
   }

@@ -11,7 +11,9 @@
 
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -53,11 +55,32 @@ struct RenameInputs {
 struct RenameResult {
   // The range of the symbol that the user can attempt to rename.
   Range Target;
+  // Placeholder text for the rename operation if non-empty.
+  std::string Placeholder;
   // Rename occurrences for the current main file.
   std::vector<Range> LocalChanges;
   // Complete edits for the rename, including LocalChanges.
   // If the full set of changes is unknown, this field is empty.
   FileEdits GlobalChanges;
+};
+
+/// Represents a symbol range where the symbol can potentially have multiple
+/// tokens.
+struct SymbolRange {
+  /// Ranges for the tokens that make up the symbol's name.
+  /// Usually a single range, but there can be multiple ranges if the tokens for
+  /// the symbol are split, e.g. ObjC selectors.
+  std::vector<Range> Ranges;
+
+  SymbolRange(Range R);
+  SymbolRange(std::vector<Range> Ranges);
+
+  /// Returns the first range.
+  Range range() const;
+
+  friend bool operator==(const SymbolRange &LHS, const SymbolRange &RHS);
+  friend bool operator!=(const SymbolRange &LHS, const SymbolRange &RHS);
+  friend bool operator<(const SymbolRange &LHS, const SymbolRange &RHS);
 };
 
 /// Renames all occurrences of the symbol. The result edits are unformatted.
@@ -71,8 +94,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs);
 /// REQUIRED: Occurrences is sorted and doesn't have duplicated ranges.
 llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
                                      llvm::StringRef InitialCode,
-                                     std::vector<Range> Occurrences,
-                                     llvm::StringRef NewName);
+                                     std::vector<SymbolRange> Occurrences,
+                                     llvm::ArrayRef<llvm::StringRef> NewNames);
 
 /// Adjusts indexed occurrences to match the current state of the file.
 ///
@@ -84,9 +107,10 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 /// The API assumes that Indexed contains only named occurrences (each
 /// occurrence has the same length).
 /// REQUIRED: Indexed is sorted.
-std::optional<std::vector<Range>>
+std::optional<std::vector<SymbolRange>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
-                   std::vector<Range> Indexed, const LangOptions &LangOpts);
+                   std::vector<Range> Indexed, const LangOptions &LangOpts,
+                   std::optional<Selector> Selector);
 
 /// Calculates the lexed occurrences that the given indexed occurrences map to.
 /// Returns std::nullopt if we don't find a mapping.
@@ -94,15 +118,16 @@ adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
 /// Exposed for testing only.
 ///
 /// REQUIRED: Indexed and Lexed are sorted.
-std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
-                                                  ArrayRef<Range> Lexed);
+std::optional<std::vector<SymbolRange>>
+getMappedRanges(ArrayRef<Range> Indexed, ArrayRef<SymbolRange> Lexed);
 /// Evaluates how good the mapped result is. 0 indicates a perfect match.
 ///
 /// Exposed for testing only.
 ///
 /// REQUIRED: Indexed and Lexed are sorted, Indexed and MappedIndex have the
 /// same size.
-size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
+size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed,
+                                 ArrayRef<SymbolRange> Lexed,
                                  ArrayRef<size_t> MappedIndex);
 
 } // namespace clangd

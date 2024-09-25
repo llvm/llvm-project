@@ -655,3 +655,93 @@ body:             |
     PseudoRET implicit $x10, implicit $x11
 
 ...
+---
+name:            udivrem_i64
+body:             |
+  bb.1.entry:
+    liveins: $x10, $x11
+
+    ; CHECK-I-LABEL: name: udivrem_i64
+    ; CHECK-I: liveins: $x10, $x11
+    ; CHECK-I-NEXT: {{  $}}
+    ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: $x10 = COPY [[COPY]](s64)
+    ; CHECK-I-NEXT: $x11 = COPY [[COPY1]](s64)
+    ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__udivdi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: $x10 = COPY [[COPY]](s64)
+    ; CHECK-I-NEXT: $x11 = COPY [[COPY1]](s64)
+    ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__umoddi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY2]], [[COPY3]]
+    ; CHECK-I-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-I-NEXT: PseudoRET implicit $x10
+    ;
+    ; CHECK-M-LABEL: name: udivrem_i64
+    ; CHECK-M: liveins: $x10, $x11
+    ; CHECK-M-NEXT: {{  $}}
+    ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s64) = G_UREM [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[UDIV]], [[UREM]]
+    ; CHECK-M-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-M-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64), %3:_(s64) = G_UDIVREM %0, %1
+    %4:_(s64) = G_ADD %2, %3
+    $x10 = COPY %4(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            sdivrem_i64
+body:             |
+  bb.1.entry:
+    liveins: $x10, $x11
+
+    ; CHECK-I-LABEL: name: sdivrem_i64
+    ; CHECK-I: liveins: $x10, $x11
+    ; CHECK-I-NEXT: {{  $}}
+    ; CHECK-I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: $x10 = COPY [[COPY]](s64)
+    ; CHECK-I-NEXT: $x11 = COPY [[COPY1]](s64)
+    ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__divdi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: $x10 = COPY [[COPY]](s64)
+    ; CHECK-I-NEXT: $x11 = COPY [[COPY1]](s64)
+    ; CHECK-I-NEXT: PseudoCALL target-flags(riscv-call) &__moddi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-I-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-I-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY2]], [[COPY3]]
+    ; CHECK-I-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-I-NEXT: PseudoRET implicit $x10
+    ;
+    ; CHECK-M-LABEL: name: sdivrem_i64
+    ; CHECK-M: liveins: $x10, $x11
+    ; CHECK-M-NEXT: {{  $}}
+    ; CHECK-M-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s64) = G_SDIV [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: [[SREM:%[0-9]+]]:_(s64) = G_SREM [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[SDIV]], [[SREM]]
+    ; CHECK-M-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-M-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64), %3:_(s64) = G_SDIVREM %0, %1
+    %4:_(s64) = G_ADD %2, %3
+    $x10 = COPY %4(s64)
+    PseudoRET implicit $x10
+
+...

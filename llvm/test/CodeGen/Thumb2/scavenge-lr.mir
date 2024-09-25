@@ -29,42 +29,42 @@
 
   %S = type { [32 x i8] }
 
-  define void @f(%S* %arg) {
+  define void @f(ptr %arg) {
   entry:
-    %ppp..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -8
-    %ppp..sroa_cast248 = bitcast %S* %ppp..sroa_idx to <8 x float>*
-    %ppp.copyload = load <8 x float>, <8 x float>* %ppp..sroa_cast248, align 32
+    %ppp..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -8
+    %ppp..sroa_cast248 = bitcast ptr %ppp..sroa_idx to ptr
+    %ppp.copyload = load <8 x float>, ptr %ppp..sroa_cast248, align 32
 
-    %xxx..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -5
-    %xxx..sroa_cast248 = bitcast %S* %xxx..sroa_idx to <8 x float>*
-    %xxx.copyload = load <8 x float>, <8 x float>* %xxx..sroa_cast248, align 32
+    %xxx..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -5
+    %xxx..sroa_cast248 = bitcast ptr %xxx..sroa_idx to ptr
+    %xxx.copyload = load <8 x float>, ptr %xxx..sroa_cast248, align 32
 
-    %yyy..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -2
-    %yyy..sroa_cast244 = bitcast %S* %yyy..sroa_idx to <8 x float>*
-    %yyy.copyload = load <8 x float>, <8 x float>* %yyy..sroa_cast244, align 32
+    %yyy..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -2
+    %yyy..sroa_cast244 = bitcast ptr %yyy..sroa_idx to ptr
+    %yyy.copyload = load <8 x float>, ptr %yyy..sroa_cast244, align 32
 
-    %zzz..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -7
-    %zzz..sroa_cast241 = bitcast %S* %zzz..sroa_idx to <8 x float>*
-    %zzz.copyload = load <8 x float>, <8 x float>* %zzz..sroa_cast241, align 32
+    %zzz..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -7
+    %zzz..sroa_cast241 = bitcast ptr %zzz..sroa_idx to ptr
+    %zzz.copyload = load <8 x float>, ptr %zzz..sroa_cast241, align 32
 
-    %www..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -4
-    %www..sroa_cast238 = bitcast %S* %www..sroa_idx to <8 x float>*
-    %www.copyload = load <8 x float>, <8 x float>* %www..sroa_cast238, align 32
+    %www..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -4
+    %www..sroa_cast238 = bitcast ptr %www..sroa_idx to ptr
+    %www.copyload = load <8 x float>, ptr %www..sroa_cast238, align 32
 
-    %uuu..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 1
-    %uuu..sroa_cast235 = bitcast %S* %uuu..sroa_idx to <8 x float>*
-    %uuu.copyload = load <8 x float>, <8 x float>* %uuu..sroa_cast235, align 32
+    %uuu..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 1
+    %uuu..sroa_cast235 = bitcast ptr %uuu..sroa_idx to ptr
+    %uuu.copyload = load <8 x float>, ptr %uuu..sroa_cast235, align 32
 
-    %vvv..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -6
-    %vvv..sroa_cast230 = bitcast %S* %vvv..sroa_idx to <8 x float>*
-    %vvv.copyload = load <8 x float>, <8 x float>* %vvv..sroa_cast230, align 32
+    %vvv..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -6
+    %vvv..sroa_cast230 = bitcast ptr %vvv..sroa_idx to ptr
+    %vvv.copyload = load <8 x float>, ptr %vvv..sroa_cast230, align 32
 
-    %ttt..sroa_idx = getelementptr inbounds %S, %S* %arg, i32 -3
-    %ttt..sroa_cast226 = bitcast %S* %ttt..sroa_idx to <8 x float>*
-    %ttt.copyload = load <8 x float>, <8 x float>* %ttt..sroa_cast226, align 32
+    %ttt..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -3
+    %ttt..sroa_cast226 = bitcast ptr %ttt..sroa_idx to ptr
+    %ttt.copyload = load <8 x float>, ptr %ttt..sroa_cast226, align 32
 
-    %sss..sroa_cast223 = bitcast %S* %arg to <8 x float>*
-    %sss.copyload = load <8 x float>, <8 x float>* %sss..sroa_cast223, align 32
+    %sss..sroa_cast223 = bitcast ptr %arg to ptr
+    %sss.copyload = load <8 x float>, ptr %sss..sroa_cast223, align 32
 
     %mul.i = fmul <8 x float> %ppp.copyload, %www.copyload
     %mul.i185 = fmul <8 x float> %xxx.copyload, %uuu.copyload
@@ -75,31 +75,31 @@
     %div.i = fdiv <8 x float> zeroinitializer, %add.i
     %mul.i153 = fmul <8 x float> %uuu.copyload, %div.i
 
-    store <8 x float> %mul.i153, <8 x float>* %ppp..sroa_cast248, align 32
+    store <8 x float> %mul.i153, ptr %ppp..sroa_cast248, align 32
 
     %mul.i147 = fmul <8 x float> %uuu.copyload, %vvv.copyload
     %mul.i141 = fmul <8 x float> %zzz.copyload, %sss.copyload
     %mul.i135 = fmul <8 x float> %mul.i141, %div.i
     %sub.i129 = fsub <8 x float> %mul.i147, %mul.i135
 
-    store <8 x float> %sub.i129, <8 x float>* %zzz..sroa_cast241, align 32
-    store <8 x float> %div.i, <8 x float>* %vvv..sroa_cast230, align 32
-    store <8 x float> %div.i, <8 x float>* %xxx..sroa_cast248, align 32
+    store <8 x float> %sub.i129, ptr %zzz..sroa_cast241, align 32
+    store <8 x float> %div.i, ptr %vvv..sroa_cast230, align 32
+    store <8 x float> %div.i, ptr %xxx..sroa_cast248, align 32
 
     %mul.i123 = fmul <8 x float> %yyy.copyload, %vvv.copyload
     %mul.i117 = fmul <8 x float> %mul.i123, %div.i
     %sub.i111 = fsub <8 x float> %sss.copyload, %mul.i117
-    store <8 x float> %sub.i111, <8 x float>* %www..sroa_cast238, align 32
+    store <8 x float> %sub.i111, ptr %www..sroa_cast238, align 32
 
     %mul.i105 = fmul <8 x float> %ppp.copyload, %ttt.copyload
     %mul.i99 = fmul <8 x float> %mul.i105, %div.i
     %sub.i93 = fsub <8 x float> %xxx.copyload, %mul.i99
-    store <8 x float> %sub.i93, <8 x float>* %ttt..sroa_cast226, align 32
+    store <8 x float> %sub.i93, ptr %ttt..sroa_cast226, align 32
 
     %mul.i81 = fmul <8 x float> %yyy.copyload, %www.copyload
     %mul.i75 = fmul <8 x float> %mul.i81, %div.i
     %sub.i = fsub <8 x float> %mul.i185, %mul.i75
-    store <8 x float> %sub.i, <8 x float>* %yyy..sroa_cast244, align 32
+    store <8 x float> %sub.i, ptr %yyy..sroa_cast244, align 32
 
     ret void
   }

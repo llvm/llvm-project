@@ -1,4 +1,6 @@
 ! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false --enable-constant-argument-globalisation %s -o - \
+! RUN:    | FileCheck %s --check-prefix=CHECK-CONST
 
 ! Test lowering of local character variables
 
@@ -118,7 +120,8 @@ subroutine assumed_length_param(n)
   integer :: n
   ! CHECK: %[[c4:.*]] = arith.constant 4 : i64
   ! CHECK: fir.store %[[c4]] to %[[tmp:.*]] : !fir.ref<i64>
-  ! CHECK: fir.call @_QPtake_int(%[[tmp]]) {{.*}}: (!fir.ref<i64>) -> ()
+  ! CHECK-CONST: %[[tmp:.*]] = fir.address_of(@_global_const_.{{.*}}) : !fir.ref<i64>
+  ! CHECK-CONST: fir.call @_QPtake_int(%[[tmp]]) {{.*}}: (!fir.ref<i64>) -> ()
   call take_int(len(c(n), kind=8))
 end
 

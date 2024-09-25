@@ -1,0 +1,28 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import os
+import platform
+import re
+import shlex
+
+# Load common config for all compiler-rt unit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
+
+# Setup config name.
+config.name = 'CtxProfile-Unit'
+config.target_arch = "@arch@"
+assert config.target_arch == 'x86_64'
+
+config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@",
+                                     "lib", "ctx_profile", "tests")
+
+config.test_source_root = config.test_exec_root
+
+# When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
+# config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
+# host triple as the trailing path component. The value is incorrect for i386
+# tests on x86_64 hosts and vice versa. But, since only x86_64 is enabled as
+# target, and we don't support different environments for building and,
+# respectively, running tests, we we only need to fix up the x86_64 case.
+if config.enable_per_target_runtime_dir and config.target_arch != config.host_arch:
+    config.compiler_rt_libdir = re.sub(r'/i386(?=-[^/]+$)', '/x86_64', config.compiler_rt_libdir)

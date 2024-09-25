@@ -20,6 +20,7 @@
 #ifndef NVGPU
 #define NVGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -109,10 +110,22 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
+def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
+def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;
+def RcpRM     : I32EnumAttrCase<"RM", 3, "rm">;
+def RcpRP     : I32EnumAttrCase<"RP", 4, "rp">;
+def RcpRoundingMode   : I32EnumAttr<"RcpRoundingMode", "Rounding mode of rcp",
+  [RcpApprox, RcpRN, RcpRZ, RcpRM, RcpRP]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
 def TensorMapSwizzleAttr : EnumAttr<NVGPU_Dialect, TensorMapSwizzleKind, "swizzle">;
 def TensorMapL2PromoAttr : EnumAttr<NVGPU_Dialect, TensorMapL2PromoKind, "l2promo">;
 def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
+def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
 
 //===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
@@ -609,14 +622,16 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
     phase. Suspended thread resumes execution when the specified phase completes 
     OR before the phase completes following a system-dependent time limit. 
 
+    The `$phaseParity` specifies either even phase (0) or odd phase (1) to 
+    wait.
+
     Example:
     ```mlir
-      nvgpu.mbarrier.try_wait.parity %barrier, %phase, %ticks : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+      nvgpu.mbarrier.try_wait.parity %barrier, %phaseParity, %ticks : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
-
   }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$phase, Index:$ticks, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, I1:$phaseParity, Index:$ticks, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phaseParity `,` $ticks attr-dict `:` type($barriers)";  
 }
 
 def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
@@ -659,6 +674,28 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
   }];
   let hasVerifier = 1;
 
+}
+
+def NVGPU_TmaAsyncStoreOp : NVGPU_Op<"tma.async.store", [AttrSizedOperandSegments]> {
+  let summary = "TMA asynchronous store";
+  let description = [{
+    The Op store a tile memory region from global memory to shared memory by 
+    Tensor Memory Access (TMA).
+    
+    `$tensorMapDescriptor` is tensor map descriptor which has information about
+    tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
+  }];  
+  let arguments = (ins  Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
+                        Arg<NVGPU_TensorMapDescriptor, "", [MemWriteAt<0, FullEffect>]>:$tensorMapDescriptor,
+                        Variadic<Index>:$coordinates, 
+                        Optional<I1>:$predicate);
+  let assemblyFormat = [{
+      $src `to` $tensorMapDescriptor `[` $coordinates `]`
+      (`,` `predicate` `=` $predicate^)?
+      attr-dict `:` type($src)
+      `->` type($tensorMapDescriptor)
+  }];
+  let hasVerifier = 1;
 }
 
 def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
@@ -778,4 +815,24 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   let hasVerifier = 1;
 }
 
+def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
+                                   SameOperandsAndResultType]> {
+  let summary = "The reciprocal calculation for vector types";
+  let description = [{
+    Reciprocal calculation for `vector` types using `nvvm.rcp` OPs.
+
+    Currently, only the `approx` rounding mode and `ftz` are supported, and only for the `f32` type.
+
+    The input and output must be of the same vector type and shape.
+  }];
+  let arguments = (ins VectorOf<[F32]>:$in,
+                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
+                       UnitAttr:$ftz);
+  let results = (outs VectorOf<[F32]>:$out);
+  let assemblyFormat = [{
+    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
+    attr-dict `:` type($out)
+  }];
+  let hasVerifier = 1;
+}
 #endif // NVGPU

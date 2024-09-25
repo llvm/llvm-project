@@ -57,7 +57,23 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   auto VPID = VPIntrinsic::getForOpcode(Opcode);
   if (VPID == Intrinsic::not_intrinsic)
     return returnWithError<Value *>("No VPIntrinsic for this opcode");
+  return createVectorInstructionImpl(VPID, ReturnTy, InstOpArray, Name);
+}
 
+Value *VectorBuilder::createSimpleReduction(Intrinsic::ID RdxID,
+                                            Type *ValTy,
+                                            ArrayRef<Value *> InstOpArray,
+                                            const Twine &Name) {
+  auto VPID = VPIntrinsic::getForIntrinsic(RdxID);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
+}
+
+Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
+                                                  Type *ReturnTy,
+                                                  ArrayRef<Value *> InstOpArray,
+                                                  const Twine &Name) {
   auto MaskPosOpt = VPIntrinsic::getMaskParamPos(VPID);
   auto VLenPosOpt = VPIntrinsic::getVectorLengthParamPos(VPID);
   size_t NumInstParams = InstOpArray.size();
@@ -80,8 +96,7 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
     // Insert mask and evl operands in between the instruction operands.
     for (size_t VPParamIdx = 0, ParamIdx = 0; VPParamIdx < NumVPParams;
          ++VPParamIdx) {
-      if ((MaskPosOpt && MaskPosOpt.value_or(NumVPParams) == VPParamIdx) ||
-          (VLenPosOpt && VLenPosOpt.value_or(NumVPParams) == VPParamIdx))
+      if (MaskPosOpt == VPParamIdx || VLenPosOpt == VPParamIdx)
         continue;
       assert(ParamIdx < NumInstParams);
       IntrinParams[VPParamIdx] = InstOpArray[ParamIdx++];

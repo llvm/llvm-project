@@ -10,18 +10,13 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp slt i32 [[CALL]], 1
+; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp sgt i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[CMP40_NOT3]], label [[FOR_COND41_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond41.preheader.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64
 ; CHECK-NEXT:    br label [[FOR_COND41_PREHEADER:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[INDVARS_IV:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       for.cond41.preheader:
-; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[TMP0]], [[FOR_COND41_PREHEADER_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_COND_CLEANUP]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND:%.*]] ]
 ; CHECK-NEXT:    [[CALL431:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
 ; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
@@ -36,6 +31,11 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CALL43:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp sgt i32 [[CALL43]], 0
 ; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
+; CHECK:       for.inc57:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP1]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND41_PREHEADER_PREHEADER]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -100,9 +100,9 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
 ; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i64 11, label [[IF_END_I:%.*]]
-; CHECK-NEXT:    i64 13, label [[TEST2_FN2_EXIT12:%.*]]
-; CHECK-NEXT:    i64 17, label [[IF_END_I31:%.*]]
+; CHECK-NEXT:      i64 11, label [[IF_END_I:%.*]]
+; CHECK-NEXT:      i64 13, label [[TEST2_FN2_EXIT12:%.*]]
+; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()

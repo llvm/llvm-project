@@ -73,6 +73,6 @@ void implicit_maps_struct (int a){
 // CK17: [[ADDR:%.+]] = alloca ptr,
 // CK17: store ptr [[ARG]], ptr [[ADDR]],
 // CK17: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK17: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK17: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif // CK17
 #endif

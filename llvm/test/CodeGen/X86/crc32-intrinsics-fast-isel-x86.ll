@@ -29,7 +29,7 @@ define i32 @test_mm_crc32_u8(i32 %a0, i32 %a1) nounwind {
 ; EGPR-LABEL: test_mm_crc32_u8:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; EGPR-NEXT:    crc32b %sil, %eax # encoding: [0x62,0xf4,0x7c,0x08,0xf0,0xc6]
+; EGPR-NEXT:    crc32b %sil, %eax # EVEX TO LEGACY Compression encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %trunc = trunc i32 %a1 to i8
   %res = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a0, i8 %trunc)
@@ -55,7 +55,7 @@ define i32 @test_mm_crc32_u16(i32 %a0, i32 %a1) nounwind {
 ; EGPR-LABEL: test_mm_crc32_u16:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; EGPR-NEXT:    crc32w %si, %eax # encoding: [0x62,0xf4,0x7d,0x08,0xf1,0xc6]
+; EGPR-NEXT:    crc32w %si, %eax # EVEX TO LEGACY Compression encoding: [0x66,0xf2,0x0f,0x38,0xf1,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %trunc = trunc i32 %a1 to i16
   %res = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a0, i16 %trunc)
@@ -79,7 +79,7 @@ define i32 @test_mm_crc32_u32(i32 %a0, i32 %a1) nounwind {
 ; EGPR-LABEL: test_mm_crc32_u32:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; EGPR-NEXT:    crc32l %esi, %eax # encoding: [0x62,0xf4,0x7c,0x08,0xf1,0xc6]
+; EGPR-NEXT:    crc32l %esi, %eax # EVEX TO LEGACY Compression encoding: [0xf2,0x0f,0x38,0xf1,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %res = call i32 @llvm.x86.sse42.crc32.32.32(i32 %a0, i32 %a1)
   ret i32 %res

@@ -64,8 +64,8 @@ define float @PR39535min_switch(i64 %i, float %x) {
 ; CHECK-LABEL: @PR39535min_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i64 [[I:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
@@ -125,6 +125,37 @@ F:
   ret i32 %z2
 }
 
+
+define float @hoist_uitofp_flags_preserve(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_uitofp_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = uitofp nneg i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = uitofp nneg i8 %x to float
+  ret float %z1
+F:
+  %z2 = uitofp nneg i8 %x to float
+  ret float %z2
+}
+
+define float @hoist_uitofp_flags_drop(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_uitofp_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = uitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = uitofp nneg i8 %x to float
+  ret float %z1
+F:
+  %z2 = uitofp i8 %x to float
+  ret float %z2
+}
+
 define i32 @hoist_or_flags_preserve(i1 %C, i32 %x, i32 %y) {
 ; CHECK-LABEL: @hoist_or_flags_preserve(
 ; CHECK-NEXT:  common.ret:
@@ -153,4 +184,94 @@ T:
 F:
   %z2 = or disjoint i32 %x, %y
   ret i32 %z2
+}
+
+define i16 @hoist_trunc_flags_preserve(i1 %C, i32 %x) {
+; CHECK-LABEL: @hoist_trunc_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = trunc nsw nuw i32 %x to i16
+  ret i16 %z1
+F:
+  %z2 = trunc nsw nuw i32 %x to i16
+  ret i16 %z2
+}
+
+define i16 @hoist_trunc_flags_drop(i1 %C, i32 %x) {
+; CHECK-LABEL: @hoist_trunc_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = trunc i32 %x to i16
+  ret i16 %z1
+F:
+  %z2 = trunc nsw nuw i32 %x to i16
+  ret i16 %z2
+}
+
+define ptr @hoist_gep_flags_both_nuw(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_both_nuw(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_both_nusw(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_both_nusw(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_intersect1(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_intersect1(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nusw i8, ptr %p, i64 1
+  ret ptr %gep2
+}
+
+define ptr @hoist_gep_flags_intersect2(i1 %C, ptr %p) {
+; CHECK-LABEL: @hoist_gep_flags_intersect2(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 1
+  ret ptr %gep1
+F:
+  %gep2 = getelementptr nuw i8, ptr %p, i64 1
+  ret ptr %gep2
 }

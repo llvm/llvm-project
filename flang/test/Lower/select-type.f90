@@ -1,5 +1,5 @@
-! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | fir-opt --fir-polymorphic-op | FileCheck --check-prefix=CFG %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | fir-opt --fir-polymorphic-op | FileCheck --check-prefix=CFG %s
 module select_type_lower_test
   type p1
     integer :: a
@@ -498,7 +498,7 @@ contains
 ! CHECK:  fir.array_merge_store %[[ARRAY_LOAD]], %[[LOOP_RES]] to %[[BOX]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
 ! CHECK:  cf.br ^{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %0 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %{{[0-9]+}} : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>> 
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>

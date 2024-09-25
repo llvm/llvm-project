@@ -212,17 +212,17 @@ static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
 
   for (const auto &Symbol : Symbols) {
     auto Name = Symbol.Name;
-    auto Kind = SymbolKind::GlobalSymbol;
+    auto Kind = EncodeKind::GlobalSymbol;
     switch (Symbol.Type) {
     default:
     case IFSSymbolType::NoType:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Object:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     case IFSSymbolType::Func:
-      Kind = SymbolKind::GlobalSymbol;
+      Kind = EncodeKind::GlobalSymbol;
       break;
     }
     if (Symbol.Weak)
@@ -441,12 +441,9 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto SI = SymbolMap.find(Symbol.Name);
-      if (SI == SymbolMap.end()) {
-        SymbolMap.insert(
-            std::pair<std::string, IFSSymbol>(Symbol.Name, Symbol));
+      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      if (Inserted)
         continue;
-      }
 
       assert(Symbol.Name == SI->second.Name && "Symbol Names Must Match.");
 

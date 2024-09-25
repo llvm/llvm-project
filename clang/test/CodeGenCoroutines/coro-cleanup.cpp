@@ -84,11 +84,13 @@ void f() {
   // CHECK: [[Cleanup]]:
   // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_typeD1Ev(
   // CHECK: %[[Mem0:.+]] = call ptr @llvm.coro.free(
-  // CHECK: call void @_ZdlPv(ptr noundef %[[Mem0]]
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[Mem0]], i64 noundef %[[SIZE]])
 
   // CHECK: [[Dealloc]]:
   // THROWEND:   %[[Mem:.+]] = call ptr @llvm.coro.free(
-  // THROWEND:   call void @_ZdlPv(ptr noundef %[[Mem]])
+  // THROWEND:   %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // THROWEND:   call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
 
   co_return;
 }

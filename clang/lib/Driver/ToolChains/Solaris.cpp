@@ -201,8 +201,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -212,7 +211,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
                         !Args.hasArg(options::OPT_static);
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -224,7 +223,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Additional linker set-up and flags for Fortran. This is required in order
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below.
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
       addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
       CmdArgs.push_back("-lm");
@@ -342,6 +342,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
   }
+  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Vptr;
   return Res;
 }

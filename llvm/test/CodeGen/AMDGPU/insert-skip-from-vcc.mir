@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
 
 ---
 # GCN-LABEL: name: and_execz_mov_vccz

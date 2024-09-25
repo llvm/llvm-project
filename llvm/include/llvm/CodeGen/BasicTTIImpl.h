@@ -25,11 +25,12 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -208,28 +210,31 @@ private:
                                               Align Alignment,
                                               bool VariableMask,
                                               bool IsGatherScatter,
-                                              TTI::TargetCostKind CostKind) {
+                                              TTI::TargetCostKind CostKind,
+                                              unsigned AddressSpace = 0) {
     // We cannot scalarize scalable vectors, so return Invalid.
     if (isa<ScalableVectorType>(DataTy))
       return InstructionCost::getInvalid();
 
     auto *VT = cast<FixedVectorType>(DataTy);
+    unsigned VF = VT->getNumElements();
+
     // Assume the target does not have support for gather/scatter operations
     // and provide a rough estimate.
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
         IsGatherScatter
-            ? getVectorInstrCost(Instruction::ExtractElement,
-                                 FixedVectorType::get(
-                                     PointerType::get(VT->getElementType(), 0),
-                                     VT->getNumElements()),
-                                 CostKind, -1, nullptr, nullptr)
+            ? getScalarizationOverhead(
+                  FixedVectorType::get(
+                      PointerType::get(VT->getElementType(), 0), VF),
+                  /*Insert=*/false, /*Extract=*/true, CostKind)
             : 0;
-    InstructionCost LoadCost =
-        VT->getNumElements() *
-        (AddrExtractCost +
-         getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind));
+
+    // The cost of the scalar loads/stores.
+    InstructionCost MemoryOpCost =
+        VF * thisT()->getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                                      AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -245,17 +250,14 @@ private:
       // operations accurately is quite difficult and the current solution
       // provides a very rough estimate only.
       ConditionalCost =
-          VT->getNumElements() *
-          (getVectorInstrCost(
-               Instruction::ExtractElement,
-               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()),
-                                    VT->getNumElements()),
-               CostKind, -1, nullptr, nullptr) +
-           getCFInstrCost(Instruction::Br, CostKind) +
-           getCFInstrCost(Instruction::PHI, CostKind));
+          getScalarizationOverhead(
+              FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
+              /*Insert=*/false, /*Extract=*/true, CostKind) +
+          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+                thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
-    return LoadCost + PackingCost + ConditionalCost;
+    return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
 protected:
@@ -327,18 +329,24 @@ public:
     return getTLI()->isLegalAddImmediate(imm);
   }
 
+  bool isLegalAddScalableImmediate(int64_t Imm) {
+    return getTLI()->isLegalAddScalableImmediate(Imm);
+  }
+
   bool isLegalICmpImmediate(int64_t imm) {
     return getTLI()->isLegalICmpImmediate(imm);
   }
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace, Instruction *I = nullptr) {
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
+    AM.ScalableOffset = ScalableOffset;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
@@ -386,9 +394,8 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
-  bool shouldFoldTerminatingConditionAfterLSR() const {
-    return TargetTransformInfoImplBase::
-        shouldFoldTerminatingConditionAfterLSR();
+  bool shouldDropLSRSolutionIfLessProfitable() const {
+    return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
   }
 
   bool isProfitableLSRChainElement(Instruction *I) {
@@ -396,13 +403,14 @@ public:
   }
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
-    AM.BaseOffs = BaseOffset;
+    AM.BaseOffs = BaseOffset.getFixed();
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
+    AM.ScalableOffset = BaseOffset.getScalable();
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
     return -1;
@@ -419,7 +427,7 @@ public:
   bool useAA() const { return getST()->useAA(); }
 
   bool isTypeLegal(Type *Ty) {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
   }
 
@@ -512,7 +520,7 @@ public:
         TM.getCodeModel() == CodeModel::Large)
       return false;
 
-    Triple TargetTriple = TM.getTargetTriple();
+    const Triple &TargetTriple = TM.getTargetTriple();
     if (!TargetTriple.isArch64Bit())
       return false;
 
@@ -781,6 +789,10 @@ public:
     return Cost;
   }
 
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
                                            bool Extract,
@@ -885,8 +897,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr) {
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr) {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1011,7 +1022,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt) {
+                                 ArrayRef<const Value *> Args = {},
+                                 const Instruction *CxtI = nullptr) {
     switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
@@ -1362,6 +1374,7 @@ public:
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind) {
+    // TODO: Pass on AddressSpace when we have test coverage.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
                                        CostKind);
   }
@@ -1373,6 +1386,18 @@ public:
                                          const Instruction *I = nullptr) {
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
                                        true, CostKind);
+  }
+
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I) {
+    // For a target without strided memory operations (or for an illegal
+    // operation type on one which does), assume we lower to a gather/scatter
+    // operation.  (Which may in turn be scalarized.)
+    return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                           Alignment, CostKind, I);
   }
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -1595,7 +1620,31 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
-    case Intrinsic::experimental_stepvector: {
+    case Intrinsic::experimental_vp_strided_store: {
+      const Value *Data = Args[0];
+      const Value *Ptr = Args[1];
+      const Value *Mask = Args[3];
+      const Value *EVL = Args[4];
+      bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
+      Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
+      Align Alignment =
+          I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
+      return thisT()->getStridedMemoryOpCost(Instruction::Store,
+                                             Data->getType(), Ptr, VarMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      const Value *Ptr = Args[0];
+      const Value *Mask = Args[2];
+      const Value *EVL = Args[3];
+      bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
+      Type *EltTy = cast<VectorType>(RetTy)->getElementType();
+      Align Alignment =
+          I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
+      return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
+                                             VarMask, Alignment, CostKind, I);
+    }
+    case Intrinsic::stepvector: {
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       // The cost of materialising a constant integer vector.
@@ -1607,9 +1656,9 @@ public:
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
-      return thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -1618,19 +1667,19 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
-          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()),
-          std::nullopt, CostKind, Index, cast<VectorType>(Args[1]->getType()));
+          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), {},
+          CostKind, Index, cast<VectorType>(Args[1]->getType()));
     }
-    case Intrinsic::experimental_vector_reverse: {
-      return thisT()->getShuffleCost(
-          TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), std::nullopt,
-          CostKind, 0, cast<VectorType>(RetTy));
+    case Intrinsic::vector_reverse: {
+      return thisT()->getShuffleCost(TTI::SK_Reverse,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, 0, cast<VectorType>(RetTy));
     }
-    case Intrinsic::experimental_vector_splice: {
+    case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
-      return thisT()->getShuffleCost(
-          TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), std::nullopt,
-          CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(TTI::SK_Splice,
+                                     cast<VectorType>(Args[0]->getType()), {},
+                                     CostKind, Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
@@ -1715,6 +1764,53 @@ public:
           thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
                                           CmpInst::ICMP_ULT, CostKind);
+      return Cost;
+    }
+    case Intrinsic::experimental_cttz_elts: {
+      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
+
+      // If we're not expanding the intrinsic then we assume this is cheap
+      // to implement.
+      if (!getTLI()->shouldExpandCttzElements(ArgType))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // TODO: The costs below reflect the expansion code in
+      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
+      // favour of compile time.
+
+      // Find the smallest "sensible" element type to use for the expansion.
+      bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
+      ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+      if (isa<ScalableVectorType>(ICA.getArgTypes()[0]) && I && I->getCaller())
+        VScaleRange = getVScaleRange(I->getCaller(), 64);
+
+      unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+          RetTy, ArgType.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
+      Type *NewEltTy = IntegerType::getIntNTy(RetTy->getContext(), EltWidth);
+
+      // Create the new vector type & get the vector length
+      Type *NewVecTy = VectorType::get(
+          NewEltTy, cast<VectorType>(Args[0]->getType())->getElementCount());
+
+      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, NewVecTy, {},
+                                           FMF);
+      InstructionCost Cost =
+          thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
+
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Sub, NewVecTy, CostKind);
+      Cost += thisT()->getCastInstrCost(Instruction::SExt, NewVecTy,
+                                        Args[0]->getType(),
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::And, NewVecTy, CostKind);
+
+      IntrinsicCostAttributes ReducAttrs(Intrinsic::vector_reduce_umax,
+                                         NewEltTy, NewVecTy, FMF, I, 1);
+      Cost += thisT()->getTypeBasedIntrinsicInstrCost(ReducAttrs, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Sub, NewEltTy, CostKind);
+
       return Cost;
     }
     }
@@ -1851,8 +1947,7 @@ public:
         ScalarRetTy = RetTy->getScalarType();
       }
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!SkipScalarizationCost)
             ScalarizationCost += getScalarizationOverhead(
@@ -1882,6 +1977,27 @@ public:
       break;
     case Intrinsic::cos:
       ISD = ISD::FCOS;
+      break;
+    case Intrinsic::tan:
+      ISD = ISD::FTAN;
+      break;
+    case Intrinsic::asin:
+      ISD = ISD::FASIN;
+      break;
+    case Intrinsic::acos:
+      ISD = ISD::FACOS;
+      break;
+    case Intrinsic::atan:
+      ISD = ISD::FATAN;
+      break;
+    case Intrinsic::sinh:
+      ISD = ISD::FSINH;
+      break;
+    case Intrinsic::cosh:
+      ISD = ISD::FCOSH;
+      break;
+    case Intrinsic::tanh:
+      ISD = ISD::FTANH;
       break;
     case Intrinsic::exp:
       ISD = ISD::FEXP;
@@ -1918,6 +2034,12 @@ public:
       break;
     case Intrinsic::maximum:
       ISD = ISD::FMAXIMUM;
+      break;
+    case Intrinsic::minimumnum:
+      ISD = ISD::FMINIMUMNUM;
+      break;
+    case Intrinsic::maximumnum:
+      ISD = ISD::FMAXIMUMNUM;
       break;
     case Intrinsic::copysign:
       ISD = ISD::FCOPYSIGN;
@@ -1981,68 +2103,158 @@ public:
                                             CostKind);
     }
     case Intrinsic::vector_reduce_add:
-      return thisT()->getArithmeticReductionCost(Instruction::Add, VecOpTy,
-                                                 std::nullopt, CostKind);
     case Intrinsic::vector_reduce_mul:
-      return thisT()->getArithmeticReductionCost(Instruction::Mul, VecOpTy,
-                                                 std::nullopt, CostKind);
     case Intrinsic::vector_reduce_and:
-      return thisT()->getArithmeticReductionCost(Instruction::And, VecOpTy,
-                                                 std::nullopt, CostKind);
     case Intrinsic::vector_reduce_or:
-      return thisT()->getArithmeticReductionCost(Instruction::Or, VecOpTy,
-                                                 std::nullopt, CostKind);
     case Intrinsic::vector_reduce_xor:
-      return thisT()->getArithmeticReductionCost(Instruction::Xor, VecOpTy,
-                                                 std::nullopt, CostKind);
+      return thisT()->getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), VecOpTy, std::nullopt,
+          CostKind);
     case Intrinsic::vector_reduce_fadd:
-      return thisT()->getArithmeticReductionCost(Instruction::FAdd, VecOpTy,
-                                                 FMF, CostKind);
     case Intrinsic::vector_reduce_fmul:
-      return thisT()->getArithmeticReductionCost(Instruction::FMul, VecOpTy,
-                                                 FMF, CostKind);
+      return thisT()->getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), VecOpTy, FMF, CostKind);
     case Intrinsic::vector_reduce_smax:
-      return thisT()->getMinMaxReductionCost(Intrinsic::smax, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_smin:
-      return thisT()->getMinMaxReductionCost(Intrinsic::smin, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_umax:
-      return thisT()->getMinMaxReductionCost(Intrinsic::umax, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_umin:
-      return thisT()->getMinMaxReductionCost(Intrinsic::umin, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_fmax:
-      return thisT()->getMinMaxReductionCost(Intrinsic::maxnum, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_fmin:
-      return thisT()->getMinMaxReductionCost(Intrinsic::minnum, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_fmaximum:
-      return thisT()->getMinMaxReductionCost(Intrinsic::maximum, VecOpTy,
-                                             ICA.getFlags(), CostKind);
     case Intrinsic::vector_reduce_fminimum:
-      return thisT()->getMinMaxReductionCost(Intrinsic::minimum, VecOpTy,
-                                             ICA.getFlags(), CostKind);
-    case Intrinsic::abs: {
-      // abs(X) = select(icmp(X,0),X,sub(0,X))
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
-      InstructionCost Cost = 0;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                          Pred, CostKind);
-      // TODO: Should we add an OperandValueProperties::OP_Zero property?
-      Cost += thisT()->getArithmeticInstrCost(
-         BinaryOperator::Sub, RetTy, CostKind, {TTI::OK_UniformConstantValue, TTI::OP_None});
-      return Cost;
-    }
+      return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
+                                             VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::abs:
+      ISD = ISD::ABS;
+      break;
     case Intrinsic::smax:
+      ISD = ISD::SMAX;
+      break;
     case Intrinsic::smin:
+      ISD = ISD::SMIN;
+      break;
     case Intrinsic::umax:
-    case Intrinsic::umin: {
+      ISD = ISD::UMAX;
+      break;
+    case Intrinsic::umin:
+      ISD = ISD::UMIN;
+      break;
+    case Intrinsic::sadd_sat:
+      ISD = ISD::SADDSAT;
+      break;
+    case Intrinsic::ssub_sat:
+      ISD = ISD::SSUBSAT;
+      break;
+    case Intrinsic::uadd_sat:
+      ISD = ISD::UADDSAT;
+      break;
+    case Intrinsic::usub_sat:
+      ISD = ISD::USUBSAT;
+      break;
+    case Intrinsic::smul_fix:
+      ISD = ISD::SMULFIX;
+      break;
+    case Intrinsic::umul_fix:
+      ISD = ISD::UMULFIX;
+      break;
+    case Intrinsic::sadd_with_overflow:
+      ISD = ISD::SADDO;
+      break;
+    case Intrinsic::ssub_with_overflow:
+      ISD = ISD::SSUBO;
+      break;
+    case Intrinsic::uadd_with_overflow:
+      ISD = ISD::UADDO;
+      break;
+    case Intrinsic::usub_with_overflow:
+      ISD = ISD::USUBO;
+      break;
+    case Intrinsic::smul_with_overflow:
+      ISD = ISD::SMULO;
+      break;
+    case Intrinsic::umul_with_overflow:
+      ISD = ISD::UMULO;
+      break;
+    case Intrinsic::fptosi_sat:
+      ISD = ISD::FP_TO_SINT_SAT;
+      break;
+    case Intrinsic::fptoui_sat:
+      ISD = ISD::FP_TO_UINT_SAT;
+      break;
+    case Intrinsic::ctpop:
+      ISD = ISD::CTPOP;
+      // In case of legalization use TCC_Expensive. This is cheaper than a
+      // library call but still not a cheap instruction.
+      SingleCallCost = TargetTransformInfo::TCC_Expensive;
+      break;
+    case Intrinsic::ctlz:
+      ISD = ISD::CTLZ;
+      break;
+    case Intrinsic::cttz:
+      ISD = ISD::CTTZ;
+      break;
+    case Intrinsic::bswap:
+      ISD = ISD::BSWAP;
+      break;
+    case Intrinsic::bitreverse:
+      ISD = ISD::BITREVERSE;
+      break;
+    case Intrinsic::ucmp:
+      ISD = ISD::UCMP;
+      break;
+    case Intrinsic::scmp:
+      ISD = ISD::SCMP;
+      break;
+    }
+
+    auto *ST = dyn_cast<StructType>(RetTy);
+    Type *LegalizeTy = ST ? ST->getContainedType(0) : RetTy;
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(LegalizeTy);
+
+    const TargetLoweringBase *TLI = getTLI();
+
+    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+      if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
+          TLI->isFAbsFree(LT.second)) {
+        return 0;
+      }
+
+      // The operation is legal. Assume it costs 1.
+      // If the type is split to multiple registers, assume that there is some
+      // overhead to this.
+      // TODO: Once we have extract/insert subvector cost we need to use them.
+      if (LT.first > 1)
+        return (LT.first * 2);
+      else
+        return (LT.first * 1);
+    } else if (!TLI->isOperationExpand(ISD, LT.second)) {
+      // If the operation is custom lowered then assume
+      // that the code is twice as expensive.
+      return (LT.first * 2);
+    }
+
+    switch (IID) {
+    case Intrinsic::fmuladd: {
+      // If we can't lower fmuladd into an FMA estimate the cost as a floating
+      // point mul followed by an add.
+
+      return thisT()->getArithmeticInstrCost(BinaryOperator::FMul, RetTy,
+                                             CostKind) +
+             thisT()->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
+                                             CostKind);
+    }
+    case Intrinsic::experimental_constrained_fmuladd: {
+      IntrinsicCostAttributes FMulAttrs(
+        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
+      IntrinsicCostAttributes FAddAttrs(
+        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
+      return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
+             thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    }
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+    case Intrinsic::umin:
+    case Intrinsic::umax: {
       // minmax(X,Y) = select(icmp(X,Y),X,Y)
       Type *CondTy = RetTy->getWithNewBitWidth(1);
       bool IsUnsigned = IID == Intrinsic::umax || IID == Intrinsic::umin;
@@ -2055,8 +2267,78 @@ public:
                                           Pred, CostKind);
       return Cost;
     }
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::ssub_with_overflow: {
+      Type *SumTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned Opcode = IID == Intrinsic::sadd_with_overflow
+                            ? BinaryOperator::Add
+                            : BinaryOperator::Sub;
+
+      //   Add:
+      //   Overflow -> (Result < LHS) ^ (RHS < 0)
+      //   Sub:
+      //   Overflow -> (Result < LHS) ^ (RHS > 0)
+      InstructionCost Cost = 0;
+      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
+      Cost +=
+          2 * thisT()->getCmpSelInstrCost(Instruction::ICmp, SumTy, OverflowTy,
+                                          CmpInst::ICMP_SGT, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Xor, OverflowTy,
+                                              CostKind);
+      return Cost;
+    }
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::usub_with_overflow: {
+      Type *SumTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned Opcode = IID == Intrinsic::uadd_with_overflow
+                            ? BinaryOperator::Add
+                            : BinaryOperator::Sub;
+      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
+                                    ? CmpInst::ICMP_ULT
+                                    : CmpInst::ICMP_UGT;
+
+      InstructionCost Cost = 0;
+      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy,
+                                          OverflowTy, Pred, CostKind);
+      return Cost;
+    }
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::umul_with_overflow: {
+      Type *MulTy = RetTy->getContainedType(0);
+      Type *OverflowTy = RetTy->getContainedType(1);
+      unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
+      Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
+      bool IsSigned = IID == Intrinsic::smul_with_overflow;
+
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None;
+
+      InstructionCost Cost = 0;
+      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
+      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
+                                            CCH, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, ExtTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+
+      if (IsSigned)
+        Cost += thisT()->getArithmeticInstrCost(
+            Instruction::AShr, MulTy, CostKind,
+            {TTI::OK_AnyValue, TTI::OP_None},
+            {TTI::OK_UniformConstantValue, TTI::OP_None});
+
+      Cost += thisT()->getCmpSelInstrCost(
+          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
+      return Cost;
+    }
     case Intrinsic::sadd_sat:
     case Intrinsic::ssub_sat: {
+      // Assume a default expansion.
       Type *CondTy = RetTy->getWithNewBitWidth(1);
 
       Type *OpTy = StructType::create({RetTy, CondTy});
@@ -2110,85 +2392,28 @@ public:
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, RetTy, ExtTy,
                                             CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, RetTy,
-                                              CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::Shl, RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
       return Cost;
     }
-    case Intrinsic::sadd_with_overflow:
-    case Intrinsic::ssub_with_overflow: {
-      Type *SumTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned Opcode = IID == Intrinsic::sadd_with_overflow
-                            ? BinaryOperator::Add
-                            : BinaryOperator::Sub;
-
-      //   Add:
-      //   Overflow -> (Result < LHS) ^ (RHS < 0)
-      //   Sub:
-      //   Overflow -> (Result < LHS) ^ (RHS > 0)
+    case Intrinsic::abs: {
+      // abs(X) = select(icmp(X,0),X,sub(0,X))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
       InstructionCost Cost = 0;
-      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(
-                      Instruction::ICmp, SumTy, OverflowTy,
-                      CmpInst::ICMP_SGT, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Xor, OverflowTy,
-                                              CostKind);
-      return Cost;
-    }
-    case Intrinsic::uadd_with_overflow:
-    case Intrinsic::usub_with_overflow: {
-      Type *SumTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned Opcode = IID == Intrinsic::uadd_with_overflow
-                            ? BinaryOperator::Add
-                            : BinaryOperator::Sub;
-      CmpInst::Predicate Pred = IID == Intrinsic::uadd_with_overflow
-                                    ? CmpInst::ICMP_ULT
-                                    : CmpInst::ICMP_UGT;
-
-      InstructionCost Cost = 0;
-      Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
-                                      Pred, CostKind);
-      return Cost;
-    }
-    case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow: {
-      Type *MulTy = RetTy->getContainedType(0);
-      Type *OverflowTy = RetTy->getContainedType(1);
-      unsigned ExtSize = MulTy->getScalarSizeInBits() * 2;
-      Type *ExtTy = MulTy->getWithNewBitWidth(ExtSize);
-      bool IsSigned = IID == Intrinsic::smul_with_overflow;
-
-      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
-      TTI::CastContextHint CCH = TTI::CastContextHint::None;
-
-      InstructionCost Cost = 0;
-      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
-      Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
-                                            CCH, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, ExtTy,
-                                              CostKind,
-                                              {TTI::OK_AnyValue, TTI::OP_None},
-                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
-
-      if (IsSigned)
-        Cost += thisT()->getArithmeticInstrCost(Instruction::AShr, MulTy,
-                                                CostKind,
-                                                {TTI::OK_AnyValue, TTI::OP_None},
-                                                {TTI::OK_UniformConstantValue, TTI::OP_None});
-
-      Cost += thisT()->getCmpSelInstrCost(
-          BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          Pred, CostKind);
+      // TODO: Should we add an OperandValueProperties::OP_Zero property?
+      Cost += thisT()->getArithmeticInstrCost(
+          BinaryOperator::Sub, RetTy, CostKind,
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
       return Cost;
     }
     case Intrinsic::fptosi_sat:
@@ -2217,63 +2442,36 @@ public:
       }
       return Cost;
     }
-    case Intrinsic::ctpop:
-      ISD = ISD::CTPOP;
-      // In case of legalization use TCC_Expensive. This is cheaper than a
-      // library call but still not a cheap instruction.
-      SingleCallCost = TargetTransformInfo::TCC_Expensive;
-      break;
-    case Intrinsic::ctlz:
-      ISD = ISD::CTLZ;
-      break;
-    case Intrinsic::cttz:
-      ISD = ISD::CTTZ;
-      break;
-    case Intrinsic::bswap:
-      ISD = ISD::BSWAP;
-      break;
-    case Intrinsic::bitreverse:
-      ISD = ISD::BITREVERSE;
-      break;
-    }
+    case Intrinsic::ucmp:
+    case Intrinsic::scmp: {
+      Type *CmpTy = Tys[0];
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost =
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CmpTy, CondTy,
+                                      CmpIntrinsic::getGTPredicate(IID),
+                                      CostKind) +
+          thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CmpTy, CondTy,
+                                      CmpIntrinsic::getLTPredicate(IID),
+                                      CostKind);
 
-    const TargetLoweringBase *TLI = getTLI();
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
-
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
-      if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
-          TLI->isFAbsFree(LT.second)) {
-        return 0;
+      EVT VT = TLI->getValueType(DL, CmpTy, true);
+      if (TLI->shouldExpandCmpUsingSelects(VT)) {
+        // x < y ? -1 : (x > y ? 1 : 0)
+        Cost += 2 * thisT()->getCmpSelInstrCost(
+                        BinaryOperator::Select, RetTy, CondTy,
+                        ICmpInst::BAD_ICMP_PREDICATE, CostKind);
+      } else {
+        // zext(x > y) - zext(x < y)
+        Cost +=
+            2 * thisT()->getCastInstrCost(CastInst::ZExt, RetTy, CondTy,
+                                          TTI::CastContextHint::None, CostKind);
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy,
+                                                CostKind);
       }
-
-      // The operation is legal. Assume it costs 1.
-      // If the type is split to multiple registers, assume that there is some
-      // overhead to this.
-      // TODO: Once we have extract/insert subvector cost we need to use them.
-      if (LT.first > 1)
-        return (LT.first * 2);
-      else
-        return (LT.first * 1);
-    } else if (!TLI->isOperationExpand(ISD, LT.second)) {
-      // If the operation is custom lowered then assume
-      // that the code is twice as expensive.
-      return (LT.first * 2);
+      return Cost;
     }
-
-    // If we can't lower fmuladd into an FMA estimate the cost as a floating
-    // point mul followed by an add.
-    if (IID == Intrinsic::fmuladd)
-      return thisT()->getArithmeticInstrCost(BinaryOperator::FMul, RetTy,
-                                             CostKind) +
-             thisT()->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
-                                             CostKind);
-    if (IID == Intrinsic::experimental_constrained_fmuladd) {
-      IntrinsicCostAttributes FMulAttrs(
-        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
-      IntrinsicCostAttributes FAddAttrs(
-        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
-      return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
-             thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    default:
+      break;
     }
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins
@@ -2294,8 +2492,7 @@ public:
 
       unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (Ty->isVectorTy())
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
@@ -2303,8 +2500,8 @@ public:
       IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
       InstructionCost ScalarCost =
           thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
+      for (Type *Ty : Tys) {
+        if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!ICA.skipScalarizationCost())
             ScalarizationCost += getScalarizationOverhead(
                 VTy, /*Insert*/ false, /*Extract*/ true, CostKind);
@@ -2402,9 +2599,8 @@ public:
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
-      ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
-                                  CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
+                                             CostKind, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -2420,7 +2616,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -2493,9 +2689,8 @@ public:
       NumVecElts /= 2;
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
-      ShuffleCost +=
-          thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
-                                  CostKind, NumVecElts, SubTy);
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
+                                             CostKind, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -2511,7 +2706,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 std::nullopt, CostKind, 0, Ty);
+                                                 {}, CostKind, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

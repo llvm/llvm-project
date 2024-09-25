@@ -30,7 +30,7 @@ define void @fn1() local_unnamed_addr #0 {
 ; CHECK:       while.body12:
 ; CHECK-NEXT:    br i1 undef, label [[IF_END18]], label [[L]]
 ; CHECK:       L.loopexit:
-; CHECK-NEXT:    store i8 poison, ptr null
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[L]]
 ; CHECK:       L:
 ; CHECK-NEXT:    [[H_125]] = phi i32 [ [[H_127]], [[WHILE_BODY12]] ], [ poison, [[L_LOOPEXIT]] ]
@@ -114,13 +114,13 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 define void @a() {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  b:
-; CHECK-NEXT:    store ptr null, ptr null
+; CHECK-NEXT:    store ptr null, ptr null, align 8
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       d:
 ; CHECK-NEXT:    [[I:%.*]] = phi ptr [ null, [[B:%.*]] ], [ [[E:%.*]], [[F:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[F]], label [[G:%.*]]
 ; CHECK:       g:
-; CHECK-NEXT:    store ptr [[I]], ptr null
+; CHECK-NEXT:    store ptr [[I]], ptr null, align 8
 ; CHECK-NEXT:    unreachable
 ; CHECK:       f:
 ; CHECK-NEXT:    [[E]] = getelementptr i8, ptr [[I]], i64 1

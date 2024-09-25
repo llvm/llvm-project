@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: cp %s %t.cpp
-// RUN: not %clang_cc1 -fsyntax-only %t.cpp -fixit
+// RUN: not %clang_cc1 %t.cpp -fixit
 // RUN: %clang_cc1 -fsyntax-only %t.cpp
 
 void test1(int a;) { // expected-error{{unexpected ';' before ')'}}

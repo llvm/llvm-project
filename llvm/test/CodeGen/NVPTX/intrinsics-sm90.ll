@@ -133,6 +133,41 @@ define void @test_barrier_cluster() {
        ret void
 }
 
+; CHECK-LABEL: test_barrier_cluster_aligned(
+define void @test_barrier_cluster_aligned() {
+; CHECK: barrier.cluster.arrive.aligned;
+       call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+; CHECK: barrier.cluster.arrive.relaxed.aligned;
+       call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+; CHECK: barrier.cluster.wait.aligned;
+       call void @llvm.nvvm.barrier.cluster.wait.aligned()
+       ret void
+}
+
+; CHECK-LABEL: test_cp_async_bulk_commit_group(
+define void @test_cp_async_bulk_commit_group() {
+; CHECK: cp.async.bulk.commit_group;
+       call void @llvm.nvvm.cp.async.bulk.commit.group()
+       ret void
+}
+
+; CHECK-LABEL: test_cp_async_bulk_wait_group(
+define void @test_cp_async_bulk_wait_group() {
+; CHECK: cp.async.bulk.wait_group 8;
+       call void @llvm.nvvm.cp.async.bulk.wait.group(i32 8)
+; CHECK: cp.async.bulk.wait_group 0;
+       call void @llvm.nvvm.cp.async.bulk.wait.group(i32 0)
+       ret void
+}
+
+; CHECK-LABEL: test_cp_async_bulk_wait_group_read(
+define void @test_cp_async_bulk_wait_group_read() {
+; CHECK: cp.async.bulk.wait_group.read 8;
+       call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 8)
+; CHECK: cp.async.bulk.wait_group.read 0;
+       call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 0)
+       ret void
+}
 
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p);
 declare ptr @llvm.nvvm.mapa(ptr %p, i32 %r);
@@ -153,4 +188,10 @@ declare i1 @llvm.nvvm.is_explicit_cluster()
 declare void @llvm.nvvm.barrier.cluster.arrive()
 declare void @llvm.nvvm.barrier.cluster.arrive.relaxed()
 declare void @llvm.nvvm.barrier.cluster.wait()
+declare void @llvm.nvvm.barrier.cluster.arrive.aligned()
+declare void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+declare void @llvm.nvvm.barrier.cluster.wait.aligned()
 declare void @llvm.nvvm.fence.sc.cluster()
+declare void @llvm.nvvm.cp.async.bulk.commit.group()
+declare void @llvm.nvvm.cp.async.bulk.wait.group(i32)
+declare void @llvm.nvvm.cp.async.bulk.wait.group.read(i32)

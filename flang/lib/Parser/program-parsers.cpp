@@ -19,6 +19,31 @@
 
 namespace Fortran::parser {
 
+// R1530 function-stmt ->
+//         [prefix] FUNCTION function-name ( [dummy-arg-name-list] ) [suffix]
+// R1526 prefix -> prefix-spec [prefix-spec]...
+// R1531 dummy-arg-name -> name
+
+static constexpr auto validFunctionStmt{
+    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
+        parenthesized(optionalList(name)), maybe(suffix)) /
+        atEndOfStmt ||
+    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name / atEndOfStmt,
+        // PGI & Intel accept "FUNCTION F"
+        extension<LanguageFeature::OmitFunctionDummies>(
+            "nonstandard usage: FUNCTION statement without dummy argument list"_port_en_US,
+            pure<std::list<Name>>()),
+        pure<std::optional<Suffix>>())};
+
+// function-stmt with error recovery -- used in interfaces and internal
+// subprograms, but not at the top level, where REALFUNCTIONF and
+// INTEGERPUREELEMENTALFUNCTIONG(10) might appear as the first statement
+// of a main program.
+TYPE_PARSER(validFunctionStmt ||
+    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
+        defaulted(parenthesized(optionalList(name))), maybe(suffix)) /
+        checkEndOfKnownStmt)
+
 // R502 program-unit ->
 //        main-program | external-subprogram | module | submodule | block-data
 // R503 external-subprogram -> function-subprogram | subroutine-subprogram
@@ -36,10 +61,11 @@ namespace Fortran::parser {
 // Enforcing C1547 is done in semantics.
 static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(Parser<Module>{})) ||
-    construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(subroutineSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<Submodule>{})) ||
     construct<ProgramUnit>(indirect(Parser<BlockData>{})) ||
+    lookAhead(validFunctionStmt) >>
+        construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
         skipMany(";"_tok) / space / recovery(endOfLine, SkipPast<'\n'>{})};
@@ -66,16 +92,6 @@ TYPE_PARSER(
             normalProgramUnit) /
             skipStuffBeforeStatement))
 
-// R504 specification-part ->
-//         [use-stmt]... [import-stmt]... [implicit-part]
-//         [declaration-construct]...
-TYPE_CONTEXT_PARSER("specification part"_en_US,
-    construct<SpecificationPart>(many(openaccDeclarativeConstruct),
-        many(openmpDeclarativeConstruct), many(indirect(compilerDirective)),
-        many(statement(indirect(Parser<UseStmt>{}))),
-        many(unambiguousStatement(indirect(Parser<ImportStmt>{}))),
-        implicitPart, many(declarationConstruct)))
-
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
 //        entry-stmt | stmt-function-stmt
@@ -86,10 +102,15 @@ TYPE_CONTEXT_PARSER("specification part"_en_US,
 // are in contexts that impose constraints on the kinds of statements that
 // are allowed, and so we have a variant production for declaration-construct
 // that implements those constraints.
-constexpr auto execPartLookAhead{first(actionStmt >> ok, openaccConstruct >> ok,
-    openmpConstruct >> ok, "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok,
-    "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok,
-    "FORALL ("_tok, "!$CUF"_tok)};
+constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
+    // Also accept apparent action statements with errors if they might be
+    // first in the execution part
+    "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
+    "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
+constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
+    openaccConstruct >> ok, openmpConstruct >> ok, "ASSOCIATE ("_tok,
+    "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
+    "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{
     stmtErrorRecoveryStart >> !execPartLookAhead >> skipStmtErrorRecovery};
 constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
@@ -101,18 +122,29 @@ constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
         fail<DeclarationConstruct>(
             "IMPLICIT statements must follow USE and IMPORT and precede all other declarations"_err_en_US)};
 
-TYPE_PARSER(recovery(
-    withMessage("expected declaration construct"_err_en_US,
-        CONTEXT_PARSER("declaration construct"_en_US,
-            first(construct<DeclarationConstruct>(specificationConstruct),
-                construct<DeclarationConstruct>(statement(indirect(dataStmt))),
-                construct<DeclarationConstruct>(
-                    statement(indirect(formatStmt))),
-                construct<DeclarationConstruct>(statement(indirect(entryStmt))),
-                construct<DeclarationConstruct>(
-                    statement(indirect(Parser<StmtFunctionStmt>{}))),
-                misplacedSpecificationStmt))),
-    construct<DeclarationConstruct>(declErrorRecovery)))
+TYPE_CONTEXT_PARSER("declaration construct"_en_US,
+    first(construct<DeclarationConstruct>(specificationConstruct),
+        construct<DeclarationConstruct>(statement(indirect(dataStmt))),
+        construct<DeclarationConstruct>(statement(indirect(formatStmt))),
+        construct<DeclarationConstruct>(statement(indirect(entryStmt))),
+        construct<DeclarationConstruct>(
+            statement(indirect(Parser<StmtFunctionStmt>{}))),
+        misplacedSpecificationStmt))
+
+constexpr auto recoveredDeclarationConstruct{
+    recovery(withMessage("expected declaration construct"_err_en_US,
+                 declarationConstruct),
+        construct<DeclarationConstruct>(declErrorRecovery))};
+
+// R504 specification-part ->
+//         [use-stmt]... [import-stmt]... [implicit-part]
+//         [declaration-construct]...
+TYPE_CONTEXT_PARSER("specification part"_en_US,
+    construct<SpecificationPart>(many(openaccDeclarativeConstruct),
+        many(openmpDeclarativeConstruct), many(indirect(compilerDirective)),
+        many(statement(indirect(Parser<UseStmt>{}))),
+        many(unambiguousStatement(indirect(Parser<ImportStmt>{}))),
+        implicitPart, many(recoveredDeclarationConstruct)))
 
 // R507 variant of declaration-construct for use in limitedSpecificationPart.
 constexpr auto invalidDeclarationStmt{formatStmt >>
@@ -247,7 +279,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 //         separate-module-subprogram
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
-    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})))
+    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -445,10 +478,13 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(scalarExpr, "," >> scalarExpr,
                  maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
-TYPE_PARSER(construct<CallStmt>(
-    sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
-        maybe(Parser<CallStmt::Chevrons>{}),
-        defaulted(parenthesized(optionalList(actualArgSpec)))))))
+constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
+TYPE_CONTEXT_PARSER("CALL statement"_en_US,
+    construct<CallStmt>(
+        sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
+            maybe(Parser<CallStmt::Chevrons>{}) / space,
+            "(" >> actualArgSpecList / ")" ||
+                lookAhead(endOfStmt) >> defaulted(actualArgSpecList)))))
 
 // R1522 procedure-designator ->
 //         procedure-name | proc-component-ref | data-ref % binding-name
@@ -471,8 +507,8 @@ TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
-        construct<ActualArg>(construct<ActualArg::PercentRef>(
-            "%REF" >> parenthesized(variable)))) ||
+        construct<ActualArg>(
+            construct<ActualArg::PercentRef>("%REF" >> parenthesized(expr)))) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %VAL"_port_en_US,
         construct<ActualArg>(
@@ -519,20 +555,6 @@ TYPE_CONTEXT_PARSER("FUNCTION subprogram"_en_US,
         executionPart, maybe(internalSubprogramPart),
         unterminatedStatement(endFunctionStmt)))
 
-// R1530 function-stmt ->
-//         [prefix] FUNCTION function-name ( [dummy-arg-name-list] ) [suffix]
-// R1526 prefix -> prefix-spec [prefix-spec]...
-// R1531 dummy-arg-name -> name
-TYPE_CONTEXT_PARSER("FUNCTION statement"_en_US,
-    construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
-        parenthesized(optionalList(name)), maybe(suffix)) ||
-        extension<LanguageFeature::OmitFunctionDummies>(
-            "nonstandard usage: FUNCTION statement without dummy argument list"_port_en_US,
-            construct<FunctionStmt>( // PGI & Intel accept "FUNCTION F"
-                many(prefixSpec), "FUNCTION" >> name,
-                construct<std::list<Name>>(),
-                construct<std::optional<Suffix>>())))
-
 // R1532 suffix ->
 //         proc-language-binding-spec [RESULT ( result-name )] |
 //         RESULT ( result-name ) [proc-language-binding-spec]
@@ -557,11 +579,13 @@ TYPE_CONTEXT_PARSER("SUBROUTINE subprogram"_en_US,
 //         [prefix] SUBROUTINE subroutine-name [( [dummy-arg-list] )
 //         [proc-language-binding-spec]]
 TYPE_PARSER(
-    construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-        parenthesized(optionalList(dummyArg)), maybe(languageBindingSpec)) ||
-    construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-        pure<std::list<DummyArg>>(),
-        pure<std::optional<LanguageBindingSpec>>()))
+    (construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+         !"("_tok >> pure<std::list<DummyArg>>(),
+         pure<std::optional<LanguageBindingSpec>>()) ||
+        construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
+            defaulted(parenthesized(optionalList(dummyArg))),
+            maybe(languageBindingSpec))) /
+    checkEndOfKnownStmt)
 
 // R1536 dummy-arg -> dummy-arg-name | *
 TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))

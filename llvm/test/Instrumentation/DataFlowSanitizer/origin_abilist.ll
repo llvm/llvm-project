@@ -149,12 +149,12 @@ define void @call_custom_varg_without_ret(i32 %a, i32 %b) {
   ; CHECK: %labelva = alloca [1 x i8], align 1
   ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[AS]], ptr [[VS0]], align 1
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds [1 x i32], ptr %originva, i32 0, i32 0
+  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: store i32 [[AO]], ptr [[VO0]], align 4
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds [1 x i32], ptr %originva, i32 0, i32 0
+  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: call void (i32, i32, i8, i8, ptr, i32, i32, ptr, ...) @__dfso_custom_varg_without_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr [[VS0]], i32 zeroext [[AO]], i32 zeroext [[BO]], ptr [[VO0]], i32 %a)
   ; CHECK-NEXT: ret void
 
@@ -172,12 +172,12 @@ define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
   ; CHECK: %labelva = alloca [1 x i8], align 1
   ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[BS]], ptr [[VS0]], align 1
-  ; CHECK: [[VS0:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds [1 x i32], ptr %originva, i32 0, i32 0
+  ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: store i32 [[BO]], ptr [[VO0]], align 4
-  ; CHECK: [[VO0:%.*]] = getelementptr inbounds [1 x i32], ptr %originva, i32 0, i32 0
+  ; CHECK: [[VO0:%.*]] = getelementptr inbounds nuw [1 x i32], ptr %originva, i32 0, i32 0
   ; CHECK: {{.*}} = call i32 (i32, i32, i8, i8, ptr, ptr, i32, i32, ptr, ptr, ...) @__dfso_custom_varg_with_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr [[VS0]], ptr %labelreturn, i32 zeroext [[AO]], i32 zeroext [[BO]], ptr [[VO0]], ptr %originreturn, i32 %b)
   ; CHECK: [[RS:%.*]] = load i8, ptr %labelreturn, align 1
   ; CHECK: [[RO:%.*]] = load i32, ptr %originreturn, align 4

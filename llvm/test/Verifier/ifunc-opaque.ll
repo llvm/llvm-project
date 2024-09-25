@@ -14,4 +14,4 @@ define ptr @resolver() {
 
 ; CHECK: IFunc must have a Function resolver
 ; CHECK-NEXT: ptr @ifunc_shl
-@ifunc_shl = ifunc void (), ptr inttoptr (i64 shl (i64 ptrtoint (ptr @resolver to i64), i64 4) to ptr)
+@ifunc_shl = ifunc void (), ptr inttoptr (i64 add (i64 ptrtoint (ptr @resolver to i64), i64 4) to ptr)

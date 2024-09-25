@@ -36,7 +36,7 @@
 ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
 ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-; CHECK-DAG   llvm.return %[[GEP]] : !llvm.ptr
+; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
 @global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
 
 ; // -----
@@ -249,8 +249,8 @@ define void @bar() {
 
 ; CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 ; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"source.c" in "/path/to/file">
-; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
-; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
+; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
 ; CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "foo", linkageName = "foo", file = #[[FILE]], line = 7, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <[DW_OP_LLVM_fragment(0, 16)]>>
@@ -280,7 +280,24 @@ define void @bar() {
 ; CHECK-DAG: #[[GLOBAL_VAR:.*]] = #llvm.di_global_variable<file = #[[FILE]], line = 268, type = #[[COMPOSITE_TYPE]], isLocalToUnit = true, isDefined = true>
 ; CHECK-DAG: #[[GLOBAL_VAR_EXPR:.*]] = #llvm.di_global_variable_expression<var = #[[GLOBAL_VAR]], expr = <>>
 
-; CHECK-DAG: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #[[GLOBAL_VAR_EXPR]]}
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_0("0\00")
+; We skip over @mlir.llvm.nameless_global.1 and 2 because they exist
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_3("1\00")
+;
+; CHECK:  llvm.mlir.global internal constant @zero() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_0 : !llvm.ptr
+; CHECK:  llvm.mlir.global internal constant @one() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_3 : !llvm.ptr
+
+; CHECK: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #[[GLOBAL_VAR_EXPR]]}
+
+@0 = private unnamed_addr constant [2 x i8] c"0\00"
+@1 = private unnamed_addr constant [2 x i8] c"1\00"
+@zero = internal constant ptr @0
+@one = internal constant ptr @1
+
+@"mlir.llvm.nameless_global_1" = external constant [10 x i8], !dbg !0
+declare void @"mlir.llvm.nameless_global_2"()
 
 @.str.1 = external constant [10 x i8], !dbg !0
 

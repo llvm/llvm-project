@@ -1,11 +1,12 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16
@@ -128,6 +129,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: dead $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_undef_src
@@ -150,6 +152,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e64
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_e64_permlane16
@@ -166,5 +169,28 @@ body:            |
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_vcmpx_permlane64
+# GCN:      V_CMPX_LE_F32_nosdst_e32
+# GCN:      S_ADD_U32
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: V_PERMLANE64_B32
+---
+name:            hazard_vcmpx_permlane64
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = IMPLICIT_DEF
+    $sgpr0 = IMPLICIT_DEF
+    $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
+    $vgpr1 = V_PERMLANE64_B32 killed $vgpr1, implicit $exec
     S_ENDPGM 0
 ...

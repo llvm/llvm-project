@@ -57,6 +57,14 @@ cl::opt<std::string> HTMLReportPath{
     cl::cat(IncludeCleaner),
 };
 
+cl::opt<std::string> OnlyHeaders{
+    "only-headers",
+    cl::desc("A comma-separated list of regexes to match against suffix of a "
+             "header. Only headers that match will be analyzed."),
+    cl::init(""),
+    cl::cat(IncludeCleaner),
+};
+
 cl::opt<std::string> IgnoreHeaders{
     "ignore-headers",
     cl::desc("A comma-separated list of regexes to match against suffix of a "
@@ -131,7 +139,17 @@ private:
   }
 
   void ExecuteAction() override {
-    auto &P = getCompilerInstance().getPreprocessor();
+    const auto &CI = getCompilerInstance();
+
+    // Disable all warnings when running include-cleaner, as we are only
+    // interested in include-cleaner related findings. This makes the tool both
+    // more resilient around in-development code, and possibly faster as we
+    // skip some extra analysis.
+    auto &Diags = CI.getDiagnostics();
+    Diags.setEnableAllWarnings(false);
+    Diags.setSeverityForAll(clang::diag::Flavor::WarningOrError,
+                            clang::diag::Severity::Ignored);
+    auto &P = CI.getPreprocessor();
     P.addPPCallbacks(PP.record(P));
     PI.record(getCompilerInstance());
     ASTFrontendAction::ExecuteAction();
@@ -156,7 +174,7 @@ private:
       writeHTML();
 
     llvm::StringRef Path =
-        SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
@@ -221,11 +239,12 @@ private:
   llvm::StringMap<std::string> EditedFiles;
 };
 
-std::function<bool(llvm::StringRef)> headerFilter() {
+// Compiles a regex list into a function that return true if any match a header.
+// Prints and returns nullptr if any regexes are invalid.
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
   auto FilterRegs = std::make_shared<std::vector<llvm::Regex>>();
-
   llvm::SmallVector<llvm::StringRef> Headers;
-  llvm::StringRef(IgnoreHeaders).split(Headers, ',', -1, /*KeepEmpty=*/false);
+  RegexFlag.split(Headers, ',', -1, /*KeepEmpty=*/false);
   for (auto HeaderPattern : Headers) {
     std::string AnchoredPattern = "(" + HeaderPattern.str() + ")$";
     llvm::Regex CompiledRegex(AnchoredPattern);
@@ -242,6 +261,21 @@ std::function<bool(llvm::StringRef)> headerFilter() {
       if (F.match(Path))
         return true;
     }
+    return false;
+  };
+}
+
+std::function<bool(llvm::StringRef)> headerFilter() {
+  auto OnlyMatches = matchesAny(OnlyHeaders);
+  auto IgnoreMatches = matchesAny(IgnoreHeaders);
+  if (!OnlyMatches || !IgnoreMatches)
+    return nullptr;
+
+  return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
+    if (!OnlyHeaders.empty() && !OnlyMatches(Header))
+      return true;
+    if (!IgnoreHeaders.empty() && IgnoreMatches(Header))
+      return true;
     return false;
   };
 }

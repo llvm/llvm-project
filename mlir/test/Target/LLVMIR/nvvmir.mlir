@@ -62,7 +62,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %29 = nvvm.read.ptx.sreg.clock : i32
   // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
   %30 = nvvm.read.ptx.sreg.clock64 : i64
-  
+
+  // CHECK: %31 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %31 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
+
   llvm.return %1 : i32
 }
 
@@ -77,6 +80,45 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
 llvm.func @llvm_nvvm_barrier0() {
   // CHECK: call void @llvm.nvvm.barrier0()
   nvvm.barrier0
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_barrier(
+// CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
+llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
+  // CHECK: call void @llvm.nvvm.barrier0()
+  nvvm.barrier 
+  // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
+  nvvm.barrier id = %barID
+  // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive
+llvm.func @llvm_nvvm_cluster_arrive() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
+  nvvm.cluster.arrive
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+  nvvm.cluster.arrive {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive_relaxed
+llvm.func @llvm_nvvm_cluster_arrive_relaxed() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+  nvvm.cluster.arrive.relaxed
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+  nvvm.cluster.arrive.relaxed {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_wait
+llvm.func @llvm_nvvm_cluster_wait() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
+  nvvm.cluster.wait
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait.aligned()
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -369,6 +411,35 @@ llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_setmaxregister
+llvm.func @llvm_nvvm_setmaxregister() {
+  // CHECK: call void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 256)
+  nvvm.setmaxregister increase 256
+  // CHECK: call void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 24)
+  nvvm.setmaxregister decrease 24
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_commit_group
+llvm.func @llvm_nvvm_cp_async_bulk_commit_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.commit.group()
+  nvvm.cp.async.bulk.commit.group
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_wait_group
+llvm.func @llvm_nvvm_cp_async_bulk_wait_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 0)
+  nvvm.cp.async.bulk.wait_group 0
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 3)
+  nvvm.cp.async.bulk.wait_group 3
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 0)
+  nvvm.cp.async.bulk.wait_group 0 {read}
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 3)
+  nvvm.cp.async.bulk.wait_group 3 {read}
+  llvm.return
+}
+
 // CHECK-LABEL: @ld_matrix
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) %{{.*}})
@@ -398,7 +469,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
 
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -410,7 +481,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -442,7 +513,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
                                      nvvm.minctasm = 16, nvvm.maxnreg = 32} {
   llvm.return
 }
@@ -455,6 +526,13 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+
+// -----
+
+llvm.func @kernel_func(%numberOfThreads : i32) {
+  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
+  nvvm.barrier number_of_threads = %numberOfThreads
+}
 
 // -----
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
@@ -472,13 +550,75 @@ nvvm.maxnreg = "boo"} {
 }
 // -----
 // expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 
 // -----
 // expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 
+// -----
+// CHECK: !nvvm.annotations =
+// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
+// CHECK: !2 = !{i32 1}
+// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+// CHECK: !nvvm.annotations =
+// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
+// CHECK: !2 = !{i32 1, i32 3}
+// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_release
+llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cta>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cluster>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  nvvm.fence.proxy.release #nvvm.mem_scope<gpu>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+  nvvm.fence.proxy.release #nvvm.mem_scope<sys>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
+llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cluster> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<gpu> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_breakpoint
+llvm.func @nvvm_breakpoint() {
+  // CHECK: call void @llvm.debugtrap()
+  nvvm.breakpoint
+  llvm.return
+}

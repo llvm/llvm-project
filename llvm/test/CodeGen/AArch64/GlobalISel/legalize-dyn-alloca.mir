@@ -4,34 +4,34 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define i8* @test_simple_alloca(i32 %numelts) {
+  define ptr @test_simple_alloca(i32 %numelts) {
     %addr = alloca i8, i32 %numelts
-    ret i8* %addr
+    ret ptr %addr
   }
 
-  define i8* @test_aligned_alloca(i32 %numelts) {
+  define ptr @test_aligned_alloca(i32 %numelts) {
     %addr = alloca i8, i32 %numelts, align 32
-    ret i8* %addr
+    ret ptr %addr
   }
 
-  define i128* @test_natural_alloca(i32 %numelts) {
+  define ptr @test_natural_alloca(i32 %numelts) {
     %addr = alloca i128, i32 %numelts
-    ret i128* %addr
+    ret ptr %addr
   }
 
-  define i8* @test_simple_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
+  define ptr @test_simple_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
     %addr = alloca i8, i32 %numelts
-    ret i8* %addr
+    ret ptr %addr
   }
 
-  define i8* @test_aligned_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
+  define ptr @test_aligned_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
     %addr = alloca i8, i32 %numelts, align 32
-    ret i8* %addr
+    ret ptr %addr
   }
 
-  define i128* @test_natural_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
+  define ptr @test_natural_alloca_stack_probing(i32 %numelts) "probe-stack"="inline-asm" {
     %addr = alloca i128, i32 %numelts
-    ret i128* %addr
+    ret ptr %addr
   }
 
 ...

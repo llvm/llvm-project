@@ -1,6 +1,8 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-aix
-// RUN: cat %s | clang-repl | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -verify | FileCheck %s
+
+// expected-no-diagnostics
 
 extern "C" int printf(const char*,...);
 int i = \
@@ -17,8 +19,7 @@ void f(int x) \
 f(i);
 // CHECK: x=12
 
-// FIXME: Support preprocessor directives.
-// #if 0 \
-//   #error "Can't be!" \
-// #endif
+#if 0                   \
+  #error "Can't be!"    \
+#endif
 

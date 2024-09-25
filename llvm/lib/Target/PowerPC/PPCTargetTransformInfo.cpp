@@ -219,7 +219,7 @@ InstructionCost PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -504,7 +504,7 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
   // Assume that Future CPU has the same cache line size as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
       Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
-      Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR11 || Directive == PPC::DIR_PWR_FUTURE)
     return 128;
 
   // On other processors return a default of 64 bytes.
@@ -538,7 +538,7 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   // Assume that future is the same as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
       Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
-      Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR11 || Directive == PPC::DIR_PWR_FUTURE)
     return 12;
 
   // For most things, modern systems have two execution units (and
@@ -607,7 +607,8 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, Type *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
@@ -697,39 +698,49 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     return Cost;
 
-  } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
+  } else if (Val->getScalarType()->isIntegerTy()) {
     unsigned EltSize = Val->getScalarSizeInBits();
     // Computing on 1 bit values requires extra mask or compare operations.
-    unsigned MaskCost = VecMaskCost && EltSize == 1 ? 1 : 0;
+    unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
+    // Computing on non const index requires extra mask or compare operations.
+    unsigned MaskCostForIdx = (Index != -1U) ? 0 : 1;
     if (ST->hasP9Altivec()) {
-      if (ISD == ISD::INSERT_VECTOR_ELT)
-        // A move-to VSR and a permute/insert.  Assume vector operation cost
-        // for both (cost will be 2x on P9).
-        return 2 * CostFactor;
+      // P10 has vxform insert which can handle non const index. The
+      // MaskCostForIdx is for masking the index.
+      // P9 has insert for const index. A move-to VSR and a permute/insert.
+      // Assume vector operation cost for both (cost will be 2x on P9).
+      if (ISD == ISD::INSERT_VECTOR_ELT) {
+        if (ST->hasP10Vector())
+          return CostFactor + MaskCostForIdx;
+        else if (Index != -1U)
+          return 2 * CostFactor;
+      } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
+        // It's an extract.  Maybe we can do a cheap move-from VSR.
+        unsigned EltSize = Val->getScalarSizeInBits();
+        // P9 has both mfvsrd and mfvsrld for 64 bit integer.
+        if (EltSize == 64 && Index != -1U)
+          return 1;
+        else if (EltSize == 32) {
+          unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
+          if (Index == MfvsrwzIndex)
+            return 1;
 
-      // It's an extract.  Maybe we can do a cheap move-from VSR.
-      unsigned EltSize = Val->getScalarSizeInBits();
-      if (EltSize == 64) {
-        unsigned MfvsrdIndex = ST->isLittleEndian() ? 1 : 0;
-        if (Index == MfvsrdIndex)
-          return 1;
-      } else if (EltSize == 32) {
-        unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
-        if (Index == MfvsrwzIndex)
-          return 1;
+          // For other indexs like non const, P9 has vxform extract. The
+          // MaskCostForIdx is for masking the index.
+          return CostFactor + MaskCostForIdx;
+        }
+
+        // We need a vector extract (or mfvsrld).  Assume vector operation cost.
+        // The cost of the load constant for a vector extract is disregarded
+        // (invariant, easily schedulable).
+        return CostFactor + MaskCostForOneBitSize + MaskCostForIdx;
       }
-
-      // We need a vector extract (or mfvsrld).  Assume vector operation cost.
-      // The cost of the load constant for a vector extract is disregarded
-      // (invariant, easily schedulable).
-      return CostFactor + MaskCost;
-
-    } else if (ST->hasDirectMove()) {
+    } else if (ST->hasDirectMove() && Index != -1U) {
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
       if (ISD == ISD::INSERT_VECTOR_ELT)
         return 3;
-      return 3 + MaskCost;
+      return 3 + MaskCostForOneBitSize;
     }
   }
 
@@ -788,9 +799,10 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // VSX has 32b/64b load instructions. Legalization can handle loading of
   // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
   // PPCTargetLowering can't compute the cost appropriately. So here we
-  // explicitly check this case.
+  // explicitly check this case. There are also corresponding store
+  // instructions.
   unsigned MemBytes = Src->getPrimitiveSizeInBits();
-  if (Opcode == Instruction::Load && ST->hasVSX() && IsAltivecType &&
+  if (ST->hasVSX() && IsAltivecType &&
       (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
     return 1;
 

@@ -23,8 +23,8 @@ entry:
 ; ALL:       .set reorder
 ; ALL:       .reloc 0, R_MIPS_NONE, v_sf
 ; GAS:       la $25, $__fn_local_v_sf
-; IAS:       lw $25, %got($$__fn_local_v_sf)($gp)
-; IAS:       addiu $25, $25, %lo($$__fn_local_v_sf)
+; IAS:       lw $25, %got($__fn_local_v_sf)($gp)
+; IAS:       addiu $25, $25, %lo($__fn_local_v_sf)
 ; ALL:       mfc1 $4, $f12
 ; ALL:       jr $25
 ; ALL:       .end __fn_stub_v_sf

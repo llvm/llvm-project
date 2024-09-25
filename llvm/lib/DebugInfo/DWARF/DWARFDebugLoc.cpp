@@ -113,11 +113,10 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
                            ArrayRef<uint8_t> Data, bool IsLittleEndian,
                            unsigned AddressSize, DWARFUnit *U) {
   DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
-  // Note. We do not pass any format to DWARFExpression, even if the
-  // corresponding unit is known. For now, there is only one operation,
-  // DW_OP_call_ref, which depends on the format; it is rarely used, and
-  // is unexpected in location tables.
-  DWARFExpression(Extractor, AddressSize).print(OS, DumpOpts, U);
+  std::optional<dwarf::DwarfFormat> Format;
+  if (U)
+    Format = U->getFormat();
+  DWARFExpression(Extractor, AddressSize, Format).print(OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(

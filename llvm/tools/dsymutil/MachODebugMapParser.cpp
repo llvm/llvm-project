@@ -32,9 +32,8 @@ public:
                       ArrayRef<std::string> DSYMSearchPaths,
                       StringRef PathPrefix = "", StringRef VariantSuffix = "",
                       bool Verbose = false)
-      : BinaryPath(std::string(BinaryPath)), Archs(Archs.begin(), Archs.end()),
-        DSYMSearchPaths(DSYMSearchPaths.begin(), DSYMSearchPaths.end()),
-        PathPrefix(std::string(PathPrefix)),
+      : BinaryPath(std::string(BinaryPath)), Archs(Archs),
+        DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
         VariantSuffix(std::string(VariantSuffix)), BinHolder(VFS, Verbose),
         CurrentDebugMapObject(nullptr), SkipDebugMapObject(false) {}
 
@@ -186,6 +185,8 @@ void MachODebugMapParser::addCommonSymbols() {
 /// everything up to add symbols to the new one.
 void MachODebugMapParser::switchToNewDebugMapObject(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
+  addCommonSymbols();
+  resetParserState();
 
   SmallString<80> Path(PathPrefix);
   sys::path::append(Path, Filename);
@@ -205,9 +206,6 @@ void MachODebugMapParser::switchToNewDebugMapObject(
             Path.str());
     return;
   }
-
-  addCommonSymbols();
-  resetParserState();
 
   CurrentDebugMapObject =
       &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
@@ -302,7 +300,7 @@ void MachODebugMapParser::switchToNewLibDebugMapObject(
 
     if (CurrentDebugMapObject &&
         CurrentDebugMapObject->getType() == MachO::N_LIB &&
-        CurrentDebugMapObject->getObjectFilename().compare(Path.str()) == 0) {
+        CurrentDebugMapObject->getObjectFilename() == Path) {
       return;
     }
 
@@ -385,7 +383,7 @@ MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
     llvm::raw_string_ostream OS(Buffer);
     OS << sys::TimePoint<std::chrono::seconds>(sys::toTimePoint(OSO.second));
     Warning("skipping debug map object with duplicate name and timestamp: " +
-            OS.str() + Twine(" ") + Twine(OSO.first));
+            Buffer + Twine(" ") + Twine(OSO.first));
   }
 
   // Build the debug map by iterating over the STABS again but ignore the

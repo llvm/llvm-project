@@ -36,9 +36,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <memory>
@@ -340,7 +340,6 @@ namespace {
       std::string FunctionNameAndLine;
       raw_string_ostream FNLOS(FunctionNameAndLine);
       FNLOS << getFunctionName(SP) << SP->getLine();
-      FNLOS.flush();
       FuncChecksum = hash_value(FunctionNameAndLine);
     }
 
@@ -535,7 +534,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 
       SmallString<128> Filename = GCovFile->getString();
       sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
-      return std::string(Filename.str());
+      return std::string(Filename);
     }
   }
 
@@ -546,7 +545,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   if (sys::fs::current_path(CurPath))
     return std::string(FName);
   sys::path::append(CurPath, FName);
-  return std::string(CurPath.str());
+  return std::string(CurPath);
 }
 
 bool GCOVProfiler::runOnModule(
@@ -1127,7 +1126,7 @@ Function *GCOVProfiler::insertCounterWriteout(
     uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
     auto *StartFileCallArgs = ConstantStruct::get(
         StartFileCallArgsTy,
-        {Builder.CreateGlobalStringPtr(FilenameGcda),
+        {Builder.CreateGlobalString(FilenameGcda),
          Builder.getInt32(endian::read32be(Options.Version)),
          Builder.getInt32(CfgChecksum)});
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Verify that 'tmp' is stored in bb1 and read by bb3, as it is needed as
 ; incoming value for the tmp11 PHI node.

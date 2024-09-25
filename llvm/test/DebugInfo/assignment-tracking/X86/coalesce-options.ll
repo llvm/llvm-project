@@ -14,18 +14,28 @@
 ;; Coalescing default + instructino-referencing enabled = enable.
 ; RUN: llc %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,ENABLE
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,ENABLE
 
 ;; Coalescing default + instructino-referencing disabled = disable.
 ; RUN: llc %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DISABLE
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DISABLE
 
 ;; Coalescing enabled + instructino-referencing disabled = enable.
 ; RUN: llc %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=false \
 ; RUN:     -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,ENABLE
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=false \
+; RUN:     -debug-ata-coalesce-frags=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,ENABLE
 
 ;; Coalescing disabled + instructino-referencing enabled = disable.
 ; RUN: llc %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
+; RUN:     -debug-ata-coalesce-frags=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DISABLE
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
 ; RUN:     -debug-ata-coalesce-frags=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DISABLE
 

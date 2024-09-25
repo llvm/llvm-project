@@ -14,10 +14,12 @@ recommended to avoid the risk of incorrect interpretation of the return value
 and to simplify the code. The string equality and inequality operators can
 also be faster than the ``compare`` method due to early termination.
 
-Examples:
+Example
+-------
 
 .. code-block:: c++
 
+  // The same rules apply to std::string_view.
   std::string str1{"a"};
   std::string str2{"b"};
 
@@ -50,5 +52,36 @@ Examples:
   }
 
 The above code examples show the list of if-statements that this check will
-give a warning for. All of them uses ``compare`` to check if equality or
+give a warning for. All of them use ``compare`` to check equality or
 inequality of two strings instead of using the correct operators.
+
+Options
+-------
+
+.. option:: StringLikeClasses
+
+   A string containing semicolon-separated names of string-like classes.
+   By default contains only ``::std::basic_string``
+   and ``::std::basic_string_view``. If a class from this list has
+   a ``compare`` method similar to that of ``std::string``, it will be checked
+   in the same way.
+
+Example
+^^^^^^^
+
+.. code-block:: c++
+
+  struct CustomString {
+  public:
+    int compare (const CustomString& other) const;
+  }
+
+  CustomString str1;
+  CustomString str2;
+
+  // use str1 != str2 instead.
+  if (str1.compare(str2)) {
+  }
+
+If `StringLikeClasses` contains ``CustomString``, the check will suggest
+replacing ``compare`` with equality operator.

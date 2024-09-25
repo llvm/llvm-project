@@ -3,7 +3,7 @@
 
 define i32 @ctlz_true_freeze(i32 %arg) {
 ; CHECK-LABEL: @ctlz_true_freeze(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 true)
 ; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
 ; CHECK-NEXT:    ret i32 [[FREEZE]]
 ;
@@ -15,7 +15,7 @@ define i32 @ctlz_true_freeze(i32 %arg) {
 define i32 @ctlz_false_freeze(i32 %arg) {
 ; CHECK-LABEL: @ctlz_false_freeze(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ctlz.i32(i32 [[ARG_FR]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG_FR]], i1 false)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.ctlz.i32(i32 %arg, i1 false)
@@ -25,7 +25,7 @@ define i32 @ctlz_false_freeze(i32 %arg) {
 
 define i32 @ctlz_true_noundef_freeze(i32 %arg) {
 ; CHECK-LABEL: @ctlz_true_noundef_freeze(
-; CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noundef range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call noundef i32 @llvm.ctlz.i32(i32 %arg, i1 true)
@@ -35,7 +35,7 @@ define i32 @ctlz_true_noundef_freeze(i32 %arg) {
 
 define i32 @cttz_true_freeze(i32 %arg) {
 ; CHECK-LABEL: @cttz_true_freeze(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 true)
 ; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
 ; CHECK-NEXT:    ret i32 [[FREEZE]]
 ;
@@ -46,7 +46,7 @@ define i32 @cttz_true_freeze(i32 %arg) {
 
 define i32 @cttz_true_noundef_freeze(i32 %arg) {
 ; CHECK-LABEL: @cttz_true_noundef_freeze(
-; CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noundef range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call noundef i32 @llvm.cttz.i32(i32 %arg, i1 true)
@@ -57,7 +57,7 @@ define i32 @cttz_true_noundef_freeze(i32 %arg) {
 define i32 @freeze_cttz_true(i32 %arg) {
 ; CHECK-LABEL: @freeze_cttz_true(
 ; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.cttz.i32(i32 [[FREEZE]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[FREEZE]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %freeze = freeze i32 %arg
@@ -68,7 +68,7 @@ define i32 @freeze_cttz_true(i32 %arg) {
 define i32 @cttz_false_freeze(i32 %arg) {
 ; CHECK-LABEL: @cttz_false_freeze(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG_FR]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG_FR]], i1 false)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @llvm.cttz.i32(i32 %arg, i1 false)
@@ -79,7 +79,7 @@ define i32 @cttz_false_freeze(i32 %arg) {
 define i32 @freeze_cttz_false(i32 %arg) {
 ; CHECK-LABEL: @freeze_cttz_false(
 ; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.cttz.i32(i32 [[FREEZE]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[FREEZE]], i1 false)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %freeze = freeze i32 %arg

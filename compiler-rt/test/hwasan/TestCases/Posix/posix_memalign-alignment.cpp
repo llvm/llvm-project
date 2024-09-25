@@ -11,7 +11,7 @@ int main() {
   // CHECK: ERROR: HWAddressSanitizer: invalid alignment requested in posix_memalign: 17
   // CHECK: {{#0 0x.* in .*posix_memalign}}
   // CHECK: {{#1 0x.* in main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
-  // CHECK: SUMMARY: HWAddressSanitizer: invalid-posix-memalign-alignment
+  // CHECK: SUMMARY: HWAddressSanitizer: invalid-posix-memalign-alignment {{.*}} in main
 
   printf("pointer after failed posix_memalign: %zd\n", (size_t)p);
   // CHECK-NULL: pointer after failed posix_memalign: 42

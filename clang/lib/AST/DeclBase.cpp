@@ -29,7 +29,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -72,21 +71,20 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #include "clang/AST/DeclNodes.inc"
 
 void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         unsigned ID, std::size_t Extra) {
+                         GlobalDeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
-  static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
-                "Decl won't be misaligned");
+  static_assert(sizeof(uint64_t) >= alignof(Decl), "Decl won't be misaligned");
   void *Start = Context.Allocate(Size + Extra + 8);
   void *Result = (char*)Start + 8;
 
-  unsigned *PrefixPtr = (unsigned *)Result - 2;
+  uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  // Zero out the first 4 bytes; this is used to store the owning module ID.
-  PrefixPtr[0] = 0;
+  *PrefixPtr = ID.getRawValue();
 
-  // Store the global declaration ID in the second 4 bytes.
-  PrefixPtr[1] = ID;
+  // We leave the upper 16 bits to store the module IDs. 48 bits should be
+  // sufficient to store a declaration ID.
+  assert(*PrefixPtr < llvm::maskTrailingOnes<uint64_t>(48));
 
   return Result;
 }
@@ -110,6 +108,29 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     return new (Buffer) Module*(ParentModule) + 1;
   }
   return ::operator new(Size + Extra, Ctx);
+}
+
+GlobalDeclID Decl::getGlobalID() const {
+  if (!isFromASTFile())
+    return GlobalDeclID();
+  // See the comments in `Decl::operator new` for details.
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return GlobalDeclID(ID & llvm::maskTrailingOnes<uint64_t>(48));
+}
+
+unsigned Decl::getOwningModuleID() const {
+  if (!isFromASTFile())
+    return 0;
+
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return ID >> 48;
+}
+
+void Decl::setOwningModuleID(unsigned ID) {
+  assert(isFromASTFile() && "Only works on a deserialized declaration");
+  uint64_t *IDAddress = (uint64_t *)this - 1;
+  *IDAddress &= llvm::maskTrailingOnes<uint64_t>(48);
+  *IDAddress |= (uint64_t)ID << 48;
 }
 
 Module *Decl::getOwningModuleSlow() const {
@@ -403,12 +424,85 @@ bool Decl::isInAnonymousNamespace() const {
 
 bool Decl::isInStdNamespace() const {
   const DeclContext *DC = getDeclContext();
-  return DC && DC->isStdNamespace();
+  return DC && DC->getNonTransparentContext()->isStdNamespace();
 }
 
 bool Decl::isFileContextDecl() const {
   const auto *DC = dyn_cast<DeclContext>(this);
   return DC && DC->isFileContext();
+}
+
+bool Decl::isFlexibleArrayMemberLike(
+    ASTContext &Ctx, const Decl *D, QualType Ty,
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+    bool IgnoreTemplateOrMacroSubstitution) {
+  // For compatibility with existing code, we treat arrays of length 0 or
+  // 1 as flexible array members.
+  const auto *CAT = Ctx.getAsConstantArrayType(Ty);
+  if (CAT) {
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+
+    llvm::APInt Size = CAT->getSize();
+    if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
+      return false;
+
+    // GCC extension, only allowed to represent a FAM.
+    if (Size.isZero())
+      return true;
+
+    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete && Size.uge(1))
+      return false;
+
+    if (StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete && Size.uge(2))
+      return false;
+  } else if (!Ctx.getAsIncompleteArrayType(Ty)) {
+    return false;
+  }
+
+  if (const auto *OID = dyn_cast_if_present<ObjCIvarDecl>(D))
+    return OID->getNextIvar() == nullptr;
+
+  const auto *FD = dyn_cast_if_present<FieldDecl>(D);
+  if (!FD)
+    return false;
+
+  if (CAT) {
+    // GCC treats an array memeber of a union as an FAM if the size is one or
+    // zero.
+    llvm::APInt Size = CAT->getSize();
+    if (FD->getParent()->isUnion() && (Size.isZero() || Size.isOne()))
+      return true;
+  }
+
+  // Don't consider sizes resulting from macro expansions or template argument
+  // substitution to form C89 tail-padded arrays.
+  if (IgnoreTemplateOrMacroSubstitution) {
+    TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+    while (TInfo) {
+      TypeLoc TL = TInfo->getTypeLoc();
+
+      // Look through typedefs.
+      if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
+        const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
+        TInfo = TDL->getTypeSourceInfo();
+        continue;
+      }
+
+      if (auto CTL = TL.getAs<ConstantArrayTypeLoc>()) {
+        if (const Expr *SizeExpr =
+                dyn_cast_if_present<IntegerLiteral>(CTL.getSizeExpr());
+            !SizeExpr || SizeExpr->getExprLoc().isMacroID())
+          return false;
+      }
+
+      break;
+    }
+  }
+
+  // Test that the field is the last in the structure.
+  RecordDecl::field_iterator FI(
+      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+  return ++FI == FD->getParent()->field_end();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
@@ -594,12 +688,29 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
-    if (Message) {
-      Message->clear();
-      llvm::raw_string_ostream Out(*Message);
-      VersionTuple VTI(A->getIntroduced());
-      Out << "introduced in " << PrettyPlatformName << ' '
-          << VTI << HintMessage;
+    IdentifierInfo *IIEnv = A->getEnvironment();
+    StringRef TargetEnv =
+        Context.getTargetInfo().getTriple().getEnvironmentName();
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
+        Context.getTargetInfo().getTriple().getEnvironment());
+    // Matching environment or no environment on attribute
+    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        VersionTuple VTI(A->getIntroduced());
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
+            << EnvName << HintMessage;
+      }
+    }
+    // Non-matching environment or no environment on target
+    else {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        Out << "not available on " << PrettyPlatformName << " " << EnvName
+            << HintMessage;
+      }
     }
 
     return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
@@ -768,8 +879,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
-    case IndirectField:
-      return IDNS_Ordinary | IDNS_Member;
 
     case Binding:
     case NonTypeTemplateParm:
@@ -807,6 +916,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_ObjCProtocol;
 
     case Field:
+    case IndirectField:
     case ObjCAtDefsField:
     case ObjCIvar:
       return IDNS_Member;
@@ -1005,7 +1115,7 @@ bool Decl::isInExportDeclContext() const {
   while (DC && !isa<ExportDecl>(DC))
     DC = DC->getLexicalParent();
 
-  return DC && isa<ExportDecl>(DC);
+  return isa_and_nonnull<ExportDecl>(DC);
 }
 
 bool Decl::isInAnotherModuleUnit() const {
@@ -1014,20 +1124,48 @@ bool Decl::isInAnotherModuleUnit() const {
   if (!M)
     return false;
 
+  // FIXME or NOTE: maybe we need to be clear about the semantics
+  // of clang header modules. e.g., if this lives in a clang header
+  // module included by the current unit, should we return false
+  // here?
+  //
+  // This is clear for header units as the specification says the
+  // header units live in a synthesised translation unit. So we
+  // can return false here.
   M = M->getTopLevelModule();
-  // FIXME: It is problematic if the header module lives in another module
-  // unit. Consider to fix this by techniques like
-  // ExternalASTSource::hasExternalDefinitions.
-  if (M->isHeaderLikeModule())
+  if (!M->isNamedModule())
     return false;
 
-  // A global module without parent implies that we're parsing the global
-  // module. So it can't be in another module unit.
-  if (M->isGlobalModule())
-    return false;
-
-  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::shouldEmitInExternalSource() const {
+  ExternalASTSource *Source = getASTContext().getExternalSource();
+  if (!Source)
+    return false;
+
+  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
+}
+
+bool Decl::isFromExplicitGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
+bool Decl::isFromGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isGlobalModule();
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1045,6 +1183,13 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
     Ty = D->getUnderlyingType();
   else
     return nullptr;
+
+  if (Ty.isNull()) {
+    // BindingDecls do not have types during parsing, so return nullptr. This is
+    // the only known case where `Ty` is null.
+    assert(isa<BindingDecl>(this));
+    return nullptr;
+  }
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();
@@ -1280,6 +1425,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
   case Decl::Export:
+  case Decl::TopLevelStmt:
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
@@ -1300,8 +1446,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
     return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
-    // The original namespace is our primary context.
-    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
     return this;
@@ -1770,9 +1915,9 @@ DeclContext::lookup(DeclarationName Name) const {
 
 DeclContext::lookup_result
 DeclContext::noload_lookup(DeclarationName Name) {
-  assert(getDeclKind() != Decl::LinkageSpec &&
-         getDeclKind() != Decl::Export &&
-         "should not perform lookups into transparent contexts");
+  // For transparent DeclContext, we should lookup in their enclosing context.
+  if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
+    return getParent()->noload_lookup(Name);
 
   DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)
@@ -2067,4 +2212,8 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   Map->FirstDiagnostic = DD;
 
   return DD;
+}
+
+unsigned DeclIDBase::getLocalDeclIndex() const {
+  return ID & llvm::maskTrailingOnes<DeclID>(32);
 }

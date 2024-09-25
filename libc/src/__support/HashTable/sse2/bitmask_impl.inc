@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <immintrin.h>
-namespace LIBC_NAMESPACE {
+
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // With SSE2, every bitmask is iteratable as
 // we use single bit to encode the data.
@@ -33,7 +36,7 @@ struct Group {
   LIBC_INLINE IteratableBitMask match_byte(uint8_t byte) const {
     auto cmp = _mm_cmpeq_epi8(data, _mm_set1_epi8(byte));
     auto bitmask = static_cast<uint16_t>(_mm_movemask_epi8(cmp));
-    return {bitmask};
+    return {{bitmask}};
   }
 
   LIBC_INLINE BitMask mask_available() const {
@@ -42,8 +45,8 @@ struct Group {
   }
 
   LIBC_INLINE IteratableBitMask occupied() const {
-    return {static_cast<uint16_t>(~mask_available().word)};
+    return {{static_cast<uint16_t>(~mask_available().word)}};
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -54,7 +54,7 @@ local_tee_type_mismatch:
 
 global_get_missing_globaltype:
   .functype global_get_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.get foo
   end_function
 
@@ -66,7 +66,7 @@ global_get_expected_expression_operand:
 
 global_set_missing_globaltype:
   .functype global_set_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.set foo
   end_function
 
@@ -93,13 +93,15 @@ global_set_type_mismatch:
 
 table_get_expected_expression_operand:
   .functype table_get_expected_expression_operand () -> ()
+  i32.const 0
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
   end_function
 
 table_get_missing_tabletype:
   .functype table_get_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+  i32.const 0
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.get foo
   end_function
 
@@ -126,7 +128,7 @@ table_set_expected_expression_operand:
 
 table_set_missing_tabletype:
   .functype table_set_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.set foo
   end_function
 
@@ -166,7 +168,7 @@ table_fill_expected_expression_operand:
 
 table_fill_missing_tabletype:
   .functype table_fill_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .tabletype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .tabletype
   table.fill foo
   end_function
 
@@ -213,6 +215,52 @@ table_fill_type_mismatch_3:
   i32.const 1
 # CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
   table.fill valid_table
+  end_function
+
+table_fill_type_mismatch_4:
+  .functype table_fill_type_mismatch_4 () -> ()
+  ref.null_exn
+  i32.const 1
+# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
+  table.fill valid_table
+  end_function
+
+table_fill_type_mismatch_5:
+  .functype table_fill_type_mismatch_5 () -> ()
+  ref.null_exn
+  i32.const 1
+# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
+  table.fill valid_table
+  end_function
+
+table_grow_non_exist_table:
+  .functype table_grow_non_exist_table (externref, i32) -> (i32)
+  local.get 0
+  local.get 1
+# CHECK: [[@LINE+1]]:14: error: symbol invalid_table: missing .tabletype
+  table.grow invalid_table
+  end_function
+
+table_grow_type_mismatch_1:
+  .functype table_grow_type_mismatch_1 (externref, i32) -> (i32)
+  local.get 1
+# CHECK: [[@LINE+1]]:3: error: empty stack while popping externref
+  table.grow valid_table
+  end_function
+
+table_grow_type_mismatch_2:
+  .functype table_grow_type_mismatch_2 (externref, i32) -> (i32)
+  local.get 0
+# CHECK: [[@LINE+1]]:3: error: popped externref, expected i32
+  table.grow valid_table
+  end_function
+
+table_grow_wrong_result:
+  .functype table_grow_wrong_result (externref, i32) -> (f32)
+  local.get 0
+  local.get 1
+  table.grow valid_table
+# CHECK: [[@LINE+1]]:3: error: popped i32, expected f32
   end_function
 
 drop_empty_stack_while_popping:
@@ -508,7 +556,7 @@ call_superfluous_value_at_end:
 
 call_missing_functype:
   .functype call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:8: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:8: error: symbol no_functype: missing .functype
   call no_functype
   end_function
 
@@ -533,7 +581,7 @@ return_call_type_mismatch:
 
 return_call_missing_functype:
   .functype return_call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:15: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:15: error: symbol no_functype: missing .functype
   return_call no_functype
   end_function
 
@@ -548,7 +596,7 @@ catch_expected_expression_operand:
 catch_missing_tagtype:
   .functype catch_missing_tagtype () -> ()
   try
-# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype missing .tagtype
+# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype: missing .tagtype
   catch no_tagtype
   end_try
   end_function
@@ -804,4 +852,24 @@ br_incorrect_func_signature:
   end_block
   drop
   i32.const 1
+  end_function
+
+multiple_errors_in_function:
+  .functype multiple_errors_in_function () -> ()
+# CHECK: :[[@LINE+2]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:13: error: expected expression operand
+  table.get 1
+
+# CHECK: :[[@LINE+3]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+2]]:3: error: empty stack while popping externref
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+  table.fill valid_table
+
+  f32.const 0.0
+  ref.null_extern
+# CHECK: :[[@LINE+2]]:3: error: popped externref, expected i32
+# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+  i32.add
+  drop
+
   end_function

@@ -5,13 +5,13 @@
 # Test that a DBG_INSTR_REF that refers to a DBG_PHI, will be translated into a
 # DBG_VALUE of the value read at that DBG_PHI. Same original code as
 # phi-coalescing.mir.
-# 
+#
 --- |
   ; ModuleID = 'phi-coalescing.mir'
   source_filename = "test.c"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define dso_local i32 @foo(i64 %bar, i64 %baz) !dbg !7 {
   entry:
     call void @llvm.dbg.value(metadata i64 %bar, metadata !12, metadata !DIExpression()), !dbg !13
@@ -23,12 +23,12 @@
     %call = call i64 @getlong(), !dbg !18
     %tobool = icmp ne i64 %call, 0, !dbg !18
     br i1 %tobool, label %if.then, label %if.end, !dbg !20
-  
+
   if.then:                                          ; preds = %entry
     %add1 = add nsw i64 %add, 1, !dbg !21
     call void @llvm.dbg.value(metadata i64 %add1, metadata !12, metadata !DIExpression()), !dbg !13
     br label %if.end, !dbg !22
-  
+
   if.end:                                           ; preds = %if.then, %entry
     %bar.addr.0 = phi i64 [ %add1, %if.then ], [ %add, %entry ], !dbg !13
     call void @llvm.dbg.value(metadata i64 %bar.addr.0, metadata !12, metadata !DIExpression()), !dbg !13
@@ -38,21 +38,21 @@
     %conv = trunc i64 %add2 to i32, !dbg !25
     ret i32 %conv, !dbg !26
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata)
-  
+
   declare dso_local void @ext(i64)
-  
+
   declare dso_local i64 @getlong()
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/tmp/out.c")
   !2 = !{}
@@ -105,7 +105,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi, $r14, $rbx
-  
+
     frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
@@ -123,15 +123,15 @@ body:             |
     CALL64pcrel32 @getlong, csr_64, implicit $rsp, implicit $ssp, implicit-def $rax, debug-location !18
     CMP64ri8 killed renamable $rax, 0, implicit-def $eflags, debug-location !18
     JCC_1 %bb.2, 4, implicit $eflags, debug-location !20
-  
+
   bb.1.if.then:
     liveins: $rbx, $r14
-  
+
     renamable $rbx = ADD64ri32 killed renamable $rbx, 1, implicit-def $eflags, debug-location !21
-  
+
   bb.2.if.end:
     liveins: $rbx, $r14
-  
+
     DBG_PHI $rbx, 1
     $rax = COPY $rbx
     $rbx = MOV64ri 0

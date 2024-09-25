@@ -13,26 +13,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
-
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -55,7 +60,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
-
 #include <cstring>
 #include <deque>
 #include <string>
@@ -147,6 +151,10 @@ static cl::opt<bool> PerfSupport("perf-support",
                                  cl::init(false), cl::Hidden,
                                  cl::cat(JITLinkCategory));
 
+static cl::opt<bool> VTuneSupport("vtune-support",
+                                  cl::desc("Enable vtune profiling support"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(JITLinkCategory));
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -161,6 +169,12 @@ static cl::list<std::string>
     Aliases("alias",
             cl::desc("Inject symbol aliases (syntax: <alias-name>=<aliasee>)"),
             cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    SectCreate("sectcreate",
+               cl::desc("given <sectname>,<filename>[@<sym>=<offset>,...]  "
+                        "add the content of <filename> to <sectname>"),
+               cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::desc("Test harness files"),
@@ -247,6 +261,10 @@ static cl::opt<bool> UseSharedMemory(
     cl::desc("Use shared memory to transfer generated code and data"),
     cl::init(false), cl::cat(JITLinkCategory));
 
+static cl::opt<std::string>
+    OverrideTriple("triple", cl::desc("Override target triple detection"),
+                   cl::init(""), cl::cat(JITLinkCategory));
+
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
@@ -257,7 +275,10 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n'
+         << (void *)&llvm_orc_registerVTuneImpl << '\n'
+         << (void *)&llvm_orc_unregisterVTuneImpl << '\n'
+         << (void *)&llvm_orc_test_registerVTuneImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -331,8 +352,12 @@ operator<<(raw_ostream &OS, const Session::FileInfo &FI) {
     OS << "  Section \"" << SIKV.first() << "\": " << SIKV.second << "\n";
   for (auto &GOTKV : FI.GOTEntryInfos)
     OS << "  GOT \"" << GOTKV.first() << "\": " << GOTKV.second << "\n";
-  for (auto &StubKV : FI.StubInfos)
-    OS << "  Stub \"" << StubKV.first() << "\": " << StubKV.second << "\n";
+  for (auto &StubKVs : FI.StubInfos) {
+    OS << "  Stubs \"" << StubKVs.first() << "\":";
+    for (auto MemRegion : StubKVs.second)
+      OS << " " << MemRegion;
+    OS << "\n";
+  }
   return OS;
 }
 
@@ -787,8 +812,8 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(), std::move(S),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
+      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -877,7 +902,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       std::move(S), *SockFD, *SockFD);
 #endif
 }
@@ -993,6 +1018,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
   }
 
+  if (VTuneSupport && TT.isOSBinFormatELF()) {
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(
+        VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
+                                   *ProcessSymsJD, /*EmitDebugInfo=*/true,
+                                   /*TestMode=*/true)));
+  }
+
   // Set up the platform.
   if (!OrcRuntime.empty()) {
     assert(ProcessSymsJD && "ProcessSymsJD should have been set");
@@ -1073,7 +1106,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   for (auto &HarnessFile : TestHarnesses) {
     HarnessFiles.insert(HarnessFile);
 
-    auto ObjBuffer = ExitOnErr(getFile(HarnessFile));
+    auto ObjBuffer =
+        ExitOnErr(loadLinkableFile(HarnessFile, ES.getTargetTriple(),
+                                   LoadArchives::Never))
+            .first;
 
     auto ObjInterface =
         ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
@@ -1183,6 +1219,62 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   return Error::success();
 }
 
+Error Session::FileInfo::registerGOTEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
+                                  Sym.getAddress().getValue(),
+                                  Sym.getTargetFlags()};
+  return Error::success();
+}
+
+Error Session::FileInfo::registerStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  Entry.insert(Entry.begin(),
+               {Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                Sym.getTargetFlags()});
+  return Error::success();
+}
+
+Error Session::FileInfo::registerMultiStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+
+  auto Target = GetSymbolTarget(G, Sym.getBlock());
+  if (!Target)
+    return Target.takeError();
+
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                     Sym.getTargetFlags());
+
+  // Let's keep stubs ordered by ascending address.
+  std::sort(Entry.begin(), Entry.end(),
+            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+              return L.getTargetAddress() < R.getTargetAddress();
+            });
+
+  return Error::success();
+}
+
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
   auto FileInfoItr = FileInfos.find(FileName);
   if (FileInfoItr == FileInfos.end())
@@ -1205,8 +1297,59 @@ Session::findSectionInfo(StringRef FileName, StringRef SectionName) {
   return SecInfoItr->second;
 }
 
+class MemoryMatcher {
+public:
+  MemoryMatcher(ArrayRef<char> Content)
+      : Pos(Content.data()), End(Pos + Content.size()) {}
+
+  template <typename MaskType> bool matchMask(MaskType Mask) {
+    if (Mask == (Mask & *reinterpret_cast<const MaskType *>(Pos))) {
+      Pos += sizeof(MaskType);
+      return true;
+    }
+    return false;
+  }
+
+  template <typename ValueType> bool matchEqual(ValueType Value) {
+    if (Value == *reinterpret_cast<const ValueType *>(Pos)) {
+      Pos += sizeof(ValueType);
+      return true;
+    }
+    return false;
+  }
+
+  bool done() const { return Pos == End; }
+
+private:
+  const char *Pos;
+  const char *End;
+};
+
+static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
+  using namespace support::endian;
+  auto Armv7MovWTle = byte_swap<uint32_t, endianness::little>(0xe300c000);
+  auto Armv7BxR12le = byte_swap<uint32_t, endianness::little>(0xe12fff1c);
+  auto Thumbv7MovWTle = byte_swap<uint32_t, endianness::little>(0x0c00f240);
+  auto Thumbv7BxR12le = byte_swap<uint16_t, endianness::little>(0x4760);
+
+  MemoryMatcher M(Stub.getContent());
+  if (M.matchMask(Thumbv7MovWTle)) {
+    if (M.matchMask(Thumbv7MovWTle))
+      if (M.matchEqual(Thumbv7BxR12le))
+        if (M.done())
+          return "thumbv7_abs_le";
+  } else if (M.matchMask(Armv7MovWTle)) {
+    if (M.matchMask(Armv7MovWTle))
+      if (M.matchEqual(Armv7BxR12le))
+        if (M.done())
+          return "armv7_abs_le";
+  }
+  return "";
+}
+
 Expected<Session::MemoryRegionInfo &>
-Session::findStubInfo(StringRef FileName, StringRef TargetName) {
+Session::findStubInfo(StringRef FileName, StringRef TargetName,
+                      StringRef KindNameFilter) {
   auto FI = findFileInfo(FileName);
   if (!FI)
     return FI.takeError();
@@ -1216,7 +1359,38 @@ Session::findStubInfo(StringRef FileName, StringRef TargetName) {
                                        "\" registered for file \"" + FileName +
                                        "\"",
                                    inconvertibleErrorCode());
-  return StubInfoItr->second;
+  auto &StubsForTarget = StubInfoItr->second;
+  assert(!StubsForTarget.empty() && "At least 1 stub in each entry");
+  if (KindNameFilter.empty() && StubsForTarget.size() == 1)
+    return StubsForTarget[0]; // Regular single-stub match
+
+  std::string KindsStr;
+  SmallVector<MemoryRegionInfo *, 1> Matches;
+  Regex KindNameMatcher(KindNameFilter.empty() ? ".*" : KindNameFilter);
+  for (MemoryRegionInfo &Stub : StubsForTarget) {
+    StringRef Kind = detectStubKind(Stub);
+    if (KindNameMatcher.match(Kind))
+      Matches.push_back(&Stub);
+    KindsStr += "\"" + (Kind.empty() ? "<unknown>" : Kind.str()) + "\", ";
+  }
+  if (Matches.empty())
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(StubsForTarget.size()) +
+            " stubs in file \"" + FileName +
+            "\", but none of them matches the stub-kind filter \"" +
+            KindNameFilter + "\" (all encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+  if (Matches.size() > 1)
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(Matches.size()) +
+            " candidate stubs in file \"" + FileName +
+            "\". Please refine stub-kind filter \"" + KindNameFilter +
+            "\" for disambiguation (encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+
+  return *Matches[0];
 }
 
 Expected<Session::MemoryRegionInfo &>
@@ -1252,6 +1426,14 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
   static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
+
+    if (!OverrideTriple.empty()) {
+      LLVM_DEBUG({
+        dbgs() << "Triple from -triple override: " << OverrideTriple << "\n";
+      });
+      return std::make_pair(Triple(OverrideTriple), SubtargetFeatures());
+    }
+
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
       file_magic Magic = identify_magic(ObjBuffer->getBuffer());
@@ -1270,13 +1452,25 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
         SubtargetFeatures Features;
         if (auto ObjFeatures = Obj->getFeatures())
           Features = std::move(*ObjFeatures);
+
+        LLVM_DEBUG({
+          dbgs() << "Triple from " << InputFile << ": " << TT.str() << "\n";
+        });
         return std::make_pair(TT, Features);
       }
       default:
         break;
       }
     }
-    return std::make_pair(Triple(), SubtargetFeatures());
+
+    // If no plain object file inputs exist to pin down the triple then detect
+    // the host triple and default to that.
+    auto JTMB = ExitOnErr(JITTargetMachineBuilder::detectHost());
+    LLVM_DEBUG({
+      dbgs() << "Triple from host-detection: " << JTMB.getTargetTriple().str()
+             << "\n";
+    });
+    return std::make_pair(JTMB.getTargetTriple(), JTMB.getFeatures());
   }();
 
   return FirstTTAndFeatures;
@@ -1524,14 +1718,66 @@ static Error addAliases(Session &S,
   return Error::success();
 }
 
+static Error addSectCreates(Session &S,
+                            const std::map<unsigned, JITDylib *> &IdxToJD) {
+  for (auto SCItr = SectCreate.begin(), SCEnd = SectCreate.end();
+       SCItr != SCEnd; ++SCItr) {
+
+    unsigned SCArgIdx = SectCreate.getPosition(SCItr - SectCreate.begin());
+    auto &JD = *std::prev(IdxToJD.lower_bound(SCArgIdx))->second;
+
+    StringRef SCArg(*SCItr);
+
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectName, FileName] = SectAndFileName.rsplit(',');
+    if (SectName.empty())
+      return make_error<StringError>("In -sectcreate=" + SCArg +
+                                         ", filename component cannot be empty",
+                                     inconvertibleErrorCode());
+    if (FileName.empty())
+      return make_error<StringError>("In -sectcreate=" + SCArg +
+                                         ", filename component cannot be empty",
+                                     inconvertibleErrorCode());
+
+    auto Content = getFile(FileName);
+    if (!Content)
+      return Content.takeError();
+
+    SectCreateMaterializationUnit::ExtraSymbolsMap ExtraSymbols;
+    while (!ExtraSymbolsString.empty()) {
+      StringRef NextSymPair;
+      std::tie(NextSymPair, ExtraSymbolsString) = ExtraSymbolsString.split(',');
+
+      auto [Sym, OffsetString] = NextSymPair.split('=');
+      size_t Offset;
+
+      if (OffsetString.getAsInteger(0, Offset))
+        return make_error<StringError>("In -sectcreate=" + SCArg + ", " +
+                                           OffsetString +
+                                           " is not a valid integer",
+                                       inconvertibleErrorCode());
+
+      ExtraSymbols[S.ES.intern(Sym)] = {JITSymbolFlags::Exported, Offset};
+    }
+
+    if (auto Err = JD.define(std::make_unique<SectCreateMaterializationUnit>(
+            S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
+            std::move(ExtraSymbols))))
+      return Err;
+  }
+
+  return Error::success();
+}
+
 static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
     LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
-    auto ObjBuffer = getFile(HarnessFile);
-    if (!ObjBuffer)
-      return ObjBuffer.takeError();
-    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(*ObjBuffer)))
+    auto Linkable = loadLinkableFile(HarnessFile, S.ES.getTargetTriple(),
+                                     LoadArchives::Never);
+    if (!Linkable)
+      return Linkable.takeError();
+    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(Linkable->first)))
       return Err;
   }
   return Error::success();
@@ -1553,21 +1799,22 @@ static Error addObjects(Session &S,
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
-    auto ObjBuffer = getFile(InputFile);
+    auto ObjBuffer = loadLinkableFile(InputFile, S.ES.getTargetTriple(),
+                                      LoadArchives::Never);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
     if (S.HarnessFiles.empty()) {
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer)))
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first)))
         return Err;
     } else {
       // We're in -harness mode. Use a custom interface for this
       // test object.
       auto ObjInterface =
-          getTestObjectFileInterface(S, (*ObjBuffer)->getMemBufferRef());
+          getTestObjectFileInterface(S, ObjBuffer->first->getMemBufferRef());
       if (!ObjInterface)
         return ObjInterface.takeError();
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer),
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
                                     std::move(*ObjInterface)))
         return Err;
     }
@@ -1874,6 +2121,9 @@ static Error addSessionInputs(Session &S) {
   if (auto Err = addAliases(S, IdxToJD))
     return Err;
 
+  if (auto Err = addSectCreates(S, IdxToJD))
+    return Err;
+
   if (!TestHarnesses.empty())
     if (auto Err = addTestHarnesses(S))
       return Err;
@@ -1985,8 +2235,9 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
     return S.findSectionInfo(FileName, SectionName);
   };
 
-  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName) {
-    return S.findStubInfo(FileName, SectionName);
+  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName,
+                          StringRef KindNameFilter) {
+    return S.findStubInfo(FileName, SectionName, KindNameFilter);
   };
 
   auto GetGOTInfo = [&S](StringRef FileName, StringRef SectionName) {

@@ -1,0 +1,69 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+; RUN: clang-installapi \
+; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -XApple -DDarwin=1 -XElf -DNONDarwin=1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include -dynamiclib \
+; RUN: -extra-public-header %S/Inputs/LibFoo/usr/include/public.h \
+; RUN: -o %t/output.tbd -v 2>&1 | FileCheck %s --check-prefix=INSTALLAPI
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+// Try with -optionlist.
+; RUN: clang-installapi \
+; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include -dynamiclib \
+; RUN: -extra-public-header %S/Inputs/LibFoo/usr/include/public.h \
+; RUN: -optionlist %t/options.json -o %t/output2.tbd 2>&1 | FileCheck %s -allow-empty 
+; RUN: llvm-readtapi --compare %t/output2.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+; INSTALLAPI: Public Headers:
+; INSTALLAPI: Apple Public Headers:
+; INSTALLAPI: Elf Public Headers:
+
+;--- options.json
+{
+  "Apple" : ["-DDarwin=1"],
+  "Elf" : ["-DNONDarwin=1"]
+}
+
+;--- expected.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_foo$darwin",
+            "_foo$linux",
+            "_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "12",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

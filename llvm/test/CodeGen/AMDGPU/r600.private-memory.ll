@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 

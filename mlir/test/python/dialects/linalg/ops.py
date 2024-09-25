@@ -97,7 +97,7 @@ def testNamedStructuredOpGenericForm():
                 RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32)
             )
             def named_form(lhs, rhs):
-                init_result = tensor.EmptyOp([4, 8], f32)
+                init_result = tensor.empty([4, 8], f32)
                 #      CHECK: "linalg.matmul"(%{{.*}})
                 # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
                 # CHECK-SAME:    operandSegmentSizes = array<i32: 2, 1>
@@ -106,7 +106,7 @@ def testNamedStructuredOpGenericForm():
                 # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
                 # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
                 # CHECK-NEXT: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
-                return linalg.matmul(lhs, rhs, outs=[init_result.result])
+                return linalg.matmul(lhs, rhs, outs=[init_result])
 
     module.operation.print(print_generic_op_form=True)
 

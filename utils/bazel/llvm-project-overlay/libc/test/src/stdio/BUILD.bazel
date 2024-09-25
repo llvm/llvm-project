@@ -120,3 +120,15 @@ libc_test(
         "//libc:vfprintf",
     ],
 )
+
+libc_test(
+    name = "remove_test",
+    srcs = ["remove_test.cpp"],
+    libc_function_deps = [
+        "//libc:remove",
+        "//libc:open",
+        "//libc:mkdirat",
+        "//libc:access",
+        "//libc:close",
+    ],
+)

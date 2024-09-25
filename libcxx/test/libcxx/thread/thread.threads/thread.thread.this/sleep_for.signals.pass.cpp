@@ -11,11 +11,6 @@
 // This test uses the POSIX header <sys/time.h> which Windows doesn't provide
 // UNSUPPORTED: windows
 
-// Until 58a0a70fb2f1, this_thread::sleep_for misbehaves when interrupted by
-// a signal, as tested here. Disable the test on the corresponding system
-// libraries.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // ALLOW_RETRIES: 3
 
 // <thread>

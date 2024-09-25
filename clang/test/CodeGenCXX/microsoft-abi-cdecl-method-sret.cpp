@@ -19,9 +19,9 @@ S C::variadic_sret(const char *f, ...) { return S(); }
 S C::cdecl_sret() { return S(); }
 S C::byval_and_sret(S a) { return S(); }
 
-// CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result, ptr noundef %f, ...)
-// CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result)
-// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.S) align 4 %agg.result, ptr noundef byval(%struct.S) align 4 %a)
+// CHECK: define dso_local void @"?variadic_sret@C@@QAA?AUS@@PBDZZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.S) align 4 %agg.result, ptr noundef %f, ...)
+// CHECK: define dso_local void @"?cdecl_sret@C@@QAA?AUS@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.S) align 4 %agg.result)
+// CHECK: define dso_local void @"?byval_and_sret@C@@QAA?AUS@@U2@@Z"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.S) align 4 %agg.result, ptr noundef byval(%struct.S) align 4 %a)
 
 int main() {
   C c;
@@ -41,4 +41,4 @@ struct A {
 S A::f(int x) {
   return S();
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(ptr inreg noundef nonnull align 1 dereferenceable(1) %this, ptr inreg noalias sret(%struct.S) align 4 %agg.result, i32 noundef %x)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"?f@A@@QAI?AUS@@H@Z"(ptr inreg noundef nonnull align 1 dereferenceable(1) %this, ptr dead_on_unwind inreg noalias writable sret(%struct.S) align 4 %agg.result, i32 noundef %x)

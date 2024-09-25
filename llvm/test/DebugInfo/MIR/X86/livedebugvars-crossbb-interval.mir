@@ -26,10 +26,10 @@
   %struct.a = type { i32 }
   
   ; Function Attrs: nounwind ssp
-  define i32 @bar(%struct.a* nocapture %b, i32 %shoes) !dbg !4 {
+  define i32 @bar(ptr nocapture %b, i32 %shoes) !dbg !4 {
   entry:
     tail call void @llvm.dbg.value(metadata i32 %shoes, metadata !9, metadata !DIExpression()), !dbg !16
-    %tmp1 = getelementptr inbounds %struct.a, %struct.a* %b, i64 0, i32 0, !dbg !17
+    %tmp1 = getelementptr inbounds %struct.a, ptr %b, i64 0, i32 0, !dbg !17
     br label %bb3
   
   bb1:                                              ; preds = %bb2
@@ -43,7 +43,7 @@
     br label %bb1
   
   bb3:                                              ; preds = %entry
-    %tmp2 = load i32, i32* %tmp1, align 4, !dbg !17
+    %tmp2 = load i32, ptr %tmp1, align 4, !dbg !17
     br label %bb2
   
   exit:                                             ; preds = %bb1
@@ -56,7 +56,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
   
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
@@ -100,6 +100,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$esi', virtual-reg: '%4' }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |

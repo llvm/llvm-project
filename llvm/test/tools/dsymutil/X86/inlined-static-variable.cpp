@@ -4,7 +4,7 @@
 // RUN:   "{{DW_AT_low_pc|DW_AT_high_pc|DW_AT_location|DW_TAG|NULL}}" \
 // RUN:   --check-prefixes=CHECK
 //
-// RUN: dsymutil --linker llvm --no-odr -f -y %p/dummy-debug-map.map \
+// RUN: dsymutil --linker parallel --no-odr -f -y %p/dummy-debug-map.map \
 // RUN:   -oso-prepend-path %p/../Inputs/inlined-static-variable -o - \
 // RUN:   -keep-function-for-static | llvm-dwarfdump - | FileCheck %s \
 // RUN:   --implicit-check-not \

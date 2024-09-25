@@ -17,6 +17,8 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
+    MLIRArmNeonTestPasses
+    MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
     MLIRDLTITestPasses
@@ -25,14 +27,16 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLinalgTestPasses
     MLIRLoopLikeInterfaceTestPasses
     MLIRMathTestPasses
+    MLIRTestMathToVCIX
     MLIRMemRefTestPasses
-    MLIRMeshTestSimplifications
+    MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
     MLIRTensorTestPasses
     MLIRTestAnalysis
+    MLIRTestConvertToSPIRV
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
@@ -104,11 +108,3 @@ llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)
 export_executable_symbols_for_plugins(mlir-opt)
-
-if(MLIR_ENABLE_DEPRECATED_GPU_SERIALIZATION)
-  # Enable deprecated serialization passes.
-  target_compile_definitions(mlir-opt
-    PRIVATE
-    MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE=1
-  )
-endif()

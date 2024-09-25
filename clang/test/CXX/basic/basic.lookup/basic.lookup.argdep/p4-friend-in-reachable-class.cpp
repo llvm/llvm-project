@@ -8,7 +8,10 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/Friend-in-reachable-class.cppm -o %t/X.pcm
-// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/Friend-in-reachable-class.cppm \
+// RUN:   -o %t/X.reduced.pcm
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=X=%t/X.pcm %t/Use.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=X=%t/X.reduced.pcm %t/Use.cpp -verify -fsyntax-only
 //
 //--- Friend-in-reachable-class.cppm
 module;

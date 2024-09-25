@@ -31,38 +31,38 @@
 --- |
   source_filename = "reduced.ll"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-  
+
   %class._Tree = type { i8 }
   %class._Tree_const_iterator = type { %class._Tree_unchecked_const_iterator }
-  %class._Tree_unchecked_const_iterator = type { %struct._Iterator_base0, i32* }
+  %class._Tree_unchecked_const_iterator = type { %struct._Iterator_base0, ptr }
   %struct._Iterator_base0 = type { i32 }
-  
-  define i32 @main({ i32, i32* } %call.i) !dbg !6 {
+
+  define i32 @main({ i32, ptr } %call.i) !dbg !6 {
   entry:
     call void @llvm.dbg.value(metadata i32 2, metadata !10, metadata !DIExpression()), !dbg !12
-    %call.i1 = call { i32, i32* } undef(%class._Tree* null)
-    %0 = extractvalue { i32, i32* } %call.i, 1
-    call void @llvm.dbg.value(metadata i32* %0, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
-    %call.i.i.i.i.i = call i8 undef(i32* null), !dbg !15
+    %call.i1 = call { i32, ptr } undef(ptr null)
+    %0 = extractvalue { i32, ptr } %call.i, 1
+    call void @llvm.dbg.value(metadata ptr %0, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    %call.i.i.i.i.i = call i8 undef(ptr null), !dbg !15
     br i1 undef, label %_Z17do_insert_cv_testI5_TreeEvv.exit, label %if.then.i.i.i.i.i
-  
+
   if.then.i.i.i.i.i:
-    %call3.i.i.i.i.i = call i32* undef(i32* null)
-    call void @llvm.dbg.value(metadata i32* %call3.i.i.i.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    %call3.i.i.i.i.i = call ptr undef(ptr null)
+    call void @llvm.dbg.value(metadata ptr %call3.i.i.i.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
     br label %_Z17do_insert_cv_testI5_TreeEvv.exit
-  
+
   _Z17do_insert_cv_testI5_TreeEvv.exit:
-    %_First.sroa.2.0.i.i = phi i32* [ %0, %entry ], [ %call3.i.i.i.i.i, %if.then.i.i.i.i.i ]
-    call void @llvm.dbg.value(metadata i32* %_First.sroa.2.0.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
-    call void undef(%class._Tree_const_iterator* null, i32 0, i32* %_First.sroa.2.0.i.i), !dbg !16
+    %_First.sroa.2.0.i.i = phi ptr [ %0, %entry ], [ %call3.i.i.i.i.i, %if.then.i.i.i.i.i ]
+    call void @llvm.dbg.value(metadata ptr %_First.sroa.2.0.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    call void undef(ptr null, i32 0, ptr %_First.sroa.2.0.i.i), !dbg !16
     ret i32 0
   }
-  
+
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2, !3, !4, !5}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0 (git@github.com:llvm/llvm-project ffb249520766d4e2ca120c09dae7afa3d64ef81d)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "toolchain10279.cpp", directory: "/home/jmorse")
   !2 = !{i32 7, !"Dwarf Version", i32 4}
@@ -104,7 +104,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $rsi, $r14, $rbx
-  
+
     frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
@@ -124,16 +124,16 @@ body:             |
     CALL64r undef renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al, debug-location !15
     TEST8rr renamable $r14b, renamable $r14b, implicit-def $eflags, implicit killed $r14
     JCC_1 %bb.2, 5, implicit $eflags
-  
+
   bb.1.if.then.i.i.i.i.i:
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
     CALL64r undef renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-instr-number 3
     $rbx = MOV64rr killed $rax
     DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(3, 7), debug-location !15
-  
+
   bb.2._Z17do_insert_cv_testI5_TreeEvv.exit:
     liveins: $rbx
-  
+
     DBG_PHI $rbx, 1
     DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !15
     dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi, debug-location !16

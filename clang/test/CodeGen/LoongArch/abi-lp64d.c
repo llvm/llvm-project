@@ -449,13 +449,13 @@ void f_va_caller(void) {
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[FMT:%.*]], ptr [[FMT_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGP_CUR]], align 8
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[V]], align 4
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 int f_va_int(char *fmt, ...) {

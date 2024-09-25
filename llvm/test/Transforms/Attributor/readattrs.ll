@@ -10,8 +10,8 @@ declare void @test1_1(ptr %x1_1, ptr readonly %y1_1, ...)
 ; NOTE: readonly for %y1_2 would be OK here but not for the similar situation in test13.
 ;
 ;.
-; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = global i32 0
-; CHECK: @[[CONSTANT_MEM:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant i32, align 4
+; CHECK: @x = global i32 0
+; CHECK: @constant_mem = external dso_local constant i32, align 4
 ;.
 define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_2
@@ -129,7 +129,6 @@ entry:
   ret void
 }
 
-; CHECK: declare void @llvm.masked.scatter
 declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>%val, <4 x ptr>, i32, <4 x i1>)
 
 ; CHECK-NOT: readnone
@@ -151,7 +150,6 @@ define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
   ret void
 }
 
-; CHECK: declare <4 x i32> @llvm.masked.gather
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x ptr> %ptrs) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
@@ -170,7 +168,6 @@ define <4 x i32> @test10(<4 x ptr> %ptrs) {
   ret <4 x i32> %res
 }
 
-; CHECK: declare <4 x i32> @test11_1
 declare <4 x i32> @test11_1(<4 x ptr>) argmemonly nounwind readonly
 define <4 x i32> @test11_2(<4 x ptr> %ptrs) {
 ; TUNIT: Function Attrs: nosync nounwind memory(argmem: read)

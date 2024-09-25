@@ -7,12 +7,12 @@
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
-define void @foo(<vscale x 4 x i32>* nocapture dereferenceable(16) %ptr) {
+define void @foo(ptr nocapture dereferenceable(16) %ptr) {
 entry:
   %tmp = alloca <vscale x 4 x i32>, align 8
-  %tmp_ptr = bitcast <vscale x 4 x i32>* %tmp to ptr
+  %tmp_ptr = bitcast ptr %tmp to ptr
   call void @llvm.lifetime.start.p0(i64 32, ptr %tmp_ptr)
-  store <vscale x 4 x i32> undef, <vscale x 4 x i32>* %ptr
+  store <vscale x 4 x i32> undef, ptr %ptr
   call void @llvm.lifetime.end.p0(i64 32, ptr %tmp_ptr)
   ret void
 }

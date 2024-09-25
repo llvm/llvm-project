@@ -29,9 +29,9 @@ Overview
 Within LLVM, FatLTO is supported by choosing the ``FatLTODefaultPipeline``.
 This pipeline will:
 
-#) Run the pre-link UnifiedLTO pipeline on the current module.
+#) Run the pre-link (Thin)LTO pipeline on the current module.
 #) Embed the pre-link bitcode in a special ``.llvm.lto`` section.
-#) Finish optimizing the module using the post-link ThinLTO pipeline.
+#) Finish optimizing the module using the ModuleOptimization pipeline.
 #) Emit the object file, including the new ``.llvm.lto`` section.
 
 .. NOTE

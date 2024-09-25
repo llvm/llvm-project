@@ -1,5 +1,5 @@
-; RUN: opt -S -codegenprepare -disable-complex-addr-modes=false -addr-sink-new-phis=true -addr-sink-new-select=true -disable-cgp-delete-phis  %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-YES
-; RUN: opt -S -codegenprepare -disable-complex-addr-modes=false -addr-sink-new-phis=false -addr-sink-new-select=true -disable-cgp-delete-phis %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -disable-complex-addr-modes=false -addr-sink-new-phis=true -addr-sink-new-select=true -disable-cgp-delete-phis  %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-YES
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -disable-complex-addr-modes=false -addr-sink-new-phis=false -addr-sink-new-select=true -disable-cgp-delete-phis %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO
 target datalayout =
 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -480,34 +480,34 @@ fallthrough:
 }
 
 ; Different types but null is the first?
-define i32 @test19(i1 %cond1, i1 %cond2, i64* %b2, i8* %b1) {
+define i32 @test19(i1 %cond1, i1 %cond2, ptr %b2, ptr %b1) {
 ; CHECK-LABEL: @test19
 entry:
-  %g1 = getelementptr inbounds i64, i64* %b2, i64 5
-  %bc1 = bitcast i64* %g1 to i32*
+  %g1 = getelementptr inbounds i64, ptr %b2, i64 5
+  %bc1 = bitcast ptr %g1 to ptr
   br i1 %cond1, label %if.then1, label %if.then2
 
 if.then1:
-  %g2 = getelementptr inbounds i8, i8* %b1, i64 40
-  %bc2 = bitcast i8* %g2 to i32*
+  %g2 = getelementptr inbounds i8, ptr %b1, i64 40
+  %bc2 = bitcast ptr %g2 to ptr
   br label %fallthrough
 
 if.then2:
-  %bc1_1 = bitcast i64* %g1 to i32*
+  %bc1_1 = bitcast ptr %g1 to ptr
   br i1 %cond2, label %fallthrough, label %if.then3
 
 if.then3:
-  %g3 = getelementptr inbounds i64, i64* null, i64 5
-  %bc1_2 = bitcast i64* %g3 to i32*
+  %g3 = getelementptr inbounds i64, ptr null, i64 5
+  %bc1_2 = bitcast ptr %g3 to ptr
   br label %fallthrough
 
 fallthrough:
 ; CHECK-NOT: sunk_phi
-  %c = phi i32* [%bc2, %if.then1], [%bc1_1, %if.then2], [%bc1_2, %if.then3]
-  %v1 = load i32, i32* %c, align 4
-  %g1_1 = getelementptr inbounds i64, i64* %b2, i64 5
-  %bc1_1_1 = bitcast i64* %g1_1 to i32*
-  %v2 = load i32, i32* %bc1_1_1, align 4
+  %c = phi ptr [%bc2, %if.then1], [%bc1_1, %if.then2], [%bc1_2, %if.then3]
+  %v1 = load i32, ptr %c, align 4
+  %g1_1 = getelementptr inbounds i64, ptr %b2, i64 5
+  %bc1_1_1 = bitcast ptr %g1_1 to ptr
+  %v2 = load i32, ptr %bc1_1_1, align 4
   %v = add i32 %v1, %v2
   ret i32 %v
 }

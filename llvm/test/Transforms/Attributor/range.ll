@@ -48,7 +48,7 @@ define void @test0-icmp-check(ptr %p){
   ; ret = [0, 10)
 ; TUNIT-LABEL: define {{[^@]+}}@test0-icmp-check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) {
-; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG0]]
+; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]]
 ; TUNIT-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; TUNIT-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; TUNIT-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
@@ -722,8 +722,8 @@ define dso_local zeroext i1 @phi(i32 %arg) {
 ; TUNIT:       bb2:
 ; TUNIT-NEXT:    br label [[BB3]]
 ; TUNIT:       bb3:
-; TUNIT-NEXT:    [[TRUETMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; TUNIT-NEXT:    br i1 [[TRUETMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; TUNIT-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; TUNIT-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
 ; TUNIT:       bb5:
 ; TUNIT-NEXT:    br label [[BB9:%.*]]
 ; TUNIT:       bb7:
@@ -748,8 +748,8 @@ define dso_local zeroext i1 @phi(i32 %arg) {
 ; CGSCC:       bb2:
 ; CGSCC-NEXT:    br label [[BB3]]
 ; CGSCC:       bb3:
-; CGSCC-NEXT:    [[TRUETMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; CGSCC-NEXT:    br i1 [[TRUETMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; CGSCC-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; CGSCC-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
 ; CGSCC:       bb5:
 ; CGSCC-NEXT:    br label [[BB9:%.*]]
 ; CGSCC:       bb7:
@@ -1383,13 +1383,13 @@ define internal i32 @less_than_100_1(i32 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@less_than_100_1
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
-; CGSCC-NEXT:    i32 0, label [[ONZERO:%.*]]
-; CGSCC-NEXT:    i32 1, label [[ONONE:%.*]]
-; CGSCC-NEXT:    i32 2, label [[ONTWO:%.*]]
-; CGSCC-NEXT:    i32 3, label [[ONTHREE:%.*]]
-; CGSCC-NEXT:    i32 4, label [[ONFOUR:%.*]]
-; CGSCC-NEXT:    i32 5, label [[ONFIVE:%.*]]
-; CGSCC-NEXT:    i32 6, label [[ONSIX:%.*]]
+; CGSCC-NEXT:      i32 0, label [[ONZERO:%.*]]
+; CGSCC-NEXT:      i32 1, label [[ONONE:%.*]]
+; CGSCC-NEXT:      i32 2, label [[ONTWO:%.*]]
+; CGSCC-NEXT:      i32 3, label [[ONTHREE:%.*]]
+; CGSCC-NEXT:      i32 4, label [[ONFOUR:%.*]]
+; CGSCC-NEXT:      i32 5, label [[ONFIVE:%.*]]
+; CGSCC-NEXT:      i32 6, label [[ONSIX:%.*]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       onzero:
 ; CGSCC-NEXT:    ret i32 0
@@ -1468,13 +1468,13 @@ define internal i32 @less_than_100_2(i32 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@less_than_100_2
 ; TUNIT-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
-; TUNIT-NEXT:    i32 0, label [[ONZERO:%.*]]
-; TUNIT-NEXT:    i32 1, label [[ONONE:%.*]]
-; TUNIT-NEXT:    i32 2, label [[ONTWO:%.*]]
-; TUNIT-NEXT:    i32 3, label [[ONTHREE:%.*]]
-; TUNIT-NEXT:    i32 4, label [[ONFOUR:%.*]]
-; TUNIT-NEXT:    i32 5, label [[ONFIVE:%.*]]
-; TUNIT-NEXT:    i32 6, label [[ONSIX:%.*]]
+; TUNIT-NEXT:      i32 0, label [[ONZERO:%.*]]
+; TUNIT-NEXT:      i32 1, label [[ONONE:%.*]]
+; TUNIT-NEXT:      i32 2, label [[ONTWO:%.*]]
+; TUNIT-NEXT:      i32 3, label [[ONTHREE:%.*]]
+; TUNIT-NEXT:      i32 4, label [[ONFOUR:%.*]]
+; TUNIT-NEXT:      i32 5, label [[ONFIVE:%.*]]
+; TUNIT-NEXT:      i32 6, label [[ONSIX:%.*]]
 ; TUNIT-NEXT:    ]
 ; TUNIT:       onzero:
 ; TUNIT-NEXT:    ret i32 0
@@ -1497,13 +1497,13 @@ define internal i32 @less_than_100_2(i32 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@less_than_100_2
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    switch i32 [[C]], label [[OTHERWISE:%.*]] [
-; CGSCC-NEXT:    i32 0, label [[ONZERO:%.*]]
-; CGSCC-NEXT:    i32 1, label [[ONONE:%.*]]
-; CGSCC-NEXT:    i32 2, label [[ONTWO:%.*]]
-; CGSCC-NEXT:    i32 3, label [[ONTHREE:%.*]]
-; CGSCC-NEXT:    i32 4, label [[ONFOUR:%.*]]
-; CGSCC-NEXT:    i32 5, label [[ONFIVE:%.*]]
-; CGSCC-NEXT:    i32 6, label [[ONSIX:%.*]]
+; CGSCC-NEXT:      i32 0, label [[ONZERO:%.*]]
+; CGSCC-NEXT:      i32 1, label [[ONONE:%.*]]
+; CGSCC-NEXT:      i32 2, label [[ONTWO:%.*]]
+; CGSCC-NEXT:      i32 3, label [[ONTHREE:%.*]]
+; CGSCC-NEXT:      i32 4, label [[ONFOUR:%.*]]
+; CGSCC-NEXT:      i32 5, label [[ONFIVE:%.*]]
+; CGSCC-NEXT:      i32 6, label [[ONSIX:%.*]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       onzero:
 ; CGSCC-NEXT:    ret i32 0
@@ -1652,8 +1652,8 @@ define void @spam(ptr %arg, ptr %arg1) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[ARG:%.*]], ptr nocapture nofree readnone [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TRUETMP2:%.*]] = icmp ult i32 [[TMP]], 4
-; CHECK-NEXT:    br i1 [[TRUETMP2]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP]], 4
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call fastcc void @wobble(i32 signext [[TMP]])
 ; CHECK-NEXT:    br label [[BB5:%.*]]

@@ -95,6 +95,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Do finalize relaxation after collecting relaxation infos.
+  virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
@@ -130,7 +132,7 @@ public:
   RelType tlsGotRel;
   RelType tlsModuleIndexRel;
   RelType tlsOffsetRel;
-  unsigned gotEntrySize = config->wordsize;
+  unsigned gotEntrySize = ctx.arg.wordsize;
   unsigned pltEntrySize;
   unsigned pltHeaderSize;
   unsigned ipltEntrySize;
@@ -186,6 +188,7 @@ TargetInfo *getPPC64TargetInfo();
 TargetInfo *getPPCTargetInfo();
 TargetInfo *getRISCVTargetInfo();
 TargetInfo *getSPARCV9TargetInfo();
+TargetInfo *getSystemZTargetInfo();
 TargetInfo *getX86TargetInfo();
 TargetInfo *getX86_64TargetInfo();
 template <class ELFT> TargetInfo *getMipsTargetInfo();
@@ -228,7 +231,7 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 template <typename ELFT> void writeARMCmseImportLib();
-uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc);
+uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections();
 void addArmInputSectionMappingSymbols();
@@ -236,8 +239,8 @@ void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
 void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
+void initSymbolAnchors();
 
-LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
@@ -279,27 +282,37 @@ inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
 
 // Endianness-aware read/write.
 inline uint16_t read16(const void *p) {
-  return llvm::support::endian::read16(p, config->endianness);
+  return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
 inline uint32_t read32(const void *p) {
-  return llvm::support::endian::read32(p, config->endianness);
+  return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
 inline uint64_t read64(const void *p) {
-  return llvm::support::endian::read64(p, config->endianness);
+  return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
 inline void write16(void *p, uint16_t v) {
-  llvm::support::endian::write16(p, v, config->endianness);
+  llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
 inline void write32(void *p, uint32_t v) {
-  llvm::support::endian::write32(p, v, config->endianness);
+  llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
 inline void write64(void *p, uint64_t v) {
-  llvm::support::endian::write64(p, v, config->endianness);
+  llvm::support::endian::write64(p, v, ctx.arg.endianness);
+}
+
+// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
 }
 } // namespace elf
 } // namespace lld
@@ -308,7 +321,7 @@ inline void write64(void *p, uint64_t v) {
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (config->ekind) {                                                     \
+  switch (ctx.arg.ekind) {                                                     \
   case lld::elf::ELF32LEKind:                                                  \
     f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
     break;                                                                     \
@@ -322,7 +335,7 @@ inline void write64(void *p, uint64_t v) {
     f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
     break;                                                                     \
   default:                                                                     \
-    llvm_unreachable("unknown config->ekind");                                 \
+    llvm_unreachable("unknown ctx.arg.ekind");                                 \
   }
 
 #endif

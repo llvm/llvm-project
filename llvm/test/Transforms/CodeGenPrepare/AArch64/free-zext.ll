@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare -mtriple=aarch64-linux %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=aarch64-linux %s | FileCheck -enable-var-scope %s
 
 ; Test for CodeGenPrepare::optimizeLoadExt(): simple case: two loads
 ; feeding a phi that zext's each loaded value.

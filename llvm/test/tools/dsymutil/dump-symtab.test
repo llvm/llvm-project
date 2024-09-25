@@ -1,6 +1,9 @@
 RUN: dsymutil -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=ALL,I386 %s
 RUN: dsymutil -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=I386,ONE %s
 
+RUN: dsymutil --linker parallel -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=ALL,I386 %s
+RUN: dsymutil --linker parallel -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=I386,ONE %s
+
 
 ALL:  ----------------------------------------------------------------------
 ALL-NEXT:  Symbol table for: '{{.*}}fat-test.dylib' (x86_64)

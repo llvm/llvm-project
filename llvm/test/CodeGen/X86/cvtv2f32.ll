@@ -9,7 +9,7 @@ define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) 
 ; X86-LABEL: uitofp_2i32_cvt_buildvector:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    movsd {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
 ; X86-NEXT:    orpd %xmm2, %xmm1
 ; X86-NEXT:    subsd %xmm2, %xmm1
 ; X86-NEXT:    cvtsd2ss %xmm1, %xmm1

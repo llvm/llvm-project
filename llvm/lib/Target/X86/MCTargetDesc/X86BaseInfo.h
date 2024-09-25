@@ -56,12 +56,14 @@ enum IPREFIXES {
   IP_HAS_REPEAT = 1U << 3,
   IP_HAS_LOCK = 1U << 4,
   IP_HAS_NOTRACK = 1U << 5,
-  IP_USE_VEX = 1U << 6,
-  IP_USE_VEX2 = 1U << 7,
-  IP_USE_VEX3 = 1U << 8,
-  IP_USE_EVEX = 1U << 9,
-  IP_USE_DISP8 = 1U << 10,
-  IP_USE_DISP32 = 1U << 11,
+  IP_USE_REX = 1U << 6,
+  IP_USE_REX2 = 1U << 7,
+  IP_USE_VEX = 1U << 8,
+  IP_USE_VEX2 = 1U << 9,
+  IP_USE_VEX3 = 1U << 10,
+  IP_USE_EVEX = 1U << 11,
+  IP_USE_DISP8 = 1U << 12,
+  IP_USE_DISP32 = 1U << 13,
 };
 
 enum OperandType : unsigned {
@@ -327,8 +329,8 @@ enum EncodingOfSegmentOverridePrefix : uint8_t {
 /// Given a segment register, return the encoding of the segment override
 /// prefix for it.
 inline EncodingOfSegmentOverridePrefix
-getSegmentOverridePrefixForReg(unsigned Reg) {
-  switch (Reg) {
+getSegmentOverridePrefixForReg(MCRegister Reg) {
+  switch (Reg.id()) {
   default:
     llvm_unreachable("Unknown segment register!");
   case X86::CS:
@@ -529,6 +531,14 @@ enum : uint64_t {
   /// PrefixByte - This form is used for instructions that represent a prefix
   /// byte like data16 or rep.
   PrefixByte = 10,
+  /// MRMDestRegCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands reg(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestRegCC = 18,
+  /// MRMDestMemCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands mem(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestMemCC = 19,
   /// MRMDestMem4VOp3CC - This form is used for instructions that use the Mod/RM
   /// byte to specify a destination which in this case is memory and operand 3
   /// with VEX.VVVV, and also encodes a condition code.
@@ -802,6 +812,8 @@ enum : uint64_t {
   /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
+  /// LEGACY - encoding using REX/REX2 or w/o opcode prefix.
+  LEGACY = 0 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
   /// XOP - Opcode prefix used by XOP instructions.
@@ -857,7 +869,13 @@ enum : uint64_t {
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
   /// EVEX_NF - Set if this instruction has EVEX.NF field set.
   EVEX_NFShift = ExplicitOpPrefixShift + 2,
-  EVEX_NF = 1ULL << EVEX_NFShift
+  EVEX_NF = 1ULL << EVEX_NFShift,
+  // TwoConditionalOps - Set if this instruction has two conditional operands
+  TwoConditionalOps_Shift = EVEX_NFShift + 1,
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift,
+  // EVEX_U - Set if this instruction has EVEX.U field set.
+  EVEX_UShift = TwoConditionalOps_Shift + 1,
+  EVEX_U = 1ULL << EVEX_UShift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
@@ -1011,6 +1029,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     return -1;
   case X86II::MRMDestMem:
   case X86II::MRMDestMemFSIB:
+  case X86II::MRMDestMemCC:
     return hasNewDataDest(TSFlags);
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemFSIB:
@@ -1024,11 +1043,13 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
     return 3;
   case X86II::MRMSrcMemCC:
+    return 1 + hasNewDataDest(TSFlags);
   case X86II::MRMDestMem4VOp3CC:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
     // mask register.
     return 1;
   case X86II::MRMDestReg:
+  case X86II::MRMDestRegCC:
   case X86II::MRMSrcReg:
   case X86II::MRMSrcReg4VOp3:
   case X86II::MRMSrcRegOp4:
@@ -1135,51 +1156,52 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
 }
 
 /// \returns true if the register is a XMM.
-inline bool isXMMReg(unsigned RegNo) {
-  assert(X86::XMM15 - X86::XMM0 == 15 &&
-         "XMM0-15 registers are not continuous");
-  assert(X86::XMM31 - X86::XMM16 == 15 &&
-         "XMM16-31 registers are not continuous");
-  return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
-         (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
+inline bool isXMMReg(MCRegister Reg) {
+  static_assert(X86::XMM15 - X86::XMM0 == 15,
+                "XMM0-15 registers are not continuous");
+  static_assert(X86::XMM31 - X86::XMM16 == 15,
+                "XMM16-31 registers are not continuous");
+  return (Reg >= X86::XMM0 && Reg <= X86::XMM15) ||
+         (Reg >= X86::XMM16 && Reg <= X86::XMM31);
 }
 
 /// \returns true if the register is a YMM.
-inline bool isYMMReg(unsigned RegNo) {
-  assert(X86::YMM15 - X86::YMM0 == 15 &&
-         "YMM0-15 registers are not continuous");
-  assert(X86::YMM31 - X86::YMM16 == 15 &&
-         "YMM16-31 registers are not continuous");
-  return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
-         (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
+inline bool isYMMReg(MCRegister Reg) {
+  static_assert(X86::YMM15 - X86::YMM0 == 15,
+                "YMM0-15 registers are not continuous");
+  static_assert(X86::YMM31 - X86::YMM16 == 15,
+                "YMM16-31 registers are not continuous");
+  return (Reg >= X86::YMM0 && Reg <= X86::YMM15) ||
+         (Reg >= X86::YMM16 && Reg <= X86::YMM31);
 }
 
 /// \returns true if the register is a ZMM.
-inline bool isZMMReg(unsigned RegNo) {
-  assert(X86::ZMM31 - X86::ZMM0 == 31 && "ZMM registers are not continuous");
-  return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
+inline bool isZMMReg(MCRegister Reg) {
+  static_assert(X86::ZMM31 - X86::ZMM0 == 31,
+                "ZMM registers are not continuous");
+  return Reg >= X86::ZMM0 && Reg <= X86::ZMM31;
 }
 
-/// \returns true if \p RegNo is an apx extended register.
-inline bool isApxExtendedReg(unsigned RegNo) {
-  assert(X86::R31WH - X86::R16 == 95 && "EGPRs are not continuous");
-  return RegNo >= X86::R16 && RegNo <= X86::R31WH;
+/// \returns true if \p Reg is an apx extended register.
+inline bool isApxExtendedReg(MCRegister Reg) {
+  static_assert(X86::R31WH - X86::R16 == 95, "EGPRs are not continuous");
+  return Reg >= X86::R16 && Reg <= X86::R31WH;
 }
 
 /// \returns true if the MachineOperand is a x86-64 extended (r8 or
 /// higher) register,  e.g. r8, xmm8, xmm13, etc.
-inline bool isX86_64ExtendedReg(unsigned RegNo) {
-  if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
-      (RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
-      (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
-      (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
-      (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
+inline bool isX86_64ExtendedReg(MCRegister Reg) {
+  if ((Reg >= X86::XMM8 && Reg <= X86::XMM15) ||
+      (Reg >= X86::XMM16 && Reg <= X86::XMM31) ||
+      (Reg >= X86::YMM8 && Reg <= X86::YMM15) ||
+      (Reg >= X86::YMM16 && Reg <= X86::YMM31) ||
+      (Reg >= X86::ZMM8 && Reg <= X86::ZMM31))
     return true;
 
-  if (isApxExtendedReg(RegNo))
+  if (isApxExtendedReg(Reg))
     return true;
 
-  switch (RegNo) {
+  switch (Reg.id()) {
   default:
     break;
   case X86::R8:
@@ -1242,6 +1264,10 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
   if (Encoding == X86II::EVEX)
     return true;
 
+  unsigned Opcode = Desc.Opcode;
+  // MOV32r0 is always expanded to XOR32rr
+  if (Opcode == X86::MOV32r0)
+    return true;
   // To be conservative, egpr is not used for all pseudo instructions
   // because we are not sure what instruction it will become.
   // FIXME: Could we improve it in X86ExpandPseudo?
@@ -1250,7 +1276,6 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
 
   // MAP OB/TB in legacy encoding space can always use egpr except
   // XSAVE*/XRSTOR*.
-  unsigned Opcode = Desc.Opcode;
   switch (Opcode) {
   default:
     break;
@@ -1274,15 +1299,15 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
 
 /// \returns true if the MemoryOperand is a 32 extended (zmm16 or higher)
 /// registers, e.g. zmm21, etc.
-static inline bool is32ExtendedReg(unsigned RegNo) {
-  return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
-          (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
-          (RegNo >= X86::ZMM16 && RegNo <= X86::ZMM31));
+static inline bool is32ExtendedReg(MCRegister Reg) {
+  return ((Reg >= X86::XMM16 && Reg <= X86::XMM31) ||
+          (Reg >= X86::YMM16 && Reg <= X86::YMM31) ||
+          (Reg >= X86::ZMM16 && Reg <= X86::ZMM31));
 }
 
-inline bool isX86_64NonExtLowByteReg(unsigned reg) {
-  return (reg == X86::SPL || reg == X86::BPL || reg == X86::SIL ||
-          reg == X86::DIL);
+inline bool isX86_64NonExtLowByteReg(MCRegister Reg) {
+  return (Reg == X86::SPL || Reg == X86::BPL || Reg == X86::SIL ||
+          Reg == X86::DIL);
 }
 
 /// \returns true if this is a masked instruction.
@@ -1294,6 +1319,33 @@ inline bool isKMasked(uint64_t TSFlags) {
 inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
+
+/// \returns true if the intruction needs a SIB.
+inline bool needSIB(MCRegister BaseReg, MCRegister IndexReg, bool In64BitMode) {
+  // The SIB byte must be used if there is an index register.
+  if (IndexReg)
+    return true;
+
+  // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
+  // which encode to an R/M value of 4, which indicates that a SIB byte is
+  // present.
+  switch (BaseReg.id()) {
+  default:
+    // If there is no base register and we're in 64-bit mode, we need a SIB
+    // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
+    return In64BitMode && !BaseReg;
+  case X86::ESP:
+  case X86::RSP:
+  case X86::R12:
+  case X86::R12D:
+  case X86::R20:
+  case X86::R20D:
+  case X86::R28:
+  case X86::R28D:
+    return true;
+  }
+}
+
 } // namespace X86II
 } // namespace llvm
 #endif

@@ -1,4 +1,4 @@
-//=- AnalysisBasedWarnings.cpp - Sema warnings based on libAnalysis -*- C++ -*-=//
+//=== AnalysisBasedWarnings.cpp - Sema warnings based on libAnalysis ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
@@ -39,6 +38,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -442,7 +442,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
       if (!live[B->getBlockID()]) {
         if (B->pred_begin() == B->pred_end()) {
           const Stmt *Term = B->getTerminatorStmt();
-          if (Term && isa<CXXTryStmt>(Term))
+          if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
             // can otherwise seem dead.  Avoid noting them as dead.
             count += reachable_code::ScanReachableFromBlock(B, live);
@@ -1100,7 +1100,7 @@ namespace {
       // issue a warn_fallthrough_attr_unreachable for them.
       for (const auto *B : *Cfg) {
         const Stmt *L = B->getLabel();
-        if (L && isa<SwitchCase>(L) && ReachableBlocks.insert(B).second)
+        if (isa_and_nonnull<SwitchCase>(L) && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
       }
 
@@ -1128,7 +1128,7 @@ namespace {
         if (!P) continue;
 
         const Stmt *Term = P->getTerminatorStmt();
-        if (Term && isa<SwitchStmt>(Term))
+        if (isa_and_nonnull<SwitchStmt>(Term))
           continue; // Switch statement, good.
 
         const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
@@ -1327,7 +1327,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
         B = *B->succ_begin();
         Term = B->getTerminatorStmt();
       }
-      if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
+      if (!(B->empty() && isa_and_nonnull<BreakStmt>(Term))) {
         Preprocessor &PP = S.getPreprocessor();
         StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
         SmallString<64> TextToInsert(AnnotationSpelling);
@@ -2231,6 +2231,7 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
+    NamedDecl *D = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
       Loc = ASE->getBase()->getExprLoc();
       Range = ASE->getBase()->getSourceRange();
@@ -2257,21 +2258,30 @@ public:
         MsgParam = 1;
       }
     } else {
-      if (isa<CallExpr>(Operation)) {
+      if (isa<CallExpr>(Operation) || isa<CXXConstructExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
+      } else if (isa<MemberExpr>(Operation)) {
+        // note_unsafe_buffer_operation doesn't have this mode yet.
+        assert(!IsRelatedToDecl && "Not implemented yet!");
+        auto ME = dyn_cast<MemberExpr>(Operation);
+        D = ME->getMemberDecl();
+        MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
+        if (!isa<PointerType>(destType))
+          return;
+
         const uint64_t dSize =
             Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
-        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(ECE->getSubExpr())) {
-          QualType srcType = CE->getType();
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
-          if (sSize >= dSize)
-            return;
-        }
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
         MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();
@@ -2282,16 +2292,56 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
-      S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      if (D) {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation)
+            << MsgParam << D << Range;
+      } else {
+        S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      }
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
       }
     }
   }
 
+  void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                            ASTContext &Ctx,
+                            const Expr *UnsafeArg = nullptr) override {
+    S.Diag(Call->getBeginLoc(), diag::warn_unsafe_buffer_libc_call)
+        << Call->getDirectCallee() // We've checked there is a direct callee
+        << Call->getSourceRange();
+    if (PrintfInfo > 0) {
+      SourceRange R =
+          UnsafeArg ? UnsafeArg->getSourceRange() : Call->getSourceRange();
+      S.Diag(R.getBegin(), diag::note_unsafe_buffer_printf_call)
+          << PrintfInfo << R;
+    }
+  }
+
+  void handleUnsafeOperationInContainer(const Stmt *Operation,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+    SourceRange Range;
+    unsigned MsgParam = 0;
+
+    // This function only handles SpanTwoParamConstructorGadget so far, which
+    // always gives a CXXConstructExpr.
+    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
+    Loc = CtorExpr->getLocation();
+
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    if (IsRelatedToDecl) {
+      assert(!SuggestSuggestions &&
+             "Variables blamed for unsafe buffer usage without suggestions!");
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    }
+  }
+
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
-                                 FixItList &&Fixes, const Decl *D) override {
+                                 FixItList &&Fixes, const Decl *D,
+                                 const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
@@ -2306,7 +2356,18 @@ public:
       // NOT explain how the variables are grouped as the reason is non-trivial
       // and irrelavant to users' experience:
       const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
-      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
+      unsigned FixItStrategy = 0;
+      switch (VarTargetTypes.lookup(Variable)) {
+      case clang::FixitStrategy::Kind::Span:
+        FixItStrategy = 0;
+        break;
+      case clang::FixitStrategy::Kind::Array:
+        FixItStrategy = 1;
+        break;
+      default:
+        assert(false && "We support only std::span and std::array");
+      };
+
       const auto &FD =
           S.Diag(Variable->getLocation(),
                  BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together
@@ -2329,6 +2390,14 @@ public:
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
+
+  bool ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc);
+  }
+
+  bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -2495,6 +2564,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_libc_call,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
@@ -2505,7 +2578,11 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Emit per-function analysis-based warnings that require the whole-TU
   // reasoning. Check if any of them is enabled at all before scanning the AST:
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation())) {
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                       SourceLocation()) ||
+      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
+       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

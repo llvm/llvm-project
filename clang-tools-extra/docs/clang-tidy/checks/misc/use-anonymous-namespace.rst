@@ -15,7 +15,7 @@ The following uses of ``static`` will *not* be diagnosed:
 
 * Functions or variables in header files, since anonymous namespaces in headers
   is considered an antipattern. Allowed header file extensions can be configured
-  via the `HeaderFileExtensions` option (see below).
+  via the global option `HeaderFileExtensions`.
 * ``const`` or ``constexpr`` variables, since they already have implicit internal
   linkage in C++.
 
@@ -32,19 +32,5 @@ Examples:
     void foo();
     int x;
   } // namespace
-
-Options
--------
-
-.. option:: HeaderFileExtensions
-
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 19. Please use the global configuration option
-   `HeaderFileExtensions`.
-
-   A semicolon-separated list of filename extensions of header files (the filename
-   extensions should not include "." prefix). Default is ";h;hh;hpp;hxx".
-   For extension-less header files, using an empty string or leaving an
-   empty string between ";" if there are other filename extensions.
 
 [1] `Undeprecating static <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1012>`_

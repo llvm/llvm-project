@@ -148,6 +148,11 @@ Available checks are:
      Issues caught by this sanitizer are not undefined behavior,
      but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
+  -  ``-fsanitize=implicit-bitfield-conversion``: Implicit conversion from
+     integer of larger bit width to smaller bitfield, if that results in data
+     loss. This includes unsigned/signed truncations and sign changes, similarly
+     to how the ``-fsanitize=implicit-integer-conversion`` group works, but
+     explicitly for bitfields.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
      parameter which is declared to never be null.
   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
@@ -190,10 +195,11 @@ Available checks are:
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for
-     signed division overflow (``INT_MIN/-1``), but not checks for
-     lossy implicit conversions performed before the computation
-     (see ``-fsanitize=implicit-conversion``). Both of these two issues are
-     handled by ``-fsanitize=implicit-conversion`` group of checks.
+     signed division overflow (``INT_MIN/-1``). Note that checks are still
+     added even when ``-fwrapv`` is enabled. This sanitizer does not check for
+     lossy implicit conversions performed before the computation (see
+     ``-fsanitize=implicit-integer-conversion``). Both of these two issues are handled
+     by ``-fsanitize=implicit-integer-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
      program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer overflow, where
@@ -201,7 +207,7 @@ Available checks are:
      type. Unlike signed integer overflow, this is not undefined behavior, but
      it is often unintentional. This sanitizer does not check for lossy implicit
      conversions performed before such a computation
-     (see ``-fsanitize=implicit-conversion``).
+     (see ``-fsanitize=implicit-integer-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
@@ -223,11 +229,15 @@ You can also use the following check groups:
   -  ``-fsanitize=implicit-integer-arithmetic-value-change``: Catches implicit
      conversions that change the arithmetic value of the integer. Enables
      ``implicit-signed-integer-truncation`` and ``implicit-integer-sign-change``.
-  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
-     behavior of implicit conversions. Enables
+  -  ``-fsanitize=implicit-integer-conversion``: Checks for suspicious
+     behavior of implicit integer conversions. Enables
      ``implicit-unsigned-integer-truncation``,
      ``implicit-signed-integer-truncation``, and
      ``implicit-integer-sign-change``.
+  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
+     behavior of implicit conversions. Enables
+     ``implicit-integer-conversion``, and
+     ``implicit-bitfield-conversion``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
@@ -282,6 +292,71 @@ To silence reports from unsigned integer overflow, you can set
 ``UBSAN_OPTIONS=silence_unsigned_overflow=1``.  This feature, combined with
 ``-fsanitize-recover=unsigned-integer-overflow``, is particularly useful for
 providing fuzzing signal without blowing up logs.
+
+Disabling instrumentation for common overflow patterns
+------------------------------------------------------
+
+There are certain overflow-dependent or overflow-prone code patterns which
+produce a lot of noise for integer overflow/truncation sanitizers. Negated
+unsigned constants, post-decrements in a while loop condition and simple
+overflow checks are accepted and pervasive code patterns. However, the signal
+received from sanitizers instrumenting these code patterns may be too noisy for
+some projects. To disable instrumentation for these common patterns one should
+use ``-fsanitize-undefined-ignore-overflow-pattern=``.
+
+Currently, this option supports three overflow-dependent code idioms:
+
+``negated-unsigned-const``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const
+    unsigned long foo = -1UL; // No longer causes a negation overflow warning
+    unsigned long bar = -2UL; // and so on...
+
+``unsigned-post-decr-while``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
+    unsigned char count = 16;
+    while (count--) { /* ... */ } // No longer causes unsigned-integer-overflow sanitizer to trip
+
+``add-signed-overflow-test,add-unsigned-overflow-test``
+
+.. code-block:: c++
+
+    /// -fsanitize-undefined-ignore-overflow-pattern=add-(signed|unsigned)-overflow-test
+    if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other re-orderings,
+                                            // won't be instrumented (signed or unsigned types)
+
+.. list-table:: Overflow Pattern Types
+   :widths: 30 50
+   :header-rows: 1
+
+   * - Pattern
+     - Sanitizer
+   * - negated-unsigned-const
+     - unsigned-integer-overflow
+   * - unsigned-post-decr-while
+     - unsigned-integer-overflow
+   * - add-unsigned-overflow-test
+     - unsigned-integer-overflow
+   * - add-signed-overflow-test
+     - signed-integer-overflow
+
+
+
+Note: ``add-signed-overflow-test`` suppresses only the check for Undefined
+Behavior. Eager Undefined Behavior optimizations are still possible. One may
+remedy this with ``-fwrapv`` or ``-fno-strict-overflow``.
+
+You can enable all exclusions with
+``-fsanitize-undefined-ignore-overflow-pattern=all`` or disable all exclusions
+with ``-fsanitize-undefined-ignore-overflow-pattern=none``. If
+``-fsanitize-undefined-ignore-overflow-pattern`` is not specified ``none`` is
+implied. Specifying ``none`` alongside other values also implies ``none`` as
+``none`` has precedence over other values -- including ``all``.
 
 Issue Suppression
 =================

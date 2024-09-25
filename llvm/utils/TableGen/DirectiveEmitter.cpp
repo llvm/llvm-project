@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/DirectiveEmitter.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -19,6 +21,9 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+
+#include <numeric>
+#include <vector>
 
 using namespace llvm;
 
@@ -39,14 +44,16 @@ private:
 };
 } // namespace
 
-// Generate enum class
-static void GenerateEnumClass(const std::vector<Record *> &Records,
-                              raw_ostream &OS, StringRef Enum, StringRef Prefix,
-                              const DirectiveLanguage &DirLang) {
+// Generate enum class. Entries are emitted in the order in which they appear
+// in the `Records` vector.
+static void GenerateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
+                              StringRef Enum, StringRef Prefix,
+                              const DirectiveLanguage &DirLang,
+                              bool ExportEnums) {
   OS << "\n";
   OS << "enum class " << Enum << " {\n";
   for (const auto &R : Records) {
-    BaseRecord Rec{R};
+    BaseRecord Rec(R);
     OS << "  " << Prefix << Rec.getFormattedName() << ",\n";
   }
   OS << "};\n";
@@ -59,10 +66,10 @@ static void GenerateEnumClass(const std::vector<Record *> &Records,
   // At the same time we do not loose the strong type guarantees of the enum
   // class, that is we cannot pass an unsigned as Directive without an explicit
   // cast.
-  if (DirLang.hasMakeEnumAvailableInNamespace()) {
+  if (ExportEnums) {
     OS << "\n";
     for (const auto &R : Records) {
-      BaseRecord Rec{R};
+      BaseRecord Rec(R);
       OS << "constexpr auto " << Prefix << Rec.getFormattedName() << " = "
          << "llvm::" << DirLang.getCppNamespace() << "::" << Enum
          << "::" << Prefix << Rec.getFormattedName() << ";\n";
@@ -72,18 +79,18 @@ static void GenerateEnumClass(const std::vector<Record *> &Records,
 
 // Generate enums for values that clauses can take.
 // Also generate function declarations for get<Enum>Name(StringRef Str).
-static void GenerateEnumClauseVal(const std::vector<Record *> &Records,
+static void GenerateEnumClauseVal(ArrayRef<const Record *> Records,
                                   raw_ostream &OS,
                                   const DirectiveLanguage &DirLang,
                                   std::string &EnumHelperFuncs) {
   for (const auto &R : Records) {
-    Clause C{R};
+    Clause C(R);
     const auto &ClauseVals = C.getClauseVals();
     if (ClauseVals.size() <= 0)
       continue;
 
     const auto &EnumName = C.getEnumName();
-    if (EnumName.size() == 0) {
+    if (EnumName.empty()) {
       PrintError("enumClauseValue field not set in Clause" +
                  C.getFormattedName() + ".");
       return;
@@ -92,7 +99,7 @@ static void GenerateEnumClauseVal(const std::vector<Record *> &Records,
     OS << "\n";
     OS << "enum class " << EnumName << " {\n";
     for (const auto &CV : ClauseVals) {
-      ClauseVal CVal{CV};
+      ClauseVal CVal(CV);
       OS << "  " << CV->getName() << "=" << CVal.getValue() << ",\n";
     }
     OS << "};\n";
@@ -104,25 +111,23 @@ static void GenerateEnumClauseVal(const std::vector<Record *> &Records,
            << "llvm::" << DirLang.getCppNamespace() << "::" << EnumName
            << "::" << CV->getName() << ";\n";
       }
-      EnumHelperFuncs += (llvm::Twine(EnumName) + llvm::Twine(" get") +
-                          llvm::Twine(EnumName) + llvm::Twine("(StringRef);\n"))
+      EnumHelperFuncs += (Twine("LLVM_ABI ") + Twine(EnumName) + Twine(" get") +
+                          Twine(EnumName) + Twine("(StringRef);\n"))
                              .str();
 
       EnumHelperFuncs +=
-          (llvm::Twine("llvm::StringRef get") + llvm::Twine(DirLang.getName()) +
-           llvm::Twine(EnumName) + llvm::Twine("Name(") +
-           llvm::Twine(EnumName) + llvm::Twine(");\n"))
+          (Twine("LLVM_ABI llvm::StringRef get") + Twine(DirLang.getName()) +
+           Twine(EnumName) + Twine("Name(") + Twine(EnumName) + Twine(");\n"))
               .str();
     }
   }
 }
 
-static bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
+static bool HasDuplicateClauses(ArrayRef<const Record *> Clauses,
                                 const Directive &Directive,
-                                llvm::StringSet<> &CrtClauses) {
+                                StringSet<> &CrtClauses) {
   bool HasError = false;
-  for (const auto &C : Clauses) {
-    VersionedClause VerClause{C};
+  for (const VersionedClause VerClause : Clauses) {
     const auto insRes = CrtClauses.insert(VerClause.getClause().getName());
     if (!insRes.second) {
       PrintError("Clause " + VerClause.getClause().getRecordName() +
@@ -137,11 +142,10 @@ static bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
 // three allowed list. Also, since required implies allowed, clauses cannot
 // appear in both the allowedClauses and requiredClauses lists.
 static bool
-HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
+HasDuplicateClausesInDirectives(ArrayRef<const Record *> Directives) {
   bool HasDuplicate = false;
-  for (const auto &D : Directives) {
-    Directive Dir{D};
-    llvm::StringSet<> Clauses;
+  for (const Directive Dir : Directives) {
+    StringSet<> Clauses;
     // Check for duplicates in the three allowed lists.
     if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
         HasDuplicateClauses(Dir.getAllowedOnceClauses(), Dir, Clauses) ||
@@ -174,39 +178,63 @@ bool DirectiveLanguage::HasValidityErrors() const {
   return HasDuplicateClausesInDirectives(getDirectives());
 }
 
+// Count the maximum number of leaf constituents per construct.
+static size_t GetMaxLeafCount(const DirectiveLanguage &DirLang) {
+  size_t MaxCount = 0;
+  for (const Directive D : DirLang.getDirectives())
+    MaxCount = std::max(MaxCount, D.getLeafConstructs().size());
+  return MaxCount;
+}
+
 // Generate the declaration section for the enumeration in the directive
-// language
-static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
-  const auto DirLang = DirectiveLanguage{Records};
+// language.
+static void EmitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
+  const auto DirLang = DirectiveLanguage(Records);
   if (DirLang.HasValidityErrors())
     return;
 
   OS << "#ifndef LLVM_" << DirLang.getName() << "_INC\n";
   OS << "#define LLVM_" << DirLang.getName() << "_INC\n";
+  OS << "\n#include \"llvm/ADT/ArrayRef.h\"\n";
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
-    OS << "\n#include \"llvm/ADT/BitmaskEnum.h\"\n";
+    OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
+  OS << "#include \"llvm/Support/Compiler.h\"\n";
+  OS << "#include <cstddef>\n"; // for size_t
   OS << "\n";
   OS << "namespace llvm {\n";
   OS << "class StringRef;\n";
 
   // Open namespaces defined in the directive language
-  llvm::SmallVector<StringRef, 2> Namespaces;
-  llvm::SplitString(DirLang.getCppNamespace(), Namespaces, "::");
+  SmallVector<StringRef, 2> Namespaces;
+  SplitString(DirLang.getCppNamespace(), Namespaces, "::");
   for (auto Ns : Namespaces)
     OS << "namespace " << Ns << " {\n";
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
 
+  // Emit Directive associations
+  std::vector<const Record *> associations;
+  copy_if(DirLang.getAssociations(), std::back_inserter(associations),
+          // Skip the "special" value
+          [](const Record *Def) { return Def->getName() != "AS_FromLeaves"; });
+  GenerateEnumClass(associations, OS, "Association",
+                    /*Prefix=*/"", DirLang, /*ExportEnums=*/false);
+
+  GenerateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
+                    DirLang, /*ExportEnums=*/false);
+
   // Emit Directive enumeration
   GenerateEnumClass(DirLang.getDirectives(), OS, "Directive",
-                    DirLang.getDirectivePrefix(), DirLang);
+                    DirLang.getDirectivePrefix(), DirLang,
+                    DirLang.hasMakeEnumAvailableInNamespace());
 
   // Emit Clause enumeration
   GenerateEnumClass(DirLang.getClauses(), OS, "Clause",
-                    DirLang.getClausePrefix(), DirLang);
+                    DirLang.getClausePrefix(), DirLang,
+                    DirLang.hasMakeEnumAvailableInNamespace());
 
   // Emit ClauseVal enumeration
   std::string EnumHelperFuncs;
@@ -215,29 +243,34 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   // Generic function signatures
   OS << "\n";
   OS << "// Enumeration helper functions\n";
-  OS << "Directive get" << DirLang.getName()
+  OS << "LLVM_ABI Directive get" << DirLang.getName()
      << "DirectiveKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName()
+  OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
      << "DirectiveName(Directive D);\n";
   OS << "\n";
-  OS << "Clause get" << DirLang.getName()
+  OS << "LLVM_ABI Clause get" << DirLang.getName()
      << "ClauseKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName() << "ClauseName(Clause C);\n";
+  OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
+     << "ClauseName(Clause C);\n";
   OS << "\n";
   OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
      << "Version.\n";
-  OS << "bool isAllowedClauseForDirective(Directive D, "
+  OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
   OS << "\n";
+  OS << "constexpr std::size_t getMaxLeafCount() { return "
+     << GetMaxLeafCount(DirLang) << "; }\n";
+  OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
+  OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
     OS << "\n";
   }
 
   // Closing namespaces
-  for (auto Ns : llvm::reverse(Namespaces))
+  for (auto Ns : reverse(Namespaces))
     OS << "} // namespace " << Ns << "\n";
 
   OS << "} // namespace llvm\n";
@@ -246,16 +279,14 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Generate function implementation for get<Enum>Name(StringRef Str)
-static void GenerateGetName(const std::vector<Record *> &Records,
-                            raw_ostream &OS, StringRef Enum,
-                            const DirectiveLanguage &DirLang,
+static void GenerateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
+                            StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef Prefix) {
   OS << "\n";
   OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
      << DirLang.getName() << Enum << "Name(" << Enum << " Kind) {\n";
   OS << "  switch (Kind) {\n";
-  for (const auto &R : Records) {
-    BaseRecord Rec{R};
+  for (const BaseRecord Rec : Records) {
     OS << "    case " << Prefix << Rec.getFormattedName() << ":\n";
     OS << "      return \"";
     if (Rec.getAlternativeName().empty())
@@ -271,20 +302,19 @@ static void GenerateGetName(const std::vector<Record *> &Records,
 }
 
 // Generate function implementation for get<Enum>Kind(StringRef Str)
-static void GenerateGetKind(const std::vector<Record *> &Records,
-                            raw_ostream &OS, StringRef Enum,
-                            const DirectiveLanguage &DirLang, StringRef Prefix,
-                            bool ImplicitAsUnknown) {
+static void GenerateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
+                            StringRef Enum, const DirectiveLanguage &DirLang,
+                            StringRef Prefix, bool ImplicitAsUnknown) {
 
-  auto DefaultIt = llvm::find_if(
-      Records, [](Record *R) { return R->getValueAsBit("isDefault") == true; });
+  auto DefaultIt = find_if(
+      Records, [](const Record *R) { return R->getValueAsBit("isDefault"); });
 
   if (DefaultIt == Records.end()) {
     PrintError("At least one " + Enum + " must be defined as default.");
     return;
   }
 
-  BaseRecord DefaultRec{(*DefaultIt)};
+  BaseRecord DefaultRec(*DefaultIt);
 
   OS << "\n";
   OS << Enum << " llvm::" << DirLang.getCppNamespace() << "::get"
@@ -292,7 +322,7 @@ static void GenerateGetKind(const std::vector<Record *> &Records,
   OS << "  return llvm::StringSwitch<" << Enum << ">(Str)\n";
 
   for (const auto &R : Records) {
-    BaseRecord Rec{R};
+    BaseRecord Rec(R);
     if (ImplicitAsUnknown && R->getValueAsBit("isImplicit")) {
       OS << "    .Case(\"" << Rec.getName() << "\"," << Prefix
          << DefaultRec.getFormattedName() << ")\n";
@@ -308,15 +338,13 @@ static void GenerateGetKind(const std::vector<Record *> &Records,
 // Generate function implementation for get<ClauseVal>Kind(StringRef Str)
 static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
                                      raw_ostream &OS) {
-  for (const auto &R : DirLang.getClauses()) {
-    Clause C{R};
+  for (const Clause C : DirLang.getClauses()) {
     const auto &ClauseVals = C.getClauseVals();
     if (ClauseVals.size() <= 0)
       continue;
 
-    auto DefaultIt = llvm::find_if(ClauseVals, [](Record *CV) {
-      return CV->getValueAsBit("isDefault") == true;
-    });
+    auto DefaultIt = find_if(
+        ClauseVals, [](Record *CV) { return CV->getValueAsBit("isDefault"); });
 
     if (DefaultIt == ClauseVals.end()) {
       PrintError("At least one val in Clause " + C.getFormattedName() +
@@ -326,7 +354,7 @@ static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
     const auto DefaultName = (*DefaultIt)->getName();
 
     const auto &EnumName = C.getEnumName();
-    if (EnumName.size() == 0) {
+    if (EnumName.empty()) {
       PrintError("enumClauseValue field not set in Clause" +
                  C.getFormattedName() + ".");
       return;
@@ -337,7 +365,7 @@ static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
        << EnumName << "(llvm::StringRef Str) {\n";
     OS << "  return llvm::StringSwitch<" << EnumName << ">(Str)\n";
     for (const auto &CV : ClauseVals) {
-      ClauseVal CVal{CV};
+      ClauseVal CVal(CV);
       OS << "    .Case(\"" << CVal.getFormattedName() << "\"," << CV->getName()
          << ")\n";
     }
@@ -351,7 +379,7 @@ static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
        << " x) {\n";
     OS << "  switch (x) {\n";
     for (const auto &CV : ClauseVals) {
-      ClauseVal CVal{CV};
+      ClauseVal CVal(CV);
       OS << "    case " << CV->getName() << ":\n";
       OS << "      return \"" << CVal.getFormattedName() << "\";\n";
     }
@@ -362,14 +390,12 @@ static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
   }
 }
 
-static void
-GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
-                                raw_ostream &OS, StringRef DirectiveName,
-                                const DirectiveLanguage &DirLang,
-                                llvm::StringSet<> &Cases) {
-  for (const auto &C : Clauses) {
-    VersionedClause VerClause{C};
-
+static void GenerateCaseForVersionedClauses(ArrayRef<const Record *> Clauses,
+                                            raw_ostream &OS,
+                                            StringRef DirectiveName,
+                                            const DirectiveLanguage &DirLang,
+                                            StringSet<> &Cases) {
+  for (const VersionedClause VerClause : Clauses) {
     const auto ClauseFormattedName = VerClause.getClause().getFormattedName();
 
     if (Cases.insert(ClauseFormattedName).second) {
@@ -379,6 +405,18 @@ GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
          << " <= Version && " << VerClause.getMaxVersion() << " >= Version;\n";
     }
   }
+}
+
+static std::string GetDirectiveName(const DirectiveLanguage &DirLang,
+                                    const Record *Rec) {
+  Directive Dir(Rec);
+  return (Twine("llvm::") + DirLang.getCppNamespace() +
+          "::" + DirLang.getDirectivePrefix() + Dir.getFormattedName())
+      .str();
+}
+
+static std::string GetDirectiveType(const DirectiveLanguage &DirLang) {
+  return (Twine("llvm::") + DirLang.getCppNamespace() + "::Directive").str();
 }
 
 // Generate the isAllowedClauseForDirective function implementation.
@@ -395,20 +433,18 @@ static void GenerateIsAllowedClause(const DirectiveLanguage &DirLang,
 
   OS << "  switch (D) {\n";
 
-  for (const auto &D : DirLang.getDirectives()) {
-    Directive Dir{D};
-
+  for (const Directive Dir : DirLang.getDirectives()) {
     OS << "    case " << DirLang.getDirectivePrefix() << Dir.getFormattedName()
        << ":\n";
-    if (Dir.getAllowedClauses().size() == 0 &&
-        Dir.getAllowedOnceClauses().size() == 0 &&
-        Dir.getAllowedExclusiveClauses().size() == 0 &&
-        Dir.getRequiredClauses().size() == 0) {
+    if (Dir.getAllowedClauses().empty() &&
+        Dir.getAllowedOnceClauses().empty() &&
+        Dir.getAllowedExclusiveClauses().empty() &&
+        Dir.getRequiredClauses().empty()) {
       OS << "      return false;\n";
     } else {
       OS << "      switch (C) {\n";
 
-      llvm::StringSet<> Cases;
+      StringSet<> Cases;
 
       GenerateCaseForVersionedClauses(Dir.getAllowedClauses(), OS,
                                       Dir.getName(), DirLang, Cases);
@@ -435,10 +471,298 @@ static void GenerateIsAllowedClause(const DirectiveLanguage &DirLang,
   OS << "}\n"; // End of function isAllowedClauseForDirective
 }
 
+static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
+                          StringRef TableName) {
+  // The leaf constructs are emitted in a form of a 2D table, where each
+  // row corresponds to a directive (and there is a row for each directive).
+  //
+  // Each row consists of
+  // - the id of the directive itself,
+  // - number of leaf constructs that will follow (0 for leafs),
+  // - ids of the leaf constructs (none if the directive is itself a leaf).
+  // The total number of these entries is at most MaxLeafCount+2. If this
+  // number is less than that, it is padded to occupy exactly MaxLeafCount+2
+  // entries in memory.
+  //
+  // The rows are stored in the table in the lexicographical order. This
+  // is intended to enable binary search when mapping a sequence of leafs
+  // back to the compound directive.
+  // The consequence of that is that in order to find a row corresponding
+  // to the given directive, we'd need to scan the first element of each
+  // row. To avoid this, an auxiliary ordering table is created, such that
+  //   row for Dir_A = table[auxiliary[Dir_A]].
+
+  ArrayRef<const Record *> Directives = DirLang.getDirectives();
+  DenseMap<const Record *, int> DirId; // Record * -> llvm::omp::Directive
+
+  for (auto [Idx, Rec] : enumerate(Directives))
+    DirId.insert(std::make_pair(Rec, Idx));
+
+  using LeafList = std::vector<int>;
+  int MaxLeafCount = GetMaxLeafCount(DirLang);
+
+  // The initial leaf table, rows order is same as directive order.
+  std::vector<LeafList> LeafTable(Directives.size());
+  for (auto [Idx, Rec] : enumerate(Directives)) {
+    Directive Dir(Rec);
+    std::vector<Record *> Leaves = Dir.getLeafConstructs();
+
+    auto &List = LeafTable[Idx];
+    List.resize(MaxLeafCount + 2);
+    List[0] = Idx;           // The id of the directive itself.
+    List[1] = Leaves.size(); // The number of leaves to follow.
+
+    for (int I = 0; I != MaxLeafCount; ++I)
+      List[I + 2] =
+          static_cast<size_t>(I) < Leaves.size() ? DirId.at(Leaves[I]) : -1;
+  }
+
+  // Some Fortran directives are delimited, i.e. they have the form of
+  // "directive"---"end directive". If "directive" is a compound construct,
+  // then the set of leaf constituents will be nonempty and the same for
+  // both directives. Given this set of leafs, looking up the corresponding
+  // compound directive should return "directive", and not "end directive".
+  // To avoid this problem, gather all "end directives" at the end of the
+  // leaf table, and only do the search on the initial segment of the table
+  // that excludes the "end directives".
+  // It's safe to find all directives whose names begin with "end ". The
+  // problem only exists for compound directives, like "end do simd".
+  // All existing directives with names starting with "end " are either
+  // "end directives" for an existing "directive", or leaf directives
+  // (such as "end declare target").
+  DenseSet<int> EndDirectives;
+  for (auto [Rec, Id] : DirId) {
+    if (Directive(Rec).getName().starts_with_insensitive("end "))
+      EndDirectives.insert(Id);
+  }
+
+  // Avoid sorting the vector<vector> array, instead sort an index array.
+  // It will also be useful later to create the auxiliary indexing array.
+  std::vector<int> Ordering(Directives.size());
+  std::iota(Ordering.begin(), Ordering.end(), 0);
+
+  sort(Ordering, [&](int A, int B) {
+    auto &LeavesA = LeafTable[A];
+    auto &LeavesB = LeafTable[B];
+    int DirA = LeavesA[0], DirB = LeavesB[0];
+    // First of all, end directives compare greater than non-end directives.
+    int IsEndA = EndDirectives.count(DirA), IsEndB = EndDirectives.count(DirB);
+    if (IsEndA != IsEndB)
+      return IsEndA < IsEndB;
+    if (LeavesA[1] == 0 && LeavesB[1] == 0)
+      return DirA < DirB;
+    return std::lexicographical_compare(&LeavesA[2], &LeavesA[2] + LeavesA[1],
+                                        &LeavesB[2], &LeavesB[2] + LeavesB[1]);
+  });
+
+  // Emit the table
+
+  // The directives are emitted into a scoped enum, for which the underlying
+  // type is `int` (by default). The code above uses `int` to store directive
+  // ids, so make sure that we catch it when something changes in the
+  // underlying type.
+  std::string DirectiveType = GetDirectiveType(DirLang);
+  OS << "\nstatic_assert(sizeof(" << DirectiveType << ") == sizeof(int));\n";
+
+  OS << "[[maybe_unused]] static const " << DirectiveType << ' ' << TableName
+     << "[][" << MaxLeafCount + 2 << "] = {\n";
+  for (size_t I = 0, E = Directives.size(); I != E; ++I) {
+    auto &Leaves = LeafTable[Ordering[I]];
+    OS << "    {" << GetDirectiveName(DirLang, Directives[Leaves[0]]);
+    OS << ", static_cast<" << DirectiveType << ">(" << Leaves[1] << "),";
+    for (size_t I = 2, E = Leaves.size(); I != E; ++I) {
+      int Idx = Leaves[I];
+      if (Idx >= 0)
+        OS << ' ' << GetDirectiveName(DirLang, Directives[Leaves[I]]) << ',';
+      else
+        OS << " static_cast<" << DirectiveType << ">(-1),";
+    }
+    OS << "},\n";
+  }
+  OS << "};\n\n";
+
+  // Emit a marker where the first "end directive" is.
+  auto FirstE = find_if(Ordering, [&](int RowIdx) {
+    return EndDirectives.count(LeafTable[RowIdx][0]);
+  });
+  OS << "[[maybe_unused]] static auto " << TableName
+     << "EndDirective = " << TableName << " + "
+     << std::distance(Ordering.begin(), FirstE) << ";\n\n";
+
+  // Emit the auxiliary index table: it's the inverse of the `Ordering`
+  // table above.
+  OS << "[[maybe_unused]] static const int " << TableName << "Ordering[] = {\n";
+  OS << "   ";
+  std::vector<int> Reverse(Ordering.size());
+  for (int I = 0, E = Ordering.size(); I != E; ++I)
+    Reverse[Ordering[I]] = I;
+  for (int Idx : Reverse)
+    OS << ' ' << Idx << ',';
+  OS << "\n};\n";
+}
+
+static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
+                                            raw_ostream &OS) {
+  enum struct Association {
+    None = 0, // None should be the smallest value.
+    Block,    // The values of the rest don't matter.
+    Declaration,
+    Delimited,
+    Loop,
+    Separating,
+    FromLeaves,
+    Invalid,
+  };
+
+  ArrayRef<const Record *> associations = DirLang.getAssociations();
+
+  auto getAssocValue = [](StringRef name) -> Association {
+    return StringSwitch<Association>(name)
+        .Case("AS_Block", Association::Block)
+        .Case("AS_Declaration", Association::Declaration)
+        .Case("AS_Delimited", Association::Delimited)
+        .Case("AS_Loop", Association::Loop)
+        .Case("AS_None", Association::None)
+        .Case("AS_Separating", Association::Separating)
+        .Case("AS_FromLeaves", Association::FromLeaves)
+        .Default(Association::Invalid);
+  };
+
+  auto getAssocName = [&](Association A) -> StringRef {
+    if (A != Association::Invalid && A != Association::FromLeaves) {
+      auto F = find_if(associations, [&](const Record *R) {
+        return getAssocValue(R->getName()) == A;
+      });
+      if (F != associations.end())
+        return (*F)->getValueAsString("name"); // enum name
+    }
+    llvm_unreachable("Unexpected association value");
+  };
+
+  auto errorPrefixFor = [&](Directive D) -> std::string {
+    return (Twine("Directive '") + D.getName() + "' in namespace '" +
+            DirLang.getCppNamespace() + "' ")
+        .str();
+  };
+
+  auto reduce = [&](Association A, Association B) -> Association {
+    if (A > B)
+      std::swap(A, B);
+
+    // Calculate the result using the following rules:
+    //   x + x = x
+    //   AS_None + x = x
+    //   AS_Block + AS_Loop = AS_Loop
+    if (A == Association::None || A == B)
+      return B;
+    if (A == Association::Block && B == Association::Loop)
+      return B;
+    if (A == Association::Loop && B == Association::Block)
+      return A;
+    return Association::Invalid;
+  };
+
+  DenseMap<const Record *, Association> AsMap;
+
+  auto compAssocImpl = [&](const Record *R, auto &&Self) -> Association {
+    if (auto F = AsMap.find(R); F != AsMap.end())
+      return F->second;
+
+    Directive D(R);
+    Association AS = getAssocValue(D.getAssociation()->getName());
+    if (AS == Association::Invalid) {
+      PrintFatalError(errorPrefixFor(D) +
+                      "has an unrecognized value for association: '" +
+                      D.getAssociation()->getName() + "'");
+    }
+    if (AS != Association::FromLeaves) {
+      AsMap.insert(std::make_pair(R, AS));
+      return AS;
+    }
+    // Compute the association from leaf constructs.
+    std::vector<Record *> leaves = D.getLeafConstructs();
+    if (leaves.empty()) {
+      errs() << D.getName() << '\n';
+      PrintFatalError(errorPrefixFor(D) +
+                      "requests association to be computed from leaves, "
+                      "but it has no leaves");
+    }
+
+    Association Result = Self(leaves[0], Self);
+    for (int I = 1, E = leaves.size(); I < E; ++I) {
+      Association A = Self(leaves[I], Self);
+      Association R = reduce(Result, A);
+      if (R == Association::Invalid) {
+        PrintFatalError(errorPrefixFor(D) +
+                        "has leaves with incompatible association values: " +
+                        getAssocName(A) + " and " + getAssocName(R));
+      }
+      Result = R;
+    }
+
+    assert(Result != Association::Invalid);
+    assert(Result != Association::FromLeaves);
+    AsMap.insert(std::make_pair(R, Result));
+    return Result;
+  };
+
+  for (const Record *R : DirLang.getDirectives())
+    compAssocImpl(R, compAssocImpl); // Updates AsMap.
+
+  OS << '\n';
+
+  auto getQualifiedName = [&](StringRef Formatted) -> std::string {
+    return (Twine("llvm::") + DirLang.getCppNamespace() +
+            "::Directive::" + DirLang.getDirectivePrefix() + Formatted)
+        .str();
+  };
+
+  std::string DirectiveTypeName =
+      "llvm::" + DirLang.getCppNamespace().str() + "::Directive";
+  std::string AssociationTypeName =
+      "llvm::" + DirLang.getCppNamespace().str() + "::Association";
+
+  OS << AssociationTypeName << " llvm::" << DirLang.getCppNamespace()
+     << "::getDirectiveAssociation(" << DirectiveTypeName << " Dir) {\n";
+  OS << "  switch (Dir) {\n";
+  for (const Record *R : DirLang.getDirectives()) {
+    if (auto F = AsMap.find(R); F != AsMap.end()) {
+      Directive Dir(R);
+      OS << "  case " << getQualifiedName(Dir.getFormattedName()) << ":\n";
+      OS << "    return " << AssociationTypeName
+         << "::" << getAssocName(F->second) << ";\n";
+    }
+  }
+  OS << "  } // switch (Dir)\n";
+  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "}\n";
+}
+
+static void GenerateGetDirectiveCategory(const DirectiveLanguage &DirLang,
+                                         raw_ostream &OS) {
+  std::string LangNamespace = "llvm::" + DirLang.getCppNamespace().str();
+  std::string CategoryTypeName = LangNamespace + "::Category";
+  std::string CategoryNamespace = CategoryTypeName + "::";
+
+  OS << '\n';
+  OS << CategoryTypeName << ' ' << LangNamespace << "::getDirectiveCategory("
+     << GetDirectiveType(DirLang) << " Dir) {\n";
+  OS << "  switch (Dir) {\n";
+
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive D(R);
+    OS << "  case " << GetDirectiveName(DirLang, R) << ":\n";
+    OS << "    return " << CategoryNamespace
+       << D.getCategory()->getValueAsString("name") << ";\n";
+  }
+  OS << "  } // switch (Dir)\n";
+  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "}\n";
+}
+
 // Generate a simple enum set with the give clauses.
-static void GenerateClauseSet(const std::vector<Record *> &Clauses,
-                              raw_ostream &OS, StringRef ClauseSetPrefix,
-                              Directive &Dir,
+static void GenerateClauseSet(ArrayRef<const Record *> Clauses, raw_ostream &OS,
+                              StringRef ClauseSetPrefix, const Directive &Dir,
                               const DirectiveLanguage &DirLang) {
 
   OS << "\n";
@@ -446,7 +770,7 @@ static void GenerateClauseSet(const std::vector<Record *> &Clauses,
      << DirLang.getDirectivePrefix() << Dir.getFormattedName() << " {\n";
 
   for (const auto &C : Clauses) {
-    VersionedClause VerClause{C};
+    VersionedClause VerClause(C);
     OS << "    llvm::" << DirLang.getCppNamespace()
        << "::Clause::" << DirLang.getClausePrefix()
        << VerClause.getClause().getFormattedName() << ",\n";
@@ -464,14 +788,12 @@ static void GenerateDirectiveClauseSets(const DirectiveLanguage &DirLang,
   OS << "namespace llvm {\n";
 
   // Open namespaces defined in the directive language.
-  llvm::SmallVector<StringRef, 2> Namespaces;
-  llvm::SplitString(DirLang.getCppNamespace(), Namespaces, "::");
+  SmallVector<StringRef, 2> Namespaces;
+  SplitString(DirLang.getCppNamespace(), Namespaces, "::");
   for (auto Ns : Namespaces)
     OS << "namespace " << Ns << " {\n";
 
-  for (const auto &D : DirLang.getDirectives()) {
-    Directive Dir{D};
-
+  for (const Directive Dir : DirLang.getDirectives()) {
     OS << "\n";
     OS << "  // Sets for " << Dir.getName() << "\n";
 
@@ -486,7 +808,7 @@ static void GenerateDirectiveClauseSets(const DirectiveLanguage &DirLang,
   }
 
   // Closing namespaces
-  for (auto Ns : llvm::reverse(Namespaces))
+  for (auto Ns : reverse(Namespaces))
     OS << "} // namespace " << Ns << "\n";
 
   OS << "} // namespace llvm\n";
@@ -503,8 +825,7 @@ static void GenerateDirectiveClauseMap(const DirectiveLanguage &DirLang,
   OS << "\n";
   OS << "{\n";
 
-  for (const auto &D : DirLang.getDirectives()) {
-    Directive Dir{D};
+  for (const Directive Dir : DirLang.getDirectives()) {
     OS << "  {llvm::" << DirLang.getCppNamespace()
        << "::Directive::" << DirLang.getDirectivePrefix()
        << Dir.getFormattedName() << ",\n";
@@ -537,8 +858,7 @@ static void GenerateFlangClauseParserClass(const DirectiveLanguage &DirLang,
 
   OS << "\n";
 
-  for (const auto &C : DirLang.getClauses()) {
-    Clause Clause{C};
+  for (const Clause Clause : DirLang.getClauses()) {
     if (!Clause.getFlangClass().empty()) {
       OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName() << ", ";
       if (Clause.isValueOptional() && Clause.isValueList()) {
@@ -564,8 +884,8 @@ static void GenerateFlangClauseParserClassList(const DirectiveLanguage &DirLang,
   IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST", OS);
 
   OS << "\n";
-  llvm::interleaveComma(DirLang.getClauses(), OS, [&](Record *C) {
-    Clause Clause{C};
+  interleaveComma(DirLang.getClauses(), OS, [&](const Record *C) {
+    Clause Clause(C);
     OS << Clause.getFormattedParserClassName() << "\n";
   });
 }
@@ -577,8 +897,7 @@ static void GenerateFlangClauseDump(const DirectiveLanguage &DirLang,
   IfDefScope Scope("GEN_FLANG_DUMP_PARSE_TREE_CLAUSES", OS);
 
   OS << "\n";
-  for (const auto &C : DirLang.getClauses()) {
-    Clause Clause{C};
+  for (const Clause Clause : DirLang.getClauses()) {
     OS << "NODE(" << DirLang.getFlangClauseBaseClass() << ", "
        << Clause.getFormattedParserClassName() << ")\n";
   }
@@ -593,8 +912,7 @@ static void GenerateFlangClauseUnparse(const DirectiveLanguage &DirLang,
 
   OS << "\n";
 
-  for (const auto &C : DirLang.getClauses()) {
-    Clause Clause{C};
+  for (const Clause Clause : DirLang.getClauses()) {
     if (!Clause.getFlangClass().empty()) {
       if (Clause.isValueOptional() && Clause.getDefaultValue().empty()) {
         OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()
@@ -644,8 +962,7 @@ static void GenerateFlangClauseCheckPrototypes(const DirectiveLanguage &DirLang,
   IfDefScope Scope("GEN_FLANG_CLAUSE_CHECK_ENTER", OS);
 
   OS << "\n";
-  for (const auto &C : DirLang.getClauses()) {
-    Clause Clause{C};
+  for (const Clause Clause : DirLang.getClauses()) {
     OS << "void Enter(const parser::" << DirLang.getFlangClauseBaseClass()
        << "::" << Clause.getFormattedParserClassName() << " &);\n";
   }
@@ -659,8 +976,7 @@ static void GenerateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
   IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_KIND_MAP", OS);
 
   OS << "\n";
-  for (const auto &C : DirLang.getClauses()) {
-    Clause Clause{C};
+  for (const Clause Clause : DirLang.getClauses()) {
     OS << "if constexpr (std::is_same_v<A, parser::"
        << DirLang.getFlangClauseBaseClass()
        << "::" << Clause.getFormattedParserClassName();
@@ -674,26 +990,25 @@ static void GenerateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
      << " Parser clause\");\n";
 }
 
-static bool compareClauseName(Record *R1, Record *R2) {
-  Clause C1{R1};
-  Clause C2{R2};
+static bool compareClauseName(const Record *R1, const Record *R2) {
+  Clause C1(R1);
+  Clause C2(R2);
   return (C1.getName() > C2.getName());
 }
 
 // Generate the parser for the clauses.
 static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
                                        raw_ostream &OS) {
-  std::vector<Record *> Clauses = DirLang.getClauses();
+  std::vector<const Record *> Clauses = DirLang.getClauses();
   // Sort clauses in reverse alphabetical order so with clauses with same
   // beginning, the longer option is tried before.
-  llvm::sort(Clauses, compareClauseName);
+  sort(Clauses, compareClauseName);
   IfDefScope Scope("GEN_FLANG_CLAUSES_PARSER", OS);
   OS << "\n";
   unsigned index = 0;
-  unsigned lastClauseIndex = DirLang.getClauses().size() - 1;
+  unsigned lastClauseIndex = Clauses.size() - 1;
   OS << "TYPE_PARSER(\n";
-  for (const auto &C : Clauses) {
-    Clause Clause{C};
+  for (const Clause Clause : Clauses) {
     if (Clause.getAliases().empty()) {
       OS << "  \"" << Clause.getName() << "\"";
     } else {
@@ -730,9 +1045,9 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
     // the Flang class with first letter as lowercase. If the Flang class is
     // not a common class, we assume there is a specific Parser<>{} with the
     // Flang class name provided.
-    llvm::SmallString<128> Scratch;
+    SmallString<128> Scratch;
     StringRef Parser =
-        llvm::StringSwitch<StringRef>(Clause.getFlangClass())
+        StringSwitch<StringRef>(Clause.getFlangClass())
             .Case("Name", "name")
             .Case("ScalarIntConstantExpr", "scalarIntConstantExpr")
             .Case("ScalarIntExpr", "scalarIntExpr")
@@ -762,7 +1077,6 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
 // language
 static void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
                                     raw_ostream &OS) {
-
   GenerateDirectiveClauseSets(DirLang, OS);
 
   GenerateDirectiveClauseMap(DirLang, OS);
@@ -819,8 +1133,7 @@ static void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "  CLAUSE_NO_CLASS(" << DirLang.getClausePrefix() << "##Name, Str)\n";
   OS << "\n";
 
-  for (const auto &R : DirLang.getClauses()) {
-    Clause C{R};
+  for (const Clause C : DirLang.getClauses()) {
     if (C.getClangClass().empty()) { // NO_CLASS
       if (C.isImplicit()) {
         OS << "__IMPLICIT_CLAUSE_NO_CLASS(" << C.getFormattedName() << ", \""
@@ -842,6 +1155,7 @@ static void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "\n";
   OS << "#undef __IMPLICIT_CLAUSE_NO_CLASS\n";
   OS << "#undef __IMPLICIT_CLAUSE_CLASS\n";
+  OS << "#undef __CLAUSE_NO_CLASS\n";
   OS << "#undef __CLAUSE\n";
   OS << "#undef CLAUSE_NO_CLASS\n";
   OS << "#undef CLAUSE_CLASS\n";
@@ -853,6 +1167,8 @@ static void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
 void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
                              raw_ostream &OS) {
   IfDefScope Scope("GEN_DIRECTIVES_IMPL", OS);
+
+  OS << "\n#include \"llvm/Support/ErrorHandling.h\"\n";
 
   // getDirectiveKind(StringRef Str)
   GenerateGetKind(DirLang.getDirectives(), OS, "Directive", DirLang,
@@ -876,12 +1192,21 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
+
+  // getDirectiveAssociation(Directive D)
+  GenerateGetDirectiveAssociation(DirLang, OS);
+
+  // getDirectiveCategory(Directive D)
+  GenerateGetDirectiveCategory(DirLang, OS);
+
+  // Leaf table for getLeafConstructs, etc.
+  EmitLeafTable(DirLang, OS, "LeafConstructTable");
 }
 
 // Generate the implemenation section for the enumeration in the directive
 // language.
-static void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
-  const auto DirLang = DirectiveLanguage{Records};
+static void EmitDirectivesImpl(const RecordKeeper &Records, raw_ostream &OS) {
+  const auto DirLang = DirectiveLanguage(Records);
   if (DirLang.HasValidityErrors())
     return;
 

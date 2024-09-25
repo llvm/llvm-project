@@ -4,18 +4,18 @@
 ;
 ; C Call passes all arguments on stack ...
 
-define void @test1(i32* nocapture %out, i32 %in) nounwind {
+define void @test1(ptr nocapture %out, i32 %in) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %a0
 ; CHECK-NEXT:    move.l (8,%sp), (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  store i32 %in, i32* %out, align 4
+  store i32 %in, ptr %out, align 4
   ret void
 }
 
-define void @test2(i32* nocapture %pOut, i32* nocapture %pIn) nounwind {
+define void @test2(ptr nocapture %pOut, ptr nocapture %pIn) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (8,%sp), %a0
@@ -23,30 +23,30 @@ define void @test2(i32* nocapture %pOut, i32* nocapture %pIn) nounwind {
 ; CHECK-NEXT:    move.l (%a0), (%a1)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = load i32, i32* %pIn, align 4
-  store i32 %0, i32* %pOut, align 4
+  %0 = load i32, ptr %pIn, align 4
+  store i32 %0, ptr %pOut, align 4
   ret void
 }
 
-define void @test3(i8* nocapture %out, i8 %in) nounwind {
+define void @test3(ptr nocapture %out, i8 %in) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %a0
 ; CHECK-NEXT:    move.b (11,%sp), (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  store i8 %in, i8* %out, align 1
+  store i8 %in, ptr %out, align 1
   ret void
 }
 
-define void @test4(i16* nocapture %out, i16 %in) nounwind {
+define void @test4(ptr nocapture %out, i16 %in) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %a0
 ; CHECK-NEXT:    move.w (10,%sp), (%a0)
 ; CHECK-NEXT:    rts
 entry:
-  store i16 %in, i16* %out, align 2
+  store i16 %in, ptr %out, align 2
   ret void
 }
 

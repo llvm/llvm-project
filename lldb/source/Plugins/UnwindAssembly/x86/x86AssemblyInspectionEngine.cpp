@@ -909,10 +909,13 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   if (!m_register_map_initialized)
     return false;
 
+  if (m_disasm_context == nullptr)
+    return false;
+
   addr_t current_func_text_offset = 0;
   int current_sp_bytes_offset_from_fa = 0;
   bool is_aligned = false;
-  UnwindPlan::Row::RegisterLocation initial_regloc;
+  UnwindPlan::Row::AbstractRegisterLocation initial_regloc;
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   unwind_plan.SetPlanValidAddressRange(func_range);
@@ -1048,7 +1051,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       if (nonvolatile_reg_p(machine_regno) &&
           machine_regno_to_lldb_regno(machine_regno, lldb_regno) &&
           !saved_registers[machine_regno]) {
-        UnwindPlan::Row::RegisterLocation regloc;
+        UnwindPlan::Row::AbstractRegisterLocation regloc;
         if (is_aligned)
             regloc.SetAtAFAPlusOffset(-current_sp_bytes_offset_from_fa);
         else
@@ -1139,7 +1142,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
              !saved_registers[machine_regno]) {
       saved_registers[machine_regno] = true;
 
-      UnwindPlan::Row::RegisterLocation regloc;
+      UnwindPlan::Row::AbstractRegisterLocation regloc;
 
       // stack_offset for 'movq %r15, -80(%rbp)' will be 80. In the Row, we
       // want to express this as the offset from the FA.  If the frame base is
@@ -1231,7 +1234,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       // determine the effcts of.  Verify that the stack frame state 
       // has been unwound to the same as it was at function entry to avoid 
       // mis-identifying a JMP instruction as an epilogue.
-      UnwindPlan::Row::RegisterLocation sp, pc;
+      UnwindPlan::Row::AbstractRegisterLocation sp, pc;
       if (row->GetRegisterInfo(m_lldb_sp_regnum, sp) &&
           row->GetRegisterInfo(m_lldb_ip_regnum, pc)) {
         // Any ret instruction variant is definitely indicative of an
@@ -1568,6 +1571,9 @@ bool x86AssemblyInspectionEngine::FindFirstNonPrologueInstruction(
   offset = 0;
 
   if (!m_register_map_initialized)
+    return false;
+
+  if (m_disasm_context == nullptr)
     return false;
 
   while (offset < size) {

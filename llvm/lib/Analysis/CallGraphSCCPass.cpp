@@ -46,7 +46,7 @@ using namespace llvm;
 namespace llvm {
 cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
                                       cl::init(4));
-}
+} // namespace llvm
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 
@@ -453,7 +453,6 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
         OS << LS;
         CGN->print(OS);
       }
-      OS.flush();
   #endif
       dumpPassInfo(P, EXECUTION_MSG, ON_CG_MSG, Functions);
     }

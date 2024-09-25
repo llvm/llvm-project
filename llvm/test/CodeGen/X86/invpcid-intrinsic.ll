@@ -20,7 +20,7 @@ define void @test_invpcid(i32 %type, ptr %descriptor) {
 ; EGPR-LABEL: test_invpcid:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; EGPR-NEXT:    invpcid (%rsi), %rax # encoding: [0x62,0xf4,0x7e,0x08,0xf2,0x06]
+; EGPR-NEXT:    invpcid (%rsi), %rax # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0x82,0x06]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   call void @llvm.x86.invpcid(i32 %type, ptr %descriptor)
@@ -45,7 +45,7 @@ define void @test_invpcid2(ptr readonly %type, ptr %descriptor) {
 ; EGPR-LABEL: test_invpcid2:
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; EGPR-NEXT:    invpcid (%rsi), %rax # encoding: [0x62,0xf4,0x7e,0x08,0xf2,0x06]
+; EGPR-NEXT:    invpcid (%rsi), %rax # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0x82,0x06]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load i32, ptr %type, align 4

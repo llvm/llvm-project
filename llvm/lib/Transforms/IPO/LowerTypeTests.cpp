@@ -470,6 +470,9 @@ class LowerTypeTestsModule {
 
   Function *WeakInitializerFn = nullptr;
 
+  GlobalVariable *GlobalAnnotation;
+  DenseSet<Value *> FunctionAnnotations;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
@@ -530,6 +533,10 @@ class LowerTypeTestsModule {
   /// replaceDirectCalls - Go through the uses list for this definition and
   /// replace each use, which is a direct function call.
   void replaceDirectCalls(Value *Old, Value *New);
+
+  bool isFunctionAnnotation(Value *V) const {
+    return FunctionAnnotations.contains(V);
+  }
 
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
@@ -872,7 +879,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
         NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
@@ -1377,8 +1384,11 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // (all?) targets. Switch to a runtime initializer.
   SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
   findGlobalVariableUsersOf(F, GlobalVarUsers);
-  for (auto *GV : GlobalVarUsers)
+  for (auto *GV : GlobalVarUsers) {
+    if (GV == GlobalAnnotation)
+      continue;
     moveInitializerToModuleConstructor(GV);
+  }
 
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
@@ -1509,8 +1519,10 @@ void LowerTypeTestsModule::createJumpTable(
   // for the function to avoid double BTI. This is a no-op without
   // -mbranch-protection=.
   if (JumpTableArch == Triple::aarch64 || JumpTableArch == Triple::thumb) {
-    F->addFnAttr("branch-target-enforcement", "false");
-    F->addFnAttr("sign-return-address", "none");
+    if (F->hasFnAttribute("branch-target-enforcement"))
+      F->removeFnAttr("branch-target-enforcement");
+    if (F->hasFnAttribute("sign-return-address"))
+      F->removeFnAttr("sign-return-address");
   }
   if (JumpTableArch == Triple::riscv32 || JumpTableArch == Triple::riscv64) {
     // Make sure the jump table assembly is not modified by the assembler or
@@ -1837,6 +1849,16 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   }
   OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
+
+  // Function annotation describes or applies to function itself, and
+  // shouldn't be associated with jump table thunk generated for CFI.
+  GlobalAnnotation = M.getGlobalVariable("llvm.global.annotations");
+  if (GlobalAnnotation && GlobalAnnotation->hasInitializer()) {
+    const ConstantArray *CA =
+        cast<ConstantArray>(GlobalAnnotation->getInitializer());
+    for (Value *Op : CA->operands())
+      FunctionAnnotations.insert(Op);
+  }
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
@@ -1896,8 +1918,12 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<BlockAddress, NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions
+    // Skip direct calls to externally defined or non-dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
+      continue;
+
+    // Skip function annotation.
+    if (isFunctionAnnotation(U.getUser()))
       continue;
 
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
@@ -2050,7 +2076,7 @@ bool LowerTypeTestsModule::lower() {
     CfiFunctionLinkage Linkage;
     MDNode *FuncMD; // {name, linkage, type[, type...]}
   };
-  DenseMap<StringRef, ExportedFunctionInfo> ExportedFunctions;
+  MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
     // A set of all functions that are address taken by a live global object.
     DenseSet<GlobalValue::GUID> AddressTaken;

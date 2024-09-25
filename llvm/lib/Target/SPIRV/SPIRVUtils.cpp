@@ -14,6 +14,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -21,6 +22,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include <queue>
+#include <vector>
 
 namespace llvm {
 
@@ -82,6 +85,9 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return; // Already handled
   else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
@@ -129,6 +135,34 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD) {
+  for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
+    auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
+    if (!OpMD)
+      report_fatal_error("Invalid decoration");
+    if (OpMD->getNumOperands() == 0)
+      report_fatal_error("Expect operand(s) of the decoration");
+    ConstantInt *DecorationId =
+        mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(0));
+    if (!DecorationId)
+      report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
+                         "element of the decoration");
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
+                   .addUse(Reg)
+                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
+      if (ConstantInt *OpV =
+              mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
+        MIB.addImm(static_cast<uint32_t>(OpV->getZExtValue()));
+      else if (MDString *OpV = dyn_cast<MDString>(OpMD->getOperand(OpI)))
+        addStringImm(OpV->getString(), MIB);
+      else
+        report_fatal_error("Unexpected operand of the decoration");
+    }
+  }
+}
+
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
@@ -143,15 +177,19 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 3;
   case SPIRV::StorageClass::Generic:
     return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
   case SPIRV::StorageClass::Input:
     return 7;
   default:
-    llvm_unreachable("Unable to get address space id");
+    report_fatal_error("Unable to get address space id");
   }
 }
 
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace) {
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -163,10 +201,18 @@ addressSpaceToStorageClass(unsigned AddrSpace) {
     return SPIRV::StorageClass::Workgroup;
   case 4:
     return SPIRV::StorageClass::Generic;
+  case 5:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
+  case 6:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
   default:
-    llvm_unreachable("Unknown address space");
+    report_fatal_error("Unknown address space");
   }
 }
 
@@ -207,9 +253,38 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+  static const struct {
+    // Named by
+    // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+    // We don't need aliases for Invocation and CrossDevice, as we already have
+    // them covered by "singlethread" and "" strings respectively (see
+    // implementation of LLVMContext::LLVMContext()).
+    llvm::SyncScope::ID SubGroup = Ctx.getOrInsertSyncScopeID("subgroup");
+    llvm::SyncScope::ID WorkGroup = Ctx.getOrInsertSyncScopeID("workgroup");
+    llvm::SyncScope::ID Device = Ctx.getOrInsertSyncScopeID("device");
+  } SSIDs{};
+
+  if (Id == llvm::SyncScope::SingleThread)
+    return SPIRV::Scope::Invocation;
+  else if (Id == llvm::SyncScope::System)
+    return SPIRV::Scope::CrossDevice;
+  else if (Id == SSIDs.SubGroup)
+    return SPIRV::Scope::Subgroup;
+  else if (Id == SSIDs.WorkGroup)
+    return SPIRV::Scope::Workgroup;
+  else if (Id == SSIDs.Device)
+    return SPIRV::Scope::Device;
+  return SPIRV::Scope::CrossDevice;
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
-  MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
+  MachineInstr *MI = MRI->getVRegDef(ConstReg);
+  MachineInstr *ConstInstr =
+      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
+          ? MRI->getVRegDef(MI->getOperand(1).getReg())
+          : MI;
   if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
     if (GI->is(Intrinsic::spv_track_constant)) {
       ConstReg = ConstInstr->getOperand(2).getReg();
@@ -228,14 +303,15 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI))
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
   return false;
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
-  return cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  return toTypedPointer(ElementTy);
 }
 
 // The set of names is borrowed from the SPIR-V translator.
@@ -290,10 +366,12 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
   bool IsMangled = Name.starts_with("_Z");
 
-  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
-    return std::string();
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV || IsNonMangledHLSL || !IsMangled)
+    return Name.str();
 
   // Try to use the itanium demangler.
   if (char *DemangledName = itaniumDemangle(Name.data())) {
@@ -301,9 +379,6 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     free(DemangledName);
     return Result;
   }
-  // Otherwise use simple demangling to return the function name.
-  if (IsNonMangledOCL || IsNonMangledSPIRV)
-    return Name.str();
 
   // Autocheck C++, maybe need to do explicit check of the source language.
   // OpenCL C++ built-ins are declared in cl namespace.
@@ -325,27 +400,220 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   return Name.substr(Start, Len).str();
 }
 
-const Type *getTypedPtrEltType(const Type *Ty) {
-  // TODO: This function requires updating following the opaque pointer
-  // migration.
-  return Ty;
-}
-
 bool hasBuiltinTypePrefix(StringRef Name) {
-  if (Name.starts_with("opencl.") || Name.starts_with("spirv."))
+  if (Name.starts_with("opencl.") || Name.starts_with("ocl_") ||
+      Name.starts_with("spirv."))
     return true;
   return false;
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  const StructType *SType = dyn_cast<StructType>(getTypedPtrEltType(Ty));
-  if (SType && SType->hasName())
-    return hasBuiltinTypePrefix(SType->getName());
-
-  if (const TargetExtType *EType =
-          dyn_cast<TargetExtType>(getTypedPtrEltType(Ty)))
+  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
     return hasBuiltinTypePrefix(EType->getName());
 
   return false;
 }
+
+bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
+
+  return false;
+}
+
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
+  TypeName.consume_front("atomic_");
+  if (TypeName.consume_front("void"))
+    return Type::getVoidTy(Ctx);
+  else if (TypeName.consume_front("bool"))
+    return Type::getIntNTy(Ctx, 1);
+  else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("unsigned char") ||
+           TypeName.consume_front("uchar"))
+    return Type::getInt8Ty(Ctx);
+  else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("unsigned short") ||
+           TypeName.consume_front("ushort"))
+    return Type::getInt16Ty(Ctx);
+  else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("unsigned int") ||
+           TypeName.consume_front("uint"))
+    return Type::getInt32Ty(Ctx);
+  else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("unsigned long") ||
+           TypeName.consume_front("ulong"))
+    return Type::getInt64Ty(Ctx);
+  else if (TypeName.consume_front("half"))
+    return Type::getHalfTy(Ctx);
+  else if (TypeName.consume_front("float"))
+    return Type::getFloatTy(Ctx);
+  else if (TypeName.consume_front("double"))
+    return Type::getDoubleTy(Ctx);
+
+  // Unable to recognize SPIRV type name
+  return nullptr;
+}
+
+std::unordered_set<BasicBlock *>
+PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
+  std::queue<BasicBlock *> ToVisit;
+  ToVisit.push(Start);
+
+  std::unordered_set<BasicBlock *> Output;
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (Output.count(BB) != 0)
+      continue;
+    Output.insert(BB);
+
+    for (BasicBlock *Successor : successors(BB)) {
+      if (DT.dominates(Successor, BB))
+        continue;
+      ToVisit.push(Successor);
+    }
+  }
+
+  return Output;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Rank) {
+  if (Visited.count(BB) != 0)
+    return Rank;
+
+  Loop *L = LI.getLoopFor(BB);
+  const bool isLoopHeader = LI.isLoopHeader(BB);
+
+  if (BlockToOrder.count(BB) == 0) {
+    OrderInfo Info = {Rank, Visited.size()};
+    BlockToOrder.emplace(BB, Info);
+  } else {
+    BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
+  }
+
+  for (BasicBlock *Predecessor : predecessors(BB)) {
+    if (isLoopHeader && L->contains(Predecessor)) {
+      continue;
+    }
+
+    if (BlockToOrder.count(Predecessor) == 0) {
+      return Rank;
+    }
+  }
+
+  Visited.insert(BB);
+
+  SmallVector<BasicBlock *, 2> OtherSuccessors;
+  SmallVector<BasicBlock *, 2> LoopSuccessors;
+
+  for (BasicBlock *Successor : successors(BB)) {
+    // Ignoring back-edges.
+    if (DT.dominates(Successor, BB))
+      continue;
+
+    if (isLoopHeader && L->contains(Successor)) {
+      LoopSuccessors.push_back(Successor);
+    } else
+      OtherSuccessors.push_back(Successor);
+  }
+
+  for (BasicBlock *BB : LoopSuccessors)
+    Rank = std::max(Rank, visit(BB, Rank + 1));
+
+  size_t OutputRank = Rank;
+  for (BasicBlock *Item : OtherSuccessors)
+    OutputRank = std::max(OutputRank, visit(Item, Rank + 1));
+  return OutputRank;
+}
+
+PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
+  DT.recalculate(F);
+  LI = LoopInfo(DT);
+
+  visit(&*F.begin(), 0);
+
+  Order.reserve(F.size());
+  for (auto &[BB, Info] : BlockToOrder)
+    Order.emplace_back(BB);
+
+  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+    return compare(LHS, RHS);
+  });
+}
+
+bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
+                                     const BasicBlock *RHS) const {
+  const OrderInfo &InfoLHS = BlockToOrder.at(const_cast<BasicBlock *>(LHS));
+  const OrderInfo &InfoRHS = BlockToOrder.at(const_cast<BasicBlock *>(RHS));
+  if (InfoLHS.Rank != InfoRHS.Rank)
+    return InfoLHS.Rank < InfoRHS.Rank;
+  return InfoLHS.TraversalIndex < InfoRHS.TraversalIndex;
+}
+
+void PartialOrderingVisitor::partialOrderVisit(
+    BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
+  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  assert(BlockToOrder.count(&Start) != 0);
+
+  // Skipping blocks with a rank inferior to |Start|'s rank.
+  auto It = Order.begin();
+  while (It != Order.end() && *It != &Start)
+    ++It;
+
+  // This is unexpected. Worst case |Start| is the last block,
+  // so It should point to the last block, not past-end.
+  assert(It != Order.end());
+
+  // By default, there is no rank limit. Setting it to the maximum value.
+  std::optional<size_t> EndRank = std::nullopt;
+  for (; It != Order.end(); ++It) {
+    if (EndRank.has_value() && BlockToOrder[*It].Rank > *EndRank)
+      break;
+
+    if (Reachable.count(*It) == 0) {
+      continue;
+    }
+
+    if (!Op(*It)) {
+      EndRank = BlockToOrder[*It].Rank;
+    }
+  }
+}
+
+bool sortBlocks(Function &F) {
+  if (F.size() == 0)
+    return false;
+
+  bool Modified = false;
+
+  std::vector<BasicBlock *> Order;
+  Order.reserve(F.size());
+
+  PartialOrderingVisitor Visitor(F);
+  Visitor.partialOrderVisit(*F.begin(), [&Order](BasicBlock *Block) {
+    Order.push_back(Block);
+    return true;
+  });
+
+  assert(&*F.begin() == Order[0]);
+  BasicBlock *LastBlock = &*F.begin();
+  for (BasicBlock *BB : Order) {
+    if (BB != LastBlock && &*LastBlock->getNextNode() != BB) {
+      Modified = true;
+      BB->moveAfter(LastBlock);
+    }
+    LastBlock = BB;
+  }
+
+  return Modified;
+}
+
 } // namespace llvm

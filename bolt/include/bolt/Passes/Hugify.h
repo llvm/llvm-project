@@ -18,7 +18,7 @@ class HugePage : public BinaryFunctionPass {
 public:
   HugePage(const cl::opt<bool> &PrintPass) : BinaryFunctionPass(PrintPass) {}
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
   const char *getName() const override { return "HugePage"; }
 };

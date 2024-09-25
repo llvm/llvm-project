@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive 
 ! A type parameter inquiry cannot appear in an allocate directive.

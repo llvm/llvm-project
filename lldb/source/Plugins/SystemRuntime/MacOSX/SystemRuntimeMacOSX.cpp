@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "AbortWithPayloadFrameRecognizer.h"
 #include "SystemRuntimeMacOSX.h"
 
 #include <memory>
@@ -61,7 +62,8 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+      case llvm::Triple::XROS:
+      case llvm::Triple::BridgeOS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -89,7 +91,10 @@ SystemRuntimeMacOSX::SystemRuntimeMacOSX(Process *process)
       m_libpthread_offsets(), m_dispatch_tsd_indexes_addr(LLDB_INVALID_ADDRESS),
       m_libdispatch_tsd_indexes(),
       m_dispatch_voucher_offsets_addr(LLDB_INVALID_ADDRESS),
-      m_libdispatch_voucher_offsets() {}
+      m_libdispatch_voucher_offsets() {
+
+  RegisterAbortWithPayloadFrameRecognizer(process);
+}
 
 // Destructor
 SystemRuntimeMacOSX::~SystemRuntimeMacOSX() { Clear(true); }

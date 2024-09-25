@@ -95,7 +95,8 @@ public:
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, llvm::StringRef SearchPath,
-                          llvm::StringRef RelativePath, const Module *Imported,
+                          llvm::StringRef RelativePath,
+                          const Module *SuggestedModule, bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;

@@ -52,7 +52,7 @@ module attributes {llvm.data_layout = "e",
 LLVM functions are represented by a special operation, `llvm.func`, that has
 syntax similar to that of the built-in function operation but supports
 LLVM-related features such as linkage and variadic argument lists. See detailed
-description in the operation list [below](#llvmfunc-mlirllvmllvmfuncop).
+description in the operation list [below](#llvmfunc-llvmllvmfuncop).
 
 ### PHI Nodes and Block Arguments
 
@@ -139,12 +139,12 @@ will be reevaluated after considering composite constants.
 ### Globals
 
 Global variables are also defined using a special operation,
-[`llvm.mlir.global`](#llvmmlirglobal-mlirllvmglobalop), located at the module
+[`llvm.mlir.global`](#llvmmlirglobal-llvmglobalop), located at the module
 level. Globals are MLIR symbols and are identified by their name.
 
 Since functions need to be isolated-from-above, i.e. values defined outside the
 function cannot be directly used inside the function, an additional operation,
-[`llvm.mlir.addressof`](#llvmmliraddressof-mlirllvmaddressofop), is provided to
+[`llvm.mlir.addressof`](#llvmmliraddressof-llvmaddressofop), is provided to
 locally define a value containing the _address_ of a global. The actual value
 can then be loaded from that pointer, or a new value can be stored into it if
 the global is not declared constant. This is similar to LLVM IR where globals
@@ -179,7 +179,7 @@ Example:
 
 ```mlir
 llvm.func @func() attributes {
-  passthrough = ["noinline",           // value-less attribute
+  passthrough = ["readonly",           // value-less attribute
                  ["alignstack", "4"],  // integer attribute with value
                  ["other", "attr"]]    // attribute unknown to LLVM
 } {
@@ -240,8 +240,6 @@ dialect as there is no corresponding built-in type.
 The following non-parametric types derived from the LLVM IR are available in the
 LLVM dialect:
 
--   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
-    machine.
 -   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
     64 bits).
 -   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an

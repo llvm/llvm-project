@@ -14,7 +14,7 @@ struct MaxSplitsImpl {
   MaxSplitsImpl();
   ~MaxSplitsImpl();
 };
-} //namespace strings_internal
+} // namespace strings_internal
 
 template <typename Delim>
 strings_internal::Splitter StrSplit(absl::string_view, Delim) {
@@ -36,7 +36,7 @@ strings_internal::MaxSplitsImpl MaxSplits(Delim, int) {
   return {};
 }
 
-} //namespace absl
+} // namespace absl
 
 void SplitDelimiters() {
   absl::StrSplit("ABC", "A");

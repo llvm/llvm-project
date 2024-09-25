@@ -9,7 +9,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -30,7 +30,7 @@ int main(int, char**) {
     std::layout_stride::mapping<std::dextents<int, 3>> m(
         std::dextents<int, 3>(100, 100, 100), std::array<int, 3>{1, 100, 10000});
 
-    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "invalid rank index");
+    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "layout_stride::mapping::stride(): invalid rank index");
   }
   return 0;
 }

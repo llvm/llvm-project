@@ -57,6 +57,7 @@ public:
     return getTM<ARCTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
   void addPreRegAlloc() override;
@@ -66,6 +67,12 @@ public:
 
 TargetPassConfig *ARCTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARCPassConfig(*this, PM);
+}
+
+void ARCPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool ARCPassConfig::addInstSelector() {
@@ -90,7 +97,7 @@ MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeARCDAGToDAGISelPass(PR);
+  initializeARCDAGToDAGISelLegacyPass(PR);
 }
 
 TargetTransformInfo

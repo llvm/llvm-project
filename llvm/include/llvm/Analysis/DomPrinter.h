@@ -17,7 +17,6 @@
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 

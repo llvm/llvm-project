@@ -1,6 +1,7 @@
 ; RUN: llvm-as %s -o %t0.o
 ; RUN: llvm-as < %p/Inputs/largedatathreshold.ll > %t1.o
-; RUN: not llvm-lto2 run -r %t0.o,_start,px -r %t1.o,bar,px %t0.o %t1.o -o %t2.s 2>&1 | FileCheck %s
+; RUN: not llvm-lto2 run -r %t0.o,_start,px -r %t1.o,bar,px -r %t0.o,_GLOBAL_OFFSET_TABLE_, \
+; RUN:   -r %t1.o,_GLOBAL_OFFSET_TABLE_, %t0.o %t1.o -o %t2.s 2>&1 | FileCheck %s
 
 ; CHECK: 'Large Data Threshold': IDs have conflicting values
 

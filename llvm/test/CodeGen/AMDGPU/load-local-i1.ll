@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i1:
 ; SICIVI: s_mov_b32 m0
@@ -459,6 +459,19 @@ define amdgpu_kernel void @local_sextload_v64i1_to_v64i64(ptr addrspace(3) %out,
   %load = load <64 x i1>, ptr addrspace(3) %in
   %ext = sext <64 x i1> %load to <64 x i64>
   store <64 x i64> %ext, ptr addrspace(3) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}local_load_i1_misaligned:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+define amdgpu_kernel void @local_load_i1_misaligned(ptr addrspace(3) %in, ptr addrspace (3) %out) #0 {
+  %in.gep.1 = getelementptr i1, ptr addrspace(3) %in, i32 1
+  %load.1 = load <16 x i1>, ptr addrspace(3) %in.gep.1, align 4
+  %load.2 = load <8 x i1>, ptr addrspace(3) %in, align 1
+  %out.gep.1 = getelementptr i1, ptr addrspace(3) %out, i32 16
+  store <16 x i1> %load.1, ptr addrspace(3) %out
+  store <8 x i1> %load.2, ptr addrspace(3) %out.gep.1
   ret void
 }
 

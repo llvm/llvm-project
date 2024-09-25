@@ -22,7 +22,7 @@ entry:
   ret void
 }
 
-define void @shared_za_callee() "aarch64_pstate_za_shared" {
+define void @shared_za_callee() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -34,7 +34,7 @@ entry:
   ret void
 }
 
-define void @new_za_callee() "aarch64_pstate_za_new" {
+define void @new_za_callee() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_callee
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @inlined_body()
@@ -84,7 +84,7 @@ entry:
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_nonza_callee_inline() "aarch64_pstate_za_new" {
+define void @new_za_caller_nonza_callee_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -99,7 +99,7 @@ entry:
 ; [ ] Z -> N
 ; [x] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_shared_za_callee_inline() "aarch64_pstate_za_new" {
+define void @new_za_caller_shared_za_callee_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -114,7 +114,7 @@ entry:
 ; [ ] Z -> N
 ; [ ] Z -> S
 ; [x] Z -> Z
-define void @new_za_caller_new_za_callee_dont_inline() "aarch64_pstate_za_new" {
+define void @new_za_caller_new_za_callee_dont_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -129,7 +129,7 @@ entry:
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @shared_za_caller_nonza_callee_inline() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_nonza_callee_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -144,7 +144,7 @@ entry:
 ; [ ] S -> N
 ; [x] S -> Z
 ; [ ] S -> S
-define void @shared_za_caller_new_za_callee_dont_inline() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_new_za_callee_dont_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -159,7 +159,7 @@ entry:
 ; [ ] S -> N
 ; [ ] S -> Z
 ; [x] S -> S
-define void @shared_za_caller_shared_za_callee_inline() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_shared_za_callee_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -181,7 +181,7 @@ define void @private_za_callee_call_za_disable() {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_za_disable() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_za_disable() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_za_disable
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_za_disable()
@@ -201,7 +201,7 @@ define void @private_za_callee_call_tpidr2_save() {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_tpidr2_save()
@@ -221,13 +221,58 @@ define void @private_za_callee_call_tpidr2_restore(ptr %ptr) {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline(ptr %ptr) "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline(ptr %ptr) "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_tpidr2_restore(ptr [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   call void @private_za_callee_call_tpidr2_restore(ptr %ptr)
+  ret void
+}
+
+define void @nonzt0_callee() {
+; CHECK-LABEL: define void @nonzt0_callee
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @shared_zt0_caller_nonzt0_callee_dont_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_nonzt0_callee_dont_inline
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void @nonzt0_callee()
+; CHECK-NEXT:    ret void
+;
+  call void @nonzt0_callee()
+  ret void
+}
+
+define void @shared_zt0_callee() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_callee
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @shared_zt0_caller_shared_zt0_callee_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_shared_zt0_callee_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void @shared_zt0_callee()
   ret void
 }
 

@@ -29,7 +29,7 @@ using namespace mlir;
   os << "neither the scoping op nor the type class provide data layout "
         "information for "
      << type;
-  llvm::report_fatal_error(Twine(os.str()));
+  llvm::report_fatal_error(Twine(message));
 }
 
 /// Returns the bitwidth of the index type if specified in the param list.
@@ -75,10 +75,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
   // there is no bit-packing at the moment element sizes are taken in bytes and
   // multiplied with 8 bits.
   // TODO: make this extensible.
-  if (auto vecType = dyn_cast<VectorType>(type))
-    return vecType.getNumElements() / vecType.getShape().back() *
-           llvm::PowerOf2Ceil(vecType.getShape().back()) *
-           dataLayout.getTypeSize(vecType.getElementType()) * 8;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
+                        llvm::PowerOf2Ceil(vecType.getShape().back()) *
+                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+    return llvm::TypeSize::get(baseSize, vecType.isScalable());
+  }
 
   if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
     return typeInterface.getTypeSizeInBits(dataLayout, params);
@@ -138,9 +140,10 @@ getFloatTypeABIAlignment(FloatType fltType, const DataLayout &dataLayout,
 uint64_t mlir::detail::getDefaultABIAlignment(
     Type type, const DataLayout &dataLayout,
     ArrayRef<DataLayoutEntryInterface> params) {
-  // Natural alignment is the closest power-of-two number above.
+  // Natural alignment is the closest power-of-two number above. For scalable
+  // vectors, aligning them to the same as the base vector is sufficient.
   if (isa<VectorType>(type))
-    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
+    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type).getKnownMinValue());
 
   if (auto fltType = dyn_cast<FloatType>(type))
     return getFloatTypeABIAlignment(fltType, dataLayout, params);
@@ -218,11 +221,60 @@ uint64_t mlir::detail::getDefaultPreferredAlignment(
   reportMissingDataLayout(type);
 }
 
-// Returns the memory space used for allocal operations if specified in the
+std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
+    Type type, const DataLayout &dataLayout,
+    ArrayRef<DataLayoutEntryInterface> params) {
+  if (isa<IndexType>(type))
+    return getIndexBitwidth(params);
+
+  if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
+    if (std::optional<uint64_t> indexBitwidth =
+            typeInterface.getIndexBitwidth(dataLayout, params))
+      return *indexBitwidth;
+
+  // Return std::nullopt for all other types, which are assumed to be non
+  // pointer-like types.
+  return std::nullopt;
+}
+
+// Returns the endianness if specified in the given entry. If the entry is empty
+// the default endianness represented by an empty attribute is returned.
+Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+
+  return entry.getValue();
+}
+
+// Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
 Attribute
 mlir::detail::getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface()) {
+    return Attribute();
+  }
+
+  return entry.getValue();
+}
+
+// Returns the memory space used for the program memory space.  if
+// specified in the given entry. If the entry is empty the default
+// memory space represented by an empty attribute is returned.
+Attribute
+mlir::detail::getDefaultProgramMemorySpace(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface()) {
+    return Attribute();
+  }
+
+  return entry.getValue();
+}
+
+// Returns the memory space used for global the global memory space. if
+// specified in the given entry. If the entry is empty the default memory
+// space represented by an empty attribute is returned.
+Attribute
+mlir::detail::getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface()) {
     return Attribute();
   }
@@ -239,6 +291,14 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
 
   auto value = cast<IntegerAttr>(entry.getValue());
   return value.getValue().getZExtValue();
+}
+
+std::optional<Attribute>
+mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return std::nullopt;
+
+  return entry.getValue();
 }
 
 DataLayoutEntryList
@@ -270,6 +330,16 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
         llvm_unreachable("expected an op with data layout spec");
         return DataLayoutSpecInterface();
       });
+}
+
+static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
+  if (operation) {
+    ModuleOp moduleOp = dyn_cast<ModuleOp>(operation);
+    if (!moduleOp)
+      moduleOp = operation->getParentOfType<ModuleOp>();
+    return moduleOp.getTargetSystemSpec();
+  }
+  return TargetSystemSpecInterface();
 }
 
 /// Populates `opsWithLayout` with the list of proper ancestors of `leaf` that
@@ -381,8 +451,10 @@ void checkMissingLayout(DataLayoutSpecInterface originalLayout, OpTy op) {
 mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
-      allocaMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
+      allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
+      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -390,8 +462,10 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 }
 
 mlir::DataLayout::DataLayout(ModuleOp op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
-      allocaMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
+      allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
+      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -494,6 +568,34 @@ uint64_t mlir::DataLayout::getTypePreferredAlignment(Type t) const {
   });
 }
 
+std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
+  checkValid();
+  return cachedLookup<std::optional<uint64_t>>(t, indexBitwidths, [&](Type ty) {
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getIndexBitwidth(ty, *this, list);
+    return detail::getDefaultIndexBitwidth(ty, *this, list);
+  });
+}
+
+mlir::Attribute mlir::DataLayout::getEndianness() const {
+  checkValid();
+  if (endianness)
+    return *endianness;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getEndiannessIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    endianness = iface.getEndianness(entry);
+  else
+    endianness = detail::getDefaultEndianness(entry);
+  return *endianness;
+}
+
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   checkValid();
   if (allocaMemorySpace)
@@ -510,6 +612,38 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   return *allocaMemorySpace;
 }
 
+mlir::Attribute mlir::DataLayout::getProgramMemorySpace() const {
+  checkValid();
+  if (programMemorySpace)
+    return *programMemorySpace;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getProgramMemorySpaceIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    programMemorySpace = iface.getProgramMemorySpace(entry);
+  else
+    programMemorySpace = detail::getDefaultProgramMemorySpace(entry);
+  return *programMemorySpace;
+}
+
+mlir::Attribute mlir::DataLayout::getGlobalMemorySpace() const {
+  checkValid();
+  if (globalMemorySpace)
+    return *globalMemorySpace;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getGlobalMemorySpaceIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    globalMemorySpace = iface.getGlobalMemorySpace(entry);
+  else
+    globalMemorySpace = detail::getDefaultGlobalMemorySpace(entry);
+  return *globalMemorySpace;
+}
+
 uint64_t mlir::DataLayout::getStackAlignment() const {
   checkValid();
   if (stackAlignment)
@@ -524,6 +658,26 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   else
     stackAlignment = detail::getDefaultStackAlignment(entry);
   return *stackAlignment;
+}
+
+std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
+    TargetSystemSpecInterface::DeviceID deviceID,
+    StringAttr propertyName) const {
+  checkValid();
+  DataLayoutEntryInterface entry;
+  if (originalTargetSystemDesc) {
+    if (std::optional<TargetDeviceSpecInterface> device =
+            originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
+      entry = device->getSpecForIdentifier(propertyName);
+  }
+  // Currently I am not caching the results because we do not return
+  // default values of these properties. Instead if the property is
+  // missing, we return std::nullopt so that the users can resort to
+  // the default value however they want.
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    return iface.getDevicePropertyValue(entry);
+  else
+    return detail::getDevicePropertyValue(entry);
 }
 
 //===----------------------------------------------------------------------===//
@@ -624,6 +778,55 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
              << "' dialect does not support identifier data layout entries";
     }
     if (failed(iface->verifyEntry(kvp.second, loc)))
+      return failure();
+  }
+
+  return success();
+}
+
+LogicalResult
+mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
+                                     Location loc) {
+  DenseMap<StringAttr, DataLayoutEntryInterface> deviceDescKeys;
+  DenseSet<TargetSystemSpecInterface::DeviceID> deviceIDs;
+  for (const auto &entry : spec.getEntries()) {
+    TargetDeviceSpecInterface targetDeviceSpec = entry.second;
+    // First, verify individual target device desc specs.
+    if (failed(targetDeviceSpec.verifyEntry(loc)))
+      return failure();
+
+    // Check that device IDs are unique across all entries.
+    TargetSystemSpecInterface::DeviceID deviceID = entry.first;
+    if (!deviceIDs.insert(deviceID).second) {
+      return failure();
+    }
+
+    // collect all the keys used by all the target device specs.
+    for (DataLayoutEntryInterface entry : targetDeviceSpec.getEntries()) {
+      if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
+        // targetDeviceSpec does not support Type as a key.
+        return failure();
+      } else {
+        deviceDescKeys[entry.getKey().get<StringAttr>()] = entry;
+      }
+    }
+  }
+
+  for (const auto &[keyName, keyVal] : deviceDescKeys) {
+    Dialect *dialect = keyName.getReferencedDialect();
+
+    // Ignore attributes that belong to an unknown dialect, the dialect may
+    // actually implement the relevant interface but we don't know about that.
+    if (!dialect)
+      return failure();
+
+    const auto *iface = dyn_cast<DataLayoutDialectInterface>(dialect);
+    if (!iface) {
+      return emitError(loc)
+             << "the '" << dialect->getNamespace()
+             << "' dialect does not support identifier data layout entries";
+    }
+    if (failed(iface->verifyEntry(keyVal, loc)))
       return failure();
   }
 

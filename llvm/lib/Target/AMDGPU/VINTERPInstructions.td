@@ -77,8 +77,8 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                   clampmod:$clamp,
-                   wait_exp:$waitexp);
+                   Clamp:$clamp,
+                   WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$waitexp";
 }
@@ -95,8 +95,8 @@ class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                   clampmod:$clamp, op_sel0:$op_sel,
-                   wait_exp:$waitexp);
+                   Clamp:$clamp, op_sel0:$op_sel,
+                   WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$op_sel$waitexp";
 }
@@ -105,7 +105,7 @@ class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 // VINTERP Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isGFX11Plus in {
+let SubtargetPredicate = HasVINTERPEncoding in {
 
 let Uses = [M0, EXEC, MODE] in {
 def V_INTERP_P10_F32_inreg : VINTERP_Pseudo <"v_interp_p10_f32", VOP3_VINTERP_F32>;
@@ -123,7 +123,7 @@ def V_INTERP_P2_RTZ_F16_F32_inreg :
   VINTERP_Pseudo <"v_interp_p2_rtz_f16_f32", VOP3_VINTERP_F16<[f16, f32, f32, f32]>>;
 } // Uses = [M0, EXEC]
 
-} // SubtargetPredicate = isGFX11Plus
+} // SubtargetPredicate = HasVINTERPEncoding.
 
 class VInterpF32Pat <SDPatternOperator op, Instruction inst> : GCNPat <
    (f32 (op
@@ -172,6 +172,12 @@ defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
                      [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
 defm : VInterpF16Pat<int_amdgcn_interp_inreg_p2_f16,
                      V_INTERP_P2_F16_F32_inreg, f16,
+                     [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p10_rtz_f16,
+                     V_INTERP_P10_RTZ_F16_F32_inreg, f32,
+                     [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16,
+                     V_INTERP_P2_RTZ_F16_F32_inreg, f16,
                      [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
 
 //===----------------------------------------------------------------------===//

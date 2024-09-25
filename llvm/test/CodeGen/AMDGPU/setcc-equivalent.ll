@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
 
 ; EG-LABEL: {{^}}and_setcc_setcc_i32:
 ; EG: AND_INT

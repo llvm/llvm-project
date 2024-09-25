@@ -2,20 +2,21 @@
 Test that killing the target while quitting doesn't stall
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-import pexpect
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class DriverQuitSpeedTest(PExpectTest):
     source = "main.c"
 
+    @skipIfAsan
     def test_run_quit(self):
         """Test that the lldb driver's batch mode works correctly."""
+        import pexpect
+
         self.build()
 
         exe = self.getBuildArtifact("a.out")

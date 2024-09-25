@@ -73,6 +73,8 @@ static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
 static const bool EnableAATrace = false;
 #endif
 
+AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 
@@ -419,42 +421,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
     if (AR.hasOffset())
       OS << " (off " << AR.getOffset() << ")";
     break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
-  switch (MR) {
-  case ModRefInfo::NoModRef:
-    OS << "NoModRef";
-    break;
-  case ModRefInfo::Ref:
-    OS << "Ref";
-    break;
-  case ModRefInfo::Mod:
-    OS << "Mod";
-    break;
-  case ModRefInfo::ModRef:
-    OS << "ModRef";
-    break;
-  }
-  return OS;
-}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (IRMemLocation Loc : MemoryEffects::locations()) {
-    switch (Loc) {
-    case IRMemLocation::ArgMem:
-      OS << "ArgMem: ";
-      break;
-    case IRMemLocation::InaccessibleMem:
-      OS << "InaccessibleMem: ";
-      break;
-    case IRMemLocation::Other:
-      OS << "Other: ";
-      break;
-    }
-    OS << ME.getModRef(Loc) << ", ";
   }
   return OS;
 }
@@ -882,6 +848,11 @@ bool llvm::isEscapeSource(const Value *V) {
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
     return true;
+
+  // Same for inttoptr constant expressions.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      return true;
 
   return false;
 }

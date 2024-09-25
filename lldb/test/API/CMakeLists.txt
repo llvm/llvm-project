@@ -1,4 +1,5 @@
 add_custom_target(lldb-api-test-deps)
+set_target_properties(lldb-api-test-deps PROPERTIES FOLDER "LLDB/Tests")
 add_dependencies(lldb-api-test-deps lldb-test-depends)
 
 add_lit_testsuites(LLDB-API
@@ -35,7 +36,8 @@ set(LLDB_TEST_ARCH
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
-  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
+  CACHE STRING "Specify additional arguments to pass to test runner. Separate \
+items with \";\". For example: '-C;gcc;-C;clang;-A;i386;-A;x86_64'")
 
 set(LLDB_TEST_COMMON_ARGS_VAR
   -u CXXFLAGS
@@ -96,12 +98,6 @@ endif()
 if(CMAKE_HOST_APPLE)
   if(LLDB_BUILD_FRAMEWORK)
     set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
-  endif()
-
-  # Use the same identity for testing
-  get_property(code_sign_identity_used GLOBAL PROPERTY LLDB_DEBUGSERVER_CODESIGN_IDENTITY)
-  if(code_sign_identity_used)
-    list(APPEND LLDB_TEST_COMMON_ARGS_VAR --codesign-identity "${code_sign_identity_used}")
   endif()
 
   if(LLDB_USE_SYSTEM_DEBUGSERVER)

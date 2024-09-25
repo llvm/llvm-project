@@ -36,7 +36,7 @@ entry:
 %st.args = type { i32, ptr }
 
 ; A bitcasted load and a direct load of select.
-define void @test_multiple_loads_select(i1 %cmp){
+define void @test_multiple_loads_select(i1 %cmp) {
 ; CHECK-LABEL: @test_multiple_loads_select(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADDR_I8_SROA_SPECULATED:%.*]] = select i1 [[CMP:%.*]], ptr undef, ptr undef
@@ -44,6 +44,51 @@ define void @test_multiple_loads_select(i1 %cmp){
 ; CHECK-NEXT:    [[ADDR_I32_SROA_SPECULATED:%.*]] = select i1 [[CMP]], ptr undef, ptr undef
 ; CHECK-NEXT:    call void @foo_i32(ptr [[ADDR_I32_SROA_SPECULATED]])
 ; CHECK-NEXT:    ret void
+;
+entry:
+  %args = alloca [2 x %st.args], align 16
+  %arr1 = getelementptr inbounds [2 x %st.args], ptr %args, i64 0, i64 1
+  %sel = select i1 %cmp, ptr %arr1, ptr %args
+  %addr = getelementptr inbounds %st.args, ptr %sel, i64 0, i32 1
+  %addr.i8 = load ptr, ptr %addr, align 8
+  call void @foo_i8(ptr %addr.i8)
+  %addr.i32 = load ptr, ptr %addr, align 8
+  call void @foo_i32 (ptr %addr.i32)
+  ret void
+}
+
+; Sanitizer will break optimization.
+define void @test_multiple_loads_select_asan(i1 %cmp) sanitize_address {
+; CHECK-PRESERVE-CFG-LABEL: @test_multiple_loads_select_asan(
+; CHECK-PRESERVE-CFG-NEXT:  entry:
+; CHECK-PRESERVE-CFG-NEXT:    [[ARGS_SROA_0:%.*]] = alloca ptr, align 8
+; CHECK-PRESERVE-CFG-NEXT:    [[ARGS_SROA_1:%.*]] = alloca ptr, align 8
+; CHECK-PRESERVE-CFG-NEXT:    [[SEL_SROA_SEL:%.*]] = select i1 [[CMP:%.*]], ptr [[ARGS_SROA_1]], ptr [[ARGS_SROA_0]]
+; CHECK-PRESERVE-CFG-NEXT:    [[ADDR_I8:%.*]] = load ptr, ptr [[SEL_SROA_SEL]], align 8
+; CHECK-PRESERVE-CFG-NEXT:    call void @foo_i8(ptr [[ADDR_I8]])
+; CHECK-PRESERVE-CFG-NEXT:    [[ADDR_I32:%.*]] = load ptr, ptr [[SEL_SROA_SEL]], align 8
+; CHECK-PRESERVE-CFG-NEXT:    call void @foo_i32(ptr [[ADDR_I32]])
+; CHECK-PRESERVE-CFG-NEXT:    ret void
+;
+; CHECK-MODIFY-CFG-LABEL: @test_multiple_loads_select_asan(
+; CHECK-MODIFY-CFG-NEXT:  entry:
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[CMP:%.*]], label [[ENTRY_THEN:%.*]], label [[ENTRY_ELSE:%.*]]
+; CHECK-MODIFY-CFG:       entry.then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT:%.*]]
+; CHECK-MODIFY-CFG:       entry.else:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT]]
+; CHECK-MODIFY-CFG:       entry.cont:
+; CHECK-MODIFY-CFG-NEXT:    [[ADDR_I8:%.*]] = phi ptr [ undef, [[ENTRY_THEN]] ], [ undef, [[ENTRY_ELSE]] ]
+; CHECK-MODIFY-CFG-NEXT:    call void @foo_i8(ptr [[ADDR_I8]])
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[CMP]], label [[ENTRY_CONT_THEN:%.*]], label [[ENTRY_CONT_ELSE:%.*]]
+; CHECK-MODIFY-CFG:       entry.cont.then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT_CONT:%.*]]
+; CHECK-MODIFY-CFG:       entry.cont.else:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT_CONT]]
+; CHECK-MODIFY-CFG:       entry.cont.cont:
+; CHECK-MODIFY-CFG-NEXT:    [[ADDR_I32:%.*]] = phi ptr [ undef, [[ENTRY_CONT_THEN]] ], [ undef, [[ENTRY_CONT_ELSE]] ]
+; CHECK-MODIFY-CFG-NEXT:    call void @foo_i32(ptr [[ADDR_I32]])
+; CHECK-MODIFY-CFG-NEXT:    ret void
 ;
 entry:
   %args = alloca [2 x %st.args], align 16
@@ -414,13 +459,13 @@ define void @load_of_select_with_noundef_nonnull(ptr %buffer, i1 %b) {
 ; CHECK-PRESERVE-CFG-LABEL: @load_of_select_with_noundef_nonnull(
 ; CHECK-PRESERVE-CFG-NEXT:    [[UB_PTR:%.*]] = alloca ptr, align 8
 ; CHECK-PRESERVE-CFG-NEXT:    [[SELECT_PTR:%.*]] = select i1 [[B:%.*]], ptr [[BUFFER:%.*]], ptr [[UB_PTR]]
-; CHECK-PRESERVE-CFG-NEXT:    [[LOAD_PTR:%.*]] = load ptr, ptr [[SELECT_PTR]], align 8, !nonnull !1, !noundef !1
+; CHECK-PRESERVE-CFG-NEXT:    [[LOAD_PTR:%.*]] = load ptr, ptr [[SELECT_PTR]], align 8, !nonnull [[META1:![0-9]+]], !noundef [[META1]]
 ; CHECK-PRESERVE-CFG-NEXT:    ret void
 ;
 ; CHECK-MODIFY-CFG-LABEL: @load_of_select_with_noundef_nonnull(
 ; CHECK-MODIFY-CFG-NEXT:    br i1 [[B:%.*]], label [[DOTTHEN:%.*]], label [[DOTCONT:%.*]]
 ; CHECK-MODIFY-CFG:       .then:
-; CHECK-MODIFY-CFG-NEXT:    [[LOAD_PTR_THEN_VAL:%.*]] = load ptr, ptr [[BUFFER:%.*]], align 8, !nonnull !2, !noundef !2
+; CHECK-MODIFY-CFG-NEXT:    [[LOAD_PTR_THEN_VAL:%.*]] = load ptr, ptr [[BUFFER:%.*]], align 8, !nonnull [[META2:![0-9]+]], !noundef [[META2]]
 ; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT]]
 ; CHECK-MODIFY-CFG:       .cont:
 ; CHECK-MODIFY-CFG-NEXT:    [[LOAD_PTR:%.*]] = phi ptr [ [[LOAD_PTR_THEN_VAL]], [[DOTTHEN]] ], [ undef, [[TMP0:%.*]] ]

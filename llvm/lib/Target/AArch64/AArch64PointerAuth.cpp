@@ -12,6 +12,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -35,7 +36,10 @@ public:
 
 private:
   /// An immediate operand passed to BRK instruction, if it is ever emitted.
-  const unsigned BrkOperand = 0xc471;
+  static unsigned BrkOperandForKey(AArch64PACKey::ID KeyId) {
+    const unsigned BrkOperandBase = 0xc470;
+    return BrkOperandBase + KeyId;
+  }
 
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64InstrInfo *TII = nullptr;
@@ -45,6 +49,13 @@ private:
 
   void authenticateLR(MachineFunction &MF,
                       MachineBasicBlock::iterator MBBI) const;
+
+  /// Stores blend(AddrDisc, IntDisc) to the Result register.
+  void emitBlend(MachineBasicBlock::iterator MBBI, Register Result,
+                 Register AddrDisc, unsigned IntDisc) const;
+
+  /// Expands PAUTH_BLEND pseudo instruction.
+  void expandPAuthBlend(MachineBasicBlock::iterator MBBI) const;
 
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
@@ -89,6 +100,7 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   bool UseBKey = MFnI.shouldSignWithBKey();
   bool EmitCFI = MFnI.needsDwarfUnwindInfo(MF);
+  bool EmitAsyncCFI = MFnI.needsAsyncDwarfUnwindInfo(MF);
   bool NeedsWinCFI = MF.hasWinCFI();
 
   MachineBasicBlock &MBB = *MBBI->getParent();
@@ -104,7 +116,7 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
   // PAuthLR authentication instructions need to know the value of PC at the
   // point of signing (PACI*).
   if (MFnI.branchProtectionPAuthLR()) {
-    MCSymbol *PACSym = MF.getMMI().getContext().createTempSymbol();
+    MCSymbol *PACSym = MF.getContext().createTempSymbol();
     MFnI.setSigningInstrLabel(PACSym);
   }
 
@@ -126,6 +138,18 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
   }
 
   if (EmitCFI) {
+    if (!EmitAsyncCFI) {
+      // Reduce the size of the generated call frame information for synchronous
+      // CFI by bundling the new CFI instruction with others in the prolog, so
+      // that no additional DW_CFA_advance_loc is needed.
+      for (auto I = MBBI; I != MBB.end(); ++I) {
+        if (I->getOpcode() == TargetOpcode::CFI_INSTRUCTION &&
+            I->getFlag(MachineInstr::FrameSetup)) {
+          MBBI = I;
+          break;
+        }
+      }
+    }
     unsigned CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
@@ -220,7 +244,7 @@ MachineMemOperand *createCheckMemOperand(MachineFunction &MF,
 
 } // namespace
 
-MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
+void llvm::AArch64PAuth::checkAuthenticatedRegister(
     MachineBasicBlock::iterator MBBI, AuthCheckMethod Method,
     Register AuthenticatedReg, Register TmpReg, bool UseIKey, unsigned BrkImm) {
 
@@ -230,37 +254,36 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
   const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MBBI->getDebugLoc();
 
+  // All terminator instructions should be grouped at the end of the machine
+  // basic block, with no non-terminator instructions between them. Depending on
+  // the method requested, we will insert some regular instructions, maybe
+  // followed by a conditional branch instruction, which is a terminator, before
+  // MBBI. Thus, MBBI is expected to be the first terminator of its MBB.
+  assert(MBBI->isTerminator() && MBBI == MBB.getFirstTerminator() &&
+         "MBBI should be the first terminator in MBB");
+
   // First, handle the methods not requiring creating extra MBBs.
   switch (Method) {
   default:
     break;
   case AuthCheckMethod::None:
-    return MBB;
+    return;
   case AuthCheckMethod::DummyLoad:
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), getWRegFromXReg(TmpReg))
-        .addReg(AArch64::LR)
+        .addReg(AuthenticatedReg)
         .addImm(0)
         .addMemOperand(createCheckMemOperand(MF, Subtarget));
-    return MBB;
+    return;
   }
 
   // Control flow has to be changed, so arrange new MBBs.
-
-  // At now, at least an AUT* instruction is expected before MBBI
-  assert(MBBI != MBB.begin() &&
-         "Cannot insert the check at the very beginning of MBB");
-  // The block to insert check into.
-  MachineBasicBlock *CheckBlock = &MBB;
-  // The remaining part of the original MBB that is executed on success.
-  MachineBasicBlock *SuccessBlock = MBB.splitAt(*std::prev(MBBI));
 
   // The block that explicitly generates a break-point exception on failure.
   MachineBasicBlock *BreakBlock =
       MF.CreateMachineBasicBlock(MBB.getBasicBlock());
   MF.push_back(BreakBlock);
-  MBB.splitSuccessor(SuccessBlock, BreakBlock);
+  MBB.addSuccessor(BreakBlock);
 
-  assert(CheckBlock->getFallThrough() == SuccessBlock);
   BuildMI(BreakBlock, DL, TII->get(AArch64::BRK)).addImm(BrkImm);
 
   switch (Method) {
@@ -268,32 +291,32 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
   case AuthCheckMethod::DummyLoad:
     llvm_unreachable("Should be handled above");
   case AuthCheckMethod::HighBitsNoTBI:
-    BuildMI(CheckBlock, DL, TII->get(AArch64::EORXrs), TmpReg)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EORXrs), TmpReg)
         .addReg(AuthenticatedReg)
         .addReg(AuthenticatedReg)
         .addImm(1);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::TBNZX))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::TBNZX))
         .addReg(TmpReg)
         .addImm(62)
         .addMBB(BreakBlock);
-    return *SuccessBlock;
+    return;
   case AuthCheckMethod::XPACHint:
     assert(AuthenticatedReg == AArch64::LR &&
            "XPACHint mode is only compatible with checking the LR register");
     assert(UseIKey && "XPACHint mode is only compatible with I-keys");
-    BuildMI(CheckBlock, DL, TII->get(AArch64::ORRXrs), TmpReg)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), TmpReg)
         .addReg(AArch64::XZR)
         .addReg(AArch64::LR)
         .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::XPACLRI));
-    BuildMI(CheckBlock, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::XPACLRI));
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
         .addReg(TmpReg)
         .addReg(AArch64::LR)
         .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::Bcc))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::Bcc))
         .addImm(AArch64CC::NE)
         .addMBB(BreakBlock);
-    return *SuccessBlock;
+    return;
   }
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }
@@ -314,7 +337,12 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
 
 bool AArch64PointerAuth::checkAuthenticatedLR(
     MachineBasicBlock::iterator TI) const {
-  AuthCheckMethod Method = Subtarget->getAuthenticatedLRCheckMethod();
+  const AArch64FunctionInfo *MFnI = TI->getMF()->getInfo<AArch64FunctionInfo>();
+  AArch64PACKey::ID KeyId =
+      MFnI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
+
+  AuthCheckMethod Method =
+      Subtarget->getAuthenticatedLRCheckMethod(*TI->getMF());
 
   if (Method == AuthCheckMethod::None)
     return false;
@@ -354,9 +382,35 @@ bool AArch64PointerAuth::checkAuthenticatedLR(
          "More than a single register is used by TCRETURN");
 
   checkAuthenticatedRegister(TI, Method, AArch64::LR, TmpReg, /*UseIKey=*/true,
-                             BrkOperand);
+                             BrkOperandForKey(KeyId));
 
   return true;
+}
+
+void AArch64PointerAuth::emitBlend(MachineBasicBlock::iterator MBBI,
+                                   Register Result, Register AddrDisc,
+                                   unsigned IntDisc) const {
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  if (Result != AddrDisc)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Result)
+        .addReg(AArch64::XZR)
+        .addReg(AddrDisc)
+        .addImm(0);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), Result)
+      .addReg(Result)
+      .addImm(IntDisc)
+      .addImm(48);
+}
+
+void AArch64PointerAuth::expandPAuthBlend(
+    MachineBasicBlock::iterator MBBI) const {
+  Register ResultReg = MBBI->getOperand(0).getReg();
+  Register AddrDisc = MBBI->getOperand(1).getReg();
+  unsigned IntDisc = MBBI->getOperand(2).getImm();
+  emitBlend(MBBI, ResultReg, AddrDisc, IntDisc);
 }
 
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
@@ -390,6 +444,7 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
+      case AArch64::PAUTH_BLEND:
         assert(!MI.isBundled());
         PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
@@ -405,6 +460,9 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
     case AArch64::PAUTH_EPILOGUE:
       authenticateLR(MF, It);
       HasAuthenticationInstrs = true;
+      break;
+    case AArch64::PAUTH_BLEND:
+      expandPAuthBlend(It);
       break;
     default:
       llvm_unreachable("Unhandled opcode");

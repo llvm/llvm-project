@@ -12,14 +12,21 @@ set(LLVM_LINK_COMPONENTS
    TargetParser
   )
 
+if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(WASM_SRC Wasm.cpp)
+endif()
+
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
+  InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
   Value.cpp
+  ${WASM_SRC}
+  PARTIAL_SOURCES_INTENDED
 
   DEPENDS
   intrinsics_gen

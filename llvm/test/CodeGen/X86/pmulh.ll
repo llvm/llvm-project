@@ -329,7 +329,7 @@ define <16 x i16> @and_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
 ;
 ; SSE41-LABEL: and_mulhuw_v16i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [32767,32767,32767,32767]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm8 = [32767,32767,32767,32767]
 ; SSE41-NEXT:    pand %xmm8, %xmm3
 ; SSE41-NEXT:    pand %xmm8, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
@@ -935,6 +935,56 @@ define <16 x i32> @zext_mulhuw_v16i16_lshr(<16 x i16> %a, <16 x i16> %b) {
   %c = mul <16 x i32> %a1, %b1
   %d = lshr <16 x i32> %c, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i32> %d
+}
+
+; PR109790
+define <16 x i16> @zext_mulhuw_v16i16_negative_constant(<16 x i16> %a) {
+; SSE-LABEL: zext_mulhuw_v16i16_negative_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [64536,64536,64536,64536,64536,64536,64536,64536]
+; SSE-NEXT:    pmulhw %xmm2, %xmm0
+; SSE-NEXT:    pmulhw %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zext_mulhuw_v16i16_negative_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536]
+; AVX-NEXT:    retq
+  %k = and <16 x i16> %a, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>
+  %x = zext nneg <16 x i16> %k to <16 x i32>
+  %m = mul nsw <16 x i32> %x, <i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000>
+  %s = lshr <16 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %t = trunc nuw <16 x i32> %s to <16 x i16>
+  ret <16 x i16> %t
+}
+
+; PR109790
+define <16 x i16> @zext_mulhuw_v16i16_positive_constant(<16 x i16> %a) {
+; SSE-LABEL: zext_mulhuw_v16i16_positive_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1000,1000,1000,1000,1000,1000,1000,1000]
+; SSE-NEXT:    pmulhw %xmm2, %xmm0
+; SSE-NEXT:    pmulhw %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: zext_mulhuw_v16i16_positive_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000]
+; AVX-NEXT:    retq
+  %k = and <16 x i16> %a, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>
+  %x = zext nneg <16 x i16> %k to <16 x i32>
+  %m = mul nuw nsw <16 x i32> %x, <i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000, i32 1000>
+  %s = lshr <16 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %t = trunc nuw nsw <16 x i32> %s to <16 x i16>
+  ret <16 x i16> %t
 }
 
 define <16 x i32> @mulhsw_v16i16_lshr(<16 x i16> %a, <16 x i16> %b) {
@@ -2056,3 +2106,4 @@ define <8 x i16> @sse2_pmulhu_w_const(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %res
 }
 declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>)
+

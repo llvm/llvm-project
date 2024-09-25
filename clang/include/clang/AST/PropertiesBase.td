@@ -117,6 +117,8 @@ def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
 def FixedPointSemantics : PropertyType<"llvm::FixedPointSemantics"> {
   let PassByReference = 1;
 }
+def FunctionEffect : PropertyType<"FunctionEffect">;
+def EffectConditionExpr : PropertyType<"EffectConditionExpr">;
 def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
 def LValuePathEntry : PropertyType<"APValue::LValuePathEntry">;
 def LValuePathSerializationHelper :
@@ -143,6 +145,7 @@ def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
+def TypeCoupledDeclRefInfo : PropertyType;
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];
@@ -749,6 +752,23 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
     return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index, final);
   }]>;
 }
+let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
+  def : ReadHelper<[{
+    auto DTS = node.getAsDeducedTemplateName();
+  }]>;
+  def : Property<"underlying", TemplateName> {
+    let Read = [{ DTS->getUnderlying() }];
+  }
+  def : Property<"startPos", UInt32> {
+    let Read = [{ DTS->getDefaultArguments().StartPos }];
+  }
+  def : Property<"defaultArgs", Array<TemplateArgument>> {
+    let Read = [{ DTS->getDefaultArguments().Args }];
+  }
+  def : Creator<[{
+    return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
+  }]>;
+}
 
 // Type cases for TemplateArgument.
 def : PropertyTypeKind<TemplateArgument, TemplateArgumentKind,
@@ -806,6 +826,20 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   }
   def : Creator<[{
     return TemplateArgument(ctx, value, type, isDefaulted);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "StructuralValue"> in {
+  def : Property<"value", APValue> {
+    let Read = [{ node.getAsStructuralValue() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getStructuralValueType() }];
+  }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, type, value, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {

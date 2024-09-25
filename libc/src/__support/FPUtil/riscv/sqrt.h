@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
@@ -18,22 +19,26 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
+#ifdef __riscv_flen
 template <> LIBC_INLINE float sqrt<float>(float x) {
   float result;
   __asm__ __volatile__("fsqrt.s %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
 
+#if __riscv_flen >= 64
 template <> LIBC_INLINE double sqrt<double>(double x) {
   double result;
   __asm__ __volatile__("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
+#endif // __riscv_flen >= 64
+#endif // __riscv_flen
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H

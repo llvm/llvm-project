@@ -10,7 +10,7 @@ define <vscale x 16 x i8> @ld1_nxv16i8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 16 x i8>, <vscale x 16 x i8>* %ptr
+  %val = load volatile <vscale x 16 x i8>, ptr %ptr
   ret <vscale x 16 x i8> %val
 }
 
@@ -21,7 +21,7 @@ define <vscale x 8 x i16> @ld1_nxv16i8_bitcast_to_i16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x i16>, <vscale x 8 x i16>* %ptr
+  %val = load volatile <vscale x 8 x i16>, ptr %ptr
   ret <vscale x 8 x i16> %val
 }
 
@@ -32,7 +32,7 @@ define <vscale x 4 x i32> @ld1_nxv16i8_bitcast_to_i32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %ptr
+  %val = load volatile <vscale x 4 x i32>, ptr %ptr
   ret <vscale x 4 x i32> %val
 }
 
@@ -43,7 +43,7 @@ define <vscale x 2 x i64> @ld1_nxv16i8_bitcast_to_i64(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i64>, <vscale x 2 x i64>* %ptr
+  %val = load volatile <vscale x 2 x i64>, ptr %ptr
   ret <vscale x 2 x i64> %val
 }
 
@@ -54,7 +54,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16_zext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x i8>, <vscale x 8 x i8>* %ptr
+  %val = load volatile <vscale x 8 x i8>, ptr %ptr
   %zext = zext <vscale x 8 x i8> %val to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %zext
 }
@@ -66,7 +66,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_zext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i8>, <vscale x 4 x i8>* %ptr
+  %val = load volatile <vscale x 4 x i8>, ptr %ptr
   %zext = zext <vscale x 4 x i8> %val to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %zext
 }
@@ -78,7 +78,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i8>, <vscale x 2 x i8>* %ptr
+  %val = load volatile <vscale x 2 x i8>, ptr %ptr
   %zext = zext <vscale x 2 x i8> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %zext
 }
@@ -90,7 +90,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16_sext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x i8>, <vscale x 8 x i8>* %ptr
+  %val = load volatile <vscale x 8 x i8>, ptr %ptr
   %sext = sext <vscale x 8 x i8> %val to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %sext
 }
@@ -102,7 +102,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_sext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i8>, <vscale x 4 x i8>* %ptr
+  %val = load volatile <vscale x 4 x i8>, ptr %ptr
   %sext = sext <vscale x 4 x i8> %val to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %sext
 }
@@ -114,7 +114,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext8(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i8>, <vscale x 2 x i8>* %ptr
+  %val = load volatile <vscale x 2 x i8>, ptr %ptr
   %sext = sext <vscale x 2 x i8> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %sext
 }
@@ -128,7 +128,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x i16>, <vscale x 8 x i16>* %ptr
+  %val = load volatile <vscale x 8 x i16>, ptr %ptr
   ret <vscale x 8 x i16> %val
 }
 
@@ -139,7 +139,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_zext16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i16>, <vscale x 4 x i16>* %ptr
+  %val = load volatile <vscale x 4 x i16>, ptr %ptr
   %zext = zext <vscale x 4 x i16> %val to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %zext
 }
@@ -151,7 +151,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i16>, <vscale x 2 x i16>* %ptr
+  %val = load volatile <vscale x 2 x i16>, ptr %ptr
   %zext = zext <vscale x 2 x i16> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %zext
 }
@@ -163,7 +163,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_sext16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i16>, <vscale x 4 x i16>* %ptr
+  %val = load volatile <vscale x 4 x i16>, ptr %ptr
   %sext = sext <vscale x 4 x i16> %val to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %sext
 }
@@ -175,7 +175,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i16>, <vscale x 2 x i16>* %ptr
+  %val = load volatile <vscale x 2 x i16>, ptr %ptr
   %sext = sext <vscale x 2 x i16> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %sext
 }
@@ -187,7 +187,7 @@ define <vscale x 8 x half> @ld1_nxv8f16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x half>, <vscale x 8 x half>* %ptr
+  %val = load volatile <vscale x 8 x half>, ptr %ptr
   ret <vscale x 8 x half> %val
 }
 
@@ -198,7 +198,7 @@ define <vscale x 8 x bfloat> @ld1_nxv8bf16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  %val = load volatile <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %ptr
+  %val = load volatile <vscale x 8 x bfloat>, ptr %ptr
   ret <vscale x 8 x bfloat> %val
 }
 
@@ -209,7 +209,7 @@ define <vscale x 4 x half> @ld1_nxv4f16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x half>, <vscale x 4 x half>* %ptr
+  %val = load volatile <vscale x 4 x half>, ptr %ptr
   ret <vscale x 4 x half> %val
 }
 
@@ -220,7 +220,7 @@ define <vscale x 4 x bfloat> @ld1_nxv4bf16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x bfloat>, <vscale x 4 x bfloat>* %ptr
+  %val = load volatile <vscale x 4 x bfloat>, ptr %ptr
   ret <vscale x 4 x bfloat> %val
 }
 
@@ -231,7 +231,7 @@ define <vscale x 2 x half> @ld1_nxv2f16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x half>, <vscale x 2 x half>* %ptr
+  %val = load volatile <vscale x 2 x half>, ptr %ptr
   ret <vscale x 2 x half> %val
 }
 
@@ -242,7 +242,7 @@ define <vscale x 2 x bfloat> @ld1_nxv2bf16(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x bfloat>, <vscale x 2 x bfloat>* %ptr
+  %val = load volatile <vscale x 2 x bfloat>, ptr %ptr
   ret <vscale x 2 x bfloat> %val
 }
 
@@ -255,7 +255,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %ptr
+  %val = load volatile <vscale x 4 x i32>, ptr %ptr
   ret <vscale x 4 x i32> %val
 }
 
@@ -266,7 +266,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i32>, <vscale x 2 x i32>* %ptr
+  %val = load volatile <vscale x 2 x i32>, ptr %ptr
   %zext = zext <vscale x 2 x i32> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %zext
 }
@@ -278,7 +278,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i32>, <vscale x 2 x i32>* %ptr
+  %val = load volatile <vscale x 2 x i32>, ptr %ptr
   %sext = sext <vscale x 2 x i32> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %sext
 }
@@ -290,7 +290,7 @@ define <vscale x 4 x float> @ld1_nxv4f32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
-  %val = load volatile <vscale x 4 x float>, <vscale x 4 x float>* %ptr
+  %val = load volatile <vscale x 4 x float>, ptr %ptr
   ret <vscale x 4 x float> %val
 }
 
@@ -301,7 +301,7 @@ define <vscale x 2 x float> @ld1_nxv2f32(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x float>, <vscale x 2 x float>* %ptr
+  %val = load volatile <vscale x 2 x float>, ptr %ptr
   ret <vscale x 2 x float> %val
 }
 
@@ -314,7 +314,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i64, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x i64>, <vscale x 2 x i64>* %ptr
+  %val = load volatile <vscale x 2 x i64>, ptr %ptr
   ret <vscale x 2 x i64> %val
 }
 
@@ -325,6 +325,6 @@ define <vscale x 2 x double> @ld1_nxv2f64(ptr %addr, i64 %off) {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds double, ptr %addr, i64 %off
-  %val = load volatile <vscale x 2 x double>, <vscale x 2 x double>* %ptr
+  %val = load volatile <vscale x 2 x double>, ptr %ptr
   ret <vscale x 2 x double> %val
 }

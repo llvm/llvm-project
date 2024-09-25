@@ -3,28 +3,28 @@
 
 ; UNPREDICATED
 
-define void @store_promote_4i8(<vscale x 4 x i8> %data, <vscale x 4 x i8>* %a) {
+define void @store_promote_4i8(<vscale x 4 x i8> %data, ptr %a) {
 ; CHECK-LABEL: store_promote_4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store <vscale x 4 x i8> %data, <vscale x 4 x i8>* %a
+  store <vscale x 4 x i8> %data, ptr %a
   ret void
 }
 
-define void @store_split_i16(<vscale x 16 x i16> %data, <vscale x 16 x i16>* %a) {
+define void @store_split_i16(<vscale x 16 x i16> %data, ptr %a) {
 ; CHECK-LABEL: store_split_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store <vscale x 16 x i16> %data, <vscale x 16 x i16>* %a
+  store <vscale x 16 x i16> %data, ptr %a
   ret void
 }
 
-define void @store_split_16i32(<vscale x 16 x i32> %data, <vscale x 16 x i32>* %a) {
+define void @store_split_16i32(<vscale x 16 x i32> %data, ptr %a) {
 ; CHECK-LABEL: store_split_16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -33,11 +33,11 @@ define void @store_split_16i32(<vscale x 16 x i32> %data, <vscale x 16 x i32>* %
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store <vscale x 16 x i32> %data, <vscale x 16 x i32>* %a
+  store <vscale x 16 x i32> %data, ptr %a
   ret void
 }
 
-define void @store_split_16i64(<vscale x 16 x i64> %data, <vscale x 16 x i64>* %a) {
+define void @store_split_16i64(<vscale x 16 x i64> %data, ptr %a) {
 ; CHECK-LABEL: store_split_16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -50,48 +50,48 @@ define void @store_split_16i64(<vscale x 16 x i64> %data, <vscale x 16 x i64>* %
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store <vscale x 16 x i64> %data, <vscale x 16 x i64>* %a
+  store <vscale x 16 x i64> %data, ptr %a
   ret void
 }
 
 ; MASKED
 
-define void @masked_store_promote_2i8(<vscale x 2 x i8> %data, <vscale x 2 x i8> *%a, <vscale x 2 x i1> %pg) {
+define void @masked_store_promote_2i8(<vscale x 2 x i8> %data, ptr %a, <vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: masked_store_promote_2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.nxv2i8(<vscale x 2 x i8> %data, <vscale x 2 x i8> *%a, i32 1, <vscale x 2 x i1> %pg)
+  call void @llvm.masked.store.nxv2i8(<vscale x 2 x i8> %data, ptr %a, i32 1, <vscale x 2 x i1> %pg)
   ret void
 }
 
-define void @masked_store_split_32i8(<vscale x 32 x i8> %data, <vscale x 32 x i8> *%a, <vscale x 32 x i1> %pg) {
+define void @masked_store_split_32i8(<vscale x 32 x i8> %data, ptr %a, <vscale x 32 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1b { z1.b }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.nxv32i8(<vscale x 32 x i8> %data, <vscale x 32 x i8> *%a, i32 1, <vscale x 32 x i1> %pg)
+  call void @llvm.masked.store.nxv32i8(<vscale x 32 x i8> %data, ptr %a, i32 1, <vscale x 32 x i1> %pg)
   ret void
 }
 
-define void @masked_store_split_32i16(<vscale x 32 x i16> %data, <vscale x 32 x i16> *%a, <vscale x 32 x i1> %pg) {
+define void @masked_store_split_32i16(<vscale x 32 x i16> %data, ptr %a, <vscale x 32 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z3.h }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z2.h }, p1, [x0, #2, mul vl]
 ; CHECK-NEXT:    st1h { z1.h }, p3, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.nxv32i16(<vscale x 32 x i16> %data, <vscale x 32 x i16> *%a, i32 1, <vscale x 32 x i1> %pg)
+  call void @llvm.masked.store.nxv32i16(<vscale x 32 x i16> %data, ptr %a, i32 1, <vscale x 32 x i1> %pg)
   ret void
 }
 
-define void @masked_store_split_8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32> *%a, <vscale x 8 x i1> %pg) {
+define void @masked_store_split_8i32(<vscale x 8 x i32> %data, ptr %a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
@@ -99,33 +99,33 @@ define void @masked_store_split_8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32
 ; CHECK-NEXT:    st1w { z1.s }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32> *%a, i32 1, <vscale x 8 x i1> %pg)
+  call void @llvm.masked.store.nxv8i32(<vscale x 8 x i32> %data, ptr %a, i32 1, <vscale x 8 x i1> %pg)
   ret void
 }
 
-define void @masked_store_split_8i64(<vscale x 8 x i64> %data, <vscale x 8 x i64> *%a, <vscale x 8 x i1> %pg) {
+define void @masked_store_split_8i64(<vscale x 8 x i64> %data, ptr %a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1d { z3.d }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1d { z2.d }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1d { z1.d }, p3, [x0, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p2, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.nxv8i64(<vscale x 8 x i64> %data, <vscale x 8 x i64> *%a, i32 1, <vscale x 8 x i1> %pg)
+  call void @llvm.masked.store.nxv8i64(<vscale x 8 x i64> %data, ptr %a, i32 1, <vscale x 8 x i1> %pg)
   ret void
 }
 
-declare void @llvm.masked.store.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>*, i32, <vscale x 2 x i1>)
-declare void @llvm.masked.store.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>*, i32, <vscale x 32 x i1>)
+declare void @llvm.masked.store.nxv2i8(<vscale x 2 x i8>, ptr, i32, <vscale x 2 x i1>)
+declare void @llvm.masked.store.nxv32i8(<vscale x 32 x i8>, ptr, i32, <vscale x 32 x i1>)
 
-declare void @llvm.masked.store.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>*, i32, <vscale x 32 x i1>)
+declare void @llvm.masked.store.nxv32i16(<vscale x 32 x i16>, ptr, i32, <vscale x 32 x i1>)
 
-declare void @llvm.masked.store.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>*, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv8i32(<vscale x 8 x i32>, ptr, i32, <vscale x 8 x i1>)
 
-declare void @llvm.masked.store.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>*, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv8i64(<vscale x 8 x i64>, ptr, i32, <vscale x 8 x i1>)

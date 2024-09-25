@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
-; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 
 @b = internal addrspace(4) constant [1 x i16] [ i16 7 ], align 2

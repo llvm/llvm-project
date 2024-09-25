@@ -103,8 +103,8 @@
 // LIBS-COMPILER-RT-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtbegin_no_eh.o"
 // LIBS-COMPILER-RT-POS: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430"
 // LIBS-COMPILER-RT-POS: "-L{{.*}}/Inputs/basic_msp430_tree{{/|\\\\}}msp430-elf{{/|\\\\}}lib/430"
-// LIBS-COMPILER-RT-POS: "{{[^"]*}}libclang_rt.builtins-msp430.a" "--start-group" "-lmul_none" "-lc" "{{[^"]*}}libclang_rt.builtins-msp430.a" "-lcrt" "-lnosys" "--end-group" "{{[^"]*}}libclang_rt.builtins-msp430.a"
-// LIBS-COMPILER-RT-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "{{[^"]*}}libclang_rt.builtins-msp430.a"
+// LIBS-COMPILER-RT-POS: "{{[^"]*}}libclang_rt.builtins.a" "--start-group" "-lmul_none" "-lc" "{{[^"]*}}libclang_rt.builtins.a" "-lcrt" "-lnosys" "--end-group" "{{[^"]*}}libclang_rt.builtins.a"
+// LIBS-COMPILER-RT-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "{{[^"]*}}libclang_rt.builtins.a"
 // LIBS-COMPILER-RT-NEG-NOT: crtbegin.o
 // LIBS-COMPILER-RT-NEG-NOT: -lssp_nonshared
 // LIBS-COMPILER-RT-NEG-NOT: -lssp

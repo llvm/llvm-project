@@ -79,9 +79,9 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
   // TODO: can we use an early_inc iterator?
   for (OpOperand *operand : operandsToReplace) {
     Operation *op = operand->getOwner();
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     operand->set(val);
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
   }
 
   // Perform late op erasure.

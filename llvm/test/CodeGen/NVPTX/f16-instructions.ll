@@ -131,8 +131,8 @@ define half @test_fsub(half %a, half %b) #0 {
   ret half %r
 }
 
-; CHECK-LABEL: test_fneg(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_fneg_param_0];
+; CHECK-LABEL: test_old_fneg(
+; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_old_fneg_param_0];
 ; CHECK-F16-NOFTZ-NEXT:   mov.b16        [[Z:%rs[0-9]+]], 0x0000
 ; CHECK-F16-NOFTZ-NEXT:   sub.rn.f16     [[R:%rs[0-9]+]], [[Z]], [[A]];
 ; CHECK-F16-FTZ-NEXT:   mov.b16        [[Z:%rs[0-9]+]], 0x0000
@@ -143,8 +143,20 @@ define half @test_fsub(half %a, half %b) #0 {
 ; CHECK-NOF16-NEXT: cvt.rn.f16.f32 [[R:%rs[0-9]+]], [[R32]]
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
-define half @test_fneg(half %a) #0 {
+define half @test_old_fneg(half %a) #0 {
   %r = fsub half 0.0, %a
+  ret half %r
+}
+
+; CHECK-LABEL: test_fneg(
+; CHECK:  ld.param.b16    [[A:%rs[0-9]+]], [test_fneg_param_0];
+; CHECK-F16-NOFTZ-NEXT:   neg.f16     [[R:%rs[0-9]+]], [[A]];
+; CHECK-F16-FTZ-NEXT:   neg.ftz.f16     [[R:%rs[0-9]+]], [[A]];
+; CHECK-NOF16-NEXT:  xor.b16    [[R:%rs[0-9]+]], [[A]], -32768;
+; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
+; CHECK-NEXT: ret;
+define half @test_fneg(half %a) #0 {
+  %r = fneg half %a
   ret half %r
 }
 
@@ -253,7 +265,10 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -274,7 +289,10 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -295,7 +313,10 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];

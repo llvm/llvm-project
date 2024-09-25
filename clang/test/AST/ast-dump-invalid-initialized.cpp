@@ -25,3 +25,18 @@ void test() {
   // CHECK: `-VarDecl {{.*}} invalid b5 'auto'
   auto b5 = A{1};
 }
+
+void GH72198() {
+  // CHECK: DecompositionDecl {{.*}} invalid 'int'
+  int [_, b] = {0, 0};
+  [b]{};
+}
+
+namespace GH67495 {
+int get_point();
+void f() {
+  // CHECK: DecompositionDecl {{.*}} invalid 'int &'
+  auto& [x, y] = get_point();
+  [x, y] {};
+}
+}

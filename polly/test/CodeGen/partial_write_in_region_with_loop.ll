@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-import-jscop \
-; RUN: -polly-import-jscop-postfix=transformed -polly-codegen \
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
+; RUN: -polly-import-jscop-postfix=transformed \
 ; RUN: -verify-dom-info -polly-allow-nonaffine-loops \
 ; RUN: -S < %s | FileCheck %s
 

@@ -12,6 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_RISCVFLI
+    : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, XLenVT>]>;
+
+def riscv_fli : SDNode<"RISCVISD::FLI", SDT_RISCVFLI>;
+
+//===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
@@ -189,6 +198,8 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfa] in {
+def: Pat<(f32 (riscv_fli timm:$imm)), (FLI_S timm:$imm)>;
+
 def: PatFprFpr<fminimum, FMINM_S, FPR32, f32>;
 def: PatFprFpr<fmaximum, FMAXM_S, FPR32, f32>;
 
@@ -211,6 +222,8 @@ def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S, f32>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
+def: Pat<(f64 (riscv_fli timm:$imm)), (FLI_D timm:$imm)>;
+
 def: PatFprFpr<fminimum, FMINM_D, FPR64, f64>;
 def: PatFprFpr<fmaximum, FMAXM_D, FPR64, f64>;
 
@@ -239,6 +252,8 @@ def : Pat<(RISCVBuildPairF64 GPR:$rs1, GPR:$rs2),
 }
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+def: Pat<(f16 (riscv_fli timm:$imm)), (FLI_H timm:$imm)>;
+
 def: PatFprFpr<fminimum, FMINM_H, FPR16, f16>;
 def: PatFprFpr<fmaximum, FMAXM_H, FPR16, f16>;
 

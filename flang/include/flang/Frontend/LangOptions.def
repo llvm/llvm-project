@@ -21,6 +21,8 @@ LANGOPT(Name, Bits, Default)
 
 ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Fast) ///< FP Contract Mode (off/fast)
 
+/// Indicate a build without the standard GPU libraries.
+LANGOPT(NoGPULib  , 1, false)
 /// Permit floating point optimization without regard to infinities
 LANGOPT(NoHonorInfs, 1, false)
 /// Permit floating point optimization without regard to NaN
@@ -40,6 +42,8 @@ LANGOPT(OpenMPVersion, 32, 0)
 LANGOPT(OpenMPIsTargetDevice, 1, false)
 /// Generate OpenMP target code only for GPUs
 LANGOPT(OpenMPIsGPU, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPForceUSM, 1, false)
 /// Enable debugging in the OpenMP offloading device RTL
 LANGOPT(OpenMPTargetDebug, 32, 0)
 /// Assume work-shared loops do not have more iterations than participating

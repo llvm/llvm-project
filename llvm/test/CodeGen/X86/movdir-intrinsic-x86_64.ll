@@ -10,7 +10,7 @@ define void @test_movdiri(ptr %p, i64 %v) {
 ;
 ; EGPR-LABEL: test_movdiri:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    movdiri %rsi, (%rdi) # encoding: [0x62,0xf4,0xfc,0x08,0xf9,0x37]
+; EGPR-NEXT:    movdiri %rsi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf9,0x37]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   call void @llvm.x86.directstore64(ptr %p, i64 %v)

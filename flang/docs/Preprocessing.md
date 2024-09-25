@@ -93,6 +93,9 @@ local:
 * If a `#define` or `#undef` directive appears among continuation
   lines, it may or may not affect text in the continued statement that
   appeared before the directive.
+* A backslash at the end of a free form source line is a continuation
+  marker, with no space skipping or special handling of a leading `&`
+  on the next line.
 
 ## Behavior that few compilers properly support (or none), but should:
 

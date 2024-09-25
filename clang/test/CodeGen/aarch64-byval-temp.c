@@ -1,13 +1,14 @@
-// RUN: %clang_cc1 -emit-llvm -triple arm64-- -o - %s -O0 | FileCheck %s --check-prefix=CHECK-O0
-// RUN: %clang_cc1 -emit-llvm -disable-llvm-optzns -triple arm64-- -o - %s -O3 | FileCheck %s --check-prefix=CHECK-O3
+// RUN: %clang_cc1 -emit-llvm -triple arm64-- -fexperimental-max-bitint-width=1024  -o - %s -O0 | FileCheck %s --check-prefix=CHECK-O0
+// RUN: %clang_cc1 -emit-llvm -disable-llvm-optzns -fexperimental-max-bitint-width=1024  -triple arm64-- -o - %s -O3 | FileCheck %s --check-prefix=CHECK-O3
 
 struct large {
     void* pointers[8];
 };
 
 void pass_large(struct large);
+void pass_large_BitInt(_BitInt(129));
 
-// For arm64, we don't use byval to pass structs but instead we create
+// For arm64, we don't use byval to pass structs and _BitInt(>128) type, but instead we create
 // temporary allocas.
 //
 // Make sure we generate the appropriate lifetime markers for the temporary
@@ -71,3 +72,49 @@ void example(void) {
 // Mark the end of the lifetime of `l`.
 // CHECK-O3-NEXT: call void @llvm.lifetime.end.p0(i64 64, ptr %l)
 // CHECK-O3-NEXT: ret void
+
+void example_BitInt(void) {
+    _BitInt(129) l = {0};
+    pass_large_BitInt(l);
+    pass_large_BitInt(l);
+}
+// CHECK-O0-LABEL: define dso_local void @example_BitInt(
+// CHECK-O0-NEXT:  entry:
+// CHECK-O0-NEXT:    [[L:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i256, align 16
+// CHECK-O0-NEXT:    store i256 0, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[TMP0:%.*]] = load i256, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i256 [[TMP0]] to i129
+// CHECK-O0-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
+// CHECK-O0-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16
+// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP]])
+// CHECK-O0-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16
+// CHECK-O0-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
+// CHECK-O0-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
+// CHECK-O0-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16
+// CHECK-O0-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP1]])
+// CHECK-O0-NEXT:    ret void
+//
+// CHECK-O3-LABEL: define dso_local void @example_BitInt(
+// CHECK-O3-NEXT:  entry:
+// CHECK-O3-NEXT:    [[L:%.*]] = alloca i256, align 16
+// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i256, align 16
+// CHECK-O3-NEXT:    [[INDIRECT_ARG_TEMP1:%.*]] = alloca i256, align 16
+// CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[L]]) 
+// CHECK-O3-NEXT:    store i256 0, ptr [[L]], align 16, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-O3-NEXT:    [[TMP0:%.*]] = load i256, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[LOADEDV:%.*]] = trunc i256 [[TMP0]] to i129
+// CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[INDIRECT_ARG_TEMP]]) 
+// CHECK-O3-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV]] to i256
+// CHECK-O3-NEXT:    store i256 [[STOREDV]], ptr [[INDIRECT_ARG_TEMP]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP]])
+// CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[INDIRECT_ARG_TEMP]]) 
+// CHECK-O3-NEXT:    [[TMP1:%.*]] = load i256, ptr [[L]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    [[LOADEDV1:%.*]] = trunc i256 [[TMP1]] to i129
+// CHECK-O3-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[INDIRECT_ARG_TEMP1]]) 
+// CHECK-O3-NEXT:    [[STOREDV1:%.*]] = sext i129 [[LOADEDV1]] to i256
+// CHECK-O3-NEXT:    store i256 [[STOREDV1]], ptr [[INDIRECT_ARG_TEMP1]], align 16, !tbaa [[TBAA6]]
+// CHECK-O3-NEXT:    call void @pass_large_BitInt(ptr noundef [[INDIRECT_ARG_TEMP1]])
+// CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[INDIRECT_ARG_TEMP1]]) 
+// CHECK-O3-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr [[L]]) 

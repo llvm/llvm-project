@@ -109,25 +109,22 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
   const bool sym_status2 = bool(options & copy_options::copy_symlinks);
 
   error_code m_ec1;
-  StatT f_st = {};
+  StatT f_st;
   const file_status f =
       sym_status || sym_status2 ? detail::posix_lstat(from, f_st, &m_ec1) : detail::posix_stat(from, f_st, &m_ec1);
   if (m_ec1)
     return err.report(m_ec1);
 
-  StatT t_st          = {};
+  StatT t_st;
   const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec1) : detail::posix_stat(to, t_st, &m_ec1);
 
   if (not status_known(t))
     return err.report(m_ec1);
 
   if (!exists(f) || is_other(f) || is_other(t) || (is_directory(f) && is_regular_file(t)) ||
-      detail::stat_equivalent(f_st, t_st)) {
+      (exists(t) && detail::stat_equivalent(f_st, t_st))) {
     return err.report(errc::function_not_supported);
   }
-
-  if (ec)
-    ec->clear();
 
   if (is_symlink(f)) {
     if (bool(copy_options::skip_symlinks & options)) {
@@ -166,14 +163,14 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
       return;
     }
     error_code m_ec2;
-    for (; it != directory_iterator(); it.increment(m_ec2)) {
-      if (m_ec2) {
-        return err.report(m_ec2);
-      }
+    for (; !m_ec2 && it != directory_iterator(); it.increment(m_ec2)) {
       __copy(it->path(), to / it->path().filename(), options | copy_options::__in_recursive_copy, ec);
       if (ec && *ec) {
         return;
       }
+    }
+    if (m_ec2) {
+      return err.report(m_ec2);
     }
   }
 }
@@ -257,7 +254,7 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
 #endif // copy_file_impl implementation
 
 } // end anonymous namespace
-} // end namespace detail
+} // namespace detail
 
 bool __copy_file(const path& from, const path& to, copy_options options, error_code* ec) {
   using detail::FileDescriptor;
@@ -460,8 +457,21 @@ path __current_path(error_code* ec) {
   typedef decltype(&::free) Deleter;
   Deleter deleter = &::free;
 #else
+  errno     = 0; // Note: POSIX mandates that modifying `errno` is thread-safe.
   auto size = ::pathconf(".", _PC_PATH_MAX);
-  _LIBCPP_ASSERT_UNCATEGORIZED(size >= 0, "pathconf returned a 0 as max size");
+  if (size == -1) {
+    if (errno != 0) {
+      return err.report(capture_errno(), "call to pathconf failed");
+
+      // `pathconf` returns `-1` without an error to indicate no limit.
+    } else {
+#  if defined(__MVS__) && !defined(PATH_MAX)
+      size = _XOPEN_PATH_MAX + 1;
+#  else
+      size = PATH_MAX + 1;
+#  endif
+    }
+  }
 
   auto buff             = unique_ptr<path::value_type[]>(new path::value_type[size + 1]);
   path::value_type* ptr = buff.get();
@@ -608,10 +618,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
   const bool resolve_symlinks = !has_opt(perm_options::nofollow);
   const bool add_perms        = has_opt(perm_options::add);
   const bool remove_perms     = has_opt(perm_options::remove);
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
       (add_perms + remove_perms + has_opt(perm_options::replace)) == 1,
-      "One and only one of the perm_options constants replace, add, or remove "
-      "is present in opts");
+      "One and only one of the perm_options constants 'replace', 'add', or 'remove' must be present in opts");
 
   bool set_sym_perms = false;
   prms &= perms::mask;
@@ -621,7 +630,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
     set_sym_perms  = is_symlink(st);
     if (m_ec)
       return err.report(m_ec);
-    _LIBCPP_ASSERT_UNCATEGORIZED(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
+    // TODO(hardening): double-check this assertion -- it might be a valid (if rare) case when the permissions are
+    // unknown.
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(st.permissions() != perms::unknown, "Permissions unexpectedly unknown");
     if (add_perms)
       prms |= st.permissions();
     else if (remove_perms)
@@ -668,7 +679,7 @@ path __read_symlink(const path& p, error_code* ec) {
   detail::SSizeT ret;
   if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
     return err.report(capture_errno());
-  _LIBCPP_ASSERT_UNCATEGORIZED(ret > 0, "TODO");
+  // Note that `ret` returning `0` would work, resulting in a valid empty string being returned.
   if (static_cast<size_t>(ret) >= size)
     return err.report(errc::value_too_large);
   buff[ret] = 0;
@@ -721,7 +732,7 @@ uintmax_t remove_all_impl(path const& p, error_code& ec) {
   return count;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -801,8 +812,9 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
 
   // If opening `p` failed because it wasn't a directory, remove it as
   // a normal file instead. Note that `openat()` can return either ENOTDIR
-  // or ELOOP depending on the exact reason of the failure.
-  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels) {
+  // or ELOOP depending on the exact reason of the failure. On FreeBSD it
+  // may return EMLINK instead of ELOOP, contradicting POSIX.
+  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels || ec == errc::too_many_links) {
     ec.clear();
     if (::unlinkat(parent_directory, p.c_str(), /* flags = */ 0) == -1) {
       ec = detail::capture_errno();
@@ -815,7 +827,7 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
   return 0;
 }
 
-} // end namespace
+} // namespace
 
 uintmax_t __remove_all(const path& p, error_code* ec) {
   ErrorHandler<uintmax_t> err("remove_all", ec, &p);
@@ -921,23 +933,28 @@ path __weakly_canonical(const path& p, error_code* ec) {
   --PP;
   vector<string_view_t> DNEParts;
 
-  while (PP.State != PathParser::PS_BeforeBegin) {
+  error_code m_ec;
+  while (PP.State_ != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
-    error_code m_ec;
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
       return err.report(m_ec);
     } else if (exists(st)) {
-      result = __canonical(tmp, ec);
+      result = __canonical(tmp, &m_ec);
+      if (m_ec) {
+        return err.report(m_ec);
+      }
       break;
     }
     DNEParts.push_back(*PP);
     --PP;
   }
-  if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
-  if (ec)
-    ec->clear();
+  if (PP.State_ == PathParser::PS_BeforeBegin) {
+    result = __canonical("", &m_ec);
+    if (m_ec) {
+      return err.report(m_ec);
+    }
+  }
   if (DNEParts.empty())
     return result;
   for (auto It = DNEParts.rbegin(); It != DNEParts.rend(); ++It)

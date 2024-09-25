@@ -16,21 +16,21 @@ target triple = "x86_64-apple-macosx10.7.0"
 define i32 @depth(ptr nocapture %A, i32 %m) #0 !dbg !4 {
 ; CHECK-LABEL: @depth(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[A:%.*]], metadata [[META12:![0-9]+]], metadata !DIExpression()), !dbg [[DBG18:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[M:%.*]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG18]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata double 0.000000e+00, metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata double 2.000000e-01, metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[M]], 0, !dbg [[DBG20]]
-; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]], !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(ptr [[A:%.*]], [[META12:![0-9]+]], !DIExpression(), [[META18:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[M:%.*]], [[META13:![0-9]+]], !DIExpression(), [[META18]])
+; CHECK-NEXT:      #dbg_value(double 0.000000e+00, [[META14:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(double 2.000000e-01, [[META15:![0-9]+]], !DIExpression(), [[META19]])
+; CHECK-NEXT:      #dbg_value(i32 0, [[META16:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[M]], 0, !dbg [[META20]]
+; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]], !dbg [[META20]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A]], i64 4, !dbg [[DBG21:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8, !dbg [[DBG21]]
-; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG20]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8, !dbg [[DBG21]]
+; CHECK-NEXT:    br label [[FOR_END]], !dbg [[META20]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], [[FOR_BODY_LR_PH]] ], [ <double 0.000000e+00, double 1.000000e+00>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[TMP0]], [[FOR_BODY_LR_PH]] ], [ <double 0.000000e+00, double 1.000000e+00>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 8, !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX2]], align 8, !dbg [[DBG23]]
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[ARRAYIDX2]], align 8, !dbg [[DBG23]]
 ; CHECK-NEXT:    ret i32 undef, !dbg [[DBG24:![0-9]+]]
 ;
 entry:

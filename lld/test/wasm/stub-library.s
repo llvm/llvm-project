@@ -6,15 +6,12 @@
 # RUN: not wasm-ld %t.o %p/Inputs/libstub-missing-dep.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING-DEP %s
 
 # When the dependencies are missing the link fails
-# RUN: not wasm-ld %t.o %p/Inputs/libstub-missing-sym.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING-SYM %s
-
 # MISSING-DEP: libstub-missing-dep.so: undefined symbol: missing_dep. Required by foo
 # MISSING-DEP: libstub-missing-dep.so: undefined symbol: missing_dep2. Required by foo
 
-# MISSING-SYM: undefined symbol: foo
-
 # The function foo is defined in libstub.so but depend on foodep1 and foodep2
 .functype foo () -> ()
+.import_name foo, foo_import
 
 .globl foodep1
 foodep1:

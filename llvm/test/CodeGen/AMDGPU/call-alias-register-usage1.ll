@@ -10,7 +10,7 @@
 
 ; CHECK-LABEL: {{^}}kernel1:
 ; CHECK: .amdhsa_next_free_vgpr 41
-; CHECK-NEXT: .amdhsa_next_free_sgpr 36
+; CHECK-NEXT: .amdhsa_next_free_sgpr 33
 define amdgpu_kernel void @kernel1() #0 {
 bb:
   call void asm sideeffect "; clobber v40 ", "~{v40}"()
@@ -27,3 +27,6 @@ bb:
 attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-waves-per-eu"="8,10" }
 attributes #2 = { nounwind readnone willreturn }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

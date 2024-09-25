@@ -12,12 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
@@ -137,8 +138,7 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
 
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
-  if (llvm::any_of(forOp.getResultTypes(),
-                   [](Type type) { return isa<BaseMemRefType>(type); }))
+  if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
     return false;
 
   // Collect all load and store ops in loop nest rooted at 'forOp'.
@@ -381,11 +381,10 @@ static bool srcAppearsBeforeDstInAncestralBlock(const MemRefAccess &srcAccess,
 // *) If 'loopDepth == 1' then one constraint is added: i' >= i + 1
 // *) If 'loopDepth == 2' then two constraints are added: i == i' and j' > j + 1
 // *) If 'loopDepth == 3' then two constraints are added: i == i' and j == j'
-static void
-addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
-                       const FlatAffineValueConstraints &dstDomain,
-                       unsigned loopDepth,
-                       FlatAffineValueConstraints *dependenceDomain) {
+static void addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
+                                   const FlatAffineValueConstraints &dstDomain,
+                                   unsigned loopDepth,
+                                   IntegerRelation *dependenceDomain) {
   unsigned numCols = dependenceDomain->getNumCols();
   SmallVector<int64_t, 4> eq(numCols);
   unsigned numSrcDims = srcDomain.getNumDimVars();
@@ -411,7 +410,7 @@ addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
 static void computeDirectionVector(
     const FlatAffineValueConstraints &srcDomain,
     const FlatAffineValueConstraints &dstDomain, unsigned loopDepth,
-    FlatAffineValueConstraints *dependenceDomain,
+    IntegerPolyhedron *dependenceDomain,
     SmallVector<DependenceComponent, 2> *dependenceComponents) {
   // Find the number of common loops shared by src and dst accesses.
   SmallVector<AffineForOp, 4> commonLoops;
@@ -423,7 +422,8 @@ static void computeDirectionVector(
   unsigned numIdsToEliminate = dependenceDomain->getNumVars();
   // Add new variables to 'dependenceDomain' to represent the direction
   // constraints for each shared loop.
-  dependenceDomain->insertDimVar(/*pos=*/0, /*num=*/numCommonLoops);
+  dependenceDomain->insertVar(VarKind::SetDim, /*pos=*/0,
+                              /*num=*/numCommonLoops);
 
   // Add equality constraints for each common loop, setting newly introduced
   // variable at column 'j' to the 'dst' IV minus the 'src IV.
@@ -457,7 +457,7 @@ static void computeDirectionVector(
   }
 }
 
-LogicalResult MemRefAccess::getAccessRelation(FlatAffineRelation &rel) const {
+LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
   // Create set corresponding to domain of access.
   FlatAffineValueConstraints domain;
   if (failed(getOpIndexSet(opInst, &domain)))
@@ -469,27 +469,35 @@ LogicalResult MemRefAccess::getAccessRelation(FlatAffineRelation &rel) const {
   if (failed(getRelationFromMap(accessValueMap, rel)))
     return failure();
 
-  FlatAffineRelation domainRel(rel.getNumDomainDims(), /*numRangeDims=*/0,
-                               domain);
-
-  // Merge and align domain ids of `ret` and ids of `domain`. Since the domain
+  // Merge and align domain ids of `rel` with ids of `domain`. Since the domain
   // of the access map is a subset of the domain of access, the domain ids of
-  // `ret` are guranteed to be a subset of ids of `domain`.
+  // `rel` are guranteed to be a subset of ids of `domain`.
+  unsigned inserts = 0;
   for (unsigned i = 0, e = domain.getNumDimVars(); i < e; ++i) {
-    unsigned loc;
-    if (rel.findVar(domain.getValue(i), &loc)) {
-      rel.swapVar(i, loc);
+    const Identifier domainIdi = Identifier(domain.getValue(i));
+    const Identifier *findBegin = rel.getIds(VarKind::SetDim).begin() + i;
+    const Identifier *findEnd = rel.getIds(VarKind::SetDim).end();
+    const Identifier *itr = std::find(findBegin, findEnd, domainIdi);
+    if (itr != findEnd) {
+      rel.swapVar(i, i + std::distance(findBegin, itr));
     } else {
-      rel.insertDomainVar(i);
-      rel.setValue(i, domain.getValue(i));
+      ++inserts;
+      rel.insertVar(VarKind::SetDim, i);
+      rel.setId(VarKind::SetDim, i, domainIdi);
     }
   }
 
   // Append domain constraints to `rel`.
-  domainRel.appendRangeVar(rel.getNumRangeDims());
-  domainRel.mergeSymbolVars(rel);
+  IntegerRelation domainRel = domain;
+  if (rel.getSpace().isUsingIds() && !domainRel.getSpace().isUsingIds())
+    domainRel.resetIds();
+  domainRel.appendVar(VarKind::Range, accessValueMap.getNumResults());
+  domainRel.mergeAndAlignSymbols(rel);
   domainRel.mergeLocalVars(rel);
   rel.append(domainRel);
+
+  rel.convertVarKind(VarKind::SetDim, 0, accessValueMap.getNumDims() + inserts,
+                     VarKind::Domain);
 
   return success();
 }
@@ -624,14 +632,15 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
     return DependenceResult::Failure;
 
   // Create access relation from each MemRefAccess.
-  FlatAffineRelation srcRel, dstRel;
+  PresburgerSpace space = PresburgerSpace::getRelationSpace();
+  IntegerRelation srcRel(space), dstRel(space);
   if (failed(srcAccess.getAccessRelation(srcRel)))
     return DependenceResult::Failure;
   if (failed(dstAccess.getAccessRelation(dstRel)))
     return DependenceResult::Failure;
 
-  FlatAffineValueConstraints srcDomain = srcRel.getDomainSet();
-  FlatAffineValueConstraints dstDomain = dstRel.getDomainSet();
+  FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
+  FlatAffineValueConstraints dstDomain(dstRel.getDomainSet());
 
   // Return 'NoDependence' if loopDepth > numCommonLoops and if the ancestor
   // operation of 'srcAccess' does not properly dominate the ancestor
@@ -650,25 +659,29 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // `srcAccess` to the iteration domain of `dstAccess` which access the same
   // memory locations.
   dstRel.inverse();
-  dstRel.compose(srcRel);
+  dstRel.mergeAndCompose(srcRel);
+  dstRel.convertVarKind(VarKind::Domain, 0, dstRel.getNumDomainVars(),
+                        VarKind::Range, 0);
+  IntegerPolyhedron dependenceDomain(dstRel);
 
   // Add 'src' happens before 'dst' ordering constraints.
-  addOrderingConstraints(srcDomain, dstDomain, loopDepth, &dstRel);
+  addOrderingConstraints(srcDomain, dstDomain, loopDepth, &dependenceDomain);
 
   // Return 'NoDependence' if the solution space is empty: no dependence.
-  if (dstRel.isEmpty())
+  if (dependenceDomain.isEmpty())
     return DependenceResult::NoDependence;
 
   // Compute dependence direction vector and return true.
   if (dependenceComponents != nullptr)
-    computeDirectionVector(srcDomain, dstDomain, loopDepth, &dstRel,
+    computeDirectionVector(srcDomain, dstDomain, loopDepth, &dependenceDomain,
                            dependenceComponents);
 
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
-  LLVM_DEBUG(dstRel.dump());
+  LLVM_DEBUG(dependenceDomain.dump());
 
+  FlatAffineValueConstraints result(dependenceDomain);
   if (dependenceConstraints)
-    *dependenceConstraints = dstRel;
+    *dependenceConstraints = result;
   return DependenceResult::HasDependence;
 }
 

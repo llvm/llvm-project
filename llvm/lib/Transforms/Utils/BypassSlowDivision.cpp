@@ -233,7 +233,7 @@ ValueRange FastDivInsertionTask::getValueRange(Value *V,
   assert(LongLen > ShortLen && "Value type must be wider than BypassType");
   unsigned HiBits = LongLen - ShortLen;
 
-  const DataLayout &DL = SlowDivOrRem->getModule()->getDataLayout();
+  const DataLayout &DL = SlowDivOrRem->getDataLayout();
   KnownBits Known(LongLen);
 
   computeKnownBits(V, Known, DL);

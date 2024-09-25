@@ -101,7 +101,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Value *Remainders[3]  = {nullptr, nullptr, nullptr};
   Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -225,10 +225,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
                            : m_Intrinsic<Intrinsic::amdgcn_workgroup_id_z>());
 
       for (User *ICmp : BlockCount->users()) {
-        ICmpInst::Predicate Pred;
-        if (match(ICmp, m_ICmp(Pred, GroupIDIntrin, m_Specific(BlockCount)))) {
-          if (Pred != ICmpInst::ICMP_ULT)
-            continue;
+        if (match(ICmp, m_SpecificICmp(ICmpInst::ICMP_ULT, GroupIDIntrin,
+                                       m_Specific(BlockCount)))) {
           ICmp->replaceAllUsesWith(llvm::ConstantInt::getTrue(ICmp->getType()));
           MadeChange = true;
         }
@@ -323,7 +321,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 // TargetPassConfig for subtarget.
 bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
   bool MadeChange = false;
-  bool IsV5OrAbove = AMDGPU::getCodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
+  bool IsV5OrAbove =
+      AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(M, IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.
@@ -356,7 +355,7 @@ ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
 PreservedAnalyses
 AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   bool IsV5OrAbove =
-      AMDGPU::getCodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
+      AMDGPU::getAMDHSACodeObjectVersion(*F.getParent()) >= AMDGPU::AMDHSA_COV5;
   Function *BasePtr = getBasePtrIntrinsic(*F.getParent(), IsV5OrAbove);
 
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.

@@ -28,6 +28,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -465,15 +466,14 @@ void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
     emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
     return;
   }
-  const MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
-  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  int64_t Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
   BuildCFI(MBB, MBBI, DebugLoc{},
            MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
   emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
@@ -484,8 +484,7 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
     const DebugLoc &DL, bool IsPrologue) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
 
   // Add callee saved registers to move list.
@@ -885,8 +884,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // Update Live In information
-  recomputeLiveIns(*testMBB);
-  recomputeLiveIns(*tailMBB);
+  fullyRecomputeLiveIns({tailMBB, testMBB});
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
@@ -1039,7 +1037,8 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
       .addImm(X86::COND_AE);
 
   // Add code to roundMBB to round the final stack pointer to a page boundary.
-  RoundMBB->addLiveIn(FinalReg);
+  if (InProlog)
+    RoundMBB->addLiveIn(FinalReg);
   BuildMI(RoundMBB, DL, TII.get(X86::AND64ri32), RoundedReg)
       .addReg(FinalReg)
       .addImm(PageMask);
@@ -1056,7 +1055,8 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
         .addMBB(LoopMBB);
   }
 
-  LoopMBB->addLiveIn(JoinReg);
+  if (InProlog)
+    LoopMBB->addLiveIn(JoinReg);
   addRegOffset(BuildMI(LoopMBB, DL, TII.get(X86::LEA64r), ProbeReg), JoinReg,
                false, -PageSize);
 
@@ -1069,7 +1069,8 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
       .addReg(0)
       .addImm(0);
 
-  LoopMBB->addLiveIn(RoundedReg);
+  if (InProlog)
+    LoopMBB->addLiveIn(RoundedReg);
   BuildMI(LoopMBB, DL, TII.get(X86::CMP64rr))
       .addReg(RoundedReg)
       .addReg(ProbeReg);
@@ -1093,7 +1094,6 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
 
   // Now that the probing is done, add code to continueMBB to update
   // the stack pointer for real.
-  ContinueMBB->addLiveIn(SizeReg);
   BuildMI(*ContinueMBB, ContinueMBBI, DL, TII.get(X86::SUB64rr), X86::RSP)
       .addReg(X86::RSP)
       .addReg(SizeReg);
@@ -1104,6 +1104,11 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
   RoundMBB->addSuccessor(LoopMBB);
   LoopMBB->addSuccessor(ContinueMBB);
   LoopMBB->addSuccessor(LoopMBB);
+
+  if (InProlog) {
+    LivePhysRegs LiveRegs;
+    computeAndAddLiveIns(LiveRegs, *ContinueMBB);
+  }
 
   // Mark all the instructions added to the prolog as frame setup.
   if (InProlog) {
@@ -1378,10 +1383,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
         footMBB->addSuccessor(&MBB);
       }
 
-      recomputeLiveIns(*headMBB);
-      recomputeLiveIns(*bodyMBB);
-      recomputeLiveIns(*footMBB);
-      recomputeLiveIns(MBB);
+      fullyRecomputeLiveIns({footMBB, bodyMBB, headMBB, &MBB});
     }
   } else {
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AndOp), Reg)
@@ -1413,6 +1415,34 @@ bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
   return !isWin64Prologue(MF) && MF.needsFrameMoves();
+}
+
+/// Return true if an opcode is part of the REP group of instructions
+static bool isOpcodeRep(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::REPNE_PREFIX:
+  case X86::REP_MOVSB_32:
+  case X86::REP_MOVSB_64:
+  case X86::REP_MOVSD_32:
+  case X86::REP_MOVSD_64:
+  case X86::REP_MOVSQ_32:
+  case X86::REP_MOVSQ_64:
+  case X86::REP_MOVSW_32:
+  case X86::REP_MOVSW_64:
+  case X86::REP_PREFIX:
+  case X86::REP_STOSB_32:
+  case X86::REP_STOSB_64:
+  case X86::REP_STOSD_32:
+  case X86::REP_STOSD_64:
+  case X86::REP_STOSQ_32:
+  case X86::REP_STOSQ_64:
+  case X86::REP_STOSW_32:
+  case X86::REP_STOSW_64:
+    return true;
+  default:
+    break;
+  }
+  return false;
 }
 
 /// emitPrologue - Push callee-saved registers onto the stack, which
@@ -1507,7 +1537,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
@@ -1522,8 +1551,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsWin64Prologue = isWin64Prologue(MF);
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
-  bool NeedsWinFPO =
-      !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
+  bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
+                     MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
@@ -1602,6 +1631,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
+      assert(
+          !IsWin64Prologue &&
+          "win64 prologue does not set the bit 60 in the saved frame pointer");
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
           .addUse(MachineFramePtr)
           .addImm(60)
@@ -1744,6 +1776,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!IsFunclet) {
       if (X86FI->hasSwiftAsyncContext()) {
+        assert(!IsWin64Prologue &&
+               "win64 prologue does not store async context right below rbp");
         const auto &Attrs = MF.getFunction().getAttributes();
 
         // Before we update the live frame pointer we have to ensure there's a
@@ -2067,7 +2101,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NeedsWinCFI) {
       int FI;
-      if (unsigned Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
+      if (Register Reg = TII.isStoreToStackSlot(FrameInstr, FI)) {
         if (X86::FR64RegClass.contains(Reg)) {
           int Offset;
           Register IgnoredFrameReg;
@@ -2186,13 +2220,44 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // flag (DF in EFLAGS register). Clear this flag by creating "cld" instruction
   // in each prologue of interrupt handler function.
   //
-  // FIXME: Create "cld" instruction only in these cases:
+  // Create "cld" instruction only in these cases:
   // 1. The interrupt handling function uses any of the "rep" instructions.
   // 2. Interrupt handling function calls another function.
+  // 3. If there are any inline asm blocks, as we do not know what they do
   //
-  if (Fn.getCallingConv() == CallingConv::X86_INTR)
-    BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
-        .setMIFlag(MachineInstr::FrameSetup);
+  // TODO: We should also emit cld if we detect the use of std, but as of now,
+  // the compiler does not even emit that instruction or even define it, so in
+  // practice, this would only happen with inline asm, which we cover anyway.
+  if (Fn.getCallingConv() == CallingConv::X86_INTR) {
+    bool NeedsCLD = false;
+
+    for (const MachineBasicBlock &B : MF) {
+      for (const MachineInstr &MI : B) {
+        if (MI.isCall()) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (isOpcodeRep(MI.getOpcode())) {
+          NeedsCLD = true;
+          break;
+        }
+
+        if (MI.isInlineAsm()) {
+          // TODO: Parse asm for rep instructions or call sites?
+          // For now, let's play it safe and emit a cld instruction
+          // just in case.
+          NeedsCLD = true;
+          break;
+        }
+      }
+    }
+
+    if (NeedsCLD) {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
 
   // At this point we know if the function has WinCFI or not.
   MF.setHasWinCFI(HasWinCFI);
@@ -2495,7 +2560,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
+    int64_t Offset = -(int64_t)CSSize - SlotSize;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {
@@ -2534,7 +2599,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Emit tilerelease for AMX kernel.
-  if (X86FI->hasVirtualTileReg())
+  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 }
 
@@ -3462,7 +3527,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
 
   // HiPE-specific values
   NamedMDNode *HiPELiteralsMD =
-      MF.getMMI().getModule()->getNamedMetadata("hipe.literals");
+      MF.getFunction().getParent()->getNamedMetadata("hipe.literals");
   if (!HiPELiteralsMD)
     report_fatal_error(
         "Can't generate HiPE prologue without runtime parameters");
@@ -3821,8 +3886,7 @@ bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
   bool CompactUnwind =
-      MF.getMMI().getContext().getObjectFileInfo()->getCompactUnwindSection() !=
-      nullptr;
+      MF.getContext().getObjectFileInfo()->getCompactUnwindSection() != nullptr;
   return (MF.getFunction().hasFnAttribute(Attribute::NoUnwind) || hasFP(MF) ||
           !CompactUnwind) &&
          // The lowering of segmented stack and HiPE only support entry
@@ -4168,5 +4232,366 @@ void X86FrameLowering::restoreWinEHStackPointersInParent(
     if (NeedsRestore)
       restoreWin32EHStackPointers(MBB, MBB.begin(), DebugLoc(),
                                   /*RestoreSP=*/IsSEH);
+  }
+}
+
+// Compute the alignment gap between current SP after spilling FP/BP and the
+// next properly aligned stack offset.
+static int computeFPBPAlignmentGap(MachineFunction &MF,
+                                   const TargetRegisterClass *RC,
+                                   unsigned NumSpilledRegs) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  unsigned AllocSize = TRI->getSpillSize(*RC) * NumSpilledRegs;
+  Align StackAlign = MF.getSubtarget().getFrameLowering()->getStackAlign();
+  unsigned AlignedSize = alignTo(AllocSize, StackAlign);
+  return AlignedSize - AllocSize;
+}
+
+void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
+                                        MachineBasicBlock::iterator BeforeMI,
+                                        Register FP, Register BP,
+                                        int SPAdjust) const {
+  assert(FP.isValid() || BP.isValid());
+
+  MachineBasicBlock *MBB = BeforeMI->getParent();
+  DebugLoc DL = BeforeMI->getDebugLoc();
+
+  // Spill FP.
+  if (FP.isValid()) {
+    BuildMI(*MBB, BeforeMI, DL,
+            TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
+        .addReg(FP);
+  }
+
+  // Spill BP.
+  if (BP.isValid()) {
+    BuildMI(*MBB, BeforeMI, DL,
+            TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
+        .addReg(BP);
+  }
+
+  // Make sure SP is aligned.
+  if (SPAdjust)
+    emitSPUpdate(*MBB, BeforeMI, DL, -SPAdjust, false);
+
+  // Emit unwinding information.
+  if (FP.isValid() && needsDwarfCFI(MF)) {
+    // Emit .cfi_remember_state to remember old frame.
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
+    BuildMI(*MBB, BeforeMI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+
+    // Setup new CFA value with DW_CFA_def_cfa_expression:
+    //     DW_OP_breg7+offset, DW_OP_deref, DW_OP_consts 16, DW_OP_plus
+    SmallString<64> CfaExpr;
+    uint8_t buffer[16];
+    int Offset = SPAdjust;
+    if (BP.isValid())
+      Offset += TRI->getSpillSize(*TRI->getMinimalPhysRegClass(BP));
+    // If BeforeMI is a frame setup instruction, we need to adjust the position
+    // and offset of the new cfi instruction.
+    if (TII.isFrameSetup(*BeforeMI)) {
+      Offset += alignTo(TII.getFrameSize(*BeforeMI), getStackAlign());
+      BeforeMI = std::next(BeforeMI);
+    }
+    Register StackPtr = TRI->getStackRegister();
+    if (STI.isTarget64BitILP32())
+      StackPtr = Register(getX86SubSuperRegister(StackPtr, 64));
+    unsigned DwarfStackPtr = TRI->getDwarfRegNum(StackPtr, true);
+    CfaExpr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfStackPtr));
+    CfaExpr.append(buffer, buffer + encodeSLEB128(Offset, buffer));
+    CfaExpr.push_back(dwarf::DW_OP_deref);
+    CfaExpr.push_back(dwarf::DW_OP_consts);
+    CfaExpr.append(buffer, buffer + encodeSLEB128(SlotSize * 2, buffer));
+    CfaExpr.push_back((uint8_t)dwarf::DW_OP_plus);
+
+    SmallString<64> DefCfaExpr;
+    DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
+    DefCfaExpr.append(buffer, buffer + encodeSLEB128(CfaExpr.size(), buffer));
+    DefCfaExpr.append(CfaExpr.str());
+    BuildCFI(*MBB, BeforeMI, DL,
+             MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str()),
+             MachineInstr::FrameSetup);
+  }
+}
+
+void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
+                                          MachineBasicBlock::iterator AfterMI,
+                                          Register FP, Register BP,
+                                          int SPAdjust) const {
+  assert(FP.isValid() || BP.isValid());
+
+  // Adjust SP so it points to spilled FP or BP.
+  MachineBasicBlock *MBB = AfterMI->getParent();
+  MachineBasicBlock::iterator Pos = std::next(AfterMI);
+  DebugLoc DL = AfterMI->getDebugLoc();
+  if (SPAdjust)
+    emitSPUpdate(*MBB, Pos, DL, SPAdjust, false);
+
+  // Restore BP.
+  if (BP.isValid()) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), BP);
+  }
+
+  // Restore FP.
+  if (FP.isValid()) {
+    BuildMI(*MBB, Pos, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), FP);
+
+    // Emit unwinding information.
+    if (needsDwarfCFI(MF)) {
+      // Restore original frame with .cfi_restore_state.
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+      BuildMI(*MBB, Pos, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
+  }
+}
+
+void X86FrameLowering::saveAndRestoreFPBPUsingSP(
+    MachineFunction &MF, MachineBasicBlock::iterator BeforeMI,
+    MachineBasicBlock::iterator AfterMI, bool SpillFP, bool SpillBP) const {
+  assert(SpillFP || SpillBP);
+
+  Register FP, BP;
+  const TargetRegisterClass *RC;
+  unsigned NumRegs = 0;
+
+  if (SpillFP) {
+    FP = TRI->getFrameRegister(MF);
+    if (STI.isTarget64BitILP32())
+      FP = Register(getX86SubSuperRegister(FP, 64));
+    RC = TRI->getMinimalPhysRegClass(FP);
+    ++NumRegs;
+  }
+  if (SpillBP) {
+    BP = TRI->getBaseRegister();
+    if (STI.isTarget64BitILP32())
+      BP = Register(getX86SubSuperRegister(BP, 64));
+    RC = TRI->getMinimalPhysRegClass(BP);
+    ++NumRegs;
+  }
+  int SPAdjust = computeFPBPAlignmentGap(MF, RC, NumRegs);
+
+  spillFPBPUsingSP(MF, BeforeMI, FP, BP, SPAdjust);
+  restoreFPBPUsingSP(MF, AfterMI, FP, BP, SPAdjust);
+}
+
+bool X86FrameLowering::skipSpillFPBP(
+    MachineFunction &MF, MachineBasicBlock::reverse_iterator &MI) const {
+  if (MI->getOpcode() == X86::LCMPXCHG16B_SAVE_RBX) {
+    // The pseudo instruction LCMPXCHG16B_SAVE_RBX is generated in the form
+    //     SaveRbx = COPY RBX
+    //     SaveRbx = LCMPXCHG16B_SAVE_RBX ..., SaveRbx, implicit-def rbx
+    // And later LCMPXCHG16B_SAVE_RBX is expanded to restore RBX from SaveRbx.
+    // We should skip this instruction sequence.
+    int FI;
+    unsigned Reg;
+    while (!(MI->getOpcode() == TargetOpcode::COPY &&
+             MI->getOperand(1).getReg() == X86::RBX) &&
+           !((Reg = TII.isStoreToStackSlot(*MI, FI)) && Reg == X86::RBX))
+      ++MI;
+    return true;
+  }
+  return false;
+}
+
+static bool isFPBPAccess(const MachineInstr &MI, Register FP, Register BP,
+                         const TargetRegisterInfo *TRI, bool &AccessFP,
+                         bool &AccessBP) {
+  AccessFP = AccessBP = false;
+  if (FP) {
+    if (MI.findRegisterUseOperandIdx(FP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
+      AccessFP = true;
+  }
+  if (BP) {
+    if (MI.findRegisterUseOperandIdx(BP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
+      AccessBP = true;
+  }
+  return AccessFP || AccessBP;
+}
+
+// Invoke instruction has been lowered to normal function call. We try to figure
+// out if MI comes from Invoke.
+// Do we have any better method?
+static bool isInvoke(const MachineInstr &MI, bool InsideEHLabels) {
+  if (!MI.isCall())
+    return false;
+  if (InsideEHLabels)
+    return true;
+
+  const MachineBasicBlock *MBB = MI.getParent();
+  if (!MBB->hasEHPadSuccessor())
+    return false;
+
+  // Check if there is another call instruction from MI to the end of MBB.
+  MachineBasicBlock::const_iterator MBBI = MI, ME = MBB->end();
+  for (++MBBI; MBBI != ME; ++MBBI)
+    if (MBBI->isCall())
+      return false;
+  return true;
+}
+
+/// Given the live range of FP or BP (DefMI, KillMI), check if there is any
+/// interfered stack access in the range, usually generated by register spill.
+void X86FrameLowering::checkInterferedAccess(
+    MachineFunction &MF, MachineBasicBlock::reverse_iterator DefMI,
+    MachineBasicBlock::reverse_iterator KillMI, bool SpillFP,
+    bool SpillBP) const {
+  if (DefMI == KillMI)
+    return;
+  if (TRI->hasBasePointer(MF)) {
+    if (!SpillBP)
+      return;
+  } else {
+    if (!SpillFP)
+      return;
+  }
+
+  auto MI = KillMI;
+  while (MI != DefMI) {
+    if (any_of(MI->operands(),
+               [](const MachineOperand &MO) { return MO.isFI(); }))
+      MF.getContext().reportError(SMLoc(),
+                                  "Interference usage of base pointer/frame "
+                                  "pointer.");
+    MI++;
+  }
+}
+
+/// If a function uses base pointer and the base pointer is clobbered by inline
+/// asm, RA doesn't detect this case, and after the inline asm, the base pointer
+/// contains garbage value.
+/// For example if a 32b x86 function uses base pointer esi, and esi is
+/// clobbered by following inline asm
+///     asm("rep movsb" : "+D"(ptr), "+S"(x), "+c"(c)::"memory");
+/// We need to save esi before the asm and restore it after the asm.
+///
+/// The problem can also occur to frame pointer if there is a function call, and
+/// the callee uses a different calling convention and clobbers the fp.
+///
+/// Because normal frame objects (spill slots) are accessed through fp/bp
+/// register, so we can't spill fp/bp to normal spill slots.
+///
+/// FIXME: There are 2 possible enhancements:
+/// 1. In many cases there are different physical registers not clobbered by
+/// inline asm, we can use one of them as base pointer. Or use a virtual
+/// register as base pointer and let RA allocate a physical register to it.
+/// 2. If there is no other instructions access stack with fp/bp from the
+/// inline asm to the epilog, and no cfi requirement for a correct fp, we can
+/// skip the save and restore operations.
+void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
+  Register FP, BP;
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  if (TFI.hasFP(MF))
+    FP = TRI->getFrameRegister(MF);
+  if (TRI->hasBasePointer(MF))
+    BP = TRI->getBaseRegister();
+
+  // Currently only inline asm and function call can clobbers fp/bp. So we can
+  // do some quick test and return early.
+  if (!MF.hasInlineAsm()) {
+    X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+    if (!X86FI->getFPClobberedByCall())
+      FP = 0;
+    if (!X86FI->getBPClobberedByCall())
+      BP = 0;
+  }
+  if (!FP && !BP)
+    return;
+
+  for (MachineBasicBlock &MBB : MF) {
+    bool InsideEHLabels = false;
+    auto MI = MBB.rbegin(), ME = MBB.rend();
+    auto TermMI = MBB.getFirstTerminator();
+    if (TermMI == MBB.begin())
+      continue;
+    MI = *(std::prev(TermMI));
+
+    while (MI != ME) {
+      // Skip frame setup/destroy instructions.
+      // Skip Invoke (call inside try block) instructions.
+      // Skip instructions handled by target.
+      if (MI->getFlag(MachineInstr::MIFlag::FrameSetup) ||
+          MI->getFlag(MachineInstr::MIFlag::FrameDestroy) ||
+          isInvoke(*MI, InsideEHLabels) || skipSpillFPBP(MF, MI)) {
+        ++MI;
+        continue;
+      }
+
+      if (MI->getOpcode() == TargetOpcode::EH_LABEL) {
+        InsideEHLabels = !InsideEHLabels;
+        ++MI;
+        continue;
+      }
+
+      bool AccessFP, AccessBP;
+      // Check if fp or bp is used in MI.
+      if (!isFPBPAccess(*MI, FP, BP, TRI, AccessFP, AccessBP)) {
+        ++MI;
+        continue;
+      }
+
+      // Look for the range [DefMI, KillMI] in which fp or bp is defined and
+      // used.
+      bool FPLive = false, BPLive = false;
+      bool SpillFP = false, SpillBP = false;
+      auto DefMI = MI, KillMI = MI;
+      do {
+        SpillFP |= AccessFP;
+        SpillBP |= AccessBP;
+
+        // Maintain FPLive and BPLive.
+        if (FPLive && MI->findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
+          FPLive = false;
+        if (FP && MI->findRegisterUseOperandIdx(FP, TRI, false) != -1)
+          FPLive = true;
+        if (BPLive && MI->findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
+          BPLive = false;
+        if (BP && MI->findRegisterUseOperandIdx(BP, TRI, false) != -1)
+          BPLive = true;
+
+        DefMI = MI++;
+      } while ((MI != ME) &&
+               (FPLive || BPLive ||
+                isFPBPAccess(*MI, FP, BP, TRI, AccessFP, AccessBP)));
+
+      // Don't need to save/restore if FP is accessed through llvm.frameaddress.
+      if (FPLive && !SpillBP)
+        continue;
+
+      // If the bp is clobbered by a call, we should save and restore outside of
+      // the frame setup instructions.
+      if (KillMI->isCall() && DefMI != ME) {
+        auto FrameSetup = std::next(DefMI);
+        // Look for frame setup instruction toward the start of the BB.
+        // If we reach another call instruction, it means no frame setup
+        // instruction for the current call instruction.
+        while (FrameSetup != ME && !TII.isFrameSetup(*FrameSetup) &&
+               !FrameSetup->isCall())
+          ++FrameSetup;
+        // If a frame setup instruction is found, we need to find out the
+        // corresponding frame destroy instruction.
+        if (FrameSetup != ME && TII.isFrameSetup(*FrameSetup) &&
+            (TII.getFrameSize(*FrameSetup) ||
+             TII.getFrameAdjustment(*FrameSetup))) {
+          while (!TII.isFrameInstr(*KillMI))
+            --KillMI;
+          DefMI = FrameSetup;
+          MI = DefMI;
+          ++MI;
+        }
+      }
+
+      checkInterferedAccess(MF, DefMI, KillMI, SpillFP, SpillBP);
+
+      // Call target function to spill and restore FP and BP registers.
+      saveAndRestoreFPBPUsingSP(MF, &(*DefMI), &(*KillMI), SpillFP, SpillBP);
+    }
   }
 }

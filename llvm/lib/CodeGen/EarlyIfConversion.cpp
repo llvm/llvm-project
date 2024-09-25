@@ -122,6 +122,18 @@ public:
   /// The branch condition determined by analyzeBranch.
   SmallVector<MachineOperand, 4> Cond;
 
+  class PredicationStrategyBase {
+  public:
+    virtual bool canConvertIf(MachineBasicBlock *Tail) { return true; }
+    virtual bool canPredicateInstr(const MachineInstr &I) = 0;
+    virtual void predicateBlock(MachineBasicBlock *MBB,
+                                ArrayRef<MachineOperand> Cond,
+                                bool Reverse) = 0;
+    virtual ~PredicationStrategyBase() = default;
+  };
+
+  PredicationStrategyBase &Predicate;
+
 private:
   /// Instructions in Head that define values used by the conditional blocks.
   /// The hoisted instructions must be inserted after these instructions.
@@ -138,20 +150,12 @@ private:
   MachineBasicBlock::iterator InsertionPoint;
 
   /// Return true if all non-terminator instructions in MBB can be safely
-  /// speculated.
-  bool canSpeculateInstrs(MachineBasicBlock *MBB);
-
-  /// Return true if all non-terminator instructions in MBB can be safely
   /// predicated.
   bool canPredicateInstrs(MachineBasicBlock *MBB);
 
   /// Scan through instruction dependencies and update InsertAfter array.
   /// Return false if any dependency is incompatible with if conversion.
   bool InstrDependenciesAllowIfConv(MachineInstr *I);
-
-  /// Predicate all instructions of the basic block with current condition
-  /// except for terminators. Reverse the condition if ReversePredicate is set.
-  void PredicateBlock(MachineBasicBlock *MBB, bool ReversePredicate);
 
   /// Find a valid insertion point in Head.
   bool findInsertionPoint();
@@ -163,8 +167,8 @@ private:
   void rewritePHIOperands();
 
 public:
-  /// runOnMachineFunction - Initialize per-function data structures.
-  void runOnMachineFunction(MachineFunction &MF) {
+  SSAIfConv(PredicationStrategyBase &Predicate, MachineFunction &MF)
+      : Predicate(Predicate) {
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -176,76 +180,13 @@ public:
 
   /// canConvertIf - If the sub-CFG headed by MBB can be if-converted,
   /// initialize the internal state, and return true.
-  /// If predicate is set try to predicate the block otherwise try to
-  /// speculatively execute it.
-  bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
+  bool canConvertIf(MachineBasicBlock *MBB);
 
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
-  /// it is possible. Add any erased blocks to RemovedBlocks.
-  void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
-                 bool Predicate = false);
+  /// it is possible. Add any blocks that are to be erased to RemoveBlocks.
+  void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks);
 };
 } // end anonymous namespace
-
-
-/// canSpeculateInstrs - Returns true if all the instructions in MBB can safely
-/// be speculated. The terminators are not considered.
-///
-/// If instructions use any values that are defined in the head basic block,
-/// the defining instructions are added to InsertAfter.
-///
-/// Any clobbered regunits are added to ClobberedRegUnits.
-///
-bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
-  // Reject any live-in physregs. It's probably CPSR/EFLAGS, and very hard to
-  // get right.
-  if (!MBB->livein_empty()) {
-    LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
-    return false;
-  }
-
-  unsigned InstrCount = 0;
-
-  // Check all instructions, except the terminators. It is assumed that
-  // terminators never have side effects or define any used register values.
-  for (MachineInstr &MI :
-       llvm::make_range(MBB->begin(), MBB->getFirstTerminator())) {
-    if (MI.isDebugInstr())
-      continue;
-
-    if (++InstrCount > BlockInstrLimit && !Stress) {
-      LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
-      return false;
-    }
-
-    // There shouldn't normally be any phis in a single-predecessor block.
-    if (MI.isPHI()) {
-      LLVM_DEBUG(dbgs() << "Can't hoist: " << MI);
-      return false;
-    }
-
-    // Don't speculate loads. Note that it may be possible and desirable to
-    // speculate GOT or constant pool loads that are guaranteed not to trap,
-    // but we don't support that for now.
-    if (MI.mayLoad()) {
-      LLVM_DEBUG(dbgs() << "Won't speculate load: " << MI);
-      return false;
-    }
-
-    // We never speculate stores, so an AA pointer isn't necessary.
-    bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(nullptr, DontMoveAcrossStore)) {
-      LLVM_DEBUG(dbgs() << "Can't speculate: " << MI);
-      return false;
-    }
-
-    // Check for any dependencies on Head instructions.
-    if (!InstrDependenciesAllowIfConv(&MI))
-      return false;
-  }
-  return true;
-}
 
 /// Check that there is no dependencies preventing if conversion.
 ///
@@ -320,41 +261,14 @@ bool SSAIfConv::canPredicateInstrs(MachineBasicBlock *MBB) {
       return false;
     }
 
-    // Check that instruction is predicable
-    if (!TII->isPredicable(*I)) {
-      LLVM_DEBUG(dbgs() << "Isn't predicable: " << *I);
+    if (!Predicate.canPredicateInstr(*I))
       return false;
-    }
-
-    // Check that instruction is not already predicated.
-    if (TII->isPredicated(*I) && !TII->canPredicatePredicatedInstr(*I)) {
-      LLVM_DEBUG(dbgs() << "Is already predicated: " << *I);
-      return false;
-    }
 
     // Check for any dependencies on Head instructions.
     if (!InstrDependenciesAllowIfConv(&(*I)))
       return false;
   }
   return true;
-}
-
-// Apply predicate to all instructions in the machine block.
-void SSAIfConv::PredicateBlock(MachineBasicBlock *MBB, bool ReversePredicate) {
-  auto Condition = Cond;
-  if (ReversePredicate) {
-    bool CanRevCond = !TII->reverseBranchCondition(Condition);
-    assert(CanRevCond && "Reversed predicate is not supported");
-    (void)CanRevCond;
-  }
-  // Terminators don't need to be predicated as they will be removed.
-  for (MachineBasicBlock::iterator I = MBB->begin(),
-                                   E = MBB->getFirstTerminator();
-       I != E; ++I) {
-    if (I->isDebugInstr())
-      continue;
-    TII->PredicateInstruction(*I, Condition);
-  }
 }
 
 /// Find an insertion point in Head for the speculated instructions. The
@@ -435,7 +349,7 @@ bool SSAIfConv::findInsertionPoint() {
 /// canConvertIf - analyze the sub-cfg rooted in MBB, and return true if it is
 /// a potential candidate for if-conversion. Fill out the internal state.
 ///
-bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
+bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
   Head = MBB;
   TBB = FBB = Tail = nullptr;
 
@@ -475,18 +389,14 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
                       << printMBBReference(*Tail) << '\n');
   }
 
-  // This is a triangle or a diamond.
-  // Skip if we cannot predicate and there are no phis skip as there must be
-  // side effects that can only be handled with predication.
-  if (!Predicate && (Tail->empty() || !Tail->front().isPHI())) {
-    LLVM_DEBUG(dbgs() << "No phis in tail.\n");
-    return false;
-  }
-
   // The branch we're looking to eliminate must be analyzable.
   Cond.clear();
   if (TII->analyzeBranch(*Head, TBB, FBB, Cond)) {
     LLVM_DEBUG(dbgs() << "Branch not analyzable.\n");
+    return false;
+  }
+
+  if (!Predicate.canConvertIf(Tail)) {
     return false;
   }
 
@@ -537,17 +447,9 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   // Check that the conditional instructions can be speculated.
   InsertAfter.clear();
   ClobberedRegUnits.reset();
-  if (Predicate) {
-    if (TBB != Tail && !canPredicateInstrs(TBB))
+  for (MachineBasicBlock *MBB : {TBB, FBB})
+    if (MBB != Tail && !canPredicateInstrs(MBB))
       return false;
-    if (FBB != Tail && !canPredicateInstrs(FBB))
-      return false;
-  } else {
-    if (TBB != Tail && !canSpeculateInstrs(TBB))
-      return false;
-    if (FBB != Tail && !canSpeculateInstrs(FBB))
-      return false;
-  }
 
   // Try to find a valid insertion point for the speculated instructions in the
   // head basic block.
@@ -599,8 +501,8 @@ static bool hasSameValue(const MachineRegisterInfo &MRI,
     return false;
 
   // Further, check that the two defs come from corresponding operands.
-  int TIdx = TDef->findRegisterDefOperandIdx(TReg);
-  int FIdx = FDef->findRegisterDefOperandIdx(FReg);
+  int TIdx = TDef->findRegisterDefOperandIdx(TReg, /*TRI=*/nullptr);
+  int FIdx = FDef->findRegisterDefOperandIdx(FReg, /*TRI=*/nullptr);
   if (TIdx == -1 || FIdx == -1)
     return false;
 
@@ -617,8 +519,7 @@ void SSAIfConv::replacePHIInstrs() {
   DebugLoc HeadDL = FirstTerm->getDebugLoc();
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
-    PHIInfo &PI = PHIs[i];
+  for (PHIInfo &PI : PHIs) {
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
     Register DstReg = PI.PHI->getOperand(0).getReg();
     if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
@@ -645,8 +546,7 @@ void SSAIfConv::rewritePHIOperands() {
   DebugLoc HeadDL = FirstTerm->getDebugLoc();
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
-    PHIInfo &PI = PHIs[i];
+  for (PHIInfo &PI : PHIs) {
     unsigned DstReg = 0;
 
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
@@ -680,10 +580,9 @@ void SSAIfConv::rewritePHIOperands() {
 /// convertIf - Execute the if conversion after canConvertIf has determined the
 /// feasibility.
 ///
-/// Any basic blocks erased will be added to RemovedBlocks.
+/// Any basic blocks that need to be erased will be added to RemoveBlocks.
 ///
-void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
-                          bool Predicate) {
+void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks) {
   assert(Head && Tail && TBB && FBB && "Call canConvertIf first.");
 
   // Update statistics.
@@ -693,16 +592,15 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
     ++NumDiamondsConv;
 
   // Move all instructions into Head, except for the terminators.
-  if (TBB != Tail) {
-    if (Predicate)
-      PredicateBlock(TBB, /*ReversePredicate=*/false);
-    Head->splice(InsertionPoint, TBB, TBB->begin(), TBB->getFirstTerminator());
+  for (MachineBasicBlock *MBB : {TBB, FBB}) {
+    if (MBB != Tail) {
+      // reverse the condition for the false bb
+      Predicate.predicateBlock(MBB, Cond, MBB == FBB);
+      Head->splice(InsertionPoint, MBB, MBB->begin(),
+                   MBB->getFirstTerminator());
+    }
   }
-  if (FBB != Tail) {
-    if (Predicate)
-      PredicateBlock(FBB, /*ReversePredicate=*/true);
-    Head->splice(InsertionPoint, FBB, FBB->begin(), FBB->getFirstTerminator());
-  }
+
   // Are there extra Tail predecessors?
   bool ExtraPreds = Tail->pred_size() != 2;
   if (ExtraPreds)
@@ -723,15 +621,18 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
   DebugLoc HeadDL = Head->getFirstTerminator()->getDebugLoc();
   TII->removeBranch(*Head);
 
-  // Erase the now empty conditional blocks. It is likely that Head can fall
+  // Mark the now empty conditional blocks for removal and move them to the end.
+  // It is likely that Head can fall
   // through to Tail, and we can join the two blocks.
   if (TBB != Tail) {
-    RemovedBlocks.push_back(TBB);
-    TBB->eraseFromParent();
+    RemoveBlocks.push_back(TBB);
+    if (TBB != &TBB->getParent()->back())
+      TBB->moveAfter(&TBB->getParent()->back());
   }
   if (FBB != Tail) {
-    RemovedBlocks.push_back(FBB);
-    FBB->eraseFromParent();
+    RemoveBlocks.push_back(FBB);
+    if (FBB != &FBB->getParent()->back())
+      FBB->moveAfter(&FBB->getParent()->back());
   }
 
   assert(Head->succ_empty() && "Additional head successors?");
@@ -742,8 +643,9 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
     Head->splice(Head->end(), Tail,
                      Tail->begin(), Tail->end());
     Head->transferSuccessorsAndUpdatePHIs(Tail);
-    RemovedBlocks.push_back(Tail);
-    Tail->eraseFromParent();
+    RemoveBlocks.push_back(Tail);
+    if (Tail != &Tail->getParent()->back())
+      Tail->moveAfter(&Tail->getParent()->back());
   } else {
     // We need a branch to Tail, let code placement work it out later.
     LLVM_DEBUG(dbgs() << "Converting to unconditional branch.\n");
@@ -760,15 +662,12 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks,
 
 namespace {
 class EarlyIfConverter : public MachineFunctionPass {
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
-  SSAIfConv IfConv;
 
 public:
   static char ID;
@@ -778,9 +677,9 @@ public:
   StringRef getPassName() const override { return "Early If-Conversion"; }
 
 private:
-  bool tryConvertIf(MachineBasicBlock*);
-  void invalidateTraces();
-  bool shouldConvertIf();
+  bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
+  void invalidateTraces(SSAIfConv &IfConv);
+  bool shouldConvertIf(SSAIfConv &IfConv);
 };
 } // end anonymous namespace
 
@@ -789,18 +688,18 @@ char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
                       "Early If Converter", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
                     "Early If Converter", false, false)
 
 void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -836,7 +735,7 @@ void updateLoops(MachineLoopInfo *Loops,
 } // namespace
 
 /// Invalidate MachineTraceMetrics before if-conversion.
-void EarlyIfConverter::invalidateTraces() {
+void EarlyIfConverter::invalidateTraces(SSAIfConv &IfConv) {
   Traces->verifyAnalysis();
   Traces->invalidate(IfConv.Head);
   Traces->invalidate(IfConv.Tail);
@@ -863,10 +762,50 @@ template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
 }
 } // anonymous namespace
 
+class SpeculateStrategy : public SSAIfConv::PredicationStrategyBase {
+public:
+  bool canConvertIf(MachineBasicBlock *Tail) override {
+    // This is a triangle or a diamond.
+    // Skip if we cannot predicate and there are no phis skip as there must
+    // be side effects that can only be handled with predication.
+    if (Tail->empty() || !Tail->front().isPHI()) {
+      LLVM_DEBUG(dbgs() << "No phis in tail.\n");
+      return false;
+    }
+    return true;
+  }
+
+  bool canPredicateInstr(const MachineInstr &I) override {
+    // Don't speculate loads. Note that it may be possible and desirable to
+    // speculate GOT or constant pool loads that are guaranteed not to trap,
+    // but we don't support that for now.
+    if (I.mayLoad()) {
+      LLVM_DEBUG(dbgs() << "Won't speculate load: " << I);
+      return false;
+    }
+
+    // We never speculate stores, so an AA pointer isn't necessary.
+    bool DontMoveAcrossStore = true;
+    if (!I.isSafeToMove(DontMoveAcrossStore)) {
+      LLVM_DEBUG(dbgs() << "Can't speculate: " << I);
+      return false;
+    }
+    return true;
+  }
+
+  void predicateBlock(MachineBasicBlock *MBB, ArrayRef<MachineOperand> Cond,
+                      bool Reverse)
+      override { /* do nothing, everything is speculatable and it's valid to
+                    move the instructions into the head */
+  }
+
+  ~SpeculateStrategy() override = default;
+};
+
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
-bool EarlyIfConverter::shouldConvertIf() {
+bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
@@ -962,8 +901,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   CriticalPathInfo TBlock{};
   CriticalPathInfo FBlock{};
   bool ShouldConvert = true;
-  for (unsigned i = 0, e = IfConv.PHIs.size(); i != e; ++i) {
-    SSAIfConv::PHIInfo &PI = IfConv.PHIs[i];
+  for (SSAIfConv::PHIInfo &PI : IfConv.PHIs) {
     unsigned Slack = TailTrace.getInstrSlack(*PI.PHI);
     unsigned MaxDepth = Slack + TailTrace.getInstrCycles(*PI.PHI).Depth;
     LLVM_DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
@@ -1060,16 +998,18 @@ bool EarlyIfConverter::shouldConvertIf() {
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
 ///
-bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
+bool EarlyIfConverter::tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB) && shouldConvertIf()) {
+  while (IfConv.canConvertIf(MBB) && shouldConvertIf(IfConv)) {
     // If-convert MBB and update analyses.
-    invalidateTraces();
-    SmallVector<MachineBasicBlock*, 4> RemovedBlocks;
-    IfConv.convertIf(RemovedBlocks);
+    invalidateTraces(IfConv);
+    SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
+    IfConv.convertIf(RemoveBlocks);
     Changed = true;
-    updateDomTree(DomTree, IfConv, RemovedBlocks);
-    updateLoops(Loops, RemovedBlocks);
+    updateDomTree(DomTree, IfConv, RemoveBlocks);
+    for (MachineBasicBlock *MBB : RemoveBlocks)
+      MBB->eraseFromParent();
+    updateLoops(Loops, RemoveBlocks);
   }
   return Changed;
 }
@@ -1085,24 +1025,23 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   if (!STI.enableEarlyIfConversion())
     return false;
 
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
   bool Changed = false;
-  IfConv.runOnMachineFunction(MF);
+  SpeculateStrategy Speculate;
+  SSAIfConv IfConv(Speculate, MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
   // blocks, but only blocks dominated by the head block. This makes it safe to
   // update the dominator tree while the post-order iterator is still active.
   for (auto *DomNode : post_order(DomTree))
-    if (tryConvertIf(DomNode->getBlock()))
+    if (tryConvertIf(IfConv, DomNode->getBlock()))
       Changed = true;
 
   return Changed;
@@ -1115,13 +1054,10 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
 namespace {
 class EarlyIfPredicator : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   TargetSchedModel SchedModel;
-  MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
-  SSAIfConv IfConv;
 
 public:
   static char ID;
@@ -1131,8 +1067,8 @@ public:
   StringRef getPassName() const override { return "Early If-predicator"; }
 
 protected:
-  bool tryConvertIf(MachineBasicBlock *);
-  bool shouldConvertIf();
+  bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
+  bool shouldConvertIf(SSAIfConv &IfConv);
 };
 } // end anonymous namespace
 
@@ -1144,22 +1080,64 @@ char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator", false,
                     false)
 
 void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+class PredicatorStrategy : public SSAIfConv::PredicationStrategyBase {
+  const TargetInstrInfo *TII = nullptr;
+
+public:
+  PredicatorStrategy(const TargetInstrInfo *TII) : TII(TII) {}
+
+  bool canPredicateInstr(const MachineInstr &I) override {
+    // Check that instruction is predicable
+    if (!TII->isPredicable(I)) {
+      LLVM_DEBUG(dbgs() << "Isn't predicable: " << I);
+      return false;
+    }
+
+    // Check that instruction is not already predicated.
+    if (TII->isPredicated(I) && !TII->canPredicatePredicatedInstr(I)) {
+      LLVM_DEBUG(dbgs() << "Is already predicated: " << I);
+      return false;
+    }
+    return true;
+  }
+
+  void predicateBlock(MachineBasicBlock *MBB, ArrayRef<MachineOperand> Cond,
+                      bool Reverse) override {
+    SmallVector<MachineOperand> Condition(Cond);
+    if (Reverse) {
+      bool CanRevCond = !TII->reverseBranchCondition(Condition);
+      assert(CanRevCond && "Reversed predicate is not supported");
+      (void)CanRevCond;
+    }
+    // Terminators don't need to be predicated as they will be removed.
+    for (MachineBasicBlock::iterator I = MBB->begin(),
+                                     E = MBB->getFirstTerminator();
+         I != E; ++I) {
+      if (I->isDebugInstr())
+        continue;
+      TII->PredicateInstruction(*I, Condition);
+    }
+  }
+
+  ~PredicatorStrategy() override = default;
+};
+
 /// Apply the target heuristic to decide if the transformation is profitable.
-bool EarlyIfPredicator::shouldConvertIf() {
+bool EarlyIfPredicator::shouldConvertIf(SSAIfConv &IfConv) {
   auto TrueProbability = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
   if (IfConv.isTriangle()) {
     MachineBasicBlock &IfBlock =
@@ -1199,15 +1177,18 @@ bool EarlyIfPredicator::shouldConvertIf() {
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
 ///
-bool EarlyIfPredicator::tryConvertIf(MachineBasicBlock *MBB) {
+bool EarlyIfPredicator::tryConvertIf(SSAIfConv &IfConv,
+                                     MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB, /*Predicate*/ true) && shouldConvertIf()) {
+  while (IfConv.canConvertIf(MBB) && shouldConvertIf(IfConv)) {
     // If-convert MBB and update analyses.
-    SmallVector<MachineBasicBlock *, 4> RemovedBlocks;
-    IfConv.convertIf(RemovedBlocks, /*Predicate*/ true);
+    SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
+    IfConv.convertIf(RemoveBlocks);
     Changed = true;
-    updateDomTree(DomTree, IfConv, RemovedBlocks);
-    updateLoops(Loops, RemovedBlocks);
+    updateDomTree(DomTree, IfConv, RemoveBlocks);
+    for (MachineBasicBlock *MBB : RemoveBlocks)
+      MBB->eraseFromParent();
+    updateLoops(Loops, RemoveBlocks);
   }
   return Changed;
 }
@@ -1220,22 +1201,21 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
-  IfConv.runOnMachineFunction(MF);
+  PredicatorStrategy Predicate(TII);
+  SSAIfConv IfConv(Predicate, MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
   // blocks, but only blocks dominated by the head block. This makes it safe to
   // update the dominator tree while the post-order iterator is still active.
   for (auto *DomNode : post_order(DomTree))
-    if (tryConvertIf(DomNode->getBlock()))
+    if (tryConvertIf(IfConv, DomNode->getBlock()))
       Changed = true;
 
   return Changed;

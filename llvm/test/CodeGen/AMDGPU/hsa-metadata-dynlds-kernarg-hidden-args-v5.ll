@@ -116,7 +116,7 @@ entry:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !llvm.printf.fmts = !{!1, !2}
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}

@@ -11,7 +11,7 @@
 define i1 @t0_basic(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = add i8 %x, %y
@@ -22,7 +22,7 @@ define i1 @t0_basic(i8 %x, i8 %y) {
 define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = add <2 x i8> %x, %y
@@ -35,7 +35,7 @@ define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 define i1 @t2_symmetry(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t2_symmetry(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = add i8 %x, %y
@@ -49,7 +49,7 @@ define i1 @t3_commutative(i8 %x) {
 ; CHECK-LABEL: @t3_commutative(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = call i8 @gen8()
@@ -61,7 +61,7 @@ define i1 @t3_commutative(i8 %x) {
 define i1 @t4_commutative(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t4_commutative(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = add i8 %x, %y
@@ -73,7 +73,7 @@ define i1 @t5_commutative(i8 %x) {
 ; CHECK-LABEL: @t5_commutative(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = call i8 @gen8()
@@ -214,7 +214,7 @@ define <2 x i1> @low_bitmask_uge(<2 x i8> %x) {
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %a = add <2 x i8> %x, <i8 15, i8 undef>
+  %a = add <2 x i8> %x, <i8 15, i8 poison>
   %m = and <2 x i8> %a, <i8 15, i8 15>
   %r = icmp uge <2 x i8> %m, %x
   ret <2 x i1> %r

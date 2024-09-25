@@ -50,19 +50,7 @@ public:
                          {{CommandArgumentType::eArgTypeFormat,
                            "Specify a format to be used for display. If this "
                            "is set, register fields will not be displayed."}}) {
-    CommandArgumentEntry arg;
-    CommandArgumentData register_arg;
-
-    // Define the first (and only) variant of this arg.
-    register_arg.arg_type = eArgTypeRegisterName;
-    register_arg.arg_repetition = eArgRepeatStar;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(register_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeRegisterName, eArgRepeatStar);
 
     // Add the "--format"
     m_option_group.Append(&m_format_options,
@@ -80,9 +68,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -424,13 +410,7 @@ Fields      (*)  A table of the names and bit positions of the values contained
 Fields marked with (*) may not always be present. Some information may be
 different for the same register when connected to different debug servers.)");
 
-    CommandArgumentData register_arg;
-    register_arg.arg_type = eArgTypeRegisterName;
-    register_arg.arg_repetition = eArgRepeatPlain;
-
-    CommandArgumentEntry arg1;
-    arg1.push_back(register_arg);
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeRegisterName);
   }
 
   ~CommandObjectRegisterInfo() override = default;
@@ -440,8 +420,7 @@ different for the same register when connected to different debug servers.)");
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
 protected:

@@ -387,7 +387,8 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
 
   // Coalesce anything which is not a COPY involving a subreg to/from GR128.
   if (!(NewRC->hasSuperClassEq(&SystemZ::GR128BitRegClass) &&
-        (getRegSizeInBits(*SrcRC) <= 64 || getRegSizeInBits(*DstRC) <= 64)))
+        (getRegSizeInBits(*SrcRC) <= 64 || getRegSizeInBits(*DstRC) <= 64) &&
+        !MI->getOperand(1).isUndef()))
     return true;
 
   // Allow coalescing of a GR128 subreg COPY only if the subreg liverange is

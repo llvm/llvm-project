@@ -1,5 +1,5 @@
-; RUN: llc -march=r600 -mcpu=redwood -disable-promote-alloca-to-vector < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=redwood -disable-promote-alloca-to-vector < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
 ; RUN: opt -S -mtriple=r600-unknown-unknown -mcpu=redwood -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=OPT %s
 target datalayout = "A5"
 
@@ -12,11 +12,11 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; R600: LDS_READ
 ; R600: LDS_READ
 
-; OPT: call i32 @llvm.r600.read.local.size.y(), !range !0
-; OPT: call i32 @llvm.r600.read.local.size.z(), !range !0
-; OPT: call i32 @llvm.r600.read.tidig.x(), !range !1
-; OPT: call i32 @llvm.r600.read.tidig.y(), !range !1
-; OPT: call i32 @llvm.r600.read.tidig.z(), !range !1
+; OPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.y()
+; OPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.z()
+; OPT: call range(i32 0, 256) i32 @llvm.r600.read.tidig.x()
+; OPT: call range(i32 0, 256) i32 @llvm.r600.read.tidig.y()
+; OPT: call range(i32 0, 256) i32 @llvm.r600.read.tidig.z()
 
 define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
 entry:
@@ -275,8 +275,5 @@ define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   store i32 %tmp5, ptr addrspace(1) %out
   ret void
 }
-
-; OPT: !0 = !{i32 0, i32 257}
-; OPT: !1 = !{i32 0, i32 256}
 
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" }

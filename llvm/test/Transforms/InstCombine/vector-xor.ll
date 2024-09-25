@@ -6,7 +6,7 @@
 define <4 x i32> @test_v4i32_xor_repeated_and_0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @test_v4i32_xor_repeated_and_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = and <4 x i32> %a, %b
@@ -18,7 +18,7 @@ define <4 x i32> @test_v4i32_xor_repeated_and_0(<4 x i32> %a, <4 x i32> %b, <4 x
 define <4 x i32> @test_v4i32_xor_repeated_and_1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @test_v4i32_xor_repeated_and_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = and <4 x i32> %a, %b
@@ -53,14 +53,14 @@ define <4 x i32> @test_v4i32_xor_bswap_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_xor_bswap_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_xor_bswap_const_undef(
+define <4 x i32> @test_v4i32_xor_bswap_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_xor_bswap_const_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> [[A0:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 undef, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 poison, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a0)
-  %2 = xor  <4 x i32> %1, <i32 undef, i32 0, i32 2, i32 3>
+  %2 = xor  <4 x i32> %1, <i32 poison, i32 0, i32 2, i32 3>
   ret <4 x i32> %2
 }
 
@@ -69,7 +69,7 @@ define <4 x i32> @test_v4i32_xor_bswap_const_undef(<4 x i32> %a0) {
 define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_and(
 ; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[Y_NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %x
@@ -83,7 +83,7 @@ define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @test_v4i32_demorgan_or(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_or(
 ; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y_NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %x
@@ -105,14 +105,14 @@ define <4 x i32> @test_v4i32_not_ashr_not(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %3
 }
 
-define <4 x i32> @test_v4i32_not_ashr_not_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @test_v4i32_not_ashr_not_undef(
+define <4 x i32> @test_v4i32_not_ashr_not_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @test_v4i32_not_ashr_not_poison(
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[DOTNOT]]
 ;
-  %1 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %x
+  %1 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 poison>, %x
   %2 = ashr <4 x i32> %1, %y
-  %3 = xor  <4 x i32> <i32 -1, i32 -1, i32 undef, i32 -1>, %2
+  %3 = xor  <4 x i32> <i32 -1, i32 -1, i32 poison, i32 -1>, %2
   ret <4 x i32> %3
 }
 
@@ -138,13 +138,13 @@ define <4 x i32> @test_v4i32_not_ashr_negative_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_not_ashr_negative_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_ashr_negative_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 2, i32 4, i32 0, i32 8>, [[A0:%.*]]
+define <4 x i32> @test_v4i32_not_ashr_negative_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_not_ashr_negative_const_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 2, i32 4, i32 poison, i32 8>, [[A0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
-  %1 = ashr <4 x i32> <i32 -3, i32 -5, i32 undef, i32 -9>, %a0
-  %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %1
+  %1 = ashr <4 x i32> <i32 -3, i32 -5, i32 poison, i32 -9>, %a0
+  %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 poison>, %1
   ret <4 x i32> %2
 }
 
@@ -170,13 +170,13 @@ define <4 x i32> @test_v4i32_not_lshr_nonnegative_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_not_lshr_nonnegative_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_lshr_nonnegative_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> <i32 -4, i32 -6, i32 -1, i32 -10>, [[A0:%.*]]
+define <4 x i32> @test_v4i32_not_lshr_nonnegative_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_not_lshr_nonnegative_const_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> <i32 -4, i32 -6, i32 poison, i32 -10>, [[A0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
-  %1 = lshr <4 x i32> <i32  3, i32  5, i32 undef, i32  9>, %a0
-  %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %1
+  %1 = lshr <4 x i32> <i32  3, i32  5, i32 poison, i32  9>, %a0
+  %2 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 poison>, %1
   ret <4 x i32> %2
 }
 
@@ -202,13 +202,13 @@ define <4 x i32> @test_v4i32_not_sub_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_not_sub_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_sub_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -4, i32 undef, i32 0, i32 -16>
+define <4 x i32> @test_v4i32_not_sub_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_not_sub_const_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -4, i32 poison, i32 0, i32 -16>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
-  %1 = sub <4 x i32> <i32  3, i32 undef, i32 -1, i32 15>, %a0
-  %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %1
+  %1 = sub <4 x i32> <i32  3, i32 poison, i32 -1, i32 15>, %a0
+  %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 poison>, %1
   ret <4 x i32> %2
 }
 
@@ -235,14 +235,14 @@ define <4 x i32> @test_v4i32_xor_signmask_sub_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_xor_signmask_sub_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_xor_signmask_sub_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 3, i32 undef, i32 -1, i32 15>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 undef>
+define <4 x i32> @test_v4i32_xor_signmask_sub_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_xor_signmask_sub_const_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 3, i32 poison, i32 -1, i32 15>, [[A0:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
-  %1 = sub <4 x i32> <i32  3, i32 undef, i32 -1, i32 15>, %a0
-  %2 = xor <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 undef>, %1
+  %1 = sub <4 x i32> <i32  3, i32 poison, i32 -1, i32 15>, %a0
+  %2 = xor <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 poison>, %1
   ret <4 x i32> %2
 }
 
@@ -269,13 +269,13 @@ define <4 x i32> @test_v4i32_xor_signmask_add_const(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_v4i32_xor_signmask_add_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_xor_signmask_add_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 3, i32 undef, i32 -1, i32 15>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 undef>
+define <4 x i32> @test_v4i32_xor_signmask_add_const_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_xor_signmask_add_const_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 3, i32 poison, i32 -1, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
-  %1 = add <4 x i32> <i32  3, i32 undef, i32 -1, i32 15>, %a0
-  %2 = xor <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 undef>, %1
+  %1 = add <4 x i32> <i32  3, i32 poison, i32 -1, i32 15>, %a0
+  %2 = xor <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 poison>, %1
   ret <4 x i32> %2
 }

@@ -11,12 +11,11 @@
 // to work reliably, inlining of all function call must be performed.
 //
 //===----------------------------------------------------------------------===//
-
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -1319,6 +1318,18 @@ static unsigned texRegisterToIndexOpcode(unsigned RegOC) {
     return NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_I;
   case NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL_R:
     return NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL_I;
+  case NVPTX::TEX_UNIFIED_CUBE_F32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_F32_F32_GRAD_I;
+  case NVPTX::TEX_UNIFIED_CUBE_S32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_S32_F32_GRAD_I;
+  case NVPTX::TEX_UNIFIED_CUBE_U32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_U32_F32_GRAD_I;
+  case NVPTX::TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_I;
+  case NVPTX::TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_I;
+  case NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_R:
+    return NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_I;
   case NVPTX::TLD4_UNIFIED_R_2D_F32_F32_R:
     return NVPTX::TLD4_UNIFIED_R_2D_F32_F32_I;
   case NVPTX::TLD4_UNIFIED_G_2D_F32_F32_R:
@@ -1808,8 +1819,8 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
       return false;
     }
 
-    assert(TexHandleDef.getOperand(6).isSymbol() && "Load is not a symbol!");
-    StringRef Sym = TexHandleDef.getOperand(6).getSymbolName();
+    assert(TexHandleDef.getOperand(7).isSymbol() && "Load is not a symbol!");
+    StringRef Sym = TexHandleDef.getOperand(7).getSymbolName();
     std::string ParamBaseName = std::string(MF.getName());
     ParamBaseName += "_param_";
     assert(Sym.starts_with(ParamBaseName) && "Invalid symbol reference");

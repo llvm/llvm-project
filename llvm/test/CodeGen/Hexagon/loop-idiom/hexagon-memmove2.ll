@@ -1,5 +1,7 @@
 ; RUN: opt -hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
 ; RUN:  | FileCheck %s
+; RUN: opt -p hexagon-loop-idiom -S -mtriple hexagon-unknown-elf < %s \
+; RUN:  | FileCheck %s
 
 define void @PR14241(ptr %s, i64 %size) #0 {
 ; Ensure that we don't form a memcpy for strided loops. Briefly, when we taught

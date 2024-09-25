@@ -58,6 +58,11 @@ public:
     char1Ty = fir::CharacterType::getSingleton(builder.getContext(), 1);
     char2Ty = fir::CharacterType::getSingleton(builder.getContext(), 2);
     char4Ty = fir::CharacterType::getSingleton(builder.getContext(), 4);
+
+    logical1Ty = fir::LogicalType::get(builder.getContext(), 1);
+    logical2Ty = fir::LogicalType::get(builder.getContext(), 2);
+    logical4Ty = fir::LogicalType::get(builder.getContext(), 4);
+    logical8Ty = fir::LogicalType::get(builder.getContext(), 8);
   }
 
   mlir::MLIRContext context;
@@ -84,6 +89,10 @@ public:
   mlir::Type char1Ty;
   mlir::Type char2Ty;
   mlir::Type char4Ty;
+  mlir::Type logical1Ty;
+  mlir::Type logical2Ty;
+  mlir::Type logical4Ty;
+  mlir::Type logical8Ty;
 };
 
 /// Check that the \p op is a `fir::CallOp` operation and its name matches

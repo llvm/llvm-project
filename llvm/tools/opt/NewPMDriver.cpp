@@ -202,6 +202,19 @@ static cl::opt<std::string>
                          cl::desc("Path to the profile remapping file."),
                          cl::Hidden);
 
+static cl::opt<PGOOptions::ColdFuncOpt> PGOColdFuncAttr(
+    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
+    cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
+                          "Default (no attribute)"),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
+                          "Mark cold functions with optsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
+                          "Mark cold functions with minsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
+                          "Mark cold functions with optnone.")));
+
 static cl::opt<bool> DebugInfoForProfiling(
     "debug-info-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit special debug info to enable PGO profile generation."));
@@ -213,10 +226,6 @@ static cl::opt<bool> PseudoProbeForProfiling(
 static cl::opt<bool> DisableLoopUnrolling(
     "disable-loop-unrolling",
     cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
-
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
 
 template <typename PassManagerT>
 bool tryParsePipelineText(PassBuilder &PB,
@@ -328,34 +337,35 @@ bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins, OutputKind OK, VerifierKind VK,
-    bool ShouldPreserveAssemblyUseListOrder,
+    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
     bool UnifiedLTO) {
-  bool VerifyEachPass = VK == VK_VerifyEachPass;
-
   auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
     P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr);
+                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
+                   PGOColdFuncAttr);
     break;
   case InstrUse:
     P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
-                   PGOOptions::IRUse);
+                   PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
     P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
-                   PGOOptions::SampleUse);
+                   PGOOptions::SampleUse, PGOOptions::NoCSAction,
+                   PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
       P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
-                     PGOOptions::NoCSAction, DebugInfoForProfiling,
-                     PseudoProbeForProfiling);
+                     PGOOptions::NoCSAction, PGOColdFuncAttr,
+                     DebugInfoForProfiling, PseudoProbeForProfiling);
     else
       P = std::nullopt;
   }
@@ -398,7 +408,7 @@ bool llvm::runPassPipeline(
   PrintPassOpts.Verbose = DebugPM == DebugLogging::Verbose;
   PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
   StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
-                              VerifyEachPass, PrintPassOpts);
+                              VK == VerifierKind::EachPass, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;
@@ -427,6 +437,10 @@ bool llvm::runPassPipeline(
   // For any loaded plugins, let them register pass builder callbacks.
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
+
+  // Load any explicitly specified plugins.
+  for (auto &PassCallback : PassBuilderCallbacks)
+    PassCallback(PB);
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
@@ -467,7 +481,7 @@ bool llvm::runPassPipeline(
     }
   }
 
-  if (VK > VK_NoVerifier)
+  if (VK != VerifierKind::None)
     MPM.addPass(VerifierPass());
   if (EnableDebugify)
     MPM.addPass(NewPMCheckDebugifyPass(false, "", &DIStatsMap));

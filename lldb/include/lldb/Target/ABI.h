@@ -102,9 +102,9 @@ public:
 
   virtual bool RegisterIsVolatile(const RegisterInfo *reg_info) = 0;
 
-  virtual bool
-  GetFallbackRegisterLocation(const RegisterInfo *reg_info,
-                              UnwindPlan::Row::RegisterLocation &unwind_regloc);
+  virtual bool GetFallbackRegisterLocation(
+      const RegisterInfo *reg_info,
+      UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc);
 
   // Should take a look at a call frame address (CFA) which is just the stack
   // pointer value upon entry to a function. ABIs usually impose alignment
@@ -122,8 +122,8 @@ public:
   /// ARM uses bit zero to signify a code address is thumb, so any ARM ABI
   /// plug-ins would strip those bits.
   /// @{
-  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) { return pc; }
-  virtual lldb::addr_t FixDataAddress(lldb::addr_t pc) { return pc; }
+  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc);
+  virtual lldb::addr_t FixDataAddress(lldb::addr_t pc);
   /// @}
 
   /// Use this method when you do not know, or do not care what kind of address
@@ -165,10 +165,6 @@ protected:
 
   lldb::ProcessWP m_process_wp;
   std::unique_ptr<llvm::MCRegisterInfo> m_mc_register_info_up;
-
-  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc, lldb::addr_t mask) {
-    return pc;
-  }
 
 private:
   ABI(const ABI &) = delete;

@@ -104,7 +104,7 @@ subroutine s7biii(x, y)
   integer :: local = 5
   ! OK, since "localConst" is a constant
   real, dimension(localConst) :: realArray1
-  !ERROR: Invalid specification expression: reference to local entity 'local'
+  !PORTABILITY: specification expression refers to local object 'local' (initialized and saved)
   real, dimension(local) :: realArray2
   real, dimension(size(realArray1)) :: realArray3 ! ok
   real, dimension(size(x)) :: realArray4 ! ok

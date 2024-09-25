@@ -18,8 +18,9 @@ body: |
     %7:_(<2 x s32>) = G_INSERT_VECTOR_ELT %0(<2 x s32>), %6(s32), %5(s32)
 
     %8:_(s1) = G_CONSTANT i1 1
-    %9:_(s32) = G_EXTRACT_VECTOR_ELT %0(<2 x s32>), %8(s1)
-    %10:_(<2 x s32>) = G_INSERT_VECTOR_ELT %0(<2 x s32>), %9(s32), %8(s1)
+    %11:_(s32) = G_ZEXT %8
+    %9:_(s32) = G_EXTRACT_VECTOR_ELT %0(<2 x s32>), %11(s32)
+    %10:_(<2 x s32>) = G_INSERT_VECTOR_ELT %0(<2 x s32>), %9(s32), %11(s32)
 
     SI_RETURN
 ...

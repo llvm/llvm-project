@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 
 using namespace llvm;
 

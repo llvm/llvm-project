@@ -50,31 +50,9 @@ function(collect_object_file_deps target result)
   endif()
 endfunction(collect_object_file_deps)
 
-# A rule to build a library from a collection of entrypoint objects.
-# Usage:
-#     add_entrypoint_library(
-#       DEPENDS <list of add_entrypoint_object targets>
-#     )
-#
-# NOTE: If one wants an entrypoint to be available in a library, then they will
-# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
-# entrypoint dependencies will not be added to the library.
-function(add_entrypoint_library target_name)
-  cmake_parse_arguments(
-    "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
-    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+function(get_all_object_file_deps result fq_deps_list)
   set(all_deps "")
-  foreach(dep IN LISTS fq_deps_list)
+  foreach(dep ${fq_deps_list})
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
             (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
@@ -102,6 +80,67 @@ function(add_entrypoint_library target_name)
     list(APPEND all_deps ${entrypoint_target})
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
+  set(${result} ${all_deps} PARENT_SCOPE)
+endfunction()
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it in a single LLVM-IR bitcode file.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    list(APPEND objects ${object})
+  endforeach()
+
+  add_executable(${target_name} ${objects})
+  target_link_options(${target_name} PRIVATE
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+endfunction(add_bitcode_entrypoint_library)
+
+# A rule to build a library from a collection of entrypoint objects.
+# Usage:
+#     add_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+#
+# NOTE: If one wants an entrypoint to be available in a library, then they will
+# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
+# entrypoint dependencies will not be added to the library.
+function(add_entrypoint_library target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
   set(objects "")
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
@@ -173,7 +212,17 @@ function(create_header_library fq_target_name)
   target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
     add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
-    target_link_libraries(${fq_target_name} INTERFACE ${ADD_HEADER_DEPENDS})
+
+    # `*.__copied_hdr__` is created only to copy the header files to the target
+    # location, not to be linked against.
+    set(link_lib "")
+    foreach(dep ${ADD_HEADER_DEPENDS})
+      if (NOT dep MATCHES "__copied_hdr__")
+        list(APPEND link_lib ${dep})
+      endif()
+    endforeach()
+
+    target_link_libraries(${fq_target_name} INTERFACE ${link_lib})
   endif()
   if(ADD_HEADER_COMPILE_OPTIONS)
     target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
@@ -197,97 +246,10 @@ endfunction(create_header_library)
 #      FLAGS <list of flags>
 #    )
 
-# Internal function, used by `add_header_library`.
-function(expand_flags_for_header_library target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # Optional arguments
-    "" # Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_header_library(
-      ${target_name}
-      DEPENDS ${EXPAND_FLAGS_DEPENDS}
-      FLAGS ${EXPAND_FLAGS_FLAGS}
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_header_library(
-      ${target_name}
-      "${flags}"
-      DEPENDS ${EXPAND_FLAGS_DEPENDS} IGNORE_MARKER
-      FLAGS ${EXPAND_FLAGS_FLAGS} IGNORE_MARKER
-      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_header_library(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS ${NEW_DEPS} IGNORE_MARKER
-    FLAGS ${NEW_FLAGS} IGNORE_MARKER
-    ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
-  )
-endfunction(expand_flags_for_header_library)
-
 function(add_header_library target_name)
-  cmake_parse_arguments(
-    "ADD_TO_EXPAND"
-    "" # Optional arguments
-    "" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
+  add_target_with_flags(
+    ${target_name}
+    CREATE_TARGET create_header_library
     ${ARGN}
-  )
-
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-  
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Header library ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  expand_flags_for_header_library(
-    ${fq_target_name}
-    "${flags}"
-    DEPENDS ${fq_deps_list} IGNORE_MARKER
-    FLAGS ${flags} IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
   )
 endfunction(add_header_library)

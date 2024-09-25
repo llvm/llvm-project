@@ -111,6 +111,15 @@ static cl::opt<bool> EnablePPCGenScalarMASSEntries(
              "(scalar) entries"),
     cl::Hidden);
 
+static cl::opt<bool>
+    EnableGlobalMerge("ppc-global-merge", cl::Hidden, cl::init(false),
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<unsigned>
+    GlobalMergeMaxOffset("ppc-global-merge-max-offset", cl::Hidden,
+                         cl::init(0x7fff),
+                         cl::desc("Maximum global merge offset"));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
@@ -132,7 +141,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
   initializePPCBoolRetToIntPass(PR);
-  initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
@@ -141,7 +149,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
-  initializePPCDAGToDAGISelPass(PR);
+  initializePPCDAGToDAGISelLegacyPass(PR);
   initializePPCMergeStringPoolPass(PR);
 }
 
@@ -457,7 +465,7 @@ TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
 void PPCPassConfig::addIRPasses() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCBoolRetToIntPass());
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Lower generic MASSV routines to PowerPC subtarget-specific entries.
   addPass(createPPCLowerMASSVEntriesPass());
@@ -491,6 +499,15 @@ void PPCPassConfig::addIRPasses() {
 }
 
 bool PPCPassConfig::addPreISel() {
+  // The GlobalMerge pass is intended to be on by default on AIX.
+  // Specifying the command line option overrides the AIX default.
+  if ((EnableGlobalMerge.getNumOccurrences() > 0)
+          ? EnableGlobalMerge
+          : (TM->getTargetTriple().isOSAIX() &&
+             getOptLevel() != CodeGenOptLevel::None))
+    addPass(
+        createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true));
+
   if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCMergeStringPoolPass());
 
@@ -582,7 +599,6 @@ void PPCPassConfig::addPreSched2() {
 
 void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCPreEmitPeepholePass());
-  addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCEarlyReturnPass());

@@ -15,11 +15,11 @@
 @d = global i8 0, align 1
 
 ;.
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global ptr null, align 8
-; CHECK: @[[E:[a-zA-Z0-9_$"\\.-]+]] = global ptr @a, align 8
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = global i64 0, align 8
-; CHECK: @[[D:[a-zA-Z0-9_$"\\.-]+]] = global i8 0, align 1
+; CHECK: @a = global ptr null, align 8
+; CHECK: @e = global ptr @a, align 8
+; CHECK: @g = global i32 0, align 4
+; CHECK: @c = global i64 0, align 8
+; CHECK: @d = global i8 0, align 1
 ;.
 define internal fastcc void @fn(ptr nocapture readonly %p1, ptr nocapture readonly %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none)
@@ -92,11 +92,19 @@ entry:
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nounwind willreturn }
 ;.
-; CHECK: [[TBAA0]] = !{!1, !1, i64 0}
-; CHECK: [[META1:![0-9]+]] = !{!"int", !2, i64 0}
-; CHECK: [[META2:![0-9]+]] = !{!"omnipotent char", !3, i64 0}
-; CHECK: [[META3:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[TBAA4]] = !{!2, !2, i64 0}
-; CHECK: [[META5:![0-9]+]] = !{!6, !6, i64 0}
-; CHECK: [[META6:![0-9]+]] = !{!"any pointer", !2, i64 0}
+; TUNIT: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; TUNIT: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
+; TUNIT: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; TUNIT: [[META3]] = !{!"Simple C/C++ TBAA"}
+; TUNIT: [[TBAA4]] = !{[[META2]], [[META2]], i64 0}
+; TUNIT: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+; TUNIT: [[META6]] = !{!"any pointer", [[META2]], i64 0}
+;.
+; CGSCC: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CGSCC: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
+; CGSCC: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CGSCC: [[META3]] = !{!"Simple C/C++ TBAA"}
+; CGSCC: [[TBAA4]] = !{[[META2]], [[META2]], i64 0}
+; CGSCC: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+; CGSCC: [[META6]] = !{!"any pointer", [[META2]], i64 0}
 ;.

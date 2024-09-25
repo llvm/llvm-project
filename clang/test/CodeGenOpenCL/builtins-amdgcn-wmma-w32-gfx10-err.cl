@@ -16,19 +16,19 @@ typedef short  v16s  __attribute__((ext_vector_type(16)));
 
 // Wave32
 
-void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out8f, v16s a16s, v16s b16s, v8f c8f, 
+void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out8f, v16s a16s, v16s b16s, v8f c8f,
                                             global v16h* out16h, v16h a16h, v16h b16h, v16h c16h,
                                             global v16s* out16s, v2i a2i, v2i b2i, v16s c16s,
                                             global v8i* out8i, v4i a4i, v4i b4i, v8i c8i)
 {
- *out8f = __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(a16h, b16h, c8f);  // expected-error{{'__builtin_amdgcn_wmma_f32_16x16x16_f16_w32' needs target feature gfx11-insts}}
- *out8f = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(a16s, b16s, c8f);  // expected-error{{'__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32' needs target feature gfx11-insts}}
- *out16h = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32(a16h, b16h, c16h, true); // expected-error{{'__builtin_amdgcn_wmma_f16_16x16x16_f16_w32' needs target feature gfx11-insts}}
- *out16s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(a16s, b16s, c16s, true); // expected-error{{'__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32' needs target feature gfx11-insts}}
- *out16h = __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32(a16h, b16h, c16h, true); // expected-error{{'__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32' needs target feature gfx11-insts}}
- *out16s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32(a16s, b16s, c16s, true); // expected-error{{'__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32' needs target feature gfx11-insts}}
- *out8i = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32(true, a4i, true, b4i, c8i, false); // expected-error{{'__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32' needs target feature gfx11-insts}}
- *out8i = __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32(true, a2i, true, b2i, c8i, false); // expected-error{{'__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32' needs target feature gfx11-insts}}
+ *out8f = __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(a16h, b16h, c8f);  // expected-error{{'__builtin_amdgcn_wmma_f32_16x16x16_f16_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out8f = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(a16s, b16s, c8f);  // expected-error{{'__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out16h = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32(a16h, b16h, c16h, true); // expected-error{{'__builtin_amdgcn_wmma_f16_16x16x16_f16_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out16s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(a16s, b16s, c16s, true); // expected-error{{'__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out16h = __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32(a16h, b16h, c16h, true); // expected-error{{'__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out16s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32(a16s, b16s, c16s, true); // expected-error{{'__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out8i = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32(true, a4i, true, b4i, c8i, false); // expected-error{{'__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32' needs target feature gfx11-insts,wavefrontsize32}}
+ *out8i = __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32(true, a2i, true, b2i, c8i, false); // expected-error{{'__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32' needs target feature gfx11-insts,wavefrontsize32}}
 }
 
 #endif

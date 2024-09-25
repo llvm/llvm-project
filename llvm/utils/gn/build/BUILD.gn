@@ -72,9 +72,9 @@ config("compiler_defaults") {
     ldflags += [ "-miphoneos-version-min=8.0" ]
   }
   if (current_os == "mac") {
-    asmflags += [ "-mmacos-version-min=10.10" ]
-    cflags += [ "-mmacos-version-min=10.10" ]
-    ldflags += [ "-mmacos-version-min=10.10" ]
+    asmflags += [ "-mmacos-version-min=$mac_deployment_target" ]
+    cflags += [ "-mmacos-version-min=$mac_deployment_target" ]
+    ldflags += [ "-mmacos-version-min=$mac_deployment_target" ]
   }
 
   assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
@@ -183,9 +183,12 @@ config("compiler_defaults") {
     cflags += [ "/EHs-c-" ]
     cflags_cc += [ "/std:c++17" ]
 
-    # cl.exe doesn't set __cplusplus correctly by default.
-    # clang-cl gets it right by default, so don't needlessly add the flag there.
     if (!is_clang) {
+      # expand __VA_ARGS__ in "OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__)"
+      cflags += [ "/Zc:preprocessor" ]
+
+      # cl.exe doesn't set __cplusplus correctly by default.
+      # clang-cl gets it right by default, so don't needlessly add the flag there.
       cflags_cc += [ "/Zc:__cplusplus" ]
     }
 
@@ -265,11 +268,6 @@ config("compiler_defaults") {
           "-Wno-redundant-move",
         ]
       }
-    }
-    if (is_clang && use_goma) {
-      # goma converts all paths to lowercase on the server, breaking this
-      # warning.
-      cflags += [ "-Wno-nonportable-include-path" ]
     }
   }
 
@@ -373,9 +371,6 @@ config("compiler_defaults") {
   if (sysroot != "" && current_os != "win" && is_clang) {
     cflags += [ "-Wpoison-system-directories" ]
   }
-  assert(
-      !use_goma || sysroot != "",
-      "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
 
   if (use_ubsan) {
     assert(is_clang && (current_os == "ios" || current_os == "linux" ||
@@ -383,6 +378,7 @@ config("compiler_defaults") {
            "ubsan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [
       "-fsanitize=undefined",
+      "-fno-sanitize=vptr,function",
       "-fno-sanitize-recover=all",
     ]
     ldflags += [ "-fsanitize=undefined" ]

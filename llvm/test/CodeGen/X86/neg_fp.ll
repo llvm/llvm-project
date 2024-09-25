@@ -30,7 +30,7 @@ define double @negation_propagation(ptr %arg, double %arg1, double %arg2) nounwi
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd 12(%ebp), %xmm0
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1

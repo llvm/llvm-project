@@ -2,7 +2,7 @@
 
 # Check that when we combine ZEXT/ANYEXT we assign the correct location.
 # CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
-# CHECK:  G_AND %15, %16, debug-location !8
+# CHECK:  G_AND %14, %15, debug-location !8
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -10,17 +10,17 @@
 
   @.str = external dso_local unnamed_addr constant [4 x i8], align 1
 
-  define void @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !4 {
+  define void @main() personality ptr @__gxx_personality_v0 !dbg !4 {
   entry:
     %tobool = trunc i8 undef to i1
     %conv = zext i1 %tobool to i32
-    call void (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %conv), !dbg !8
-    %0 = load i32, i32* undef, align 4, !dbg !9
-    call void (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %0)
+    call void (ptr, ...) @printf(ptr @.str, i32 %conv), !dbg !8
+    %0 = load i32, ptr undef, align 4, !dbg !9
+    call void (ptr, ...) @printf(ptr @.str, i32 %0)
     ret void
   }
 
-  declare void @printf(i8*, ...)
+  declare void @printf(ptr, ...)
   declare i32 @__gxx_personality_v0(...)
 
   !llvm.dbg.cu = !{!0}
@@ -67,7 +67,7 @@ body:             |
     G_STORE %8(s64), %7(p0), debug-location !8 :: (store (s64) into stack, align 1)
     BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, debug-location !8
     ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp, debug-location !8
-    %13:_(s64) = G_LOAD %10(p0), debug-location !9 :: (load (s32) from `i32* undef`)
+    %13:_(s64) = G_LOAD %10(p0), debug-location !9 :: (load (s32) from `ptr undef`)
     ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
     $x0 = COPY %4(p0)
     %11:_(p0) = COPY $sp

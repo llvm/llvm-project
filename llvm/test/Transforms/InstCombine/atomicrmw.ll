@@ -21,7 +21,7 @@ define i32 @atomic_or_zero(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %res = atomicrmw add ptr %addr, i32 0 monotonic
+  %res = atomicrmw or ptr %addr, i32 0 monotonic
   ret i32 %res
 }
 
@@ -396,3 +396,397 @@ define double @no_sat_fmin_inf(ptr %addr) {
   %res = atomicrmw fmin ptr %addr, double 1.000000e-01 monotonic
   ret double %res
 }
+
+; Idempotent atomicrmw are still canonicalized.
+define i32 @atomic_add_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_add_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0:![0-9]+]], !amdgpu.no.fine.grained.host.memory [[META1:![0-9]+]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw add ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define i32 @atomic_or_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_or_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw or ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i32 @atomic_sub_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_sub_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw sub ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i32 @atomic_and_allones_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_and_allones_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw and ptr %addr, i32 -1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i32 @atomic_umin_uint_max_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_umin_uint_max_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw umin ptr %addr, i32 -1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i32 @atomic_umax_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_umax_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw umax ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i8 @atomic_min_smax_char_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_min_smax_char_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 syncscope("agent") monotonic, align 1, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = atomicrmw min ptr %addr, i8 127 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i8 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i8 @atomic_max_smin_char_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_max_smin_char_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 syncscope("agent") monotonic, align 1, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = atomicrmw max ptr %addr, i8 -128 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i8 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define float @atomic_fsub_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_fsub_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %res = atomicrmw fsub ptr %addr, float 0.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret float %res
+}
+
+define float @atomic_fadd_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_fadd_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %res = atomicrmw fadd ptr %addr, float -0.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret float %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define float @atomic_fsub_canon_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_fsub_canon_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 release, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %res = atomicrmw fsub ptr %addr, float 0.0 release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret float %res
+}
+
+define float @atomic_fadd_canon_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_fadd_canon_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 release, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %res = atomicrmw fadd ptr %addr, float -0.0 release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret float %res
+}
+
+; Can't replace a volatile w/a load; this would eliminate a volatile store.
+define i64 @atomic_sub_zero_volatile_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_sub_zero_volatile_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw volatile sub ptr [[ADDR:%.*]], i64 0 acquire, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %res = atomicrmw volatile sub ptr %addr, i64 0 acquire, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i64 %res
+}
+
+
+; Check that the transformation properly preserve the syncscope.
+; Idempotent atomicrmw are still canonicalized.
+define i16 @atomic_syncscope_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_syncscope_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 syncscope("some_syncscope") acquire, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw or ptr %addr, i16 0 syncscope("some_syncscope") acquire, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+; By eliminating the store part of the atomicrmw, we would get rid of the
+; release semantic, which is incorrect.  We can canonicalize the operation.
+define i16 @atomic_seq_cst_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_seq_cst_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 seq_cst, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw add ptr %addr, i16 0 seq_cst, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+; Check that the transformation does not apply when the value is changed by
+; the atomic operation (non zero constant).
+define i16 @atomic_add_non_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_add_non_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr [[ADDR:%.*]], i16 2 syncscope("agent") monotonic, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw add ptr %addr, i16 2 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+; Idempotent atomicrmw are still canonicalized.
+define i16 @atomic_xor_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_xor_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 syncscope("agent") monotonic, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw xor ptr %addr, i16 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+; Check that the transformation does not apply when the ordering is
+; incompatible with a load (release).  Do canonicalize.
+define i16 @atomic_release_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_release_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 release, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw sub ptr %addr, i16 0 release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+; Check that the transformation does not apply when the ordering is
+; incompatible with a load (acquire, release).  Do canonicalize.
+define i16 @atomic_acq_rel_preserve_md(ptr %addr) {
+; CHECK-LABEL: @atomic_acq_rel_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 acq_rel, align 2, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw xor ptr %addr, i16 0 acq_rel, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i16 %res
+}
+
+define i32 @sat_or_allones_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_or_allones_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw or ptr %addr, i32 -1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define i32 @sat_and_zero_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_and_zero_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw and ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define i32 @sat_umin_uint_min_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_umin_uint_min_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw umin ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define i32 @sat_umax_uint_max_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_umax_uint_max_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw umax ptr %addr, i32 -1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define i8 @sat_min_smin_char_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_min_smin_char_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i8 -128 syncscope("agent") monotonic, align 1, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = atomicrmw min ptr %addr, i8 -128 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i8 %res
+}
+
+define i8 @sat_max_smax_char_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_max_smax_char_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i8 127 syncscope("agent") monotonic, align 1, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = atomicrmw max ptr %addr, i8 127 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i8 %res
+}
+
+define double @sat_fadd_nan_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fadd_nan_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fadd ptr %addr, double 0x7FF00000FFFFFFFF release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @sat_fsub_nan_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fsub_nan_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define void @sat_fsub_nan_unused_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fsub_nan_unused_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_monotonic_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_monotonic_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw xchg ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_release_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_release_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") release, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw xchg ptr %addr, i32 -1 syncscope("agent") release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_under_aligned_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_under_aligned_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") release, align 1, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw xchg ptr %addr, i32 -1 syncscope("agent") release, align 1, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_over_aligned_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_over_aligned_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw xchg ptr %addr, i32 -1 syncscope("agent") release, align 8, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_seq_cst_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_seq_cst_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 0 syncscope("agent") seq_cst, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw xchg ptr %addr, i32 0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @xchg_unused_volatile_preserve_md(ptr %addr) {
+; CHECK-LABEL: @xchg_unused_volatile_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile xchg ptr [[ADDR:%.*]], i32 0 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw volatile xchg ptr %addr, i32 0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @sat_or_allones_unused_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_or_allones_unused_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw or ptr %addr, i32 -1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define void @undef_operand_unused_preserve_md(ptr %addr) {
+; CHECK-LABEL: @undef_operand_unused_preserve_md(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 undef syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret void
+;
+  atomicrmw or ptr %addr, i32 undef syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret void
+}
+
+define i32 @undef_operand_used_preserve_md(ptr %addr) {
+; CHECK-LABEL: @undef_operand_used_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 undef syncscope("agent") monotonic, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = atomicrmw or ptr %addr, i32 undef syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret i32 %res
+}
+
+define double @sat_fmax_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fmax_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmax ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @no_sat_fmax_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @no_sat_fmax_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[ADDR:%.*]], double 1.000000e-01 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmax ptr %addr, double 1.000000e-01 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @sat_fmin_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fmin_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0xFFF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmin ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @no_sat_fmin_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @no_sat_fmin_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[ADDR:%.*]], double 1.000000e-01 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmin ptr %addr, double 1.000000e-01 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+!0 = !{}
+!1 = !{!"foo", !"bar"}

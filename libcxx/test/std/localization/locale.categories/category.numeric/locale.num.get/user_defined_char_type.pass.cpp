@@ -26,9 +26,8 @@ struct Char {
   char underlying_;
 };
 
-namespace std {
 template <>
-struct char_traits<Char> {
+struct std::char_traits<Char> {
   using char_type  = Char;
   using int_type   = int;
   using off_type   = streamoff;
@@ -73,7 +72,7 @@ struct char_traits<Char> {
 
 // This ctype specialization treats all characters as spaces
 template <>
-class ctype<Char> : public locale::facet, public ctype_base {
+class std::ctype<Char> : public locale::facet, public ctype_base {
 public:
   using char_type = Char;
   static locale::id id;
@@ -121,10 +120,10 @@ public:
   }
 };
 
-locale::id ctype<Char>::id;
+std::locale::id std::ctype<Char>::id;
 
 template <>
-class numpunct<Char> : public locale::facet {
+class std::numpunct<Char> : public locale::facet {
 public:
   typedef basic_string<Char> string_type;
   static locale::id id;
@@ -141,9 +140,7 @@ public:
   }
 };
 
-locale::id numpunct<Char>::id;
-
-} // namespace std
+std::locale::id std::numpunct<Char>::id;
 
 int main(int, char**) {
   std::locale l(std::locale::classic(), new std::num_get<Char>);

@@ -121,14 +121,6 @@ public:
   ///    A copy of the Watchpoints which own this resource.
   WatchpointCollection CopyConstituentsList();
 
-  // The ID of the WatchpointResource is set by the WatchpointResourceList
-  // when the Resource has been set in the inferior and is being added
-  // to the List, in an attempt to match the hardware watchpoint register
-  // ordering.  If a Process can correctly identify the hardware watchpoint
-  // register index when it has created the Resource, it may initialize it
-  // before it is inserted in the WatchpointResourceList.
-  void SetID(lldb::wp_resource_id_t);
-
   lldb::wp_resource_id_t GetID() const;
 
   bool Contains(lldb::addr_t addr);

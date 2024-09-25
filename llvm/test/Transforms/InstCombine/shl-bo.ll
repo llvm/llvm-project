@@ -7,7 +7,7 @@ define i8 @lshr_add(i8 %a, i8 %y) {
 ; CHECK-LABEL: @lshr_add(
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 5
-; CHECK-NEXT:    [[R2:%.*]] = add i8 [[B1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = add i8 [[Y:%.*]], [[B1]]
 ; CHECK-NEXT:    [[L:%.*]] = and i8 [[R2]], -32
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
@@ -22,7 +22,7 @@ define <2 x i8> @lshr_add_commute_splat(<2 x i8> %a, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_add_commute_splat(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 5, i8 5>
-; CHECK-NEXT:    [[R2:%.*]] = add <2 x i8> [[B1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = add <2 x i8> [[Y:%.*]], [[B1]]
 ; CHECK-NEXT:    [[L:%.*]] = and <2 x i8> [[R2]], <i8 -32, i8 -32>
 ; CHECK-NEXT:    ret <2 x i8> [[L]]
 ;
@@ -67,7 +67,7 @@ define i8 @lshr_and(i8 %a, i8 %y) {
 ; CHECK-LABEL: @lshr_and(
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 6
-; CHECK-NEXT:    [[R2:%.*]] = and i8 [[B1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = and i8 [[Y:%.*]], [[B1]]
 ; CHECK-NEXT:    ret i8 [[R2]]
 ;
   %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
@@ -81,7 +81,7 @@ define <2 x i8> @lshr_and_commute_splat(<2 x i8> %a, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_and_commute_splat(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 6, i8 6>
-; CHECK-NEXT:    [[R2:%.*]] = and <2 x i8> [[B1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R2:%.*]] = and <2 x i8> [[Y:%.*]], [[B1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R2]]
 ;
   %x = srem <2 x i8> %a, <i8 42, i8 42> ; thwart complexity-based canonicalization
@@ -96,7 +96,7 @@ define i8 @lshr_or(i8 %a, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 4
 ; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i8 [[Y:%.*]], -16
-; CHECK-NEXT:    [[L:%.*]] = or i8 [[B1]], [[Y_MASKED]]
+; CHECK-NEXT:    [[L:%.*]] = or i8 [[Y_MASKED]], [[B1]]
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
   %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
@@ -111,7 +111,7 @@ define <2 x i8> @lshr_or_commute_splat(<2 x i8> %a, <2 x i8> %y) {
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[Y_MASKED:%.*]] = and <2 x i8> [[Y:%.*]], <i8 -16, i8 -16>
-; CHECK-NEXT:    [[L:%.*]] = or <2 x i8> [[B1]], [[Y_MASKED]]
+; CHECK-NEXT:    [[L:%.*]] = or <2 x i8> [[Y_MASKED]], [[B1]]
 ; CHECK-NEXT:    ret <2 x i8> [[L]]
 ;
   %x = srem <2 x i8> %a, <i8 42, i8 42> ; thwart complexity-based canonicalization
@@ -126,7 +126,7 @@ define i8 @lshr_xor(i8 %a, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
 ; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 3
 ; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i8 [[Y:%.*]], -8
-; CHECK-NEXT:    [[L:%.*]] = xor i8 [[B1]], [[Y_MASKED]]
+; CHECK-NEXT:    [[L:%.*]] = xor i8 [[Y_MASKED]], [[B1]]
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
   %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
@@ -141,7 +141,7 @@ define <2 x i8> @lshr_xor_commute_splat(<2 x i8> %a, <2 x i8> %y) {
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i8> [[X]], <i8 3, i8 3>
 ; CHECK-NEXT:    [[Y_MASKED:%.*]] = and <2 x i8> [[Y:%.*]], <i8 -8, i8 -8>
-; CHECK-NEXT:    [[L:%.*]] = xor <2 x i8> [[B1]], [[Y_MASKED]]
+; CHECK-NEXT:    [[L:%.*]] = xor <2 x i8> [[Y_MASKED]], [[B1]]
 ; CHECK-NEXT:    ret <2 x i8> [[L]]
 ;
   %x = srem <2 x i8> %a, <i8 42, i8 42> ; thwart complexity-based canonicalization
@@ -294,6 +294,39 @@ define i8 @lshr_and_or(i8 %a, i8 %y)  {
   ret i8 %l
 }
 
+define i8 @lshr_and_or_disjoint(i8 %a, i8 %y)  {
+; CHECK-LABEL: @lshr_and_or_disjoint(
+; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 2
+; CHECK-NEXT:    [[Y_MASK:%.*]] = and i8 [[Y:%.*]], 52
+; CHECK-NEXT:    [[L:%.*]] = or disjoint i8 [[Y_MASK]], [[B1]]
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
+  %r = lshr i8 %y, 2
+  %m = and i8 %r, 13
+  %b = or disjoint i8 %x, %m
+  %l = shl i8 %b, 2
+  ret i8 %l
+}
+
+define i8 @ashr_and_or_disjoint(i8 %a, i8 %y)  {
+; CHECK-LABEL: @ashr_and_or_disjoint(
+; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 2
+; CHECK-NEXT:    [[Y_MASK:%.*]] = and i8 [[Y:%.*]], 52
+; CHECK-NEXT:    [[L:%.*]] = or disjoint i8 [[Y_MASK]], [[B1]]
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
+  %r = ashr i8 %y, 2
+  %m = and i8 %r, 13
+  %b = or disjoint i8 %x, %m
+  %l = shl i8 %b, 2
+  ret i8 %l
+}
+
+
 define <2 x i8> @lshr_and_or_commute_splat(<2 x i8> %a, <2 x i8> %y)  {
 ; CHECK-LABEL: @lshr_and_or_commute_splat(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
@@ -347,7 +380,7 @@ define i8 @lshr_and_add_use1(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    call void @use(i8 [[R]])
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
@@ -364,7 +397,7 @@ define i8 @lshr_and_add_use2(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
@@ -380,7 +413,7 @@ define i8 @lshr_and_add_use3(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @lshr_and_add_use3(
 ; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    call void @use(i8 [[B]])
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
@@ -399,7 +432,7 @@ define i8 @lshr_and_add_use4(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    call void @use(i8 [[R]])
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
@@ -417,7 +450,7 @@ define i8 @lshr_and_add_use5(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    call void @use(i8 [[B]])
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
@@ -437,7 +470,7 @@ define i8 @lshr_and_add_use6(i8 %x, i8 %y)  {
 ; CHECK-NEXT:    call void @use(i8 [[R]])
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 12
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[M]], [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    [[L:%.*]] = shl i8 [[B]], 3
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
@@ -508,7 +541,7 @@ define <2 x i32> @lshr_add_and_shl_v2i32_undef(<2 x i32> %x, <2 x i32> %y)  {
 ; CHECK-LABEL: @lshr_add_and_shl_v2i32_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 undef, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 127>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
@@ -523,7 +556,7 @@ define <2 x i32> @lshr_add_and_shl_v2i32_nonuniform(<2 x i32> %x, <2 x i32> %y) 
 ; CHECK-LABEL: @lshr_add_and_shl_v2i32_nonuniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 255>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 6>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
@@ -614,8 +647,8 @@ define <8 x i16> @test_FoldShiftByConstant_CreateSHL2(<8 x i16> %in) {
 
 define <16 x i8> @test_FoldShiftByConstant_CreateAnd(<16 x i8> %in0) {
 ; CHECK-LABEL: @test_FoldShiftByConstant_CreateAnd(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i8> [[IN0:%.*]], <i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33>
-; CHECK-NEXT:    [[VSHL_N:%.*]] = and <16 x i8> [[TMP1]], <i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32>
+; CHECK-NEXT:    [[VSRA_N2:%.*]] = mul <16 x i8> [[IN0:%.*]], <i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33, i8 33>
+; CHECK-NEXT:    [[VSHL_N:%.*]] = and <16 x i8> [[VSRA_N2]], <i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32, i8 -32>
 ; CHECK-NEXT:    ret <16 x i8> [[VSHL_N]]
 ;
   %vsra_n = ashr <16 x i8> %in0, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>

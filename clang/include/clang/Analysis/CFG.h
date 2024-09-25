@@ -879,6 +879,7 @@ private:
   ///
   /// Optimization Note: This bit could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoReturnElement : 1;
 
   /// The parent CFG that owns this CFGBlock.
@@ -1007,7 +1008,9 @@ public:
 
   class FilterOptions {
   public:
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreNullPredecessors : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreDefaultsWithCoveredEnums : 1;
 
     FilterOptions()
@@ -1215,7 +1218,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   class BuildOptions {
-    std::bitset<Stmt::lastStmtConstant> alwaysAddMask;
+    // Stmt::lastStmtConstant has the same value as the last Stmt kind,
+    // so make sure we add one to account for this!
+    std::bitset<Stmt::lastStmtConstant + 1> alwaysAddMask;
 
   public:
     using ForcedBlkExprs = llvm::DenseMap<const Stmt *, const CFGBlock *>;

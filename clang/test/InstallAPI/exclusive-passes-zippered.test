@@ -1,0 +1,56 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: mkdir -p %t/Frameworks/
+; RUN: cp -r %S/Inputs/Zippered/Zippered.framework %t/Frameworks/
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: yaml2obj %S/Inputs/Zippered/Zippered.yaml -o %t/Frameworks/Zippered.framework/Zippered
+
+; RUN: clang-installapi \
+; RUN: --target=x86_64-apple-macos13 -darwin-target-variant x86_64-apple-ios16-macabi \
+; RUN: -install_name /System/Library/Frameworks/Zippered.framework/Versions/A/Zippered \
+; RUN: -current_version 1 -compatibility_version 1 %t/inputs.json \
+; RUN: --verify-against=%t/Frameworks/Zippered.framework/Zippered \
+; RUN: -isysroot %S/Inputs/MacOSX13.0.sdk -F%t/Frameworks \
+; RUN: --verify-mode=Pedantic -o %t/Zippered.tbd \
+; RUN: --extra-private-header=%t/Extra.h 2>&1 | FileCheck -allow-empty %s \
+; RUN: --implicit-check-not warning: --implicit-check-not error:
+; RUN: llvm-readtapi -compare %t/Zippered.tbd %S/Inputs/Zippered/Zippered.tbd
+
+// Flag extra symbols exposed by macro definition.
+; RUN: not clang-installapi \
+; RUN: --target=x86_64-apple-macos13 -darwin-target-variant x86_64-apple-ios16-macabi \
+; RUN: -install_name /System/Library/Frameworks/Zippered.framework/Versions/A/Zippered \
+; RUN: -current_version 1 -compatibility_version 1 %t/inputs.json \
+; RUN: -isysroot %S/Inputs/MacOSX13.0.sdk -F%t/Frameworks \
+; RUN: --verify-mode=Pedantic -o %t/Zippered.tbd -v \
+; RUN: --verify-against=%t/Frameworks/Zippered.framework/Zippered \
+; RUN: --extra-private-header=%t/Extra.h -XExtra -DExtra 2>&1 | FileCheck %s --check-prefix=MACRO_DEF
+
+; MACRO_DEF-COUNT-2: "-D" "Extra"
+; MACRO_DEF: violations found for x86_64-apple-macos13
+; MACRO_DEF: Extra.h:5:12: error: declaration has external linkage, but dynamic library doesn't have symbol 'foo$bar'
+; MACRO_DEF-COUNT-2: "-D" "Extra"
+; MACRO_DEF-NOT: violations found for x86_64-apple-ios16-macabi
+
+;--- Extra.h
+#define __STRING(x)     #x
+
+#if defined(Extra)
+  #define MACRO_DEF "$bar"
+extern int foo() __asm("_" __STRING(foo) MACRO_DEF) __attribute__((availability(ios, unavailable)));
+#endif
+
+;--- inputs.json.in
+{
+  "headers": [ 
+  {
+    "path" : "DSTROOT/Frameworks/Zippered.framework/PrivateHeaders/Zippered_Private.h",
+    "type" : "private"
+  }, 
+  {
+    "path" : "DSTROOT/Frameworks/Zippered.framework/Headers/Zippered.h",
+    "type" : "public"
+  }
+  ],
+  "version": "3"
+}

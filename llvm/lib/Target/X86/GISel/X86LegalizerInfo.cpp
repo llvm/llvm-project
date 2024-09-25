@@ -13,7 +13,10 @@
 #include "X86LegalizerInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -39,6 +42,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasVLX = Subtarget.hasVLX();
   bool HasDQI = Subtarget.hasAVX512() && Subtarget.hasDQI();
   bool HasBWI = Subtarget.hasAVX512() && Subtarget.hasBWI();
+  bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
@@ -69,6 +73,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v32s16 = LLT::fixed_vector(32, 16);
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
+
+  const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
+  const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
+  const LLT s32MaxVector = HasAVX512 ? v16s32 : HasAVX ? v8s32 : v4s32;
+  const LLT s64MaxVector = HasAVX512 ? v8s64 : HasAVX ? v4s64 : v2s64;
 
   // todo: AVX512 bool vector predicate types
 
@@ -212,6 +221,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return typeInSet(0, {s8, s16, s32})(Query) ||
                (Is64Bit && typeInSet(0, {s64})(Query));
       })
+      .libcallFor({s64})
       .clampScalar(0, s8, sMaxScalar);
 
   // integer shifts
@@ -257,8 +267,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s8}, Is64Bit ? IntTypes64 : IntTypes32)
       .clampScalar(0, s8, s8)
-      .clampScalar(1, s8, sMaxScalar)
-      .scalarSameSizeAs(2, 1);
+      .clampScalar(1, s8, sMaxScalar);
 
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
@@ -306,7 +315,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_PHI)
       .legalIf([=](const LegalityQuery &Query) -> bool {
         return typeInSet(0, {s8, s16, s32, p0})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query)) ||
+               (UseX87 && typeIs(0, s80)(Query)) ||
+               (Is64Bit && typeIs(0, s64)(Query)) ||
                (HasSSE1 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query)) ||
                (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query)) ||
                (HasAVX512 &&
@@ -336,6 +346,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min*/ 8);
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, sMaxScalar}});
+
+  getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -367,9 +379,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                        {s64, p0, s64, 1},
                                        {v2s32, p0, v2s32, 1}});
     if (HasSSE1)
+      Action.legalForTypesWithMemDesc({{v4s32, p0, v4s32, 1}});
+    if (HasSSE2)
       Action.legalForTypesWithMemDesc({{v16s8, p0, v16s8, 1},
                                        {v8s16, p0, v8s16, 1},
-                                       {v4s32, p0, v4s32, 1},
                                        {v2s64, p0, v2s64, 1},
                                        {v2p0, p0, v2p0, 1}});
     if (HasAVX)
@@ -383,7 +396,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                        {v32s16, p0, v32s16, 1},
                                        {v16s32, p0, v16s32, 1},
                                        {v8s64, p0, v8s64, 1}});
-    Action.widenScalarToNextPow2(0, /*Min=*/8).clampScalar(0, s8, sMaxScalar);
+    Action.widenScalarToNextPow2(0, /*Min=*/8)
+        .clampScalar(0, s8, sMaxScalar)
+        .scalarize(0);
   }
 
   for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
@@ -405,27 +420,30 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
           (Query.Opcode == G_ANYEXT && Query.Types[0] == s128) ||
           (Is64Bit && Query.Types[0] == s64);
       })
-    .widenScalarToNextPow2(0, /*Min=*/8)
-    .clampScalar(0, s8, sMaxScalar)
-    .widenScalarToNextPow2(1, /*Min=*/8)
-    .clampScalar(1, s8, sMaxScalar);
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar)
+      .widenScalarToNextPow2(1, /*Min=*/8)
+      .clampScalar(1, s8, sMaxScalar)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (HasSSE1 && typeInSet(0, {s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {s64})(Query));
+        return (typeInSet(0, {s32, s64})(Query)) ||
+               (UseX87 && typeInSet(0, {s80})(Query));
       });
 
   // fp arithmetic
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
       .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typeInSet(0, {s32, v4s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {s64, v2s64})(Query)) ||
+        return (typeInSet(0, {s32, s64})(Query)) ||
+               (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
+               (HasSSE2 && typeInSet(0, {v2s64})(Query)) ||
                (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
+               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query)) ||
+               (UseX87 && typeInSet(0, {s80})(Query));
       });
 
   // fp comparison
@@ -481,6 +499,19 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   // vector ops
+  getActionDefinitionsBuilder(G_BUILD_VECTOR)
+      .customIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
+               (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
+               (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
+               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
+      })
+      .clampNumElements(0, v16s8, s8MaxVector)
+      .clampNumElements(0, v8s16, s16MaxVector)
+      .clampNumElements(0, v4s32, s32MaxVector)
+      .clampNumElements(0, v2s64, s64MaxVector)
+      .moreElementsToNextPow2(0);
+
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
         unsigned SubIdx = Query.Opcode == G_EXTRACT ? 0 : 1;
@@ -547,6 +578,71 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
+}
+
+bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                                      LostDebugLocObserver &LocObserver) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  switch (MI.getOpcode()) {
+  default:
+    // No idea what to do.
+    return false;
+  case TargetOpcode::G_BUILD_VECTOR:
+    return legalizeBuildVector(MI, MRI, Helper);
+  }
+  llvm_unreachable("expected switch to return");
+}
+
+bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  const auto &BuildVector = cast<GBuildVector>(MI);
+  Register Dst = BuildVector.getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  MachineFunction &MF = MIRBuilder.getMF();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  uint64_t DstTySize = DstTy.getScalarSizeInBits();
+
+  SmallVector<Constant *, 4> CstIdxs;
+  for (unsigned i = 0; i < BuildVector.getNumSources(); ++i) {
+    Register Source = BuildVector.getSourceReg(i);
+
+    auto ValueAndReg = getIConstantVRegValWithLookThrough(Source, MRI);
+    if (ValueAndReg) {
+      CstIdxs.emplace_back(ConstantInt::get(Ctx, ValueAndReg->Value));
+      continue;
+    }
+
+    auto FPValueAndReg = getFConstantVRegValWithLookThrough(Source, MRI);
+    if (FPValueAndReg) {
+      CstIdxs.emplace_back(ConstantFP::get(Ctx, FPValueAndReg->Value));
+      continue;
+    }
+
+    if (getOpcodeDef<GImplicitDef>(Source, MRI)) {
+      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
+      continue;
+    }
+    return false;
+  }
+
+  Constant *ConstVal = ConstantVector::get(CstIdxs);
+
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+  Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
+  auto Addr = MIRBuilder.buildConstantPool(
+      LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, DstTy, Alignment);
+
+  MIRBuilder.buildLoad(Dst, Addr, *MMO);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

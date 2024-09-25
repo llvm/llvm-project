@@ -40,14 +40,14 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS32-NEXT:      NumberOfAuxEntries: 2
 ; SYMS32-NEXT:      Function Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+1]]
-; SYMS32-NEXT:        OffsetToExceptionTable: 0x2A8
+; SYMS32-NEXT:        OffsetToExceptionTable: 0x2B8
 ; SYMS32-NEXT:        SizeOfFunction: 0xC
 ; SYMS32-NEXT:        PointerToLineNum: 0x0
 ; SYMS32-NEXT:        SymbolIndexOfNextBeyond: [[#IND+3]] 
 ; SYMS32-NEXT:      }
 ; SYMS32-NEXT:      CSECT Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+2]]
-; SYMS32-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS32-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS32-NEXT:        ParameterHashIndex: 0x0
 ; SYMS32-NEXT:        TypeChkSectNum: 0x0
 ; SYMS32-NEXT:        SymbolAlignmentLog2: 0
@@ -67,14 +67,14 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS32-NEXT:      NumberOfAuxEntries: 2
 ; SYMS32-NEXT:      Function Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+4]]
-; SYMS32-NEXT:        OffsetToExceptionTable: 0x2B4
+; SYMS32-NEXT:        OffsetToExceptionTable: 0x2C4
 ; SYMS32-NEXT:        SizeOfFunction: 0x34
 ; SYMS32-NEXT:        PointerToLineNum: 0x0
 ; SYMS32-NEXT:        SymbolIndexOfNextBeyond: [[#IND+6]]
 ; SYMS32-NEXT:      }
 ; SYMS32-NEXT:      CSECT Auxiliary Entry {
 ; SYMS32-NEXT:        Index: [[#IND+5]]
-; SYMS32-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS32-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS32-NEXT:        ParameterHashIndex: 0x0
 ; SYMS32-NEXT:        TypeChkSectNum: 0x0
 ; SYMS32-NEXT:        SymbolAlignmentLog2: 0
@@ -93,7 +93,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      NumberOfAuxEntries: 3
 ; SYMS64-NEXT:      Exception Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+1]]
-; SYMS64-NEXT:        OffsetToExceptionTable: 0x398
+; SYMS64-NEXT:        OffsetToExceptionTable: 0x3AC
 ; SYMS64-NEXT:        SizeOfFunction: 0x18
 ; SYMS64-NEXT:        SymbolIndexOfNextBeyond: [[#IND+4]]
 ; SYMS64-NEXT:        Auxiliary Type: AUX_EXCEPT (0xFF)
@@ -107,7 +107,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+3]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0
@@ -126,7 +126,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      NumberOfAuxEntries: 3
 ; SYMS64-NEXT:      Exception Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+5]]
-; SYMS64-NEXT:        OffsetToExceptionTable: 0x3AC
+; SYMS64-NEXT:        OffsetToExceptionTable: 0x3C0
 ; SYMS64-NEXT:        SizeOfFunction: 0x68
 ; SYMS64-NEXT:        SymbolIndexOfNextBeyond: [[#IND+8]]
 ; SYMS64-NEXT:        Auxiliary Type: AUX_EXCEPT (0xFF)
@@ -140,7 +140,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+7]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0

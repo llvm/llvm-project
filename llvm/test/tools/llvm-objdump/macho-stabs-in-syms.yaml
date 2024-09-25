@@ -1,0 +1,263 @@
+# Check we don't error out on MachO files with stabs symbol entries that
+# repurpose the section field so it's out of range for normal symbols.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --syms %t | FileCheck %s
+
+# CHECK: 0000000000000000      d  *UND*
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           16
+  sizeofcmds:      744
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100003FA0
+        size:            8
+        offset:          0x3FA0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00008052C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x100003FA8
+        size:            88
+        offset:          0x3FA8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000A03F00004000000040000000A83F00000000000040000000000000000000000000000000030000000C00010010000100000000000000000200000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        688
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         16384
+    datasize:        56
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         16440
+    datasize:        48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16496
+    nsyms:           11
+    stroff:          16672
+    strsize:         120
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       9
+    iextdefsym:      9
+    nextdefsym:      2
+    iundefsym:       11
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            73BD5072-2F45-39FD-8013-8102F002C240
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           917504
+    sdk:             918528
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         72942592
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        16288
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 88171522
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16488
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16496
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         16800
+    datasize:        272
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      18
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      9
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      13
+            Name:            main
+            Flags:           0x0
+            Address:         0x3FA0
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          1
+      n_type:          0x64
+      # This line has been changed from a real object file to move the section
+      # out of valid range for normal symbols.
+      n_sect:          42
+      n_desc:          0
+      n_value:         0
+    - n_strx:          28
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          68
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          74
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         1713522175
+    - n_strx:          1
+      n_type:          0x2E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983584
+    - n_strx:          22
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983584
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         8
+    - n_strx:          1
+      n_type:          0x4E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983584
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983584
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - '/Users/tim/llvm/llvm-project/build.rel/'
+    - tmp.c
+    - '/Users/tim/llvm/llvm-project/build.rel/tmp.o'
+    - ''
+  FunctionStarts:  [ 0x3FA0 ]
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x30, 0x0,
+                     0x0, 0x0, 0x30, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+...

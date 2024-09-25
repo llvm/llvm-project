@@ -3,7 +3,7 @@ set(INTERCEPTION_TESTSUITES)
 
 # Unit tests. There are currently no unit tests capable to running on Apple or
 # Android targets.
-if(COMPILER_RT_INCLUDE_TESTS AND NOT ANDROID AND NOT APPLE)
+if(NOT ANDROID AND NOT APPLE)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
@@ -14,4 +14,3 @@ endif()
 add_lit_testsuite(check-interception "Running the Interception tests"
   ${INTERCEPTION_TESTSUITES}
   DEPENDS ${INTERCEPTION_TEST_DEPS})
-set_target_properties(check-interception PROPERTIES FOLDER "Compiler-RT Misc")

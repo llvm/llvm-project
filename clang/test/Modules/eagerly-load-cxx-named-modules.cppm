@@ -7,8 +7,8 @@
 // RUN:    2>&1 | FileCheck %t/user.cpp
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -o %t/b.pcm \
 // RUN:    -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 %t/b.pcm -Wno-read-modules-implicitly -S \
-// RUN:    -emit-llvm 2>&1 -o - | FileCheck %t/b.cppm
+// RUN: %clang_cc1 -std=c++20 %t/b.pcm \
+// RUN:    -fprebuilt-module-path=%t -emit-llvm 2>&1 -o - | FileCheck %t/b.cppm
 
 //--- a.cppm
 export module a;

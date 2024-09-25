@@ -22,7 +22,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -122,16 +121,23 @@ public:
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
-        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {}
+      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
+        LastF(Arg.LastF),
+        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
+  }
 
   BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
   BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
 
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
+    Handles = std::move(RHS.Handles);
     Probs = std::move(RHS.Probs);
     EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
+    for (auto &Handle : Handles)
+      Handle.setBPI(this);
     return *this;
   }
 
@@ -163,7 +169,7 @@ public:
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
-  /// as having a relative probability >= 80%.
+  /// as having a relative probability > 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
   /// Print an edge's probability.
@@ -279,6 +285,8 @@ private:
     }
 
   public:
+    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
+
     BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };
@@ -336,7 +344,7 @@ private:
 
   /// Helper to construct LoopBlock for \p BB.
   LoopBlock getLoopBlock(const BasicBlock *BB) const {
-    return LoopBlock(BB, *LI, *SccI.get());
+    return LoopBlock(BB, *LI, *SccI);
   }
 
   /// Returns true if destination block belongs to some loop and source block is

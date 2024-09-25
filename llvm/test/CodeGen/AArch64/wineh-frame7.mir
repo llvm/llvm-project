@@ -35,37 +35,37 @@
     %A = alloca [748193 x i32], align 4
     %a = alloca i32, align 4
     %B = alloca [123 x i32], align 4
-    store i32 %i, i32* %i.addr, align 4
-    %0 = load i32, i32* %i.addr, align 4
+    store i32 %i, ptr %i.addr, align 4
+    %0 = load i32, ptr %i.addr, align 4
     %add = add nsw i32 %0, 2
-    store i32 %add, i32* %a, align 4
+    store i32 %add, ptr %a, align 4
     %call = call i32 @"?func2@@YAHXZ"()
-    %1 = load i32, i32* %i.addr, align 4
+    %1 = load i32, ptr %i.addr, align 4
     %cmp = icmp sgt i32 %1, 2
     br i1 %cmp, label %if.then, label %if.else
 
   if.then:                                          ; preds = %entry
     %call1 = call i32 @"?func2@@YAHXZ"()
-    store i32 %call1, i32* %retval, align 4
+    store i32 %call1, ptr %retval, align 4
     br label %return
 
   if.else:                                          ; preds = %entry
-    %arraydecay = getelementptr inbounds [123 x i32], [123 x i32]* %B, i32 0, i32 0
-    %call2 = call i32 @"?func3@@YAHPEAH@Z"(i32* %arraydecay)
-    store i32 %call2, i32* %retval, align 4
+    %arraydecay = getelementptr inbounds [123 x i32], ptr %B, i32 0, i32 0
+    %call2 = call i32 @"?func3@@YAHPEAH@Z"(ptr %arraydecay)
+    store i32 %call2, ptr %retval, align 4
     br label %return
 
   return:                                           ; preds = %if.else, %if.then
-    %2 = load i32, i32* %retval, align 4
+    %2 = load i32, ptr %retval, align 4
     ret i32 %2
   }
 
   declare dso_local i32 @"?func2@@YAHXZ"() #1
 
-  declare dso_local i32 @"?func3@@YAHPEAH@Z"(i32*) #1
+  declare dso_local i32 @"?func3@@YAHPEAH@Z"(ptr) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }

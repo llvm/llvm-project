@@ -22,7 +22,10 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             stopCommands=["?" + command_quiet, command_not_quiet],
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
-        full_output = self.collect_console(duration=1.0)
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_not_quiet,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_not_quiet, full_output)
 
@@ -47,7 +50,10 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             postRunCommands=commands if use_post_run_commands else None,
             expectFailure=True,
         )
-        full_output = self.collect_console(duration=1.0)
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_abort_on_error,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)
 
@@ -75,6 +81,9 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
             expectFailure=True,
         )
-        full_output = self.collect_console(duration=1.0)
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_abort_on_error,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)

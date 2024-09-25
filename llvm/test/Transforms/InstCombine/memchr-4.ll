@@ -44,7 +44,7 @@ define ptr @call_memchr_ax_2_uimax_p2() {
 
 define ptr @fold_memchr_a12345_3_uimax_p2() {
 ; CHECK-LABEL: @fold_memchr_a12345_3_uimax_p2(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ;
 
   %res = call ptr @memchr(ptr @a12345, i32 3, i64 4294967297)

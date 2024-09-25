@@ -170,6 +170,10 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_label_attr - substituted by a call to a label attribute matcher;
+  //   - $_roundingMode_attr - substituted by a call to a rounding mode
+  //     attribute matcher;
+  //   - $_fpExceptionBehavior_attr - substituted by a call to a FP exception
+  //     behavior attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;
@@ -315,17 +319,19 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string immArgPositionsCpp = "{" # !interleave(immArgPositions, ", ") # "}";
   string immArgAttrNamesCpp = "{" # !interleave(!foreach(name, immArgAttrNames,
     "StringLiteral(\"" # name # "\")"), ", ") # "}";
-  let llvmBuilder = [{
+  string baseLlvmBuilder = [{
     auto *inst = LLVM::detail::createIntrinsicCall(
       builder, moduleTranslation, &opInst, llvm::Intrinsic::}] # !interleave([
         enumName, "" # numResults, overloadedResultsCpp, overloadedOperandsCpp,
         immArgPositionsCpp, immArgAttrNamesCpp], ",") # [{);
     (void) inst;
-    }] # !if(!gt(requiresAccessGroup, 0), setAccessGroupsMetadataCode, "")
+    }];
+  string baseLlvmBuilderCoda = !if(!gt(numResults, 0), "$res = inst;", "");
+  let llvmBuilder =  baseLlvmBuilder # !if(!gt(requiresAccessGroup, 0), setAccessGroupsMetadataCode, "")
        # !if(!gt(requiresAliasAnalysis, 0), setAliasAnalysisMetadataCode, "")
-       # !if(!gt(numResults, 0), "$res = inst;", "");
+       # baseLlvmBuilderCoda;
 
-  string mlirBuilder = [{
+  string baseMlirBuilder = [{
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
@@ -341,9 +347,32 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
     auto op = $_builder.create<$_qualCppClassName>(
       $_location, resultTypes, mlirOperands, mlirAttrs);
-    }] # !if(!gt(requiresFastmath, 0),
+    }];
+  string baseMlirBuilderCoda = !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
+  let mlirBuilder = baseMlirBuilder # !if(!gt(requiresFastmath, 0),
       "moduleImport.setFastmathFlagsAttr(inst, op);", "")
-    # !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
+    # baseMlirBuilderCoda;
+
+  // Code for handling a `range` attribute that holds the constant range of the
+  // intrinsic's result (if one is specified at the call site). This is intended
+  // for GPU IDs and other calls where range() is meaningful. It expects
+  // an optional LLVM_ConstantRangeAttr named `range` to be present on the
+  // operation. These are included to abstract out common code in several
+  // dialects.
+  string setRangeRetAttrCode = [{
+    if ($range) {
+      inst->addRangeRetAttr(::llvm::ConstantRange(
+        $range->getLower(), $range->getUpper()));
+    }
+  }];
+  string importRangeRetAttrCode = [{
+    // Note: we don't want to look in to the declaration here.
+    auto rangeAttr = inst->getAttributes().getRetAttr(::llvm::Attribute::Range);
+    if (rangeAttr.isValid()) {
+      const ::llvm::ConstantRange& value = rangeAttr.getValueAsConstantRange();
+      op.setRangeAttr(::mlir::LLVM::ConstantRangeAttr::get($_builder.getContext(), value.getLower(), value.getUpper()));
+    }
+  }];
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places

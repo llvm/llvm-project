@@ -1788,10 +1788,7 @@ static QualType getReferenceInitTemporaryType(const Expr *Init,
     }
 
     // Skip sub-object accesses into rvalues.
-    SmallVector<const Expr *, 2> CommaLHSs;
-    SmallVector<SubobjectAdjustment, 2> Adjustments;
-    const Expr *SkippedInit =
-        Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+    const Expr *SkippedInit = Init->skipRValueSubobjectAdjustments();
     if (SkippedInit != Init) {
       Init = SkippedInit;
       continue;
@@ -2042,7 +2039,7 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
     QualType QT = FI->getType();
     // It may be a multidimensional array.
     while (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
-      if (AT->getSize() == 0)
+      if (AT->isZeroSize())
         break;
       QT = AT->getElementType();
     }
@@ -2136,7 +2133,7 @@ bool CFGBuilder::hasTrivialDestructor(const VarDecl *VD) const {
 
   // Check for constant size array. Set type to array element type.
   while (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
-    if (AT->getSize() == 0)
+    if (AT->isZeroSize())
       return true;
     QT = AT->getElementType();
   }
@@ -6167,7 +6164,7 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 
   printTerminator(TempOut, LO);
 
-  Out << JsonFormat(TempOut.str(), AddQuotes);
+  Out << JsonFormat(Buf, AddQuotes);
 }
 
 // Returns true if by simply looking at the block, we can be sure that it
@@ -6348,10 +6345,9 @@ struct DOTGraphTraits<const CFG*> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getNodeLabel(const CFGBlock *Node, const CFG *Graph) {
-    std::string OutSStr;
-    llvm::raw_string_ostream Out(OutSStr);
+    std::string OutStr;
+    llvm::raw_string_ostream Out(OutStr);
     print_block(Out,Graph, *Node, *GraphHelper, false, false);
-    std::string& OutStr = Out.str();
 
     if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
 

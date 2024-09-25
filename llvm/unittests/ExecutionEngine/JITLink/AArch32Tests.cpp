@@ -39,7 +39,8 @@ struct MutableWord {
 namespace llvm {
 namespace jitlink {
 
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType);
+Expected<aarch32::EdgeKind_aarch32>
+getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &Cfg);
 Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 } // namespace jitlink
@@ -47,7 +48,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 TEST(AArch32_ELF, EdgeKinds) {
   // Fails: Invalid ELF type -> JITLink kind
-  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_NONE);
+  aarch32::ArmConfig Cfg;
+  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_ME_TOO, Cfg);
   EXPECT_TRUE(errorToBool(ErrKind.takeError()));
 
   // Fails: Invalid JITLink kind -> ELF type
@@ -59,7 +61,7 @@ TEST(AArch32_ELF, EdgeKinds) {
     EXPECT_FALSE(errorToBool(ELFType.takeError()))
         << "Failed to translate JITLink kind -> ELF type";
 
-    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType);
+    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType, Cfg);
     EXPECT_FALSE(errorToBool(JITLinkKind.takeError()))
         << "Failed to translate ELF type -> JITLink kind";
 

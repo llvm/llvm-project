@@ -33,6 +33,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -103,7 +104,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
-  initializeNVPTXDAGToDAGISelPass(PR);
+  initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
 }
@@ -132,8 +133,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
                         CPU, FS, Options, Reloc::PIC_,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
-      TLOF(std::make_unique<NVPTXTargetObjectFile>()),
+      is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
   if (TT.getOS() == Triple::NVCL)
@@ -225,55 +225,17 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
-void NVPTXTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, FunctionPassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvvm-reflect") {
-          PM.addPass(NVVMReflectPass());
-          return true;
-        }
-        if (PassName == "nvvm-intr-range") {
-          PM.addPass(NVVMIntrRangePass());
-          return true;
-        }
-        return false;
-      });
-
-  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
-    FAM.registerPass([&] { return NVPTXAA(); });
-  });
-
-  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
-    if (AAName == "nvptx-aa") {
-      AAM.registerFunctionAnalysis<NVPTXAA>();
-      return true;
-    }
-    return false;
-  });
-
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, ModulePassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvptx-lower-ctor-dtor") {
-          PM.addPass(NVPTXCtorDtorLoweringPass());
-          return true;
-        }
-        if (PassName == "generic-to-nvvm") {
-          PM.addPass(GenericToNVVMPass());
-          return true;
-        }
-        return false;
-      });
+void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
-        // FIXME: NVVMIntrRangePass is causing numerical discrepancies,
-        // investigate and re-enable.
-        // FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        // Note: NVVMIntrRangePass was causing numerical discrepancies at one
+        // point, if issues crop up, consider disabling.
+        FPM.addPass(NVVMIntrRangePass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }
@@ -353,6 +315,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   addPass(createNVPTXAAWrapperPass());
   addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
@@ -380,7 +343,8 @@ void NVPTXPassConfig::addIRPasses() {
     addStraightLineScalarOptimizationPasses();
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===
@@ -498,7 +462,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
     printAndVerify("After ILP optimizations");
 
   addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSEID);
+  addPass(&MachineCSELegacyID);
 
   addPass(&MachineSinkingID);
   printAndVerify("After Machine LICM, CSE and Sinking passes");

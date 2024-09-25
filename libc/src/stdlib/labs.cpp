@@ -9,9 +9,10 @@
 #include "src/stdlib/labs.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, labs, (long n)) { return integer_abs(n); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,11 +38,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
-
-static cl::opt<bool>
-    UseSubRegLiveness("ppc-track-subreg-liveness",
-                      cl::desc("Enable subregister liveness tracking for PPC"),
-                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
@@ -68,8 +65,7 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
-  InstSelector.reset(createPPCInstructionSelector(
-      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
 }
 
 void PPCSubtarget::initializeEnvironment() {
@@ -124,10 +120,28 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
 
-  if (HasAIXSmallLocalExecTLS && (!TargetTriple.isOSAIX() || !IsPPC64))
-    report_fatal_error(
-      "The aix-small-local-exec-tls attribute is only supported on AIX in "
-      "64-bit mode.\n", false);
+  if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
+    if (!TargetTriple.isOSAIX() || !IsPPC64)
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
+                         "only supported on AIX in "
+                         "64-bit mode.\n",
+                         false);
+    // The aix-small-local-[exec|dynamic]-tls attribute should only be used with
+    // -data-sections, as having data sections turned off with this option
+    // is not ideal for performance. Moreover, the
+    // small-local-[exec|dynamic]-tls region is a limited resource, and should
+    // not be used for variables that may be replaced.
+    if (!TM.getDataSections())
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute can "
+                         "only be specified with "
+                         "-data-sections.\n",
+                         false);
+  }
+
+  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
+                       "is only supported on AIX in 64-bit mode.\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -168,17 +182,64 @@ bool PPCSubtarget::useAA() const {
   return true;
 }
 
-bool PPCSubtarget::enableSubRegLiveness() const {
-  return UseSubRegLiveness;
-}
+bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
+  if (isAIXABI()) {
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      // On AIX the only symbols that aren't indirect are toc-data.
+      return !GVar->hasAttribute("toc-data");
+
+    return true;
+  }
+
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+
+  if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;
+}
+
+CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
+                                            const GlobalValue *GV) const {
+  // If there isn't an attribute to override the module code model
+  // this will be the effective code model.
+  CodeModel::Model ModuleModel = TM.getCodeModel();
+
+  // Initially support per global code model for AIX only.
+  if (!isAIXABI())
+    return ModuleModel;
+
+  // Only GlobalVariables carry an attribute which can override the module code
+  // model.
+  assert(GV && "Unexpected NULL GlobalValue");
+  const GlobalVariable *GlobalVar =
+      [](const GlobalValue *GV) -> const GlobalVariable * {
+    const GlobalVariable *Var = dyn_cast<GlobalVariable>(GV);
+    if (Var)
+      return Var;
+
+    const GlobalAlias *Alias = dyn_cast<GlobalAlias>(GV);
+    if (Alias)
+      return dyn_cast<GlobalVariable>(Alias->getAliaseeObject());
+
+    return nullptr;
+  }(GV);
+
+  if (!GlobalVar)
+    return ModuleModel;
+
+  std::optional<CodeModel::Model> MaybeCodeModel = GlobalVar->getCodeModel();
+  if (MaybeCodeModel) {
+    CodeModel::Model CM = *MaybeCodeModel;
+    assert((CM == CodeModel::Small || CM == CodeModel::Large) &&
+           "invalid code model for AIX");
+    return CM;
+  }
+
+  return ModuleModel;
 }
 
 bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }

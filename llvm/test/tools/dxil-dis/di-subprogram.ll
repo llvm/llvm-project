@@ -12,8 +12,8 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 !1 = !DIFile(filename: "some-source", directory: "some-path")
 !2 = !{}
 
-; CHECK: !3 = !{i32 7, !"Dwarf Version", i32 2}
-!3 = !{i32 7, !"Dwarf Version", i32 2}
+; CHECK: !3 = !{i32 2, !"Dwarf Version", i32 4}
+!3 = !{i32 2, !"Dwarf Version", i32 4}
 ; CHECK: !4 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 

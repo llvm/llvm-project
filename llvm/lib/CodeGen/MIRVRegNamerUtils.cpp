@@ -123,7 +123,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   llvm::transform(MI.uses(), std::back_inserter(MIOperands), GetHashableMO);
 
   for (const auto *Op : MI.memoperands()) {
-    MIOperands.push_back((unsigned)Op->getSize());
+    MIOperands.push_back((unsigned)Op->getSize().getValue());
     MIOperands.push_back((unsigned)Op->getFlags());
     MIOperands.push_back((unsigned)Op->getOffset());
     MIOperands.push_back((unsigned)Op->getSuccessOrdering());

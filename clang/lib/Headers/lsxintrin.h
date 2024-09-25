@@ -1778,6 +1778,18 @@ extern __inline
 
 extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128
+    __lsx_vfrecipe_s(__m128 _1) {
+  return (__m128)__builtin_lsx_vfrecipe_s((v4f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128d
+    __lsx_vfrecipe_d(__m128d _1) {
+  return (__m128d)__builtin_lsx_vfrecipe_d((v2f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128
     __lsx_vfrint_s(__m128 _1) {
   return (__m128)__builtin_lsx_vfrint_s((v4f32)_1);
 }
@@ -1798,6 +1810,18 @@ extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128d
     __lsx_vfrsqrt_d(__m128d _1) {
   return (__m128d)__builtin_lsx_vfrsqrt_d((v2f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128
+    __lsx_vfrsqrte_s(__m128 _1) {
+  return (__m128)__builtin_lsx_vfrsqrte_s((v4f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m128d
+    __lsx_vfrsqrte_d(__m128d _1) {
+  return (__m128d)__builtin_lsx_vfrsqrte_d((v2f64)_1);
 }
 
 extern __inline

@@ -130,7 +130,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = add i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -193,7 +193,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = add i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -251,7 +251,7 @@ define amdgpu_kernel void @atomic_add_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = add i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -310,7 +310,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = add i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -364,7 +364,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -1, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = and i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -421,7 +421,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -1, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = and i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -473,7 +473,7 @@ define amdgpu_kernel void @atomic_and_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -1, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = and i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -526,7 +526,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -1, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = and i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    store i32 [[TMP13]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -586,7 +586,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -649,7 +649,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -707,7 +707,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -766,7 +766,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
-; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
+; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = mul i32 [[IN]], [[TMP5]]
 ; IR-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[OUT2:%.*]], align 4
@@ -820,7 +820,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -2147483648, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -878,7 +878,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -2147483648, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -931,7 +931,7 @@ define amdgpu_kernel void @atomic_max_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -2147483648, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -985,7 +985,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 -2147483648, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp sgt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1040,7 +1040,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 0, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1098,7 +1098,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 0, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1151,7 +1151,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr addrspace(1) %out, ptr addrsp
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 0, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1205,7 +1205,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 0, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1260,7 +1260,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 2147483647, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1318,7 +1318,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 2147483647, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1371,7 +1371,7 @@ define amdgpu_kernel void @atomic_min_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 2147483647, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]
@@ -1425,7 +1425,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP10]])
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP10]])
 ; IR-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], i32 2147483647, i32 [[IN]]
 ; IR-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP11]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP11]], i32 [[TMP12]]

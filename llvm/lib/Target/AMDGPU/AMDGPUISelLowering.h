@@ -84,6 +84,8 @@ protected:
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
@@ -199,7 +201,7 @@ public:
                                NegatibleCost &Cost,
                                unsigned Depth) const override;
 
-  bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -228,6 +230,20 @@ public:
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
   bool isSDNodeAlwaysUniform(const SDNode *N) const override;
+
+  // FIXME: This hook should not exist
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
+    return AtomicExpansionKind::None;
+  }
+
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 
@@ -372,8 +388,6 @@ public:
     return MVT::i32;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };
@@ -404,6 +418,9 @@ enum NodeType : unsigned {
 
   // s_endpgm, but we may want to insert it in the middle of the block.
   ENDPGM_TRAP,
+
+  // "s_trap 2" equivalent on hardware that does not support it.
+  SIMULATED_TRAP,
 
   // Return to a shader part's epilog code.
   RETURN_TO_EPILOG,
@@ -536,8 +553,6 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
-  FPTRUNC_ROUND_UPWARD,
-  FPTRUNC_ROUND_DOWNWARD,
 
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -556,17 +571,25 @@ enum NodeType : unsigned {
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_LOAD_FMIN,
-  ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,
   BUFFER_LOAD_BYTE,
   BUFFER_LOAD_SHORT,
+  BUFFER_LOAD_TFE,
+  BUFFER_LOAD_UBYTE_TFE,
+  BUFFER_LOAD_USHORT_TFE,
+  BUFFER_LOAD_BYTE_TFE,
+  BUFFER_LOAD_SHORT_TFE,
   BUFFER_LOAD_FORMAT,
   BUFFER_LOAD_FORMAT_TFE,
   BUFFER_LOAD_FORMAT_D16,
   SBUFFER_LOAD,
+  SBUFFER_LOAD_BYTE,
+  SBUFFER_LOAD_UBYTE,
+  SBUFFER_LOAD_SHORT,
+  SBUFFER_LOAD_USHORT,
+  SBUFFER_PREFETCH_DATA,
   BUFFER_STORE,
   BUFFER_STORE_BYTE,
   BUFFER_STORE_SHORT,
@@ -589,6 +612,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FADD,
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
+  BUFFER_ATOMIC_COND_SUB_U32,
 
   LAST_AMDGPU_ISD_NUMBER
 };

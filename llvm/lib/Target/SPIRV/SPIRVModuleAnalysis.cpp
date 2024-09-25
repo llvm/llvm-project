@@ -21,7 +21,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "TargetInfo/SPIRVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -34,6 +33,22 @@ static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
                 cl::Optional, cl::init(false));
+
+static cl::list<SPIRV::Capability::Capability>
+    AvoidCapabilities("avoid-spirv-capabilities",
+                      cl::desc("SPIR-V capabilities to avoid if there are "
+                               "other options enabling a feature"),
+                      cl::ZeroOrMore, cl::Hidden,
+                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
+                                            "SPIR-V Shader capability")));
+// Use sets instead of cl::list to check "if contains" condition
+struct AvoidCapabilitiesSet {
+  SmallSet<SPIRV::Capability::Capability, 4> S;
+  AvoidCapabilitiesSet() {
+    for (auto Cap : AvoidCapabilities)
+      S.insert(Cap);
+  }
+};
 
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
@@ -58,23 +73,44 @@ static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  unsigned ReqMinVer = getSymbolicOperandMinVersion(Category, i);
-  unsigned ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
-  unsigned TargetVer = ST.getSPIRVVersion();
-  bool MinVerOK = !ReqMinVer || !TargetVer || TargetVer >= ReqMinVer;
-  bool MaxVerOK = !ReqMaxVer || !TargetVer || TargetVer <= ReqMaxVer;
+  static AvoidCapabilitiesSet
+      AvoidCaps; // contains capabilities to avoid if there is another option
+
+  VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
+  VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
+  VersionTuple SPIRVVersion = ST.getSPIRVVersion();
+  bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
+  bool MaxVerOK =
+      ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
   if (ReqCaps.empty()) {
     if (ReqExts.empty()) {
       if (MinVerOK && MaxVerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
-      return {false, {}, {}, 0, 0};
+      return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
   } else if (MinVerOK && MaxVerOK) {
-    for (auto Cap : ReqCaps) { // Only need 1 of the capabilities to work.
+    if (ReqCaps.size() == 1) {
+      auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap))
-        return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+        return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+    } else {
+      // By SPIR-V specification: "If an instruction, enumerant, or other
+      // feature specifies multiple enabling capabilities, only one such
+      // capability needs to be declared to use the feature." However, one
+      // capability may be preferred over another. We use command line
+      // argument(s) and AvoidCapabilities to avoid selection of certain
+      // capabilities if there are other options.
+      CapabilityList UseCaps;
+      for (auto Cap : ReqCaps)
+        if (Reqs.isCapabilityAvailable(Cap))
+          UseCaps.push_back(Cap);
+      for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
+        auto Cap = UseCaps[i];
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
+          return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+      }
     }
   }
   // If there are no capabilities, or we can't satisfy the version or
@@ -83,9 +119,13 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true, {}, ReqExts, 0, 0}; // TODO: add versions to extensions.
+    return {true,
+            {},
+            ReqExts,
+            VersionTuple(),
+            VersionTuple()}; // TODO: add versions to extensions.
   }
-  return {false, {}, {}, 0, 0};
+  return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
 
 void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
@@ -132,10 +172,21 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     unsigned MajorNum = getMetadataUInt(VersionMD, 0, 2);
     unsigned MinorNum = getMetadataUInt(VersionMD, 1);
     unsigned RevNum = getMetadataUInt(VersionMD, 2);
-    MAI.SrcLangVersion = (MajorNum * 100 + MinorNum) * 1000 + RevNum;
+    // Prevent Major part of OpenCL version to be 0
+    MAI.SrcLangVersion =
+        (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
   } else {
-    MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
-    MAI.SrcLangVersion = 0;
+    // If there is no information about OpenCL version we are forced to generate
+    // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
+    // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
+    // Translator avoids potential issues with run-times in a similar manner.
+    if (ST->isOpenCLEnv()) {
+      MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
+      MAI.SrcLangVersion = 100000;
+    } else {
+      MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
+      MAI.SrcLangVersion = 0;
+    }
   }
 
   if (auto ExtNode = M.getNamedMetadata("opencl.used.extensions")) {
@@ -263,34 +314,6 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
       [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
 }
 
-// True if there is an instruction in the MS list with all the same operands as
-// the given instruction has (after the given starting index).
-// TODO: maybe it needs to check Opcodes too.
-static bool findSameInstrInMS(const MachineInstr &A,
-                              SPIRV::ModuleSectionType MSType,
-                              SPIRV::ModuleAnalysisInfo &MAI,
-                              unsigned StartOpIndex = 0) {
-  for (const auto *B : MAI.MS[MSType]) {
-    const unsigned NumAOps = A.getNumOperands();
-    if (NumAOps != B->getNumOperands() || A.getNumDefs() != B->getNumDefs())
-      continue;
-    bool AllOpsMatch = true;
-    for (unsigned i = StartOpIndex; i < NumAOps && AllOpsMatch; ++i) {
-      if (A.getOperand(i).isReg() && B->getOperand(i).isReg()) {
-        Register RegA = A.getOperand(i).getReg();
-        Register RegB = B->getOperand(i).getReg();
-        AllOpsMatch = MAI.getRegisterAlias(A.getMF(), RegA) ==
-                      MAI.getRegisterAlias(B->getMF(), RegB);
-      } else {
-        AllOpsMatch = A.getOperand(i).isIdenticalTo(B->getOperand(i));
-      }
-    }
-    if (AllOpsMatch)
-      return true;
-  }
-  return false;
-}
-
 // Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
@@ -319,15 +342,69 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   }
 }
 
+// References to a function via function pointers generate virtual
+// registers without a definition. We are able to resolve this
+// reference using Globar Register info into an OpFunction instruction
+// and replace dummy operands by the corresponding global register references.
+void SPIRVModuleAnalysis::collectFuncPtrs() {
+  for (auto &MI : MAI.MS[SPIRV::MB_TypeConstVars])
+    if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL)
+      collectFuncPtrs(MI);
+}
+
+void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
+  const MachineOperand *FunUse = &MI->getOperand(2);
+  if (const MachineOperand *FunDef = GR->getFunctionDefinitionByUse(FunUse)) {
+    const MachineInstr *FunDefMI = FunDef->getParent();
+    assert(FunDefMI->getOpcode() == SPIRV::OpFunction &&
+           "Constant function pointer must refer to function definition");
+    Register FunDefReg = FunDef->getReg();
+    Register GlobalFunDefReg =
+        MAI.getRegisterAlias(FunDefMI->getMF(), FunDefReg);
+    assert(GlobalFunDefReg.isValid() &&
+           "Function definition must refer to a global register");
+    Register FunPtrReg = FunUse->getReg();
+    MAI.setRegisterAlias(MI->getMF(), FunPtrReg, GlobalFunDefReg);
+  }
+}
+
+using InstrSignature = SmallVector<size_t>;
+using InstrTraces = std::set<InstrSignature>;
+
+// Returns a representation of an instruction as a vector of MachineOperand
+// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
+// This creates a signature of the instruction with the same content
+// that MachineOperand::isIdenticalTo uses for comparison.
+static InstrSignature instrToSignature(MachineInstr &MI,
+                                       SPIRV::ModuleAnalysisInfo &MAI) {
+  InstrSignature Signature;
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    size_t h;
+    if (MO.isReg()) {
+      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
+      // mimic llvm::hash_value(const MachineOperand &MO)
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else {
+      h = hash_value(MO);
+    }
+    Signature.push_back(h);
+  }
+  return Signature;
+}
+
 // Collect the given instruction in the specified MS. We assume global register
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
-                              SPIRV::ModuleSectionType MSType,
+                              SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
-  if (findSameInstrInMS(MI, MSType, MAI))
-    return; // Found a duplicate, so don't add it.
+  InstrSignature MISign = instrToSignature(MI, MAI);
+  auto FoundMI = IS.insert(MISign);
+  if (!FoundMI.second)
+    return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
@@ -338,6 +415,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // Some global instructions make reference to function-local ID regs, so cannot
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
+  InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
       continue;
@@ -348,21 +426,37 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
-        if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames);
+        if (OpCode == SPIRV::OpString) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
+        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+                   MI.getOperand(2).getImm() ==
+                       SPIRV::InstructionSet::
+                           NonSemantic_Shader_DebugInfo_100) {
+          MachineOperand Ins = MI.getOperand(3);
+          namespace NS = SPIRV::NonSemanticExtInst;
+          static constexpr int64_t GlobalNonSemanticDITy[] = {
+              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
+              NS::DebugTypeBasic};
+          bool IsGlobalDI = false;
+          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
+            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
+          if (IsGlobalDI)
+            collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
+        } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
+          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
         } else if (TII->isDecorationInstr(MI)) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
+          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
       }
   }
@@ -405,16 +499,13 @@ void SPIRV::RequirementHandler::getAndAddRequirements(
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
-void SPIRV::RequirementHandler::pruneCapabilities(
+void SPIRV::RequirementHandler::recursiveAddCapabilities(
     const CapabilityList &ToPrune) {
   for (const auto &Cap : ToPrune) {
     AllCaps.insert(Cap);
-    auto FoundIndex = std::find(MinimalCaps.begin(), MinimalCaps.end(), Cap);
-    if (FoundIndex != MinimalCaps.end())
-      MinimalCaps.erase(FoundIndex);
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
   }
 }
 
@@ -425,7 +516,7 @@ void SPIRV::RequirementHandler::addCapabilities(const CapabilityList &ToAdd) {
       continue;
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
     MinimalCaps.push_back(Cap);
   }
 }
@@ -440,25 +531,25 @@ void SPIRV::RequirementHandler::addRequirements(
 
   addExtensions(Req.Exts);
 
-  if (Req.MinVer) {
-    if (MaxVersion && Req.MinVer > MaxVersion) {
+  if (!Req.MinVer.empty()) {
+    if (!MaxVersion.empty() && Req.MinVer > MaxVersion) {
       LLVM_DEBUG(dbgs() << "Conflicting version requirements: >= " << Req.MinVer
                         << " and <= " << MaxVersion << "\n");
       report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
     }
 
-    if (MinVersion == 0 || Req.MinVer > MinVersion)
+    if (MinVersion.empty() || Req.MinVer > MinVersion)
       MinVersion = Req.MinVer;
   }
 
-  if (Req.MaxVer) {
-    if (MinVersion && Req.MaxVer < MinVersion) {
+  if (!Req.MaxVer.empty()) {
+    if (!MinVersion.empty() && Req.MaxVer < MinVersion) {
       LLVM_DEBUG(dbgs() << "Conflicting version requirements: <= " << Req.MaxVer
                         << " and >= " << MinVersion << "\n");
       report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
     }
 
-    if (MaxVersion == 0 || Req.MaxVer < MaxVersion)
+    if (MaxVersion.empty() || Req.MaxVer < MaxVersion)
       MaxVersion = Req.MaxVer;
   }
 }
@@ -469,7 +560,7 @@ void SPIRV::RequirementHandler::checkSatisfiable(
   bool IsSatisfiable = true;
   auto TargetVer = ST.getSPIRVVersion();
 
-  if (MaxVersion && TargetVer && MaxVersion < TargetVer) {
+  if (!MaxVersion.empty() && !TargetVer.empty() && MaxVersion < TargetVer) {
     LLVM_DEBUG(
         dbgs() << "Target SPIR-V version too high for required features\n"
                << "Required max version: " << MaxVersion << " target version "
@@ -477,14 +568,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
-  if (MinVersion && TargetVer && MinVersion > TargetVer) {
+  if (!MinVersion.empty() && !TargetVer.empty() && MinVersion > TargetVer) {
     LLVM_DEBUG(dbgs() << "Target SPIR-V version too low for required features\n"
                       << "Required min version: " << MinVersion
                       << " target version " << TargetVer << "\n");
     IsSatisfiable = false;
   }
 
-  if (MinVersion && MaxVersion && MinVersion > MaxVersion) {
+  if (!MinVersion.empty() && !MaxVersion.empty() && MinVersion > MaxVersion) {
     LLVM_DEBUG(
         dbgs()
         << "Version is too low for some features and too high for others.\n"
@@ -562,12 +653,13 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     addAvailableCaps({Capability::ImageBasic, Capability::LiteralSampler,
                       Capability::Image1D, Capability::SampledBuffer,
                       Capability::ImageBuffer});
-    if (ST.isAtLeastOpenCLVer(20))
+    if (ST.isAtLeastOpenCLVer(VersionTuple(2, 0)))
       addAvailableCaps({Capability::ImageReadWrite});
   }
-  if (ST.isAtLeastSPIRVVer(11) && ST.isAtLeastOpenCLVer(22))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 1)) &&
+      ST.isAtLeastOpenCLVer(VersionTuple(2, 2)))
     addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
-  if (ST.isAtLeastSPIRVVer(13))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
     addAvailableCaps({Capability::GroupNonUniform,
                       Capability::GroupNonUniformVote,
                       Capability::GroupNonUniformArithmetic,
@@ -575,7 +667,7 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
                       Capability::GroupNonUniformClustered,
                       Capability::GroupNonUniformShuffle,
                       Capability::GroupNonUniformShuffleRelative});
-  if (ST.isAtLeastSPIRVVer(14))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 4)))
     addAvailableCaps({Capability::DenormPreserve, Capability::DenormFlushToZero,
                       Capability::SignedZeroInfNanPreserve,
                       Capability::RoundingModeRTE,
@@ -597,8 +689,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage});
 
-  // Provided by Vulkan version 1.0.
-  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float64});
+  // Provided by all supported Vulkan versions.
+  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
+                    Capability::Float64, Capability::GroupNonUniform});
 }
 
 } // namespace SPIRV
@@ -619,6 +712,21 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
     Reqs.addRequirements(getSymbolicOperandRequirements(
         SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+  } else if (Dec == SPIRV::Decoration::LinkageAttributes) {
+    int64_t LinkageOp = MI.getOperand(MI.getNumOperands() - 1).getImm();
+    SPIRV::LinkageType::LinkageType LnkType =
+        static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
+    if (LnkType == SPIRV::LinkageType::LinkOnceODR)
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
+  } else if (Dec == SPIRV::Decoration::CacheControlLoadINTEL ||
+             Dec == SPIRV::Decoration::CacheControlStoreINTEL) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_cache_controls);
+  } else if (Dec == SPIRV::Decoration::HostAccessINTEL) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_global_variable_host_access);
+  } else if (Dec == SPIRV::Decoration::InitModeINTEL ||
+             Dec == SPIRV::Decoration::ImplementInRegisterMapINTEL) {
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   }
 }
 
@@ -674,6 +782,67 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
   else
     Reqs.addRequirements(SPIRV::Capability::ImageBasic);
+}
+
+// Add requirements for handling atomic float instructions
+#define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
+  "The atomic float instruction requires the following SPIR-V "                \
+  "extension: SPV_EXT_shader_atomic_float" ExtName
+static void AddAtomicFloatRequirements(const MachineInstr &MI,
+                                       SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg() &&
+         "Expect register operand in atomic float instruction");
+  Register TypeReg = MI.getOperand(1).getReg();
+  SPIRVType *TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
+  if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
+    report_fatal_error("Result type of an atomic float instruction must be a "
+                       "floating-point type scalar");
+
+  unsigned BitWidth = TypeDef->getOperand(1).getImm();
+  unsigned Op = MI.getOpcode();
+  if (Op == SPIRV::OpAtomicFAddEXT) {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_add"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
+    switch (BitWidth) {
+    case 16:
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64AddEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  } else {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_min_max"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
+    switch (BitWidth) {
+    case 16:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64MinMaxEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  }
 }
 
 void addInstrRequirements(const MachineInstr &MI,
@@ -733,13 +902,24 @@ void addInstrRequirements(const MachineInstr &MI,
     auto SC = MI.getOperand(1).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
                                ST);
-    // If it's a type of pointer to float16, add Float16Buffer capability.
+    // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
+    // capability.
+    if (!ST.isOpenCLEnv())
+      break;
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
     if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
         TypeDef->getOperand(1).getImm() == 16)
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
+    break;
+  }
+  case SPIRV::OpExtInst: {
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+    }
     break;
   }
   case SPIRV::OpBitReverse:
@@ -903,12 +1083,122 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupNonUniformBallotFindMSB:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
     break;
+  case SPIRV::OpSubgroupShuffleINTEL:
+  case SPIRV::OpSubgroupShuffleDownINTEL:
+  case SPIRV::OpSubgroupShuffleUpINTEL:
+  case SPIRV::OpSubgroupShuffleXorINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupShuffleINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupBlockReadINTEL:
+  case SPIRV::OpSubgroupBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupBufferBlockIOINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupImageBlockReadINTEL:
+  case SPIRV::OpSubgroupImageBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
+    break;
+  case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
+  case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes);
+      Reqs.addCapability(SPIRV::Capability::USMStorageClassesINTEL);
+    }
+    break;
+  case SPIRV::OpConstantFunctionPointerINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpGroupNonUniformRotateKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
+      report_fatal_error("OpGroupNonUniformRotateKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_subgroup_rotate",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
+    break;
+  case SPIRV::OpGroupIMulKHR:
+  case SPIRV::OpGroupFMulKHR:
+  case SPIRV::OpGroupBitwiseAndKHR:
+  case SPIRV::OpGroupBitwiseOrKHR:
+  case SPIRV::OpGroupBitwiseXorKHR:
+  case SPIRV::OpGroupLogicalAndKHR:
+  case SPIRV::OpGroupLogicalOrKHR:
+  case SPIRV::OpGroupLogicalXorKHR:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions);
+      Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
+    }
+    break;
+  case SPIRV::OpReadClockKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_shader_clock))
+      report_fatal_error("OpReadClockKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_shader_clock",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_shader_clock);
+    Reqs.addCapability(SPIRV::Capability::ShaderClockKHR);
+    break;
+  case SPIRV::OpFunctionPointerCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpAtomicFAddEXT:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
+    AddAtomicFloatRequirements(MI, Reqs, ST);
+    break;
+  case SPIRV::OpConvertBF16ToFINTEL:
+  case SPIRV::OpConvertFToBF16INTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
+    }
+    break;
+  case SPIRV::OpVariableLengthArrayINTEL:
+  case SPIRV::OpSaveMemoryINTEL:
+  case SPIRV::OpRestoreMemoryINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
+    }
+    break;
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
+  case SPIRV::OpAsmCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_inline_assembly)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_inline_assembly);
+      Reqs.addCapability(SPIRV::Capability::AsmINTEL);
+    }
+    break;
+  case SPIRV::OpTypeCooperativeMatrixKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
+      report_fatal_error(
+          "OpTypeCooperativeMatrixKHR type requires the "
+          "following SPIR-V extension: SPV_KHR_cooperative_matrix",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
+    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     break;
   default:
     break;
@@ -935,6 +1225,9 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
+    // SPV_KHR_float_controls is not available until v1.4
+    bool RequireFloatControls = false,
+         VerLower14 = !ST.isAtLeastSPIRVVer(VersionTuple(1, 4));
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);
@@ -944,9 +1237,22 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           auto EM = Const->getZExtValue();
           MAI.Reqs.getAndAddRequirements(
               SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+          // add SPV_KHR_float_controls if the version is too low
+          switch (EM) {
+          case SPIRV::ExecutionMode::DenormPreserve:
+          case SPIRV::ExecutionMode::DenormFlushToZero:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+          case SPIRV::ExecutionMode::RoundingModeRTE:
+          case SPIRV::ExecutionMode::RoundingModeRTZ:
+            RequireFloatControls = VerLower14;
+            break;
+          }
         }
       }
     }
+    if (RequireFloatControls &&
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -1068,12 +1374,19 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
 
+  // Update references to OpFunction instructions to use Global Registers
+  if (GR->hasConstFunPtr())
+    collectFuncPtrs();
+
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);
 
   // If there are no entry points, we need the Linkage capability.
   if (MAI.MS[SPIRV::MB_EntryPoints].empty())
     MAI.Reqs.addCapability(SPIRV::Capability::Linkage);
+
+  // Set maximum ID used.
+  GR->setBound(MAI.MaxID);
 
   return false;
 }

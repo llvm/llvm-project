@@ -342,6 +342,7 @@ template <typename A> struct Extremum : public Operation<Extremum<A>, A, A, A> {
       : Base{x, y}, ordering{ord} {}
   Extremum(Ordering ord, Expr<Operand> &&x, Expr<Operand> &&y)
       : Base{std::move(x), std::move(y)}, ordering{ord} {}
+  bool operator==(const Extremum &) const;
   Ordering ordering{Ordering::Greater};
 };
 
@@ -381,6 +382,7 @@ struct LogicalOperation
       : Base{x, y}, logicalOperator{opr} {}
   LogicalOperation(LogicalOperator opr, Expr<Operand> &&x, Expr<Operand> &&y)
       : Base{std::move(x), std::move(y)}, logicalOperator{opr} {}
+  bool operator==(const LogicalOperation &) const;
   LogicalOperator logicalOperator;
 };
 
@@ -634,6 +636,7 @@ public:
       : Base{a, b}, opr{r} {}
   Relational(RelationalOperator r, Expr<Operand> &&a, Expr<Operand> &&b)
       : Base{std::move(a), std::move(b)}, opr{r} {}
+  bool operator==(const Relational &) const;
   RelationalOperator opr;
 };
 
@@ -660,7 +663,7 @@ extern template class Relational<SomeType>;
 // Logical expressions of a kind bigger than LogicalResult
 // do not include Relational<> operations as possibilities,
 // since the results of Relationals are always LogicalResult
-// (kind=1).
+// (kind=4).
 template <int KIND>
 class Expr<Type<TypeCategory::Logical, KIND>>
     : public ExpressionBase<Type<TypeCategory::Logical, KIND>> {
@@ -735,8 +738,7 @@ public:
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
   int Rank() const { return 0; }
   DynamicType GetType() const;
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
-      const parser::CharBlock *derivedTypeRename = nullptr) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   std::optional<Expr<SomeType>> CreateParentComponent(const Symbol &) const;

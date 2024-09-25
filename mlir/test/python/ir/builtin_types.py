@@ -57,8 +57,8 @@ def testTypeEq():
     print("t1 == t2:", t1 == t2)
     # CHECK: t1 == t3: True
     print("t1 == t3:", t1 == t3)
-    # CHECK: t1 == None: False
-    print("t1 == None:", t1 == None)
+    # CHECK: t1 is None: False
+    print("t1 is None:", t1 is None)
 
 
 # CHECK-LABEL: TEST: testTypeHash
@@ -100,8 +100,48 @@ def testTypeIsInstance():
     print(IntegerType.isinstance(t1))
     # CHECK: False
     print(F32Type.isinstance(t1))
+    # CHECK: False
+    print(FloatType.isinstance(t1))
     # CHECK: True
     print(F32Type.isinstance(t2))
+    # CHECK: True
+    print(FloatType.isinstance(t2))
+
+
+# CHECK-LABEL: TEST: testFloatTypeSubclasses
+@run
+def testFloatTypeSubclasses():
+    ctx = Context()
+    # CHECK: True
+    print(isinstance(Type.parse("f4E2M1FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f6E2M3FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f6E3M2FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E3M4", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E5M2", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3B11FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E5M2FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f16", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("bf16", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f32", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("tf32", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f64", ctx), FloatType))
 
 
 # CHECK-LABEL: TEST: testTypeEqDoesNotRaise
@@ -113,9 +153,9 @@ def testTypeEqDoesNotRaise():
     # CHECK: False
     print(t1 == not_a_type)
     # CHECK: False
-    print(t1 == None)
+    print(t1 is None)
     # CHECK: True
-    print(t1 != None)
+    print(t1 is not None)
 
 
 # CHECK-LABEL: TEST: testTypeCapsule
@@ -199,6 +239,16 @@ def testIndexType():
 @run
 def testFloatType():
     with Context():
+        # CHECK: float: f4E2M1FN
+        print("float:", Float4E2M1FNType.get())
+        # CHECK: float: f6E2M3FN
+        print("float:", Float6E2M3FNType.get())
+        # CHECK: float: f6E3M2FN
+        print("float:", Float6E3M2FNType.get())
+        # CHECK: float: f8E3M4
+        print("float:", Float8E3M4Type.get())
+        # CHECK: float: f8E4M3
+        print("float:", Float8E4M3Type.get())
         # CHECK: float: f8E4M3FN
         print("float:", Float8E4M3FNType.get())
         # CHECK: float: f8E5M2
@@ -218,7 +268,10 @@ def testFloatType():
         # CHECK: float: f32
         print("float:", F32Type.get())
         # CHECK: float: f64
-        print("float:", F64Type.get())
+        f64 = F64Type.get()
+        print("float:", f64)
+        # CHECK: f64 width: 64
+        print("f64 width:", f64.width)
 
 
 # CHECK-LABEL: TEST: testNoneType
@@ -304,7 +357,7 @@ def testVectorType():
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
+            # CHECK: error: unknown: failed to verify 'elementType': integer or index or floating-point
             print(e)
         else:
             print("Exception not produced")
@@ -568,6 +621,11 @@ def testTypeIDs():
         types = [
             (IntegerType, IntegerType.get_signless(16)),
             (IndexType, IndexType.get()),
+            (Float4E2M1FNType, Float4E2M1FNType.get()),
+            (Float6E2M3FNType, Float6E2M3FNType.get()),
+            (Float6E3M2FNType, Float6E3M2FNType.get()),
+            (Float8E3M4Type, Float8E3M4Type.get()),
+            (Float8E4M3Type, Float8E4M3Type.get()),
             (Float8E4M3FNType, Float8E4M3FNType.get()),
             (Float8E5M2Type, Float8E5M2Type.get()),
             (Float8E4M3FNUZType, Float8E4M3FNUZType.get()),
@@ -591,6 +649,11 @@ def testTypeIDs():
 
         # CHECK: IntegerType(i16)
         # CHECK: IndexType(index)
+        # CHECK: Float4E2M1FNType(f4E2M1FN)
+        # CHECK: Float6E2M3FNType(f6E2M3FN)
+        # CHECK: Float6E3M2FNType(f6E3M2FN)
+        # CHECK: Float8E3M4Type(f8E3M4)
+        # CHECK: Float8E4M3Type(f8E4M3)
         # CHECK: Float8E4M3FNType(f8E4M3FN)
         # CHECK: Float8E5M2Type(f8E5M2)
         # CHECK: Float8E4M3FNUZType(f8E4M3FNUZ)
@@ -668,9 +731,24 @@ def testConcreteTypesRoundTrip():
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())
+        # CHECK: Float4E2M1FNType
+        # CHECK: Float4E2M1FNType(f4E2M1FN)
+        print_downcasted(Float4E2M1FNType.get())
+        # CHECK: Float6E2M3FNType
+        # CHECK: Float6E2M3FNType(f6E2M3FN)
+        print_downcasted(Float6E2M3FNType.get())
+        # CHECK: Float6E3M2FNType
+        # CHECK: Float6E3M2FNType(f6E3M2FN)
+        print_downcasted(Float6E3M2FNType.get())
+        # CHECK: Float8E3M4Type
+        # CHECK: Float8E3M4Type(f8E3M4)
+        print_downcasted(Float8E3M4Type.get())
         # CHECK: Float8E4M3B11FNUZType
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         print_downcasted(Float8E4M3B11FNUZType.get())
+        # CHECK: Float8E4M3Type
+        # CHECK: Float8E4M3Type(f8E4M3)
+        print_downcasted(Float8E4M3Type.get())
         # CHECK: Float8E4M3FNType
         # CHECK: Float8E4M3FNType(f8E4M3FN)
         print_downcasted(Float8E4M3FNType.get())

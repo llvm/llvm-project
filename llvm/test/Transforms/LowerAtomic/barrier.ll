@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loweratomic -S | FileCheck %s
+; RUN: opt < %s -passes=lower-atomic -S | FileCheck %s
 
 define void @barrier() {
 ; CHECK-LABEL: @barrier(

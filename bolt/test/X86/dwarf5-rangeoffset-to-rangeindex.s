@@ -8,7 +8,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests conversion for DWARF5 ranges DW_AT_ranges [DW_FORM_sec_offset] to DW_AT_ranges [DW_FORM_rnglistx]
+## This tests conversion for DWARF5 ranges DW_AT_ranges [DW_FORM_sec_offset] to DW_AT_ranges [DW_FORM_rnglistx]
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_AT_ranges [DW_FORM_sec_offset]

@@ -426,7 +426,7 @@ bool f(int);
 template <typename T>
 struct A {
   constexpr A(T t) {
-    __assume(f(t)); // expected-warning{{the argument to '__assume' has side effects that will be discarded}}
+    __assume(f(t)); // expected-warning{{assumption is ignored because it contains (potential) side-effects}}
   }
   constexpr bool g() { return false; }
 };

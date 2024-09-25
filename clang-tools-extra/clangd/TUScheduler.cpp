@@ -1838,7 +1838,7 @@ DebouncePolicy::compute(llvm::ArrayRef<clock::duration> History) const {
   // Base the result on the median rebuild.
   // nth_element needs a mutable array, take the chance to bound the data size.
   History = History.take_back(15);
-  llvm::SmallVector<clock::duration, 15> Recent(History.begin(), History.end());
+  llvm::SmallVector<clock::duration, 15> Recent(History);
   auto *Median = Recent.begin() + Recent.size() / 2;
   std::nth_element(Recent.begin(), Median, Recent.end());
 

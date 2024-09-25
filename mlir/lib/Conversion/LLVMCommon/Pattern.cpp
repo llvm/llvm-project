@@ -329,14 +329,19 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 // Detail methods
 //===----------------------------------------------------------------------===//
 
+void LLVM::detail::setNativeProperties(Operation *op,
+                                       IntegerOverflowFlags overflowFlags) {
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
+    iface.setOverflowFlags(overflowFlags);
+}
+
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
-LogicalResult
-LLVM::detail::oneToOneRewrite(Operation *op, StringRef targetOp,
-                              ValueRange operands,
-                              ArrayRef<NamedAttribute> targetAttrs,
-                              const LLVMTypeConverter &typeConverter,
-                              ConversionPatternRewriter &rewriter) {
+LogicalResult LLVM::detail::oneToOneRewrite(
+    Operation *op, StringRef targetOp, ValueRange operands,
+    ArrayRef<NamedAttribute> targetAttrs,
+    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
+    IntegerOverflowFlags overflowFlags) {
   unsigned numResults = op->getNumResults();
 
   SmallVector<Type> resultTypes;
@@ -351,6 +356,8 @@ LLVM::detail::oneToOneRewrite(Operation *op, StringRef targetOp,
   Operation *newOp =
       rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
                       resultTypes, targetAttrs);
+
+  setNativeProperties(newOp, overflowFlags);
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)

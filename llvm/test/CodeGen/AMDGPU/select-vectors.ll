@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; Test expansion of scalar selects on vectors.
 ; Evergreen not enabled since it seems to be having problems with doubles.
@@ -14,7 +14,7 @@
 
 ; This is worse when i16 is legal and packed is not because
 ; SelectionDAGBuilder for some reason changes the select type.
-; VI: v_cndmask_b32
+; VI: s_cselect_b64
 ; VI: v_cndmask_b32
 define amdgpu_kernel void @v_select_v2i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {
   %a = load <2 x i8>, ptr addrspace(1) %a.ptr, align 2
@@ -111,8 +111,7 @@ define amdgpu_kernel void @v_select_v2i16(ptr addrspace(1) %out, ptr addrspace(1
 ; SI: cndmask
 ; SI-NOT: cndmask
 
-; VI: s_cselect_b32
-; VI: s_cselect_b32
+; VI: s_cselect_b64
 ; GFX9: cndmask
 ; GFX9: cndmask
 define amdgpu_kernel void @v_select_v3i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr, i32 %c) #0 {

@@ -120,9 +120,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   }
 
   if (func_local_addr == LLDB_INVALID_ADDRESS) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't find function %s for disassembly",
-                                 m_name.AsCString());
+    ret = Status::FromErrorStringWithFormat(
+        "Couldn't find function %s for disassembly", m_name.AsCString());
     return ret;
   }
 
@@ -136,9 +135,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   func_range = GetRemoteRangeForLocal(func_local_addr);
 
   if (func_range.first == 0 && func_range.second == 0) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't find code range for function %s",
-                                 m_name.AsCString());
+    ret = Status::FromErrorStringWithFormat(
+        "Couldn't find code range for function %s", m_name.AsCString());
     return ret;
   }
 
@@ -147,8 +145,7 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
 
   Target *target = exe_ctx.GetTargetPtr();
   if (!target) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorString("Couldn't find the target");
+    ret = Status::FromErrorString("Couldn't find the target");
     return ret;
   }
 
@@ -161,9 +158,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                       buffer_sp->GetByteSize(), err);
 
   if (!err.Success()) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat("Couldn't read from process: %s",
-                                 err.AsCString("unknown error"));
+    ret = Status::FromErrorStringWithFormat("Couldn't read from process: %s",
+                                            err.AsCString("unknown error"));
     return ret;
   }
 
@@ -175,16 +171,14 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
       Disassembler::FindPlugin(arch, flavor_string, plugin_name);
 
   if (!disassembler_sp) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorStringWithFormat(
+    ret = Status::FromErrorStringWithFormat(
         "Unable to find disassembler plug-in for %s architecture.",
         arch.GetArchitectureName());
     return ret;
   }
 
   if (!process) {
-    ret.SetErrorToGenericError();
-    ret.SetErrorString("Couldn't find the process");
+    ret = Status::FromErrorString("Couldn't find the process");
     return ret;
   }
 
@@ -201,7 +195,7 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                                       UINT32_MAX, false, false);
 
   InstructionList &instruction_list = disassembler_sp->GetInstructionList();
-  instruction_list.Dump(&stream, true, true, /*show_control_flow_kind=*/true,
+  instruction_list.Dump(&stream, true, true, /*show_control_flow_kind=*/false,
                         &exe_ctx);
 
   return ret;
@@ -212,18 +206,16 @@ struct IRExecDiagnosticHandler : public llvm::DiagnosticHandler {
   Status *err;
   IRExecDiagnosticHandler(Status *err) : err(err) {}
   bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
-    if (DI.getKind() == llvm::DK_SrcMgr) {
+    if (DI.getSeverity() == llvm::DS_Error) {
       const auto &DISM = llvm::cast<llvm::DiagnosticInfoSrcMgr>(DI);
       if (err && err->Success()) {
-        err->SetErrorToGenericError();
-        err->SetErrorStringWithFormat(
-            "Inline assembly error: %s",
+        *err = Status::FromErrorStringWithFormat(
+            "IRExecution error: %s",
             DISM.getSMDiag().getMessage().str().c_str());
       }
-      return true;
     }
 
-    return false;
+    return true;
   }
 };
 } // namespace
@@ -242,9 +234,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   func_end = LLDB_INVALID_ADDRESS;
 
   if (!process_sp) {
-    error.SetErrorToGenericError();
-    error.SetErrorString("Couldn't write the JIT compiled code into the "
-                         "process because the process is invalid");
+    error =
+        Status::FromErrorString("Couldn't write the JIT compiled code into the "
+                                "process because the process is invalid");
     return;
   }
 
@@ -268,8 +260,6 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     llvm::raw_string_ostream oss(s);
 
     m_module->print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOGF(log, "Module being sent to JIT: \n%s", s.c_str());
   }
@@ -300,9 +290,8 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   m_execution_engine_up.reset(builder.create(target_machine));
 
   if (!m_execution_engine_up) {
-    error.SetErrorToGenericError();
-    error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
-                                   error_string.c_str());
+    error = Status::FromErrorStringWithFormat("Couldn't JIT the function: %s",
+                                              error_string.c_str());
     return;
   }
 
@@ -365,8 +354,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
 
     if (!fun_ptr) {
-      error.SetErrorToGenericError();
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "'%s' was in the JITted module but wasn't lowered",
           function.getName().str().c_str());
       return;
@@ -432,8 +420,10 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
 
     m_failed_lookups.clear();
-
-    error.SetErrorString(ss.GetString());
+    ss.PutCString(
+        "\nHint: The expression tried to call a function that is not present "
+        "in the target, perhaps because it was optimized out by the compiler.");
+    error = Status(ss.GetString().str());
 
     return;
   }
@@ -533,63 +523,63 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
   }
 
   if (!name.empty()) {
-    if (name.equals("__text") || name.equals(".text"))
+    if (name == "__text" || name == ".text")
       sect_type = lldb::eSectionTypeCode;
-    else if (name.equals("__data") || name.equals(".data"))
+    else if (name == "__data" || name == ".data")
       sect_type = lldb::eSectionTypeCode;
     else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
       switch (dwarf_name[0]) {
       case 'a':
-        if (dwarf_name.equals("abbrev"))
+        if (dwarf_name == "abbrev")
           sect_type = lldb::eSectionTypeDWARFDebugAbbrev;
-        else if (dwarf_name.equals("aranges"))
+        else if (dwarf_name == "aranges")
           sect_type = lldb::eSectionTypeDWARFDebugAranges;
-        else if (dwarf_name.equals("addr"))
+        else if (dwarf_name == "addr")
           sect_type = lldb::eSectionTypeDWARFDebugAddr;
         break;
 
       case 'f':
-        if (dwarf_name.equals("frame"))
+        if (dwarf_name == "frame")
           sect_type = lldb::eSectionTypeDWARFDebugFrame;
         break;
 
       case 'i':
-        if (dwarf_name.equals("info"))
+        if (dwarf_name == "info")
           sect_type = lldb::eSectionTypeDWARFDebugInfo;
         break;
 
       case 'l':
-        if (dwarf_name.equals("line"))
+        if (dwarf_name == "line")
           sect_type = lldb::eSectionTypeDWARFDebugLine;
-        else if (dwarf_name.equals("loc"))
+        else if (dwarf_name == "loc")
           sect_type = lldb::eSectionTypeDWARFDebugLoc;
-        else if (dwarf_name.equals("loclists"))
+        else if (dwarf_name == "loclists")
           sect_type = lldb::eSectionTypeDWARFDebugLocLists;
         break;
 
       case 'm':
-        if (dwarf_name.equals("macinfo"))
+        if (dwarf_name == "macinfo")
           sect_type = lldb::eSectionTypeDWARFDebugMacInfo;
         break;
 
       case 'p':
-        if (dwarf_name.equals("pubnames"))
+        if (dwarf_name == "pubnames")
           sect_type = lldb::eSectionTypeDWARFDebugPubNames;
-        else if (dwarf_name.equals("pubtypes"))
+        else if (dwarf_name == "pubtypes")
           sect_type = lldb::eSectionTypeDWARFDebugPubTypes;
         break;
 
       case 's':
-        if (dwarf_name.equals("str"))
+        if (dwarf_name == "str")
           sect_type = lldb::eSectionTypeDWARFDebugStr;
-        else if (dwarf_name.equals("str_offsets"))
+        else if (dwarf_name == "str_offsets")
           sect_type = lldb::eSectionTypeDWARFDebugStrOffsets;
         break;
 
       case 'r':
-        if (dwarf_name.equals("ranges"))
+        if (dwarf_name == "ranges")
           sect_type = lldb::eSectionTypeDWARFDebugRanges;
         break;
 
@@ -598,7 +588,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       }
     } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
-    else if (name.equals("__objc_imageinfo"))
+    else if (name == "__objc_imageinfo")
       sect_type = lldb::eSectionTypeOther;
   }
   return sect_type;

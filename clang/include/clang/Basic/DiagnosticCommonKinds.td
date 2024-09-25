@@ -70,6 +70,10 @@ def warn_pragma_debug_missing_argument : Warning<
 def warn_pragma_debug_unexpected_argument : Warning<
   "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
+def warn_fp_nan_inf_when_disabled : Warning<
+  "use of %select{infinity|NaN}0%select{| via a macro}1 is undefined behavior "
+  "due to the currently enabled floating-point options">,
+  InGroup<DiagGroup<"nan-infinity-disabled", [], NanInfDisabledDocs>>;
 }
 
 // Parse && Sema
@@ -225,6 +229,9 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
+def ext_cxx_bitint_suffix : Extension<
+  "'_BitInt' suffix for literals is a Clang extension">,
+  InGroup<BitIntExtension>;
 def ext_c23_bitint_suffix : ExtWarn<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
@@ -262,6 +269,9 @@ def err_too_large_for_fixed_point : Error<
   "this value is too large for this fixed point type">;
 def err_unimplemented_conversion_with_fixed_point_type : Error<
   "conversion between fixed point and %0 is not yet supported">;
+
+def err_requires_positive_value : Error<
+  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
 
 // SEH
 def err_seh_expected_handler : Error<
@@ -349,15 +359,26 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
+def err_target_unsupported_abi_with_fpu : Error<
+  "'%0' ABI is not supported with FPU">;
+
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls can not be tail called on PPC|"
+  "indirect calls can not be tail called on PPC|"
+  "external calls can not be tail called on PPC}0"
+  >;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
 def err_file_modified : Error<
   "file '%0' modified since it was first processed">, DefaultFatal;
 def err_file_too_large : Error<
-  "sorry, unsupported: file '%0' is too large for Clang to process">;
+  "file '%0' is too large for Clang to process">;
 def err_sloc_space_too_large : Error<
-  "sorry, the translation unit is too large for Clang to process: ran out of source locations">, DefaultFatal;
+  "translation unit is too large for Clang to process: ran out of source locations">, DefaultFatal;
 def err_unsupported_bom : Error<"%0 byte order mark detected in '%1', but "
   "encoding is not supported">, DefaultFatal;
 def err_unable_to_rename_temp : Error<

@@ -298,7 +298,10 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
         calculate(op.getSplatValue<ElementValueT>(), castStatus);
     if (!castStatus)
       return {};
-    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResult);
+    auto shapedResType = cast<ShapedType>(resType);
+    if (!shapedResType.hasStaticShape())
+      return {};
+    return DenseElementsAttr::get(shapedResType, elementResult);
   }
   if (auto op = dyn_cast<ElementsAttr>(operands[0])) {
     // Operand is ElementsAttr-derived; perform an element-wise fold by

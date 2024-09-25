@@ -27,6 +27,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__sgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
@@ -81,6 +82,7 @@ define amdgpu_ps void @sample_1d_sgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY13]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_sgpr_vaddr__sgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14
@@ -177,6 +179,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
@@ -306,6 +309,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
@@ -447,6 +451,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)

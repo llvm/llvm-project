@@ -40,6 +40,10 @@ class MCSectionWasm final : public MCSection {
   // For data sections, whether to use a passive segment
   bool IsPassive = false;
 
+  bool IsWasmData;
+
+  bool IsMetadata;
+
   // For data sections, bitfield of WasmSegmentFlag
   unsigned SegmentFlags;
 
@@ -47,8 +51,10 @@ class MCSectionWasm final : public MCSection {
   friend class MCContext;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, Name, K, Begin), UniqueID(UniqueID), Group(Group),
-        SegmentFlags(SegmentFlags) {}
+      : MCSection(SV_Wasm, Name, K.isText(), /*IsVirtual=*/false, Begin),
+        UniqueID(UniqueID), Group(Group),
+        IsWasmData(K.isReadOnly() || K.isWriteable()),
+        IsMetadata(K.isMetadata()), SegmentFlags(SegmentFlags) {}
 
 public:
   /// Decides whether a '.section' directive should be printed before the
@@ -60,14 +66,11 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
 
-  bool isWasmData() const {
-    return Kind.isGlobalWriteableData() || Kind.isReadOnly() ||
-           Kind.isThreadLocal();
-  }
+  bool isWasmData() const { return IsWasmData; }
+  bool isMetadata() const { return IsMetadata; }
 
   bool isUnique() const { return UniqueID != ~0U; }
   unsigned getUniqueID() const { return UniqueID; }
