@@ -412,6 +412,16 @@ New Compiler Flags
   only for thread-local variables, and none (which corresponds to the
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
+- The ``-fextend-lifetimes`` and ``-fextend-this-ptr`` flags have been added to
+  allow for improved debugging of optimized code. Using ``-fextend-lifetimes``
+  will cause Clang to generate code that tries to preserve the lifetimes of
+  source variables, meaning that variables will typically be visible in a
+  debugger more often. The ``-fextend-this-ptr`` flag has the same behaviour,
+  but applies only to the ``this`` variable in C++ class member functions. Note
+  that this flag modifies the optimizations that Clang performs, which will
+  result in reduced performance in generated code; however, this feature will
+  not extend the lifetime of some variables in cases where doing so would have
+  too severe an impact on generated code performance.
 
 Deprecated Compiler Flags
 -------------------------
