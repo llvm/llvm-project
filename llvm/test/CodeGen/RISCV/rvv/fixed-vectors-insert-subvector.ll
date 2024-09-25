@@ -898,10 +898,8 @@ define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
 define <16 x i32> @build_vector_insert(<16 x i32> %0) {
 ; VLA-LABEL: build_vector_insert:
 ; VLA:       # %bb.0: # %entry
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vmv.v.i v16, 0
 ; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; VLA-NEXT:    vslideup.vi v12, v16, 8
+; VLA-NEXT:    vmv.v.i v12, 0
 ; VLA-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
 ; VLA-NEXT:    vmv.v.v v12, v8
 ; VLA-NEXT:    vmv4r.v v8, v12
@@ -909,8 +907,10 @@ define <16 x i32> @build_vector_insert(<16 x i32> %0) {
 ;
 ; VLS-LABEL: build_vector_insert:
 ; VLS:       # %bb.0: # %entry
-; VLS-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLS-NEXT:    vmv.v.i v10, 0
+; VLS-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; VLS-NEXT:    vmv.v.i v12, 0
+; VLS-NEXT:    vmv1r.v v10, v14
+; VLS-NEXT:    vmv1r.v v11, v15
 ; VLS-NEXT:    ret
 entry:
   %1 = call <16 x i32> @llvm.vector.insert.v16f32.v8f32(<16 x i32> poison, <8 x i32> zeroinitializer, i64 8)

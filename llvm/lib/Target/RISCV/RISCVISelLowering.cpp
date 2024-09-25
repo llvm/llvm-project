@@ -10140,6 +10140,35 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
       DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
 
+// Merge BUILD_VECTOR and insert_subvector into BUILD_VECTOR.
+// e.g.,
+// t7: v8i32 = BUILD_VECTOR 0, 0, 0, 0, 0, 0, 0, 0
+// t9: v16i32 = insert_subvector undef:v16i32, t7, i64<8>
+// ->
+// BUILD_VECTOR undef, undef, undef, undef, undef, undef, undef, undef, 0, 0, 0,
+// 0, 0, 0, 0, 0
+static SDValue lowerINSERT_SUBVECTORAsBUILD_VECTOR(SDValue Op,
+                                                   SelectionDAG &DAG) {
+  SDValue SubVec = Op.getOperand(1);
+  if (!Op.getOperand(0).isUndef())
+    return SDValue();
+  if (SubVec.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+  SDLoc DL(Op);
+  MVT VecVT = Op.getSimpleValueType();
+  uint64_t InsertIndex = Op.getConstantOperandVal(2);
+  MVT SubVecVT = SubVec.getSimpleValueType();
+  MVT SubVecElementVT = SubVec.getOperand(0).getSimpleValueType();
+  unsigned SubVecNumElements = SubVecVT.getVectorNumElements();
+  SmallVector<SDValue> NewOps(VecVT.getVectorNumElements());
+  for (unsigned I = 0, E = VecVT.getVectorNumElements(); I != E; ++I)
+    if (I < InsertIndex || InsertIndex + SubVecNumElements <= I)
+      NewOps[I] = DAG.getUNDEF(SubVecElementVT);
+    else
+      NewOps[I] = SubVec.getOperand(I - InsertIndex);
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, Op.getSimpleValueType(), NewOps);
+}
+
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDValue Vec = Op.getOperand(0);
@@ -10190,6 +10219,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       return DAG.getSetCC(DL, VecVT, Vec, SplatZero, ISD::SETNE);
     }
   }
+
+  if (SDValue V = lowerINSERT_SUBVECTORAsBUILD_VECTOR(Op, DAG))
+    return V;
 
   // If the subvector vector is a fixed-length type and we don't know VLEN
   // exactly, we cannot use subregister manipulation to simplify the codegen; we
