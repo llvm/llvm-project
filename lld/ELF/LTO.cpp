@@ -200,7 +200,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
-  for (Symbol *sym : symtab.getSymbols()) {
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->isPlaceholder())
       continue;
     StringRef s = sym->getName();
