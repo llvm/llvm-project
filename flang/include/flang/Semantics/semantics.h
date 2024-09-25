@@ -76,9 +76,7 @@ public:
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
   }
-  const common::LangOptions &langOptions() const {
-    return langOpts_;
-  }
+  const common::LangOptions &langOptions() const { return langOpts_; }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
