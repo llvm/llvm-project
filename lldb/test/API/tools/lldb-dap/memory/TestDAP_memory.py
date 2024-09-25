@@ -93,8 +93,11 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
 
         # We can read the complete string
         mem = self.dap_server.request_readMemory(memref, 0, 5)["body"]
-        self.assertEqual(mem["unreadableBytes"], 0)
         self.assertEqual(b64decode(mem["data"]), b"dead\0")
+
+        # We can read large chunks, potentially returning partial results
+        mem = self.dap_server.request_readMemory(memref, 0, 4096)["body"]
+        self.assertEqual(b64decode(mem["data"])[0:5], b"dead\0")
 
         # Use an offset
         mem = self.dap_server.request_readMemory(memref, 2, 3)["body"]
@@ -105,7 +108,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(b64decode(mem["data"])[1:], b"dead\0")
 
         # Reads of size 0 are successful
-        # VS-Code sends those in order to check if a `memoryReference` can actually be dereferenced.
+        # VS Code sends those in order to check if a `memoryReference` can actually be dereferenced.
         mem = self.dap_server.request_readMemory(memref, 0, 0)
         self.assertEqual(mem["success"], True)
         self.assertEqual(mem["body"]["data"], "")
@@ -113,4 +116,3 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Reads at offset 0x0 fail
         mem = self.dap_server.request_readMemory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
-        self.assertEqual(mem["message"], "Memory region is not readable")
