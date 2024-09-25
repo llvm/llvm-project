@@ -160,14 +160,12 @@ decltype(auto) get(const StringMapEntry<ValueTy> &E) {
 
 } // end namespace llvm
 
-namespace std {
 template <typename ValueTy>
-struct tuple_size<llvm::StringMapEntry<ValueTy>>
+struct std::tuple_size<llvm::StringMapEntry<ValueTy>>
     : std::integral_constant<std::size_t, 2> {};
 
 template <std::size_t I, typename ValueTy>
-struct tuple_element<I, llvm::StringMapEntry<ValueTy>>
+struct std::tuple_element<I, llvm::StringMapEntry<ValueTy>>
     : std::conditional<I == 0, llvm::StringRef, ValueTy> {};
-} // namespace std
 
 #endif // LLVM_ADT_STRINGMAPENTRY_H

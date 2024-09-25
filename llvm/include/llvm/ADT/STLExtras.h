@@ -2582,19 +2582,16 @@ constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
 } // end namespace llvm
 
-namespace std {
 template <typename... Refs>
-struct tuple_size<llvm::detail::enumerator_result<Refs...>>
+struct std::tuple_size<llvm::detail::enumerator_result<Refs...>>
     : std::integral_constant<std::size_t, sizeof...(Refs)> {};
 
 template <std::size_t I, typename... Refs>
-struct tuple_element<I, llvm::detail::enumerator_result<Refs...>>
+struct std::tuple_element<I, llvm::detail::enumerator_result<Refs...>>
     : std::tuple_element<I, std::tuple<Refs...>> {};
 
 template <std::size_t I, typename... Refs>
-struct tuple_element<I, const llvm::detail::enumerator_result<Refs...>>
+struct std::tuple_element<I, const llvm::detail::enumerator_result<Refs...>>
     : std::tuple_element<I, std::tuple<Refs...>> {};
-
-} // namespace std
 
 #endif // LLVM_ADT_STLEXTRAS_H

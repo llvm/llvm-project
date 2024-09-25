@@ -25,10 +25,8 @@ enum class pdb_error_code {
 } // namespace pdb
 } // namespace llvm
 
-namespace std {
 template <>
-struct is_error_code_enum<llvm::pdb::pdb_error_code> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<llvm::pdb::pdb_error_code> : std::true_type {};
 
 namespace llvm {
 namespace pdb {

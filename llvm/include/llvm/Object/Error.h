@@ -89,9 +89,7 @@ inline Error createError(const Twine &Err) {
 
 } // end namespace llvm.
 
-namespace std {
 template <>
-struct is_error_code_enum<llvm::object::object_error> : std::true_type {};
-}
+struct std::is_error_code_enum<llvm::object::object_error> : std::true_type {};
 
 #endif

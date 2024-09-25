@@ -78,12 +78,8 @@ inline sampleprof_error mergeSampleProfErrors(sampleprof_error &Accumulator,
 
 } // end namespace llvm
 
-namespace std {
-
 template <>
-struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
-
-} // end namespace std
+struct std::is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 
 namespace llvm {
 namespace sampleprof {

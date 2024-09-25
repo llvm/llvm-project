@@ -277,18 +277,16 @@ get(const PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info> &Pair) {
 
 } // end namespace llvm
 
-namespace std {
 template <typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits, typename Info>
-struct tuple_size<
+struct std::tuple_size<
     llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
     : std::integral_constant<std::size_t, 2> {};
 
 template <std::size_t I, typename PointerTy, unsigned IntBits, typename IntType,
           typename PtrTraits, typename Info>
-struct tuple_element<
+struct std::tuple_element<
     I, llvm::PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>>
     : std::conditional<I == 0, PointerTy, IntType> {};
-} // namespace std
 
 #endif // LLVM_ADT_POINTERINTPAIR_H
