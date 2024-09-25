@@ -334,7 +334,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 }
 #    endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 DEFINE_REAL(int, vfork,)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork,)

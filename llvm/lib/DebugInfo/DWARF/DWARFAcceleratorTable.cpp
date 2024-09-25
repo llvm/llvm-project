@@ -630,21 +630,35 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   return std::nullopt;
 }
 
-std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
+std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUIndex() const {
+  // Return the DW_IDX_compile_unit attribute value if it is specified.
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU, but only if we don't have a
-  // DW_IDX_type_unit.
-  if (lookup(dwarf::DW_IDX_type_unit).has_value())
-    return std::nullopt;
+  // implicitly refer to the single CU. 
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
 }
 
+std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
+  // Return the DW_IDX_compile_unit attribute value but only if we don't have a
+  // DW_IDX_type_unit attribute. Use Entry::getRelatedCUIndex() to get the
+  // associated CU index if this behaviour is not desired.
+  if (lookup(dwarf::DW_IDX_type_unit).has_value())
+    return std::nullopt;
+  return getRelatedCUIndex();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   std::optional<uint64_t> Index = getCUIndex();
+  if (!Index || *Index >= NameIdx->getCUCount())
+    return std::nullopt;
+  return NameIdx->getCUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUOffset() const {
+  std::optional<uint64_t> Index = getRelatedCUIndex();
   if (!Index || *Index >= NameIdx->getCUCount())
     return std::nullopt;
   return NameIdx->getCUOffset(*Index);
@@ -655,6 +669,19 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
   if (!Index || *Index >= NameIdx->getLocalTUCount())
     return std::nullopt;
   return NameIdx->getLocalTUOffset(*Index);
+}
+
+std::optional<uint64_t>
+DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
+  std::optional<uint64_t> Index = getLocalTUIndex();
+  const uint32_t NumLocalTUs = NameIdx->getLocalTUCount();
+  if (!Index || *Index < NumLocalTUs)
+    return std::nullopt; // Invalid TU index or TU index is for a local TU
+  // The foreign TU index is the TU index minus the number of local TUs.
+  const uint64_t ForeignTUIndex = *Index - NumLocalTUs;
+  if (ForeignTUIndex >= NameIdx->getForeignTUCount())
+    return std::nullopt; // Invalid foreign TU index.
+  return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
 
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {

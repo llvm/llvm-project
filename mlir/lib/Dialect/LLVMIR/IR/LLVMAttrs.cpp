@@ -58,10 +58,11 @@ void LLVMDialect::registerAttributes() {
 bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                   DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,12 +84,21 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIVariableAttr
+//===----------------------------------------------------------------------===//
+
+bool DIVariableAttr::classof(Attribute attr) {
+  return llvm::isa<DILocalVariableAttr, DIGlobalVariableAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DITypeAttr
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+                   DIDerivedTypeAttr, DIStringTypeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -192,16 +202,75 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::withRecId(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(getContext(), getTag(), recId, getName(),
-                                  getFile(), getLine(), getScope(),
-                                  getBaseType(), getFlags(), getSizeInBits(),
-                                  getAlignInBits(), getElements());
+  return DICompositeTypeAttr::get(
+      getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
+      getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
+      getAlignInBits(), getElements(), getDataLocation(), getRank(),
+      getAllocated(), getAssociated());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
-                                  {}, DIFlags(), 0, 0, {});
+  return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                                  0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
+                                  {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DISubprogramAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
+  return DISubprogramAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getCompileUnit(),
+      getScope(), getName(), getLinkageName(), getFile(), getLine(),
+      getScopeLine(), getSubprogramFlags(), getType(), getRetainedNodes());
+}
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
+  return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// ConstantRangeAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  IntegerType widthType;
+  if (parser.parseLess() || parser.parseType(widthType) ||
+      parser.parseComma()) {
+    return Attribute{};
+  }
+  unsigned bitWidth = widthType.getWidth();
+  APInt lower(bitWidth, 0);
+  APInt upper(bitWidth, 0);
+  if (parser.parseInteger(lower) || parser.parseComma() ||
+      parser.parseInteger(upper) || parser.parseGreater())
+    return Attribute{};
+  // For some reason, 0 is always parsed as 64-bits, fix that if needed.
+  if (lower.isZero())
+    lower = lower.sextOrTrunc(bitWidth);
+  if (upper.isZero())
+    upper = upper.sextOrTrunc(bitWidth);
+  return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
+                                              upper);
+}
+
+void ConstantRangeAttr::print(AsmPrinter &printer) const {
+  printer << "<i" << getLower().getBitWidth() << ", " << getLower() << ", "
+          << getUpper() << ">";
+}
+
+LogicalResult
+ConstantRangeAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                          APInt lower, APInt upper) {
+  if (lower.getBitWidth() != upper.getBitWidth())
+    return emitError()
+           << "expected lower and upper to have matching bitwidths but got "
+           << lower.getBitWidth() << " vs. " << upper.getBitWidth();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -257,7 +326,7 @@ std::string TargetFeaturesAttr::getFeaturesString() const {
   llvm::raw_string_ostream ss(featuresString);
   llvm::interleave(
       getFeatures(), ss, [&](auto &feature) { ss << feature.strref(); }, ",");
-  return ss.str();
+  return featuresString;
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {

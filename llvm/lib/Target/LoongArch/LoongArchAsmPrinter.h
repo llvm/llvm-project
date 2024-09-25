@@ -15,6 +15,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Compiler.h"
 
@@ -41,14 +42,15 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  void LowerSTATEPOINT(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
   // tblgen'erated function.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
+
   // Wrapper needed for tblgenned pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);

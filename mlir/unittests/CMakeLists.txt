@@ -1,5 +1,3 @@
-set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR Tests")
-
 # To silence warning caused by Wundef.
 add_definitions(-DGTEST_NO_LLVM_SUPPORT=0)
 

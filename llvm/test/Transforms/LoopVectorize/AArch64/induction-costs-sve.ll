@@ -42,13 +42,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
-; DEFAULT-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 0
-; DEFAULT-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP17]], 1
-; DEFAULT-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], [[TMP18]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP14]]
-; DEFAULT-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP19]]
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP20]], i32 0
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 8
@@ -68,7 +62,6 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP36:%.*]] = trunc <vscale x 8 x i16> [[TMP34]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP37:%.*]] = trunc <vscale x 8 x i16> [[TMP35]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
-; DEFAULT-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP19]]
 ; DEFAULT-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[TMP38]], i32 0
 ; DEFAULT-NEXT:    [[TMP41:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP42:%.*]] = mul i64 [[TMP41]], 8
@@ -157,9 +150,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
-; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
-; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP8]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

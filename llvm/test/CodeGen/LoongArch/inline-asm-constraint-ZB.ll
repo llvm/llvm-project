@@ -1,6 +1,6 @@
-; RUN: llc --mtriple=loongarch64 --verify-machineinstrs < %s \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=ASM
-; RUN: llc --mtriple=loongarch64 --print-after-isel -o /dev/null 2>&1 < %s \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --print-after-isel -o /dev/null 2>&1 < %s \
 ; RUN:   | FileCheck %s --check-prefix=MACHINE-INSTR
 
 ;; Note amswap.w is not available on loongarch32.

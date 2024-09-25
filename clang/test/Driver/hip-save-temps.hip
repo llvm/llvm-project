@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // -fno-gpu-rdc without -o with -c
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \

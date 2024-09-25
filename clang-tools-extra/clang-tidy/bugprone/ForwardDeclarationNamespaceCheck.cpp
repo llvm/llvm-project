@@ -95,7 +95,7 @@ static bool haveSameNamespaceOrTranslationUnit(const CXXRecordDecl *Decl1,
          "ParentDecl2 declaration must be a namespace");
   auto *Ns1 = NamespaceDecl::castFromDeclContext(ParentDecl1);
   auto *Ns2 = NamespaceDecl::castFromDeclContext(ParentDecl2);
-  return Ns1->getOriginalNamespace() == Ns2->getOriginalNamespace();
+  return Ns1->getFirstDecl() == Ns2->getFirstDecl();
 }
 
 static std::string getNameOfNamespace(const CXXRecordDecl *Decl) {
@@ -107,7 +107,6 @@ static std::string getNameOfNamespace(const CXXRecordDecl *Decl) {
   std::string Ns;
   llvm::raw_string_ostream OStream(Ns);
   NsDecl->printQualifiedName(OStream);
-  OStream.flush();
   return Ns.empty() ? "(global)" : Ns;
 }
 

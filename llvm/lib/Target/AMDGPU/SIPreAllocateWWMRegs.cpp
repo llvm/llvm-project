@@ -59,7 +59,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<VirtRegMap>();
     AU.addRequired<LiveRegMatrix>();
     AU.setPreservesAll();
@@ -75,7 +75,7 @@ private:
 
 INITIALIZE_PASS_BEGIN(SIPreAllocateWWMRegs, DEBUG_TYPE,
                 "SI Pre-allocate WWM Registers", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_END(SIPreAllocateWWMRegs, DEBUG_TYPE,
@@ -165,19 +165,15 @@ SIPreAllocateWWMRegs::printWWMInfo(const MachineInstr &MI) {
 
   unsigned Opc = MI.getOpcode();
 
-  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM ||
-      Opc == AMDGPU::ENTER_PSEUDO_WM) {
+  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM) {
     dbgs() << "Entering ";
   } else {
-    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM ||
-           Opc == AMDGPU::EXIT_PSEUDO_WM);
+    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM);
     dbgs() << "Exiting ";
   }
 
   if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WWM) {
     dbgs() << "Strict WWM ";
-  } else if (Opc == AMDGPU::ENTER_PSEUDO_WM || Opc == AMDGPU::EXIT_PSEUDO_WM) {
-    dbgs() << "Pseudo WWM/WQM ";
   } else {
     assert(Opc == AMDGPU::ENTER_STRICT_WQM || Opc == AMDGPU::EXIT_STRICT_WQM);
     dbgs() << "Strict WQM ";
@@ -197,7 +193,7 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Matrix = &getAnalysis<LiveRegMatrix>();
   VRM = &getAnalysis<VirtRegMap>();
 
@@ -219,8 +215,7 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : RPOT) {
     bool InWWM = false;
     for (MachineInstr &MI : *MBB) {
-      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
-          MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
+      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32)
         RegsAssigned |= processDef(MI.getOperand(0));
 
       if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
@@ -230,16 +225,14 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM ||
-          MI.getOpcode() == AMDGPU::ENTER_PSEUDO_WM) {
+          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = true;
         continue;
       }
 
       if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM ||
-          MI.getOpcode() == AMDGPU::EXIT_PSEUDO_WM) {
+          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = false;
       }

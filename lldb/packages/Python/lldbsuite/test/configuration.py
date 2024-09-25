@@ -43,6 +43,7 @@ arch = None
 compiler = None
 dsymutil = None
 sdkroot = None
+make_path = None
 
 # The overriden dwarf verison.
 dwarf_version = 0
@@ -116,6 +117,9 @@ test_result = None
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.
 all_tests = set()
+
+# Path to LLVM tools to be used by tests.
+llvm_tools_dir = None
 
 # LLDB library directory.
 lldb_libs_dir = None

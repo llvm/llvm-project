@@ -43,21 +43,6 @@ have their own config directory.
    config directory for Fuchsia as the bring up is being done in the Fuchsia
    source tree.
 
-The api.td file
----------------
-
-If the :ref:`fullbuild_mode` is to be supported on the new operating system,
-then a file named ``api.td`` should be added in its config directory. It is
-written in the
-`LLVM tablegen language <https://llvm.org/docs/TableGen/ProgRef.html>`_.
-It lists all the relevant macros and type definitions we want in the
-public libc header files. See the existing Linux
-`api.td <https://github.com/llvm/llvm-project/blob/main/libc/config/linux/api.td>`_
-file as an example to prepare the ``api.td`` file for the new operating system.
-
-.. note:: In future, LLVM tablegen will be replaced with a different DSL to list
-   config information.
-
 Architecture Subdirectory
 =========================
 

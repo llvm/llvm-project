@@ -252,6 +252,22 @@ def BufferDeallocationSimplification :
   ];
 }
 
+def OptimizeAllocationLiveness
+    : Pass<"optimize-allocation-liveness", "func::FuncOp"> {
+  let summary = "This pass optimizes the liveness of temp allocations in the "
+                "input function";
+  let description =
+       [{This pass will find all operations that have a memory allocation effect. 
+       It will search for the corresponding deallocation and move it right after 
+       the last user of the allocation.
+       This will optimize the liveness of the allocations.
+
+       The pass is expected to run after the deallocation pipeline.}];
+  let constructor =
+      "mlir::bufferization::createOptimizeAllocationLivenessPass()";
+  let dependentDialects = ["mlir::memref::MemRefDialect"];
+}
+
 def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
@@ -348,11 +364,6 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
     with tensor typed operands remains.
   }];
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
@@ -503,6 +514,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",

@@ -420,9 +420,9 @@ define void @strided_store_v32f64(<32 x double> %v, ptr %ptr, i32 signext %strid
 ; CHECK-NEXT:    addi a3, a2, -16
 ; CHECK-NEXT:    sltu a2, a2, a3
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-NEXT:    ret

@@ -47,5 +47,4 @@ target datalayout = "A1-E-p270:16:32:64:8-p271:16:32:64-i64:64:128"
 ; CHECK: dlti.dl_spec =
 ; CHECK: #dlti.dl_spec<
 ; CHECK-NOT:   #dlti.dl_entry<"dlti.alloca_memory_space"
-; CHECK-NOT:   #dlti.dl_entry<"dlti.stack_alignment"
-target datalayout = "A0-S0"
+target datalayout = "A0"

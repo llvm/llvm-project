@@ -8,12 +8,12 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <map>
@@ -46,7 +46,7 @@ static std::string strFromOs(function_ref<void(raw_ostream &)> func) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   func(os);
-  return os.str();
+  return buf;
 }
 
 /// Escape special characters such as '\n' and quotation marks.
@@ -93,6 +93,7 @@ public:
       processOperation(getOperation());
       emitAllEdgeStmts();
     });
+    markAllAnalysesPreserved();
   }
 
   /// Create a CFG graph for a region. Used in `Region::viewGraph`.
@@ -198,7 +199,7 @@ private:
     std::string buf;
     llvm::raw_string_ostream ss(buf);
     attr.print(ss);
-    os << truncateString(ss.str());
+    os << truncateString(buf);
   }
 
   /// Append an edge to the list of edges.
@@ -261,7 +262,7 @@ private:
         std::string buf;
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
-        os << truncateString(ss.str()) << ")";
+        os << truncateString(buf) << ")";
       }
 
       // Print attributes.

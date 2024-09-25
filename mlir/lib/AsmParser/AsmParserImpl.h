@@ -226,6 +226,16 @@ public:
     return success(parser.consumeIf(Token::plus));
   }
 
+  /// Parses a '-' token.
+  ParseResult parseMinus() override {
+    return parser.parseToken(Token::minus, "expected '-'");
+  }
+
+  /// Parses a '-' token if present.
+  ParseResult parseOptionalMinus() override {
+    return success(parser.consumeIf(Token::minus));
+  }
+
   /// Parse a '|' token.
   ParseResult parseVerticalBar() override {
     return parser.parseToken(Token::vertical_bar, "expected '|'");
@@ -320,6 +330,11 @@ public:
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result) override {
     return parser.parseOptionalInteger(result);
+  }
+
+  /// Parse an optional integer value from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result) override {
+    return parser.parseOptionalDecimalInteger(result);
   }
 
   /// Parse a list of comma-separated items with an optional delimiter.  If a

@@ -2,6 +2,7 @@
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -137,5 +138,20 @@ TEST(InstSizes, AtomicPseudo) {
         EXPECT_EQ(36u, II.getInstSizeInBytes(*I));
         ++I;
         EXPECT_EQ(44u, II.getInstSizeInBytes(*I));
+      });
+}
+
+TEST(InstSizes, StatePoint) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(
+      TM.get(), II.get(), "  declare zeroext i1 @return_i1()\n",
+      // clang-format off
+      "  STATEPOINT 0, 0, 0, target-flags(loongarch-call-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, implicit-def $r3, implicit-def $r4\n",
+      // clang-format on
+      [](LoongArchInstrInfo &II, MachineFunction &MF) {
+        auto I = MF.begin()->begin();
+        EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
       });
 }

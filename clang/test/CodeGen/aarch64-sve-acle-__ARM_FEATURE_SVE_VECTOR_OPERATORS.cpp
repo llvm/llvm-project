@@ -73,8 +73,10 @@ typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK128-NEXT:   ret void
 // CHECKWIDE-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS, 16)]] x i16>, align 16
 // CHECKWIDE-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 16)]] x i16> @llvm.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
+// CHECKWIDE-NEXT:   call void @llvm.lifetime.start.p0(i64 [[SIZE:[0-9]+]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], ptr [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(ptr noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECKWIDE-NEXT:   call void @llvm.lifetime.end.p0(i64 [[SIZE]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECKWIDE-NEXT:   ret void
 void g(vec2 x) { f(x); } // OK
 #endif

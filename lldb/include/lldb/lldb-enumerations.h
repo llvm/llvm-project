@@ -253,6 +253,7 @@ enum StopReason {
   eStopReasonFork,
   eStopReasonVFork,
   eStopReasonVForkDone,
+  eStopReasonInterrupt, ///< Thread requested interrupt
 };
 
 /// Command Return Status Types.
@@ -1107,7 +1108,12 @@ enum MemberFunctionKind {
 };
 
 /// String matching algorithm used by SBTarget.
-enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
+enum MatchType {
+  eMatchTypeNormal,
+  eMatchTypeRegex,
+  eMatchTypeStartsWith,
+  eMatchTypeRegexInsensitive
+};
 
 /// Bitmask that describes details about a type.
 FLAGS_ENUM(TypeFlags){
@@ -1216,6 +1222,7 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.

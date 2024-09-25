@@ -8,7 +8,7 @@
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-pc-table
 // CHECK-FUZZER-LIB: libclang_rt.fuzzer
 
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=platform %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-LINUX %s
+// RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=platform %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-LINUX %s
 //
 // CHECK-LIBCXX-LINUX: -lstdc++
 
@@ -29,18 +29,18 @@
 // Check that we respect whether thes tandard library should be linked
 // statically.
 //
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBSTDCXX-DYNAMIC %s
+// RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBSTDCXX-DYNAMIC %s
 // CHECK-LIBSTDCXX-DYNAMIC-NOT: -Bstatic
 // CHECK-LIBSTDCXX-DYNAMIC: -lstdc++
 //
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=libstdc++ -static-libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBSTDCXX-STATIC %s
+// RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=libstdc++ -static-libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBSTDCXX-STATIC %s
 // CHECK-LIBSTDCXX-STATIC: "-Bstatic" "-lstdc++"
 //
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=libc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-DYNAMIC %s
+// RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=libc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-DYNAMIC %s
 // CHECK-LIBCXX-DYNAMIC-NOT: -Bstatic
 // CHECK-LIBCXX-DYNAMIC: -lc++
 //
-// RUN: %clang -fsanitize=fuzzer -target i386-unknown-linux -stdlib=libc++ -static-libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-STATIC %s
+// RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=libc++ -static-libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-STATIC %s
 // CHECK-LIBCXX-STATIC: "-Bstatic" "-lc++"
 
 int LLVMFuzzerTestOneInput(const char *Data, long Size) {

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -33,6 +34,15 @@ static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
 #include "llvm/DebugInfo/BTF/BTF.def"
 };
+
+static const DIType *tryRemoveAtomicType(const DIType *Ty) {
+  if (!Ty)
+    return Ty;
+  auto DerivedTy = dyn_cast<DIDerivedType>(Ty);
+  if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
+    return DerivedTy->getBaseType();
+  return Ty;
+}
 
 /// Emit a BTF common type.
 void BTFTypeBase::emitType(MCStreamer &OS) {
@@ -89,7 +99,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
 
   // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = DTy->getBaseType();
+  const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
   if (!ResolvedType) {
     assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
             Kind == BTF::BTF_KIND_VOLATILE) &&
@@ -304,7 +314,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     } else {
       BTFMember.Offset = DDTy->getOffsetInBits();
     }
-    const auto *BaseTy = DDTy->getBaseType();
+    const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
     BTFMember.Type = BDebug.getTypeId(BaseTy);
     Members.push_back(BTFMember);
   }
@@ -341,7 +351,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeRefArray Elements = STy->getTypeArray();
-  auto RetType = Elements[0];
+  auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
 
@@ -349,7 +359,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   // to represent the vararg, encode the NameOff/Type to be 0.
   for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
     struct BTF::BTFParam Param;
-    auto Element = Elements[I];
+    auto Element = tryRemoveAtomicType(Elements[I]);
     if (Element) {
       Param.NameOff = BDebug.addString(FuncArgNames[I]);
       Param.Type = BDebug.getTypeId(Element);
@@ -482,7 +492,7 @@ void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
   BTFType.NameOff = BDebug.addString(Tag);
   if (DTy) {
-    const DIType *ResolvedType = DTy->getBaseType();
+    const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
     if (!ResolvedType)
       BTFType.Type = 0;
     else
@@ -798,6 +808,10 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
   unsigned Tag = DTy->getTag();
+
+  if (Tag == dwarf::DW_TAG_atomic_type)
+    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
+                          SeenPointer);
 
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
@@ -1443,8 +1457,10 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       DIGlobal = GVE->getVariable();
       if (SecName.starts_with(".maps"))
         visitMapDefType(DIGlobal->getType(), GVTypeId);
-      else
-        visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
+      else {
+        const DIType *Ty = tryRemoveAtomicType(DIGlobal->getType());
+        visitTypeEntry(Ty, GVTypeId, false, false);
+      }
       break;
     }
 
@@ -1489,11 +1505,34 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     }
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
     DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
         Asm->getSymbol(&Global), Size);
+
+    if (Global.hasInitializer())
+      processGlobalInitializer(Global.getInitializer());
+  }
+}
+
+/// Process global variable initializer in pursuit for function
+/// pointers. Add discovered (extern) functions to BTF. Some (extern)
+/// functions might have been missed otherwise. Every symbol needs BTF
+/// info when linking with bpftool. Primary use case: "static"
+/// initialization of BPF maps.
+///
+/// struct {
+///   __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+///   ...
+/// } prog_map SEC(".maps") = { .values = { extern_func } };
+///
+void BTFDebug::processGlobalInitializer(const Constant *C) {
+  if (auto *Fn = dyn_cast<Function>(C))
+    processFuncPrototypes(Fn);
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    for (unsigned I = 0, N = CA->getNumOperands(); I < N; ++I)
+      processGlobalInitializer(CA->getOperand(I));
   }
 }
 

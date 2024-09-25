@@ -90,6 +90,8 @@ def ProcR7      : SubtargetFeature<"r7", "ARMProcFamily", "CortexR7",
                                    "Cortex-R7 ARM processors", []>;
 def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
                                    "Cortex-R52 ARM processors", []>;
+def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
+                                   "Cortex-R52plus ARM processors", []>;
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
@@ -342,6 +344,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
+                                                         FeaturePrefLoopAlign64,
                                                          FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
@@ -383,6 +386,7 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
+                                                         FeaturePrefLoopAlign64,
                                                          FeatureUseMISched,
                                                          HasMVEFloatOps]>;
 
@@ -573,6 +577,12 @@ def : ProcNoItin<"kryo",                                [ARMv8a, ProcKryo,
                                                          FeatureCRC]>;
 
 def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
+                                                         FeatureFPARMv8,
+                                                         FeatureNEON,
+                                                         FeatureUseMISched,
+                                                         FeatureFPAO]>;
+
+def : ProcessorModel<"cortex-r52plus", CortexR52Model,  [ARMv8r, ProcR52plus,
                                                          FeatureFPARMv8,
                                                          FeatureNEON,
                                                          FeatureUseMISched,

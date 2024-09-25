@@ -10,11 +10,12 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 
+#include <__config>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <cstddef>
-#include <experimental/__config>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
@@ -68,6 +69,17 @@ public:
   template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd(const _Up* __mem, _Flags) {
     _Impl::__load(__s_, _Flags::template __apply<simd>(__mem));
+  }
+
+  // copy functions
+  template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_from(const _Up* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd>(__mem));
+  }
+
+  template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void copy_to(_Up* __mem, _Flags) const {
+    _Impl::__store(__s_, _Flags::template __apply<simd>(__mem));
   }
 
   // scalar access [simd.subscr]

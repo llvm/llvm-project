@@ -16,45 +16,45 @@
 // CHECK-NEXT:    [[F32:%.*]] = alloca <vscale x 4 x float>, align 16
 // CHECK-NEXT:    [[F64:%.*]] = alloca <vscale x 2 x double>, align 16
 // CHECK-NEXT:    [[BF16:%.*]] = alloca <vscale x 8 x bfloat>, align 16
-// CHECK-NEXT:    [[S8X2:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    [[S16X2:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    [[S32X2:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    [[X64X2:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    [[U8X2:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    [[U16X2:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    [[U32X2:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    [[U64X2:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    [[F16X2:%.*]] = alloca <vscale x 16 x half>, align 16
-// CHECK-NEXT:    [[F32X2:%.*]] = alloca <vscale x 8 x float>, align 16
-// CHECK-NEXT:    [[F64X2:%.*]] = alloca <vscale x 4 x double>, align 16
-// CHECK-NEXT:    [[BF16X2:%.*]] = alloca <vscale x 16 x bfloat>, align 16
-// CHECK-NEXT:    [[S8X3:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    [[S16X3:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    [[S32X3:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    [[X64X3:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    [[U8X3:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    [[U16X3:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    [[U32X3:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    [[U64X3:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    [[F16X3:%.*]] = alloca <vscale x 24 x half>, align 16
-// CHECK-NEXT:    [[F32X3:%.*]] = alloca <vscale x 12 x float>, align 16
-// CHECK-NEXT:    [[F64X3:%.*]] = alloca <vscale x 6 x double>, align 16
-// CHECK-NEXT:    [[BF16X3:%.*]] = alloca <vscale x 24 x bfloat>, align 16
-// CHECK-NEXT:    [[S8X4:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    [[S16X4:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    [[S32X4:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    [[X64X4:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    [[U8X4:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    [[U16X4:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    [[U32X4:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    [[U64X4:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    [[F16X4:%.*]] = alloca <vscale x 32 x half>, align 16
-// CHECK-NEXT:    [[F32X4:%.*]] = alloca <vscale x 16 x float>, align 16
-// CHECK-NEXT:    [[F64X4:%.*]] = alloca <vscale x 8 x double>, align 16
-// CHECK-NEXT:    [[BF16X4:%.*]] = alloca <vscale x 32 x bfloat>, align 16
+// CHECK-NEXT:    [[S8X2:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[S16X2:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[S32X2:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[X64X2:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[U8X2:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[U16X2:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[U32X2:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[U64X2:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[F16X2:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[F32X2:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[F64X2:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[BF16X2:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[S8X3:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[S16X3:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[S32X3:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[X64X3:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[U8X3:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[U16X3:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[U32X3:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[U64X3:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[F16X3:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[F32X3:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[F64X3:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[BF16X3:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[S8X4:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[S16X4:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[S32X4:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[X64X4:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[U8X4:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[U16X4:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[U32X4:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[U64X4:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[F16X4:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[F32X4:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[F64X4:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[BF16X4:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
 // CHECK-NEXT:    [[B8:%.*]] = alloca <vscale x 16 x i1>, align 2
-// CHECK-NEXT:    [[B8X2:%.*]] = alloca <vscale x 32 x i1>, align 2
-// CHECK-NEXT:    [[B8X4:%.*]] = alloca <vscale x 64 x i1>, align 2
+// CHECK-NEXT:    [[B8X2:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[B8X4:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
 // CHECK-NEXT:    [[CNT:%.*]] = alloca target("aarch64.svcount"), align 2
 // CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[S8]], align 16
 // CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr [[S16]], align 16
@@ -68,45 +68,45 @@
 // CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[F32]], align 16
 // CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[F64]], align 16
 // CHECK-NEXT:    store <vscale x 8 x bfloat> zeroinitializer, ptr [[BF16]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> zeroinitializer, ptr [[S8X2]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> zeroinitializer, ptr [[S16X2]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[S32X2]], align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[X64X2]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> zeroinitializer, ptr [[U8X2]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> zeroinitializer, ptr [[U16X2]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr [[U32X2]], align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[U64X2]], align 16
-// CHECK-NEXT:    store <vscale x 16 x half> zeroinitializer, ptr [[F16X2]], align 16
-// CHECK-NEXT:    store <vscale x 8 x float> zeroinitializer, ptr [[F32X2]], align 16
-// CHECK-NEXT:    store <vscale x 4 x double> zeroinitializer, ptr [[F64X2]], align 16
-// CHECK-NEXT:    store <vscale x 16 x bfloat> zeroinitializer, ptr [[BF16X2]], align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> zeroinitializer, ptr [[S8X3]], align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> zeroinitializer, ptr [[S16X3]], align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> zeroinitializer, ptr [[S32X3]], align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> zeroinitializer, ptr [[X64X3]], align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> zeroinitializer, ptr [[U8X3]], align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> zeroinitializer, ptr [[U16X3]], align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> zeroinitializer, ptr [[U32X3]], align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> zeroinitializer, ptr [[U64X3]], align 16
-// CHECK-NEXT:    store <vscale x 24 x half> zeroinitializer, ptr [[F16X3]], align 16
-// CHECK-NEXT:    store <vscale x 12 x float> zeroinitializer, ptr [[F32X3]], align 16
-// CHECK-NEXT:    store <vscale x 6 x double> zeroinitializer, ptr [[F64X3]], align 16
-// CHECK-NEXT:    store <vscale x 24 x bfloat> zeroinitializer, ptr [[BF16X3]], align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> zeroinitializer, ptr [[S8X4]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> zeroinitializer, ptr [[S16X4]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[S32X4]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> zeroinitializer, ptr [[X64X4]], align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> zeroinitializer, ptr [[U8X4]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> zeroinitializer, ptr [[U16X4]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> zeroinitializer, ptr [[U32X4]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> zeroinitializer, ptr [[U64X4]], align 16
-// CHECK-NEXT:    store <vscale x 32 x half> zeroinitializer, ptr [[F16X4]], align 16
-// CHECK-NEXT:    store <vscale x 16 x float> zeroinitializer, ptr [[F32X4]], align 16
-// CHECK-NEXT:    store <vscale x 8 x double> zeroinitializer, ptr [[F64X4]], align 16
-// CHECK-NEXT:    store <vscale x 32 x bfloat> zeroinitializer, ptr [[BF16X4]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[S8X2]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[S16X2]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[S32X2]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[X64X2]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[U8X2]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[U16X2]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[U32X2]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[U64X2]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half> } zeroinitializer, ptr [[F16X2]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float> } zeroinitializer, ptr [[F32X2]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double> } zeroinitializer, ptr [[F64X2]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } zeroinitializer, ptr [[BF16X2]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[S8X3]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[S16X3]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[S32X3]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[X64X3]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[U8X3]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[U16X3]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[U32X3]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[U64X3]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } zeroinitializer, ptr [[F16X3]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } zeroinitializer, ptr [[F32X3]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } zeroinitializer, ptr [[F64X3]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } zeroinitializer, ptr [[BF16X3]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[S8X4]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[S16X4]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[S32X4]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[X64X4]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[U8X4]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } zeroinitializer, ptr [[U16X4]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } zeroinitializer, ptr [[U32X4]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } zeroinitializer, ptr [[U64X4]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } zeroinitializer, ptr [[F16X4]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } zeroinitializer, ptr [[F32X4]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } zeroinitializer, ptr [[F64X4]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } zeroinitializer, ptr [[BF16X4]], align 16
 // CHECK-NEXT:    store <vscale x 16 x i1> zeroinitializer, ptr [[B8]], align 2
-// CHECK-NEXT:    store <vscale x 32 x i1> zeroinitializer, ptr [[B8X2]], align 2
-// CHECK-NEXT:    store <vscale x 64 x i1> zeroinitializer, ptr [[B8X4]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr [[B8X2]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr [[B8X4]], align 2
 // CHECK-NEXT:    store target("aarch64.svcount") zeroinitializer, ptr [[CNT]], align 2
 // CHECK-NEXT:    ret void
 //
@@ -339,13 +339,18 @@ void test_copy_bf16(__SVBfloat16_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_s8x210svint8x2_t
-// CHECK-SAME: (<vscale x 32 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s8x2(__clang_svint8x2_t a) {
@@ -353,13 +358,18 @@ void test_copy_s8x2(__clang_svint8x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s16x211svint16x2_t
-// CHECK-SAME: (<vscale x 16 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s16x2(__clang_svint16x2_t a) {
@@ -367,13 +377,18 @@ void test_copy_s16x2(__clang_svint16x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s32x211svint32x2_t
-// CHECK-SAME: (<vscale x 8 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s32x2(__clang_svint32x2_t a) {
@@ -381,13 +396,18 @@ void test_copy_s32x2(__clang_svint32x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s64x211svint64x2_t
-// CHECK-SAME: (<vscale x 4 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s64x2(__clang_svint64x2_t a) {
@@ -395,13 +415,18 @@ void test_copy_s64x2(__clang_svint64x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_u8x211svuint8x2_t
-// CHECK-SAME: (<vscale x 32 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u8x2(__clang_svuint8x2_t a) {
@@ -409,13 +434,18 @@ void test_copy_u8x2(__clang_svuint8x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u16x212svuint16x2_t
-// CHECK-SAME: (<vscale x 16 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u16x2(__clang_svuint16x2_t a) {
@@ -423,13 +453,18 @@ void test_copy_u16x2(__clang_svuint16x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u32x212svuint32x2_t
-// CHECK-SAME: (<vscale x 8 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u32x2(__clang_svuint32x2_t a) {
@@ -437,13 +472,18 @@ void test_copy_u32x2(__clang_svuint32x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u64x212svuint64x2_t
-// CHECK-SAME: (<vscale x 4 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 4 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 4 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u64x2(__clang_svuint64x2_t a) {
@@ -451,13 +491,18 @@ void test_copy_u64x2(__clang_svuint64x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f16x213svfloat16x2_t
-// CHECK-SAME: (<vscale x 16 x half> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x half> [[A_COERCE0:%.*]], <vscale x 8 x half> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x half>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x half>, align 16
-// CHECK-NEXT:    store <vscale x 16 x half> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x half>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x half> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f16x2(__clang_svfloat16x2_t a) {
@@ -465,13 +510,18 @@ void test_copy_f16x2(__clang_svfloat16x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f32x213svfloat32x2_t
-// CHECK-SAME: (<vscale x 8 x float> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x float> [[A_COERCE0:%.*]], <vscale x 4 x float> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x float>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x float>, align 16
-// CHECK-NEXT:    store <vscale x 8 x float> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x float>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x float> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f32x2(__clang_svfloat32x2_t a) {
@@ -479,13 +529,18 @@ void test_copy_f32x2(__clang_svfloat32x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f64x213svfloat64x2_t
-// CHECK-SAME: (<vscale x 4 x double> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x double> [[A_COERCE0:%.*]], <vscale x 2 x double> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 4 x double>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 4 x double>, align 16
-// CHECK-NEXT:    store <vscale x 4 x double> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x double>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 4 x double> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f64x2(__clang_svfloat64x2_t a) {
@@ -493,13 +548,18 @@ void test_copy_f64x2(__clang_svfloat64x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z16test_copy_bf16x214svbfloat16x2_t
-// CHECK-SAME: (<vscale x 16 x bfloat> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x bfloat> [[A_COERCE0:%.*]], <vscale x 8 x bfloat> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x bfloat>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x bfloat>, align 16
-// CHECK-NEXT:    store <vscale x 16 x bfloat> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x bfloat>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x bfloat> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_bf16x2(__clang_svbfloat16x2_t a) {
@@ -507,13 +567,19 @@ void test_copy_bf16x2(__clang_svbfloat16x2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_s8x310svint8x3_t
-// CHECK-SAME: (<vscale x 48 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 48 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s8x3(__clang_svint8x3_t a) {
@@ -521,13 +587,19 @@ void test_copy_s8x3(__clang_svint8x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s16x311svint16x3_t
-// CHECK-SAME: (<vscale x 24 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]], <vscale x 8 x i16> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 24 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s16x3(__clang_svint16x3_t a) {
@@ -535,13 +607,19 @@ void test_copy_s16x3(__clang_svint16x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s32x311svint32x3_t
-// CHECK-SAME: (<vscale x 12 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]], <vscale x 4 x i32> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 12 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s32x3(__clang_svint32x3_t a) {
@@ -549,13 +627,19 @@ void test_copy_s32x3(__clang_svint32x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s64x311svint64x3_t
-// CHECK-SAME: (<vscale x 6 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]], <vscale x 2 x i64> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 6 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s64x3(__clang_svint64x3_t a) {
@@ -563,13 +647,19 @@ void test_copy_s64x3(__clang_svint64x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_u8x311svuint8x3_t
-// CHECK-SAME: (<vscale x 48 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 48 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 48 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 48 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u8x3(__clang_svuint8x3_t a) {
@@ -577,13 +667,19 @@ void test_copy_u8x3(__clang_svuint8x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u16x312svuint16x3_t
-// CHECK-SAME: (<vscale x 24 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]], <vscale x 8 x i16> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 24 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 24 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 24 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u16x3(__clang_svuint16x3_t a) {
@@ -591,13 +687,19 @@ void test_copy_u16x3(__clang_svuint16x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u32x312svuint32x3_t
-// CHECK-SAME: (<vscale x 12 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]], <vscale x 4 x i32> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 12 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 12 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 12 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u32x3(__clang_svuint32x3_t a) {
@@ -605,13 +707,19 @@ void test_copy_u32x3(__clang_svuint32x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u64x312svuint64x3_t
-// CHECK-SAME: (<vscale x 6 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]], <vscale x 2 x i64> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 6 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 6 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 6 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u64x3(__clang_svuint64x3_t a) {
@@ -619,13 +727,19 @@ void test_copy_u64x3(__clang_svuint64x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f16x313svfloat16x3_t
-// CHECK-SAME: (<vscale x 24 x half> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x half> [[A_COERCE0:%.*]], <vscale x 8 x half> [[A_COERCE1:%.*]], <vscale x 8 x half> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 24 x half>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 24 x half>, align 16
-// CHECK-NEXT:    store <vscale x 24 x half> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 24 x half>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 24 x half> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f16x3(__clang_svfloat16x3_t a) {
@@ -633,13 +747,19 @@ void test_copy_f16x3(__clang_svfloat16x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f32x313svfloat32x3_t
-// CHECK-SAME: (<vscale x 12 x float> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x float> [[A_COERCE0:%.*]], <vscale x 4 x float> [[A_COERCE1:%.*]], <vscale x 4 x float> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 12 x float>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 12 x float>, align 16
-// CHECK-NEXT:    store <vscale x 12 x float> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 12 x float>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 12 x float> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f32x3(__clang_svfloat32x3_t a) {
@@ -647,13 +767,19 @@ void test_copy_f32x3(__clang_svfloat32x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f64x313svfloat64x3_t
-// CHECK-SAME: (<vscale x 6 x double> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x double> [[A_COERCE0:%.*]], <vscale x 2 x double> [[A_COERCE1:%.*]], <vscale x 2 x double> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 6 x double>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 6 x double>, align 16
-// CHECK-NEXT:    store <vscale x 6 x double> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 6 x double>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 6 x double> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f64x3(__clang_svfloat64x3_t a) {
@@ -661,13 +787,19 @@ void test_copy_f64x3(__clang_svfloat64x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z16test_copy_bf16x314svbfloat16x3_t
-// CHECK-SAME: (<vscale x 24 x bfloat> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x bfloat> [[A_COERCE0:%.*]], <vscale x 8 x bfloat> [[A_COERCE1:%.*]], <vscale x 8 x bfloat> [[A_COERCE2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 24 x bfloat>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 24 x bfloat>, align 16
-// CHECK-NEXT:    store <vscale x 24 x bfloat> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 24 x bfloat>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 24 x bfloat> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_bf16x3(__clang_svbfloat16x3_t a) {
@@ -675,13 +807,20 @@ void test_copy_bf16x3(__clang_svbfloat16x3_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_s8x410svint8x4_t
-// CHECK-SAME: (<vscale x 64 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]], <vscale x 16 x i8> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 64 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s8x4(__clang_svint8x4_t a) {
@@ -689,13 +828,20 @@ void test_copy_s8x4(__clang_svint8x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s16x411svint16x4_t
-// CHECK-SAME: (<vscale x 32 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]], <vscale x 8 x i16> [[A_COERCE2:%.*]], <vscale x 8 x i16> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], <vscale x 8 x i16> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s16x4(__clang_svint16x4_t a) {
@@ -703,13 +849,20 @@ void test_copy_s16x4(__clang_svint16x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s32x411svint32x4_t
-// CHECK-SAME: (<vscale x 16 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]], <vscale x 4 x i32> [[A_COERCE2:%.*]], <vscale x 4 x i32> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], <vscale x 4 x i32> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s32x4(__clang_svint32x4_t a) {
@@ -717,13 +870,20 @@ void test_copy_s32x4(__clang_svint32x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_s64x411svint64x4_t
-// CHECK-SAME: (<vscale x 8 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]], <vscale x 2 x i64> [[A_COERCE2:%.*]], <vscale x 2 x i64> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], <vscale x 2 x i64> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_s64x4(__clang_svint64x4_t a) {
@@ -731,13 +891,20 @@ void test_copy_s64x4(__clang_svint64x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_u8x411svuint8x4_t
-// CHECK-SAME: (<vscale x 64 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]], <vscale x 16 x i8> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 64 x i8>, align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 64 x i8>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 64 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u8x4(__clang_svuint8x4_t a) {
@@ -745,13 +912,20 @@ void test_copy_u8x4(__clang_svuint8x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u16x412svuint16x4_t
-// CHECK-SAME: (<vscale x 32 x i16> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x i16> [[A_COERCE0:%.*]], <vscale x 8 x i16> [[A_COERCE1:%.*]], <vscale x 8 x i16> [[A_COERCE2:%.*]], <vscale x 8 x i16> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x i16>, align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x i16>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x i16> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison, <vscale x 8 x i16> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], <vscale x 8 x i16> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], <vscale x 8 x i16> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP2]], <vscale x 8 x i16> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u16x4(__clang_svuint16x4_t a) {
@@ -759,13 +933,20 @@ void test_copy_u16x4(__clang_svuint16x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u32x412svuint32x4_t
-// CHECK-SAME: (<vscale x 16 x i32> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x i32> [[A_COERCE0:%.*]], <vscale x 4 x i32> [[A_COERCE1:%.*]], <vscale x 4 x i32> [[A_COERCE2:%.*]], <vscale x 4 x i32> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i32>, align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i32>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x i32> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison, <vscale x 4 x i32> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], <vscale x 4 x i32> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], <vscale x 4 x i32> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP2]], <vscale x 4 x i32> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u32x4(__clang_svuint32x4_t a) {
@@ -773,13 +954,20 @@ void test_copy_u32x4(__clang_svuint32x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_u64x412svuint64x4_t
-// CHECK-SAME: (<vscale x 8 x i64> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x i64> [[A_COERCE0:%.*]], <vscale x 2 x i64> [[A_COERCE1:%.*]], <vscale x 2 x i64> [[A_COERCE2:%.*]], <vscale x 2 x i64> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x i64>, align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i64>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x i64> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison, <vscale x 2 x i64> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], <vscale x 2 x i64> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], <vscale x 2 x i64> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP2]], <vscale x 2 x i64> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_u64x4(__clang_svuint64x4_t a) {
@@ -787,13 +975,20 @@ void test_copy_u64x4(__clang_svuint64x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f16x413svfloat16x4_t
-// CHECK-SAME: (<vscale x 32 x half> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x half> [[A_COERCE0:%.*]], <vscale x 8 x half> [[A_COERCE1:%.*]], <vscale x 8 x half> [[A_COERCE2:%.*]], <vscale x 8 x half> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x half>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x half>, align 16
-// CHECK-NEXT:    store <vscale x 32 x half> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x half>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x half> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison, <vscale x 8 x half> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], <vscale x 8 x half> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], <vscale x 8 x half> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP2]], <vscale x 8 x half> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f16x4(__clang_svfloat16x4_t a) {
@@ -801,13 +996,20 @@ void test_copy_f16x4(__clang_svfloat16x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f32x413svfloat32x4_t
-// CHECK-SAME: (<vscale x 16 x float> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 4 x float> [[A_COERCE0:%.*]], <vscale x 4 x float> [[A_COERCE1:%.*]], <vscale x 4 x float> [[A_COERCE2:%.*]], <vscale x 4 x float> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x float>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x float>, align 16
-// CHECK-NEXT:    store <vscale x 16 x float> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x float>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 16 x float> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison, <vscale x 4 x float> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], <vscale x 4 x float> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], <vscale x 4 x float> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP2]], <vscale x 4 x float> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f32x4(__clang_svfloat32x4_t a) {
@@ -815,13 +1017,20 @@ void test_copy_f32x4(__clang_svfloat32x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z15test_copy_f64x413svfloat64x4_t
-// CHECK-SAME: (<vscale x 8 x double> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 2 x double> [[A_COERCE0:%.*]], <vscale x 2 x double> [[A_COERCE1:%.*]], <vscale x 2 x double> [[A_COERCE2:%.*]], <vscale x 2 x double> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 8 x double>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 8 x double>, align 16
-// CHECK-NEXT:    store <vscale x 8 x double> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x double>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 8 x double> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison, <vscale x 2 x double> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], <vscale x 2 x double> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], <vscale x 2 x double> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP2]], <vscale x 2 x double> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_f64x4(__clang_svfloat64x4_t a) {
@@ -829,13 +1038,20 @@ void test_copy_f64x4(__clang_svfloat64x4_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z16test_copy_bf16x414svbfloat16x4_t
-// CHECK-SAME: (<vscale x 32 x bfloat> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 8 x bfloat> [[A_COERCE0:%.*]], <vscale x 8 x bfloat> [[A_COERCE1:%.*]], <vscale x 8 x bfloat> [[A_COERCE2:%.*]], <vscale x 8 x bfloat> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x bfloat>, align 16
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x bfloat>, align 16
-// CHECK-NEXT:    store <vscale x 32 x bfloat> [[A]], ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x bfloat>, ptr [[A_ADDR]], align 16
-// CHECK-NEXT:    store <vscale x 32 x bfloat> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP4]], ptr [[B]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_copy_bf16x4(__clang_svbfloat16x4_t a) {
@@ -857,13 +1073,18 @@ void test_copy_b8(__SVBool_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_b8x210svboolx2_t
-// CHECK-SAME: (<vscale x 32 x i1> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i1> [[A_COERCE0:%.*]], <vscale x 16 x i1> [[A_COERCE1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 32 x i1>, align 2
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 32 x i1>, align 2
-// CHECK-NEXT:    store <vscale x 32 x i1> [[A]], ptr [[A_ADDR]], align 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 32 x i1>, ptr [[A_ADDR]], align 2
-// CHECK-NEXT:    store <vscale x 32 x i1> [[TMP0]], ptr [[B]], align 2
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], ptr [[A]], align 2
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i1>, <vscale x 16 x i1> }, ptr [[A]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } [[A1]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 16 x i1>, <vscale x 16 x i1> }, ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], ptr [[B]], align 2
 // CHECK-NEXT:    ret void
 //
 void test_copy_b8x2(__clang_svboolx2_t a) {
@@ -871,13 +1092,20 @@ void test_copy_b8x2(__clang_svboolx2_t a) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z14test_copy_b8x410svboolx4_t
-// CHECK-SAME: (<vscale x 64 x i1> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<vscale x 16 x i1> [[A_COERCE0:%.*]], <vscale x 16 x i1> [[A_COERCE1:%.*]], <vscale x 16 x i1> [[A_COERCE2:%.*]], <vscale x 16 x i1> [[A_COERCE3:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 64 x i1>, align 2
-// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 64 x i1>, align 2
-// CHECK-NEXT:    store <vscale x 64 x i1> [[A]], ptr [[A_ADDR]], align 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 64 x i1>, ptr [[A_ADDR]], align 2
-// CHECK-NEXT:    store <vscale x 64 x i1> [[TMP0]], ptr [[B]], align 2
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } poison, <vscale x 16 x i1> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP0]], <vscale x 16 x i1> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP1]], <vscale x 16 x i1> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP2]], <vscale x 16 x i1> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP3]], ptr [[A]], align 2
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, ptr [[A]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[A1]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } [[TMP4]], ptr [[B]], align 2
 // CHECK-NEXT:    ret void
 //
 void test_copy_b8x4(__clang_svboolx4_t a) {

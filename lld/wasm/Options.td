@@ -38,9 +38,13 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
-def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
-def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
+
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions (default)">;
 
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
@@ -58,7 +62,7 @@ def compress_relocations: F<"compress-relocations">,
   HelpText<"Compress the relocation targets in the code section.">;
 
 defm demangle: B<"demangle",
-    "Demangle symbol names",
+    "Demangle symbol names (default)",
     "Do not demangle symbol names">;
 
 def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
@@ -79,15 +83,16 @@ def entry: S<"entry">, MetaVarName<"<entry>">,
 defm error_limit:
   EEq<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
-def fatal_warnings: F<"fatal-warnings">,
-  HelpText<"Treat warnings as errors">;
+defm fatal_warnings: B<"fatal-warnings",
+    "Treat warnings as errors",
+    "Do not treat warnings as errors (default)">;
 
 defm gc_sections: B<"gc-sections",
-    "Enable garbage collection of unused sections",
+    "Enable garbage collection of unused sections (defualt)",
     "Disable garbage collection of unused sections">;
 
 defm merge_data_segments: BB<"merge-data-segments",
-    "Enable merging data segments",
+    "Enable merging data segments (default)",
     "Disable merging data segments">;
 
 def help: F<"help">, HelpText<"Print option help">;
@@ -104,7 +109,8 @@ defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option proces
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
 
-def no_fatal_warnings: F<"no-fatal-warnings">;
+def noinhibit_exec: F<"noinhibit-exec">,
+  HelpText<"Retain the executable output file whenever it is still usable">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -117,7 +123,7 @@ defm pie: B<"pie",
 
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
-    "Do not list removed unused sections">;
+    "Do not list removed unused sections (default)">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
@@ -235,6 +241,9 @@ def no_growable_memory: FF<"no-growable-memory">,
 
 def no_entry: FF<"no-entry">,
   HelpText<"Do not output any entry point">;
+
+def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
+  HelpText<"Do not check signatures of functions defined in shared libraries.">;
 
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;

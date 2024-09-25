@@ -12,6 +12,11 @@ module ExportAs {
   export *
 }
 
+module Fields {
+  header "Fields.h"
+  export *
+}
+
 module HeaderLib {
   header "HeaderLib.h"
 }
@@ -22,6 +27,10 @@ module InstancetypeModule {
 
 module BrokenTypes {
   header "BrokenTypes.h"
+}
+
+module Methods {
+  header "Methods.h"
 }
 
 module ModuleWithWrongCase {

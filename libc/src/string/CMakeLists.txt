@@ -201,6 +201,14 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcoll_l
+  SRCS
+    strcoll_l.cpp
+  HDRS
+  strcoll_l.h
+)
+
+add_entrypoint_object(
   strcpy
   SRCS
     strcpy.cpp
@@ -436,6 +444,17 @@ add_entrypoint_object(
     strxfrm.cpp
   HDRS
     strxfrm.h
+  DEPENDS
+    .string_utils
+    .memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
+  strxfrm_l
+  SRCS
+    strxfrm_l.cpp
+  HDRS
+    strxfrm_l.h
   DEPENDS
     .string_utils
     .memory_utils.inline_memcpy

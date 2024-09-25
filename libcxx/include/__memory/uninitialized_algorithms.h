@@ -22,6 +22,7 @@
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/voidify.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -562,17 +563,13 @@ struct __allocator_has_trivial_copy_construct<allocator<_Type>, _Type> : true_ty
 
 template <class _Alloc,
           class _In,
-          class _RawTypeIn = __remove_const_t<_In>,
           class _Out,
-          __enable_if_t<
-              // using _RawTypeIn because of the allocator<T const> extension
-              is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_copy_assignable<_RawTypeIn>::value &&
-                  is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
-                  __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
-              int> = 0>
+          __enable_if_t<is_trivially_copy_constructible<_In>::value && is_trivially_copy_assignable<_In>::value &&
+                            is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
+                            __allocator_has_trivial_copy_construct<_Alloc, _In>::value,
+                        int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
 __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
-  // TODO: Remove the const_cast once we drop support for std::allocator<T const>
   if (__libcpp_is_constant_evaluated()) {
     while (__first1 != __last1) {
       std::__construct_at(std::__to_address(__first2), *__first1);
@@ -581,7 +578,7 @@ __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* 
     }
     return __first2;
   } else {
-    return std::copy(__first1, __last1, const_cast<_RawTypeIn*>(__first2));
+    return std::copy(__first1, __last1, __first2);
   }
 }
 
@@ -642,7 +639,7 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(const_cast<__remove_const_t<_Tp>*>(__result), __first, sizeof(_Tp) * (__last - __first));
+    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
   }
 }
 

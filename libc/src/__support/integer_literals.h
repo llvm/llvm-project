@@ -15,11 +15,12 @@
 
 #include "src/__support/CPP/limits.h"        // CHAR_BIT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"           // UInt128
 #include <stddef.h>                          // size_t
 #include <stdint.h>                          // uintxx_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
   return static_cast<uint8_t>(value);
@@ -182,6 +183,6 @@ template <typename T> LIBC_INLINE constexpr T parse_bigint(const char *ptr) {
   return internal::parse_with_prefix<T>(ptr);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H

@@ -17,6 +17,8 @@ unittest("IRTests") {
     "BasicBlockDbgInfoTest.cpp",
     "BasicBlockTest.cpp",
     "CFGBuilder.cpp",
+    "ConstantFPRangeTest.cpp",
+    "ConstantRangeListTest.cpp",
     "ConstantRangeTest.cpp",
     "ConstantsTest.cpp",
     "CoreBindings.cpp",

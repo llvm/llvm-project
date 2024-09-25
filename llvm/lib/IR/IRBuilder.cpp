@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Statepoint.h"
@@ -43,8 +44,8 @@ using namespace llvm;
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
                                                   unsigned AddressSpace,
-                                                  Module *M) {
-  Constant *StrConstant = ConstantDataArray::getString(Context, Str);
+                                                  Module *M, bool AddNull) {
+  Constant *StrConstant = ConstantDataArray::getString(Context, Str, AddNull);
   if (!M)
     M = BB->getParent()->getParent();
   auto *GV = new GlobalVariable(
@@ -116,8 +117,8 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
     if (STy->getScalarSizeInBits() < 8)
       StepVecType =
           VectorType::get(getInt8Ty(), cast<ScalableVectorType>(DstType));
-    Value *Res = CreateIntrinsic(Intrinsic::experimental_stepvector,
-                                 {StepVecType}, {}, nullptr, Name);
+    Value *Res = CreateIntrinsic(Intrinsic::stepvector, {StepVecType}, {},
+                                 nullptr, Name);
     if (StepVecType != DstType)
       Res = CreateTrunc(Res, DstType);
     return Res;
@@ -345,8 +346,8 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
-                      MallocF, Name);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
+                      Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
@@ -1053,9 +1054,8 @@ Value *IRBuilderBase::CreateFCmpHelper(
     return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
   }
 
-  if (auto *LC = dyn_cast<Constant>(LHS))
-    if (auto *RC = dyn_cast<Constant>(RHS))
-      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  if (auto *V = Folder.FoldCmp(P, LHS, RHS))
+    return V;
   return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
 }
 

@@ -158,8 +158,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
                         Register FrameReg) {
   DefedReg = MCRegister::NoRegister;
   bool SawStore = true;
-  if (!MI->isSafeToMove(nullptr, SawStore) || MI->isImplicitDef() ||
-      MI->isInlineAsm())
+  if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);

@@ -11,6 +11,7 @@
 #include "Globals.h"
 #include "IRModule.h"
 #include "Pass.h"
+#include "Rewrite.h"
 
 namespace py = pybind11;
 using namespace mlir;
@@ -115,6 +116,9 @@ PYBIND11_MODULE(_mlir, m) {
   populateIRAttributes(irModule);
   populateIRInterfaces(irModule);
   populateIRTypes(irModule);
+
+  auto rewriteModule = m.def_submodule("rewrite", "MLIR Rewrite Bindings");
+  populateRewriteSubmodule(rewriteModule);
 
   // Define and populate PassManager submodule.
   auto passModule =

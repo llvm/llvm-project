@@ -34,6 +34,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -117,6 +118,8 @@ public:
 
   InlineStrategy GetInlineStrategy() const;
 
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
+
   llvm::StringRef GetArg0() const;
 
   void SetArg0(llvm::StringRef arg);
@@ -140,6 +143,8 @@ public:
   bool GetSkipPrologue() const;
 
   PathMappingList &GetSourcePathMap() const;
+
+  PathMappingList &GetObjectPathMap() const;
 
   bool GetAutoSourceMapRelative() const;
 
@@ -1077,9 +1082,11 @@ public:
   // section, then read from the file cache
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr);
+  //
+  // The method is virtual for mocking in the unit tests.
+  virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                            Status &error, bool force_live_memory = false,
+                            lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1216,6 +1223,10 @@ public:
                           lldb::addr_t load_addr);
 
   void ClearAllLoadedSections();
+
+  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(
+      lldb_private::TypeSummaryImpl &summary_provider);
+  lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.
@@ -1380,8 +1391,7 @@ public:
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
     StructuredDataImpl m_extra_args;
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp;
+    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     /// and fill it with commands, and SetSpecifier to set the specifier shared
@@ -1550,6 +1560,7 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
@@ -1615,7 +1626,7 @@ public:
 
   TargetStats &GetStatistics() { return m_stats; }
 
-private:
+protected:
   /// Construct with optional file and arch.
   ///
   /// This member is private. Clients must use

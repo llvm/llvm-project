@@ -302,15 +302,15 @@ public:
         !producer.getResult(0).hasOneUse()) {
       return failure();
     }
+    // Clone the materialization operation, but update the result to sparse.
+    rewriter.setInsertionPoint(producer);
+    Operation *init = producer.getDpsInitOperand(0)->get().getDefiningOp();
+    Operation *cloned = rewriter.clone(*init);
+    cloned->getResult(0).setType(op.getResult().getType());
+
     rewriter.modifyOpInPlace(producer, [&]() {
+      producer.getDpsInitsMutable().assign(cloned->getResults());
       producer.getResult(0).setType(op.getResult().getType());
-    });
-
-    Operation *materializeOp =
-        producer.getDpsInitOperand(0)->get().getDefiningOp();
-
-    rewriter.modifyOpInPlace(materializeOp, [&]() {
-      materializeOp->getResult(0).setType(op.getResult().getType());
     });
 
     rewriter.replaceAllOpUsesWith(op, producer);
@@ -1395,7 +1395,7 @@ public:
       loopEmitter.enterNewLoopSeq(rewriter, loc, tidLvls);
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
-      loopEmitter.enterCoIterationOverTensorsAtLvls(rewriter, loc, tidLvls,
+      loopEmitter.enterCoIterationOverTensorsAtLvls(rewriter, loc, tidLvls, 1,
                                                     reduc);
     }
 

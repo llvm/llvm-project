@@ -253,3 +253,14 @@ void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
   else
     O << Imm;
 }
+
+void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  auto PrefetchTag = SparcPrefetchTag::lookupPrefetchTagByEncoding(Imm);
+  if (PrefetchTag)
+    O << '#' << PrefetchTag->Name;
+  else
+    O << Imm;
+}

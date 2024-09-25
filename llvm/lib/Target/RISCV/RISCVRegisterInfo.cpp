@@ -72,7 +72,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   bool HasVectorCSR =
-      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
+      Subtarget.hasVInstructions();
 
   switch (Subtarget.getTargetABI()) {
   default:
@@ -103,14 +104,17 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
-  // Mark any registers requested to be reserved as such
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
+    // Mark any GPRs requested to be reserved as such
     if (Subtarget.isRegisterReservedByUser(Reg))
+      markSuperRegs(Reserved, Reg);
+
+    // Mark all the registers defined as constant in TableGen as reserved.
+    if (isConstantPhysReg(Reg))
       markSuperRegs(Reserved, Reg);
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
-  markSuperRegs(Reserved, RISCV::X0); // zero
   markSuperRegs(Reserved, RISCV::X2); // sp
   markSuperRegs(Reserved, RISCV::X3); // gp
   markSuperRegs(Reserved, RISCV::X4); // tp
@@ -135,14 +139,13 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::VTYPE);
   markSuperRegs(Reserved, RISCV::VXSAT);
   markSuperRegs(Reserved, RISCV::VXRM);
-  markSuperRegs(Reserved, RISCV::VLENB); // vlenb (constant)
 
   // Floating point environment registers.
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
 
   // SiFive VCIX state registers.
-  markSuperRegs(Reserved, RISCV::VCIX_STATE);
+  markSuperRegs(Reserved, RISCV::SF_VCIX_STATE);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())
@@ -197,11 +200,11 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
     assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % 8 == 0 &&
+    assert(ScalableValue % (RISCV::RVVBitsPerBlock / 8) == 0 &&
            "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / 8) &&
+    assert(isInt<32>(ScalableValue / (RISCV::RVVBitsPerBlock / 8)) &&
            "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / 8;
+    uint32_t NumOfVReg = ScalableValue / (RISCV::RVVBitsPerBlock / 8);
     BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
         .setMIFlag(Flag);
 
@@ -607,17 +610,24 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
 
   if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
+    auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
     // Estimate the stack size used to store callee saved registers(
     // excludes reserved registers).
     unsigned CalleeSavedSize = 0;
-    BitVector ReservedRegs = getReservedRegs(MF);
     for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
          ++R) {
-      if (!ReservedRegs.test(Reg))
-        CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+      if (Subtarget.isRegisterReservedByUser(Reg))
+        continue;
+
+      if (RISCV::GPRRegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::GPRRegClass);
+      else if (RISCV::FPR64RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR64RegClass);
+      else if (RISCV::FPR32RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR32RegClass);
+      // Ignore vector registers.
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;

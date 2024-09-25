@@ -30,15 +30,14 @@ public:
   // Appends the token stream obtained from expanding the macro Name given
   // the provided arguments, to be later retrieved with getTokens().
   // Returns the list of tokens making up the unexpanded macro call.
-  TokenList
-  expand(llvm::StringRef Name,
-         const SmallVector<llvm::SmallVector<FormatToken *, 8>, 1> &Args) {
+  TokenList expand(StringRef Name,
+                   const SmallVector<SmallVector<FormatToken *, 8>, 1> &Args) {
     return expandInternal(Name, Args);
   }
 
-  TokenList expand(llvm::StringRef Name) { return expandInternal(Name, {}); }
+  TokenList expand(StringRef Name) { return expandInternal(Name, {}); }
 
-  TokenList expand(llvm::StringRef Name, const std::vector<std::string> &Args) {
+  TokenList expand(StringRef Name, const std::vector<std::string> &Args) {
     return expandInternal(Name, lexArgs(Args));
   }
 
@@ -48,8 +47,8 @@ public:
 
 private:
   TokenList expandInternal(
-      llvm::StringRef Name,
-      const std::optional<SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
+      StringRef Name,
+      const std::optional<SmallVector<SmallVector<FormatToken *, 8>, 1>>
           &Args) {
     auto *ID = Lex.id(Name);
     auto UnexpandedLine = std::make_unique<UnwrappedLine>();
@@ -75,26 +74,23 @@ private:
     return UnexpandedTokens;
   }
 
-  llvm::SmallVector<TokenList, 1>
-  lexArgs(const std::vector<std::string> &Args) {
-    llvm::SmallVector<TokenList, 1> Result;
+  SmallVector<TokenList, 1> lexArgs(const std::vector<std::string> &Args) {
+    SmallVector<TokenList, 1> Result;
     for (const auto &Arg : Args)
       Result.push_back(uneof(Lex.lex(Arg)));
     return Result;
   }
   llvm::DenseMap<FormatToken *, std::unique_ptr<UnwrappedLine>> Unexpanded;
-  llvm::SmallVector<FormatToken *, 8> Tokens;
+  SmallVector<FormatToken *, 8> Tokens;
   TestLexer &Lex;
   MacroExpander &Macros;
 };
 
 struct Chunk {
-  Chunk(llvm::ArrayRef<FormatToken *> Tokens)
-      : Tokens(Tokens.begin(), Tokens.end()) {}
-  Chunk(llvm::ArrayRef<UnwrappedLine> Children)
-      : Children(Children.begin(), Children.end()) {}
-  llvm::SmallVector<UnwrappedLineNode, 1> Tokens;
-  llvm::SmallVector<UnwrappedLine, 0> Children;
+  Chunk(ArrayRef<FormatToken *> Tokens) : Tokens(Tokens) {}
+  Chunk(ArrayRef<UnwrappedLine> Children) : Children(Children) {}
+  SmallVector<UnwrappedLineNode, 1> Tokens;
+  SmallVector<UnwrappedLine, 0> Children;
 };
 
 // Allows to produce chunks of a token list by typing the code of equal tokens.
@@ -140,7 +136,7 @@ UnexpandedMap mergeUnexpanded(const UnexpandedMap &M1,
   return Result;
 }
 
-class MacroCallReconstructorTest : public ::testing::Test {
+class MacroCallReconstructorTest : public testing::Test {
 public:
   MacroCallReconstructorTest() : Lex(Allocator, Buffers) {}
 
@@ -151,7 +147,7 @@ public:
                                            Lex.Allocator, Lex.IdentTable);
   }
 
-  UnwrappedLine line(llvm::ArrayRef<FormatToken *> Tokens, unsigned Level = 0) {
+  UnwrappedLine line(ArrayRef<FormatToken *> Tokens, unsigned Level = 0) {
     UnwrappedLine Result;
     Result.Level = Level;
     for (FormatToken *Tok : Tokens)
@@ -159,11 +155,11 @@ public:
     return Result;
   }
 
-  UnwrappedLine line(llvm::StringRef Text, unsigned Level = 0) {
+  UnwrappedLine line(StringRef Text, unsigned Level = 0) {
     return line({lex(Text)}, Level);
   }
 
-  UnwrappedLine line(llvm::ArrayRef<Chunk> Chunks, unsigned Level = 0) {
+  UnwrappedLine line(ArrayRef<Chunk> Chunks, unsigned Level = 0) {
     UnwrappedLine Result;
     Result.Level = Level;
     for (const Chunk &Chunk : Chunks) {
@@ -176,13 +172,11 @@ public:
     return Result;
   }
 
-  TokenList lex(llvm::StringRef Text) { return uneof(Lex.lex(Text)); }
+  TokenList lex(StringRef Text) { return uneof(Lex.lex(Text)); }
 
-  Chunk tokens(llvm::StringRef Text) { return Chunk(lex(Text)); }
+  Chunk tokens(StringRef Text) { return Chunk(lex(Text)); }
 
-  Chunk children(llvm::ArrayRef<UnwrappedLine> Children) {
-    return Chunk(Children);
-  }
+  Chunk children(ArrayRef<UnwrappedLine> Children) { return Chunk(Children); }
 
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;

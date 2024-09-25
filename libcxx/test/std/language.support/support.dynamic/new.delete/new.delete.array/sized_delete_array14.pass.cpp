@@ -8,11 +8,15 @@
 
 // test sized operator delete[] replacement.
 
-// UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+// These compiler versions don't enable sized deallocation by default.
+// UNSUPPORTED: clang-17, clang-18
 
-// NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
-// default. It is only enabled when -fsized-deallocation is given.
-// XFAIL: clang, apple-clang
+// UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+// XFAIL: apple-clang
+// XFAIL: using-built-library-before-llvm-11
+
+// AIX, z/OS, and MinGW default to -fno-sized-deallocation.
+// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}, target={{.+}}-windows-gnu
 
 #include <new>
 #include <cstddef>

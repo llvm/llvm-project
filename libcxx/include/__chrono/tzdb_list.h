@@ -16,12 +16,12 @@
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#  include <__availability>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb.h>
 #  include <__config>
 #  include <__fwd/string.h>
 #  include <forward_list>
+#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

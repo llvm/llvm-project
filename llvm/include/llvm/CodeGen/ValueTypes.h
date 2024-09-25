@@ -27,6 +27,7 @@ namespace llvm {
 
   class LLVMContext;
   class Type;
+  struct fltSemantics;
 
   /// Extended Value Type. Capable of holding value types which are not native
   /// for any processor (such as the i12345 type), as well as the types an MVT
@@ -173,6 +174,9 @@ namespace llvm {
     bool isScalableVector() const {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
     }
+
+    /// Return true if this is a vector value type.
+    bool isRISCVVectorTuple() const { return V.isRISCVVectorTuple(); }
 
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
@@ -350,6 +354,11 @@ namespace llvm {
       return getVectorElementCount().getKnownMinValue();
     }
 
+    /// Given a RISCV vector tuple type, return the num_fields.
+    unsigned getRISCVVectorTupleNumFields() const {
+      return V.getRISCVVectorTupleNumFields();
+    }
+
     /// Return the size of the specified value type in bits.
     ///
     /// If the value type is a scalable vector type, the scalable property will
@@ -488,8 +497,10 @@ namespace llvm {
     Type *getTypeForEVT(LLVMContext &Context) const;
 
     /// Return the value type corresponding to the specified type.
-    /// This returns all pointers as iPTR.  If HandleUnknown is true, unknown
-    /// types are returned as Other, otherwise they are invalid.
+    /// If HandleUnknown is true, unknown types are returned as Other,
+    /// otherwise they are invalid.
+    /// NB: This includes pointer types, which require a DataLayout to convert
+    /// to a concrete value type.
     static EVT getEVT(Type *Ty, bool HandleUnknown = false);
 
     intptr_t getRawBits() const {
@@ -509,6 +520,10 @@ namespace llvm {
           return L.V.SimpleTy < R.V.SimpleTy;
       }
     };
+
+    /// Returns an APFloat semantics tag appropriate for the value type. If this
+    /// is a vector type, the element semantics are returned.
+    const fltSemantics &getFltSemantics() const;
 
   private:
     // Methods for handling the Extended-type case in functions above.

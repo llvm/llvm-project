@@ -3,21 +3,10 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -passes=slp-vectorizer,dce < %s | FileCheck -check-prefixes=GCN,VI %s
 
 define half @reduction_half4(<4 x half> %a) {
-; GFX9-LABEL: @reduction_half4(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[A:%.*]])
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_half4(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[A]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[A]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[A]], i64 3
-; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
-; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
-; VI-NEXT:    ret half [[ADD3]]
+; GCN-LABEL: @reduction_half4(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[A:%.*]])
+; GCN-NEXT:    ret half [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %a, i64 0
@@ -33,29 +22,10 @@ entry:
 }
 
 define half @reduction_half8(<8 x half> %vec8) {
-; GFX9-LABEL: @reduction_half8(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[VEC8:%.*]])
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_half8(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <8 x half> [[VEC8:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <8 x half> [[VEC8]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <8 x half> [[VEC8]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <8 x half> [[VEC8]], i64 3
-; VI-NEXT:    [[ELT4:%.*]] = extractelement <8 x half> [[VEC8]], i64 4
-; VI-NEXT:    [[ELT5:%.*]] = extractelement <8 x half> [[VEC8]], i64 5
-; VI-NEXT:    [[ELT6:%.*]] = extractelement <8 x half> [[VEC8]], i64 6
-; VI-NEXT:    [[ELT7:%.*]] = extractelement <8 x half> [[VEC8]], i64 7
-; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
-; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
-; VI-NEXT:    [[ADD4:%.*]] = fadd fast half [[ELT4]], [[ADD3]]
-; VI-NEXT:    [[ADD5:%.*]] = fadd fast half [[ELT5]], [[ADD4]]
-; VI-NEXT:    [[ADD6:%.*]] = fadd fast half [[ELT6]], [[ADD5]]
-; VI-NEXT:    [[ADD7:%.*]] = fadd fast half [[ELT7]], [[ADD6]]
-; VI-NEXT:    ret half [[ADD7]]
+; GCN-LABEL: @reduction_half8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8:%.*]])
+; GCN-NEXT:    ret half [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <8 x half> %vec8, i64 0
@@ -81,43 +51,17 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 ; GFX9-LABEL: @reduction_half16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[VEC16:%.*]])
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> [[VEC16:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half16(
 ; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <16 x half> [[VEC16:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <16 x half> [[VEC16]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <16 x half> [[VEC16]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <16 x half> [[VEC16]], i64 3
-; VI-NEXT:    [[ELT4:%.*]] = extractelement <16 x half> [[VEC16]], i64 4
-; VI-NEXT:    [[ELT5:%.*]] = extractelement <16 x half> [[VEC16]], i64 5
-; VI-NEXT:    [[ELT6:%.*]] = extractelement <16 x half> [[VEC16]], i64 6
-; VI-NEXT:    [[ELT7:%.*]] = extractelement <16 x half> [[VEC16]], i64 7
-; VI-NEXT:    [[ELT8:%.*]] = extractelement <16 x half> [[VEC16]], i64 8
-; VI-NEXT:    [[ELT9:%.*]] = extractelement <16 x half> [[VEC16]], i64 9
-; VI-NEXT:    [[ELT10:%.*]] = extractelement <16 x half> [[VEC16]], i64 10
-; VI-NEXT:    [[ELT11:%.*]] = extractelement <16 x half> [[VEC16]], i64 11
-; VI-NEXT:    [[ELT12:%.*]] = extractelement <16 x half> [[VEC16]], i64 12
-; VI-NEXT:    [[ELT13:%.*]] = extractelement <16 x half> [[VEC16]], i64 13
-; VI-NEXT:    [[ELT14:%.*]] = extractelement <16 x half> [[VEC16]], i64 14
-; VI-NEXT:    [[ELT15:%.*]] = extractelement <16 x half> [[VEC16]], i64 15
-; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
-; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
-; VI-NEXT:    [[ADD4:%.*]] = fadd fast half [[ELT4]], [[ADD3]]
-; VI-NEXT:    [[ADD5:%.*]] = fadd fast half [[ELT5]], [[ADD4]]
-; VI-NEXT:    [[ADD6:%.*]] = fadd fast half [[ELT6]], [[ADD5]]
-; VI-NEXT:    [[ADD7:%.*]] = fadd fast half [[ELT7]], [[ADD6]]
-; VI-NEXT:    [[ADD8:%.*]] = fadd fast half [[ELT8]], [[ADD7]]
-; VI-NEXT:    [[ADD9:%.*]] = fadd fast half [[ELT9]], [[ADD8]]
-; VI-NEXT:    [[ADD10:%.*]] = fadd fast half [[ELT10]], [[ADD9]]
-; VI-NEXT:    [[ADD11:%.*]] = fadd fast half [[ELT11]], [[ADD10]]
-; VI-NEXT:    [[ADD12:%.*]] = fadd fast half [[ELT12]], [[ADD11]]
-; VI-NEXT:    [[ADD13:%.*]] = fadd fast half [[ELT13]], [[ADD12]]
-; VI-NEXT:    [[ADD14:%.*]] = fadd fast half [[ELT14]], [[ADD13]]
-; VI-NEXT:    [[ADD15:%.*]] = fadd fast half [[ELT15]], [[ADD14]]
-; VI-NEXT:    ret half [[ADD15]]
+; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VI-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP0]])
+; VI-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; VI-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP2]])
+; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
+; VI-NEXT:    ret half [[OP_RDX]]
 ;
 entry:
   %elt0 = extractelement <16 x half> %vec16, i64 0
@@ -183,21 +127,10 @@ entry:
 }
 
 define i16 @reduction_v4i16(<4 x i16> %a) {
-; GFX9-LABEL: @reduction_v4i16(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A:%.*]])
-; GFX9-NEXT:    ret i16 [[TMP0]]
-;
-; VI-LABEL: @reduction_v4i16(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x i16> [[A:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x i16> [[A]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x i16> [[A]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x i16> [[A]], i64 3
-; VI-NEXT:    [[ADD1:%.*]] = add i16 [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[ADD2:%.*]] = add i16 [[ELT2]], [[ADD1]]
-; VI-NEXT:    [[ADD3:%.*]] = add i16 [[ELT3]], [[ADD2]]
-; VI-NEXT:    ret i16 [[ADD3]]
+; GCN-LABEL: @reduction_v4i16(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A:%.*]])
+; GCN-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <4 x i16> %a, i64 0
@@ -213,29 +146,10 @@ entry:
 }
 
 define i16 @reduction_v8i16(<8 x i16> %vec8) {
-; GFX9-LABEL: @reduction_v8i16(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VEC8:%.*]])
-; GFX9-NEXT:    ret i16 [[TMP0]]
-;
-; VI-LABEL: @reduction_v8i16(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <8 x i16> [[VEC8:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <8 x i16> [[VEC8]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <8 x i16> [[VEC8]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <8 x i16> [[VEC8]], i64 3
-; VI-NEXT:    [[ELT4:%.*]] = extractelement <8 x i16> [[VEC8]], i64 4
-; VI-NEXT:    [[ELT5:%.*]] = extractelement <8 x i16> [[VEC8]], i64 5
-; VI-NEXT:    [[ELT6:%.*]] = extractelement <8 x i16> [[VEC8]], i64 6
-; VI-NEXT:    [[ELT7:%.*]] = extractelement <8 x i16> [[VEC8]], i64 7
-; VI-NEXT:    [[ADD1:%.*]] = add i16 [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[ADD2:%.*]] = add i16 [[ELT2]], [[ADD1]]
-; VI-NEXT:    [[ADD3:%.*]] = add i16 [[ELT3]], [[ADD2]]
-; VI-NEXT:    [[ADD4:%.*]] = add i16 [[ELT4]], [[ADD3]]
-; VI-NEXT:    [[ADD5:%.*]] = add i16 [[ELT5]], [[ADD4]]
-; VI-NEXT:    [[ADD6:%.*]] = add i16 [[ELT6]], [[ADD5]]
-; VI-NEXT:    [[ADD7:%.*]] = add i16 [[ELT7]], [[ADD6]]
-; VI-NEXT:    ret i16 [[ADD7]]
+; GCN-LABEL: @reduction_v8i16(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VEC8:%.*]])
+; GCN-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <8 x i16> %vec8, i64 0

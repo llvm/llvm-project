@@ -464,6 +464,32 @@ namespace UsesThis {
       g1(x1);
       g1(y0);
       g1(y1);
+
+      T::f0(0);
+      T::f0(z);
+      T::f0(x0);
+      T::f0(x1);
+      T::f0(y0);
+      T::f0(y1);
+      T::g0(0);
+      T::g0(z);
+      T::g0(x0);
+      T::g0(x1);
+      T::g0(y0);
+      T::g0(y1);
+
+      E::f1(0);
+      E::f1(z);
+      E::f1(x0);
+      E::f1(x1);
+      E::f1(y0);
+      E::f1(y1);
+      E::g1(0);
+      E::g1(z);
+      E::g1(x0);
+      E::g1(x1);
+      E::g1(y0);
+      E::g1(y1);
     }
 
     template<>
@@ -519,6 +545,32 @@ namespace UsesThis {
       g1(x1); // expected-error {{invalid use of member 'x1' in static member function}}
       g1(y0);
       g1(y1);
+
+      T::f0(0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(z); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(x0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(x1); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(y0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(y1); // expected-error {{call to non-static member function without an object argument}}
+      T::g0(0);
+      T::g0(z);
+      T::g0(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      T::g0(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      T::g0(y0);
+      T::g0(y1);
+
+      E::f1(0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(z); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(x0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(x1); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(y0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(y1); // expected-error {{call to non-static member function without an object argument}}
+      E::g1(0);
+      E::g1(z);
+      E::g1(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      E::g1(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      E::g1(y0);
+      E::g1(y1);
     }
   };
 

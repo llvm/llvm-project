@@ -13,6 +13,7 @@
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -134,6 +135,9 @@ public:
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
 
+  /// Create an edge mask for every destination of cases and/or default.
+  void createSwitchEdgeMasks(SwitchInst *SI);
+
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
   VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
@@ -165,7 +169,7 @@ public:
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands);
 
-  VPValue *getVPValueOrAddLiveIn(Value *V, VPlan &Plan) {
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();

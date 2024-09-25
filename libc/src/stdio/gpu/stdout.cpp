@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 static struct {
 } stub;
 FILE *stdout = reinterpret_cast<FILE *>(&stub);
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 extern "C" FILE *stdout = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::stub);

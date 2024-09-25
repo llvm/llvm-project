@@ -124,11 +124,9 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
   ret i16 %extract
 }
 
-define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
+define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX90A-LABEL: define void @syncscope_workgroup_nortn(
 ; GFX90A-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX90A-NEXT:    br label [[ATOMICRMW_CHECK_SHARED:%.*]]
-; GFX90A:       atomicrmw.check.shared:
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
@@ -149,7 +147,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
-; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
@@ -159,7 +156,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
 ; GFX1100-NEXT:    ret void
 ;
-  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !mmra !2
+  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !mmra !2, !amdgpu.no.fine.grained.memory !3, !amdgpu.ignore.denormal.mode !3
   ret void
 }
 
@@ -188,11 +185,10 @@ define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {
   ret i32 %val
 }
 
-attributes #0 = { "amdgpu-unsafe-fp-atomics"="true" }
-
 !0 = !{!"foo", !"bar"}
 !1 = !{!"bux", !"baz"}
 !2 = !{!0, !1}
+!3 = !{}
 ;.
 ; GFX90A: [[META0]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; GFX90A: [[META1]] = !{!"foo", !"bar"}

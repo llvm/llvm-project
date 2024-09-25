@@ -4,10 +4,10 @@
 define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-LABEL: spill:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s44, s[4:5], 0x2
+; CHECK-NEXT:    s_load_dword s44, s[6:7], 0x2
 ; CHECK-NEXT:    s_mov_b64 s[98:99], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[96:97], s[0:1]
-; CHECK-NEXT:    s_add_u32 s96, s96, s7
+; CHECK-NEXT:    s_add_u32 s96, s96, s13
 ; CHECK-NEXT:    s_addc_u32 s97, s97, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_eq_u32 s44, 0

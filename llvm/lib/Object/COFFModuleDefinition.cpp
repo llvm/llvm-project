@@ -282,8 +282,6 @@ private:
       if (Tok.K == EqualEqual) {
         read();
         E.ImportName = std::string(Tok.Value);
-        if (AddUnderscores && !isDecorated(E.ImportName, MingwDef))
-          E.ImportName = std::string("_").append(E.ImportName);
         continue;
       }
       // EXPORTAS must be at the end of export definition

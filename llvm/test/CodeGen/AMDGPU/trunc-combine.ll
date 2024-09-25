@@ -41,7 +41,7 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u16_e32 v0, 4, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load i32, ptr addrspace(1) undef
   %load1 = load i32, ptr addrspace(1) null
@@ -70,7 +70,7 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u16_e32 v0, 4, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load float, ptr addrspace(1) undef
   %load1 = load float, ptr addrspace(1) null
@@ -85,8 +85,8 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture %arg2) local_unnamed_addr {
 ; SI-LABEL: truncate_high_elt_extract_vector:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -103,8 +103,8 @@ define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) noc
 ;
 ; VI-LABEL: truncate_high_elt_extract_vector:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s3, s[6:7], 0x0

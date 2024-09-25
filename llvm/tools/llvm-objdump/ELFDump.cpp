@@ -104,7 +104,11 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   // In SHT_REL case we would need to read the addend from section data.
   // GNU objdump does not do that and we just follow for simplicity atm.
   bool Undef = false;
-  if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
+  if ((*SecOrErr)->sh_type == ELF::SHT_CREL) {
+    auto ERela = Obj->getCrel(Rel);
+    Addend = ERela.r_addend;
+    Undef = ERela.getSymbol(false) == 0;
+  } else if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
     const typename ELFT::Rela *ERela = Obj->getRela(Rel);
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;

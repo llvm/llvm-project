@@ -13,6 +13,7 @@
 #include "llvm/IR/Function.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -79,11 +80,32 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
+static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+
+void Function::renumberBlocks() {
+  validateBlockNumbers();
+
+  NextBlockNum = 0;
+  for (auto &BB : *this)
+    BB.Number = NextBlockNum++;
+  BlockNumEpoch++;
+}
+
+void Function::validateBlockNumbers() const {
+#ifndef NDEBUG
+  BitVector Numbers(NextBlockNum);
+  for (const auto &BB : *this) {
+    unsigned Num = BB.getNumber();
+    assert(Num < NextBlockNum && "out of range block number");
+    assert(!Numbers[Num] && "duplicate block numbers");
+    Numbers.set(Num);
+  }
+#endif
+}
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
@@ -359,6 +381,10 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+const DataLayout &Function::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
@@ -376,7 +402,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                                           LinkageTypes Linkage,
                                           unsigned AddrSpace, const Twine &N,
                                           Module *M) {
-  auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
+  auto *F = new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   AttrBuilder B(F->getContext());
   UWTableKind UWTable = M->getUwtable();
   if (UWTable != UWTableKind::None)
@@ -384,6 +410,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   switch (M->getFramePointer()) {
   case FramePointerKind::None:
     // 0 ("none") is the default.
+    break;
+  case FramePointerKind::Reserved:
+    B.addAttribute("frame-pointer", "reserved");
     break;
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
@@ -394,6 +423,41 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   }
   if (M->getModuleFlag("function_return_thunk_extern"))
     B.addAttribute(Attribute::FnRetThunkExtern);
+  StringRef DefaultCPU = F->getContext().getDefaultTargetCPU();
+  if (!DefaultCPU.empty())
+    B.addAttribute("target-cpu", DefaultCPU);
+  StringRef DefaultFeatures = F->getContext().getDefaultTargetFeatures();
+  if (!DefaultFeatures.empty())
+    B.addAttribute("target-features", DefaultFeatures);
+
+  // Check if the module attribute is present and not zero.
+  auto isModuleAttributeSet = [&](const StringRef &ModAttr) -> bool {
+    const auto *Attr =
+        mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr));
+    return Attr && !Attr->isZero();
+  };
+
+  auto AddAttributeIfSet = [&](const StringRef &ModAttr) {
+    if (isModuleAttributeSet(ModAttr))
+      B.addAttribute(ModAttr);
+  };
+
+  StringRef SignType = "none";
+  if (isModuleAttributeSet("sign-return-address"))
+    SignType = "non-leaf";
+  if (isModuleAttributeSet("sign-return-address-all"))
+    SignType = "all";
+  if (SignType != "none") {
+    B.addAttribute("sign-return-address", SignType);
+    B.addAttribute("sign-return-address-key",
+                   isModuleAttributeSet("sign-return-address-with-bkey")
+                       ? "b_key"
+                       : "a_key");
+  }
+  AddAttributeIfSet("branch-target-enforcement");
+  AddAttributeIfSet("branch-protection-pauth-lr");
+  AddAttributeIfSet("guarded-control-stack");
+
   F->addFnAttrs(B);
   return F;
 }
@@ -437,8 +501,7 @@ static unsigned computeAddrSpace(unsigned AddrSpace, Module *M) {
 
 Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
                    const Twine &name, Module *ParentModule)
-    : GlobalObject(Ty, Value::FunctionVal,
-                   OperandTraits<Function>::op_begin(this), 0, Linkage, name,
+    : GlobalObject(Ty, Value::FunctionVal, AllocMarker, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
       NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
@@ -467,6 +530,8 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 }
 
 Function::~Function() {
+  validateBlockNumbers();
+
   dropAllReferences();    // After this it is safe to delete instructions.
 
   // Delete all of the method arguments and unlink from symbol table...
@@ -700,6 +765,11 @@ Attribute Function::getAttributeAtIndex(unsigned i, StringRef Kind) const {
   return AttributeSets.getAttributeAtIndex(i, Kind);
 }
 
+bool Function::hasAttributeAtIndex(unsigned Idx,
+                                   Attribute::AttrKind Kind) const {
+  return AttributeSets.hasAttributeAtIndex(Idx, Kind);
+}
+
 Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
   return AttributeSets.getFnAttr(Kind);
 }
@@ -870,8 +940,8 @@ void Function::setOnlyAccessesInaccessibleMemOrArgMem() {
 }
 
 /// Table of string intrinsic names indexed by enum value.
-static const char * const IntrinsicNameTable[] = {
-  "not_intrinsic",
+static constexpr const char *const IntrinsicNameTable[] = {
+    "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_NAME_TABLE
@@ -893,8 +963,9 @@ bool Function::isTargetIntrinsic() const {
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
 /// target as \c Name, or the generic table if \c Name is not target specific.
 ///
-/// Returns the relevant slice of \c IntrinsicNameTable
-static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
+/// Returns the relevant slice of \c IntrinsicNameTable and the target name.
+static std::pair<ArrayRef<const char *>, StringRef>
+findTargetSubtable(StringRef Name) {
   assert(Name.starts_with("llvm."));
 
   ArrayRef<IntrinsicTargetInfo> Targets(TargetInfos);
@@ -906,14 +977,14 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
+  return {ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count), TI.Name};
 }
 
-/// This does the actual lookup of an intrinsic ID which
-/// matches the given function name.
+/// This does the actual lookup of an intrinsic ID which matches the given
+/// function name.
 Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
-  ArrayRef<const char *> NameTable = findTargetSubtable(Name);
-  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
+  auto [NameTable, Target] = findTargetSubtable(Name);
+  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, Target);
   if (Idx == -1)
     return Intrinsic::not_intrinsic;
 
@@ -1010,8 +1081,9 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::DoubleTyID:    Result += "f64";      break;
     case Type::X86_FP80TyID:  Result += "f80";      break;
     case Type::FP128TyID:     Result += "f128";     break;
-    case Type::PPC_FP128TyID: Result += "ppcf128";  break;
-    case Type::X86_MMXTyID:   Result += "x86mmx";   break;
+    case Type::PPC_FP128TyID:
+      Result += "ppcf128";
+      break;
     case Type::X86_AMXTyID:   Result += "x86amx";   break;
     case Type::IntegerTyID:
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
@@ -1314,22 +1386,24 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 void Intrinsic::getIntrinsicInfoTableEntries(ID id,
                                              SmallVectorImpl<IITDescriptor> &T){
+  static_assert(sizeof(IIT_Table[0]) == 2,
+                "Expect 16-bit entries in IIT_Table");
   // Check to see if the intrinsic's type was expressible by the table.
-  unsigned TableVal = IIT_Table[id-1];
+  uint16_t TableVal = IIT_Table[id - 1];
 
   // Decode the TableVal into an array of IITValues.
-  SmallVector<unsigned char, 8> IITValues;
+  SmallVector<unsigned char> IITValues;
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
-  if ((TableVal >> 31) != 0) {
+  if (TableVal >> 15) {
     // This is an offset into the IIT_LongEncodingTable.
     IITEntries = IIT_LongEncodingTable;
 
     // Strip sentinel bit.
-    NextElt = (TableVal << 1) >> 1;
+    NextElt = TableVal & 0x7fff;
   } else {
-    // Decode the TableVal into an array of IITValues.  If the entry was encoded
-    // into a single word in the table itself, decode it now.
+    // If the entry was encoded into a single word in the table itself, decode
+    // it from an array of nibbles to an array of bytes.
     do {
       IITValues.push_back(TableVal & 0xF);
       TableVal >>= 4;
@@ -1355,7 +1429,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void: return Type::getVoidTy(Context);
   case IITDescriptor::VarArg: return Type::getVoidTy(Context);
-  case IITDescriptor::MMX: return Type::getX86_MMXTy(Context);
+  case IITDescriptor::MMX:
+    return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case IITDescriptor::AMX: return Type::getX86_AMXTy(Context);
   case IITDescriptor::Token: return Type::getTokenTy(Context);
   case IITDescriptor::Metadata: return Type::getMetadataTy(Context);
@@ -1538,7 +1613,11 @@ static bool matchIntrinsicType(
   switch (D.Kind) {
     case IITDescriptor::Void: return !Ty->isVoidTy();
     case IITDescriptor::VarArg: return true;
-    case IITDescriptor::MMX:  return !Ty->isX86_MMXTy();
+    case IITDescriptor::MMX: {
+      FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
+      return !VT || VT->getNumElements() != 1 ||
+             !VT->getElementType()->isIntegerTy(64);
+    }
     case IITDescriptor::AMX:  return !Ty->isX86_AMXTy();
     case IITDescriptor::Token: return !Ty->isTokenTy();
     case IITDescriptor::Metadata: return !Ty->isMetadataTy();

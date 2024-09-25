@@ -77,7 +77,7 @@
    <p><b>builtins</b> is known to work on the following platforms:</p>
    <ul>
    <li>Machine Architectures: i386, X86-64, SPARC64, ARM, PowerPC, PowerPC 64.</li>
-   <li>OS: DragonFlyBSD, FreeBSD, NetBSD, OpenBSD, Linux, Darwin.</li>
+   <li>OS: DragonFlyBSD, FreeBSD, NetBSD, OpenBSD, Linux, Darwin, Windows.</li>
    </ul>
 
    <p>Most sanitizer runtimes are supported only on Linux x86-64. See tool-specific
@@ -116,14 +116,13 @@
     cmake.
 
   <p>To build it separately, first
-  <a href="https://llvm.org/docs/CMake.html#quick-start">build LLVM</a>
-  separately to get llvm-config binary, and then run:
+  <a href="https://llvm.org/docs/CMake.html#quick-start">build LLVM</a>, and then run:
 
   <ul>
   <li>cd llvm-project</li>
   <li>mkdir build-compiler-rt</li>
   <li>cd build-compiler-rt</li>
-  <li>cmake ../compiler-rt -DLLVM_CMAKE_DIR=/path/to/llvm-project/cmake/modules</li>
+  <li>cmake ../compiler-rt -DLLVM_CMAKE_DIR=/path/to/llvm-build-dir</li>
   <li>make</li>
   </ul>
 

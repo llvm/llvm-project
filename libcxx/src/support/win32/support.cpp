@@ -17,13 +17,13 @@
 // a pointer to a malloc'd string in *sptr.
 // If return >= 0, use free to delete *sptr.
 int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
-  *sptr = NULL;
+  *sptr = nullptr;
   // Query the count required.
   va_list ap_copy;
   va_copy(ap_copy, ap);
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  int count = vsnprintf(NULL, 0, format, ap_copy);
+  int count = vsnprintf(nullptr, 0, format, ap_copy);
   _LIBCPP_DIAGNOSTIC_POP
   va_end(ap_copy);
   if (count < 0)
@@ -81,7 +81,7 @@ size_t mbsnrtowcs(wchar_t* __restrict dst,
     // if result > 0, it's the size in bytes of that character.
     // othewise if result is zero it indicates the null character has been found.
     // otherwise it's an error and errno may be set.
-    size_t char_size = mbrtowc(dst ? dst + dest_converted : NULL, *src + source_converted, source_remaining, ps);
+    size_t char_size = mbrtowc(dst ? dst + dest_converted : nullptr, *src + source_converted, source_remaining, ps);
     // Don't do anything to change errno from here on.
     if (char_size > 0) {
       source_remaining -= char_size;
@@ -95,7 +95,7 @@ size_t mbsnrtowcs(wchar_t* __restrict dst,
   }
   if (dst) {
     if (have_result && result == terminated_sequence)
-      *src = NULL;
+      *src = nullptr;
     else
       *src += source_converted;
   }
@@ -141,7 +141,7 @@ size_t wcsnrtombs(char* __restrict dst,
     if (dst)
       result = wcrtomb_s(&char_size, dst + dest_converted, dest_remaining, c, ps);
     else
-      result = wcrtomb_s(&char_size, NULL, 0, c, ps);
+      result = wcrtomb_s(&char_size, nullptr, 0, c, ps);
     // If result is zero there is no error and char_size contains the
     // size of the multi-byte-sequence converted.
     // Otherwise result indicates an errno type error.
@@ -161,7 +161,7 @@ size_t wcsnrtombs(char* __restrict dst,
   }
   if (dst) {
     if (terminator_found)
-      *src = NULL;
+      *src = nullptr;
     else
       *src = *src + source_converted;
   }

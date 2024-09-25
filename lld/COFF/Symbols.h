@@ -98,15 +98,15 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
-        writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
-        isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        isWeak(false), nameSize(n.size()),
-        nameData(n.empty() ? nullptr : n.data()) {
+        writtenToSymtab(false), isUsedInRegularObj(false),
+        pendingArchiveLoad(false), isGCRoot(false), isRuntimePseudoReloc(false),
+        deferUndefined(false), canInline(true), isWeak(false),
+        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
     assert((!n.empty() || k <= LastDefinedCOFFKind) &&
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
 
-  const unsigned symbolKind : 8;
+  unsigned symbolKind : 8;
   unsigned isExternal : 1;
 
 public:
@@ -341,6 +341,9 @@ public:
   // symbol by searching the chain of fallback symbols. Returns the symbol if
   // successful, otherwise returns null.
   Defined *getWeakAlias();
+
+  // If this symbol is external weak, replace this object with aliased symbol.
+  bool resolveWeakAlias();
 };
 
 // Windows-specific classes.
@@ -351,23 +354,23 @@ public:
 // table in an output. The former has "__imp_" prefix.
 class DefinedImportData : public Defined {
 public:
-  DefinedImportData(StringRef n, ImportFile *f)
-      : Defined(DefinedImportDataKind, n), file(f) {
-  }
+  DefinedImportData(StringRef n, ImportFile *file, Chunk *&location)
+      : Defined(DefinedImportDataKind, n), file(file), location(location) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportDataKind;
   }
 
-  uint64_t getRVA() { return file->location->getRVA(); }
-  Chunk *getChunk() { return file->location; }
-  void setLocation(Chunk *addressTable) { file->location = addressTable; }
+  uint64_t getRVA() { return getChunk()->getRVA(); }
+  Chunk *getChunk() { return location; }
+  void setLocation(Chunk *addressTable) { location = addressTable; }
 
   StringRef getDLLName() { return file->dllName; }
   StringRef getExternalName() { return file->externalName; }
   uint16_t getOrdinal() { return file->hdr->OrdinalHint; }
 
   ImportFile *file;
+  Chunk *&location;
 
   // This is a pointer to the synthetic symbol associated with the load thunk
   // for this symbol that will be called if the DLL is delay-loaded. This is
@@ -385,19 +388,19 @@ public:
 class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                     DefinedImportData *s, uint16_t machine);
+                     DefinedImportData *s, ImportThunkChunk *chunk);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;
   }
 
   uint64_t getRVA() { return data->getRVA(); }
-  Chunk *getChunk() { return data; }
+  ImportThunkChunk *getChunk() const { return data; }
 
   DefinedImportData *wrappedSym;
 
 private:
-  Chunk *data;
+  ImportThunkChunk *data;
 };
 
 // If you have a symbol "foo" in your object file, a symbol name
@@ -499,8 +502,10 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
   bool canInline = s->canInline;
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
   new (s) T(std::forward<ArgT>(arg)...);
   s->canInline = canInline;
+  s->isUsedInRegularObj = isUsedInRegularObj;
 }
 } // namespace coff
 

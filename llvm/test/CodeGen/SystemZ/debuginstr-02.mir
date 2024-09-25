@@ -3,6 +3,8 @@
 #
 # RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=finalize-isel \
 # RUN:   -o - 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -passes=finalize-isel \
+# RUN:   -o - 2>&1 | FileCheck %s
 #
 # CHECK-LABEL: bb.1 (%ir-block.0):
 # CHECK-NEXT: %5:fp32bit = PHI %1, %bb.0, %2, %bb.2

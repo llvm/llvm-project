@@ -42,6 +42,10 @@ namespace mlir {
 class Location;
 }
 
+namespace fir {
+class FortranProcedureFlagsEnumAttr;
+}
+
 namespace Fortran::lower {
 class AbstractConverter;
 class SymMap;
@@ -138,7 +142,7 @@ public:
     FirPlaceHolder(mlir::Type t, int passedPosition, Property p,
                    llvm::ArrayRef<mlir::NamedAttribute> attrs)
         : type{t}, passedEntityPosition{passedPosition}, property{p},
-          attributes{attrs.begin(), attrs.end()} {}
+          attributes{attrs} {}
     /// Type for this input/output
     mlir::Type type;
     /// Position of related passedEntity in passedArguments.
@@ -234,6 +238,11 @@ public:
   bool canBeCalledViaImplicitInterface() const {
     return characteristic && characteristic->CanBeCalledViaImplicitInterface();
   }
+
+  /// Translate Fortran procedure attributes into FIR attribute.
+  /// Return attribute is nullptr if the procedure has no attributes.
+  fir::FortranProcedureFlagsEnumAttr
+  getProcedureAttrs(mlir::MLIRContext *) const;
 
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}

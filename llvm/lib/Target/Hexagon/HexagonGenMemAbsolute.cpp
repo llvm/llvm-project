@@ -56,8 +56,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -82,14 +82,13 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
   TRI = Fn.getRegInfo().getTargetRegisterInfo();
 
-  MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Loop over all of the basic blocks
-  for (MachineFunction::iterator MBBb = Fn.begin(), MBBe = Fn.end();
-       MBBb != MBBe; ++MBBb) {
-    MachineBasicBlock *MBB = &*MBBb;
+  for (MachineBasicBlock &MBB : Fn) {
     // Traverse the basic block
-    for (MachineBasicBlock::iterator MII = MBB->begin(); MII != MBB->end();
+    for (MachineBasicBlock::iterator MII = MBB.begin(); MII != MBB.end();
          ++MII) {
       MachineInstr *MI = &*MII;
       int Opc = MI->getOpcode();
@@ -204,7 +203,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
 
       LLVM_DEBUG(dbgs() << "Replaced with " << *MIB << "\n");
       // Erase the instructions that got replaced.
-      MII = MBB->erase(MI);
+      MII = MBB.erase(MI);
       --MII;
       NextMI->getParent()->erase(NextMI);
     }

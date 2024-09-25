@@ -73,6 +73,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonMCInstLower.cpp",
     "HexagonMachineFunctionInfo.cpp",
     "HexagonMachineScheduler.cpp",
+    "HexagonMask.cpp",
     "HexagonNewValueJump.cpp",
     "HexagonOptAddrMode.cpp",
     "HexagonOptimizeSZextends.cpp",

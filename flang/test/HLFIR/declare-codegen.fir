@@ -210,3 +210,12 @@ func.func @dummy_scope(%arg0: !fir.ref<f32>) {
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<f32>) {
 // CHECK:         %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[SCOPE]] {uniq_name = "x"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+
+func.func @assumed_rank_declare(%arg0: !fir.box<!fir.array<*:f32>>) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+  return
+}
+// CHECK-LABEL:  func.func @assumed_rank_declare(
+// CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
+// CHECK:    %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+// CHECK:    %[[VAL_2:.*]] = fir.rebox_assumed_rank %[[VAL_1]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>

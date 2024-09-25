@@ -340,9 +340,9 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // function.
   MlirRegion region = mlirOperationGetRegion(operation, 0);
   MlirBlock block = mlirRegionGetFirstBlock(region);
-  operation = mlirBlockGetFirstOperation(block);
-  region = mlirOperationGetRegion(operation, 0);
-  MlirOperation parentOperation = operation;
+  MlirOperation function = mlirBlockGetFirstOperation(block);
+  region = mlirOperationGetRegion(function, 0);
+  MlirOperation parentOperation = function;
   block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
   assert(mlirModuleIsNull(mlirModuleFromOperation(operation)));
@@ -488,6 +488,18 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
+  // clang-format on
+
+  mlirOpPrintingFlagsDestroy(flags);
+  flags = mlirOpPrintingFlagsCreate();
+  mlirOpPrintingFlagsSkipRegions(flags);
+  fprintf(stderr, "Op print with skip regions flag: ");
+  mlirOperationPrintWithFlags(function, flags, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // clang-format off
+  // CHECK: Op print with skip regions flag: func.func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>)
+  // CHECK-NOT: constant
+  // CHECK-NOT: return
   // clang-format on
 
   fprintf(stderr, "With state: |");

@@ -15,8 +15,8 @@ _Complex T test(T a, T b) {
   return __builtin_complex(a, b);
   // CHECK: %[[A:.*]] = load [[T]], ptr %a.addr,
   // CHECK: %[[B:.*]] = load [[T]], ptr %b.addr,
-  // CHECK: %[[RET_RE:.*]] = getelementptr inbounds { [[T]], [[T]] }, ptr %[[RET:[^,]*]], i32 0, i32 0
-  // CHECK: %[[RET_IM:.*]] = getelementptr inbounds { [[T]], [[T]] }, ptr %[[RET]], i32 0, i32 1
+  // CHECK: %[[RET_RE:.*]] = getelementptr inbounds nuw { [[T]], [[T]] }, ptr %[[RET:[^,]*]], i32 0, i32 0
+  // CHECK: %[[RET_IM:.*]] = getelementptr inbounds nuw { [[T]], [[T]] }, ptr %[[RET]], i32 0, i32 1
   // CHECK: store [[T]] %[[A]], ptr %[[RET_RE]],
   // CHECK: store [[T]] %[[B]], ptr %[[RET_IM]],
 }

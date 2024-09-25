@@ -376,25 +376,35 @@ static void PropagateSaveAttr(const EquivalenceSet &src, EquivalenceSet &dst) {
 
 void EquivalenceSets::AddToSet(const parser::Designator &designator) {
   if (CheckDesignator(designator)) {
-    Symbol &symbol{*currObject_.symbol};
-    if (!currSet_.empty()) {
-      // check this symbol against first of set for compatibility
-      Symbol &first{currSet_.front().symbol};
-      CheckCanEquivalence(designator.source, first, symbol) &&
-          CheckCanEquivalence(designator.source, symbol, first);
-    }
-    auto subscripts{currObject_.subscripts};
-    if (subscripts.empty() && symbol.IsObjectArray()) {
-      // record a whole array as its first element
-      for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-        auto &lbound{spec.lbound().GetExplicit().value()};
-        subscripts.push_back(evaluate::ToInt64(lbound).value());
+    if (Symbol * symbol{currObject_.symbol}) {
+      if (!currSet_.empty()) {
+        // check this symbol against first of set for compatibility
+        Symbol &first{currSet_.front().symbol};
+        CheckCanEquivalence(designator.source, first, *symbol) &&
+            CheckCanEquivalence(designator.source, *symbol, first);
       }
+      auto subscripts{currObject_.subscripts};
+      if (subscripts.empty()) {
+        if (const ArraySpec * shape{symbol->GetShape()};
+            shape && shape->IsExplicitShape()) {
+          // record a whole array as its first element
+          for (const ShapeSpec &spec : *shape) {
+            if (auto lbound{spec.lbound().GetExplicit()}) {
+              if (auto lbValue{evaluate::ToInt64(*lbound)}) {
+                subscripts.push_back(*lbValue);
+                continue;
+              }
+            }
+            subscripts.clear(); // error recovery
+            break;
+          }
+        }
+      }
+      auto substringStart{currObject_.substringStart};
+      currSet_.emplace_back(
+          *symbol, subscripts, substringStart, designator.source);
+      PropagateSaveAttr(currSet_.back(), currSet_);
     }
-    auto substringStart{currObject_.substringStart};
-    currSet_.emplace_back(
-        symbol, subscripts, substringStart, designator.source);
-    PropagateSaveAttr(currSet_.back(), currSet_);
   }
   currObject_ = {};
 }
@@ -700,13 +710,15 @@ public:
   SymbolMapper(Scope &scope, SymbolAndTypeMappings &map)
       : Base{*this}, scope_{scope}, map_{map} {}
   using Base::operator();
-  bool operator()(const SymbolRef &ref) const {
+  bool operator()(const SymbolRef &ref) {
     if (const Symbol *mapped{MapSymbol(*ref)}) {
       const_cast<SymbolRef &>(ref) = *mapped;
+    } else if (ref->has<UseDetails>()) {
+      CopySymbol(&*ref);
     }
     return false;
   }
-  bool operator()(const Symbol &x) const {
+  bool operator()(const Symbol &x) {
     if (MapSymbol(x)) {
       DIE("SymbolMapper hit symbol outside SymbolRef");
     }
@@ -716,9 +728,9 @@ public:
   Symbol *CopySymbol(const Symbol *);
 
 private:
-  void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
-  void MapBound(Bound &bound) const { (*this)(bound.GetExplicit()); }
-  void MapShapeSpec(ShapeSpec &spec) const {
+  void MapParamValue(ParamValue &param) { (*this)(param.GetExplicit()); }
+  void MapBound(Bound &bound) { (*this)(bound.GetExplicit()); }
+  void MapShapeSpec(ShapeSpec &spec) {
     MapBound(spec.lbound());
     MapBound(spec.ubound());
   }

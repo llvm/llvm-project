@@ -369,8 +369,9 @@ enum : unsigned {
 namespace HWEncoding {
 enum : unsigned {
   REG_IDX_MASK = 0xff,
-  IS_VGPR_OR_AGPR = 1 << 8,
-  IS_HI = 1 << 9, // High 16-bit register.
+  IS_VGPR = 1 << 8,
+  IS_AGPR = 1 << 9,
+  IS_HI16 = 1 << 10,
 };
 } // namespace HWEncoding
 
@@ -1111,7 +1112,7 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 #define   C_00B84C_LDS_SIZE                                           0xFF007FFF
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
-#define   C_00B84C_EXCP_EN
+#define   C_00B84C_EXCP_EN                                            0x80FFFFFF
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0

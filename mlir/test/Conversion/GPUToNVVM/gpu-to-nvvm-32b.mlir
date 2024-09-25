@@ -67,7 +67,7 @@ module attributes {transform.with_named_sequence} {
         {index_bitwidth = 32, use_opaque_pointers = true}
     } {
       legal_dialects = ["llvm", "memref", "nvvm"],
-      legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
+      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",

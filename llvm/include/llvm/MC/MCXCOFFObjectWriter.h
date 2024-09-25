@@ -43,6 +43,15 @@ std::unique_ptr<MCObjectWriter>
 createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                         raw_pwrite_stream &OS);
 
+namespace XCOFF {
+void addExceptionEntry(MCObjectWriter &Writer, const MCSymbol *Symbol,
+                       const MCSymbol *Trap, unsigned LanguageCode,
+                       unsigned ReasonCode, unsigned FunctionSize,
+                       bool hasDebug);
+void addCInfoSymEntry(MCObjectWriter &Writer, StringRef Name,
+                      StringRef Metadata);
+} // namespace XCOFF
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCXCOFFOBJECTWRITER_H

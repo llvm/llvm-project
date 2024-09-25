@@ -54,7 +54,8 @@ define i1 @pr85190(i64 %a) {
 ; CHECK-ZBB-NEXT:    li a2, -1
 ; CHECK-ZBB-NEXT:    slli a2, a2, 63
 ; CHECK-ZBB-NEXT:    sub a2, a2, a1
-; CHECK-ZBB-NEXT:    slt a0, a0, a2
+; CHECK-ZBB-NEXT:    min a1, a2, zero
+; CHECK-ZBB-NEXT:    slt a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %or = or i64 %a, 7
   %cmp1 = icmp slt i64 %a, 0

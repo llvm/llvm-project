@@ -74,8 +74,8 @@ public:
   bool attemptToBalignSmallLoop(MachineFunction &MF, MachineBasicBlock &MBB);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBranchProbabilityInfo>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -148,9 +148,9 @@ bool HexagonLoopAlign::attemptToBalignSmallLoop(MachineFunction &MF,
     return false;
 
   const MachineBranchProbabilityInfo *MBPI =
-      &getAnalysis<MachineBranchProbabilityInfo>();
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   const MachineBlockFrequencyInfo *MBFI =
-      &getAnalysis<MachineBlockFrequencyInfo>();
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   // Compute frequency of back edge,
   BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);

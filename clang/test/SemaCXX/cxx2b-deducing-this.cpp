@@ -19,7 +19,7 @@ struct S {
     // new and delete are implicitly static
     void *operator new(this unsigned long); // expected-error{{an explicit object parameter cannot appear in a static function}}
     void operator delete(this void*); // expected-error{{an explicit object parameter cannot appear in a static function}}
-    
+
     void g(this auto) const; // expected-error{{explicit object member function cannot have 'const' qualifier}}
     void h(this auto) &; // expected-error{{explicit object member function cannot have '&' qualifier}}
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
@@ -198,9 +198,7 @@ void func(int i) {
 void TestMutationInLambda() {
     [i = 0](this auto &&){ i++; }();
     [i = 0](this auto){ i++; }();
-    [i = 0](this const auto&){ i++; }();
-    // expected-error@-1 {{cannot assign to a variable captured by copy in a non-mutable lambda}}
-    // expected-note@-2 {{in instantiation of}}
+    [i = 0](this const auto&){ i++; }(); // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
 
     int x;
     const auto l1 = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
@@ -731,10 +729,10 @@ struct S2 {
 };
 
 S2& S2::operator=(this int&& self, const S2&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted copy assignment operator should be reference to 'S2'}}
 
 S2& S2::operator=(this int&& self, S2&&) = default;
-// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should match the type of the class 'S2'}}
+// expected-error@-1 {{the type of the explicit object parameter of an explicitly-defaulted move assignment operator should be reference to 'S2'}}
 
 struct Move {
     Move& operator=(this int&, Move&&) = default;
@@ -836,5 +834,242 @@ int h() {
   [&list](this auto self) {
     list = function3{}; // expected-error {{selected deleted operator '='}}
   }();
+}
+}
+
+namespace GH92188 {
+struct A {
+  template<auto N>
+  void operator+=(this auto &&, const char (&)[N]);
+  void operator+=(this auto &&, auto &&) = delete;
+
+  void f1(this A &, auto &);
+  void f1(this A &, auto &&) = delete;
+
+  void f2(this auto&);
+  void f2(this auto&&) = delete;
+
+  void f3(auto&) &;
+  void f3(this A&, auto&&) = delete;
+
+  void f4(auto&&) & = delete;
+  void f4(this A&, auto&);
+
+  static void f5(auto&);
+  void f5(this A&, auto&&) = delete;
+
+  static void f6(auto&&) = delete;
+  void f6(this A&, auto&);
+
+  void implicit_this() {
+    int lval;
+    operator+=("123");
+    f1(lval);
+    f2();
+    f3(lval);
+    f4(lval);
+    f5(lval);
+    f6(lval);
+  }
+
+  void operator-(this A&, auto&&) = delete;
+  friend void operator-(A&, auto&);
+
+  void operator*(this A&, auto&);
+  friend void operator*(A&, auto&&) = delete;
+};
+
+void g() {
+  A a;
+  int lval;
+  a += "123";
+  a.f1(lval);
+  a.f2();
+  a.f3(lval);
+  a.f4(lval);
+  a.f5(lval);
+  a.f6(lval);
+  a - lval;
+  a * lval;
+}
+}
+
+namespace P2797 {
+
+int bar(void) { return 55; }
+int (&fref)(void) = bar;
+
+struct C {
+  void c(this const C&);    // #first
+  void c() &;               // #second
+  static void c(int = 0);   // #third
+
+  void d() {
+    c();                // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (C::c)();           // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (&(C::c))();        // expected-error {{cannot create a non-constant pointer to member function}}
+    (&C::c)(C{});
+    (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
+    (&C::c)();
+
+    (&fref)();
+  }
+};
+}
+
+namespace GH85992 {
+namespace N {
+struct A {
+  int f(this A);
+};
+
+int f(A);
+}
+
+struct S {
+  int (S::*x)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (*y)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (***z)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  int f(this S);
+  int ((g))(this S);
+  friend int h(this S); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  struct T {
+    int f(this T);
+  };
+
+  friend int T::f(this T);
+  friend int N::A::f(this N::A);
+  friend int N::f(this N::A); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int friend func(this T); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+};
+
+using T = int (*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+using U = int (S::*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+int h(this int); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int S::f(this S) { return 1; }
+
+namespace a {
+void f();
+};
+void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+}
+
+struct R {
+  void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
+  void g(int &&r_value_ref) {
+	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
+  }
+};
+
+namespace GH100329 {
+struct A {
+    bool operator == (this const int&, const A&);
+};
+bool A::operator == (this const int&, const A&) = default;
+// expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const int &', expected 'const GH100329::A &'}}
+} // namespace GH100329
+
+namespace defaulted_assign {
+struct A {
+  A& operator=(this A, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+  A& operator=(this int, const A&) = default;
+  // expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-2 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+};
+} // namespace defaulted_assign
+
+namespace defaulted_compare {
+struct A {
+  bool operator==(this A&, const A&) = default;
+  // expected-error@-1 {{defaulted member equality comparison operator must be const-qualified}}
+  bool operator==(this const A, const A&) = default;
+  // expected-error@-1 {{invalid parameter type for defaulted equality comparison operator; found 'const A', expected 'const defaulted_compare::A &'}}
+  bool operator==(this A, A) = default;
+};
+struct B {
+  int a;
+  bool operator==(this B, B) = default;
+};
+static_assert(B{0} == B{0});
+static_assert(B{0} != B{1});
+template<B b>
+struct X;
+static_assert(__is_same(X<B{0}>, X<B{0}>));
+static_assert(!__is_same(X<B{0}>, X<B{1}>));
+} // namespace defaulted_compare
+
+namespace static_overloaded_operator {
+struct A {
+  template<auto N>
+  static void operator()(const char (&)[N]);
+  void operator()(this auto &&, auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct B {
+  template<auto N>
+  void operator()(this auto &&, const char (&)[N]);
+  static void operator()(auto &&);
+
+  void implicit_this() {
+    operator()("123");
+  }
+};
+
+struct C {
+  template<auto N>
+  static void operator[](const char (&)[N]);
+  void operator[](this auto &&, auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+struct D {
+  template<auto N>
+  void operator[](this auto &&, const char (&)[N]);
+  static void operator[](auto &&);
+
+  void implicit_this() {
+    operator[]("123");
+  }
+};
+
+} // namespace static_overloaded_operator
+
+namespace GH102025 {
+struct Foo {
+  template <class T>
+  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+      -> decltype(_evaluate(self, i...)) {
+    return self._evaluate(i...);
+  }
+
+private:
+  template <class T>
+  constexpr auto _evaluate(this T &&self, auto... i) -> decltype((i + ...));
+};
+
+int main() {
+  Foo foo;
+  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
 }
 }

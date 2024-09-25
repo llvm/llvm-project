@@ -49,8 +49,8 @@ for.end:
 ; CHECK:       define void @phi_three_incoming_values(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK:         [[PREDPHI:%.*]] = select <2 x i1> {{.*}}, <2 x i32> <i32 3, i32 3>, <2 x i32> <i32 9, i32 9>
-; CHECK:         [[PREDPHI7:%.*]] = select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> [[PREDPHI]]
+; CHECK:         [[PREDPHI:%.*]] = select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> <i32 3, i32 3>
+; CHECK:         [[PREDPHI7:%.*]] = select <2 x i1> {{.*}}, <2 x i32> [[PREDPHI]], <2 x i32> <i32 9, i32 9>
 ; CHECK:         store <2 x i32> [[PREDPHI7]], ptr {{.*}}
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ;

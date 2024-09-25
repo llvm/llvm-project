@@ -32,6 +32,12 @@ std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
   return 0;
 }
 
+std::size_t IoStatementBase::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  p = nullptr;
+  return 0;
+}
+
 bool IoStatementBase::AdvanceRecord(int) { return false; }
 
 void IoStatementBase::BackspaceRecord() {}
@@ -104,6 +110,8 @@ template <Direction DIR>
 std::size_t InternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return unit_.GetNextInputBytes(p, *this);
 }
+
+// InternalIoStatementState<DIR>::ViewBytesInRecord() not needed or defined
 
 template <Direction DIR>
 bool InternalIoStatementState<DIR>::AdvanceRecord(int n) {
@@ -321,8 +329,11 @@ void OpenStatementState::CompleteOperation() {
   }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
-    unit().CloseUnit(CloseStatus::Delete, *this);
-    unit().DestroyClosed();
+    if (ExternalFileUnit *
+        toClose{unit().LookUpForClose(unit().unitNumber())}) {
+      toClose->Close(CloseStatus::Delete, *this);
+      toClose->DestroyClosed();
+    }
   }
   IoStatementBase::CompleteOperation();
 }
@@ -411,6 +422,12 @@ bool ExternalIoStatementState<DIR>::Emit(
 template <Direction DIR>
 std::size_t ExternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return unit().GetNextInputBytes(p, *this);
+}
+
+template <Direction DIR>
+std::size_t ExternalIoStatementState<DIR>::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  return unit().ViewBytesInRecord(p, forward);
 }
 
 template <Direction DIR>

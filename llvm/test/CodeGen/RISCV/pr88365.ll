@@ -10,7 +10,7 @@ define void @foo() {
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    li a0, -2048
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa_offset -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 4294967280
 ; CHECK-NEXT:    addi a0, sp, 4
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    li a0, -2048

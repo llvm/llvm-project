@@ -89,6 +89,8 @@ public:
 
   lldb::SBValue GetNonSyntheticValue();
 
+  lldb::SBValue GetSyntheticValue();
+
   lldb::DynamicValueType GetPreferDynamicValue();
 
   void SetPreferDynamicValue(lldb::DynamicValueType use_dynamic);
@@ -143,6 +145,8 @@ public:
   // AddressOf() on the return of this call all return invalid
   lldb::SBValue CreateValueFromData(const char *name, lldb::SBData data,
                                     lldb::SBType type);
+  // Returned value has no address.
+  lldb::SBValue CreateBoolValue(const char *name, bool value);
 
   /// Get a child value by index from a value.
   ///
@@ -281,8 +285,22 @@ public:
 
   bool IsRuntimeSupportValue();
 
+  /// Return the number of children of this variable. Note that for some
+  /// variables this operation can be expensive. If possible, prefer calling
+  /// GetNumChildren(max) with the maximum number of children you are interested
+  /// in.
   uint32_t GetNumChildren();
 
+  /// Return the numer of children of this variable, with a hint that the
+  /// caller is interested in at most \a max children. Use this function to
+  /// avoid expensive child computations in some cases. For example, if you know
+  /// you will only ever display 100 elements, calling GetNumChildren(100) can
+  /// avoid enumerating all the other children. If the returned value is smaller
+  /// than \a max, then it represents the true number of children, otherwise it
+  /// indicates that their number is at least \a max. Do not assume the returned
+  /// number will always be less than or equal to \a max, as the implementation
+  /// may choose to return a larger (but still smaller than the actual number of
+  /// children) value.
   uint32_t GetNumChildren(uint32_t max);
 
   LLDB_DEPRECATED("SBValue::GetOpaqueType() is deprecated.")

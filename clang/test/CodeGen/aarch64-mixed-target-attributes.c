@@ -30,9 +30,6 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @explicit_default.ifunc = weak_odr alias i32 (), ptr @explicit_default
-// CHECK: @implicit_default.ifunc = weak_odr alias i32 (), ptr @implicit_default
-// CHECK: @default_def_with_version_decls.ifunc = weak_odr alias i32 (), ptr @default_def_with_version_decls
 // CHECK: @explicit_default = weak_odr ifunc i32 (), ptr @explicit_default.resolver
 // CHECK: @implicit_default = weak_odr ifunc i32 (), ptr @implicit_default.resolver
 // CHECK: @default_def_with_version_decls = weak_odr ifunc i32 (), ptr @default_def_with_version_decls.resolver
@@ -264,9 +261,9 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-v9.5a" }
 // CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rdm,-v9.5a" }
 // CHECK: attributes #[[ATTR5:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon,-v9.5a" }
-// CHECK: attributes #[[ATTR6:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+jsconv,+neon,-v9.5a" }
-// CHECK: attributes #[[ATTR7:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.5a" }
-// CHECK: attributes #[[ATTR8:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-v9.5a" }
+// CHECK: attributes #[[ATTR6:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.5a" }
+// CHECK: attributes #[[ATTR7:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-v9.5a" }
+// CHECK: attributes #[[ATTR8:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+jsconv,+neon,-v9.5a" }
 //.
 // CHECK-NOFMV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-fmv" }
 //.

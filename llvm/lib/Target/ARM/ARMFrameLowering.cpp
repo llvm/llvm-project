@@ -215,7 +215,7 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
 /// isFPReserved - Return true if the frame pointer register should be
 /// considered a reserved register on the scope of the specified function.
 bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
-  return hasFP(MF) || MF.getSubtarget<ARMSubtarget>().createAAPCSFrameChain();
+  return hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF);
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -735,8 +735,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo  &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const TargetMachine &TM = MF.getTarget();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
@@ -1167,7 +1166,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         if (STI.splitFramePushPop(MF)) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
               Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
-          unsigned Offset = MFI.getObjectOffset(FI);
+          int64_t Offset = MFI.getObjectOffset(FI);
           unsigned CFIIndex = MF.addFrameInst(
               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
           BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1189,7 +1188,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg >= ARM::D0 && Reg <= ARM::D31) &&
           (Reg < ARM::D8 || Reg >= ARM::D8 + AFI->getNumAlignedDPRCS2Regs())) {
         unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-        unsigned Offset = MFI.getObjectOffset(FI);
+        int64_t Offset = MFI.getObjectOffset(FI);
         unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
         BuildMI(MBB, Pos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1673,8 +1672,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .add(predOps(ARMCC::AL))
                                     .setMIFlags(MachineInstr::FrameDestroy);
-      for (unsigned i = 0, e = Regs.size(); i < e; ++i)
-        MIB.addReg(Regs[i], getDefRegState(true));
+      for (unsigned Reg : Regs)
+        MIB.addReg(Reg, getDefRegState(true));
       if (DeleteRet) {
         if (MI != MBB.end()) {
           MIB.copyImplicitOps(*MI);
@@ -2233,10 +2232,10 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   return true;
 }
 
-static bool requiresAAPCSFrameRecord(const MachineFunction &MF) {
+bool ARMFrameLowering::requiresAAPCSFrameRecord(
+    const MachineFunction &MF) const {
   const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
-  return Subtarget.createAAPCSFrameChainLeaf() ||
-         (Subtarget.createAAPCSFrameChain() && MF.getFrameInfo().hasCalls());
+  return Subtarget.createAAPCSFrameChain() && hasFP(MF);
 }
 
 // Thumb1 may require a spill when storing to a frame index through FP (or any
@@ -2995,8 +2994,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     report_fatal_error("Segmented stacks not supported on this platform.");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  MCContext &Context = MMI.getContext();
+  MCContext &Context = MF.getContext();
   const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());

@@ -48,6 +48,7 @@ add_llvm_target(HexagonCodeGen
   HexagonLoopIdiomRecognition.cpp
   HexagonMachineFunctionInfo.cpp
   HexagonMachineScheduler.cpp
+  HexagonMask.cpp
   HexagonMCInstLower.cpp
   HexagonNewValueJump.cpp
   HexagonOptAddrMode.cpp

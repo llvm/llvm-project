@@ -34,7 +34,7 @@ void test2(void) {
 
 // CHECK-LABEL: define{{.*}} void @test3
 void test3(void) {
-  // CHECK:     = call ptr @__strcpy_chk(ptr getelementptr inbounds ([63 x i8], ptr @gbuf, i64 1, i64 37), ptr @.str, i64 0)
+  // CHECK:     = call ptr @__strcpy_chk(ptr getelementptr inbounds ([63 x i8], ptr @gbuf, i64 0, i64 100), ptr @.str, i64 0)
   strcpy(&gbuf[100], "Hi there");
 }
 

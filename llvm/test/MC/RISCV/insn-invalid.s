@@ -23,3 +23,11 @@
 
 # Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_i  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:1: error: unknown directive
+
+.insn . # CHECK: :[[@LINE]]:7: error: expected instruction format or an integer constant
+.insn 0x2, # CHECK: :[[@LINE]]:12: error: expected an integer constant
+.insn 0x2, 0xffff # CHECK: :[[@LINE]]:7: error: instruction length mismatch
+.insn 0x2, 0xffffffff # CHECK: :[[@LINE]]:7: error: instruction length mismatch
+.insn 0xffffffffff # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+.insn 0x0010 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+.insn 0x4, 0x13, 0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction

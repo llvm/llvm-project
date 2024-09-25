@@ -17,16 +17,56 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
 using namespace llvm;
 
-// Verify that phi-like recipes are at the beginning of \p VPBB, with no
-// other recipes in between. Also check that only header blocks contain
-// VPHeaderPHIRecipes.
-static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
+namespace {
+class VPlanVerifier {
+  const VPDominatorTree &VPDT;
+
+  SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
+
+  // Verify that phi-like recipes are at the beginning of \p VPBB, with no
+  // other recipes in between. Also check that only header blocks contain
+  // VPHeaderPHIRecipes.
+  bool verifyPhiRecipes(const VPBasicBlock *VPBB);
+
+  /// Verify that \p EVL is used correctly. The user must be either in
+  /// EVL-based recipes as a last operand or VPInstruction::Add which is
+  /// incoming value into EVL's recipe.
+  bool verifyEVLRecipe(const VPInstruction &EVL) const;
+
+  bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
+
+  bool verifyBlock(const VPBlockBase *VPB);
+
+  /// Helper function that verifies the CFG invariants of the VPBlockBases
+  /// within
+  /// \p Region. Checks in this function are generic for VPBlockBases. They are
+  /// not specific for VPBasicBlocks or VPRegionBlocks.
+  bool verifyBlocksInRegion(const VPRegionBlock *Region);
+
+  /// Verify the CFG invariants of VPRegionBlock \p Region and its nested
+  /// VPBlockBases. Do not recurse inside nested VPRegionBlocks.
+  bool verifyRegion(const VPRegionBlock *Region);
+
+  /// Verify the CFG invariants of VPRegionBlock \p Region and its nested
+  /// VPBlockBases. Recurse inside nested VPRegionBlocks.
+  bool verifyRegionRec(const VPRegionBlock *Region);
+
+public:
+  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+
+  bool verify(const VPlan &Plan);
+};
+} // namespace
+
+bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   auto RecipeI = VPBB->begin();
   auto End = VPBB->end();
   unsigned NumActiveLaneMaskPhiRecipes = 0;
@@ -80,8 +120,68 @@ static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
   return true;
 }
 
-static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
-                               const VPDominatorTree &VPDT) {
+bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
+  if (EVL.getOpcode() != VPInstruction::ExplicitVectorLength) {
+    errs() << "verifyEVLRecipe should only be called on "
+              "VPInstruction::ExplicitVectorLength\n";
+    return false;
+  }
+  auto VerifyEVLUse = [&](const VPRecipeBase &R,
+                          const unsigned ExpectedIdx) -> bool {
+    SmallVector<const VPValue *> Ops(R.operands());
+    unsigned UseCount = count(Ops, &EVL);
+    if (UseCount != 1 || Ops[ExpectedIdx] != &EVL) {
+      errs() << "EVL is used as non-last operand in EVL-based recipe\n";
+      return false;
+    }
+    return true;
+  };
+  for (const VPUser *U : EVL.users()) {
+    if (!TypeSwitch<const VPUser *, bool>(U)
+             .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
+               return VerifyEVLUse(*S, 2);
+             })
+             .Case<VPWidenLoadEVLRecipe>([&](const VPWidenLoadEVLRecipe *L) {
+               return VerifyEVLUse(*L, 1);
+             })
+             .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
+               return VerifyEVLUse(
+                   *W, Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
+             })
+             .Case<VPReductionEVLRecipe>([&](const VPReductionEVLRecipe *R) {
+               return VerifyEVLUse(*R, 2);
+             })
+             .Case<VPScalarCastRecipe>(
+                 [&](const VPScalarCastRecipe *S) { return true; })
+             .Case<VPInstruction>([&](const VPInstruction *I) {
+               if (I->getOpcode() != Instruction::Add) {
+                 errs()
+                     << "EVL is used as an operand in non-VPInstruction::Add\n";
+                 return false;
+               }
+               if (I->getNumUsers() != 1) {
+                 errs() << "EVL is used in VPInstruction:Add with multiple "
+                           "users\n";
+                 return false;
+               }
+               if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+                 errs() << "Result of VPInstruction::Add with EVL operand is "
+                           "not used by VPEVLBasedIVPHIRecipe\n";
+                 return false;
+               }
+               return true;
+             })
+             .Default([&](const VPUser *U) {
+               errs() << "EVL has unexpected user\n";
+               return false;
+             })) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
@@ -93,6 +193,15 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
     RecipeNumbering[&R] = Cnt++;
 
   for (const VPRecipeBase &R : *VPBB) {
+    if (isa<VPIRInstruction>(&R) ^ isa<VPIRBasicBlock>(VPBB)) {
+      errs() << "VPIRInstructions ";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      R.dump();
+      errs() << " ";
+#endif
+      errs() << "not in a VPIRBasicBlock!\n";
+      return false;
+    }
     for (const VPValue *V : R.definedValues()) {
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
@@ -117,6 +226,31 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
         }
       }
     }
+    if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
+      if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
+          !verifyEVLRecipe(*EVL)) {
+        errs() << "EVL VPValue is not used correctly\n";
+        return false;
+      }
+    }
+  }
+
+  auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);
+  if (!IRBB)
+    return true;
+
+  if (!WrappedIRBBs.insert(IRBB->getIRBasicBlock()).second) {
+    errs() << "Same IR basic block used by multiple wrapper blocks!\n";
+    return false;
+  }
+
+  VPBlockBase *MiddleBB =
+      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
+  if (IRBB != IRBB->getPlan()->getPreheader() &&
+      IRBB->getSinglePredecessor() != MiddleBB) {
+    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
+              "middle-block at the moment!\n";
+    return false;
   }
   return true;
 }
@@ -126,14 +260,13 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
 static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
   SmallDenseSet<const VPBlockBase *, 8> VPBlockSet;
   for (const auto *Block : VPBlockVec) {
-    if (VPBlockSet.count(Block))
+    if (!VPBlockSet.insert(Block).second)
       return true;
-    VPBlockSet.insert(Block);
   }
   return false;
 }
 
-static bool verifyBlock(const VPBlockBase *VPB, const VPDominatorTree &VPDT) {
+bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
   if (VPB->getNumSuccessors() > 1 ||
@@ -193,14 +326,10 @@ static bool verifyBlock(const VPBlockBase *VPB, const VPDominatorTree &VPDT) {
       return false;
     }
   }
-  return !VPBB || verifyVPBasicBlock(VPBB, VPDT);
+  return !VPBB || verifyVPBasicBlock(VPBB);
 }
 
-/// Helper function that verifies the CFG invariants of the VPBlockBases within
-/// \p Region. Checks in this function are generic for VPBlockBases. They are
-/// not specific for VPBasicBlocks or VPRegionBlocks.
-static bool verifyBlocksInRegion(const VPRegionBlock *Region,
-                                 const VPDominatorTree &VPDT) {
+bool VPlanVerifier::verifyBlocksInRegion(const VPRegionBlock *Region) {
   for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
     // Check block's parent.
     if (VPB->getParent() != Region) {
@@ -208,16 +337,13 @@ static bool verifyBlocksInRegion(const VPRegionBlock *Region,
       return false;
     }
 
-    if (!verifyBlock(VPB, VPDT))
+    if (!verifyBlock(VPB))
       return false;
   }
   return true;
 }
 
-/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
-/// VPBlockBases. Do not recurse inside nested VPRegionBlocks.
-static bool verifyRegion(const VPRegionBlock *Region,
-                         const VPDominatorTree &VPDT) {
+bool VPlanVerifier::verifyRegion(const VPRegionBlock *Region) {
   const VPBlockBase *Entry = Region->getEntry();
   const VPBlockBase *Exiting = Region->getExiting();
 
@@ -231,33 +357,26 @@ static bool verifyRegion(const VPRegionBlock *Region,
     return false;
   }
 
-  return verifyBlocksInRegion(Region, VPDT);
+  return verifyBlocksInRegion(Region);
 }
 
-/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
-/// VPBlockBases. Recurse inside nested VPRegionBlocks.
-static bool verifyRegionRec(const VPRegionBlock *Region,
-                            const VPDominatorTree &VPDT) {
+bool VPlanVerifier::verifyRegionRec(const VPRegionBlock *Region) {
   // Recurse inside nested regions and check all blocks inside the region.
-  return verifyRegion(Region, VPDT) &&
+  return verifyRegion(Region) &&
          all_of(vp_depth_first_shallow(Region->getEntry()),
-                [&VPDT](const VPBlockBase *VPB) {
+                [this](const VPBlockBase *VPB) {
                   const auto *SubRegion = dyn_cast<VPRegionBlock>(VPB);
-                  return !SubRegion || verifyRegionRec(SubRegion, VPDT);
+                  return !SubRegion || verifyRegionRec(SubRegion);
                 });
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
-  VPDominatorTree VPDT;
-  VPDT.recalculate(const_cast<VPlan &>(Plan));
-
-  if (any_of(
-          vp_depth_first_shallow(Plan.getEntry()),
-          [&VPDT](const VPBlockBase *VPB) { return !verifyBlock(VPB, VPDT); }))
+bool VPlanVerifier::verify(const VPlan &Plan) {
+  if (any_of(vp_depth_first_shallow(Plan.getEntry()),
+             [this](const VPBlockBase *VPB) { return !verifyBlock(VPB); }))
     return false;
 
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  if (!verifyRegionRec(TopRegion, VPDT))
+  if (!verifyRegionRec(TopRegion))
     return false;
 
   if (TopRegion->getParent()) {
@@ -304,4 +423,11 @@ bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
     }
 
   return true;
+}
+
+bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(const_cast<VPlan &>(Plan));
+  VPlanVerifier Verifier(VPDT);
+  return Verifier.verify(Plan);
 }

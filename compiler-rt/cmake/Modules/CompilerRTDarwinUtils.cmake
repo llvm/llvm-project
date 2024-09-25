@@ -100,7 +100,6 @@ function(darwin_get_toolchain_supported_archs output_var)
     message(WARNING "Detecting supported architectures from 'ld -v' failed. Returning default set.")
     set(ARCHES "i386;x86_64;armv7;armv7s;arm64")
   endif()
-  
   set(${output_var} ${ARCHES} PARENT_SCOPE)
 endfunction()
 
@@ -135,7 +134,7 @@ function(darwin_test_archs os valid_archs)
     endif()
   endif()
 
-  # The simple program will build for x86_64h on the simulator because it is 
+  # The simple program will build for x86_64h on the simulator because it is
   # compatible with x86_64 libraries (mostly), but since x86_64h isn't actually
   # a valid or useful architecture for the iOS simulator we should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
@@ -154,7 +153,7 @@ function(darwin_test_archs os valid_archs)
 
   set(working_archs)
   foreach(arch ${archs})
-   
+
     set(arch_linker_flags "-arch ${arch} ${os_linker_flags}")
     if(TEST_COMPILE_ONLY)
       # `-w` is used to surpress compiler warnings which `try_compile_only()` treats as an error.
@@ -269,7 +268,7 @@ function(darwin_find_excluded_builtins_list output_var)
         ${DARWIN_EXCLUDE_DIR}/${LIB_OS}${smallest_version}-${LIB_ARCH}.txt)
     endif()
   endif()
-  
+
   set(${output_var}
       ${${LIB_ARCH}_${LIB_OS}_BUILTINS}
       ${${LIB_OS}_${LIB_ARCH}_BASE_BUILTINS}
@@ -336,7 +335,7 @@ macro(darwin_add_builtin_library name suffix)
 
   list(APPEND ${LIB_OS}_${suffix}_libs ${libname})
   list(APPEND ${LIB_OS}_${suffix}_lipo_flags -arch ${arch} $<TARGET_FILE:${libname}>)
-  set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
+  set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
 endmacro()
 
 function(darwin_lipo_libs name)
@@ -355,7 +354,7 @@ function(darwin_lipo_libs name)
       )
     add_custom_target(${name}
       DEPENDS ${LIB_OUTPUT_DIR}/lib${name}.a)
-    set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT/Misc")
     add_dependencies(${LIB_PARENT_TARGET} ${name})
 
     if(CMAKE_CONFIGURATION_TYPES)
@@ -447,7 +446,15 @@ macro(darwin_add_builtin_libraries)
                               OS ${os}
                               ARCH ${arch}
                               MIN_VERSION ${DARWIN_${os}_BUILTIN_MIN_VER})
-
+      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }"
+                              COMPILER_RT_HAS_${arch}_FLOAT16)
+      append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
+      check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }"
+                              COMPILER_RT_HAS_${arch}_BFLOAT16)
+      # Build BF16 files only when "__bf16" is available.
+      if(COMPILER_RT_HAS_${arch}_BFLOAT16)
+        list(APPEND ${arch}_SOURCES ${BF16_SOURCES})
+      endif()
       darwin_filter_builtin_sources(filtered_sources
         ${os}_${arch}
         EXCLUDE ${arch}_${os}_EXCLUDED_BUILTINS
@@ -548,7 +555,7 @@ macro(darwin_add_embedded_builtin_libraries)
       ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
     set(DARWIN_macho_embedded_LIBRARY_INSTALL_DIR
       ${COMPILER_RT_INSTALL_LIBRARY_DIR}/macho_embedded)
-      
+
     set(CFLAGS_armv7 -target thumbv7-apple-darwin-eabi)
     set(CFLAGS_i386 -march=pentium)
 

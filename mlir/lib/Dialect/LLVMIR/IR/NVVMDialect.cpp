@@ -28,7 +28,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/AsmParser/Parser.h"
@@ -522,7 +521,7 @@ LogicalResult MmaOp::verify() {
       }
       errorStream << "but got ";
       llvm::interleaveComma(operandTySeg, errorStream);
-      return emitOpError(errorStream.str());
+      return emitOpError(errorMessage);
     }
   }
 
@@ -534,7 +533,7 @@ LogicalResult MmaOp::verify() {
         << "Could not match allowed types for the result; expected one of ";
     llvm::interleaveComma(expectedResult, errorStream);
     errorStream << " but got " << getResult().getType();
-    return emitOpError(errorStream.str());
+    return emitOpError(errorMessage);
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
@@ -879,9 +878,12 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
 
   // Check transpose (only available for f16/bf16)
+  // Matrices A should be stored in row-major and B in column-major.
+  // Only f16/bf16 matrices can be stored in either column-major or row-major
+  // by setting the tranpose value(imm-trans-a,imm-trans-b) in PTX code.
   if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
-       getLayoutB() == mlir::NVVM::MMALayout::col)) {
+       getLayoutB() == mlir::NVVM::MMALayout::row)) {
     return emitOpError()
            << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
            << " and layout_b = " << stringifyMMALayout(getLayoutB())
@@ -965,7 +967,6 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   }
   ss << ";\n"
      << "}\n";
-  ss.flush();
   return ptx;
 }
 
@@ -1002,12 +1003,40 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
   }
 }
 LogicalResult NVVM::FenceProxyOp::verify() {
+  if (getKind() == NVVM::ProxyKind::TENSORMAP)
+    return emitOpError() << "tensormap proxy is not a supported proxy kind";
+  if (getKind() == NVVM::ProxyKind::GENERIC)
+    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
   if (getKind() != NVVM::ProxyKind::async_shared && getSpace().has_value()) {
     return emitOpError() << "only async_shared fence can have space attribute";
   }
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyAcquireOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
+  return success();
+}
+
+LogicalResult NVVM::FenceProxyReleaseOp::verify() {
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("uni-directional proxies only support generic for "
+                       "from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
+    return emitOpError("uni-directional proxies only support tensormap "
+                       "for to_proxy attribute");
+
   return success();
 }
 

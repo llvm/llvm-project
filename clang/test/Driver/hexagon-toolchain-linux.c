@@ -119,3 +119,36 @@
 // CHECK010:   crt1.o
 // CHECK010:   "-L/tmp"
 // CHECK010-NOT:  "-lstandalone"
+
+// -----------------------------------------------------------------------------
+// unwindlib
+// -----------------------------------------------------------------------------
+// RUN: %clangxx --unwindlib=none \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK011 %s
+// CHECK011:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK011:   crt1.o
+// CHECK011-NOT:  "-lunwind"
+// CHECK011-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+
+// RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// RUN: %clangxx \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// CHECK012:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK012:   crt1.o
+// CHECK012:  "-lunwind"
+// CHECK012-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+// RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK013 %s
+// CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
+// CHECK013-NOT:  "-lgcc_eh"
+// CHECK013-NOT:  "-lgcc_s"
+// CHECK013-NOT:  "-lunwind"

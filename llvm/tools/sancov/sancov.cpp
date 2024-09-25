@@ -262,7 +262,7 @@ RawCoverage::read(const std::string &FileName) {
   // to compactify the data.
   Addrs->erase(0);
 
-  return std::unique_ptr<RawCoverage>(new RawCoverage(std::move(Addrs)));
+  return std::make_unique<RawCoverage>(std::move(Addrs));
 }
 
 // Print coverage addresses.
@@ -323,11 +323,10 @@ static void operator<<(json::OStream &W,
             for (const auto &Loc : Point->Locs) {
               if (Loc.FileName != FileName || Loc.FunctionName != FunctionName)
                 continue;
-              if (WrittenIds.find(Point->Id) != WrittenIds.end())
+              if (!WrittenIds.insert(Point->Id).second)
                 continue;
 
               // Output <point_id> : "<line>:<col>".
-              WrittenIds.insert(Point->Id);
               W.attribute(Point->Id,
                           (utostr(Loc.Line) + ":" + utostr(Loc.Column)));
             }
@@ -418,9 +417,6 @@ SymbolizedCoverage::read(const std::string &InputFile) {
             auto LineStr = Loc.substr(0, ColonPos);
             auto ColStr = Loc.substr(ColonPos + 1, Loc.size());
 
-            if (Points.find(PointId) == Points.end())
-              Points.insert(std::make_pair(PointId, CoveragePoint(PointId)));
-
             DILineInfo LineInfo;
             LineInfo.FileName = Filename;
             LineInfo.FunctionName = FunctionName;
@@ -428,7 +424,8 @@ SymbolizedCoverage::read(const std::string &InputFile) {
             LineInfo.Line = std::strtoul(LineStr.c_str(), &End, 10);
             LineInfo.Column = std::strtoul(ColStr.c_str(), &End, 10);
 
-            CoveragePoint *CoveragePoint = &Points.find(PointId)->second;
+            CoveragePoint *CoveragePoint =
+                &Points.try_emplace(PointId, PointId).first->second;
             CoveragePoint->Locs.push_back(LineInfo);
           }
         }
@@ -460,8 +457,7 @@ static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
   symbolize::LLVMSymbolizer::Options SymbolizerOptions;
   SymbolizerOptions.Demangle = ClDemangle;
   SymbolizerOptions.UseSymbolTable = true;
-  return std::unique_ptr<symbolize::LLVMSymbolizer>(
-      new symbolize::LLVMSymbolizer(SymbolizerOptions));
+  return std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOptions);
 }
 
 static std::string normalizeFilename(const std::string &FileName) {
@@ -577,10 +573,8 @@ getCoveragePoints(const std::string &ObjectFile,
       FrameInfo.FileName = normalizeFilename(FrameInfo.FileName);
       if (Ig.isIgnorelisted(FrameInfo))
         continue;
-      if (Infos.find(FrameInfo) == Infos.end()) {
-        Infos.insert(FrameInfo);
+      if (Infos.insert(FrameInfo).second)
         Point.Locs.push_back(FrameInfo);
-      }
     }
 
     Result.push_back(Point);

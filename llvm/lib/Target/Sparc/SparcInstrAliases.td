@@ -400,9 +400,11 @@ defm : cp_cond_alias<"012",   0b1111>;
 let EmitPriority = 0 in defm : cp_cond_alias<"",      0b1000>; // same as a; gnu asm, not in manual
 
 defm : reg_cond_alias<"z",    0b001>;
+defm : reg_cond_alias<"e",    0b001>;
 defm : reg_cond_alias<"lez",  0b010>;
 defm : reg_cond_alias<"lz",   0b011>;
 defm : reg_cond_alias<"nz",   0b101>;
+defm : reg_cond_alias<"ne",   0b101>;
 defm : reg_cond_alias<"gz",   0b110>;
 defm : reg_cond_alias<"gez",  0b111>;
 
@@ -560,10 +562,15 @@ def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, simm13Op:$simm13), 0>;
 
 // End of Section A.3
 
-// or imm, reg, rd -> or reg, imm, rd
-// Nonstandard GNU extension.
-let EmitPriority = 0 in
+
+// Nonstandard GNU extensions.
+let EmitPriority = 0 in {
+  // or imm, reg, rd -> or reg, imm, rd
   def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+
+  // addc/addx imm, reg, rd -> addc/addx reg, imm, rd
+  def : InstAlias<"addx $simm13, $rs1, $rd", (ADDCri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
+}
 
 // wr reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 // (aka: omit the first arg when it's g0. This is not in the manual, but is
@@ -593,6 +600,10 @@ def : InstAlias<"flush", (FLUSH), 0>;
 
 // unimp -> unimp 0
 def : InstAlias<"unimp", (UNIMP 0), 0>;
+
+// Not in spec, but we follow Solaris behavior of having `illtrap`
+// interchangeable with `unimp` all the time.
+def : MnemonicAlias<"illtrap", "unimp">;
 
 def : MnemonicAlias<"iflush", "flush">;
 

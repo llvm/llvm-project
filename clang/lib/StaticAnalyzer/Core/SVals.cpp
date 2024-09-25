@@ -263,6 +263,23 @@ bool SVal::isZeroConstant() const {
 // Pretty-Printing.
 //===----------------------------------------------------------------------===//
 
+StringRef SVal::getKindStr() const {
+  switch (getKind()) {
+#define BASIC_SVAL(Id, Parent)                                                 \
+  case Id##Kind:                                                               \
+    return #Id;
+#define LOC_SVAL(Id, Parent)                                                   \
+  case Loc##Id##Kind:                                                          \
+    return #Id;
+#define NONLOC_SVAL(Id, Parent)                                                \
+  case NonLoc##Id##Kind:                                                       \
+    return #Id;
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
+#undef REGION
+  }
+  llvm_unreachable("Unkown kind!");
+}
+
 LLVM_DUMP_METHOD void SVal::dump() const { dumpToStream(llvm::errs()); }
 
 void SVal::printJson(raw_ostream &Out, bool AddQuotes) const {
@@ -271,7 +288,7 @@ void SVal::printJson(raw_ostream &Out, bool AddQuotes) const {
 
   dumpToStream(TempOut);
 
-  Out << JsonFormat(TempOut.str(), AddQuotes);
+  Out << JsonFormat(Buf, AddQuotes);
 }
 
 void SVal::dumpToStream(raw_ostream &os) const {

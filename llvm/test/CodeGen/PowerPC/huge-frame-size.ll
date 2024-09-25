@@ -18,7 +18,7 @@ define void @foo(i8 %x) {
 ; CHECK-LE-NEXT:    oris 0, 0, 65535
 ; CHECK-LE-NEXT:    ori 0, 0, 65504
 ; CHECK-LE-NEXT:    stdux 1, 1, 0
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-LE-NEXT:    .cfi_def_cfa_offset 4294967328
 ; CHECK-LE-NEXT:    li 4, 1
 ; CHECK-LE-NEXT:    addi 5, 1, 32
 ; CHECK-LE-NEXT:    stb 3, 32(1)

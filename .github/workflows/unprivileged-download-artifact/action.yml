@@ -1,0 +1,81 @@
+name: Unprivileged Download Artifact
+description: >-
+  Download artifacts from another workflow run without using an access token.
+inputs:
+  run-id:
+    description: >-
+      The run-id for the workflow run that you want to download the artifact
+      from.  If ommitted it will download the most recently created artifact
+      from the repo with the artifact-name.
+    required: false
+  artifact-name:
+    desciption: The name of the artifact to download.
+    required: true
+
+
+outputs:
+  filename:
+    description: >-
+      The filename of the downloaded artifact or the empty string if the
+      artifact was not found.
+    value: ${{ steps.download-artifact.outputs.filename }}
+  artifact-id:
+    description: "The id of the artifact being downloaded."
+    value: ${{ steps.artifact-url.outputs.id }}
+
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+      id: artifact-url
+      with:
+        script: |
+          var response;
+          if (!"${{ inputs.run-id }}") {
+            response = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "${{ inputs.artifact-name }}"
+            })
+          } else {
+            response = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: "${{ inputs.run-id }}",
+              name: "${{ inputs.artifact-name }}"
+            })
+          }
+
+          console.log(response)
+
+          for (artifact of response.data.artifacts) {
+            console.log(artifact);
+          }
+
+          if (response.data.artifacts.length == 0) {
+            console.log("Could not find artifact ${{ inputs.artifact-name }} for workflow run ${{ inputs.run-id }}")
+            return;
+          }
+
+          const url_response = await github.rest.actions.downloadArtifact({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            artifact_id: response.data.artifacts[0].id,
+            archive_format: "zip"
+          })
+
+          core.setOutput("url", url_response.url);
+          core.setOutput("id", response.data.artifacts[0].id);
+
+    - shell: bash
+      if: steps.artifact-url.outputs.url != ''
+      id: download-artifact
+      run: |
+        curl -L -o ${{ inputs.artifact-name }}.zip "${{ steps.artifact-url.outputs.url }}"
+        echo "filename=${{ inputs.artifact-name }}.zip" >> $GITHUB_OUTPUT
+
+    - shell: bash
+      if: steps.download-artifact.outputs.filename != ''
+      run: |
+        unzip ${{ steps.download-artifact.outputs.filename }}

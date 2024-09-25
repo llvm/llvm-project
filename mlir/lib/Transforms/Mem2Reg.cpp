@@ -9,14 +9,15 @@
 #include "mlir/Transforms/Mem2Reg.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
@@ -173,7 +174,9 @@ public:
   /// Actually promotes the slot by mutating IR. Promoting a slot DOES
   /// invalidate the MemorySlotPromotionInfo of other slots. Preparation of
   /// promotion info should NOT be performed in batches.
-  void promoteSlot();
+  /// Returns a promotable allocation op if a new allocator was created, nullopt
+  /// otherwise.
+  std::optional<PromotableAllocationOpInterface> promoteSlot();
 
 private:
   /// Computes the reaching definition for all the operations that require
@@ -253,6 +256,18 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // delete itself). We thus need to start from the use of the slot pointer and
   // propagate further requests through the forward slice.
 
+  // Because this pass currently only supports analysing the parent region of
+  // the slot pointer, if a promotable memory op that needs promotion is within
+  // a graph region, the slot may only be used in a graph region and should
+  // therefore be ignored.
+  Region *slotPtrRegion = slot.ptr.getParentRegion();
+  auto slotPtrRegionOp =
+      dyn_cast<RegionKindInterface>(slotPtrRegion->getParentOp());
+  if (slotPtrRegionOp &&
+      slotPtrRegionOp.getRegionKind(slotPtrRegion->getRegionNumber()) ==
+          RegionKind::Graph)
+    return failure();
+
   // First insert that all immediate users of the slot pointer must no longer
   // use it.
   for (OpOperand &use : slot.ptr.getUses()) {
@@ -328,9 +343,8 @@ SmallPtrSet<Block *, 16> MemorySlotPromotionAnalyzer::computeSlotLiveIn(
   // blocks.
   SmallPtrSet<Block *, 16> visited;
   for (Operation *user : slot.ptr.getUsers()) {
-    if (visited.contains(user->getBlock()))
+    if (!visited.insert(user->getBlock()).second)
       continue;
-    visited.insert(user->getBlock());
 
     for (Operation &op : user->getBlock()->getOperations()) {
       if (auto memOp = dyn_cast<PromotableMemOpInterface>(op)) {
@@ -515,7 +529,7 @@ getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
     return it->second;
 
   DenseMap<Block *, size_t> &blockIndices = it->second;
-  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(*region);
+  SetVector<Block *> topologicalOrder = getBlocksSortedByDominance(*region);
   for (auto [index, block] : llvm::enumerate(topologicalOrder))
     blockIndices[block] = index;
   return blockIndices;
@@ -595,7 +609,8 @@ void MemorySlotPromoter::removeBlockingUses() {
          "after promotion, the slot pointer should not be used anymore");
 }
 
-void MemorySlotPromoter::promoteSlot() {
+std::optional<PromotableAllocationOpInterface>
+MemorySlotPromoter::promoteSlot() {
   computeReachingDefInRegion(slot.ptr.getParentRegion(),
                              getOrCreateDefaultValue());
 
@@ -622,7 +637,7 @@ void MemorySlotPromoter::promoteSlot() {
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;
 
-  allocator.handlePromotionComplete(slot, defaultValue, builder);
+  return allocator.handlePromotionComplete(slot, defaultValue, builder);
 }
 
 LogicalResult mlir::tryToPromoteMemorySlots(
@@ -636,20 +651,49 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   // lazily and cached to avoid expensive recomputation.
   BlockIndexCache blockIndexCache;
 
-  for (PromotableAllocationOpInterface allocator : allocators) {
-    for (MemorySlot slot : allocator.getPromotableSlots()) {
-      if (slot.ptr.use_empty())
-        continue;
+  SmallVector<PromotableAllocationOpInterface> workList(allocators);
 
-      MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
-      std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
-      if (info) {
-        MemorySlotPromoter(slot, allocator, builder, dominance, dataLayout,
-                           std::move(*info), statistics, blockIndexCache)
-            .promoteSlot();
-        promotedAny = true;
+  SmallVector<PromotableAllocationOpInterface> newWorkList;
+  newWorkList.reserve(workList.size());
+  while (true) {
+    bool changesInThisRound = false;
+    for (PromotableAllocationOpInterface allocator : workList) {
+      bool changedAllocator = false;
+      for (MemorySlot slot : allocator.getPromotableSlots()) {
+        if (slot.ptr.use_empty())
+          continue;
+
+        MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
+        std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
+        if (info) {
+          std::optional<PromotableAllocationOpInterface> newAllocator =
+              MemorySlotPromoter(slot, allocator, builder, dominance,
+                                 dataLayout, std::move(*info), statistics,
+                                 blockIndexCache)
+                  .promoteSlot();
+          changedAllocator = true;
+          // Add newly created allocators to the worklist for further
+          // processing.
+          if (newAllocator)
+            newWorkList.push_back(*newAllocator);
+
+          // A break is required, since promoting a slot may invalidate the
+          // remaining slots of an allocator.
+          break;
+        }
       }
+      if (!changedAllocator)
+        newWorkList.push_back(allocator);
+      changesInThisRound |= changedAllocator;
     }
+    if (!changesInThisRound)
+      break;
+    promotedAny = true;
+
+    // Swap the vector's backing memory and clear the entries in newWorkList
+    // afterwards. This ensures that additional heap allocations can be avoided.
+    workList.swap(newWorkList);
+    newWorkList.clear();
   }
 
   return success(promotedAny);
@@ -677,22 +721,16 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
 
       OpBuilder builder(&region.front(), region.front().begin());
 
-      // Promoting a slot can allow for further promotion of other slots,
-      // promotion is tried until no promotion succeeds.
-      while (true) {
-        SmallVector<PromotableAllocationOpInterface> allocators;
-        // Build a list of allocators to attempt to promote the slots of.
-        region.walk([&](PromotableAllocationOpInterface allocator) {
-          allocators.emplace_back(allocator);
-        });
+      SmallVector<PromotableAllocationOpInterface> allocators;
+      // Build a list of allocators to attempt to promote the slots of.
+      region.walk([&](PromotableAllocationOpInterface allocator) {
+        allocators.emplace_back(allocator);
+      });
 
-        // Attempt promoting until no promotion succeeds.
-        if (failed(tryToPromoteMemorySlots(allocators, builder, dataLayout,
-                                           dominance, statistics)))
-          break;
-
+      // Attempt promoting as many of the slots as possible.
+      if (succeeded(tryToPromoteMemorySlots(allocators, builder, dataLayout,
+                                            dominance, statistics)))
         changed = true;
-      }
     }
     if (!changed)
       markAllAnalysesPreserved();

@@ -10,10 +10,15 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include <stack>
 
 #include "gtest/gtest.h"
+#include <tuple>
 
 using namespace clang;
 using namespace llvm;
@@ -22,7 +27,8 @@ namespace {
 
 // Should be called before testing.
 void setupProfiler() {
-  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test");
+  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test",
+                              /*TimeTraceVerbose=*/true);
 }
 
 // Should be called after `compileFromString()`.
@@ -37,14 +43,24 @@ std::string teardownProfiler() {
 
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
-bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName) {
+bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
+                       llvm::StringMap<std::string> Headers = {}) {
   CompilerInstance Compiler;
   Compiler.createDiagnostics();
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
+      new llvm::vfs::InMemoryFileSystem());
+  FS->addFile(File, 0, MemoryBuffer::getMemBuffer(Code));
+  for (const auto &Header : Headers) {
+    FS->addFile(Header.getKey(), 0,
+                MemoryBuffer::getMemBuffer(Header.getValue()));
+  }
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), FS));
+  Compiler.setFileManager(Files.get());
+
   auto Invocation = std::make_shared<CompilerInvocation>();
-  Invocation->getPreprocessorOpts().addRemappedFile(
-      FileName, MemoryBuffer::getMemBuffer(Code).release());
-  const char *Args[] = {Standard.data(), FileName.data()};
+  std::vector<const char *> Args = {Standard.data(), File.data()};
   CompilerInvocation::CreateFromArgs(*Invocation, Args,
                                      Compiler.getDiagnostics());
   Compiler.setInvocation(std::move(Invocation));
@@ -59,13 +75,28 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName) {
   return Compiler.ExecuteAction(Action);
 }
 
+std::string GetMetadata(json::Object *Event) {
+  std::string M;
+  llvm::raw_string_ostream OS(M);
+  if (json::Object *Args = Event->getObject("args")) {
+    if (auto Detail = Args->getString("detail"))
+      OS << Detail;
+    // Use only filename to not include os-specific path separators.
+    if (auto File = Args->getString("file"))
+      OS << (M.empty() ? "" : ", ") << llvm::sys::path::filename(*File);
+    if (auto Line = Args->getInteger("line"))
+      OS << ":" << *Line;
+  }
+  return M;
+}
+
 // Returns pretty-printed trace graph.
 std::string buildTraceGraph(StringRef Json) {
   struct EventRecord {
     int64_t TimestampBegin;
     int64_t TimestampEnd;
-    StringRef Name;
-    StringRef Detail;
+    std::string Name;
+    std::string Metadata;
   };
   std::vector<EventRecord> Events;
 
@@ -80,10 +111,13 @@ std::string buildTraceGraph(StringRef Json) {
     int64_t TimestampBegin = TraceEventObj->getInteger("ts").value_or(0);
     int64_t TimestampEnd =
         TimestampBegin + TraceEventObj->getInteger("dur").value_or(0);
-    StringRef Name = TraceEventObj->getString("name").value_or("");
-    StringRef Detail = "";
-    if (json::Object *Args = TraceEventObj->getObject("args"))
-      Detail = Args->getString("detail").value_or("");
+    std::string Name = TraceEventObj->getString("name").value_or("").str();
+    std::string Metadata = GetMetadata(TraceEventObj);
+
+    // Source events are asynchronous events and may not perfectly nest the
+    // synchronous events. Skip testing them.
+    if (Name == "Source")
+      continue;
 
     // This is a "summary" event, like "Total PerformPendingInstantiations",
     // skip it
@@ -91,7 +125,7 @@ std::string buildTraceGraph(StringRef Json) {
       continue;
 
     Events.emplace_back(
-        EventRecord{TimestampBegin, TimestampEnd, Name, Detail});
+        EventRecord{TimestampBegin, TimestampEnd, Name, Metadata});
   }
 
   // There can be nested events that are very fast, for example:
@@ -131,9 +165,9 @@ std::string buildTraceGraph(StringRef Json) {
       Stream << "| ";
     }
     Stream.write(Event.Name.data(), Event.Name.size());
-    if (!Event.Detail.empty()) {
+    if (!Event.Metadata.empty()) {
       Stream << " (";
-      Stream.write(Event.Detail.data(), Event.Detail.size());
+      Stream.write(Event.Metadata.data(), Event.Metadata.size());
       Stream << ")";
     }
     Stream << "\n";
@@ -144,7 +178,7 @@ std::string buildTraceGraph(StringRef Json) {
 } // namespace
 
 TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
-  constexpr StringRef Code = R"(
+  std::string Code = R"(
 void print(double value);
 
 namespace slow_namespace {
@@ -174,9 +208,8 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
-  std::string TraceGraph = buildTraceGraph(Json);
-  ASSERT_TRUE(TraceGraph == R"(
-Frontend
+  ASSERT_EQ(R"(
+Frontend (test.cc)
 | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
 | ParseDeclarationOrFunctionDefinition (test.cc:6:1)
 | | ParseFunctionDefinition (slow_func)
@@ -201,14 +234,54 @@ Frontend
 | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
 | | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
-)");
+)",
+            buildTraceGraph(Json));
+}
 
-  // NOTE: If this test is failing, run this test with
-  // `llvm::errs() << TraceGraph;` and change the assert above.
+TEST(TimeProfilerTest, TemplateInstantiations) {
+  std::string B_H = R"(
+    template <typename T>
+    T fooB(T t) {
+      return T();
+    }
+
+    #define MacroTemp(x) template <typename T> void foo##x(T) { T(); }
+  )";
+
+  std::string A_H = R"(
+    #include "b.h"
+
+    MacroTemp(MTA)
+
+    template <typename T>
+    void fooA(T t) { fooB(t); fooMTA(t); }
+  )";
+  std::string Code = R"(
+    #include "a.h"
+    void user() { fooA(0); }
+  )";
+
+  setupProfiler();
+  ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc",
+                                /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
+  std::string Json = teardownProfiler();
+  ASSERT_EQ(R"(
+Frontend (test.cc)
+| ParseFunctionDefinition (fooB)
+| ParseFunctionDefinition (fooMTA)
+| ParseFunctionDefinition (fooA)
+| ParseDeclarationOrFunctionDefinition (test.cc:3:5)
+| | ParseFunctionDefinition (user)
+| PerformPendingInstantiations
+| | InstantiateFunction (fooA<int>, a.h:7)
+| | | InstantiateFunction (fooB<int>, b.h:3)
+| | | InstantiateFunction (fooMTA<int>, a.h:4)
+)",
+            buildTraceGraph(Json));
 }
 
 TEST(TimeProfilerTest, ConstantEvaluationC99) {
-  constexpr StringRef Code = R"(
+  std::string Code = R"(
 struct {
   short quantval[4]; // 3rd line
 } value;
@@ -217,15 +290,12 @@ struct {
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
   std::string Json = teardownProfiler();
-  std::string TraceGraph = buildTraceGraph(Json);
-  ASSERT_TRUE(TraceGraph == R"(
-Frontend
+  ASSERT_EQ(R"(
+Frontend (test.c)
 | ParseDeclarationOrFunctionDefinition (test.c:2:1)
 | | isIntegerConstantExpr (<test.c:3:18>)
 | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
-)");
-
-  // NOTE: If this test is failing, run this test with
-  // `llvm::errs() << TraceGraph;` and change the assert above.
+)",
+            buildTraceGraph(Json));
 }

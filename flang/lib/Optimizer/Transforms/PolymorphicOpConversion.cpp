@@ -50,7 +50,7 @@ public:
   SelectTypeConv(mlir::MLIRContext *ctx)
       : mlir::OpConversionPattern<fir::SelectTypeOp>(ctx) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::SelectTypeOp selectType, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override;
 
@@ -60,7 +60,7 @@ private:
                                  mlir::Type ty, mlir::ModuleOp mod,
                                  mlir::PatternRewriter &rewriter) const;
 
-  mlir::LogicalResult genTypeLadderStep(mlir::Location loc,
+  llvm::LogicalResult genTypeLadderStep(mlir::Location loc,
                                         mlir::Value selector,
                                         mlir::Attribute attr, mlir::Block *dest,
                                         std::optional<mlir::ValueRange> destOps,
@@ -81,7 +81,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
       : mlir::OpConversionPattern<fir::DispatchOp>(ctx),
         bindingTables(bindingTables) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::DispatchOp dispatch, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = dispatch.getLoc();
@@ -135,7 +135,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     //   %18 = fir.field_index proc, !fir.type<_QM__fortran_type_infoTbinding>
     //   %19 = fir.coordinate_of %17, %18 : (!fir.ref<!fir.type<_QM__fortran_type_infoTbinding>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>
     //   %20 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_funptr>
-    //   %21 = fir.coordinate_of %19, %20 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>, !fir.field) -> !fir.ref<i64> 
+    //   %21 = fir.coordinate_of %19, %20 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr>>, !fir.field) -> !fir.ref<i64>
     //   %22 = fir.load %21 : !fir.ref<i64>
     //   %23 = fir.convert %22 : (i64) -> (() -> ())
     //   fir.call %23()  : () -> ()
@@ -205,7 +205,10 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Make the call.
     llvm::SmallVector<mlir::Value> args{funcPtr};
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
-    rewriter.replaceOpWithNewOp<fir::CallOp>(dispatch, resTypes, nullptr, args);
+    // FIXME: add procedure_attrs to fir.dispatch and propagate to fir.call.
+    rewriter.replaceOpWithNewOp<fir::CallOp>(
+        dispatch, resTypes, nullptr, args,
+        /*procedure_attrs=*/fir::FortranProcedureFlagsEnumAttr{});
     return mlir::success();
   }
 
@@ -217,7 +220,7 @@ private:
 class PolymorphicOpConversion
     : public fir::impl::PolymorphicOpConversionBase<PolymorphicOpConversion> {
 public:
-  mlir::LogicalResult initialize(mlir::MLIRContext *ctx) override {
+  llvm::LogicalResult initialize(mlir::MLIRContext *ctx) override {
     return mlir::success();
   }
 
@@ -250,7 +253,7 @@ public:
 };
 } // namespace
 
-mlir::LogicalResult SelectTypeConv::matchAndRewrite(
+llvm::LogicalResult SelectTypeConv::matchAndRewrite(
     fir::SelectTypeOp selectType, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto operands = adaptor.getOperands();
@@ -341,7 +344,7 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult SelectTypeConv::genTypeLadderStep(
+llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
     mlir::Location loc, mlir::Value selector, mlir::Attribute attr,
     mlir::Block *dest, std::optional<mlir::ValueRange> destOps,
     mlir::ModuleOp mod, mlir::PatternRewriter &rewriter,

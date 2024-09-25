@@ -85,14 +85,6 @@ protected:
   /// Default is false.
   bool HasSubsectionsViaSymbols = false;
 
-  /// True if this is a MachO target that supports the macho-specific .zerofill
-  /// directive for emitting BSS Symbols.  Default is false.
-  bool HasMachoZeroFillDirective = false;
-
-  /// True if this is a MachO target that supports the macho-specific .tbss
-  /// directive for emitting thread local BSS Symbols.  Default is false.
-  bool HasMachoTBSSDirective = false;
-
   /// True if this is a non-GNU COFF target. The COFF port of the GNU linker
   /// doesn't handle associative comdats in the way that we would like to use
   /// them.
@@ -348,21 +340,6 @@ protected:
   ///   .long a
   bool SetDirectiveSuppressesReloc = false;
 
-  /// False if the assembler requires that we use
-  /// \code
-  ///   Lc = a - b
-  ///   .long Lc
-  /// \endcode
-  //
-  /// instead of
-  //
-  /// \code
-  ///   .long a - b
-  /// \endcode
-  ///
-  ///  Defaults to true.
-  bool HasAggressiveSymbolFolding = true;
-
   /// True is .comm's and .lcomms optional alignment is to be specified in bytes
   /// instead of log2(n).  Defaults to true.
   bool COMMDirectiveAlignmentIsInBytes = true;
@@ -393,7 +370,7 @@ protected:
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
 
-  /// True if the target has a four strings .file directive, strings seperated
+  /// True if the target has a four strings .file directive, strings separated
   /// by comma. Defaults to false.
   bool HasFourStringsDotFile = false;
 
@@ -405,20 +382,12 @@ protected:
   /// to false.
   bool HasNoDeadStrip = false;
 
-  /// True if this target supports the MachO .alt_entry directive.  Defaults to
-  /// false.
-  bool HasAltEntry = false;
-
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
   const char *WeakDirective;
 
   /// This directive, if non-null, is used to declare a global as being a weak
   /// undefined symbol.  Defaults to nullptr.
   const char *WeakRefDirective = nullptr;
-
-  /// True if we have a directive to declare a global as being a weak defined
-  /// symbol.  Defaults to false.
-  bool HasWeakDefDirective = false;
 
   /// True if we have a directive to declare a global as being a weak defined
   /// symbol that can be hidden (unexported).  Defaults to false.
@@ -524,6 +493,9 @@ protected:
   /// Preserve Comments in assembly
   bool PreserveAsmComments;
 
+  /// The column (zero-based) at which asm comments should be printed.
+  unsigned CommentColumn = 40;
+
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
@@ -580,12 +552,6 @@ public:
     return nullptr;
   }
 
-  /// True if the section is atomized using the symbols in it.
-  /// This is false if the section is not atomized at all (most ELF sections) or
-  /// if it is atomized based on its contents (MachO' __TEXT,__cstring for
-  /// example).
-  virtual bool isSectionAtomizableBySymbols(const MCSection &Section) const;
-
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
@@ -624,8 +590,7 @@ public:
 
   // Accessors.
 
-  bool hasMachoZeroFillDirective() const { return HasMachoZeroFillDirective; }
-  bool hasMachoTBSSDirective() const { return HasMachoTBSSDirective; }
+  bool isMachO() const { return HasSubsectionsViaSymbols; }
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
   bool hasVisibilityOnlyWithLinkage() const {
@@ -644,9 +609,8 @@ public:
   bool getStarIsPC() const { return StarIsPC; }
   const char *getSeparatorString() const { return SeparatorString; }
 
-  /// This indicates the column (zero-based) at which asm comments should be
-  /// printed.
-  unsigned getCommentColumn() const { return 40; }
+  unsigned getCommentColumn() const { return CommentColumn; }
+  void setCommentColumn(unsigned Col) { CommentColumn = Col; }
 
   StringRef getCommentString() const { return CommentString; }
   bool getRestrictCommentStringToStartOfStatement() const {
@@ -728,8 +692,6 @@ public:
     return SetDirectiveSuppressesReloc;
   }
 
-  bool hasAggressiveSymbolFolding() const { return HasAggressiveSymbolFolding; }
-
   bool getCOMMDirectiveAlignmentIsInBytes() const {
     return COMMDirectiveAlignmentIsInBytes;
   }
@@ -750,10 +712,8 @@ public:
   bool hasFourStringsDotFile() const { return HasFourStringsDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
-  bool hasAltEntry() const { return HasAltEntry; }
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
-  bool hasWeakDefDirective() const { return HasWeakDefDirective; }
 
   bool hasWeakDefCanBeHiddenDirective() const {
     return HasWeakDefCanBeHiddenDirective;

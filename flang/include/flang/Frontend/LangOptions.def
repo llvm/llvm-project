@@ -42,6 +42,8 @@ LANGOPT(OpenMPVersion, 32, 0)
 LANGOPT(OpenMPIsTargetDevice, 1, false)
 /// Generate OpenMP target code only for GPUs
 LANGOPT(OpenMPIsGPU, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPForceUSM, 1, false)
 /// Enable debugging in the OpenMP offloading device RTL
 LANGOPT(OpenMPTargetDebug, 32, 0)
 /// Assume work-shared loops do not have more iterations than participating

@@ -2,13 +2,7 @@
 ! derived type's with a mix of explicit and
 ! implicit member mapping of arrays to target
 ! one with bounds.
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
@@ -19,13 +13,13 @@ program main
         real(4) :: array_y(10)
         real(4) :: break_3
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   do i = 1, 10
     scalar_arr1%array_x(i) = i
-  end do 
+  end do
 
   !$omp target map(tofrom:scalar_arr2%array_x(3:6))
     do i = 3, 6

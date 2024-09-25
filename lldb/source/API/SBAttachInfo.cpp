@@ -266,13 +266,7 @@ SBListener SBAttachInfo::GetShadowListener() {
 void SBAttachInfo::SetShadowListener(SBListener &listener) {
   LLDB_INSTRUMENT_VA(this, listener);
 
-  ListenerSP listener_sp = listener.GetSP();
-  if (listener_sp && listener.IsValid())
-    listener_sp->SetShadow(true);
-  else
-    listener_sp = nullptr;
-
-  m_opaque_sp->SetShadowListener(listener_sp);
+  m_opaque_sp->SetShadowListener(listener.GetSP());
 }
 
 const char *SBAttachInfo::GetScriptedProcessClassName() const {

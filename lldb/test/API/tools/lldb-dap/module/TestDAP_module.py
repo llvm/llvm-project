@@ -58,7 +58,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("addressRange", program_module)
 
     @skipIfWindows
-    @skipIfRemote
     def test_modules(self):
         """
         Mac or linux.
@@ -74,7 +73,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipUnlessDarwin
-    @skipIfRemote
     def test_modules_dsym(self):
         """
         Darwin only test with dSYM file.
@@ -85,7 +83,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         return self.run_test("a.out.dSYM", expect_debug_info_size=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

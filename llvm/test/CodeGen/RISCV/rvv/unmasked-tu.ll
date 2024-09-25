@@ -711,8 +711,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64(<vscale 
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1down.vx v10, v9, a0
 ; RV32-NEXT:    vslide1down.vx v8, v10, a1
 ; RV32-NEXT:    ret
@@ -743,8 +743,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64(<vscale x 
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1up.vx v10, v9, a1
 ; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
@@ -2576,21 +2576,21 @@ entry:
   ret <vscale x 8 x double> %a
 }
 
-declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+declare <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
   iXLen);
 
-define <vscale x 1 x half> @intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
-; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
+define <vscale x 1 x half> @intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; CHECK-LABEL: intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+  %a = call <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
     <vscale x 1 x half> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,

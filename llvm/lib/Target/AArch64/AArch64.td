@@ -19,6 +19,7 @@ include "llvm/Target/Target.td"
 // Subtarget features.
 //===----------------------------------------------------------------------===//
 include "AArch64Features.td"
+include "AArch64FMV.td"
 
 //===----------------------------------------------------------------------===//
 // Register File Description
@@ -62,7 +63,8 @@ def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSVE2, HasSVE2orSME, HasSVE2orSME2, HasSSVE_FP8FMA, HasSMEF8F16,
-                       HasSMEF8F32, HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
+                       HasSMEF8F32, HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm,
+                       HasSVEB16B16],
                        SVE2p1Unsupported.F);
 }
 
@@ -76,13 +78,17 @@ def SME2p1Unsupported : AArch64Unsupported;
 
 def SME2Unsupported : AArch64Unsupported {
   let F = !listconcat([HasSME2, HasSVE2orSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
-                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16orSMEF8F16],
+                      HasSMEF8F16, HasSMEF8F32, HasSMEF16F16orSMEF8F16, HasSMEB16B16],
                       SME2p1Unsupported.F);
 }
 
 def SMEUnsupported : AArch64Unsupported {
   let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64],
                       SME2Unsupported.F);
+}
+
+def MTEUnsupported : AArch64Unsupported {
+  let F = [HasMTE];
 }
 
 let F = [HasPAuth, HasPAuthLR] in
@@ -107,8 +113,10 @@ include "AArch64SchedAmpere1.td"
 include "AArch64SchedAmpere1B.td"
 include "AArch64SchedNeoverseN1.td"
 include "AArch64SchedNeoverseN2.td"
+include "AArch64SchedNeoverseN3.td"
 include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
+include "AArch64SchedOryon.td"
 
 include "AArch64Processors.td"
 

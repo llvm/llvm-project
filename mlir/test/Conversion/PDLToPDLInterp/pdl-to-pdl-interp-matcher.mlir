@@ -588,7 +588,7 @@ module @variadic_results_all {
   // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
   // CHECK-DAG: pdl_interp.foreach %[[OP:.*]] : !pdl.operation in %[[OPS]]
   // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands of %[[OP]]
-  // CHECK-DAG    pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:    pdl_interp.are_equal %[[OPERANDS]], %[[VALS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
   // CHECK-DAG:   pdl_interp.is_not_null %[[OP]]
   // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is 0
   pdl.pattern @variadic_results_all : benefit(1) {
@@ -701,7 +701,7 @@ module @common_connector {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OP]], %[[VAL0]] : !pdl.value
   // CHECK-DAG:     %[[ROOTB_OP:.*]] = pdl_interp.get_operand 0 of %[[ROOTB]]
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OP]], %[[VAL0]] : !pdl.value
-  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  // CHECK-DAG:    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector : benefit(1) {
       %type = type
       %op = operation -> (%type, %type : !pdl.type, !pdl.type)
@@ -742,7 +742,7 @@ module @common_connector_range {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OPS]], %[[VALS0]] : !pdl.range<value>
   // CHECK-DAG:     %[[ROOTB_OPS:.*]] = pdl_interp.get_operands of %[[ROOTB]]
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OPS]], %[[VALS0]] : !pdl.range<value>
-  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  // CHECK-DAG:    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector_range : benefit(1) {
     %types = types
     %op = operation -> (%types, %types : !pdl.range<type>, !pdl.range<type>)

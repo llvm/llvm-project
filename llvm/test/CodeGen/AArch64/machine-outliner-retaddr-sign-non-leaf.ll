@@ -1,15 +1,15 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64 %s -o - | FileCheck %s --check-prefixes CHECK,V8A
-; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN-V83A: aarch64 -mattr=+v8.3a %s -o - > %t
-; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V8A
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple aarch64 -mattr=+v8.3a %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 
 define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL:      a:                                     // @a
 ; CHECK:                .cfi_b_key_frame
 ; V8A-NEXT:             hint #27
 ; V83A-NEXT:            pacibsp
-; CHECK-NEXT:           .cfi_negate_ra_state
+; CHECK:                .cfi_negate_ra_state
+; CHECK-NEXT:           .cfi_def_cfa_offset
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -31,7 +31,8 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; CHECK:                .cfi_b_key_frame
 ; V8A-NEXT:             hint #27
 ; V83A-NEXT:            pacibsp
-; CHECK-NEXT:           .cfi_negate_ra_state
+; CHECK:                .cfi_negate_ra_state
+; CHECK-NEXT:           .cfi_def_cfa_offset
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -53,7 +54,8 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; CHECK:                .cfi_b_key_frame
 ; V8A-NEXT:             hint #27
 ; V83A-NEXT:            pacibsp
-; CHECK-NEXT:           .cfi_negate_ra_state
+; CHECK:                .cfi_negate_ra_state
+; CHECK-NEXT:           .cfi_def_cfa_offset
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -70,7 +72,7 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
   ret i64 %x
 }
 
-; Outlined function is leaf-function => don't sign it
+;; Outlined function is leaf-function => don't sign it
 ; CHECK-LABEL:      OUTLINED_FUNCTION_0:
 ; CHECK-NOT:            .cfi_b_key_frame
 ; CHECK-NOT:            paci{{[a,b]}}sp

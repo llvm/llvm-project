@@ -2,5 +2,5 @@
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vsm4r.vs v10, v10
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group
 # CHECK-ERROR-LABEL: vsm4r.vs v10, v10

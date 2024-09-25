@@ -194,7 +194,8 @@ LegalityPredicate LegalityPredicates::memSizeNotByteSizePow2(unsigned MMOIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT MemTy = Query.MMODescrs[MMOIdx].MemoryTy;
     return !MemTy.isByteSized() ||
-           !llvm::has_single_bit<uint32_t>(MemTy.getSizeInBytes());
+           !llvm::has_single_bit<uint32_t>(
+               MemTy.getSizeInBytes().getKnownMinValue());
   };
 }
 

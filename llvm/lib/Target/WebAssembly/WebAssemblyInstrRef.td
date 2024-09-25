@@ -17,8 +17,9 @@ multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
                         [(set rc:$dst, (!cast<Intrinsic>("int_wasm_ref_null_" # ht)))],
                         "ref.null_" # ht # "$dst",
                         "ref.null_" # ht,
-                        !cond(!eq(ht, "func")   : 0xd070, 
-                              !eq(ht, "extern") : 0xd06f)>,
+                        !cond(!eq(ht, "func")   : 0xd070,
+                              !eq(ht, "extern") : 0xd06f,
+                              !eq(ht, "exn")    : 0xd069)>,
                       Requires<[HasReferenceTypes]>;
   defm SELECT_#rc: I<(outs rc:$dst), (ins rc:$lhs, rc:$rhs, I32:$cond),
                      (outs), (ins),
@@ -37,8 +38,9 @@ multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
 
 defm "" : REF_I<FUNCREF, funcref, "func">;
 defm "" : REF_I<EXTERNREF, externref, "extern">;
+defm "" : REF_I<EXNREF, exnref, "exn">;
 
-foreach rc = [FUNCREF, EXTERNREF] in {
+foreach rc = [FUNCREF, EXTERNREF, EXNREF] in {
 def : Pat<(select (i32 (setne I32:$cond, 0)), rc:$lhs, rc:$rhs),
           (!cast<Instruction>("SELECT_"#rc) rc:$lhs, rc:$rhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), rc:$lhs, rc:$rhs),

@@ -790,3 +790,16 @@ define i32 @test48(ptr %P, ptr noalias %Q, ptr %R) {
   %l = load i32, ptr %R
   ret i32 %l
 }
+
+define void @test49() {
+; CHECK-LABEL: @test49(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+; CHECK-NEXT:    store ptr null, ptr null, align 8
+; CHECK-NEXT:    ret void
+;
+bb:
+  call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+  store ptr null, ptr null, align 8
+  ret void
+}

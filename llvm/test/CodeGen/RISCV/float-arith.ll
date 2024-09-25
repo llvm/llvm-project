@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck -check-prefix=CHECKIF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=ilp32 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=ilp32 | FileCheck -check-prefixes=CHECKIZFINX,RV32IZFINX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
-; RUN:   -target-abi=lp64 | FileCheck -check-prefix=CHECKIZFINX %s
+; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=CHECKIZFINX,RV64IZFINX %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
@@ -706,12 +706,18 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fneg.s fa0, fa5
 ; CHECKIF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: fnmadd_s_3:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
-; CHECKIZFINX-NEXT:    ret
+; RV32IZFINX-LABEL: fnmadd_s_3:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV32IZFINX-NEXT:    fneg.s a0, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fnmadd_s_3:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV64IZFINX-NEXT:    lui a1, 524288
+; RV64IZFINX-NEXT:    xor a0, a0, a1
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_3:
 ; RV32I:       # %bb.0:
@@ -755,12 +761,17 @@ define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ; CHECKIF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
 ; CHECKIF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: fnmadd_nsz:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
-; CHECKIZFINX-NEXT:    lui a1, 524288
-; CHECKIZFINX-NEXT:    xor a0, a0, a1
-; CHECKIZFINX-NEXT:    ret
+; RV32IZFINX-LABEL: fnmadd_nsz:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fnmadd.s a0, a0, a1, a2
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fnmadd_nsz:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; RV64IZFINX-NEXT:    lui a1, 524288
+; RV64IZFINX-NEXT:    xor a0, a0, a1
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
 ; RV32I:       # %bb.0:
@@ -1194,4 +1205,45 @@ define float @fnmsub_s_contract(float %a, float %b, float %c) nounwind {
   %1 = fmul contract float %a_, %b_
   %2 = fsub contract float %c, %1
   ret float %2
+}
+
+define float @fsgnjx_f32(float %x, float %y) nounwind {
+; CHECKIF-LABEL: fsgnjx_f32:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fsgnjx.s fa0, fa1, fa0
+; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fsgnjx_f32:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fsgnjx.s a0, a1, a0
+; CHECKIZFINX-NEXT:    ret
+;
+; RV32I-LABEL: fsgnjx_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    lui a2, 260096
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    call __mulsf3
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fsgnjx_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a2, 260096
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    call __mulsf3
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %z = call float @llvm.copysign.f32(float 1.0, float %x)
+  %mul = fmul float %z, %y
+  ret float %mul
 }

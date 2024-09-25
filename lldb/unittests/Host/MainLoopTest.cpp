@@ -12,9 +12,11 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
+#include <thread>
 
 using namespace lldb_private;
 
@@ -75,6 +77,44 @@ TEST_F(MainLoopTest, ReadObject) {
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
   ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, NoSpuriousReads) {
+  // Write one byte into the socket.
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
+
+  MainLoop loop;
+
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      socketpair[1],
+      [this](MainLoopBase &) {
+        if (callback_count == 0) {
+          // Read the byte back the first time we're called. After that, the
+          // socket is empty, and we should not be called anymore.
+          char X;
+          size_t len = sizeof(X);
+          EXPECT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(),
+                            llvm::Succeeded());
+          EXPECT_EQ(len, sizeof(X));
+        }
+        ++callback_count;
+      },
+      error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  // Terminate the loop after one second.
+  std::thread terminate_thread([&loop] {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    loop.AddPendingCallback(
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
+  });
+  ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  terminate_thread.join();
+
+  // Make sure the callback was called only once.
   ASSERT_EQ(1u, callback_count);
 }
 

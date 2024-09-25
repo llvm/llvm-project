@@ -388,7 +388,7 @@ define signext i16 @tar9(i32 signext %x) #0 {
 entry:
   %call = tail call signext i32 @foo(i32 signext 5) #0
   %and = and i32 %call, 33554432
-; DEBUGIFY: call void @llvm.dbg.value(metadata i32 %call, metadata {{.*}}, metadata !DIExpression(DW_OP_constu, 33554432, DW_OP_and, DW_OP_stack_value))
+; DEBUGIFY: #dbg_value(i32 %call, {{.*}}, !DIExpression(DW_OP_constu, 33554432, DW_OP_and, DW_OP_stack_value),
   %cast = trunc i32 %call to i16
   ret i16 %cast
 }

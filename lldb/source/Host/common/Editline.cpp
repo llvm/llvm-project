@@ -31,20 +31,6 @@
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
 
-// Workaround for what looks like an OS X-specific issue, but other platforms
-// may benefit from something similar if issues arise.  The libedit library
-// doesn't explicitly initialize the curses termcap library, which it gets away
-// with until TERM is set to VT100 where it stumbles over an implementation
-// assumption that may not exist on other platforms.  The setupterm() function
-// would normally require headers that don't work gracefully in this context,
-// so the function declaration has been hoisted here.
-#if defined(__APPLE__)
-extern "C" {
-int setupterm(char *term, int fildes, int *errret);
-}
-#define USE_SETUPTERM_WORKAROUND
-#endif
-
 // Editline uses careful cursor management to achieve the illusion of editing a
 // multi-line block of text with a single line editor.  Preserving this
 // illusion requires fairly careful management of cursor state.  Read and
@@ -1402,35 +1388,6 @@ Editline::Editline(const char *editline_name, FILE *input_file,
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
-
-#ifdef USE_SETUPTERM_WORKAROUND
-  if (m_output_file) {
-    const int term_fd = fileno(m_output_file);
-    if (term_fd != -1) {
-      static std::recursive_mutex *g_init_terminal_fds_mutex_ptr = nullptr;
-      static std::set<int> *g_init_terminal_fds_ptr = nullptr;
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, [&]() {
-        g_init_terminal_fds_mutex_ptr =
-            new std::recursive_mutex(); // NOTE: Leak to avoid C++ destructor
-                                        // chain issues
-        g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
-                                                       // C++ destructor chain
-                                                       // issues
-      });
-
-      // We must make sure to initialize the terminal a given file descriptor
-      // only once. If we do this multiple times, we start leaking memory.
-      std::lock_guard<std::recursive_mutex> guard(
-          *g_init_terminal_fds_mutex_ptr);
-      if (g_init_terminal_fds_ptr->find(term_fd) ==
-          g_init_terminal_fds_ptr->end()) {
-        g_init_terminal_fds_ptr->insert(term_fd);
-        setupterm((char *)0, term_fd, (int *)0);
-      }
-    }
-  }
-#endif
 }
 
 Editline::~Editline() {

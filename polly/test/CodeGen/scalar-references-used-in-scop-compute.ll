@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; Test the code generation in the presence of a scalar out-of-scop value being
 ; used from within the SCoP.

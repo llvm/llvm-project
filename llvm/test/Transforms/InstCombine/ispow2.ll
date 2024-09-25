@@ -161,7 +161,7 @@ define i1 @is_pow2or0_negate_op_extra_use1(i32 %x) {
 define i1 @is_pow2or0_negate_op_extra_use2(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_extra_use2(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    call void @use(i32 [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -197,7 +197,7 @@ define i1 @is_pow2_non_zero_ult_2(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ult_2(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -212,7 +212,7 @@ define i1 @is_pow2_non_zero_eq_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_eq_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -227,7 +227,7 @@ define i1 @is_pow2_non_zero_ugt_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ugt_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -242,7 +242,7 @@ define i1 @is_pow2_non_zero_ne_1(i32 %x) {
 ; CHECK-LABEL: @is_pow2_non_zero_ne_1(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1190,7 +1190,7 @@ define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
 define i1 @is_pow2_fail_pr63327(i32 %x) {
 ; CHECK-LABEL: @is_pow2_fail_pr63327(
 ; CHECK-NEXT:    [[NX:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[X_AND_NX:%.*]] = and i32 [[NX]], [[X]]
+; CHECK-NEXT:    [[X_AND_NX:%.*]] = and i32 [[X]], [[NX]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[X_AND_NX]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1244,7 +1244,7 @@ define i1 @blsmsk_is_p2_or_z_fail(i32 %xx, i32 %yy) {
 define i1 @blsmsk_isnt_p2_or_z_fail(i32 %x) {
 ; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail(
 ; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1259,7 +1259,7 @@ declare void @use.i32(i32)
 define i1 @blsmsk_isnt_p2_or_z_fail_multiuse(i32 %x) {
 ; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_multiuse(
 ; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[Y]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1274,7 +1274,7 @@ define i1 @blsmsk_isnt_p2_or_z_fail_multiuse(i32 %x) {
 define i1 @blsmsk_isnt_p2_or_z_fail_wrong_add(i32 %x, i32 %z) {
 ; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_wrong_add(
 ; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[Z:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X:%.*]], [[XM1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1288,7 +1288,7 @@ define i1 @blsmsk_isnt_p2_or_z_fail_wrong_add(i32 %x, i32 %z) {
 define i1 @blsmsk_isnt_p2_or_z_fail_bad_xor(i32 %x, i32 %z) {
 ; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_bad_xor(
 ; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[Z:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[Z:%.*]], [[XM1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1302,7 +1302,7 @@ define i1 @blsmsk_isnt_p2_or_z_fail_bad_xor(i32 %x, i32 %z) {
 define i1 @blsmsk_is_p2_or_z_fail_bad_cmp(i32 %x, i32 %z) {
 ; CHECK-LABEL: @blsmsk_is_p2_or_z_fail_bad_cmp(
 ; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

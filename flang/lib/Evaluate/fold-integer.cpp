@@ -347,7 +347,8 @@ public:
     bool back{false};
     if (arg_[backArg]) {
       const auto *backConst{
-          Folder<LogicalResult>{context_}.Folding(arg_[backArg])};
+          Folder<LogicalResult>{context_, /*forOptionalArgument=*/true}.Folding(
+              arg_[backArg])};
       if (backConst) {
         back = backConst->GetScalarValue().value().IsTrue();
       } else {
@@ -910,8 +911,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     const auto *argCon{Folder<T>(context).Folding(args[0])};
     const auto *shiftCon{Folder<Int4>(context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
-    const auto *sizeCon{
-        args.size() == 3 ? Folder<Int4>(context).Folding(args[2]) : nullptr};
+    const auto *sizeCon{args.size() == 3
+            ? Folder<Int4>{context, /*forOptionalArgument=*/true}.Folding(
+                  args[2])
+            : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
     if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
         (sizeVals && sizeVals->empty())) {
@@ -985,7 +988,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 auto shiftVal{static_cast<int>(shift.ToInt64())};
                 auto sizeVal{static_cast<int>(size.ToInt64())};
                 return i.ISHFTC(shiftVal, sizeVal);
-              }));
+              }),
+          /*hasOptionalArgument=*/true);
     }
   } else if (name == "izext" || name == "jzext") {
     if (args.size() == 1) {
@@ -1116,14 +1120,25 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldMaxvalMinval<T>(
         context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
   } else if (name == "mod") {
+    bool badPConst{false};
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+      *pExpr = Fold(context, std::move(*pExpr));
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
+          pConst->IsZero() &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+        context.messages().Say("MOD: P argument is zero"_warn_en_US);
+        badPConst = true;
+      }
+    }
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFuncWithContext<T, T, T>(
-            [](FoldingContext &context, const Scalar<T> &x,
+            [badPConst](FoldingContext &context, const Scalar<T> &x,
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
               if (context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-                if (quotRem.divisionByZero) {
+                if (!badPConst && quotRem.divisionByZero) {
                   context.messages().Say("mod() by zero"_warn_en_US);
                 } else if (quotRem.overflow) {
                   context.messages().Say("mod() folding overflowed"_warn_en_US);
@@ -1132,12 +1147,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               return quotRem.remainder;
             }));
   } else if (name == "modulo") {
+    bool badPConst{false};
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+      *pExpr = Fold(context, std::move(*pExpr));
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
+          pConst->IsZero() &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+        context.messages().Say("MODULO: P argument is zero"_warn_en_US);
+        badPConst = true;
+      }
+    }
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
-        ScalarFuncWithContext<T, T, T>([](FoldingContext &context,
+        ScalarFuncWithContext<T, T, T>([badPConst](FoldingContext &context,
                                            const Scalar<T> &x,
                                            const Scalar<T> &y) -> Scalar<T> {
           auto result{x.MODULO(y)};
-          if (result.overflow &&
+          if (!badPConst && result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
             context.messages().Say("modulo() folding overflowed"_warn_en_US);
@@ -1186,20 +1212,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u)};
     }
   } else if (name == "rank") {
-    if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-      if (auto named{ExtractNamedEntity(*array)}) {
-        const Symbol &symbol{named->GetLastSymbol()};
-        if (IsAssumedRank(symbol)) {
-          // DescriptorInquiry can only be placed in expression of kind
-          // DescriptorInquiry::Result::kind.
-          return ConvertToType<T>(Expr<
-              Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
-              DescriptorInquiry{*named, DescriptorInquiry::Field::Rank}});
-        }
+    if (args[0]) {
+      const Symbol *symbol{nullptr};
+      if (auto dataRef{ExtractDataRef(args[0])}) {
+        symbol = &dataRef->GetLastSymbol();
+      } else {
+        symbol = args[0]->GetAssumedTypeDummy();
       }
-      return Expr<T>{args[0].value().Rank()};
+      if (symbol && IsAssumedRank(*symbol)) {
+        // DescriptorInquiry can only be placed in expression of kind
+        // DescriptorInquiry::Result::kind.
+        return ConvertToType<T>(
+            Expr<Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
+                DescriptorInquiry{
+                    NamedEntity{*symbol}, DescriptorInquiry::Field::Rank}});
+      }
+      return Expr<T>{args[0]->Rank()};
     }
-    return Expr<T>{args[0].value().Rank()};
   } else if (name == "selected_char_kind") {
     if (const auto *chCon{UnwrapExpr<Constant<TypeOf<std::string>>>(args[0])}) {
       if (std::optional<std::string> value{chCon->GetScalarValue()}) {

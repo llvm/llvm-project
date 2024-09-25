@@ -157,11 +157,11 @@ static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
   write16le(buf + 2, instr & 0x0000ffff);
   int64_t offset;
   if (isBcc(instr))
-    offset = target->getImplicitAddend(buf, R_ARM_THM_JUMP19);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_JUMP19);
   else if (isB(instr))
-    offset = target->getImplicitAddend(buf, R_ARM_THM_JUMP24);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_JUMP24);
   else
-    offset = target->getImplicitAddend(buf, R_ARM_THM_CALL);
+    offset = ctx.target->getImplicitAddend(buf, R_ARM_THM_CALL);
   // A BLX instruction from Thumb to Arm may have an address that is
   // not 4-byte aligned. As Arm instructions are always 4-byte aligned
   // the instruction is calculated (from Arm ARM):
@@ -182,7 +182,7 @@ void Patch657417Section::writeTo(uint8_t *buf) {
     write32le(buf, 0x9000f000);
   // If we have a relocation then apply it.
   if (!relocs().empty()) {
-    target->relocateAlloc(*this, buf);
+    ctx.target->relocateAlloc(*this, buf);
     return;
   }
 
@@ -197,7 +197,8 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   // state with a PC Bias of 4.
   uint64_t pcBias = isBLX(instr) ? 8 : 4;
   uint64_t p = getVA(pcBias);
-  target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
+  ctx.target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24,
+                            s - p);
 }
 
 // Given a branch instruction spanning two 4KiB regions, at offset off from the
@@ -233,7 +234,7 @@ static bool patchInRange(const InputSection *isec, uint64_t off,
   // after isec. As there can be more than one patch in the patch section we
   // add 0x100 as contingency to account for worst case of 1 branch every 4KiB
   // for a 1 MiB range.
-  return target->inBranchRange(
+  return ctx.target->inBranchRange(
       isBcc(instr) ? R_ARM_THM_JUMP19 : R_ARM_THM_JUMP24, isec->getVA(off),
       isec->getVA() + isec->getSize() + 0x100);
 }
@@ -518,7 +519,7 @@ bool ARMErr657417Patcher::createFixes() {
     init();
 
   bool addressesChanged = false;
-  for (OutputSection *os : outputSections) {
+  for (OutputSection *os : ctx.outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
     for (SectionCommand *cmd : os->commands)

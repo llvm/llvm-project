@@ -260,3 +260,34 @@ Patches containing any amount of Assembly ideally should be approved by 2
 maintainers. llvm-libc maintainers reserve the right to reject Assembly
 contributions that they feel could be better maintained if rewritten in C++,
 and to revisit this policy in the future.
+
+LIBC_NAMESPACE_DECL
+===================
+
+llvm-libc provides a macro `LIBC_NAMESPACE` which contains internal implementations of
+libc functions and globals. This macro should only be used as an
+identifier for accessing such symbols within the namespace (like `LIBC_NAMESPACE::cpp::max`).
+Any usage of this namespace for declaring or defining internal symbols should
+instead use `LIBC_NAMESPACE_DECL` which declares `LIBC_NAMESPACE` with hidden visibility.
+
+Example usage:
+
+.. code-block:: c++
+
+   #include "src/__support/macros/config.h"  // The macro is defined here.
+
+   namespace LIBC_NAMESPACE_DECL {
+
+   void new_function() {
+     ...
+   }
+
+   }  // LIBC_NAMESPACE_DECL
+
+Having hidden visibility on the namespace ensures extern declarations in a given TU
+have known visibility and never generate GOT indirextions. The attribute guarantees
+this independently of global compile options and build systems.
+
+..
+  TODO(97655): We should have a clang-tidy check to enforce this and a
+  fixit implementation.

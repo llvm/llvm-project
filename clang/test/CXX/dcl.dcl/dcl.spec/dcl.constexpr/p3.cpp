@@ -212,7 +212,7 @@ constexpr int ClassDecl3() {
   return 0;
 }
 
-constexpr int NoReturn() {} // expected-error {{no return statement in constexpr function}}
+constexpr int NoReturn() {} // beforecxx23-error {{no return statement in constexpr function}}
 constexpr int MultiReturn() {
   return 0; // beforecxx14-note {{return statement}}
   return 0; // beforecxx14-warning {{multiple return statements in constexpr function}}

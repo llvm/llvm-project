@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu -v \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
@@ -22,6 +19,29 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,MSVC %s
+
+// Test fatbin symbol search for -l libraries.
+
+// RUN: touch librdctest.a rdctest2.bin
+// RUN: %clang -### --target=x86_64-linux-gnu -v \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -L. -lrdctest -l:rdctest2.bin \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=LIB,LNX-LIB %s
+// RUN: rm librdctest.a rdctest2.bin
+
+// RUN: touch rdctest.lib rdctest2.bin
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -v \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -L. -lrdctest -l:rdctest2.bin \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=LIB,MSVC-LIB %s
+// RUN: rm rdctest.lib rdctest2.bin
+
+// LIB: HIP fatbin symbol search uses library path: .
+// LIB: HIP fatbin symbol search found library: .{{/|\\}}rdctest2.bin
+// LNX-LIB: HIP fatbin symbol search found library: .{{/|\\}}librdctest.a
+// MSVC-LIB: HIP fatbin symbol search found library: .{{/|\\}}rdctest.lib
 
 // check HIP fatbin and gpubin handle symbols and code object alignment in dumped llvm-mc input
 // CHECK: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID1:[0-9a-f]+]]

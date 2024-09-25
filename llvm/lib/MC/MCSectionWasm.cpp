@@ -46,14 +46,12 @@ static void printName(raw_ostream &OS, StringRef Name) {
 
 void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
-                                         const MCExpr *Subsection) const {
+                                         uint32_t Subsection) const {
 
   if (shouldOmitSectionDirective(getName(), MAI)) {
     OS << '\t' << getName();
-    if (Subsection) {
-      OS << '\t';
-      Subsection->print(OS, &MAI);
-    }
+    if (Subsection)
+      OS << '\t' << Subsection;
     OS << '\n';
     return;
   }
@@ -96,13 +94,8 @@ void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   OS << '\n';
 
-  if (Subsection) {
-    OS << "\t.subsection\t";
-    Subsection->print(OS, &MAI);
-    OS << '\n';
-  }
+  if (Subsection)
+    OS << "\t.subsection\t" << Subsection << '\n';
 }
 
 bool MCSectionWasm::useCodeAlign() const { return false; }
-
-bool MCSectionWasm::isVirtualSection() const { return false; }

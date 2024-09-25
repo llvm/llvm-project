@@ -41,9 +41,7 @@ next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n =
 // [range.iter.op.next]
 
 namespace ranges {
-namespace __next {
-
-struct __fn {
+struct __next {
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x) const {
     ++__x;
@@ -69,10 +67,8 @@ struct __fn {
   }
 };
 
-} // namespace __next
-
 inline namespace __cpo {
-inline constexpr auto next = __next::__fn{};
+inline constexpr auto next = __next{};
 } // namespace __cpo
 } // namespace ranges
 

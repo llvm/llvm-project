@@ -387,7 +387,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
-      if (evaluate::IsProcedure(*expr)) {
+      if (evaluate::IsProcedureDesignator(*expr)) {
         if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
                 scope,
                 /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
@@ -419,7 +419,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
   } else if (evaluate::IsNullPointer(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
-  } else if (evaluate::IsProcedure(*expr)) {
+  } else if (evaluate::IsProcedureDesignator(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
@@ -522,11 +522,10 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
     } else if (!object->isDummy() && object->type()) {
       if (const DerivedTypeSpec * derived{object->type()->AsDerived()}) {
         DirectComponentIterator directs{*derived};
-        if (std::find_if(
-                directs.begin(), directs.end(), [](const Symbol &component) {
-                  return !IsAllocatable(component) &&
-                      HasDeclarationInitializer(component);
-                }) != directs.end()) {
+        if (llvm::any_of(directs, [](const Symbol &component) {
+              return !IsAllocatable(component) &&
+                  HasDeclarationInitializer(component);
+            })) {
           return derived;
         }
       }

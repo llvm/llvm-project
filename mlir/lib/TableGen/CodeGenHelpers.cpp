@@ -49,7 +49,7 @@ StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs) {
+    ArrayRef<const llvm::Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
@@ -111,7 +111,7 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 /// Code for a type constraint. These may be called on the type of either
 /// operands or results.
 static const char *const typeConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Type type, ::llvm::StringRef valueKind,
     unsigned valueIndex) {
   if (!({1})) {
@@ -129,14 +129,14 @@ static ::mlir::LogicalResult {0}(
 /// TODO: Unique constraints for adaptors. However, most Adaptor::verify
 /// functions are stripped anyways.
 static const char *const attrConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Attribute attr, ::llvm::StringRef attrName, llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
   if (attr && !({1}))
     return emitError() << "attribute '" << attrName
         << "' failed to satisfy constraint: {2}";
   return ::mlir::success();
 }
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {{
   return {0}(attr, attrName, [op]() {{
     return op->emitOpError();
@@ -146,7 +146,7 @@ static ::mlir::LogicalResult {0}(
 
 /// Code for a successor constraint.
 static const char *const successorConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Block *successor,
     ::llvm::StringRef successorName, unsigned successorIndex) {
   if (!({1})) {
@@ -160,7 +160,7 @@ static ::mlir::LogicalResult {0}(
 /// Code for a region constraint. Callers will need to pass in the region's name
 /// for emitting an error message.
 static const char *const regionConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Region &region, ::llvm::StringRef regionName,
     unsigned regionIndex) {
   if (!({1})) {
@@ -176,7 +176,7 @@ static ::mlir::LogicalResult {0}(
 ///
 /// {3}: "Type type" or "Attribute attr".
 static const char *const patternAttrOrTypeConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::PatternRewriter &rewriter, ::mlir::Operation *op, ::mlir::{3},
     ::llvm::StringRef failureStr) {
   if (!({1})) {
@@ -258,20 +258,20 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto *it = map.find(constraint);
-  if (it == map.end())
-    map.insert({constraint, getUniqueName(kind, map.size())});
+  auto [it, inserted] = map.try_emplace(constraint);
+  if (inserted)
+    it->second = getUniqueName(kind, map.size());
 }
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
-    ArrayRef<Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   const auto collectTypeConstraints = [&](Operator::const_value_range values) {
     for (const NamedTypeConstraint &value : values)
       if (value.hasPredicate())
         collectConstraint(typeConstraints, "type", value.constraint);
   };
 
-  for (Record *def : opDefs) {
+  for (const Record *def : opDefs) {
     Operator op(*def);
     /// Collect type constraints.
     collectTypeConstraints(op.getOperands());
@@ -315,5 +315,5 @@ std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
   llvm::raw_string_ostream os(ret);
   os.write_escaped(value);
-  return os.str();
+  return ret;
 }

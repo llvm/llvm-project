@@ -375,6 +375,9 @@ def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true
 def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
                                               "Prefer 32-bit alignment for loops">;
 
+def FeaturePrefLoopAlign64 : SubtargetFeature<"loop-align-64", "PrefLoopLogAlignment","3",
+                                              "Prefer 64-bit alignment for loops">;
+
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture">;
 
@@ -548,15 +551,14 @@ def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
+// If frame pointers are in use, they must follow the AAPCS definition, which
+// always uses R11 as the frame pointer. If this is not set, we can use R7 as
+// the frame pointer for Thumb1-only code, which is more efficient, but less
+// compatible. Note that this feature does not control whether frame pointers
+// are emitted, that is controlled by the "frame-pointer" function attribute.
 def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
                                               "CreateAAPCSFrameChain", "true",
                                               "Create an AAPCS compliant frame chain">;
-
-def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
-                                                  "CreateAAPCSFrameChainLeaf", "true",
-                                                  "Create an AAPCS compliant frame chain "
-                                                  "for leaf functions",
-                                                  [FeatureAAPCSFrameChain]>;
 
 // Assume that lock-free 32-bit atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

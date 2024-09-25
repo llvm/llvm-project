@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_H
 
+#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void qsort(void *array, size_t array_size, size_t elem_size,
            int (*compare)(const void *, const void *));
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_QSORT_H

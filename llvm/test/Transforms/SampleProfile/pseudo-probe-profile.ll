@@ -40,14 +40,14 @@ attributes #0 = {"use-sample-profile"}
 
 ; CHECK: ![[PD1]] = !{!"branch_weights", i32 8, i32 7}
 ; CHECK: ![[#PROBE1]] = !DILocation(line: 0, scope: ![[#SCOPE1:]])
-;; A discriminator of 119537695 which is 0x720001f in hexdecimal, stands for an indirect call probe
+;; A discriminator of 387973151 which is 0x1720001f in hexdecimal, stands for an indirect call probe
 ;; with an index of 3.
-; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537695)
+; CHECK: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 387973151)
 ; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 7, i64 9191153033785521275, i64 5, i64 -1069303473483922844, i64 2}
-;; A discriminator of 119537711 which is 0x720002f in hexdecimal, stands for an indirect call probe
+;; A discriminator of 387973167 which is 0x1720002f in hexdecimal, stands for an indirect call probe
 ;; with an index of 5.
 ; CHECK: ![[#PROBE2]] = !DILocation(line: 0, scope: ![[#SCOPE2:]])
-; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537711)
+; CHECK: ![[#SCOPE2]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 387973167)
 ; CHECK: ![[PROF2]] = !{!"VP", i32 0, i64 6, i64 -1069303473483922844, i64 4, i64 9191153033785521275, i64 2}
 
 !llvm.module.flags = !{!9, !10}

@@ -93,7 +93,7 @@ define amdgpu_kernel void @add_u64_vs(i64 %a) {
 define amdgpu_kernel void @add_u64_ss(i64 %v, i64 %a) {
 ; GCN-LABEL: add_u64_ss:
 ; GCN: s_add_u32
-; GCN: s_addc_u32 s1, s1, s3
+; GCN: s_addc_u32 s1, s5, s7
   %add = add i64 %v, %a
   store i64 %add, ptr undef
   ret void

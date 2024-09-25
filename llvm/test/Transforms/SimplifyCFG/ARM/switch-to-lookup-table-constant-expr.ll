@@ -7,8 +7,6 @@ target triple = "armv7a--none-eabi"
 ; One of the phi node's values is too complex to be represented by a global
 ; variable, so we can't convert to a lookup table.
 
-; CHECK-NOT: @switch.table
-; CHECK-NOT: load
 
 @g1 = external global i32, align 4
 @g2 = external global i32, align 4
@@ -19,9 +17,9 @@ define ptr @test3(i32 %n) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB2:%.*]]
+; CHECK-NEXT:      i32 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]

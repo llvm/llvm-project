@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <tuple>
@@ -257,7 +258,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       return -1.0f;
     }
 
-    float Weight = 1.0f;
+    // Force Weight onto the stack so that x86 doesn't add hidden precision,
+    // similar to HWeight below.
+    stack_float_t Weight = 1.0f;
     if (IsSpillable) {
       // Get loop info for mi.
       if (MI->getParent() != MBB) {
@@ -284,11 +287,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     Register HintReg = copyHint(MI, LI.reg(), TRI, MRI);
     if (!HintReg)
       continue;
-    // Force hweight onto the stack so that x86 doesn't add hidden precision,
+    // Force HWeight onto the stack so that x86 doesn't add hidden precision,
     // making the comparison incorrectly pass (i.e., 1 > 1 == true??).
-    //
-    // FIXME: we probably shouldn't use floats at all.
-    volatile float HWeight = Hint[HintReg] += Weight;
+    stack_float_t HWeight = Hint[HintReg] += Weight;
     if (HintReg.isVirtual() || MRI.isAllocatable(HintReg))
       CopyHints.insert(CopyHint(HintReg, HWeight));
   }

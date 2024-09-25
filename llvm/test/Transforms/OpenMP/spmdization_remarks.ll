@@ -1,12 +1,12 @@
 ; RUN: opt -passes=openmp-opt -pass-remarks=openmp-opt -pass-remarks-missed=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 target triple = "nvptx64"
 
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Transformed generic-mode kernel to SPMD-mode.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Call may contain unknown parallel regions. Use `[[omp::assume("omp_no_parallelism")]]` to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Call may contain unknown parallel regions. Use `[[omp::assume("omp_no_parallelism")]]` to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Transformed generic-mode kernel to SPMD-mode.
 
 
 ;; void unknown(void);
@@ -26,7 +26,7 @@ target triple = "nvptx64"
 ;;   }
 ;; }
 ;;
-;; void no_openmp(void) __attribute__((assume("omp_no_openmp")));
+;; void no_openmp(void) [[omp::assume("omp_no_openmp")]];
 ;; void test_no_fallback(void) {
 ;;   #pragma omp target teams
 ;;   {

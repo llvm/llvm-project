@@ -158,7 +158,7 @@ define <3 x i32> @and_and_vec_poison(<3 x i32> %arg) {
 define i32 @f_var0(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[T5:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[T5]]
@@ -175,7 +175,7 @@ define i32 @f_var0(i32 %arg, i32 %arg1) {
 define i32 @f_var0_commutative_and(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var0_commutative_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[T5:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[T5]]
@@ -191,7 +191,7 @@ define i32 @f_var0_commutative_and(i32 %arg, i32 %arg1) {
 define <2 x i32> @f_var0_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var0_splatvec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T5:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
@@ -207,7 +207,7 @@ define <2 x i32> @f_var0_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 define <2 x i32> @f_var0_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var0_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], <i32 2, i32 4>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T5:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
@@ -223,7 +223,7 @@ define <2 x i32> @f_var0_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 define <3 x i32> @f_var0_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var0_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], <i32 2, i32 poison, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T5:%.*]] = zext <3 x i1> [[TMP3]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[T5]]
@@ -240,7 +240,7 @@ define <3 x i32> @f_var0_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 define i32 @f_var1(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[T4:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[T4]]
@@ -256,7 +256,7 @@ define i32 @f_var1(i32 %arg, i32 %arg1) {
 define i32 @f_var1_commutative_and(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var1_commutative_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARG1:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[T4:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[T4]]
@@ -271,7 +271,7 @@ define i32 @f_var1_commutative_and(i32 %arg, i32 %arg1) {
 define <2 x i32> @f_var1_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var1_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T4]]
@@ -286,7 +286,7 @@ define <2 x i32> @f_var1_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 define <3 x i32> @f_var1_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var1_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], <i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[TMP1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = zext <3 x i1> [[TMP3]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
@@ -588,11 +588,9 @@ define i32 @n4(i32 %arg) {
 
 define i32 @n5(i32 %arg) {
 ; CHECK-LABEL: @n5(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 2
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[ARG]], 2
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T1]], i32 [[T2]], i32 1
-; CHECK-NEXT:    ret i32 [[T3]]
+; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[T_LOBIT:%.*]] = and i32 [[T]], 1
+; CHECK-NEXT:    ret i32 [[T_LOBIT]]
 ;
   %t = and i32 %arg, 2
   %t1 = icmp eq i32 %t, 0

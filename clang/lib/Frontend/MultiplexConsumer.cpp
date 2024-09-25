@@ -35,7 +35,7 @@ void MultiplexASTDeserializationListener::ReaderInitialized(
 }
 
 void MultiplexASTDeserializationListener::IdentifierRead(
-    serialization::IdentID ID, IdentifierInfo *II) {
+    serialization::IdentifierID ID, IdentifierInfo *II) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->IdentifierRead(ID, II);
 }
@@ -56,6 +56,11 @@ void MultiplexASTDeserializationListener::DeclRead(GlobalDeclID ID,
                                                    const Decl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DeclRead(ID, D);
+}
+
+void MultiplexASTDeserializationListener::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->PredefinedDeclBuilt(ID, D);
 }
 
 void MultiplexASTDeserializationListener::SelectorRead(
@@ -293,6 +298,13 @@ MultiplexConsumer::MultiplexConsumer(
   }
 }
 
+MultiplexConsumer::MultiplexConsumer(std::unique_ptr<ASTConsumer> C)
+    : MultiplexConsumer([](std::unique_ptr<ASTConsumer> Consumer) {
+        std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+        Consumers.push_back(std::move(Consumer));
+        return Consumers;
+      }(std::move(C))) {}
+
 MultiplexConsumer::~MultiplexConsumer() {}
 
 void MultiplexConsumer::Initialize(ASTContext &Context) {
@@ -357,7 +369,7 @@ void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
     Consumer->CompleteTentativeDefinition(D);
 }
 
-void MultiplexConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void MultiplexConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   for (auto &Consumer : Consumers)
     Consumer->CompleteExternalDeclaration(D);
 }

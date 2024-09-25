@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <limits>
 
@@ -70,6 +71,9 @@ public:
   }
 
   uint16_t getVersion() const { return static_cast<const T *>(this)->Version; }
+  uint64_t getEntryPointAddr() const {
+    return static_cast<const T *>(this)->EntryPointAddr;
+  }
 };
 
 struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
@@ -771,6 +775,13 @@ struct XCOFFSymbolEntry64 {
   XCOFF::StorageClass StorageClass;
   uint8_t NumberOfAuxEntries;
 };
+
+extern template LLVM_TEMPLATE_ABI Expected<ArrayRef<XCOFFRelocation32>>
+XCOFFObjectFile::relocations<XCOFFSectionHeader32, XCOFFRelocation32>(
+    const XCOFFSectionHeader32 &Sec) const;
+extern template LLVM_TEMPLATE_ABI Expected<ArrayRef<XCOFFRelocation64>>
+XCOFFObjectFile::relocations<XCOFFSectionHeader64, XCOFFRelocation64>(
+    const XCOFFSectionHeader64 &Sec) const;
 
 class XCOFFSymbolRef : public SymbolRef {
 public:

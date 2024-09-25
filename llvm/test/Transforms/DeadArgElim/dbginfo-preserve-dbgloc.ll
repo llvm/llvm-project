@@ -36,9 +36,9 @@ declare ptr @foo(...) local_unnamed_addr #1
 define internal zeroext i1 @f1(i1 zeroext %is_y, ptr %str) #4 !dbg !34 {
 entry:
   %frombool = zext i1 %is_y to i8
-; CHECK: call void @llvm.dbg.value(metadata i1 %is_y, metadata !39, metadata !DIExpression()), !dbg !42
+; CHECK: #dbg_value(i1 %is_y, !39, !DIExpression(), !42
   call void @llvm.dbg.value(metadata i1 %is_y, metadata !39, metadata !DIExpression()), !dbg !42
-; CHECK: call void @llvm.dbg.value(metadata ptr %str, metadata !40, metadata !DIExpression()), !dbg !43
+; CHECK: #dbg_value(ptr %str, !40, !DIExpression(), !43
   call void @llvm.dbg.value(metadata ptr %str, metadata !40, metadata !DIExpression()), !dbg !43
   call void @llvm.dbg.value(metadata ptr null, metadata !41, metadata !DIExpression()), !dbg !44
   %tobool = icmp ne ptr %str, null, !dbg !45

@@ -11,10 +11,11 @@
 # CHECK1-NEXT: .text      PROGBITS [[#%x,TEXT:]]    [[#%x,]] [[#%x,]] 00 AX   0   0  4
 # CHECK1:      nonalloc0  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
 # CHECK1-NEXT: nonalloc1  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
+# CHECK1-NEXT: smallc0    PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
 # CHECK1-NEXT: .debug_str PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MS   0   0  1
 
-# CHECK1: 0000000000000010  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
-# CHECK1: 0000000000000008  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc1) sym1
+# CHECK1: 0000000000000090  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
+# CHECK1: 0000000000000088  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc1) sym1
 
 # RUN: ld.lld -pie a.o --compress-sections '*c0=zlib' --compress-sections .debug_str=zstd:3 -o out2
 # RUN: llvm-readelf -SrsX -x nonalloc0 -x .debug_str out2 | FileCheck %s --check-prefix=CHECK2
@@ -24,15 +25,16 @@
 # CHECK2-NEXT: foo1       PROGBITS [[#%x,FOO1:]]    [[#%x,]] [[#%x,]] 00 A    0   0  8
 # CHECK2-NEXT: .text      PROGBITS [[#%x,TEXT:]]    [[#%x,]] [[#%x,]] 00 AX   0   0  4
 # CHECK2:      nonalloc0  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00 C    0   0  1
-# CHECK2-NEXT: nonalloc1  PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
+# CHECK2-NEXT: nonalloc1  PROGBITS 0000000000000000 [[#%x,]] 000088   00      0   0  8
+# CHECK2-NEXT: smallc0    PROGBITS 0000000000000000 [[#%x,]] 00000c   00      0   0  1
 # CHECK2-NEXT: .debug_str PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MSC  0   0  1
 
-# CHECK2: 0000000000000010  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
-# CHECK2: 0000000000000008  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc1) sym1
+# CHECK2: 0000000000000090  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
+# CHECK2: 0000000000000088  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc1) sym1
 
 # CHECK2:      Hex dump of section 'nonalloc0':
-## zlib with ch_size=0x10
-# CHECK2-NEXT: 01000000 00000000 10000000 00000000
+## zlib with ch_size=0x90
+# CHECK2-NEXT: 01000000 00000000 90000000 00000000
 # CHECK2-NEXT: 01000000 00000000 {{.*}}
 # CHECK2:      Hex dump of section '.debug_str':
 ## zstd with ch_size=0x38
@@ -80,19 +82,27 @@ _start:
 .balign 8
 .quad .text-.
 .quad .text-.
+.space 128
 .section foo1,"a"
 .balign 8
 .quad .text-.
 .quad .text-.
+.space 128
 .section nonalloc0,""
 .balign 8
 .quad .text+1
 .quad .text+2
+.space 128
 sym0:
 .section nonalloc1,""
 .balign 8
 .quad 42
+.space 128
 sym1:
+
+.section smallc0,""
+.balign 8
+.space 12
 
 .section .debug_str,"MS",@progbits,1
 .Linfo_string0:

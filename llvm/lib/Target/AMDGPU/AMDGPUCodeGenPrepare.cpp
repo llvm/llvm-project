@@ -2035,6 +2035,11 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
     return true;
 
+  // getUnderlyingObject may have looked through another addrspacecast, although
+  // the optimizable situations most likely folded out by now.
+  if (AS != cast<PointerType>(V->getType())->getAddressSpace())
+    return false;
+
   // TODO: Calls that return nonnull?
 
   // For all other things, use KnownBits.
@@ -2043,8 +2048,10 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   //
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
-  auto SrcPtrKB = computeKnownBits(V, DL).trunc(DL.getPointerSizeInBits(AS));
+  auto SrcPtrKB = computeKnownBits(V, DL);
   const auto NullVal = TM.getNullPointerValue(AS);
+
+  assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
   assert((NullVal == 0 || NullVal == -1) &&
          "don't know how to check for this null value!");
   return NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero();

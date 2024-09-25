@@ -44,7 +44,7 @@ define <4 x float> @test2_float(<4 x float> %aa) #0 {
 ; CHECK-NOVSX: fabs
 ; CHECK-NOVSX: fabs
 ; CHECK-NOVSX: fabs
-; CHECK-NOVSX: vsubfp
+; CHECK-NOVSX: vxor
 ; CHECK-NOVSX: blr
 
 define <2 x double> @test_double(<2 x double> %aa) #0 {

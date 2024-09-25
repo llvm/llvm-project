@@ -9,7 +9,8 @@
 // This test ensures that we can override any hardening mode with the extensive hardening mode on a per-TU basis.
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
-// UNSUPPORTED: c++03, !has-unix-headers, no-localization
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: c++03, no-localization
 // The ability to set a custom abort message is required to compare the assertion message (which only happens in the
 // debug mode).
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing

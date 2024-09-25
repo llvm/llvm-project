@@ -21,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
@@ -40,6 +41,7 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class Module;
+class PGOContextualProfile;
 class ProfileSummaryInfo;
 class ReturnInst;
 class DomTreeUpdater;
@@ -264,6 +266,17 @@ public:
 /// The callee's function attributes are merged into the callers' if
 /// MergeAttributes is set to true.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                            bool MergeAttributes = false,
+                            AAResults *CalleeAAR = nullptr,
+                            bool InsertLifetime = true,
+                            Function *ForwardVarArgsTo = nullptr);
+
+/// Same as above, but it will update the contextual profile. If the contextual
+/// profile is invalid (i.e. not loaded because it is not present), it defaults
+/// to the behavior of the non-contextual profile updating variant above. This
+/// makes it easy to drop-in replace uses of the non-contextual overload.
+InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                            PGOContextualProfile &CtxProf,
                             bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,

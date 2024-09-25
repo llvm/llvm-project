@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv64 -x hip -emit-llvm -fcuda-is-device \
 // RUN:   -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device \
+// RUN:   -o - %s | FileCheck %s
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

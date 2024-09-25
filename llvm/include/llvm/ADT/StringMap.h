@@ -53,6 +53,7 @@ protected:
   }
 
   StringMapImpl(unsigned InitSize, unsigned ItemSize);
+  ~StringMapImpl() { free(TheTable); }
   unsigned RehashTable(unsigned BucketNo = 0);
 
   /// LookupBucketFor - Look up the bucket that the specified string should end
@@ -203,7 +204,6 @@ public:
         }
       }
     }
-    free(TheTable);
   }
 
   using AllocTy::getAllocator;

@@ -54,6 +54,50 @@ func.func @fold_convert(%arg0: tensor<128x32x32x1xf32>, %arg1: tensor<128x32x32x
   return %2 : tensor<128x32x32x1xf32, #CCCD>
 }
 
+#trait_bin = {
+  indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>,
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>,
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+  ],
+  iterator_types = ["parallel", "parallel", "parallel", "parallel"]
+}
+
+// CHECK-FOLD-LABEL:   func.func @fold_convert_multi_use(
+// CHECK-FOLD:           tensor.empty() : tensor<128x32x32x1xf32>
+// CHECK-FOLD:           linalg.generic
+// CHECK-FOLD:           tensor.empty() : tensor<128x32x32x1xf32, #sparse>
+// CHECK-FOLD:           linalg.generic
+// CHECK-FOLD-NOT:       sparse_tensor.convert
+func.func @fold_convert_multi_use(%arg0: tensor<128x32x32x1xf32>, %arg1: tensor<128x32x32x1xf32>,
+                        %arg2: tensor<128x32x32x1xf32>, %arg3: tensor<128x32x32x1xf32>) -> (tensor<128x32x32x1xf32>, tensor<128x32x32x1xf32, #CCCD>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 1.000000e+00 : f32
+
+  %0 = tensor.empty() : tensor<128x32x32x1xf32>
+  %1 = linalg.generic #trait_bin
+  ins(%arg0, %arg1 : tensor<128x32x32x1xf32>, tensor<128x32x32x1xf32>)
+  outs(%0 : tensor<128x32x32x1xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %3 = arith.mulf %in, %in_1 : f32
+      linalg.yield %3 : f32
+    } -> tensor<128x32x32x1xf32>
+
+  // A second kernel that uses %0 as the init operand.
+  %3 = linalg.generic #trait_bin
+  ins(%arg2, %arg3 : tensor<128x32x32x1xf32>, tensor<128x32x32x1xf32>)
+  outs(%0 : tensor<128x32x32x1xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %3 = arith.mulf %in, %in_1 : f32
+      linalg.yield %3 : f32
+    } -> tensor<128x32x32x1xf32>
+  %4 = sparse_tensor.convert %3 : tensor<128x32x32x1xf32> to tensor<128x32x32x1xf32, #CCCD>
+
+  return %1, %4 : tensor<128x32x32x1xf32>, tensor<128x32x32x1xf32, #CCCD>
+}
+
+
 
 // FIXME: The following kernel is not sparsifiable because `arith.select`
 // operations is not handled by the sparse compiler at the moment.

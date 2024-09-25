@@ -5,7 +5,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 ; CHECK: Loop 'for.j' has cost = 201000000
 ; CHECK-NEXT: Loop 'for.i' has cost = 102000000
-; CHECK-NEXT: Loop 'for.k' has cost = 90000
+; CHECK-NEXT: Loop 'for.k' has cost = 120000
 
 ;; Test to make sure when we have multiple conflicting access patterns, the 
 ;; chosen loop configuration favours the majority of those accesses. 

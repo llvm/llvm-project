@@ -210,6 +210,10 @@ static cl::opt<bool> FailOnIncompleteFormat(
     cl::desc("If set, fail with exit code 1 on incomplete format."),
     cl::init(false), cl::cat(ClangFormatCategory));
 
+static cl::opt<bool> ListIgnored("list-ignored",
+                                 cl::desc("List ignored files."),
+                                 cl::cat(ClangFormatCategory), cl::Hidden);
+
 namespace clang {
 namespace format {
 
@@ -336,7 +340,8 @@ static void outputReplacementXML(StringRef Text) {
 
 static void outputReplacementsXML(const Replacements &Replaces) {
   for (const auto &R : Replaces) {
-    outs() << "<replacement " << "offset='" << R.getOffset() << "' "
+    outs() << "<replacement "
+           << "offset='" << R.getOffset() << "' "
            << "length='" << R.getLength() << "'>";
     outputReplacementXML(R.getReplacementText());
     outs() << "</replacement>\n";
@@ -351,7 +356,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
 
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
-    llvm::SourceMgr Mgr;
+    SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
     Mgr.AddNewSourceBuffer(
@@ -363,7 +368,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                            : SourceMgr::DiagKind::DK_Warning,
           "code should be clang-formatted [-Wclang-format-violations]");
 
-      Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
+      Diag.print(nullptr, llvm::errs(), ShowColors && !NoShowColors);
       if (ErrorLimit && ++Errors >= ErrorLimit)
         break;
     }
@@ -446,11 +451,11 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     return true;
   }
 
-  llvm::Expected<FormatStyle> FormatStyle =
+  Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
                nullptr, WNoErrorList.isSet(WNoError::Unknown));
   if (!FormatStyle) {
-    llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+    llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
   }
 
@@ -496,7 +501,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
   if (!ChangedCode) {
-    llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+    llvm::errs() << toString(ChangedCode.takeError()) << "\n";
     return true;
   }
   // Get new affected ranges after sorting `#includes`.
@@ -508,8 +513,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   if (OutputXML || DryRun) {
     if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    else
-      outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
+    outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
@@ -566,14 +570,12 @@ static int dumpConfig() {
     }
     Code = std::move(CodeOrErr.get());
   }
-  llvm::Expected<clang::format::FormatStyle> FormatStyle =
-      clang::format::getStyle(Style,
-                              FileNames.empty() || FileNames[0] == "-"
-                                  ? AssumeFileName
-                                  : FileNames[0],
-                              FallbackStyle, Code ? Code->getBuffer() : "");
+  Expected<clang::format::FormatStyle> FormatStyle = clang::format::getStyle(
+      Style,
+      FileNames.empty() || FileNames[0] == "-" ? AssumeFileName : FileNames[0],
+      FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
-    llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+    llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return 1;
   }
   std::string Config = clang::format::configurationAsText(*FormatStyle);
@@ -670,7 +672,7 @@ static bool isIgnored(StringRef FilePath) {
 }
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  InitLLVM X(argc, argv);
 
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
@@ -701,7 +703,7 @@ int main(int argc, const char **argv) {
       FileNames.push_back(Line);
       LineNo++;
     }
-    errs() << "Clang-formating " << LineNo << " files\n";
+    errs() << "Clang-formatting " << LineNo << " files\n";
   }
 
   if (FileNames.empty())
@@ -717,7 +719,13 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
-    if (isIgnored(FileName))
+    const bool Ignored = isIgnored(FileName);
+    if (ListIgnored) {
+      if (Ignored)
+        outs() << FileName << '\n';
+      continue;
+    }
+    if (Ignored)
       continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "

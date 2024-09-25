@@ -64,10 +64,6 @@ struct PluginManager {
         std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
-  /// Initialize as many devices as possible for this plugin. Devices that fail
-  /// to initialize are ignored.
-  void initDevices(GenericPluginTy &RTL);
-
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
   llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
@@ -117,19 +113,36 @@ struct PluginManager {
     return Devices.getExclusiveAccessor();
   }
 
-  int getNumUsedPlugins() const { return DeviceOffsets.size(); }
+  /// Initialize \p Plugin. Returns true on success.
+  bool initializePlugin(GenericPluginTy &Plugin);
 
-  // Initialize all plugins.
-  void initAllPlugins();
+  /// Initialize device \p DeviceNo of \p Plugin. Returns true on success.
+  bool initializeDevice(GenericPluginTy &Plugin, int32_t DeviceId);
+
+  /// Eagerly initialize all plugins and their devices.
+  void initializeAllDevices();
 
   /// Iterator range for all plugins (in use or not, but always valid).
   auto plugins() { return llvm::make_pointee_range(Plugins); }
+
+  /// Iterator range for all plugins (in use or not, but always valid).
+  auto plugins() const { return llvm::make_pointee_range(Plugins); }
 
   /// Return the user provided requirements.
   int64_t getRequirements() const { return Requirements.getRequirements(); }
 
   /// Add \p Flags to the user provided requirements.
   void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
+
+  /// Returns the number of plugins that are active.
+  int getNumActivePlugins() const {
+    int count = 0;
+    for (auto &R : plugins())
+      if (R.is_initialized())
+        ++count;
+
+    return count;
+  }
 
 private:
   bool RTLsLoaded = false;
@@ -138,11 +151,9 @@ private:
   // List of all plugins, in use or not.
   llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
 
-  // Mapping of plugins to offsets in the device table.
-  llvm::DenseMap<const GenericPluginTy *, int32_t> DeviceOffsets;
-
-  // Mapping of plugins to the number of used devices.
-  llvm::DenseMap<const GenericPluginTy *, int32_t> DeviceUsed;
+  // Mapping of plugins to the OpenMP device identifier.
+  llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>
+      DeviceIds;
 
   // Set of all device images currently in use.
   llvm::DenseSet<const __tgt_device_image *> UsedImages;

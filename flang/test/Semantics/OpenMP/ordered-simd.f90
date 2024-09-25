@@ -95,6 +95,7 @@ SUBROUTINE ORDERED_BAD(N)
 
   !$OMP CRITICAL  
     C =  C - A * B
+    !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
@@ -107,6 +108,7 @@ SUBROUTINE ORDERED_BAD(N)
 
   !$OMP ORDERED  
     C =  C - A * B
+    !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
     !$OMP MASTER
     DO I = 1,N
       !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
@@ -119,6 +121,7 @@ SUBROUTINE ORDERED_BAD(N)
 
   !$OMP TASK  
     C =  C - A * B
+    !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
     !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$OMP MASTER
     DO I = 1,N
@@ -133,6 +136,7 @@ SUBROUTINE ORDERED_BAD(N)
   !$OMP TASKLOOP
   DO J= 1,N  
     C =  C - A * B
+    !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
     !ERROR: `MASTER` region may not be closely nested inside of `WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` region.
     !$OMP MASTER
     DO I = 1,N

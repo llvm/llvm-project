@@ -1,6 +1,4 @@
 // REQUIRES: system-linux
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
 // REQUIRES: shell
 
 // RUN: mkdir -p %t
@@ -44,3 +42,11 @@
 // RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 | FileCheck %s --check-prefix=MARCH-sm_89
 // MARCH-sm_89: warning: multiple nvptx64 architectures are detected: sm_89, sm_80; only the first one is used for '-march' [-Wmulti-gpu]
 // MARCH-sm_89: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_89"
+
+// case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed.
+// RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib \
+// RUN:     --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda -x cuda %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT
+// BAD-TIMEOUT: clang: error: cannot determine nvptx64 architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

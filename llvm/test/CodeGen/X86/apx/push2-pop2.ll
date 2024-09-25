@@ -24,8 +24,12 @@ define void @csr1() nounwind {
 ; FRAME:       # %bb.0: # %entry
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
 entry:
@@ -59,8 +63,12 @@ define void @csr2() nounwind {
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    pushq %r15
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %r15
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
@@ -95,8 +103,12 @@ define void @csr3() nounwind {
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
@@ -136,8 +148,12 @@ define void @csr4() nounwind {
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    pushq %r13
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %r13
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
@@ -178,8 +194,12 @@ define void @csr5() nounwind {
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    push2 %r12, %r13
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    pop2 %r13, %r12
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
@@ -225,8 +245,12 @@ define void @csr6() nounwind {
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    push2 %r12, %r13
 ; FRAME-NEXT:    pushq %rbx
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %rbx
 ; FRAME-NEXT:    pop2 %r13, %r12
 ; FRAME-NEXT:    pop2 %r15, %r14

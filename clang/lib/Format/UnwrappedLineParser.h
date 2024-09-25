@@ -49,6 +49,9 @@ struct UnwrappedLine {
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
 
+  /// Nesting level of unbraced body of a control statement.
+  unsigned UnbracedBodyLevel = 0;
+
   bool MustBeDeclaration = false;
 
   /// Whether the parser has seen \c decltype(auto) in this line.
@@ -407,7 +410,7 @@ struct UnwrappedLineNode {
   UnwrappedLineNode() : Tok(nullptr) {}
   UnwrappedLineNode(FormatToken *Tok,
                     llvm::ArrayRef<UnwrappedLine> Children = {})
-      : Tok(Tok), Children(Children.begin(), Children.end()) {}
+      : Tok(Tok), Children(Children) {}
 
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;

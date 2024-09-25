@@ -37,9 +37,9 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_floor(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_floor_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_floor_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>
@@ -226,12 +226,9 @@ define <vscale x 8 x i8> @vaaddu_vx_nxv8i8_ceil(<vscale x 8 x i8> %x, i8 %y) {
 define <vscale x 8 x i8> @vaaddu_vv_nxv8i8_ceil_sexti16(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_nxv8i8_ceil_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vadd.vi v10, v10, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <vscale x 8 x i8> %x to <vscale x 8 x i16>
   %yzv = sext <vscale x 8 x i8> %y to <vscale x 8 x i16>

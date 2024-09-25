@@ -591,7 +591,7 @@ public:
 
   CombiningDirIterImpl(ArrayRef<directory_iterator> DirIters,
                        std::error_code &EC)
-      : IterList(DirIters.begin(), DirIters.end()) {
+      : IterList(DirIters) {
     EC = incrementImpl(true);
   }
 
@@ -867,21 +867,16 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
   // Any intermediate directories we create should be accessible by
   // the owner, even if Perms says otherwise for the final path.
   const auto NewDirectoryPerms = ResolvedPerms | sys::fs::owner_all;
-  while (true) {
-    StringRef Name = *I;
-    detail::InMemoryNode *Node = Dir->getChild(Name);
-    ++I;
-    if (!Node) {
-      if (I == E) {
-        // End of the path.
-        Dir->addChild(
-            Name, MakeNode({Dir->getUniqueID(), Path, Name, ModificationTime,
-                            std::move(Buffer), ResolvedUser, ResolvedGroup,
-                            ResolvedType, ResolvedPerms}));
-        return true;
-      }
 
-      // Create a new directory. Use the path up to here.
+  StringRef Name = *I;
+  while (true) {
+    Name = *I;
+    ++I;
+    if (I == E)
+      break;
+    detail::InMemoryNode *Node = Dir->getChild(Name);
+    if (!Node) {
+      // This isn't the last element, so we create a new directory.
       Status Stat(
           StringRef(Path.str().begin(), Name.end() - Path.str().begin()),
           getDirectoryID(Dir->getUniqueID(), Name),
@@ -891,27 +886,33 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
           Name, std::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
     }
-
-    if (auto *NewDir = dyn_cast<detail::InMemoryDirectory>(Node)) {
-      Dir = NewDir;
-    } else {
-      assert((isa<detail::InMemoryFile>(Node) ||
-              isa<detail::InMemoryHardLink>(Node)) &&
-             "Must be either file, hardlink or directory!");
-
-      // Trying to insert a directory in place of a file.
-      if (I != E)
-        return false;
-
-      // Return false only if the new file is different from the existing one.
-      if (auto Link = dyn_cast<detail::InMemoryHardLink>(Node)) {
-        return Link->getResolvedFile().getBuffer()->getBuffer() ==
-               Buffer->getBuffer();
-      }
-      return cast<detail::InMemoryFile>(Node)->getBuffer()->getBuffer() ==
-             Buffer->getBuffer();
-    }
+    // Creating file under another file.
+    if (!isa<detail::InMemoryDirectory>(Node))
+      return false;
+    Dir = cast<detail::InMemoryDirectory>(Node);
   }
+  detail::InMemoryNode *Node = Dir->getChild(Name);
+  if (!Node) {
+    Dir->addChild(Name,
+                  MakeNode({Dir->getUniqueID(), Path, Name, ModificationTime,
+                            std::move(Buffer), ResolvedUser, ResolvedGroup,
+                            ResolvedType, ResolvedPerms}));
+    return true;
+  }
+  if (isa<detail::InMemoryDirectory>(Node))
+    return ResolvedType == sys::fs::file_type::directory_file;
+
+  assert((isa<detail::InMemoryFile>(Node) ||
+          isa<detail::InMemoryHardLink>(Node)) &&
+         "Must be either file, hardlink or directory!");
+
+  // Return false only if the new file is different from the existing one.
+  if (auto *Link = dyn_cast<detail::InMemoryHardLink>(Node)) {
+    return Link->getResolvedFile().getBuffer()->getBuffer() ==
+           Buffer->getBuffer();
+  }
+  return cast<detail::InMemoryFile>(Node)->getBuffer()->getBuffer() ==
+         Buffer->getBuffer();
 }
 
 bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
@@ -1372,7 +1373,7 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
       llvm::sys::path::is_absolute(Path,
                                    llvm::sys::path::Style::windows_backslash))
     // This covers windows absolute path with forward slash as well, as the
-    // forward slashes are treated as path seperation in llvm::path
+    // forward slashes are treated as path separation in llvm::path
     // regardless of what path::Style is used.
     return {};
 
@@ -2779,7 +2780,7 @@ bool JSONWriter::containedIn(StringRef Parent, StringRef Path) {
 StringRef JSONWriter::containedPart(StringRef Parent, StringRef Path) {
   assert(!Parent.empty());
   assert(containedIn(Parent, Path));
-  return Path.slice(Parent.size() + 1, StringRef::npos);
+  return Path.substr(Parent.size() + 1);
 }
 
 void JSONWriter::startDirectory(StringRef Path) {
@@ -2845,7 +2846,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     if (UseOverlayRelative) {
       assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDir.size(), RPath.size());
+      RPath = RPath.substr(OverlayDir.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2878,7 +2879,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       if (UseOverlayRelative) {
         assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDir.size(), RPath.size());
+        RPath = RPath.substr(OverlayDir.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
@@ -2912,30 +2913,31 @@ vfs::recursive_directory_iterator::recursive_directory_iterator(
   directory_iterator I = FS->dir_begin(Path, EC);
   if (I != directory_iterator()) {
     State = std::make_shared<detail::RecDirIterState>();
-    State->Stack.push(I);
+    State->Stack.push_back(I);
   }
 }
 
 vfs::recursive_directory_iterator &
 recursive_directory_iterator::increment(std::error_code &EC) {
   assert(FS && State && !State->Stack.empty() && "incrementing past end");
-  assert(!State->Stack.top()->path().empty() && "non-canonical end iterator");
+  assert(!State->Stack.back()->path().empty() && "non-canonical end iterator");
   vfs::directory_iterator End;
 
   if (State->HasNoPushRequest)
     State->HasNoPushRequest = false;
   else {
-    if (State->Stack.top()->type() == sys::fs::file_type::directory_file) {
-      vfs::directory_iterator I = FS->dir_begin(State->Stack.top()->path(), EC);
+    if (State->Stack.back()->type() == sys::fs::file_type::directory_file) {
+      vfs::directory_iterator I =
+          FS->dir_begin(State->Stack.back()->path(), EC);
       if (I != End) {
-        State->Stack.push(I);
+        State->Stack.push_back(I);
         return *this;
       }
     }
   }
 
-  while (!State->Stack.empty() && State->Stack.top().increment(EC) == End)
-    State->Stack.pop();
+  while (!State->Stack.empty() && State->Stack.back().increment(EC) == End)
+    State->Stack.pop_back();
 
   if (State->Stack.empty())
     State.reset(); // end iterator
@@ -2943,8 +2945,34 @@ recursive_directory_iterator::increment(std::error_code &EC) {
   return *this;
 }
 
+void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
+                                  unsigned IndentLevel) const {
+  printIndent(OS, IndentLevel);
+  OS << "TracingFileSystem\n";
+  if (Type == PrintType::Summary)
+    return;
+
+  printIndent(OS, IndentLevel);
+  OS << "NumStatusCalls=" << NumStatusCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumOpenFileForReadCalls=" << NumOpenFileForReadCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumDirBeginCalls=" << NumDirBeginCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumGetRealPathCalls=" << NumGetRealPathCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumExistsCalls=" << NumExistsCalls << "\n";
+  printIndent(OS, IndentLevel);
+  OS << "NumIsLocalCalls=" << NumIsLocalCalls << "\n";
+
+  if (Type == PrintType::Contents)
+    Type = PrintType::Summary;
+  getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+}
+
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+const char TracingFileSystem::ID = 0;

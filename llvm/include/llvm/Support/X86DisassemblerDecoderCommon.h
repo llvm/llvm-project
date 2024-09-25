@@ -71,7 +71,8 @@ enum attributeBits {
   ATTR_EVEXB = 0x1 << 12,
   ATTR_REX2 = 0x1 << 13,
   ATTR_EVEXNF = 0x1 << 14,
-  ATTR_max = 0x1 << 15,
+  ATTR_EVEXU = 0x1 << 15,
+  ATTR_max = 0x1 << 16,
 };
 
 // Combinations of the above attributes that are relevant to instruction
@@ -320,7 +321,47 @@ enum attributeBits {
   ENUM_ENTRY(IC_EVEX_L2_W_KZ, 3, "requires EVEX_KZ, L2 and W")                 \
   ENUM_ENTRY(IC_EVEX_L2_W_XS_KZ, 4, "requires EVEX_KZ, L2, W and XS prefix")   \
   ENUM_ENTRY(IC_EVEX_L2_W_XD_KZ, 4, "requires EVEX_KZ, L2, W and XD prefix")   \
-  ENUM_ENTRY(IC_EVEX_L2_W_OPSIZE_KZ, 4, "requires EVEX_KZ, L2, W and OpSize")
+  ENUM_ENTRY(IC_EVEX_L2_W_OPSIZE_KZ, 4, "requires EVEX_KZ, L2, W and OpSize")  \
+  ENUM_ENTRY(IC_EVEX_B_U, 2, "requires EVEX_B and EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_XS_B_U, 3, "requires EVEX_B, XS and EVEX_U prefix")       \
+  ENUM_ENTRY(IC_EVEX_XD_B_U, 3, "requires EVEX_B, XD and EVEX_U prefix")       \
+  ENUM_ENTRY(IC_EVEX_OPSIZE_B_U, 3,                                            \
+             "requires EVEX_B, OpSize and EVEX_U prefix")                      \
+  ENUM_ENTRY(IC_EVEX_W_B_U, 4, "requires EVEX_B, W, and EVEX_U prefix")        \
+  ENUM_ENTRY(IC_EVEX_W_XS_B_U, 5, "requires EVEX_B, W, XS, and EVEX_U prefix") \
+  ENUM_ENTRY(IC_EVEX_W_XD_B_U, 5, "requires EVEX_B, W, XD, and EVEX_U prefix") \
+  ENUM_ENTRY(IC_EVEX_W_OPSIZE_B_U, 5,                                          \
+             "requires EVEX_B, W, OpSize and EVEX_U prefix")                   \
+  ENUM_ENTRY(IC_EVEX_K_B_U, 2, "requires EVEX_B, EVEX_K and EVEX_U prefix")    \
+  ENUM_ENTRY(IC_EVEX_XS_K_B_U, 3,                                              \
+             "requires EVEX_B, EVEX_K, XS and the EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_XD_K_B_U, 3,                                              \
+             "requires EVEX_B, EVEX_K, XD and the EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_OPSIZE_K_B_U, 3,                                          \
+             "requires EVEX_B, EVEX_K, OpSize and the EVEX_U prefix")          \
+  ENUM_ENTRY(IC_EVEX_W_K_B_U, 4,                                               \
+             "requires EVEX_B, EVEX_K, W,  and the EVEX_U prefix")             \
+  ENUM_ENTRY(IC_EVEX_W_XS_K_B_U, 5,                                            \
+             "requires EVEX_B, EVEX_K, W, XS, and EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_W_XD_K_B_U, 5,                                            \
+             "requires EVEX_B, EVEX_K, W, XD, and EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_W_OPSIZE_K_B_U, 5,                                        \
+             "requires EVEX_B, EVEX_K, W, OpSize, and EVEX_U prefix")          \
+  ENUM_ENTRY(IC_EVEX_KZ_B_U, 2, "requires EVEX_B, EVEX_KZ and EVEX_U prefix")  \
+  ENUM_ENTRY(IC_EVEX_XS_KZ_B_U, 3,                                             \
+             "requires EVEX_B, EVEX_KZ, XS, and the EVEX_U prefix")            \
+  ENUM_ENTRY(IC_EVEX_XD_KZ_B_U, 3,                                             \
+             "requires EVEX_B, EVEX_KZ, XD, and the EVEX_U prefix")            \
+  ENUM_ENTRY(IC_EVEX_OPSIZE_KZ_B_U, 3,                                         \
+             "requires EVEX_B, EVEX_KZ, OpSize and EVEX_U prefix")             \
+  ENUM_ENTRY(IC_EVEX_W_KZ_B_U, 4,                                              \
+             "requires EVEX_B, EVEX_KZ, W and the EVEX_U prefix")              \
+  ENUM_ENTRY(IC_EVEX_W_XS_KZ_B_U, 5,                                           \
+             "requires EVEX_B, EVEX_KZ, W, XS, and EVEX_U prefix")             \
+  ENUM_ENTRY(IC_EVEX_W_XD_KZ_B_U, 5,                                           \
+             "requires EVEX_B, EVEX_KZ, W, XD, and EVEX_U prefix")             \
+  ENUM_ENTRY(IC_EVEX_W_OPSIZE_KZ_B_U, 5,                                       \
+             "requires EVEX_B, EVEX_KZ, W, OpSize and EVEX_U prefix")
 
 #define ENUM_ENTRY(n, r, d) n,
 enum InstructionContext { INSTRUCTION_CONTEXTS IC_max };
