@@ -167,8 +167,8 @@ class InlineSpiller : public Spiller {
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
 
-  // All registers that were replaced by the spiller. This includes registers
-  // that were rematerialized; rematted regs are removed from RegsToSpill.
+  // All registers that were replaced by the spiller through some other method,
+  // e.g. rematerialization.
   SmallVector<Register, 8> RegsReplaced;
 
   // All COPY instructions to/from snippets.
@@ -203,6 +203,7 @@ public:
         HSpiller(Pass, MF, VRM), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &) override;
+  ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
   ArrayRef<Register> getReplacedRegs() override { return RegsReplaced; }
   void postOptimization() override;
 
@@ -390,7 +391,7 @@ void InlineSpiller::collectRegsToSpill() {
   // Main register always spills.
   RegsToSpill.assign(1, Reg);
   SnippetCopies.clear();
-  RegsReplaced.assign(RegsToSpill);
+  RegsReplaced.clear();
 
   // Snippets all have the same original, so there can't be any for an original
   // register.
@@ -411,8 +412,6 @@ void InlineSpiller::collectRegsToSpill() {
     LLVM_DEBUG(dbgs() << "\talso spill snippet " << SnipLI << '\n');
     ++NumSnippets;
   }
-
-  RegsReplaced.assign(RegsToSpill);
 }
 
 bool InlineSpiller::isSibling(Register Reg) {
@@ -813,6 +812,7 @@ void InlineSpiller::reMaterializeAll() {
 
     RegsToSpill[ResultPos++] = Reg;
   }
+  RegsReplaced.assign(RegsToSpill.begin() + ResultPos, RegsToSpill.end());
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());
   LLVM_DEBUG(dbgs() << RegsToSpill.size()
                     << " registers to spill after remat.\n");

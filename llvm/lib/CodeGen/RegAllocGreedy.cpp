@@ -2504,6 +2504,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
     // the new regs are kept in LDV (still mapping to the old register), until
     // we rewrite spilled locations in LDV at a later stage.
+    for (Register r : spiller().getSpilledRegs())
+      DebugVars->splitRegister(r, LRE.regs(), *LIS);
     for (Register r : spiller().getReplacedRegs())
       DebugVars->splitRegister(r, LRE.regs(), *LIS);
 
