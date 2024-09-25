@@ -3617,7 +3617,7 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       if (info.GetFileActionForFD(STDERR_FILENO) == nullptr)
         err_file_spec = GetStandardErrorPath();
 
-      LLDB_LOG(log, "target stdin='{0}', target stdout='{1}', stderr='{1}'",
+      LLDB_LOG(log, "target stdin='{0}', target stdout='{1}', stderr='{2}'",
                in_file_spec, out_file_spec, err_file_spec);
 
       if (in_file_spec) {
