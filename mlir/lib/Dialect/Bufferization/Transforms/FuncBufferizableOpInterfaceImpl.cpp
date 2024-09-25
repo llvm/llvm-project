@@ -22,7 +22,7 @@ namespace mlir {
 namespace bufferization {
 namespace func_ext {
 
-void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
+void FuncAnalysisState::startFunctionAnalysis(FunctionOpInterface funcOp) {
   analyzedFuncOps[funcOp] = FuncOpAnalysisState::InProgress;
   auto createdEquiv = equivalentFuncArgs.try_emplace(funcOp, IndexMapping());
   auto createdAliasingResults =

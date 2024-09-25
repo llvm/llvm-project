@@ -370,6 +370,13 @@ public:
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
 
+    /// This method does not make a copy of the \a opcodes memory, it is
+    /// assumed to have the same lifetime as the Module this UnwindPlan will
+    /// be registered in.
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
+
     bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
                                          bool can_replace);
 

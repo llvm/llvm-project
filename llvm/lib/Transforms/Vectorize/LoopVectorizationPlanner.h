@@ -220,6 +220,11 @@ public:
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL,
+                              const Twine &Name = "") {
+    return createInstruction(VPInstruction::PtrAdd, {Ptr, Offset}, DL, Name);
+  }
+
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,

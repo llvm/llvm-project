@@ -12,22 +12,22 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-TSO,RV64IA-TSO-NOZACAS %s
 
-; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+a,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-WMO,RV32IA-WMO-ZACAS %s
-; RUN: llc -mtriple=riscv32 -mattr=+a,+ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+a,+ztso,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-TSO,RV32IA-TSO-ZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-WMO,RV64IA-WMO-ZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-TSO,RV64IA-TSO-ZACAS %s
 
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO,RV64IA-WMO-ZABHA,RV64IA-WMO-ZABHA-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO,RV64IA-TSO-ZABHA,RV64IA-TSO-ZABHA-NOZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO,RV64IA-WMO-ZABHA,RV64IA-WMO-ZABHA-ZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+zabha,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+zabha,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO,RV64IA-TSO-ZABHA,RV64IA-TSO-ZABHA-ZACAS %s
 
 define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {

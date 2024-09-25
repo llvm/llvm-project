@@ -41,10 +41,8 @@ reduceNodes(MDNode *Root,
       if (MDNode *Operand =
               dyn_cast<MDNode>(CurrentNode->getOperand(I).get())) {
         // Check whether node has been visited
-        if (!VisitedNodes.contains(Operand)) {
+        if (VisitedNodes.insert(Operand))
           NodesToTraverse.push(Operand);
-          VisitedNodes.insert(Operand);
-        }
         // Delete the node only if it is distinct
         if (Operand->isDistinct()) {
           // Add to removal list
@@ -74,10 +72,8 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
     // If the node hasn't been traversed yet, add it to the queue of nodes to
     // traverse.
     if (MDTuple *TupleI = dyn_cast<MDTuple>((*I))) {
-      if (!VisitedNodes.contains(TupleI)) {
+      if (VisitedNodes.insert(TupleI))
         NodesToTraverse.push(TupleI);
-        VisitedNodes.insert(TupleI);
-      }
     }
   }
 
@@ -113,12 +109,10 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
     // Push the remaining nodes into the queue
     for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
       MDTuple *Operand = dyn_cast<MDTuple>(CurrentTuple->getOperand(I).get());
-      if (Operand && !VisitedNodes.contains(Operand)) {
-        NodesToTraverse.push(Operand);
+      if (Operand && VisitedNodes.insert(Operand))
         // If the node hasn't been traversed yet, add it to the queue of nodes
         // to traverse.
-        VisitedNodes.insert(Operand);
-      }
+        NodesToTraverse.push(Operand);
     }
   }
 }

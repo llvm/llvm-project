@@ -1362,12 +1362,22 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     }
   }
 
+#ifndef NDEBUG
   // Find the node for the last stack id, which should be the same
   // across all calls recorded for this id, and is this node's id.
   uint64_t LastId = Node->OrigStackOrAllocId;
   ContextNode *LastNode = getNodeForStackId(LastId);
   // We should only have kept stack ids that had nodes.
   assert(LastNode);
+  assert(LastNode == Node);
+#else
+  ContextNode *LastNode = Node;
+#endif
+
+  // Compute the last node's context ids once, as it is shared by all calls in
+  // this entry.
+  DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
+  assert(!LastNodeContextIds.empty());
 
   for (unsigned I = 0; I < Calls.size(); I++) {
     auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
@@ -1389,40 +1399,43 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
     assert(LastId == Ids.back());
 
-    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
-    assert(FirstNode);
-
     // Recompute the context ids for this stack id sequence (the
     // intersection of the context ids of the corresponding nodes).
     // Start with the ids we saved in the map for this call, which could be
     // duplicated context ids. We have to recompute as we might have overlap
     // overlap between the saved context ids for different last nodes, and
     // removed them already during the post order traversal.
-    set_intersect(SavedContextIds, FirstNode->getContextIds());
-    ContextNode *PrevNode = nullptr;
-    for (auto Id : Ids) {
+    set_intersect(SavedContextIds, LastNodeContextIds);
+    ContextNode *PrevNode = LastNode;
+    bool Skip = false;
+    // Iterate backwards through the stack Ids, starting after the last Id
+    // in the list, which was handled once outside for all Calls.
+    for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
+      auto Id = *IdIter;
       ContextNode *CurNode = getNodeForStackId(Id);
       // We should only have kept stack ids that had nodes and weren't
       // recursive.
       assert(CurNode);
       assert(!CurNode->Recursive);
-      if (!PrevNode) {
-        PrevNode = CurNode;
-        continue;
-      }
-      auto *Edge = CurNode->findEdgeFromCallee(PrevNode);
+
+      auto *Edge = CurNode->findEdgeFromCaller(PrevNode);
       if (!Edge) {
-        SavedContextIds.clear();
+        Skip = true;
         break;
       }
       PrevNode = CurNode;
+
+      // Update the context ids, which is the intersection of the ids along
+      // all edges in the sequence.
       set_intersect(SavedContextIds, Edge->getContextIds());
 
       // If we now have no context ids for clone, skip this call.
-      if (SavedContextIds.empty())
+      if (SavedContextIds.empty()) {
+        Skip = true;
         break;
+      }
     }
-    if (SavedContextIds.empty())
+    if (Skip)
       continue;
 
     // Create new context node.
@@ -1432,6 +1445,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     NodeToCallingFunc[NewNode] = Func;
     NonAllocationCallToContextNodeMap[Call] = NewNode;
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
+
+    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
+    assert(FirstNode);
 
     // Connect to callees of innermost stack frame in inlined call chain.
     // This updates context ids for FirstNode's callee's to reflect those
