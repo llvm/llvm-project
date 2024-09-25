@@ -3,7 +3,7 @@
 
 #include "bsl_optional.h"
 
-/// Mock of `bdbl::NullableValue`.
+/// Mock of `bdlb::NullableValue`.
 namespace BloombergLP::bdlb {
 
 template <typename T>
