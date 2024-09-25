@@ -596,8 +596,6 @@ namespace ImplicitFunction {
                                     // both-note {{in call to 'callMe()'}}
 }
 
-/// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
-/// which we don't support yet.
 namespace std {
   class strong_ordering {
   public:

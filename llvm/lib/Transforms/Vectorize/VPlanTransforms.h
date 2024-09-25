@@ -116,6 +116,9 @@ struct VPlanTransforms {
   static void createInterleaveGroups(
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
+
+  /// Remove dead recipes from \p Plan.
+  static void removeDeadRecipes(VPlan &Plan);
 };
 
 } // namespace llvm

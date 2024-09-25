@@ -63,20 +63,18 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP5:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -167,20 +165,18 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP5:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -271,20 +267,18 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = urem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    [[TMP7:%.*]] = urem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = urem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP5:%.*]] = urem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -375,20 +369,18 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = srem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    [[TMP7:%.*]] = srem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; FIXED-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = srem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP5:%.*]] = srem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -439,21 +431,21 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP11:%.*]] = udiv <vscale x 2 x i64> [[WIDE_LOAD]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
-; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -484,29 +476,27 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.ph:
 ; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[V:%.*]], i64 0
 ; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP10:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[TMP8]]
-; FIXED-NEXT:    [[TMP11:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[TMP9]]
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP10]], <4 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP11]], <4 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP1]]
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
+; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
+; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[TMP5]]
+; FIXED-NEXT:    [[TMP8:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[TMP6]]
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP3]], align 8
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -569,21 +559,21 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
-; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -614,29 +604,27 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED:       vector.ph:
 ; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[V:%.*]], i64 0
 ; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP10:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[TMP8]]
-; FIXED-NEXT:    [[TMP11:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[TMP9]]
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP10]], <4 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP11]], <4 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP1]]
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
+; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
+; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[TMP5]]
+; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[TMP6]]
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP3]], align 8
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -709,8 +697,8 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -743,24 +731,22 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP8:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[TMP9:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP9]], <4 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
+; FIXED-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -833,8 +819,8 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -867,24 +853,22 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
-; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[TMP9:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP9]], <4 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
-; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP5]], align 8
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
+; FIXED-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], <i64 27, i64 27, i64 27, i64 27>
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP2]], align 8
+; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP3]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:
@@ -958,8 +942,8 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[PREDPHI]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -992,26 +976,24 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 32
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
-; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 32
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP4]], align 1
-; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i8>, ptr [[TMP5]], align 1
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD1]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP6]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; FIXED-NEXT:    [[TMP9:%.*]] = select <32 x i1> [[TMP7]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; FIXED-NEXT:    [[TMP10:%.*]] = sdiv <32 x i8> [[WIDE_LOAD]], [[TMP8]]
-; FIXED-NEXT:    [[TMP11:%.*]] = sdiv <32 x i8> [[WIDE_LOAD1]], [[TMP9]]
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[TMP6]], <32 x i8> [[TMP10]], <32 x i8> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <32 x i1> [[TMP7]], <32 x i8> [[TMP11]], <32 x i8> [[WIDE_LOAD1]]
-; FIXED-NEXT:    store <32 x i8> [[PREDPHI]], ptr [[TMP4]], align 1
-; FIXED-NEXT:    store <32 x i8> [[PREDPHI2]], ptr [[TMP5]], align 1
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 32
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP2]], align 1
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i8>, ptr [[TMP3]], align 1
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD1]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; FIXED-NEXT:    [[TMP6:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP7:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <32 x i8> [[WIDE_LOAD]], [[TMP6]]
+; FIXED-NEXT:    [[TMP9:%.*]] = sdiv <32 x i8> [[WIDE_LOAD1]], [[TMP7]]
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[TMP4]], <32 x i8> [[TMP8]], <32 x i8> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP9]], <32 x i8> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <32 x i8> [[PREDPHI]], ptr [[TMP2]], align 1
+; FIXED-NEXT:    store <32 x i8> [[PREDPHI2]], ptr [[TMP3]], align 1
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
-; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXED:       scalar.ph:

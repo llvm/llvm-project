@@ -823,8 +823,11 @@ public:
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
-  /// Returns 0 if the trip count is unknown or not constant.
-  unsigned getSmallConstantMaxTripCount(const Loop *L);
+  /// Returns 0 if the trip count is unknown, not constant or requires
+  /// SCEV predicates and \p Predicates is nullptr.
+  unsigned getSmallConstantMaxTripCount(
+      const Loop *L,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
   /// Returns the largest constant divisor of the trip count as a normal
   /// unsigned value, if possible. This means that the actual trip count is
@@ -904,6 +907,13 @@ public:
   const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L) {
     return getBackedgeTakenCount(L, ConstantMaximum);
   }
+
+  /// Similar to getConstantMaxBackedgeTakenCount, except it will add a set of
+  /// SCEV predicates to Predicates that are required to be true in order for
+  /// the answer to be correct. Predicates can be checked with run-time
+  /// checks and can be used to perform loop versioning.
+  const SCEV *getPredicatedConstantMaxBackedgeTakenCount(
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// When successful, this returns a SCEV that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -1506,7 +1516,7 @@ private:
 
     /// Expression indicating the least constant maximum backedge-taken count of
     /// the loop that is known, or a SCEVCouldNotCompute. This expression is
-    /// only valid if the redicates associated with all loop exits are true.
+    /// only valid if the predicates associated with all loop exits are true.
     const SCEV *ConstantMax = nullptr;
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
@@ -1585,7 +1595,9 @@ private:
     }
 
     /// Get the constant max backedge taken count for the loop.
-    const SCEV *getConstantMax(ScalarEvolution *SE) const;
+    const SCEV *getConstantMax(
+        ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Get the constant max backedge taken count for the particular loop exit.
     const SCEV *getConstantMax(

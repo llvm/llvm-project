@@ -82,9 +82,7 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE7:%.*]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP1]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP3]], i32 0
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i32 2
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
@@ -344,9 +342,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP2]], i32 0
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i32 16
 ; DEFAULT-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP6]], align 1

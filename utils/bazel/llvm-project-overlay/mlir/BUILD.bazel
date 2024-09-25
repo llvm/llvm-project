@@ -380,6 +380,7 @@ cc_library(
         ":TensorEncodingIncGen",
         ":config",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 
@@ -12973,6 +12974,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
+        ":FunctionInterfaces",
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",

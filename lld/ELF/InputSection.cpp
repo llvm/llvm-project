@@ -713,7 +713,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     return s.getVA(0) - tls->p_memsz -
            ((-tls->p_vaddr - tls->p_memsz) & (tls->p_align - 1));
   default:
-    llvm_unreachable("unhandled Config->EMachine");
+    llvm_unreachable("unhandled ctx.arg.emachine");
   }
 }
 
@@ -1129,7 +1129,7 @@ static void switchMorestackCallsToMorestackNonSplit(
   // If the target adjusted a function's prologue, all calls to
   // __morestack inside that function should be switched to
   // __morestack_non_split.
-  Symbol *moreStackNonSplit = symtab.find("__morestack_non_split");
+  Symbol *moreStackNonSplit = ctx.symtab->find("__morestack_non_split");
   if (!moreStackNonSplit) {
     error("mixing split-stack objects requires a definition of "
           "__morestack_non_split");

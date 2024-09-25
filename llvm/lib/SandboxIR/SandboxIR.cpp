@@ -569,6 +569,10 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
 }
 
+Type *Instruction::getAccessType() const {
+  return Ctx.getType(cast<llvm::Instruction>(Val)->getAccessType());
+}
+
 void Instruction::setHasApproxFunc(bool B) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&Instruction::hasApproxFunc,
@@ -2887,6 +2891,10 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Value::ConstantPtrAuthVal:
       It->second = std::unique_ptr<ConstantPtrAuth>(
           new ConstantPtrAuth(cast<llvm::ConstantPtrAuth>(C), *this));
+      break;
+    case llvm::Value::ConstantExprVal:
+      It->second = std::unique_ptr<ConstantExpr>(
+          new ConstantExpr(cast<llvm::ConstantExpr>(C), *this));
       break;
     default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));

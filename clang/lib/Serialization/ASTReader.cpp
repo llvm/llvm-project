@@ -3856,6 +3856,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case FUNCTION_DECL_TO_LAMBDAS_MAP:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
+        GlobalDeclID ID = ReadDeclID(F, Record, I);
+        auto &Lambdas = FunctionToLambdasMap[ID];
+        unsigned NN = Record[I++];
+        Lambdas.reserve(NN);
+        for (unsigned II = 0; II < NN; II++)
+          Lambdas.push_back(ReadDeclID(F, Record, I));
+      }
+      break;
+
     case OBJC_CATEGORIES_MAP:
       if (F.LocalNumObjCCategoriesInMap != 0)
         return llvm::createStringError(
@@ -7892,6 +7903,13 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
       return Context.TypePackElementDecl;
     NewLoaded = Context.getTypePackElementDecl();
     break;
+
+  case PREDEF_DECL_COMMON_TYPE_ID:
+    if (Context.BuiltinCommonTypeDecl)
+      return Context.BuiltinCommonTypeDecl;
+    NewLoaded = Context.getBuiltinCommonTypeDecl();
+    break;
+
   case NUM_PREDEF_DECL_IDS:
     llvm_unreachable("Invalid decl ID");
     break;

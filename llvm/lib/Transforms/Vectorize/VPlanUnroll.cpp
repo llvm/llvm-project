@@ -472,4 +472,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
     LO->setOperand(0, In);
   }
+
+  VPlanTransforms::removeDeadRecipes(Plan);
 }

@@ -1237,7 +1237,6 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = add <8 x i32> [[STRIDED_VEC]], [[STRIDED_VEC3]]
 ; FIXED-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], [[STRIDED_VEC4]]
 ; FIXED-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[Q]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP10]], i32 0
 ; FIXED-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP10]], i32 8
 ; FIXED-NEXT:    store <8 x i32> [[TMP8]], ptr [[TMP12]], align 4
@@ -1425,7 +1424,6 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[STRIDED_VEC]], [[STRIDED_VEC3]]
 ; FIXED-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], [[STRIDED_VEC4]]
 ; FIXED-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[Q]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
 ; FIXED-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP10]], i32 4
 ; FIXED-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP12]], align 8

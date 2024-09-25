@@ -631,13 +631,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     if (callNumResults != 0)
       callResult = dispatch.getResult(0);
   } else {
-    // TODO: gather other procedure attributes.
-    fir::FortranProcedureFlagsEnumAttr procAttrs;
-    if (caller.characterize().IsBindC())
-      procAttrs = fir::FortranProcedureFlagsEnumAttr::get(
-          builder.getContext(), fir::FortranProcedureFlagsEnum::bind_c);
-
     // Standard procedure call with fir.call.
+    fir::FortranProcedureFlagsEnumAttr procAttrs =
+        caller.getProcedureAttrs(builder.getContext());
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
 

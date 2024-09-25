@@ -43,11 +43,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
-; IF-EVL-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 4
-; IF-EVL-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 0
-; IF-EVL-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 1
-; IF-EVL-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp ule <vscale x 4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x i32], ptr [[B:%.*]], <vscale x 4 x i64> [[VEC_IND]], i32 0
@@ -61,7 +56,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER4]], [[WIDE_MASKED_GATHER]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER5]], [[WIDE_MASKED_GATHER3]]
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP13]]
-; IF-EVL-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP18]]
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP27]], i32 0
 ; IF-EVL-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 4
@@ -129,7 +123,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; NO-VP-NEXT:    [[TMP20:%.*]] = add nsw <vscale x 4 x i32> [[TMP16]], [[TMP15]]
 ; NO-VP-NEXT:    [[TMP21:%.*]] = add nsw <vscale x 4 x i32> [[TMP19]], [[TMP18]]
 ; NO-VP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
-; NO-VP-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
 ; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
 ; NO-VP-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 4

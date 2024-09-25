@@ -79,7 +79,8 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   if (!TheDef)
     return;
 
-  std::vector<Record *> Comps = TheDef->getValueAsListOfDefs("ComposedOf");
+  std::vector<const Record *> Comps =
+      TheDef->getValueAsListOfConstDefs("ComposedOf");
   if (!Comps.empty()) {
     if (Comps.size() != 2)
       PrintFatalError(TheDef->getLoc(),
@@ -91,8 +92,8 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
       PrintFatalError(TheDef->getLoc(), "Ambiguous ComposedOf entries");
   }
 
-  std::vector<Record *> Parts =
-      TheDef->getValueAsListOfDefs("CoveringSubRegIndices");
+  std::vector<const Record *> Parts =
+      TheDef->getValueAsListOfConstDefs("CoveringSubRegIndices");
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
@@ -167,8 +168,10 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
 }
 
 void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
-  std::vector<Record *> SRIs = TheDef->getValueAsListOfDefs("SubRegIndices");
-  std::vector<Record *> SRs = TheDef->getValueAsListOfDefs("SubRegs");
+  std::vector<const Record *> SRIs =
+      TheDef->getValueAsListOfConstDefs("SubRegIndices");
+  std::vector<const Record *> SRs =
+      TheDef->getValueAsListOfConstDefs("SubRegs");
 
   if (SRIs.size() != SRs.size())
     PrintFatalError(TheDef->getLoc(),
@@ -625,7 +628,8 @@ struct TupleExpander : SetTheory::Expander {
 
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
-    std::vector<Record *> Indices = Def->getValueAsListOfDefs("SubRegIndices");
+    std::vector<const Record *> Indices =
+        Def->getValueAsListOfConstDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
     if (Dim != SubRegs->size())
@@ -760,7 +764,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     : TheDef(R), Name(std::string(R->getName())),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
-  std::vector<Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
+  std::vector<const Record *> TypeList =
+      R->getValueAsListOfConstDefs("RegTypes");
   if (TypeList.empty())
     PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {

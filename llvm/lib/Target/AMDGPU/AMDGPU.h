@@ -405,9 +405,6 @@ extern char &SIModeRegisterID;
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
-void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
-extern char &AMDGPUInsertSingleUseVDSTID;
-
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
