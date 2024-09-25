@@ -51,9 +51,14 @@ static auto OnViolationAction(DiagnosticsInfo info) {
     IncrementTotalErrorCount();
 
     BufferedStackTrace stack;
-    stack.Unwind(info.pc, info.bp, nullptr,
-                 /*request_fast*/ true);
 
+    // We use the unwind_on_fatal flag here because of precedent with other
+    // sanitizers, this action is not necessarily fatal if halt_on_error=false
+    stack.Unwind(info.pc, info.bp, nullptr,
+                 common_flags()->fast_unwind_on_fatal);
+
+    // If in the future we interop with other sanitizers, we will
+    // need to make our own stackdepot
     StackDepotHandle handle = StackDepotPut_WithHandle(stack);
 
     const bool is_stack_novel = handle.use_count() == 0;
