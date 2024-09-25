@@ -276,7 +276,7 @@ if.false:                                    ; preds = %if.true, %entry
 }
 
 ;; Both of successor 0 and successor 1 have a single predecessor.
-define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
+define i32 @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @single_predecessor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
@@ -287,7 +287,8 @@ define void @single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP1]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 2, i32 3
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 entry:
   %tobool = icmp ne i32 %a, 0
@@ -295,12 +296,12 @@ entry:
 
 if.end:
   store i32 1, ptr %q
-  ret void
+  ret i32 2
 
 if.then:
   %0 = load i32, ptr %q
   store i32 %0, ptr %p
-  ret void
+  ret i32 3
 }
 
 ;; Hoist 6 stores.

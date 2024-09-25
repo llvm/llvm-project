@@ -1702,13 +1702,14 @@ static bool hoistConditionalLoadsStores(
       auto *Ty = I->getType();
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
-      for (User *U : I->users())
-        if ((PN = dyn_cast<PHINode>(U))) {
-          PassThru = Builder.CreateBitCast(
-              PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
-              FixedVectorType::get(Ty, 1));
-          break;
-        }
+      if (Invert)
+        for (User *U : I->users())
+          if ((PN = dyn_cast<PHINode>(U))) {
+            PassThru = Builder.CreateBitCast(
+                PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
+                FixedVectorType::get(Ty, 1));
+            break;
+          }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
@@ -1794,11 +1795,16 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
       Options.HoistLoadsStoresWithCondFaulting) {
     SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
     for (auto *Succ : successors(BB)) {
-      for (Instruction &I : drop_end(*Succ)) {
-        if (!isSafeCheapLoadStore(&I, TTI) ||
+      for (Instruction &I : *Succ) {
+        if (I.isTerminator()) {
+          if (I.getNumSuccessors() > 1)
+            return false;
+          continue;
+        } else if (!isSafeCheapLoadStore(&I, TTI) ||
             SpeculatedConditionalLoadsStores.size() ==
-                HoistLoadsStoresWithCondFaultingThreshold)
+                HoistLoadsStoresWithCondFaultingThreshold) {
           return false;
+        }
         SpeculatedConditionalLoadsStores.push_back(&I);
       }
     }
