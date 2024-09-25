@@ -160,7 +160,7 @@ public:
     insert(R.begin(), R.end());
   }
 
-  SmallSet(std::initializer_list<T> L) { this->insert(L.begin(), L.end()); }
+  SmallSet(std::initializer_list<T> L) { insert(L.begin(), L.end()); }
 
   SmallSet &operator=(const SmallSet &) = default;
   SmallSet &operator=(SmallSet &&) = default;
