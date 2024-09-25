@@ -192,6 +192,7 @@ set(GENERIC_SOURCES
 set(BF16_SOURCES
     extendbfsf2.c
     truncdfbf2.c
+    truncxfbf2.c
     truncsfbf2.c
 )
 

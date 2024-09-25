@@ -43,9 +43,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI leap_second(const leap_second&)            = default;
   _LIBCPP_HIDE_FROM_ABI leap_second& operator=(const leap_second&) = default;
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
 
 private:
   sys_seconds __date_;

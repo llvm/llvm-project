@@ -5,6 +5,8 @@ static_library("SandboxIR") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "Pass.cpp",
+    "PassManager.cpp",
     "SandboxIR.cpp",
     "Tracker.cpp",
     "Type.cpp",

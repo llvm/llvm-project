@@ -10,6 +10,7 @@
 #define _LIBCPP___CSTDDEF_BYTE_H
 
 #include <__config>
+#include <__fwd/byte.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
 

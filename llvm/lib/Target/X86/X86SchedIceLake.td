@@ -633,13 +633,13 @@ def ICXWriteResGroup1 : SchedWriteRes<[ICXPort0]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
-                                            "KANDN(B|D|Q|W)rr",
+def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)kk",
+                                            "KANDN(B|D|Q|W)kk",
                                             "KMOV(B|D|Q|W)kk",
-                                            "KNOT(B|D|Q|W)rr",
-                                            "KOR(B|D|Q|W)rr",
-                                            "KXNOR(B|D|Q|W)rr",
-                                            "KXOR(B|D|Q|W)rr",
+                                            "KNOT(B|D|Q|W)kk",
+                                            "KOR(B|D|Q|W)kk",
+                                            "KXNOR(B|D|Q|W)kk",
+                                            "KXOR(B|D|Q|W)kk",
                                             "KSET0(B|D|Q|W)", // Same as KXOR
                                             "KSET1(B|D|Q|W)", // Same as KXNOR
                                             "MMX_PADDS(B|W)rr",
@@ -651,10 +651,10 @@ def: InstRW<[ICXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
                                             "MMX_P(MAX|MIN)UBrr",
                                             "MMX_PSUBS(B|W)rr",
                                             "MMX_PSUBUS(B|W)rr",
-                                            "VPMOVB2M(Z|Z128|Z256)rr",
-                                            "VPMOVD2M(Z|Z128|Z256)rr",
-                                            "VPMOVQ2M(Z|Z128|Z256)rr",
-                                            "VPMOVW2M(Z|Z128|Z256)rr")>;
+                                            "VPMOVB2M(Z|Z128|Z256)kr",
+                                            "VPMOVD2M(Z|Z128|Z256)kr",
+                                            "VPMOVQ2M(Z|Z128|Z256)kr",
+                                            "VPMOVW2M(Z|Z128|Z256)kr")>;
 
 def ICXWriteResGroup3 : SchedWriteRes<[ICXPort5]> {
   let Latency = 1;
@@ -826,8 +826,8 @@ def ICXWriteResGroup30 : SchedWriteRes<[ICXPort0]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[ICXWriteResGroup30], (instregex "KMOV(B|D|Q|W)rk",
-                                             "KORTEST(B|D|Q|W)rr",
-                                             "KTEST(B|D|Q|W)rr")>;
+                                             "KORTEST(B|D|Q|W)kk",
+                                             "KTEST(B|D|Q|W)kk")>;
 
 def ICXWriteResGroup31 : SchedWriteRes<[ICXPort1]> {
   let Latency = 3;
@@ -854,10 +854,10 @@ def ICXWriteResGroup33 : SchedWriteRes<[ICXPort5]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup33], (instregex "KADD(B|D|Q|W)rr",
-                                             "KSHIFTL(B|D|Q|W)ri",
-                                             "KSHIFTR(B|D|Q|W)ri",
-                                             "KUNPCK(BW|DQ|WD)rr",
+def: InstRW<[ICXWriteResGroup33], (instregex "KADD(B|D|Q|W)kk",
+                                             "KSHIFTL(B|D|Q|W)ki",
+                                             "KSHIFTR(B|D|Q|W)ki",
+                                             "KUNPCK(BW|DQ|WD)kk",
                                              "VCMPPD(Z|Z128|Z256)rri",
                                              "VCMPPS(Z|Z128|Z256)rri",
                                              "VCMP(SD|SS)Zrr",
@@ -884,7 +884,7 @@ def ICXWriteResGroup36 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rr")>;
+def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rri")>;
 
 def ICXWriteResGroup37 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let Latency = 3;
@@ -1034,7 +1034,7 @@ def ICXWriteResGroup53 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let NumMicroOps = 3;
   let ReleaseAtCycles = [1,1,1];
 }
-def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mr")>;
+def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mri")>;
 
 def ICXWriteResGroup54 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let Latency = 4;
@@ -1576,19 +1576,19 @@ def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                               "VBROADCASTF32X2Z256rm(b?)",
                                               "VBROADCASTF32X2Zrm(b?)",
                                               "VBROADCASTF32X4Z256rm(b?)",
-                                              "VBROADCASTF32X4rm(b?)",
-                                              "VBROADCASTF32X8rm(b?)",
-                                              "VBROADCASTF64X2Z128rm(b?)",
-                                              "VBROADCASTF64X2rm(b?)",
-                                              "VBROADCASTF64X4rm(b?)",
+                                              "VBROADCASTF32X4Zrm(b?)",
+                                              "VBROADCASTF32X8Zrm(b?)",
+                                              "VBROADCASTF64X2Z256rm(b?)",
+                                              "VBROADCASTF64X2Zrm(b?)",
+                                              "VBROADCASTF64X4Zrm(b?)",
                                               "VBROADCASTI32X2Z256rm(b?)",
                                               "VBROADCASTI32X2Zrm(b?)",
                                               "VBROADCASTI32X4Z256rm(b?)",
-                                              "VBROADCASTI32X4rm(b?)",
-                                              "VBROADCASTI32X8rm(b?)",
-                                              "VBROADCASTI64X2Z128rm(b?)",
-                                              "VBROADCASTI64X2rm(b?)",
-                                              "VBROADCASTI64X4rm(b?)",
+                                              "VBROADCASTI32X4Zrm(b?)",
+                                              "VBROADCASTI32X8Zrm(b?)",
+                                              "VBROADCASTI64X2Z256rm(b?)",
+                                              "VBROADCASTI64X2Zrm(b?)",
+                                              "VBROADCASTI64X4Zrm(b?)",
                                               "VBROADCASTSD(Z|Z256)rm(b?)",
                                               "VBROADCASTSS(Z|Z256)rm(b?)",
                                               "VINSERTF32x4(Z|Z256)rm(b?)",

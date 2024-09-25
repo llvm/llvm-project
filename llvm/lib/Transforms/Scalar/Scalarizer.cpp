@@ -18,6 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -36,6 +37,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -280,16 +282,19 @@ T getWithDefaultOverride(const cl::opt<T> &ClOption,
 
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
-  ScalarizerVisitor(DominatorTree *DT, ScalarizerPassOptions Options)
-      : DT(DT), ScalarizeVariableInsertExtract(getWithDefaultOverride(
-                    ClScalarizeVariableInsertExtract,
-                    Options.ScalarizeVariableInsertExtract)),
+  ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
+                    ScalarizerPassOptions Options)
+      : DT(DT), TTI(TTI), ScalarizeVariableInsertExtract(getWithDefaultOverride(
+                              ClScalarizeVariableInsertExtract,
+                              Options.ScalarizeVariableInsertExtract)),
         ScalarizeLoadStore(getWithDefaultOverride(ClScalarizeLoadStore,
                                                   Options.ScalarizeLoadStore)),
         ScalarizeMinBits(getWithDefaultOverride(ClScalarizeMinBits,
                                                 Options.ScalarizeMinBits)) {}
 
   bool visit(Function &F);
+
+  bool isTriviallyScalarizable(Intrinsic::ID ID);
 
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
@@ -334,13 +339,40 @@ private:
   SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
 
   DominatorTree *DT;
+  const TargetTransformInfo *TTI;
 
   const bool ScalarizeVariableInsertExtract;
   const bool ScalarizeLoadStore;
   const unsigned ScalarizeMinBits;
 };
 
+class ScalarizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  ScalarizerPassOptions Options;
+  ScalarizerLegacyPass() : FunctionPass(ID), Options() {}
+  ScalarizerLegacyPass(const ScalarizerPassOptions &Options);
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
 } // end anonymous namespace
+
+ScalarizerLegacyPass::ScalarizerLegacyPass(const ScalarizerPassOptions &Options)
+    : FunctionPass(ID), Options(Options) {}
+
+void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+}
+
+char ScalarizerLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
+                      "Scalarize vector operations", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
+                    "Scalarize vector operations", false, false)
 
 Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
                      const VectorSplit &VS, ValueVector *cachePtr)
@@ -412,6 +444,21 @@ Value *Scatterer::operator[](unsigned Frag) {
   }
 
   return CV[Frag];
+}
+
+bool ScalarizerLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  const TargetTransformInfo *TTI =
+      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  ScalarizerVisitor Impl(DT, TTI, Options);
+  return Impl.visit(F);
+}
+
+FunctionPass *llvm::createScalarizerPass(const ScalarizerPassOptions &Options) {
+  return new ScalarizerLegacyPass(Options);
 }
 
 bool ScalarizerVisitor::visit(Function &F) {
@@ -650,8 +697,11 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   return true;
 }
 
-static bool isTriviallyScalariable(Intrinsic::ID ID) {
-  return isTriviallyVectorizable(ID);
+bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+  return Function::isTargetIntrinsic(ID) &&
+         TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 
 /// If a call to a vector typed intrinsic function, split into a scalar call per
@@ -666,7 +716,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     return false;
 
   Intrinsic::ID ID = F->getIntrinsicID();
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalariable(ID))
+
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -1210,7 +1261,8 @@ bool ScalarizerVisitor::finish() {
 
 PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  ScalarizerVisitor Impl(DT, Options);
+  const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
+  ScalarizerVisitor Impl(DT, TTI, Options);
   bool Changed = Impl.visit(F);
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();

@@ -204,9 +204,8 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
               printwordmem(MI, CurOp++, OS);
             else
               printdwordmem(MI, CurOp++, OS);
-          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD) {
-            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
-                   "Unexpected op map!");
+          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD &&
+                     (Desc.TSFlags & X86II::OpMapMask) != X86II::TA) {
             printqwordmem(MI, CurOp++, OS);
           } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp++, OS);
@@ -488,8 +487,7 @@ void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86IntelInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                             raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     OS << "st(0)";

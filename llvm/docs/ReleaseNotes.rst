@@ -54,6 +54,15 @@ Changes to the LLVM IR
   the standard vector type ``<1 x i64>`` in bitcode upgrade.
 * Renamed ``llvm.experimental.stepvector`` intrinsic to ``llvm.stepvector``.
 
+* Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
+
+* Remove the following intrinsics which can be replaced with a ``bitcast``:
+
+  * ``llvm.nvvm.bitcast.f2i``
+  * ``llvm.nvvm.bitcast.i2f``
+  * ``llvm.nvvm.bitcast.d2ll``
+  * ``llvm.nvvm.bitcast.ll2d``
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -121,6 +130,8 @@ Changes to the RISC-V Backend
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 * Added ``Smctr`` and ``Ssctr`` extensions.
+* ``-mcpu=syntacore-scr7`` was added.
+* The ``Zacas`` extension is no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -193,6 +204,15 @@ Changes to the C API
 * The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
   personality function and initializer respectively by passing a null pointer.
 
+* The following functions are added to allow iterating over debug records attached to
+  instructions:
+
+  * ``LLVMGetFirstDbgRecord``
+  * ``LLVMGetLastDbgRecord``
+  * ``LLVMGetNextDbgRecord``
+  * ``LLVMGetPreviousDbgRecord``
+
+* Added ``LLVMAtomicRMWBinOpUSubCond`` and ``LLVMAtomicRMWBinOpUSubSat`` to ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

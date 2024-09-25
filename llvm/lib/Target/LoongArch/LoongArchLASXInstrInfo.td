@@ -1789,6 +1789,12 @@ def : Pat<(v4i32 (fp_to_uint (v4f64 LASX256:$vj))),
                                                      v4f64:$vj)),
                           sub_128)>;
 
+// XVPERMI_Q
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
+def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
+          (XVPERMI_Q (SUBREG_TO_REG (i64 0), LSX128:$vd, sub_128),
+                     (SUBREG_TO_REG (i64 0), LSX128:$vj, sub_128), 2)>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern

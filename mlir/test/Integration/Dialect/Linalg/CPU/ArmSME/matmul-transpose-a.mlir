@@ -82,8 +82,16 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_masks
+      transform.apply_patterns.canonicalization
     } : !transform.any_op
 
+    // Step 5 (optional optimization): Hoist accumulator load/store.
+    %func_h = transform.structured.hoist_redundant_vector_transfers %func
+        : (!transform.any_op) -> !transform.any_op
+    %all_loops = transform.structured.match interface{LoopLikeInterface} in %module
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_licm to %all_loops : !transform.any_op
+    transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
     transform.yield
   }
 }

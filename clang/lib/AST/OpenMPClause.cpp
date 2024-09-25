@@ -1125,16 +1125,12 @@ unsigned OMPClauseMappableExprCommon::getComponentsTotalNumber(
 
 unsigned OMPClauseMappableExprCommon::getUniqueDeclarationsTotalNumber(
     ArrayRef<const ValueDecl *> Declarations) {
-  unsigned TotalNum = 0u;
-  llvm::SmallPtrSet<const ValueDecl *, 8> Cache;
+  llvm::SmallPtrSet<const ValueDecl *, 8> UniqueDecls;
   for (const ValueDecl *D : Declarations) {
     const ValueDecl *VD = D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
-    if (Cache.count(VD))
-      continue;
-    ++TotalNum;
-    Cache.insert(VD);
+    UniqueDecls.insert(VD);
   }
-  return TotalNum;
+  return UniqueDecls.size();
 }
 
 OMPMapClause *OMPMapClause::Create(

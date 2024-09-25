@@ -560,7 +560,7 @@ void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
     // If we haven't actually launched the process yet, this was an error
     // launching the process.  Set the internal error and signal the initial
     // stop event so that the DoLaunch method wakes up and returns a failure.
-    m_session_data->m_launch_error = error;
+    m_session_data->m_launch_error = error.Clone();
     ::SetEvent(m_session_data->m_initial_stop_event);
     LLDB_LOG(log,
              "Error {0} occurred launching the process before the initial "
@@ -582,7 +582,7 @@ Status ProcessDebugger::WaitForDebuggerConnection(DebuggerThreadSP debugger,
     LLDB_LOG(log, "hit loader breakpoint, returning.");
 
     process = debugger->GetProcess();
-    return m_session_data->m_launch_error;
+    return m_session_data->m_launch_error.Clone();
   } else
     return Status(::GetLastError(), eErrorTypeWin32);
 }

@@ -12,6 +12,9 @@
 #ifndef OMPTARGET_TYPES_H
 #define OMPTARGET_TYPES_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 // Tell the compiler that we do not have any "call-like" inline assembly in the
 // device rutime. That means we cannot have inline assembly which will call
 // another function but only inline assembly that performs some operation or
@@ -20,32 +23,6 @@
 //
 // TODO: Find a good place for this
 #pragma omp assumes ext_no_call_asm
-
-/// Base type declarations for freestanding mode
-///
-///{
-using int8_t = char;
-using uint8_t = unsigned char;
-using int16_t = short;
-using uint16_t = unsigned short;
-using int32_t = int;
-using uint32_t = unsigned int;
-using int64_t = long;
-using uint64_t = unsigned long;
-using size_t = decltype(sizeof(char));
-// TODO: Properly implement this
-using intptr_t = int64_t;
-using uintptr_t = uint64_t;
-
-static_assert(sizeof(int8_t) == 1, "type size mismatch");
-static_assert(sizeof(uint8_t) == 1, "type size mismatch");
-static_assert(sizeof(int16_t) == 2, "type size mismatch");
-static_assert(sizeof(uint16_t) == 2, "type size mismatch");
-static_assert(sizeof(int32_t) == 4, "type size mismatch");
-static_assert(sizeof(uint32_t) == 4, "type size mismatch");
-static_assert(sizeof(int64_t) == 8, "type size mismatch");
-static_assert(sizeof(uint64_t) == 8, "type size mismatch");
-///}
 
 enum omp_proc_bind_t {
   omp_proc_bind_false = 0,

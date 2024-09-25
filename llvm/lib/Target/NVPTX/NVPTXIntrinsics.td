@@ -978,6 +978,22 @@ def INT_NVVM_FABS_D : F_MATH_1<"abs.f64 \t$dst, $src0;", Float64Regs,
   Float64Regs, int_nvvm_fabs_d>;
 
 //
+// copysign
+//
+
+def fcopysign_nvptx : SDNode<"NVPTXISD::FCOPYSIGN", SDTFPBinOp>;
+
+def COPYSIGN_F :
+    NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src0, Float32Regs:$src1),
+              "copysign.f32 \t$dst, $src0, $src1;",
+              [(set Float32Regs:$dst, (fcopysign_nvptx Float32Regs:$src1, Float32Regs:$src0))]>;
+
+def COPYSIGN_D :
+    NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src0, Float64Regs:$src1),
+              "copysign.f64 \t$dst, $src0, $src1;",
+              [(set Float64Regs:$dst, (fcopysign_nvptx Float64Regs:$src1, Float64Regs:$src0))]>;
+
+//
 // Abs, Neg bf16, bf16x2
 //
 
@@ -1560,20 +1576,6 @@ def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
           (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN)>;
 def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
           (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
-
-//
-// Bitcast
-//
-
-def INT_NVVM_BITCAST_F2I : F_MATH_1<"mov.b32 \t$dst, $src0;", Int32Regs,
-  Float32Regs, int_nvvm_bitcast_f2i>;
-def INT_NVVM_BITCAST_I2F : F_MATH_1<"mov.b32 \t$dst, $src0;", Float32Regs,
-  Int32Regs, int_nvvm_bitcast_i2f>;
-
-def INT_NVVM_BITCAST_LL2D : F_MATH_1<"mov.b64 \t$dst, $src0;", Float64Regs,
-  Int64Regs, int_nvvm_bitcast_ll2d>;
-def INT_NVVM_BITCAST_D2LL : F_MATH_1<"mov.b64 \t$dst, $src0;", Int64Regs,
-  Float64Regs, int_nvvm_bitcast_d2ll>;
 
 //
 // FNS

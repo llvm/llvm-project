@@ -688,8 +688,7 @@ define float @fabs_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: fabs_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    slli a0, a0, 1
-; RV32IZFINX-NEXT:    srli a0, a0, 1
+; RV32IZFINX-NEXT:    fabs.s a0, a0
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IF-LABEL: fabs_f32:

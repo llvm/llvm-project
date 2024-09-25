@@ -10,6 +10,7 @@
   define amdgpu_cs_chain void @preserve_inactive_wwm() {ret void}
   define amdgpu_cs_chain void @preserve_inactive_detected_wwm() {ret void}
   define amdgpu_cs_chain void @dont_preserve_wwm_if_no_chain_calls() {ret void}
+  define amdgpu_cs_chain void @dont_preserve_wwm_if_init_whole_wave() {ret void}
   define amdgpu_cs_chain void @dont_preserve_non_wwm() {ret void}
   define amdgpu_cs_chain void @dont_preserve_v0_v7() {ret void}
   define amdgpu_cs_chain void @dont_preserve_sgpr() {ret void}
@@ -131,6 +132,34 @@ body:             |
     $sgpr35 = SI_RESTORE_S32_FROM_VGPR $vgpr8, 0
     renamable $vgpr8 = V_MOV_B32_e32 10, implicit $exec
     S_ENDPGM 0
+...
+
+---
+name:            dont_preserve_wwm_if_init_whole_wave
+tracksRegLiveness: true
+frameInfo:
+  hasTailCall: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+  returnsVoid: true
+  wwmReservedRegs:
+    - '$vgpr8'
+    - '$vgpr9'
+  hasInitWholeWave: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
+
+    ; GCN-LABEL: name: dont_preserve_wwm_if_init_whole_wave
+    ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+    renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
+    SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+
 ...
 
 ---

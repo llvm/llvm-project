@@ -161,7 +161,7 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     Align &Alignment) const {
-  if (isConstantInSmallSection(DL, C)) {
+  if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
     if (Kind.isMergeableConst8())

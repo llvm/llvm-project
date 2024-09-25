@@ -106,7 +106,6 @@ static std::string print(std::function<void(raw_ostream &OS)> PrintFn) {
   std::string Str;
   raw_string_ostream OS(Str);
   PrintFn(OS);
-  OS.flush();
   return Str;
 }
 

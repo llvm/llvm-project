@@ -569,12 +569,11 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     return {};
 
   // If this module has been handled already, just return its ID.
-  auto ModI = MDC.ModularDeps.insert({M, nullptr});
-  if (!ModI.second)
-    return ModI.first->second->ID;
+  if (auto ModI = MDC.ModularDeps.find(M); ModI != MDC.ModularDeps.end())
+    return ModI->second->ID;
 
-  ModI.first->second = std::make_unique<ModuleDeps>();
-  ModuleDeps &MD = *ModI.first->second;
+  auto OwnedMD = std::make_unique<ModuleDeps>();
+  ModuleDeps &MD = *OwnedMD;
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
@@ -649,6 +648,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.addOutputPaths(CI, MD);
 
   MD.BuildInfo = std::move(CI);
+
+  MDC.ModularDeps.insert({M, std::move(OwnedMD)});
 
   return MD.ID;
 }

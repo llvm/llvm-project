@@ -80,10 +80,10 @@ void emitEncodingMacrosUndef(raw_ostream &OS) {
      << "#undef " << EncodeMacroName << "8\n";
 }
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
                                     int HwModeIdx) {
   std::string Name = "GIFBS";
-  for (const auto &Feature : FeatureBitset)
+  for (const Record *Feature : FeatureBitset)
     Name += ("_" + Feature->getName()).str();
   if (HwModeIdx >= 0)
     Name += ("_HwMode" + std::to_string(HwModeIdx));
@@ -822,7 +822,7 @@ SaveAndRestore<GISelFlags> RuleMatcher::setGISelFlags(const Record *R) {
 }
 
 Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
-                                           Record *ComplexPattern,
+                                           const Record *ComplexPattern,
                                            unsigned RendererID,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
@@ -859,14 +859,6 @@ void RuleMatcher::addRequiredSimplePredicate(StringRef PredName) {
 
 const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
   return RequiredSimplePredicates;
-}
-
-void RuleMatcher::addRequiredFeature(Record *Feature) {
-  RequiredFeatures.push_back(Feature);
-}
-
-const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
-  return RequiredFeatures;
 }
 
 unsigned RuleMatcher::implicitlyDefineInsnVar(InstructionMatcher &Matcher) {

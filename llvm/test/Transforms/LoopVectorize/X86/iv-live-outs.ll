@@ -25,9 +25,6 @@ define i64 @test_pr98660(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP9]], i32 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP9]], i32 16

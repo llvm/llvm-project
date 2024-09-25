@@ -2571,8 +2571,8 @@ with the `offsetof` macro.
 
 .. _alpha-core-StackAddressAsyncEscape:
 
-alpha.core.StackAddressAsyncEscape (C)
-""""""""""""""""""""""""""""""""""""""
+alpha.core.StackAddressAsyncEscape (ObjC)
+"""""""""""""""""""""""""""""""""""""""""
 Check that addresses to stack memory do not escape the function that involves dispatch_after or dispatch_async.
 This checker is a part of ``core.StackAddressEscape``, but is temporarily disabled until some false positives are fixed.
 

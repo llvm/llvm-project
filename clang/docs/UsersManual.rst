@@ -2410,6 +2410,39 @@ are listed below.
   link-time optimizations like whole program inter-procedural basic block
   reordering.
 
+.. option:: -fcodegen-data-generate[=<path>]
+
+  Emit the raw codegen (CG) data into custom sections in the object file.
+  Currently, this option also combines the raw CG data from the object files
+  into an indexed CG data file specified by the <path>, for LLD MachO only.
+  When the <path> is not specified, `default.cgdata` is created.
+  The CG data file combines all the outlining instances that occurred locally
+  in each object file.
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+
+  For linkers that do not yet support this feature, `llvm-cgdata` can be used
+  manually to merge this CG data in object files.
+
+  .. code-block:: console
+
+    $ clang -c -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+    $ llvm-cgdata --merge -o default.cgdata code.o
+
+.. option:: -fcodegen-data-use[=<path>]
+
+  Read the codegen data from the specified path to more effectively outline
+  functions across compilation units. When the <path> is not specified,
+  `default.cgdata` is used. This option can create many identically outlined
+  functions that can be optimized by the conventional linker’s identical code
+  folding (ICF).
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
+
 Profile Guided Optimization
 ---------------------------
 

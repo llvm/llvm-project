@@ -654,7 +654,7 @@ void BackendConsumer::UnsupportedDiagHandler(
   auto DiagType = D.getSeverity() == llvm::DS_Error
                       ? diag::err_fe_backend_unsupported
                       : diag::warn_fe_backend_unsupported;
-  Diags.Report(Loc, DiagType) << MsgStream.str();
+  Diags.Report(Loc, DiagType) << Msg;
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -691,9 +691,7 @@ void BackendConsumer::EmitOptimizationMessage(
   if (D.getHotness())
     MsgStream << " (hotness: " << *D.getHotness() << ")";
 
-  Diags.Report(Loc, DiagID)
-      << AddFlagValue(D.getPassName())
-      << MsgStream.str();
+  Diags.Report(Loc, DiagID) << AddFlagValue(D.getPassName()) << Msg;
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information

@@ -375,6 +375,9 @@ def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true
 def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
                                               "Prefer 32-bit alignment for loops">;
 
+def FeaturePrefLoopAlign64 : SubtargetFeature<"loop-align-64", "PrefLoopLogAlignment","3",
+                                              "Prefer 64-bit alignment for loops">;
+
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture">;
 
