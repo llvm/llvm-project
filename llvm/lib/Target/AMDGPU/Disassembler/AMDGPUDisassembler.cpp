@@ -1847,9 +1847,10 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
   }
 }
 
-MCOperand AMDGPUDisassembler::decodeGVGPR(unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeGVGPR(OpWidthTy OpWidth,
+                                          unsigned Val) const {
   assert(isUInt<10>(Val));
-  return createRegOperand(AMDGPU::VGPR_32RegClassID, Val);
+  return createRegOperand(getVgprClassId(OpWidth), Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeGSrcSimple(unsigned Val) const {

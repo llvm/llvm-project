@@ -2029,6 +2029,12 @@ class getVOPMSSrcForVT<ValueType VT>{
                               !eq(VT, bf16) : SSrc_bf16);
 }
 
+// Return type of GVGPR operand.
+class getGVGPRforVT<ValueType VT>{
+  RegisterOperand ret = !cond(!eq(VT.Size, 32)  : GVGPR_32,
+                              !eq(VT.Size, 64)  : GVGPR_64);
+}
+
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
 class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> {
   dag ret = !if(!eq(NumSrcArgs, 1), (ins Src0RC:$src0),               // VOP1

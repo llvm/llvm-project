@@ -233,7 +233,7 @@ def IterationCnt {
 class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
   bit HasAux = _HasAux;
 
-  let DstRC = GVGPR;
+  let DstRC = getGVGPRforVT<ArgTy[0]>.ret;
   let Src0RC64 = GSrcSimple;
   let Src1RC64 = !if(!eq(Src1VT, i64), SCSrc_b64, GSrcSimple);
   let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)));
@@ -244,6 +244,7 @@ class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy,
   let Asm64 = "$vdst, $src0"#Src1Asm#AuxDataAsm;
 }
 
+def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]>;
 def VOPM_I32_I32_I32 : VOP2M_Profile<[i32, i32, i32, untyped]>;
 def VOPM_I32_I32_I32_AUX : VOP2M_Profile<[i32, i32, i32, untyped], 1>;
 def VOPM_I32_I32_AUX : VOP2M_Profile<[i32, i32, untyped, untyped], 1>;
@@ -587,7 +588,7 @@ class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolowe
   let Uses = [EXEC];
 }
 
-def V_MOV_2SRC_B64               : VOPM_Pseudo<VOPM_I32_I32_I32>;
+def V_MOV_2SRC_B64               : VOPM_Pseudo<VOPM_I64_I32_I32>;
 def V_BPERMUTE_B32               : VOPM_Pseudo<VOPM_I32_I32_I32,
                                                [(set i32:$vdst, (int_amdgcn_bpermute_b32 i32:$src0, i32:$src1))]>;
 

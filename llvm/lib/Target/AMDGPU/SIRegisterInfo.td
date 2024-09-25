@@ -1307,14 +1307,17 @@ def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 //  GVGPR Operands
 //===----------------------------------------------------------------------===//
 
-def GVGPR : RegisterOperand<VGPR_32_STAGING> {
+class GVGPROp<RegisterClass regClass, string width> : RegisterOperand<regClass> {
   let EncoderMethod = "encodeGVGPR";
   let DecoderMethod =
     "[](MCInst & Inst, unsigned Val, uint64_t /*Addr*/, "
     "const MCDisassembler *Decoder) { return addOperand(Inst, "
-    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGVGPR(Val)); }";
+    "static_cast<const AMDGPUDisassembler *>(Decoder)->decodeGVGPR(AMDGPUDisassembler::"# width # ", Val)); }";
   let PrintMethod = "printGVGPR";
 }
+
+def GVGPR_32 : GVGPROp<VGPR_32, "OPW32">;
+def GVGPR_64 : GVGPROp<VReg_64, "OPW64">;
 
 def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let EncoderMethod = "encodeGSrcSimple";
