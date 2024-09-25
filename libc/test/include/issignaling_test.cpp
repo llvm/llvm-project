@@ -14,7 +14,5 @@
 #ifdef issignaling
 LIST_ISSIGNALING_TESTS(double, issignaling)
 #else
-int main() {
-    return 0;
-}
+int main() { return 0; }
 #endif
