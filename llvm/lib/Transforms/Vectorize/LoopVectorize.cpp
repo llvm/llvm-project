@@ -408,10 +408,11 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 /// the following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
-///   3) Returns upper bound estimate if it is known.
+///   3) Returns upper bound estimate if known, and if CanUseConstantMax.
 ///   4) Returns std::nullopt if all of the above failed.
-static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
-                                                   Loop *L) {
+static std::optional<unsigned>
+getSmallBestKnownTC(ScalarEvolution &SE, Loop *L,
+                    bool CanUseConstantMax = true) {
   // Check if exact trip count is known.
   if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))
     return ExpectedTC;
@@ -420,6 +421,9 @@ static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
   if (LoopVectorizeWithBlockFrequency)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
       return *EstimatedTC;
+
+  if (!CanUseConstantMax)
+    return std::nullopt;
 
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
@@ -1962,7 +1966,8 @@ public:
           unsigned BestTripCount = 2;
 
           // Get the best known TC estimate.
-          if (auto EstimatedTC = getSmallBestKnownTC(*SE, OuterLoop))
+          if (auto EstimatedTC = getSmallBestKnownTC(
+                  *SE, OuterLoop, /* CanUseConstantMax = */ false))
             BestTripCount = *EstimatedTC;
 
           BestTripCount = std::max(BestTripCount, 1U);
