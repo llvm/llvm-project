@@ -4117,8 +4117,8 @@ def warn_expect_more_underlying_mutexes : Warning<
 def warn_expect_fewer_underlying_mutexes : Warning<
   "did not expect %0 '%2' to be managed by '%1'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
-def note_managed_mismatch_here_for_param : Note<
-  "see attribute on parameter here">;
+def note_managed_mismatch_here : Note<
+  "see attribute on %select{function|parameter}0 here">;
 
 
 // Thread safety warnings negative capabilities
