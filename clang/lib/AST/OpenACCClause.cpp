@@ -24,6 +24,7 @@ bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
+         OpenACCTileClause::classof(C) ||
          OpenACCClauseWithSingleIntExpr::classof(C) ||
          OpenACCClauseWithVarList::classof(C);
 }
@@ -221,6 +222,16 @@ OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
   return new (Mem) OpenACCNumGangsClause(BeginLoc, LParenLoc, IntExprs, EndLoc);
 }
 
+OpenACCTileClause *OpenACCTileClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> SizeExprs,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCTileClause::totalSizeToAlloc<Expr *>(SizeExprs.size()));
+  return new (Mem) OpenACCTileClause(BeginLoc, LParenLoc, SizeExprs, EndLoc);
+}
+
 OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
                                                    SourceLocation BeginLoc,
                                                    SourceLocation LParenLoc,
@@ -416,6 +427,13 @@ void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
 void OpenACCClausePrinter::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   OS << "num_gangs(";
   llvm::interleaveComma(C.getIntExprs(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitTileClause(const OpenACCTileClause &C) {
+  OS << "tile(";
+  llvm::interleaveComma(C.getSizeExprs(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
 }
