@@ -478,6 +478,13 @@ public:
   // applies to. nullptr if there is no 'musttail' on the current statement.
   const clang::CallExpr *MustTailCall = nullptr;
 
+  /// The attributes of cases collected during emitting the body of a switch
+  /// stmt.
+  llvm::SmallVector<llvm::SmallVector<mlir::Attribute, 4>, 2> caseAttrsStack;
+
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+
   clang::ASTContext &getContext() const;
 
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -1210,13 +1217,9 @@ public:
   buildDefaultStmt(const clang::DefaultStmt &S, mlir::Type condType,
                    SmallVector<mlir::Attribute, 4> &caseAttrs);
 
-  mlir::LogicalResult
-  buildSwitchCase(const clang::SwitchCase &S, mlir::Type condType,
-                  SmallVector<mlir::Attribute, 4> &caseAttrs);
+  mlir::LogicalResult buildSwitchCase(const clang::SwitchCase &S);
 
-  mlir::LogicalResult
-  buildSwitchBody(const clang::Stmt *S, mlir::Type condType,
-                  SmallVector<mlir::Attribute, 4> &caseAttrs);
+  mlir::LogicalResult buildSwitchBody(const clang::Stmt *S);
 
   mlir::cir::FuncOp generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
                                  const CIRGenFunctionInfo &FnInfo);

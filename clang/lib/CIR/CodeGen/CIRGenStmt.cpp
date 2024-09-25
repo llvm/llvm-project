@@ -303,8 +303,7 @@ mlir::LogicalResult CIRGenFunction::buildSimpleStmt(const Stmt *S,
 
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
-    assert(0 &&
-           "Should not get here, currently handled directly from SwitchStmt");
+    return buildSwitchCase(cast<SwitchCase>(*S));
     break;
 
   case Stmt::BreakStmtClass:
@@ -715,14 +714,19 @@ CIRGenFunction::buildDefaultStmt(const DefaultStmt &S, mlir::Type condType,
   return buildCaseDefaultCascade(&S, condType, caseAttrs);
 }
 
-mlir::LogicalResult
-CIRGenFunction::buildSwitchCase(const SwitchCase &S, mlir::Type condType,
-                                SmallVector<mlir::Attribute, 4> &caseAttrs) {
+mlir::LogicalResult CIRGenFunction::buildSwitchCase(const SwitchCase &S) {
+  assert(!caseAttrsStack.empty() &&
+         "build switch case without seeting case attrs");
+  assert(!condTypeStack.empty() &&
+         "build switch case without specifying the type of the condition");
+
   if (S.getStmtClass() == Stmt::CaseStmtClass)
-    return buildCaseStmt(cast<CaseStmt>(S), condType, caseAttrs);
+    return buildCaseStmt(cast<CaseStmt>(S), condTypeStack.back(),
+                         caseAttrsStack.back());
 
   if (S.getStmtClass() == Stmt::DefaultStmtClass)
-    return buildDefaultStmt(cast<DefaultStmt>(S), condType, caseAttrs);
+    return buildDefaultStmt(cast<DefaultStmt>(S), condTypeStack.back(),
+                            caseAttrsStack.back());
 
   llvm_unreachable("expect case or default stmt");
 }
@@ -987,15 +991,13 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
   return mlir::success();
 }
 
-mlir::LogicalResult CIRGenFunction::buildSwitchBody(
-    const Stmt *S, mlir::Type condType,
-    llvm::SmallVector<mlir::Attribute, 4> &caseAttrs) {
+mlir::LogicalResult CIRGenFunction::buildSwitchBody(const Stmt *S) {
   if (auto *compoundStmt = dyn_cast<CompoundStmt>(S)) {
     mlir::Block *lastCaseBlock = nullptr;
     auto res = mlir::success();
     for (auto *c : compoundStmt->body()) {
       if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
-        res = buildSwitchCase(*switchCase, condType, caseAttrs);
+        res = buildSwitchCase(*switchCase);
         lastCaseBlock = builder.getBlock();
       } else if (lastCaseBlock) {
         // This means it's a random stmt following up a case, just
@@ -1045,12 +1047,16 @@ mlir::LogicalResult CIRGenFunction::buildSwitchStmt(const SwitchStmt &S) {
         [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
           currLexScope->setAsSwitch();
 
-          llvm::SmallVector<mlir::Attribute, 4> caseAttrs;
+          caseAttrsStack.push_back({});
+          condTypeStack.push_back(condV.getType());
 
-          res = buildSwitchBody(S.getBody(), condV.getType(), caseAttrs);
+          res = buildSwitchBody(S.getBody());
 
           os.addRegions(currLexScope->getSwitchRegions());
-          os.addAttribute("cases", builder.getArrayAttr(caseAttrs));
+          os.addAttribute("cases", builder.getArrayAttr(caseAttrsStack.back()));
+
+          caseAttrsStack.pop_back();
+          condTypeStack.pop_back();
         });
 
     if (res.failed())
