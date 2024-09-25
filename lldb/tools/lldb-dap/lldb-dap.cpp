@@ -4445,7 +4445,7 @@ void request_readMemory(const llvm::json::Object &request) {
   lldb::SBAddress addr{addr_int, g_dap.target};
   size_t count_result =
       g_dap.target.ReadMemory(addr, buf.data(), count_read, error);
-  if (error.Fail()) {
+  if (count_result == 0) {
     response["success"] = false;
     EmplaceSafeString(response, "message", error.GetCString());
     g_dap.SendJSON(llvm::json::Value(std::move(response)));

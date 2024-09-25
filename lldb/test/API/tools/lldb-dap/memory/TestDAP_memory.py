@@ -95,6 +95,10 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         mem = self.dap_server.request_readMemory(memref, 0, 5)["body"]
         self.assertEqual(b64decode(mem["data"]), b"dead\0")
 
+        # We can read large chunks, potentially returning partial results
+        mem = self.dap_server.request_readMemory(memref, 0, 4096)["body"]
+        self.assertEqual(b64decode(mem["data"])[0:5], b"dead\0")
+
         # Use an offset
         mem = self.dap_server.request_readMemory(memref, 2, 3)["body"]
         self.assertEqual(b64decode(mem["data"]), b"ad\0")
