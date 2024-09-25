@@ -707,6 +707,8 @@ public:
   bool isUImm16() const { return IsUImm<16>(); }
   bool isUImm20() const { return IsUImm<20>(); }
   bool isUImm32() const { return IsUImm<32>(); }
+  bool isUImm48() const { return IsUImm<48>(); }
+  bool isUImm64() const { return IsUImm<64>(); }
 
   bool isUImm8GE32() const {
     int64_t Imm;
@@ -3146,7 +3148,7 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
   StringRef Format;
   SMLoc ErrorLoc = Parser.getTok().getLoc();
   if (Parser.parseIdentifier(Format)) {
-    // Try parsing .insn [length], value
+    // Try parsing .insn [ length , ] value
     int64_t Length = 0;
     int64_t Value = 0;
     if (Parser.parseIntToken(
@@ -3158,23 +3160,45 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
         return true;
     }
 
-    // TODO: Add support for long instructions
-    int64_t RealLength = (Value & 3) == 3 ? 4 : 2;
-    if (!isUIntN(RealLength * 8, Value))
-      return Error(ErrorLoc, "invalid operand for instruction");
-    if (RealLength == 2 && !AllowC)
+    // TODO: Support Instructions > 64 bits.
+    if (Length > 8)
+      return Error(ErrorLoc,
+                   "instruction lengths over 64 bits are not supported");
+
+    int64_t EncodingDerivedLength = 4;
+    unsigned Opcode = RISCV::Insn32;
+    if ((Value & 0b11) != 0b11) {
+      EncodingDerivedLength = 2;
+      Opcode = RISCV::Insn16;
+    } else
+      switch (Value & 0b111'1111) {
+      case 0b001'1111:
+      case 0b101'1111:
+        EncodingDerivedLength = 6;
+        Opcode = RISCV::Insn48;
+        break;
+      case 0b011'1111:
+        EncodingDerivedLength = 8;
+        Opcode = RISCV::Insn64;
+        break;
+      case 0b111'1111:
+        // TODO: Support Instructions > 64 bits.
+        return Error(ErrorLoc,
+                     "instruction lengths over 64 bits are not supported");
+      }
+    if (Length != 0 && Length != EncodingDerivedLength)
+      return Error(ErrorLoc, "instruction length does not match the encoding");
+    if (!isUIntN(EncodingDerivedLength * 8, Value))
+      return Error(ErrorLoc, "encoding value does not fit into instruction");
+    if (!AllowC && (EncodingDerivedLength == 2))
       return Error(ErrorLoc, "compressed instructions are not allowed");
-    if (Length != 0 && Length != RealLength)
-      return Error(ErrorLoc, "instruction length mismatch");
 
     if (getParser().parseEOL("invalid operand for instruction")) {
       getParser().eatToEndOfStatement();
       return true;
     }
 
-    emitToStreamer(getStreamer(), MCInstBuilder(RealLength == 2 ? RISCV::Insn16
-                                                                : RISCV::Insn32)
-                                      .addImm(Value));
+    emitToStreamer(getStreamer(), MCInstBuilder(Opcode).addImm(Value));
     return false;
   }
 
