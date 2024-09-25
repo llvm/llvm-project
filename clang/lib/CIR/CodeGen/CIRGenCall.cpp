@@ -430,6 +430,9 @@ void CIRGenModule::constructAttributeList(StringRef Name,
     }
 
     if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
+      auto cirKernelAttr =
+          mlir::cir::OpenCLKernelAttr::get(builder.getContext());
+      funcAttrs.set(cirKernelAttr.getMnemonic(), cirKernelAttr);
       assert(!MissingFeatures::openCL());
     }
 
