@@ -10527,6 +10527,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     // we should have successfully decomposed the extract into a subregister.
     // We use an extract_subvector that will resolve to a subreg extract.
     assert(SubRegIdx != RISCV::NoSubRegister);
+    (void)SubRegIdx;
     unsigned Idx = OrigIdx - RemIdx.getKnownMinValue();
     if (SubVecVT.isFixedLengthVector()) {
       assert(VLen);
