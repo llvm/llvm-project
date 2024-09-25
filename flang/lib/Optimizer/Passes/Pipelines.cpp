@@ -127,7 +127,7 @@ void addBoxedProcedurePass(mlir::PassManager &pm) {
 }
 
 void addExternalNameConversionPass(mlir::PassManager &pm,
-                                          bool appendUnderscore) {
+                                   bool appendUnderscore) {
   addPassConditionally(pm, disableExternalNameConversion, [&]() {
     return fir::createExternalNameConversion({appendUnderscore});
   });
