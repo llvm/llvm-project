@@ -226,10 +226,7 @@ std::string CUIDOptions::getCUID(StringRef InputFile,
     else if (UseCUID == Kind::Hash) {
       llvm::MD5 Hasher;
       llvm::MD5::MD5Result Hash;
-      SmallString<256> RealPath;
-      llvm::sys::fs::real_path(InputFile, RealPath,
-                               /*expand_tilde=*/true);
-      Hasher.update(RealPath);
+      Hasher.update(InputFile);
       for (auto *A : Args) {
         if (A->getOption().matches(options::OPT_INPUT))
           continue;
