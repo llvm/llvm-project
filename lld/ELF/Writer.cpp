@@ -96,7 +96,7 @@ template <class ELFT> void elf::writeResult(Ctx &ctx) {
   Writer<ELFT>(ctx).run();
 }
 
-static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
+static void removeEmptyPTLoad(Ctx &ctx, SmallVector<PhdrEntry *, 0> &phdrs) {
   auto it = std::stable_partition(
       phdrs.begin(), phdrs.end(), [&](const PhdrEntry *p) {
         if (p->p_type != PT_LOAD)
@@ -116,7 +116,7 @@ static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
   phdrs.erase(it, phdrs.end());
 }
 
-void elf::copySectionsIntoPartitions() {
+void elf::copySectionsIntoPartitions(Ctx &ctx) {
   SmallVector<InputSectionBase *, 0> newSections;
   const size_t ehSize = ctx.ehInputSections.size();
   for (unsigned part = 2; part != ctx.partitions.size() + 1; ++part) {
@@ -139,7 +139,7 @@ void elf::copySectionsIntoPartitions() {
                            newSections.end());
 }
 
-static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
+static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = ctx.symtab->find(name);
   if (!s || s->isDefined() || s->isCommon())
@@ -154,9 +154,9 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
-void elf::addReservedSymbols() {
+void elf::addReservedSymbols(Ctx &ctx) {
   if (ctx.arg.emachine == EM_MIPS) {
-    auto addAbsolute = [](StringRef name) {
+    auto addAbsolute = [&](StringRef name) {
       Symbol *sym =
           ctx.symtab->addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
                                         STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
@@ -184,7 +184,7 @@ void elf::addReservedSymbols() {
   } else if (ctx.arg.emachine == EM_PPC) {
     // glibc *crt1.o has a undefined reference to _SDA_BASE_. Since we don't
     // support Small Data Area, define it arbitrarily as 0.
-    addOptionalRegular("_SDA_BASE_", nullptr, 0, STV_HIDDEN);
+    addOptionalRegular(ctx, "_SDA_BASE_", nullptr, 0, STV_HIDDEN);
   } else if (ctx.arg.emachine == EM_PPC64) {
     addPPC64SaveRestore();
   }
@@ -220,23 +220,24 @@ void elf::addReservedSymbols() {
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
   // this symbol if ELF headers are in the memory mapped segment.
-  addOptionalRegular("__ehdr_start", ctx.out.elfHeader, 0, STV_HIDDEN);
+  addOptionalRegular(ctx, "__ehdr_start", ctx.out.elfHeader, 0, STV_HIDDEN);
 
   // __executable_start is not documented, but the expectation of at
   // least the Android libc is that it points to the ELF header.
-  addOptionalRegular("__executable_start", ctx.out.elfHeader, 0, STV_HIDDEN);
+  addOptionalRegular(ctx, "__executable_start", ctx.out.elfHeader, 0,
+                     STV_HIDDEN);
 
   // __dso_handle symbol is passed to cxa_finalize as a marker to identify
   // each DSO. The address of the symbol doesn't matter as long as they are
   // different in different DSOs, so we chose the start address of the DSO.
-  addOptionalRegular("__dso_handle", ctx.out.elfHeader, 0, STV_HIDDEN);
+  addOptionalRegular(ctx, "__dso_handle", ctx.out.elfHeader, 0, STV_HIDDEN);
 
   // If linker script do layout we do not need to create any standard symbols.
   if (ctx.script->hasSectionsCommand)
     return;
 
-  auto add = [](StringRef s, int64_t pos) {
-    return addOptionalRegular(s, ctx.out.elfHeader, pos, STV_DEFAULT);
+  auto add = [&](StringRef s, int64_t pos) {
+    return addOptionalRegular(ctx, s, ctx.out.elfHeader, pos, STV_DEFAULT);
   };
 
   ctx.sym.bss = add("__bss_start", 0);
@@ -270,7 +271,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 //
 // In addition, demote symbols defined in discarded sections, so that
 // references to /DISCARD/ discarded symbols will lead to errors.
-static void demoteSymbolsAndComputeIsPreemptible() {
+static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
@@ -322,7 +323,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // 0 sized region. This has to be done late since only after assignAddresses
   // we know the size of the sections.
   for (Partition &part : ctx.partitions)
-    removeEmptyPTLoad(part.phdrs);
+    removeEmptyPTLoad(ctx, part.phdrs);
 
   if (!ctx.arg.oFormatBinary)
     assignFileOffsets();
@@ -391,7 +392,7 @@ static void markUsedLocalSymbolsImpl(ObjFile<ELFT> *file,
 
 // The function ensures that the "used" field of local symbols reflects the fact
 // that the symbol is used in a relocation from a live section.
-template <class ELFT> static void markUsedLocalSymbols() {
+template <class ELFT> static void markUsedLocalSymbols(Ctx &ctx) {
   // With --gc-sections, the field is already filled.
   // See MarkLive<ELFT>::resolveReloc().
   if (ctx.arg.gcSections)
@@ -419,7 +420,7 @@ template <class ELFT> static void markUsedLocalSymbols() {
   }
 }
 
-static bool shouldKeepInSymtab(const Defined &sym) {
+static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   if (sym.isSection())
     return false;
 
@@ -474,7 +475,7 @@ bool lld::elf::includeInSymtab(const Symbol &b) {
 // - demote symbols defined relative to /DISCARD/ discarded input sections so
 //   that relocations referencing them will lead to errors.
 // - copy eligible symbols to .symTab
-static void demoteAndCopyLocalSymbols() {
+static void demoteAndCopyLocalSymbols(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Add local symbols");
   for (ELFFileBase *file : ctx.objectFiles) {
     DenseMap<SectionBase *, size_t> sectionIndexMap;
@@ -486,7 +487,8 @@ static void demoteAndCopyLocalSymbols() {
 
       if (dr->section && !dr->section->isLive())
         demoteDefined(*dr, sectionIndexMap);
-      else if (ctx.in.symTab && includeInSymtab(*b) && shouldKeepInSymtab(*dr))
+      else if (ctx.in.symTab && includeInSymtab(*b) &&
+               shouldKeepInSymtab(ctx, *dr))
         ctx.in.symTab->addSymbol(b);
     }
   }
@@ -811,10 +813,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // .rela.dyn will be present in the output.
   std::string name = ctx.arg.isRela ? "__rela_iplt_start" : "__rel_iplt_start";
   ctx.sym.relaIpltStart =
-      addOptionalRegular(name, ctx.out.elfHeader, 0, STV_HIDDEN);
+      addOptionalRegular(ctx, name, ctx.out.elfHeader, 0, STV_HIDDEN);
   name.replace(name.size() - 5, 5, "end");
   ctx.sym.relaIpltEnd =
-      addOptionalRegular(name, ctx.out.elfHeader, 0, STV_HIDDEN);
+      addOptionalRegular(ctx, name, ctx.out.elfHeader, 0, STV_HIDDEN);
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -1661,7 +1663,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
 // out to be empty.
-static void removeUnusedSyntheticSections() {
+static void removeUnusedSyntheticSections(Ctx &ctx) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
   // after a non-synthetic one which will be our starting point.
@@ -1740,8 +1742,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (ctx.arg.emachine == EM_RISCV) {
       if (!ctx.arg.shared) {
         OutputSection *sec = findSection(".sdata");
-        addOptionalRegular("__global_pointer$", sec ? sec : ctx.out.elfHeader,
-                           0x800, STV_DEFAULT);
+        addOptionalRegular(ctx, "__global_pointer$",
+                           sec ? sec : ctx.out.elfHeader, 0x800, STV_DEFAULT);
         // Set riscvGlobalPointer to be used by the optional global pointer
         // relaxation.
         if (ctx.arg.relaxGP) {
@@ -1783,11 +1785,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
-  demoteSymbolsAndComputeIsPreemptible();
+  demoteSymbolsAndComputeIsPreemptible(ctx);
 
   if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>();
-  demoteAndCopyLocalSymbols();
+    markUsedLocalSymbols<ELFT>(ctx);
+  demoteAndCopyLocalSymbols(ctx);
 
   if (ctx.arg.copyRelocs)
     addSectionSymbols();
@@ -1890,7 +1892,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (ctx.in.mipsGot)
     ctx.in.mipsGot->build();
 
-  removeUnusedSyntheticSections();
+  removeUnusedSyntheticSections(ctx);
   ctx.script->diagnoseOrphanHandling();
   ctx.script->diagnoseMissingSGSectionAddress();
 
@@ -2111,13 +2113,13 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   // correct.
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
     if (os) {
-      Defined *startSym = addOptionalRegular(start, os, 0);
-      Defined *stopSym = addOptionalRegular(end, os, -1);
+      Defined *startSym = addOptionalRegular(ctx, start, os, 0);
+      Defined *stopSym = addOptionalRegular(ctx, end, os, -1);
       if (startSym || stopSym)
         os->usedInExpression = true;
     } else {
-      addOptionalRegular(start, ctx.out.elfHeader, 0);
-      addOptionalRegular(end, ctx.out.elfHeader, 0);
+      addOptionalRegular(ctx, start, ctx.out.elfHeader, 0);
+      addOptionalRegular(ctx, end, ctx.out.elfHeader, 0);
     }
   };
 
@@ -2141,10 +2143,11 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  Defined *startSym = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
-                                         ctx.arg.zStartStopVisibility);
-  Defined *stopSym = addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
-                                        ctx.arg.zStartStopVisibility);
+  Defined *startSym =
+      addOptionalRegular(ctx, saver().save("__start_" + s), &osec, 0,
+                         ctx.arg.zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(ctx, saver().save("__stop_" + s), &osec,
+                                        -1, ctx.arg.zStartStopVisibility);
   if (startSym || stopSym)
     osec.usedInExpression = true;
 }
@@ -2162,7 +2165,7 @@ static bool needsPtLoad(OutputSection *sec) {
 }
 
 // Adjust phdr flags according to certain options.
-static uint64_t computeFlags(uint64_t flags) {
+static uint64_t computeFlags(Ctx &ctx, uint64_t flags) {
   if (ctx.arg.omagic)
     return PF_R | PF_W | PF_X;
   if (ctx.arg.executeOnly && (flags & PF_X))
@@ -2184,7 +2187,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
   bool isMain = partNo == 1;
 
   // Add the first PT_LOAD segment for regular output sections.
-  uint64_t flags = computeFlags(PF_R);
+  uint64_t flags = computeFlags(ctx, PF_R);
   PhdrEntry *load = nullptr;
 
   // nmagic or omagic output does not have PT_PHDR, PT_INTERP, or the readonly
@@ -2247,7 +2250,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // partitions.
     if (sec->partition != partNo) {
       if (isMain && sec->partition == 255)
-        addHdr(PT_LOAD, computeFlags(sec->getPhdrFlags()))->add(sec);
+        addHdr(PT_LOAD, computeFlags(ctx, sec->getPhdrFlags()))->add(sec);
       continue;
     }
 
@@ -2267,7 +2270,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // supposed-to-be-NOBITS section to the output file. (However, we cannot do
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
-    uint64_t newFlags = computeFlags(sec->getPhdrFlags());
+    uint64_t newFlags = computeFlags(ctx, sec->getPhdrFlags());
     // When --no-rosegment is specified, RO and RX sections are compatible.
     uint32_t incompatible = flags ^ newFlags;
     if (ctx.arg.singleRoRx && !(newFlags & PF_W))
