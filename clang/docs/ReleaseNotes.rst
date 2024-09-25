@@ -336,6 +336,8 @@ Improvements to Clang's diagnostics
   local variables passed to function calls using the ``[[clang::musttail]]``
   attribute.
 
+- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
