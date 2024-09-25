@@ -376,8 +376,16 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       if (AllowRealloc && MI.isCall())
         CallIndexes.insert(LIS->getInstructionIndex(MI));
 
-      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32)
+      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32) {
         RegsAssigned |= processDef(MI.getOperand(0), false);
+        // Prevent unexpected reload of operands in WWM region
+        auto markUnspillable = [&](MachineOperand &Op) {
+          if (Op.isReg() && Op.getReg().isVirtual())
+            LIS->getInterval(Op.getReg()).markNotSpillable();
+        };
+        markUnspillable(MI.getOperand(2));
+        markUnspillable(MI.getOperand(4));
+      }
 
       if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
         if (!PreallocateSGPRSpillVGPRs)
