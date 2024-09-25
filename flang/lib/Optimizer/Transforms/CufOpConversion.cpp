@@ -265,7 +265,7 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
       mlir::Value memTy = builder.createIntegerConstant(
-          loc, builder.getI32Type(), kMemTypeDevice);
+          loc, builder.getI32Type(), getMemType(op.getDataAttr()));
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, bytes, memTy, sourceFile, sourceLine)};
       auto callOp = builder.create<fir::CallOp>(loc, func, args);
@@ -329,7 +329,7 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
       mlir::Value memTy = builder.createIntegerConstant(
-          loc, builder.getI32Type(), kMemTypeDevice);
+          loc, builder.getI32Type(), getMemType(op.getDataAttr()));
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, op.getDevptr(), memTy, sourceFile, sourceLine)};
       builder.create<fir::CallOp>(loc, func, args);
