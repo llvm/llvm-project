@@ -47,8 +47,7 @@ static InitializationState GetInitializationState() {
 
 static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
-    if (flags().print_stats_on_exit)
-      IncrementTotalErrorCount();
+    IncrementTotalErrorCount();
 
     PrintDiagnostics(info);
 
