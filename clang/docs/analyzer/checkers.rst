@@ -571,7 +571,7 @@ if ((y = make_int())) {
 nullability
 ^^^^^^^^^^^
 
-Objective C checkers that warn for null pointer passing and dereferencing errors.
+Checkers (mostly Objective C) that warn for null pointer passing and dereferencing errors.
 
 .. _nullability-NullPassedToNonnull:
 
@@ -588,8 +588,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
 
 .. _nullability-NullReturnedFromNonnull:
 
-nullability.NullReturnedFromNonnull (ObjC)
-""""""""""""""""""""""""""""""""""""""""""
+nullability.NullReturnedFromNonnull (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""""""""""""
 Warns when a null pointer is returned from a function that has _Nonnull return type.
 
 .. code-block:: objc
@@ -602,6 +602,22 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // Warning: nil returned from a method that is expected
    // to return a non-null value
    return result;
+ }
+
+Warns when a null pointer is returned from a function annotated with ``__attribute__((returns_nonnull))``
+
+.. code-block:: cpp
+
+ int global;
+ __attribute__((returns_nonnull)) void* getPtr(void* p);
+
+ void* getPtr(void* p) {
+   if (p) { // forgot to negate the condition
+     return &global;
+   }
+   // Warning: nullptr returned from a function that is expected
+   // to return a non-null value
+   return p;
  }
 
 .. _nullability-NullableDereferenced:
@@ -1275,6 +1291,22 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
  void test() {
    char buf [5];
    strncpy(buf, "a", 1); // warn
+ }
+
+.. _security-MmapWriteExec:
+
+security.MmapWriteExec (C)
+""""""""""""""""""""""""""
+Warn on ``mmap()`` calls with both writable and executable access.
+
+.. code-block:: c
+
+ void test(int n) {
+   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
+                  MAP_PRIVATE | MAP_ANON, -1, 0);
+   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
+   //       exploitable memory regions, which could be overwritten with malicious
+   //       code
  }
 
 .. _security-putenv-stack-array:
@@ -2539,8 +2571,8 @@ with the `offsetof` macro.
 
 .. _alpha-core-StackAddressAsyncEscape:
 
-alpha.core.StackAddressAsyncEscape (C)
-""""""""""""""""""""""""""""""""""""""
+alpha.core.StackAddressAsyncEscape (ObjC)
+"""""""""""""""""""""""""""""""""""""""""
 Check that addresses to stack memory do not escape the function that involves dispatch_after or dispatch_async.
 This checker is a part of ``core.StackAddressEscape``, but is temporarily disabled until some false positives are fixed.
 
@@ -2949,22 +2981,6 @@ Warn about buffer overflows (newer checker).
    char s[] = "abc";
    int x = getchar();
    char c = s[x]; // warn: index is tainted
- }
-
-.. _alpha-security-MmapWriteExec:
-
-alpha.security.MmapWriteExec (C)
-""""""""""""""""""""""""""""""""
-Warn on mmap() calls that are both writable and executable.
-
-.. code-block:: c
-
- void test(int n) {
-   void *c = mmap(NULL, 32, PROT_READ | PROT_WRITE | PROT_EXEC,
-                  MAP_PRIVATE | MAP_ANON, -1, 0);
-   // warn: Both PROT_WRITE and PROT_EXEC flags are set. This can lead to
-   //       exploitable memory regions, which could be overwritten with malicious
-   //       code
  }
 
 .. _alpha-security-ReturnPtrRange:

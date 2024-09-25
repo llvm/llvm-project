@@ -89,7 +89,7 @@ struct SSB{
 // CK29-DAG: store ptr [[VAR1:%.+]], ptr [[BP2]]
 // CK29-DAG: store ptr [[VAR2:%.+]], ptr [[P2]]
 // CK29-DAG: [[VAR1]] = getelementptr inbounds nuw [[SSA]], ptr %{{.+}}, i32 0, i32 1
-// CK29-DAG: [[VAR2]] = getelementptr inbounds double, ptr [[VAR22:%.+]], i{{.+}} 0
+// CK29-DAG: [[VAR2]] = getelementptr inbounds nuw double, ptr [[VAR22:%.+]], i{{.+}} 0
 // CK29-DAG: [[VAR22]] = load ptr, ptr %{{.+}},
 
 // CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})
@@ -129,7 +129,7 @@ struct SSB{
 // CK29-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
 // CK29-DAG: store ptr [[VAR1]], ptr [[BP2]]
 // CK29-DAG: store ptr [[VAR2:%.+]], ptr [[P2]]
-// CK29-DAG: [[VAR2]] = getelementptr inbounds double, ptr [[VAR22:%.+]], i{{.+}} 0
+// CK29-DAG: [[VAR2]] = getelementptr inbounds nuw double, ptr [[VAR22:%.+]], i{{.+}} 0
 // CK29-DAG: [[VAR22]] = load ptr, ptr %{{.+}},
 
 // CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})
@@ -164,7 +164,7 @@ struct SSB{
 // CK29-DAG: store ptr [[VAR1:%.+]], ptr [[BP2]]
 // CK29-DAG: store ptr [[VAR2:%.+]], ptr [[P2]]
 // CK29-DAG: [[VAR1]] = getelementptr inbounds nuw [[SSA]], ptr %{{.+}}, i32 0, i32 1
-// CK29-DAG: [[VAR2]] = getelementptr inbounds double, ptr [[VAR22:%.+]], i{{.+}} 0
+// CK29-DAG: [[VAR2]] = getelementptr inbounds nuw double, ptr [[VAR22:%.+]], i{{.+}} 0
 // CK29-DAG: [[VAR22]] = load ptr, ptr %{{.+}},
 
 // CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})

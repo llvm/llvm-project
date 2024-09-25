@@ -24,6 +24,7 @@
 #include "llvm/IR/TypedPointerType.h"
 
 #include <queue>
+#include <unordered_set>
 
 // This pass performs the following transformation on LLVM IR level required
 // for the following translation to SPIR-V:
@@ -411,9 +412,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     return KnownTy;
 
   // maybe a cycle
-  if (Visited.find(I) != Visited.end())
+  if (!Visited.insert(I).second)
     return nullptr;
-  Visited.insert(I);
 
   // fallback value in case when we fail to deduce a type
   Type *Ty = nullptr;
@@ -511,9 +511,8 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
     return KnownTy;
 
   // maybe a cycle
-  if (Visited.find(U) != Visited.end())
+  if (!Visited.insert(U).second)
     return OrigTy;
-  Visited.insert(U);
 
   if (dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
@@ -1352,7 +1351,8 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args;
   for (auto &Op : I.operands())
     Args.push_back(Op);
-  Args.push_back(B.getInt32(I.getSyncScopeID()));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
   Args.push_back(B.getInt32(
@@ -1552,9 +1552,8 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
     Function *F, unsigned OpIdx, std::unordered_set<Function *> &FVisited) {
   // maybe a cycle
-  if (FVisited.find(F) != FVisited.end())
+  if (!FVisited.insert(F).second)
     return nullptr;
-  FVisited.insert(F);
 
   std::unordered_set<Value *> Visited;
   SmallVector<std::pair<Function *, unsigned>> Lookup;

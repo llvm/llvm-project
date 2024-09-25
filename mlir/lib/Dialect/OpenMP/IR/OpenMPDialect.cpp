@@ -1258,7 +1258,7 @@ static void printCaptureType(OpAsmPrinter &p, Operation *op,
     typeCap << "VLAType";
   if (mapCaptureType.getValue() == mlir::omp::VariableCaptureKind::This)
     typeCap << "This";
-  p << typeCap.str();
+  p << typeCapStr;
 }
 
 static ParseResult parseCaptureType(OpAsmParser &parser,
@@ -1370,7 +1370,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
 void TargetDataOp::build(OpBuilder &builder, OperationState &state,
                          const TargetDataOperands &clauses) {
-  TargetDataOp::build(builder, state, clauses.device, clauses.ifVar,
+  TargetDataOp::build(builder, state, clauses.device, clauses.ifExpr,
                       clauses.mapVars, clauses.useDeviceAddrVars,
                       clauses.useDevicePtrVars);
 }
@@ -1395,7 +1395,7 @@ void TargetEnterDataOp::build(
   MLIRContext *ctx = builder.getContext();
   TargetEnterDataOp::build(builder, state,
                            makeArrayAttr(ctx, clauses.dependKinds),
-                           clauses.dependVars, clauses.device, clauses.ifVar,
+                           clauses.dependVars, clauses.device, clauses.ifExpr,
                            clauses.mapVars, clauses.nowait);
 }
 
@@ -1415,7 +1415,7 @@ void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   TargetExitDataOp::build(builder, state,
                           makeArrayAttr(ctx, clauses.dependKinds),
-                          clauses.dependVars, clauses.device, clauses.ifVar,
+                          clauses.dependVars, clauses.device, clauses.ifExpr,
                           clauses.mapVars, clauses.nowait);
 }
 
@@ -1434,7 +1434,7 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                            const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   TargetUpdateOp::build(builder, state, makeArrayAttr(ctx, clauses.dependKinds),
-                        clauses.dependVars, clauses.device, clauses.ifVar,
+                        clauses.dependVars, clauses.device, clauses.ifExpr,
                         clauses.mapVars, clauses.nowait);
 }
 
@@ -1456,7 +1456,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   // inReductionByref, inReductionSyms.
   TargetOp::build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
                   makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                  clauses.device, clauses.hasDeviceAddrVars, clauses.ifVar,
+                  clauses.device, clauses.hasDeviceAddrVars, clauses.ifExpr,
                   /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
                   /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
@@ -1488,9 +1488,8 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
 void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-
   ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.ifVar, clauses.numThreads, clauses.privateVars,
+                    clauses.ifExpr, clauses.numThreads, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
                     clauses.procBindKind, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
@@ -1541,26 +1540,25 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
-  // Check that it is a valid loop wrapper if it's taking that role.
-  if (isa<DistributeOp>((*this)->getParentOp())) {
-    if (!isWrapper())
-      return emitOpError() << "must take a loop wrapper role if nested inside "
-                              "of 'omp.distribute'";
+  auto distributeChildOps = getOps<DistributeOp>();
+  if (!distributeChildOps.empty()) {
     if (!isComposite())
       return emitError()
-             << "'omp.composite' attribute missing from composite wrapper";
+             << "'omp.composite' attribute missing from composite operation";
 
-    if (LoopWrapperInterface nested = getNestedWrapper()) {
-      // Check for the allowed leaf constructs that may appear in a composite
-      // construct directly after PARALLEL.
-      if (!isa<WsloopOp>(nested))
-        return emitError() << "only supported nested wrapper is 'omp.wsloop'";
-    } else {
-      return emitOpError() << "must not wrap an 'omp.loop_nest' directly";
+    auto *ompDialect = getContext()->getLoadedDialect<OpenMPDialect>();
+    Operation &distributeOp = **distributeChildOps.begin();
+    for (Operation &childOp : getOps()) {
+      if (&childOp == &distributeOp || ompDialect != childOp.getDialect())
+        continue;
+
+      if (!childOp.hasTrait<OpTrait::IsTerminator>())
+        return emitError() << "unexpected OpenMP operation inside of composite "
+                              "'omp.parallel'";
     }
   } else if (isComposite()) {
     return emitError()
-           << "'omp.composite' attribute present in non-composite wrapper";
+           << "'omp.composite' attribute present in non-composite operation";
   }
 
   if (getAllocateVars().size() != getAllocatorVars().size())
@@ -1589,13 +1587,12 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms.
-  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifVar, clauses.numTeamsLower, clauses.numTeamsUpper,
-                 /*private_vars=*/{},
-                 /*private_syms=*/nullptr, clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+  TeamsOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
+      /*private_vars=*/{}, /*private_syms=*/nullptr, clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit);
 }
 
 LogicalResult TeamsOp::verify() {
@@ -1721,6 +1718,32 @@ void printWsloop(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
+static LogicalResult verifyLoopWrapperInterface(Operation *op) {
+  if (op->getNumRegions() != 1)
+    return op->emitOpError() << "loop wrapper contains multiple regions";
+
+  Region &region = op->getRegion(0);
+  if (!region.hasOneBlock())
+    return op->emitOpError() << "loop wrapper contains multiple blocks";
+
+  if (::llvm::range_size(region.getOps()) != 2)
+    return op->emitOpError()
+           << "loop wrapper does not contain exactly two nested ops";
+
+  Operation &firstOp = *region.op_begin();
+  Operation &secondOp = *(std::next(region.op_begin()));
+
+  if (!secondOp.hasTrait<OpTrait::IsTerminator>())
+    return op->emitOpError()
+           << "second nested op in loop wrapper is not a terminator";
+
+  if (!::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp))
+    return op->emitOpError() << "first nested op in loop wrapper is not "
+                                "another loop wrapper or `omp.loop_nest`";
+
+  return success();
+}
+
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ArrayRef<NamedAttribute> attributes) {
   build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
@@ -1751,15 +1774,12 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult WsloopOp::verify() {
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (verifyLoopWrapperInterface(*this).failed())
+    return failure();
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
   bool isCompositeChildLeaf =
-      wrapper && wrapper.isWrapper() &&
-      (!llvm::isa<ParallelOp>(wrapper) ||
-       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
+
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -1792,7 +1812,7 @@ void SimdOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: linearVars, linearStepVars, privateVars,
   // privateSyms, reductionVars, reductionByref, reductionSyms.
   SimdOp::build(builder, state, clauses.alignedVars,
-                makeArrayAttr(ctx, clauses.alignments), clauses.ifVar,
+                makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
                 /*linear_vars=*/{}, /*linear_step_vars=*/{},
                 clauses.nontemporalVars, clauses.order, clauses.orderMod,
                 /*private_vars=*/{}, /*private_syms=*/nullptr,
@@ -1813,18 +1833,14 @@ LogicalResult SimdOp::verify() {
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (verifyLoopWrapperInterface(*this).failed())
+    return failure();
 
   if (getNestedWrapper())
     return emitOpError() << "must wrap an 'omp.loop_nest' directly";
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
   bool isCompositeChildLeaf =
-      wrapper && wrapper.isWrapper() &&
-      (!llvm::isa<ParallelOp>(wrapper) ||
-       llvm::isa_and_present<DistributeOp>(wrapper->getParentOp()));
+      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
   if (!isComposite() && isCompositeChildLeaf)
     return emitError()
@@ -1859,8 +1875,8 @@ LogicalResult DistributeOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (verifyLoopWrapperInterface(*this).failed())
+    return failure();
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
@@ -1868,9 +1884,13 @@ LogicalResult DistributeOp::verify() {
              << "'omp.composite' attribute missing from composite wrapper";
     // Check for the allowed leaf constructs that may appear in a composite
     // construct directly after DISTRIBUTE.
-    if (!isa<ParallelOp, SimdOp>(nested))
-      return emitError() << "only supported nested wrappers are 'omp.parallel' "
-                            "and 'omp.simd'";
+    if (isa<WsloopOp>(nested)) {
+      if (!llvm::dyn_cast_if_present<ParallelOp>((*this)->getParentOp()))
+        return emitError() << "an 'omp.wsloop' nested wrapper is only allowed "
+                              "when 'omp.parallel' is the direct parent";
+    } else if (!isa<SimdOp>(nested))
+      return emitError() << "only supported nested wrappers are 'omp.simd' and "
+                            "'omp.wsloop'";
   } else if (isComposite()) {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
@@ -1883,45 +1903,37 @@ LogicalResult DistributeOp::verify() {
 // DeclareReductionOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
-                                              Region &region) {
-  if (parser.parseOptionalKeyword("atomic"))
-    return success();
-  return parser.parseRegion(region);
-}
-
-static void printAtomicReductionRegion(OpAsmPrinter &printer,
-                                       DeclareReductionOp op, Region &region) {
-  if (region.empty())
-    return;
-  printer << "atomic ";
-  printer.printRegion(region);
-}
-
-static ParseResult parseCleanupReductionRegion(OpAsmParser &parser,
-                                               Region &region) {
-  if (parser.parseOptionalKeyword("cleanup"))
-    return success();
-  return parser.parseRegion(region);
-}
-
-static void printCleanupReductionRegion(OpAsmPrinter &printer,
-                                        DeclareReductionOp op, Region &region) {
-  if (region.empty())
-    return;
-  printer << "cleanup ";
-  printer.printRegion(region);
-}
-
 LogicalResult DeclareReductionOp::verifyRegions() {
+  if (!getAllocRegion().empty()) {
+    for (YieldOp yieldOp : getAllocRegion().getOps<YieldOp>()) {
+      if (yieldOp.getResults().size() != 1 ||
+          yieldOp.getResults().getTypes()[0] != getType())
+        return emitOpError() << "expects alloc region to yield a value "
+                                "of the reduction type";
+    }
+  }
+
   if (getInitializerRegion().empty())
     return emitOpError() << "expects non-empty initializer region";
   Block &initializerEntryBlock = getInitializerRegion().front();
-  if (initializerEntryBlock.getNumArguments() != 1 ||
-      initializerEntryBlock.getArgument(0).getType() != getType()) {
-    return emitOpError() << "expects initializer region with one argument "
-                            "of the reduction type";
+
+  if (initializerEntryBlock.getNumArguments() == 1) {
+    if (!getAllocRegion().empty())
+      return emitOpError() << "expects two arguments to the initializer region "
+                              "when an allocation region is used";
+  } else if (initializerEntryBlock.getNumArguments() == 2) {
+    if (getAllocRegion().empty())
+      return emitOpError() << "expects one argument to the initializer region "
+                              "when no allocation region is used";
+  } else {
+    return emitOpError()
+           << "expects one or two arguments to the initializer region";
   }
+
+  for (mlir::Value arg : initializerEntryBlock.getArguments())
+    if (arg.getType() != getType())
+      return emitOpError() << "expects initializer region argument to match "
+                              "the reduction type";
 
   for (YieldOp yieldOp : getInitializerRegion().getOps<YieldOp>()) {
     if (yieldOp.getResults().size() != 1 ||
@@ -1982,7 +1994,7 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms.
   TaskOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                 makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                clauses.final, clauses.ifVar, clauses.inReductionVars,
+                clauses.final, clauses.ifExpr, clauses.inReductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                 makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
                 clauses.priority, /*private_vars=*/{}, /*private_syms=*/nullptr,
@@ -2028,7 +2040,7 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms.
   TaskloopOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.final, clauses.grainsize, clauses.ifVar, clauses.inReductionVars,
+      clauses.final, clauses.grainsize, clauses.ifExpr, clauses.inReductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
       makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
       clauses.nogroup, clauses.numTasks, clauses.priority, /*private_vars=*/{},
@@ -2071,8 +2083,8 @@ LogicalResult TaskloopOp::verify() {
         "may not appear on the same taskloop directive");
   }
 
-  if (!isWrapper())
-    return emitOpError() << "must be a loop wrapper";
+  if (verifyLoopWrapperInterface(*this).failed())
+    return failure();
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
@@ -2169,11 +2181,8 @@ LogicalResult LoopNestOp::verify() {
              << "range argument type does not match corresponding IV type";
   }
 
-  auto wrapper =
-      llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
-
-  if (!wrapper || !wrapper.isWrapper())
-    return emitOpError() << "expects parent op to be a valid loop wrapper";
+  if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
+    return emitOpError() << "expects parent op to be a loop wrapper";
 
   return success();
 }
@@ -2183,8 +2192,6 @@ void LoopNestOp::gatherWrappers(
   Operation *parent = (*this)->getParentOp();
   while (auto wrapper =
              llvm::dyn_cast_if_present<LoopWrapperInterface>(parent)) {
-    if (!wrapper.isWrapper())
-      break;
     wrappers.push_back(wrapper);
     parent = parent->getParentOp();
   }
@@ -2415,7 +2422,7 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 
 void CancelOp::build(OpBuilder &builder, OperationState &state,
                      const CancelOperands &clauses) {
-  CancelOp::build(builder, state, clauses.cancelDirective, clauses.ifVar);
+  CancelOp::build(builder, state, clauses.cancelDirective, clauses.ifExpr);
 }
 
 LogicalResult CancelOp::verify() {

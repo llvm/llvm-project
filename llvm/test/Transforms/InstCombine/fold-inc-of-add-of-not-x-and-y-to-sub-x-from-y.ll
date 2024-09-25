@@ -92,7 +92,7 @@ define i32 @t5(i32 %x, i32 %y) {
 define i32 @t6(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t6(
 ; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i32 [[T2]]
@@ -108,7 +108,7 @@ define i32 @t7(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t7(
 ; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i32 [[T2]]
@@ -202,7 +202,7 @@ define i32 @n11(i32 %x, i32 %y) {
 define i32 @n12(i32 %x, i32 %y) {
 ; CHECK-LABEL: @n12(
 ; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], 2
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;

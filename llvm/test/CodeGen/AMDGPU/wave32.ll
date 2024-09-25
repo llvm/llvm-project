@@ -372,8 +372,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:  .LBB10_2: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
-; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
 ; GFX1032-NEXT:    s_mov_b32 s3, 0
+; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX1032-NEXT:  ; %bb.3: ; %bb5
@@ -515,8 +515,8 @@ bb13:
 define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #0 {
 ; GFX1032-LABEL: test_loop_with_if_else_break:
 ; GFX1032:       ; %bb.0: ; %bb
-; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_mov_b32 s4, 0
+; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
 ; GFX1032-NEXT:  ; %bb.1: ; %.preheader
@@ -1674,13 +1674,13 @@ define amdgpu_kernel void @test_set_inactive(ptr addrspace(1) %out, i32 %in) #0 
 ; GFX1032-NEXT:    s_clause 0x1
 ; GFX1032-NEXT:    s_load_dword s4, s[2:3], 0x2c
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1032-NEXT:    s_or_saveexec_b32 s2, -1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 42
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 42, s4, s2
+; GFX1032-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    global_store_dword v1, v2, s[0:1]
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_set_inactive:
@@ -1688,15 +1688,16 @@ define amdgpu_kernel void @test_set_inactive(ptr addrspace(1) %out, i32 %in) #0 
 ; GFX1064-NEXT:    s_clause 0x1
 ; GFX1064-NEXT:    s_load_dword s4, s[2:3], 0x2c
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1064-NEXT:    s_or_saveexec_b64 s[2:3], -1
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1064-NEXT:    s_not_b64 exec, exec
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 42
-; GFX1064-NEXT:    s_not_b64 exec, exec
-; GFX1064-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 42, s4, s[2:3]
+; GFX1064-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    global_store_dword v1, v2, s[0:1]
 ; GFX1064-NEXT:    s_endpgm
-  %tmp = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 42)
+  %tmp.0 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 42)
+  %tmp = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp.0)
   store i32 %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -1705,31 +1706,32 @@ define amdgpu_kernel void @test_set_inactive_64(ptr addrspace(1) %out, i64 %in) 
 ; GFX1032-LABEL: test_set_inactive_64:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1032-NEXT:    v_mov_b32_e32 v1, s7
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    s_not_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
+; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 0, s7, s0
+; GFX1032-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s0
+; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-NEXT:    global_store_dwordx2 v4, v[2:3], s[4:5]
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_set_inactive_64:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mov_b32_e32 v0, s6
-; GFX1064-NEXT:    v_mov_b32_e32 v1, s7
-; GFX1064-NEXT:    s_not_b64 exec, exec
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1064-NEXT:    s_not_b64 exec, exec
-; GFX1064-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
+; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 0, s7, s[0:1]
+; GFX1064-NEXT:    v_cndmask_b32_e64 v0, 0, s6, s[0:1]
+; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-NEXT:    global_store_dwordx2 v4, v[2:3], s[4:5]
 ; GFX1064-NEXT:    s_endpgm
-  %tmp = call i64 @llvm.amdgcn.set.inactive.i64(i64 %in, i64 0)
+  %tmp.0 = call i64 @llvm.amdgcn.set.inactive.i64(i64 %in, i64 0)
+  %tmp = call i64 @llvm.amdgcn.strict.wwm.i64(i64 %tmp.0)
   store i64 %tmp, ptr addrspace(1) %out
   ret void
 }
@@ -2921,6 +2923,8 @@ declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare float @llvm.amdgcn.strict.wwm.f32(float)
+declare i32 @llvm.amdgcn.strict.wwm.i32(i32)
+declare i64 @llvm.amdgcn.strict.wwm.i64(i64)
 declare float @llvm.amdgcn.wwm.f32(float)
 declare i32 @llvm.amdgcn.wqm.i32(i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)

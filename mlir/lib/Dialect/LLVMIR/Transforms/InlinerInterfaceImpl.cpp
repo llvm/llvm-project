@@ -235,11 +235,6 @@ getUnderlyingObjectSet(Value pointerValue) {
     if (auto addrCast = val.getDefiningOp<LLVM::AddrSpaceCastOp>())
       return WalkContinuation::advanceTo(addrCast.getOperand());
 
-    // TODO: Add a SelectLikeOpInterface and use it in the slicing utility.
-    if (auto selectOp = val.getDefiningOp<LLVM::SelectOp>())
-      return WalkContinuation::advanceTo(
-          {selectOp.getTrueValue(), selectOp.getFalseValue()});
-
     // Attempt to advance to control flow predecessors.
     std::optional<SmallVector<Value>> controlFlowPredecessors =
         getControlFlowPredecessors(val);
@@ -271,36 +266,40 @@ getUnderlyingObjectSet(Value pointerValue) {
 static void createNewAliasScopesFromNoAliasParameter(
     Operation *call, iterator_range<Region::iterator> inlinedBlocks) {
 
-  // First collect all noalias parameters. These have been specially marked by
-  // the `handleArgument` implementation by using the `ssa.copy` intrinsic and
-  // attaching a `noalias` attribute to it.
-  // These are only meant to be temporary and should therefore be deleted after
-  // we're done using them here.
+  // First, collect all ssa copy operations, which correspond to function
+  // parameters, and additionally store the noalias parameters. All parameters
+  // have been marked by the `handleArgument` implementation by using the
+  // `ssa.copy` intrinsic. Additionally, noalias parameters have an attached
+  // `noalias` attribute to the intrinsics. These intrinsics are only meant to
+  // be temporary and should therefore be deleted after we're done using them
+  // here.
+  SetVector<LLVM::SSACopyOp> ssaCopies;
   SetVector<LLVM::SSACopyOp> noAliasParams;
   for (Value argument : cast<LLVM::CallOp>(call).getArgOperands()) {
     for (Operation *user : argument.getUsers()) {
       auto ssaCopy = llvm::dyn_cast<LLVM::SSACopyOp>(user);
       if (!ssaCopy)
         continue;
+      ssaCopies.insert(ssaCopy);
+
       if (!ssaCopy->hasAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
         continue;
-
       noAliasParams.insert(ssaCopy);
     }
   }
 
-  // If there were none, we have nothing to do here.
-  if (noAliasParams.empty())
-    return;
-
   // Scope exit block to make it impossible to forget to get rid of the
   // intrinsics.
   auto exit = llvm::make_scope_exit([&] {
-    for (LLVM::SSACopyOp ssaCopyOp : noAliasParams) {
+    for (LLVM::SSACopyOp ssaCopyOp : ssaCopies) {
       ssaCopyOp.replaceAllUsesWith(ssaCopyOp.getOperand());
       ssaCopyOp->erase();
     }
   });
+
+  // If there were no noalias parameters, we have nothing to do here.
+  if (noAliasParams.empty())
+    return;
 
   // Create a new domain for this specific inlining and a new scope for every
   // noalias parameter.
@@ -335,7 +334,7 @@ static void createNewAliasScopesFromNoAliasParameter(
       bool aliasesOtherKnownObject = false;
       // Go through the based on pointers and check that they are either:
       // * Constants that can be ignored (undef, poison, null pointer).
-      // * Based on a noalias parameter.
+      // * Based on a pointer parameter.
       // * Other pointers that we know can't alias with our noalias parameter.
       //
       // Any other value might be a pointer based on any noalias parameter that
@@ -346,11 +345,13 @@ static void createNewAliasScopesFromNoAliasParameter(
             if (matchPattern(object, m_Constant()))
               return false;
 
-            if (noAliasParams.contains(object.getDefiningOp<LLVM::SSACopyOp>()))
+            if (auto ssaCopy = object.getDefiningOp<LLVM::SSACopyOp>()) {
+              // If that value is based on a noalias parameter, it is guaranteed
+              // to not alias with any other object.
+              aliasesOtherKnownObject |= !noAliasParams.contains(ssaCopy);
               return false;
+            }
 
-            // TODO: This should include other arguments from the inlined
-            //       callable.
             if (isa_and_nonnull<LLVM::AllocaOp, LLVM::AddressOfOp>(
                     object.getDefiningOp())) {
               aliasesOtherKnownObject = true;
@@ -773,29 +774,25 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName())) {
-      if (argument.use_empty())
-        return argument;
 
-      // This code is essentially a workaround for deficiencies in the
-      // inliner interface: We need to transform operations *after* inlined
-      // based on the argument attributes of the parameters *before* inlining.
-      // This method runs prior to actual inlining and thus cannot transform the
-      // post-inlining code, while `processInlinedCallBlocks` does not have
-      // access to pre-inlining function arguments. Additionally, it is required
-      // to distinguish which parameter an SSA value originally came from.
-      // As a workaround until this is changed: Create an ssa.copy intrinsic
-      // with the noalias attribute that can easily be found, and is extremely
-      // unlikely to exist in the code prior to inlining, using this to
-      // communicate between this method and `processInlinedCallBlocks`.
-      // TODO: Fix this by refactoring the inliner interface.
-      auto copyOp = builder.create<LLVM::SSACopyOp>(call->getLoc(), argument);
+    // This code is essentially a workaround for deficiencies in the inliner
+    // interface: We need to transform operations *after* inlined based on the
+    // argument attributes of the parameters *before* inlining. This method runs
+    // prior to actual inlining and thus cannot transform the post-inlining
+    // code, while `processInlinedCallBlocks` does not have access to
+    // pre-inlining function arguments. Additionally, it is required to
+    // distinguish which parameter an SSA value originally came from. As a
+    // workaround until this is changed: Create an ssa.copy intrinsic with the
+    // noalias attribute (when it was present before) that can easily be found,
+    // and is extremely unlikely to exist in the code prior to inlining, using
+    // this to communicate between this method and `processInlinedCallBlocks`.
+    // TODO: Fix this by refactoring the inliner interface.
+    auto copyOp = builder.create<LLVM::SSACopyOp>(call->getLoc(), argument);
+    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName()))
       copyOp->setDiscardableAttr(
           builder.getStringAttr(LLVM::LLVMDialect::getNoAliasAttrName()),
           builder.getUnitAttr());
-      return copyOp;
-    }
-    return argument;
+    return copyOp;
   }
 
   void processInlinedCallBlocks(

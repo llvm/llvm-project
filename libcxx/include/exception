@@ -47,7 +47,7 @@ terminate_handler set_terminate(terminate_handler  f ) noexcept;
 terminate_handler get_terminate() noexcept;
 [[noreturn]] void terminate() noexcept;
 
-bool uncaught_exception()  noexcept;
+bool uncaught_exception()  noexcept;  // deprecated in C++17, removed in C++20
 int  uncaught_exceptions() noexcept;  // C++17
 
 typedef unspecified exception_ptr;

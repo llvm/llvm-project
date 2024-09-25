@@ -106,7 +106,7 @@ static std::string formatSymbol(StringRef Name, uint64_t Address,
   else
     OS << format("0x%" PRIX64, Address);
 
-  return OS.str();
+  return Buffer;
 }
 
 namespace llvm {
@@ -305,7 +305,7 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(AddressOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     // We apply SymbolOffset here directly. We return it separately to allow
     // the caller to print it as an offset on the symbol name.
@@ -1125,7 +1125,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
 
     ListScope EHS(SW, "ExceptionHandler");
@@ -1164,7 +1164,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1178,7 +1178,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
 
     SW.printString("ExceptionRecord",
@@ -1223,7 +1223,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1322,7 +1322,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }

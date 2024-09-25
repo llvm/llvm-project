@@ -127,69 +127,6 @@ Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 NVPTX Intrinsics
 ================
 
-Address Space Conversion
-------------------------
-
-'``llvm.nvvm.ptr.*.to.gen``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
-    declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
-    declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
-    declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.*.to.gen``' intrinsics convert a pointer in a non-generic
-address space to a generic address space pointer.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid generic address space
-pointer.
-
-
-'``llvm.nvvm.ptr.gen.to.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
-    declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
-    declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
-    declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.gen.to.*``' intrinsics convert a pointer in the generic
-address space to a pointer in the target address space.  Note that these
-intrinsics are only useful if the address space of the target address space of
-the pointer is known.  It is not legal to use address space conversion
-intrinsics to convert a pointer from one non-generic address space to another
-non-generic address space.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid pointer in the target
-non-generic address space.
-
-
 Reading PTX Special Registers
 -----------------------------
 
@@ -251,9 +188,35 @@ Overview:
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
+Electing a thread
+-----------------
+
+'``llvm.nvvm.elect.sync``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare {i32, i1} @llvm.nvvm.elect.sync(i32 %membermask)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.elect.sync``' intrinsic generates the ``elect.sync``
+PTX instruction, which elects one predicated active leader thread from
+a set of threads specified by ``membermask``. The behavior is undefined
+if the executing thread is not in ``membermask``. The laneid of the
+elected thread is captured in the i32 return value. The i1 return
+value is set to ``True`` for the leader thread and ``False`` for all
+the other threads. Election of a leader thread happens deterministically,
+i.e. the same leader thread is elected for the same ``membermask``
+every time. For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+
 Membar/Fences
 -------------
-
 
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -52,6 +52,34 @@ Changes to the LLVM IR
 
 * The ``x86_mmx`` IR type has been removed. It will be translated to
   the standard vector type ``<1 x i64>`` in bitcode upgrade.
+* Renamed ``llvm.experimental.stepvector`` intrinsic to ``llvm.stepvector``.
+
+* Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
+
+* Remove the following intrinsics which can be replaced with a ``bitcast``:
+
+  * ``llvm.nvvm.bitcast.f2i``
+  * ``llvm.nvvm.bitcast.i2f``
+  * ``llvm.nvvm.bitcast.d2ll``
+  * ``llvm.nvvm.bitcast.ll2d``
+
+* Remove the following intrinsics which can be replaced with a funnel-shift:
+
+  * ``llvm.nvvm.rotate.b32``
+  * ``llvm.nvvm.rotate.right.b64``
+  * ``llvm.nvvm.rotate.b64``
+
+* Remove the following intrinsics which can be replaced with an
+  ``addrspacecast``:
+
+  * ``llvm.nvvm.ptr.gen.to.global``
+  * ``llvm.nvvm.ptr.gen.to.shared``
+  * ``llvm.nvvm.ptr.gen.to.constant``
+  * ``llvm.nvvm.ptr.gen.to.local``
+  * ``llvm.nvvm.ptr.global.to.gen``
+  * ``llvm.nvvm.ptr.shared.to.gen``
+  * ``llvm.nvvm.ptr.constant.to.gen``
+  * ``llvm.nvvm.ptr.local.to.gen``
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -74,6 +102,11 @@ Changes to the AArch64 Backend
 
 Changes to the AMDGPU Backend
 -----------------------------
+
+* Removed ``llvm.amdgcn.flat.atomic.fadd`` and
+  ``llvm.amdgcn.global.atomic.fadd`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd` and
+  addrspace(0) or addrspace(1) instead.
 
 Changes to the ARM Backend
 --------------------------
@@ -108,9 +141,14 @@ Changes to the RISC-V Backend
   fill value) rather than NOPs.
 * Added Syntacore SCR4 and SCR5 CPUs: ``-mcpu=syntacore-scr4/5-rv32/64``
 * ``-mcpu=sifive-p470`` was added.
+* Added Hazard3 CPU as taped out for RP2350: ``-mcpu=rp2350-hazard3`` (32-bit
+  only).
 * Fixed length vector support using RVV instructions now requires VLEN>=64. This
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
+* The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
+* Added ``Smctr`` and ``Ssctr`` extensions.
+* ``-mcpu=syntacore-scr7`` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -155,6 +193,43 @@ Changes to the C API
 
   * ``LLVMGetNamedFunctionWithLength``
   * ``LLVMGetNamedGlobalWithLength``
+
+* The following functions are added to access the ``LLVMContextRef`` associated
+   with ``LLVMValueRef`` and ``LLVMBuilderRef`` objects:
+
+  * ``LLVMGetValueContext``
+  * ``LLVMGetBuilderContext``
+
+* The new pass manager can now be invoked with a custom alias analysis pipeline, using
+  the ``LLVMPassBuilderOptionsSetAAPipeline`` function.
+
+* It is now also possible to run the new pass manager on a single function, by calling
+  ``LLVMRunPassesOnFunction`` instead of ``LLVMRunPasses``.
+
+* Support for creating instructions with custom synchronization scopes has been added:
+
+  * ``LLVMGetSyncScopeID`` to map a synchronization scope name to an ID.
+  * ``LLVMBuildFenceSyncScope``, ``LLVMBuildAtomicRMWSyncScope`` and
+    ``LLVMBuildAtomicCmpXchgSyncScope`` versions of the existing builder functions
+    with an additional synchronization scope ID parameter.
+  * ``LLVMGetAtomicSyncScopeID`` and ``LLVMSetAtomicSyncScopeID`` to get and set the
+    synchronization scope of any atomic instruction.
+  * ``LLVMIsAtomic`` to check if an instruction is atomic, for use with the above functions.
+    Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
+    ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
+
+* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
+  personality function and initializer respectively by passing a null pointer.
+
+* The following functions are added to allow iterating over debug records attached to
+  instructions:
+
+  * ``LLVMGetFirstDbgRecord``
+  * ``LLVMGetLastDbgRecord``
+  * ``LLVMGetNextDbgRecord``
+  * ``LLVMGetPreviousDbgRecord``
+
+* Added ``LLVMAtomicRMWBinOpUSubCond`` and ``LLVMAtomicRMWBinOpUSubSat`` to ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

@@ -5,7 +5,7 @@
 define i32 @test1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T61:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T7:%.*]] = and i32 [[T61]], [[Z:%.*]]
+; CHECK-NEXT:    [[T7:%.*]] = and i32 [[Z:%.*]], [[T61]]
 ; CHECK-NEXT:    ret i32 [[T7]]
 ;
   %t3 = and i32 %z, %x

@@ -48,15 +48,12 @@ static TargetMachine *unwrap(LLVMTargetMachineRef P) {
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMPassBuilderOptions,
                                    LLVMPassBuilderOptionsRef)
 
-LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
-                           LLVMTargetMachineRef TM,
-                           LLVMPassBuilderOptionsRef Options) {
-  TargetMachine *Machine = unwrap(TM);
-  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
+                              TargetMachine *Machine,
+                              LLVMPassBuilderOptions *PassOpts) {
   bool Debug = PassOpts->DebugLogging;
   bool VerifyEach = PassOpts->VerifyEach;
 
-  Module *Mod = unwrap(M);
   PassInstrumentationCallbacks PIC;
   PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
 
@@ -80,16 +77,43 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
 
   StandardInstrumentations SI(Mod->getContext(), Debug, VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  ModulePassManager MPM;
-  if (VerifyEach) {
-    MPM.addPass(VerifierPass());
-  }
-  if (auto Err = PB.parsePassPipeline(MPM, Passes)) {
-    return wrap(std::move(Err));
+
+  // Run the pipeline.
+  if (Fun) {
+    FunctionPassManager FPM;
+    if (VerifyEach)
+      FPM.addPass(VerifierPass());
+    if (auto Err = PB.parsePassPipeline(FPM, Passes))
+      return wrap(std::move(Err));
+    FPM.run(*Fun, FAM);
+  } else {
+    ModulePassManager MPM;
+    if (VerifyEach)
+      MPM.addPass(VerifierPass());
+    if (auto Err = PB.parsePassPipeline(MPM, Passes))
+      return wrap(std::move(Err));
+    MPM.run(*Mod, MAM);
   }
 
-  MPM.run(*Mod, MAM);
   return LLVMErrorSuccess;
+}
+
+LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
+                           LLVMTargetMachineRef TM,
+                           LLVMPassBuilderOptionsRef Options) {
+  TargetMachine *Machine = unwrap(TM);
+  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+  Module *Mod = unwrap(M);
+  return runPasses(Mod, nullptr, Passes, Machine, PassOpts);
+}
+
+LLVMErrorRef LLVMRunPassesOnFunction(LLVMValueRef F, const char *Passes,
+                                     LLVMTargetMachineRef TM,
+                                     LLVMPassBuilderOptionsRef Options) {
+  TargetMachine *Machine = unwrap(TM);
+  LLVMPassBuilderOptions *PassOpts = unwrap(Options);
+  Function *Fun = unwrap<Function>(F);
+  return runPasses(Fun->getParent(), Fun, Passes, Machine, PassOpts);
 }
 
 LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions() {

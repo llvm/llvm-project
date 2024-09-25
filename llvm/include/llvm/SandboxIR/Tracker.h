@@ -59,9 +59,11 @@ class StoreInst;
 class Instruction;
 class Tracker;
 class AllocaInst;
+class CatchSwitchInst;
 class SwitchInst;
 class ConstantInt;
-
+class ShuffleVectorInst;
+class CmpInst;
 /// The base class for IR Change classes.
 class IRChangeBase {
 protected:
@@ -124,6 +126,19 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class CmpSwapOperands : public IRChangeBase {
+  CmpInst *Cmp;
+
+public:
+  CmpSwapOperands(CmpInst *Cmp);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "CmpSwapOperands"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -263,6 +278,23 @@ public:
 #endif
 };
 
+class CatchSwitchAddHandler : public IRChangeBase {
+  CatchSwitchInst *CSI;
+  unsigned HandlerIdx;
+
+public:
+  CatchSwitchAddHandler(CatchSwitchInst *CSI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "CatchSwitchAddHandler"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
+#endif // NDEBUG
+};
+
 class SwitchAddCase : public IRChangeBase {
   SwitchInst *Switch;
   ConstantInt *Val;
@@ -333,6 +365,20 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "CreateAndInsertInst"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class ShuffleVectorSetMask final : public IRChangeBase {
+  ShuffleVectorInst *SVI;
+  SmallVector<int, 8> PrevMask;
+
+public:
+  ShuffleVectorSetMask(ShuffleVectorInst *SVI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "ShuffleVectorSetMask"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };

@@ -285,67 +285,124 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
-  auto &LoadStoreActions =
-      getActionDefinitionsBuilder({G_LOAD, G_STORE})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                     {s32, p0, s16, 16},
-                                     {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen}});
-  auto &ExtLoadActions =
-      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
+  auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+  auto &ExtLoadActions = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD});
+
+  // Return the alignment needed for scalar memory ops. If unaligned scalar mem
+  // is supported, we only require byte alignment. Otherwise, we need the memory
+  // op to be natively aligned.
+  auto getScalarMemAlign = [&ST](unsigned Size) {
+    return ST.enableUnalignedScalarMem() ? 8 : Size;
+  };
+
+  LoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  StoreActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)},
+       {s32, p0, s32, getScalarMemAlign(32)},
+       {p0, p0, sXLen, getScalarMemAlign(XLen)}});
+  ExtLoadActions.legalForTypesWithMemDesc(
+      {{s32, p0, s8, getScalarMemAlign(8)},
+       {s32, p0, s16, getScalarMemAlign(16)}});
   if (XLen == 64) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
-                                               {s64, p0, s16, 16},
-                                               {s64, p0, s32, 32},
-                                               {s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)},
+         {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
-        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+        {{s64, p0, s8, getScalarMemAlign(8)},
+         {s64, p0, s16, getScalarMemAlign(16)},
+         {s64, p0, s32, getScalarMemAlign(32)}});
   } else if (ST.hasStdExtD()) {
-    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+    LoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
+    StoreActions.legalForTypesWithMemDesc(
+        {{s64, p0, s64, getScalarMemAlign(64)}});
   }
 
   // Vector loads/stores.
   if (ST.hasVInstructions()) {
-    LoadStoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
-                                               {nxv4s8, p0, nxv4s8, 8},
-                                               {nxv8s8, p0, nxv8s8, 8},
-                                               {nxv16s8, p0, nxv16s8, 8},
-                                               {nxv32s8, p0, nxv32s8, 8},
-                                               {nxv64s8, p0, nxv64s8, 8},
-                                               {nxv2s16, p0, nxv2s16, 16},
-                                               {nxv4s16, p0, nxv4s16, 16},
-                                               {nxv8s16, p0, nxv8s16, 16},
-                                               {nxv16s16, p0, nxv16s16, 16},
-                                               {nxv32s16, p0, nxv32s16, 16},
-                                               {nxv2s32, p0, nxv2s32, 32},
-                                               {nxv4s32, p0, nxv4s32, 32},
-                                               {nxv8s32, p0, nxv8s32, 32},
-                                               {nxv16s32, p0, nxv16s32, 32}});
+    LoadActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
+                                          {nxv4s8, p0, nxv4s8, 8},
+                                          {nxv8s8, p0, nxv8s8, 8},
+                                          {nxv16s8, p0, nxv16s8, 8},
+                                          {nxv32s8, p0, nxv32s8, 8},
+                                          {nxv64s8, p0, nxv64s8, 8},
+                                          {nxv2s16, p0, nxv2s16, 16},
+                                          {nxv4s16, p0, nxv4s16, 16},
+                                          {nxv8s16, p0, nxv8s16, 16},
+                                          {nxv16s16, p0, nxv16s16, 16},
+                                          {nxv32s16, p0, nxv32s16, 16},
+                                          {nxv2s32, p0, nxv2s32, 32},
+                                          {nxv4s32, p0, nxv4s32, 32},
+                                          {nxv8s32, p0, nxv8s32, 32},
+                                          {nxv16s32, p0, nxv16s32, 32}});
+    StoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
+                                           {nxv4s8, p0, nxv4s8, 8},
+                                           {nxv8s8, p0, nxv8s8, 8},
+                                           {nxv16s8, p0, nxv16s8, 8},
+                                           {nxv32s8, p0, nxv32s8, 8},
+                                           {nxv64s8, p0, nxv64s8, 8},
+                                           {nxv2s16, p0, nxv2s16, 16},
+                                           {nxv4s16, p0, nxv4s16, 16},
+                                           {nxv8s16, p0, nxv8s16, 16},
+                                           {nxv16s16, p0, nxv16s16, 16},
+                                           {nxv32s16, p0, nxv32s16, 16},
+                                           {nxv2s32, p0, nxv2s32, 32},
+                                           {nxv4s32, p0, nxv4s32, 32},
+                                           {nxv8s32, p0, nxv8s32, 32},
+                                           {nxv16s32, p0, nxv16s32, 32}});
 
-    if (ST.getELen() == 64)
-      LoadStoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
-                                                 {nxv1s16, p0, nxv1s16, 16},
-                                                 {nxv1s32, p0, nxv1s32, 32}});
+    if (ST.getELen() == 64) {
+      LoadActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                            {nxv1s16, p0, nxv1s16, 16},
+                                            {nxv1s32, p0, nxv1s32, 32}});
+      StoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                             {nxv1s16, p0, nxv1s16, 16},
+                                             {nxv1s32, p0, nxv1s32, 32}});
+    }
 
-    if (ST.hasVInstructionsI64())
-      LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
-                                                 {nxv2s64, p0, nxv2s64, 64},
-                                                 {nxv4s64, p0, nxv4s64, 64},
-                                                 {nxv8s64, p0, nxv8s64, 64}});
+    if (ST.hasVInstructionsI64()) {
+      LoadActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                            {nxv2s64, p0, nxv2s64, 64},
+                                            {nxv4s64, p0, nxv4s64, 64},
+                                            {nxv8s64, p0, nxv8s64, 64}});
+      StoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                             {nxv2s64, p0, nxv2s64, 64},
+                                             {nxv4s64, p0, nxv4s64, 64},
+                                             {nxv8s64, p0, nxv8s64, 64}});
+    }
 
     // we will take the custom lowering logic if we have scalable vector types
     // with non-standard alignments
-    LoadStoreActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+    LoadActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+    StoreActions.customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
 
     // Pointers require that XLen sized elements are legal.
-    if (XLen <= ST.getELen())
-      LoadStoreActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
+    if (XLen <= ST.getELen()) {
+      LoadActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
+      StoreActions.customIf(typeIsLegalPtrVec(0, PtrVecTys, ST));
+    }
   }
 
-  LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
+  LoadActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s32, sXLen)
+      .lower();
+  StoreActions
+      .clampScalar(0, s32, sXLen)
+      .lowerIfMemSizeNotByteSizePow2()
       .lower();
 
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
@@ -436,7 +493,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
+      .lower();
 
   // FP Operations
 
@@ -497,7 +555,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
+                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+                               G_INTRINSIC_ROUNDEVEN})
       .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 set -e
 
@@ -129,7 +129,6 @@ for arch in ${architectures}; do
                 -C "${llvm_root}/libcxx/cmake/caches/Apple.cmake" \
                 -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
                 -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
-                -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
                 -DLIBCXXABI_LIBRARY_VERSION="${version}" \
                 -DLIBCXX_LIBRARY_VERSION="${version}" \

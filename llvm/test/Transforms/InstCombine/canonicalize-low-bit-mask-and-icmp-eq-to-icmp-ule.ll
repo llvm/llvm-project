@@ -15,7 +15,7 @@
 define i1 @p0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
@@ -31,7 +31,7 @@ define i1 @p0(i8 %x, i8 %y) {
 define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @p1_vec(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge <2 x i8> [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule <2 x i8> [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = lshr <2 x i8> <i8 -1, i8 -1>, %y
@@ -43,7 +43,7 @@ define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 define <3 x i1> @p2_vec_poison(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p2_vec_poison(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <3 x i8> <i8 -1, i8 poison, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge <3 x i8> [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule <3 x i8> [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %tmp0 = lshr <3 x i8> <i8 -1, i8 poison, i8 -1>, %y
@@ -110,7 +110,7 @@ define i1 @oneuse0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP0]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
@@ -125,7 +125,7 @@ define i1 @oneuse1(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X]], [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
@@ -141,7 +141,7 @@ define i1 @oneuse2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use8(i8 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X]], [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y

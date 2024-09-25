@@ -96,6 +96,8 @@ static_assert(!is_volatile<void()volatile&>::value, "");
 #endif
 } // namespace cwg713
 
+// cwg722 is in cwg722.cpp
+
 namespace cwg727 { // cwg727: partial
   struct A {
     template<typename T> struct C; // #cwg727-C

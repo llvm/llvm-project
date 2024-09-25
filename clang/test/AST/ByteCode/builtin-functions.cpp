@@ -193,6 +193,62 @@ namespace isfpclass {
   char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
 }
 
+namespace signbit {
+  static_assert(
+    !__builtin_signbit(1.0) && __builtin_signbit(-1.0) && !__builtin_signbit(0.0) && __builtin_signbit(-0.0) &&
+    !__builtin_signbitf(1.0f) && __builtin_signbitf(-1.0f) && !__builtin_signbitf(0.0f) && __builtin_signbitf(-0.0f) &&
+    !__builtin_signbitl(1.0L) && __builtin_signbitf(-1.0L) && !__builtin_signbitf(0.0L) && __builtin_signbitf(-0.0L) &&
+    !__builtin_signbit(1.0f) && __builtin_signbit(-1.0f) && !__builtin_signbit(0.0f) && __builtin_signbit(-0.0f) &&
+    !__builtin_signbit(1.0L) && __builtin_signbit(-1.0L) && !__builtin_signbit(0.0L) && __builtin_signbit(-0.0L) &&
+    true, ""
+  );
+}
+
+namespace floating_comparison {
+#define LESS(X, Y) \
+  !__builtin_isgreater(X, Y) && __builtin_isgreater(Y, X) &&             \
+  !__builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&   \
+  __builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                   \
+  __builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&         \
+  __builtin_islessgreater(X, Y) && __builtin_islessgreater(Y, X) &&      \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define EQUAL(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  __builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&    \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  __builtin_islessequal(X, Y) && __builtin_islessequal(Y, X) &&          \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+#define UNORDERED(X, Y) \
+  !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
+  !__builtin_isgreaterequal(X, Y) && !__builtin_isgreaterequal(Y, X) &&  \
+  !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
+  !__builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&        \
+  !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
+  __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
+
+  static_assert(LESS(0.0, 1.0));
+  static_assert(LESS(0.0, __builtin_inf()));
+  static_assert(LESS(0.0f, 1.0f));
+  static_assert(LESS(0.0f, __builtin_inff()));
+  static_assert(LESS(0.0L, 1.0L));
+  static_assert(LESS(0.0L, __builtin_infl()));
+
+  static_assert(EQUAL(1.0, 1.0));
+  static_assert(EQUAL(0.0, -0.0));
+  static_assert(EQUAL(1.0f, 1.0f));
+  static_assert(EQUAL(0.0f, -0.0f));
+  static_assert(EQUAL(1.0L, 1.0L));
+  static_assert(EQUAL(0.0L, -0.0L));
+
+  static_assert(UNORDERED(__builtin_nan(""), 1.0));
+  static_assert(UNORDERED(__builtin_nan(""), __builtin_inf()));
+  static_assert(UNORDERED(__builtin_nanf(""), 1.0f));
+  static_assert(UNORDERED(__builtin_nanf(""), __builtin_inff()));
+  static_assert(UNORDERED(__builtin_nanl(""), 1.0L));
+  static_assert(UNORDERED(__builtin_nanl(""), __builtin_infl()));
+}
+
 namespace fpclassify {
   char classify_nan     [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nan(""))];
   char classify_snan    [__builtin_fpclassify(+1, -1, -1, -1, -1, __builtin_nans(""))];
@@ -906,3 +962,16 @@ namespace shufflevector {
 }
 
 #endif
+
+namespace FunctionStart {
+  void a(void) {}
+  static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
+                                                       // both-note {{comparison of addresses of literals has unspecified value}}
+}
+
+namespace BuiltinInImplicitCtor {
+  constexpr struct {
+    int a = __builtin_isnan(1.0);
+  } Foo;
+  static_assert(Foo.a == 0, "");
+}

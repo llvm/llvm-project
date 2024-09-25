@@ -1412,6 +1412,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
 
+  // We don't emit any skeleton CUs with dsymutil. So avoid emitting
+  // a redundant DW_AT_GNU_dwo_id on the non-skeleton CU.
+  if (AttrSpec.Attr == dwarf::DW_AT_GNU_dwo_id ||
+      AttrSpec.Attr == dwarf::DW_AT_dwo_id)
+    return 0;
+
   // Check for the offset to the macro table. If offset is incorrect then we
   // need to remove the attribute.
   if (AttrSpec.Attr == dwarf::DW_AT_macro_info) {

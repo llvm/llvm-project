@@ -189,7 +189,13 @@ const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 #    endif  // SANITIZER_RISCV64
 #  else     // SANITIZER_FUCHSIA
+
+#    if SANITIZER_APPLE
+const uptr kAllocatorSpace = 0x600000000000ULL;
+#    else   // SANITIZER_APPLE
 const uptr kAllocatorSpace = ~(uptr)0;
+#    endif  // SANITIZER_APPLE
+
 #    if defined(__powerpc64__)
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;

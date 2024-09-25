@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <memory>
+
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Object/COFF.h"
 
@@ -184,11 +186,13 @@ void RTDyldObjectLinkingLayer::emit(
   std::shared_ptr<MaterializationResponsibility> SharedR(std::move(R));
   auto Deps = std::make_unique<SymbolDependenceMap>();
 
-  JITDylibSearchOrderResolver Resolver(*SharedR, *Deps);
+  auto Resolver =
+      std::make_unique<JITDylibSearchOrderResolver>(*SharedR, *Deps);
+  auto *ResolverPtr = Resolver.get();
 
   jitLinkForORC(
       object::OwningBinary<object::ObjectFile>(std::move(*Obj), std::move(O)),
-      MemMgrRef, Resolver, ProcessAllSections,
+      MemMgrRef, *ResolverPtr, ProcessAllSections,
       [this, SharedR, &MemMgrRef, InternalSymbols](
           const object::ObjectFile &Obj,
           RuntimeDyld::LoadedObjectInfo &LoadedObjInfo,
@@ -196,7 +200,8 @@ void RTDyldObjectLinkingLayer::emit(
         return onObjLoad(*SharedR, Obj, MemMgrRef, LoadedObjInfo,
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, SharedR, MemMgr = std::move(MemMgr), Deps = std::move(Deps)](
+      [this, SharedR, MemMgr = std::move(MemMgr), Deps = std::move(Deps),
+       Resolver = std::move(Resolver)](
           object::OwningBinary<object::ObjectFile> Obj,
           std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
           Error Err) mutable {

@@ -673,14 +673,6 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord *Record) const {
   if (Record->Availability.isUnconditionallyUnavailable())
     return true;
 
-  // Filter out symbols without a name as we can generate correct symbol graphs
-  // for them. In practice these are anonymous record types that aren't attached
-  // to a declaration.
-  if (auto *Tag = dyn_cast<TagRecord>(Record)) {
-    if (Tag->IsEmbeddedInVarDeclarator)
-      return true;
-  }
-
   // Filter out symbols prefixed with an underscored as they are understood to
   // be symbols clients should not use.
   if (Record->Name.starts_with("_"))
@@ -936,8 +928,8 @@ bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     return true;
 
   auto *CurrentModule = ModuleForCurrentSymbol;
-  if (Record->isExtendingExternalModule())
-    ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
+  if (auto ModuleExtendedByRecord = Record->getExtendedExternalModule())
+    ModuleForCurrentSymbol = &ExtendedModules[*ModuleExtendedByRecord];
 
   if (!walkUpFromObjCCategoryRecord(Record))
     return false;

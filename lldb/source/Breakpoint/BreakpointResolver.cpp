@@ -74,7 +74,8 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     const StructuredData::Dictionary &resolver_dict, Status &error) {
   BreakpointResolverSP result_sp;
   if (!resolver_dict.IsValid()) {
-    error.SetErrorString("Can't deserialize from an invalid data object.");
+    error = Status::FromErrorString(
+        "Can't deserialize from an invalid data object.");
     return result_sp;
   }
 
@@ -84,14 +85,15 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
       GetSerializationSubclassKey(), subclass_name);
 
   if (!success) {
-    error.SetErrorString("Resolver data missing subclass resolver key");
+    error =
+        Status::FromErrorString("Resolver data missing subclass resolver key");
     return result_sp;
   }
 
   ResolverTy resolver_type = NameToResolverTy(subclass_name);
   if (resolver_type == UnknownResolver) {
-    error.SetErrorStringWithFormatv("Unknown resolver type: {0}.",
-                                    subclass_name);
+    error = Status::FromErrorStringWithFormatv("Unknown resolver type: {0}.",
+                                               subclass_name);
     return result_sp;
   }
 
@@ -99,7 +101,8 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   success = resolver_dict.GetValueForKeyAsDictionary(
       GetSerializationSubclassOptionsKey(), subclass_options);
   if (!success || !subclass_options || !subclass_options->IsValid()) {
-    error.SetErrorString("Resolver data missing subclass options key.");
+    error =
+        Status::FromErrorString("Resolver data missing subclass options key.");
     return result_sp;
   }
 
@@ -107,7 +110,8 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   success = subclass_options->GetValueForKeyAsInteger(
       GetKey(OptionNames::Offset), offset);
   if (!success) {
-    error.SetErrorString("Resolver data missing offset options key.");
+    error =
+        Status::FromErrorString("Resolver data missing offset options key.");
     return result_sp;
   }
 
@@ -133,7 +137,7 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
         *subclass_options, error);
     break;
   case ExceptionResolver:
-    error.SetErrorString("Exception resolvers are hard.");
+    error = Status::FromErrorString("Exception resolvers are hard.");
     break;
   default:
     llvm_unreachable("Should never get an unresolvable resolver type.");

@@ -587,7 +587,7 @@ define i64 @test44(i8 %T) {
 define i64 @test45(i8 %A, i64 %Q) {
 ; ALL-LABEL: @test45(
 ; ALL-NEXT:    [[B:%.*]] = sext i8 [[A:%.*]] to i64
-; ALL-NEXT:    [[C:%.*]] = or i64 [[B]], [[Q:%.*]]
+; ALL-NEXT:    [[C:%.*]] = or i64 [[Q:%.*]], [[B]]
 ; ALL-NEXT:    [[E:%.*]] = and i64 [[C]], 4294967295
 ; ALL-NEXT:    ret i64 [[E]]
 ;
@@ -1144,10 +1144,10 @@ define %s @test78(ptr %p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
 ; ALL-NEXT:    [[A:%.*]] = mul nsw i32 [[K:%.*]], 36
 ; ALL-NEXT:    [[B:%.*]] = mul nsw i32 [[A]], [[L:%.*]]
 ; ALL-NEXT:    [[C:%.*]] = sext i32 [[B]] to i128
-; ALL-NEXT:    [[D:%.*]] = mul nsw i128 [[C]], [[M:%.*]]
+; ALL-NEXT:    [[D:%.*]] = mul nsw i128 [[M:%.*]], [[C]]
 ; ALL-NEXT:    [[E:%.*]] = mul i128 [[D]], [[N:%.*]]
 ; ALL-NEXT:    [[F:%.*]] = trunc i128 [[E]] to i64
-; ALL-NEXT:    [[G:%.*]] = mul nsw i64 [[F]], [[I:%.*]]
+; ALL-NEXT:    [[G:%.*]] = mul nsw i64 [[I:%.*]], [[F]]
 ; ALL-NEXT:    [[H:%.*]] = mul nsw i64 [[G]], [[J:%.*]]
 ; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[H]]
 ; ALL-NEXT:    [[LOAD:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
