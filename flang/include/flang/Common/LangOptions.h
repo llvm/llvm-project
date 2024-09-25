@@ -52,8 +52,8 @@ class LangOptions : public LangOptionsBase {
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define LANGOPT(Name, Bits, Default)
-#define ENUM_LANGOPT(Name, Type, Bits, Default)                                \
-  Type get##Name() const { return static_cast<Type>(Name); }                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default) \
+  Type get##Name() const { return static_cast<Type>(Name); } \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "flang/Common/LangOptions.def"
 
