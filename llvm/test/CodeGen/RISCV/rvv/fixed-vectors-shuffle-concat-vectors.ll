@@ -10,10 +10,9 @@ define <16 x float> @test1(<8 x float> %0) {
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %1 = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> poison, i64 8)
-  %2 = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> %1, <8 x float> %0, i64 0)
-  %3 = shufflevector <16 x float> %2, <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <16 x float> %3
+  %1 = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> %0, i64 0)
+  %2 = shufflevector <16 x float> %1, <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <16 x float> %2
 }
 
 define <16 x i32> @test2(<4 x i32> %0) {
@@ -27,10 +26,7 @@ define <16 x i32> @test2(<4 x i32> %0) {
 ; CHECK-NEXT:    vslideup.vi v8, v9, 8
 ; CHECK-NEXT:    ret
 entry:
-  %1 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> poison, <4 x i32> poison, i64 4)
-  %2 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> %1, <4 x i32> poison, i64 8)
-  %3 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> %2, <4 x i32> poison, i64 12)
-  %4 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> %3, <4 x i32> %0, i64 0)
-  %5 = shufflevector <16 x i32> %4, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  ret <16 x i32> %5
+  %1 = call <16 x i32> @llvm.vector.insert.v16i32.v4i32(<16 x i32> poison, <4 x i32> %0, i64 0)
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x i32> %2
 }
