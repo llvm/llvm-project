@@ -255,8 +255,8 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
 
   EXPECT_EQ("abc/foo.cpp", r1->getName());
   EXPECT_EQ("abc/bar.cpp", r2->getName());
-  EXPECT_EQ((f1 ? *f1 : nullptr), &r1->getFileEntry());
-  EXPECT_EQ((f2 ? *f2 : nullptr), &r2->getFileEntry());
+  EXPECT_EQ((f1 ? &f1->getFileEntry() : nullptr), &r1->getFileEntry());
+  EXPECT_EQ((f2 ? &f2->getFileEntry() : nullptr), &r2->getFileEntry());
 }
 
 TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
