@@ -1872,7 +1872,9 @@ bb1:
   EXPECT_EQ(I1->getOpcodeName(), "Sub");
   EXPECT_EQ(Ret->getOpcodeName(), "Ret");
 
-  EXPECT_EQ(sandboxir::Instruction::getOpcodeName(sandboxir::Instruction::Opcode::Alloca), "Alloca");
+  EXPECT_EQ(sandboxir::Instruction::getOpcodeName(
+                sandboxir::Instruction::Opcode::Alloca),
+            "Alloca");
 
   // Check moveBefore(I).
   I1->moveBefore(I0);
@@ -1953,9 +1955,11 @@ bb1:
     // Check hasMetadata().
     EXPECT_EQ(LLVMI.hasMetadata(), I.hasMetadata());
     // Check hasMetadataOtherThanDebugLoc().
-    EXPECT_EQ(LLVMI.hasMetadataOtherThanDebugLoc(), I.hasMetadataOtherThanDebugLoc());
+    EXPECT_EQ(LLVMI.hasMetadataOtherThanDebugLoc(),
+              I.hasMetadataOtherThanDebugLoc());
     // Check getMetadata(unsigned).
-    EXPECT_EQ(LLVMI.getMetadata(LLVMContext::MD_dbg), I.getMetadata(LLVMContext::MD_dbg));
+    EXPECT_EQ(LLVMI.getMetadata(LLVMContext::MD_dbg),
+              I.getMetadata(LLVMContext::MD_dbg));
     // Check getMetadata(StringRef).
     EXPECT_EQ(LLVMI.getMetadata("dbg"), I.getMetadata("dbg"));
     // Check isAssociative().
