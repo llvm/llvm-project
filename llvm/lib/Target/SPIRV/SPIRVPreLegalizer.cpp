@@ -523,6 +523,14 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                    ? MI.getOperand(1).getCImm()->getType()
                    : TargetExtIt->second;
           const ConstantInt *OpCI = MI.getOperand(1).getCImm();
+          // TODO: we may wish to analyze here if OpCI is zero and LLT RegType =
+          // MRI.getType(Reg); RegType.isPointer() is true, so that we observe
+          // at this point not i64/i32 constant but null pointer in the
+          // corresponding address space of RegType.getAddressSpace(). This may
+          // help to successfully validate the case when a OpConstantComposite's
+          // constituent has type that does not match Result Type of
+          // OpConstantComposite (see, for example,
+          // pointers/PtrCast-null-in-OpSpecConstantOp.ll).
           Register PrimaryReg = GR->find(OpCI, &MF);
           if (!PrimaryReg.isValid()) {
             GR->add(OpCI, &MF, Reg);
