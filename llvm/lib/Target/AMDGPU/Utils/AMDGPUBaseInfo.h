@@ -870,10 +870,8 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc);
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
 
-#if LLPC_BUILD_GFX12
 bool isDPMACCInstruction(unsigned Opc);
 
-#endif /* LLPC_BUILD_GFX12 */
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 

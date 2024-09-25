@@ -354,6 +354,17 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
   return true;
 }
 
+bool UnwindPlan::Row::SetRegisterLocationToIsDWARFExpression(
+    uint32_t reg_num, const uint8_t *opcodes, uint32_t len, bool can_replace) {
+  if (!can_replace &&
+      m_register_locations.find(reg_num) != m_register_locations.end())
+    return false;
+  AbstractRegisterLocation reg_loc;
+  reg_loc.SetIsDWARFExpression(opcodes, len);
+  m_register_locations[reg_num] = reg_loc;
+  return true;
+}
+
 bool UnwindPlan::Row::SetRegisterLocationToIsConstant(uint32_t reg_num,
                                                       uint64_t constant,
                                                       bool can_replace) {

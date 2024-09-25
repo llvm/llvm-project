@@ -1296,10 +1296,6 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   if (!InvalidNewDeleteExpr(S, OpPC, E))
     return false;
 
-  // Assume proper types in std functions.
-  if (S.Current->isStdFunction())
-    return true;
-
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 

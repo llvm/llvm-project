@@ -858,11 +858,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
   }
   case Instruction::SRem: {
     const APInt *Rem;
-    if (match(I->getOperand(1), m_APInt(Rem))) {
-      // X % -1 demands all the bits because we don't want to introduce
-      // INT_MIN % -1 (== undef) by accident.
-      if (Rem->isAllOnes())
-        break;
+    // X % -1 demands all the bits because we don't want to introduce
+    // INT_MIN % -1 (== undef) by accident.
+    if (match(I->getOperand(1), m_APInt(Rem)) && !Rem->isAllOnes()) {
       APInt RA = Rem->abs();
       if (RA.isPowerOf2()) {
         if (DemandedMask.ult(RA))    // srem won't affect demanded bits

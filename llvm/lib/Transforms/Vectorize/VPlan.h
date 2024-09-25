@@ -254,7 +254,7 @@ struct VPTransformState {
                    DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan);
 
-  /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
+  /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
   /// Hold the indices to generate specific scalar instructions. Null indicates
@@ -1253,9 +1253,7 @@ public:
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
-    // last. The second operand must be a positive constant and <= VF when
-    // extracting from a vector or <= UF when extracting from an unrolled
-    // scalar.
+    // last. The second operand must be a positive constant and <= VF.
     ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first

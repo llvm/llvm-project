@@ -17,8 +17,6 @@ class LetDummies {
   bit isReMaterializable;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
-  bit IsInvalidSingleUseConsumer;
-  bit IsInvalidSingleUseProducer;
 #ifdef LLPC_BUILD_GFX12
   bit IsDPMACCInstruction;
 #endif /* LLPC_BUILD_GFX12 */
@@ -70,8 +68,6 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
-  bit IsInvalidSingleUseConsumer = P.IsInvalidSingleUseConsumer;
-  bit IsInvalidSingleUseProducer = P.IsInvalidSingleUseProducer;
 #ifdef LLPC_BUILD_GFX12
   bit IsDPMACCInstruction = 0;
 #endif /* LLPC_BUILD_GFX12 */
@@ -171,8 +167,6 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
 class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
-  bit IsInvalidSingleUseConsumer = ps.Pfl.IsInvalidSingleUseConsumer;
-  bit IsInvalidSingleUseProducer = ps.Pfl.IsInvalidSingleUseProducer;
 #ifdef LLPC_BUILD_GFX12
   bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
 #endif /* LLPC_BUILD_GFX12 */
@@ -853,9 +847,6 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "GFX8";
-
-  let IsInvalidSingleUseConsumer = !not(VINTERP);
-  let IsInvalidSingleUseProducer = !not(VINTERP);
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
@@ -1723,15 +1714,6 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
-}
-
-def SingleUseExceptionTable : GenericTable {
-  let FilterClass = "VOP_Pseudo";
-  let CppTypeName = "SingleUseExceptionInfo";
-  let Fields = ["Opcode", "IsInvalidSingleUseConsumer", "IsInvalidSingleUseProducer"];
-
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getSingleUseExceptionHelper";
 #ifdef LLPC_BUILD_GFX12
 }
 
@@ -1742,5 +1724,7 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getDPMACCInstructionHelper";
-#endif /* LLPC_BUILD_GFX12 */
 }
+#else /* LLPC_BUILD_GFX12 */
+}
+#endif /* LLPC_BUILD_GFX12 */

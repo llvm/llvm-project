@@ -477,27 +477,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
   case VPInstruction::ExplicitVectorLength: {
-    // Compute EVL
-    auto GetEVL = [=](VPTransformState &State, Value *AVL) {
-      assert(AVL->getType()->isIntegerTy() &&
-             "Requested vector length should be an integer.");
-
-      // TODO: Add support for MaxSafeDist for correct loop emission.
-      assert(State.VF.isScalable() && "Expected scalable vector factor.");
-      Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
-
-      Value *EVL = State.Builder.CreateIntrinsic(
-          State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
-          {AVL, VFArg, State.Builder.getTrue()});
-      return EVL;
-    };
     // TODO: Restructure this code with an explicit remainder loop, vsetvli can
     // be outside of the main loop.
-    // Compute VTC - IV as the AVL (requested vector length).
-    Value *Index = State.get(getOperand(0), VPIteration(0, 0));
-    Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
-    Value *AVL = State.Builder.CreateSub(TripCount, Index);
-    Value *EVL = GetEVL(State, AVL);
+    Value *AVL = State.get(getOperand(0), VPIteration(0, 0));
+    // Compute EVL
+    assert(AVL->getType()->isIntegerTy() &&
+           "Requested vector length should be an integer.");
+
+    assert(State.VF.isScalable() && "Expected scalable vector factor.");
+    Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
+
+    Value *EVL = State.Builder.CreateIntrinsic(
+        State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
+        {AVL, VFArg, State.Builder.getTrue()});
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
@@ -1504,8 +1496,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   VecInd->setDebugLoc(EntryVal->getDebugLoc());
   State.set(this, VecInd);
 
-  Instruction *LastInduction = cast<Instruction>(Builder.CreateBinOp(
-      AddOp, VecInd, SplatVF, "vec.ind.next", EntryVal->getDebugLoc()));
+  Instruction *LastInduction = cast<Instruction>(
+      Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
   if (isa<TruncInst>(EntryVal))
     State.addMetadata(LastInduction, EntryVal);
   LastInduction->setDebugLoc(EntryVal->getDebugLoc());
@@ -2490,9 +2482,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   // If the group is reverse, adjust the index to refer to the last vector lane
   // instead of the first. We adjust the index from the first vector lane,
   // rather than directly getting the pointer for lane VF - 1, because the
-  // pointer operand of the interleaved access is supposed to be uniform. For
-  // uniform instructions, we're only required to generate a value for the
-  // first vector lane in each unroll iteration.
+  // pointer operand of the interleaved access is supposed to be uniform.
   if (Group->isReverse()) {
     Value *RuntimeVF =
         getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);

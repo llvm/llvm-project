@@ -725,9 +725,7 @@ bool Compiler<Emitter>::VisitParenExpr(const ParenExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Need short-circuiting for these.
-  if (BO->getType()->isVectorType())
-    return this->VisitVectorBinOp(BO);
-  if (BO->isLogicalOp())
+  if (BO->isLogicalOp() && !BO->getType()->isVectorType())
     return this->VisitLogicalBinOp(BO);
 
   const Expr *LHS = BO->getLHS();
@@ -746,6 +744,8 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   if (BO->getType()->isAnyComplexType())
     return this->VisitComplexBinOp(BO);
+  if (BO->getType()->isVectorType())
+    return this->VisitVectorBinOp(BO);
   if ((LHS->getType()->isAnyComplexType() ||
        RHS->getType()->isAnyComplexType()) &&
       BO->isComparisonOp())
@@ -1264,6 +1264,8 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  assert(!E->isCommaOp() &&
+         "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
   assert(E->getLHS()->getType()->isVectorType());
   assert(E->getRHS()->getType()->isVectorType());
@@ -1282,9 +1284,8 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
                 : E->getOpcode();
 
-  // The LHS and RHS of a comparison operator must have the same type. So we
-  // just use LHS vector element type here.
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
+  PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   // Evaluate LHS and save value to LHSOffset.
@@ -1312,7 +1313,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType PromotT = classifyPrim(PromotTy);
   PrimType OpT = NeedIntPromot ? PromotT : ElemT;
 
-  auto getElem = [=](unsigned Offset, unsigned Index) {
+  auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
     if (!this->emitArrayElemPop(ElemT, Index, E))
@@ -1342,9 +1343,9 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   }
 
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
-    if (!getElem(LHSOffset, I))
+    if (!getElem(LHSOffset, ElemT, I))
       return false;
-    if (!getElem(RHSOffset, I))
+    if (!getElem(RHSOffset, RHSElemT, I))
       return false;
     switch (Op) {
     case BO_Add:
@@ -1372,11 +1373,11 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
         return false;
       break;
     case BO_Shl:
-      if (!this->emitShl(OpT, ElemT, E))
+      if (!this->emitShl(OpT, RHSElemT, E))
         return false;
       break;
     case BO_Shr:
-      if (!this->emitShr(OpT, ElemT, E))
+      if (!this->emitShr(OpT, RHSElemT, E))
         return false;
       break;
     case BO_EQ:
