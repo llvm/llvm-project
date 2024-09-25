@@ -93,12 +93,14 @@ global_set_type_mismatch:
 
 table_get_expected_expression_operand:
   .functype table_get_expected_expression_operand () -> ()
+  i32.const 0
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
   end_function
 
 table_get_missing_tabletype:
   .functype table_get_missing_tabletype () -> ()
+  i32.const 0
 # CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.get foo
   end_function
@@ -850,4 +852,24 @@ br_incorrect_func_signature:
   end_block
   drop
   i32.const 1
+  end_function
+
+multiple_errors_in_function:
+  .functype multiple_errors_in_function () -> ()
+# CHECK: :[[@LINE+2]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:13: error: expected expression operand
+  table.get 1
+
+# CHECK: :[[@LINE+3]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+2]]:3: error: empty stack while popping externref
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+  table.fill valid_table
+
+  f32.const 0.0
+  ref.null_extern
+# CHECK: :[[@LINE+2]]:3: error: popped externref, expected i32
+# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+  i32.add
+  drop
+
   end_function

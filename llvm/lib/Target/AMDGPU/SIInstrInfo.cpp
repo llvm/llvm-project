@@ -4514,7 +4514,6 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
         // of vcc was already added during the initial BuildMI, but we
         // 1) may need to change vcc to vcc_lo to preserve the original register
         // 2) have to preserve the original flags.
-        fixImplicitOperands(*Inst32);
         copyFlagsToImplicitVCC(*Inst32, *Src2);
         continue;
       }
@@ -4524,7 +4523,7 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
   }
 
   // FIXME: Losing implicit operands
-
+  fixImplicitOperands(*Inst32);
   return Inst32;
 }
 
@@ -6089,10 +6088,14 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     legalizeOpWithMove(MI, VOP3Idx[2]);
 }
 
-Register SIInstrInfo::readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                                         MachineRegisterInfo &MRI) const {
+Register SIInstrInfo::readlaneVGPRToSGPR(
+    Register SrcReg, MachineInstr &UseMI, MachineRegisterInfo &MRI,
+    const TargetRegisterClass *DstRC /*=nullptr*/) const {
   const TargetRegisterClass *VRC = MRI.getRegClass(SrcReg);
   const TargetRegisterClass *SRC = RI.getEquivalentSGPRClass(VRC);
+  if (DstRC)
+    SRC = RI.getCommonSubClass(SRC, DstRC);
+
   Register DstReg = MRI.createVirtualRegister(SRC);
   unsigned SubRegs = RI.getRegSizeInBits(*VRC) / 32;
 
@@ -6245,7 +6248,10 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   if (moveFlatAddrToVGPR(MI))
     return;
 
-  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI);
+  const TargetRegisterClass *DeclaredRC = getRegClass(
+      MI.getDesc(), SAddr->getOperandNo(), &RI, *MI.getParent()->getParent());
+
+  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);
 }
 
@@ -9785,6 +9791,9 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
+    // A valid Mask is required to have a single bit set, hence a non-zero and
+    // power-of-two value. This verifies that we will not do 64-bit shift below.
+    assert(llvm::has_single_bit<uint64_t>(Mask) && "Invalid mask.");
     unsigned BitNo = llvm::countr_zero((uint64_t)Mask);
     if (IsSigned && BitNo == SrcSize - 1)
       return false;
