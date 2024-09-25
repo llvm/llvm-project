@@ -176,6 +176,7 @@ atol           |check|
 atoll          |check|
 exit           |check|    |check|
 abort          |check|    |check|
+system         |check|    |check|
 labs           |check|
 llabs          |check|
 div            |check|
