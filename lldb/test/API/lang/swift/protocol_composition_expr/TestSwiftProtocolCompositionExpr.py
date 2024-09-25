@@ -4,7 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
-class TestSwiftProtocolComposition(lldbtest.TestBase):
+class TestSwiftProtocolCompositionExpr(lldbtest.TestBase):
     @swiftTest
     def test(self):
         """Test that expression evaluation can call functions in protocol composition existentials"""
