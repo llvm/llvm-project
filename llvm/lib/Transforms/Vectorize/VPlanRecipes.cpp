@@ -2366,9 +2366,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
                                                   VPCostContext &Ctx) const {
-  if (!Consecutive || IsMasked) {
+  if (!Consecutive || IsMasked)
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
-  }
 
   // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
   // here because the EVL recipes using EVL to replace the tail mask. But in the
@@ -2492,9 +2491,8 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
                                                    VPCostContext &Ctx) const {
-  if (!Consecutive || IsMasked) {
+  if (!Consecutive || IsMasked)
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
-  }
 
   // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
   // here because the EVL recipes using EVL to replace the tail mask. But in the
