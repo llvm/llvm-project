@@ -3505,6 +3505,23 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
   EXPECT_SPLIT_PENALTY(Tokens[7], 23u);
 }
 
+TEST_F(TokenAnnotatorTest, TemplateName) {
+  constexpr StringRef Code{"return Foo < A || B > (C ^ D);"};
+
+  auto Tokens = annotate(Code);
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_BinaryOperator);
+
+  auto Style = getLLVMStyle();
+  Style.TemplateNames.push_back("Foo");
+
+  Tokens = annotate(Code, Style);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_TemplateName);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
