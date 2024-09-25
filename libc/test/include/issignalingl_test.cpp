@@ -12,7 +12,9 @@
 // TODO: enable the test unconditionally when issignaling macro is fixed for
 //       older compiler
 #ifdef issignaling
-
 LIST_ISSIGNALING_TESTS(long double, issignaling)
-
+#else
+int main() {
+    return 0;
+}
 #endif
