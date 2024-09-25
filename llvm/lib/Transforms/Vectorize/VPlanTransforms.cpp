@@ -29,6 +29,9 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 
+#define LV_NAME "loop-vectorize"
+#define DEBUG_TYPE LV_NAME
+
 using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
@@ -1674,25 +1677,24 @@ static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
   return false;
 }
 
-/// Returns true of \p IR is a consecutive interleave group with \p VF members.
+/// Returns true if \p IR is a full interleave group with factor and number of
+/// members both equal to \p VF.
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *IR,
                                          ElementCount VF) {
   if (!IR)
     return false;
   auto IG = IR->getInterleaveGroup();
   return IG->getFactor() == IG->getNumMembers() &&
-         IG->getNumMembers() == VF.getKnownMinValue();
+         IG->getNumMembers() == VF.getFixedValue();
 }
 
-bool VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
+void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   using namespace llvm::VPlanPatternMatch;
   if (VF.isScalable())
-    return false;
+    return;
 
-  bool Changed = false;
   SmallVector<VPInterleaveRecipe *> StoreGroups;
-  for (auto &R : make_early_inc_range(
-           *Plan.getVectorLoopRegion()->getEntryBasicBlock())) {
+  for (auto &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
     if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
         isa<VPCanonicalIVPHIRecipe>(&R))
       continue;
@@ -1701,37 +1703,42 @@ bool VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
     //  * phi recipes other than the canonical induction
     //  * recipes writing to memory except interleave groups
     // Only support plans with a canonical induction phi.
-    if ((R.isPhi() && !isa<VPCanonicalIVPHIRecipe>(&R)) ||
-        (R.mayWriteToMemory() && !isa<VPInterleaveRecipe>(&R)))
-      return false;
+    if (R.isPhi())
+      return;
 
     auto *IR = dyn_cast<VPInterleaveRecipe>(&R);
+    if (R.mayWriteToMemory() && !IR)
+      return;
+
     if (!IR)
       continue;
 
     if (!isConsecutiveInterleaveGroup(IR, VF))
-      return false;
+      return;
     if (IR->getStoredValues().empty())
       continue;
 
     auto *Lane0 = dyn_cast_or_null<VPWidenRecipe>(
         IR->getStoredValues()[0]->getDefiningRecipe());
     if (!Lane0)
-      return false;
+      return;
     for (const auto &[I, V] : enumerate(IR->getStoredValues())) {
       auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != Lane0->getOpcode())
-        return false;
+        return;
       // Work around captured structured bindings being a C++20 extension.
       auto Idx = I;
       if (any_of(R->operands(), [Lane0, Idx](VPValue *V) {
             return !supportedLoad(Lane0, V, Idx);
           }))
-        return false;
+        return;
     }
 
     StoreGroups.push_back(IR);
   }
+
+  if (StoreGroups.empty())
+    return;
 
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
@@ -1769,11 +1776,7 @@ bool VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
         StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
-    Changed = true;
   }
-
-  if (!Changed)
-    return false;
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
@@ -1782,5 +1785,5 @@ bool VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   Inc->setOperand(
       1, Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
-  return true;
+  LLVM_DEBUG(dbgs() << "Narrowed interleave\n");
 }
