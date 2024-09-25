@@ -1698,17 +1698,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // Prepare a 'this' for CXXDefaultInitExprs.
   CodeGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
-  const bool ZeroInitPadding =
-      CGF.CGM.shouldZeroInitPadding() && !Dest.isZeroed();
-  const Address BaseLoc = Dest.getAddress().withElementType(CGF.Int8Ty);
-  auto DoZeroInitPadding = [&](CharUnits Offset, CharUnits Size) {
-    if (Size.isPositive()) {
-      Address Loc = CGF.Builder.CreateConstGEP(BaseLoc, Offset.getQuantity());
-      llvm::Constant *SizeVal = CGF.Builder.getInt64(Size.getQuantity());
-      CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
-    }
-  };
-
   if (record->isUnion()) {
     // Only initialize one field of a union. The field itself is
     // specified by the initializer list.
@@ -1733,37 +1722,17 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (NumInitElements) {
       // Store the initializer into the field
       EmitInitializationToLValue(InitExprs[0], FieldLoc);
-      if (ZeroInitPadding) {
-        CharUnits TotalSize =
-            Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
-        CharUnits FieldSize =
-            CGF.getContext().getTypeSizeInChars(FieldLoc.getType());
-        DoZeroInitPadding(FieldSize, TotalSize - FieldSize);
-      }
     } else {
       // Default-initialize to null.
-      if (ZeroInitPadding)
-        EmitNullInitializationToLValue(DestLV);
-      else
-        EmitNullInitializationToLValue(FieldLoc);
+      EmitNullInitializationToLValue(FieldLoc);
     }
+
     return;
   }
 
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
-  const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(record);
-  CharUnits SizeSoFar = CharUnits::Zero();
   for (const auto *field : record->fields()) {
-    if (ZeroInitPadding) {
-      unsigned FieldNo = field->getFieldIndex();
-      CharUnits Offset =
-          CGF.getContext().toCharUnitsFromBits(Layout.getFieldOffset(FieldNo));
-      DoZeroInitPadding(SizeSoFar, Offset - SizeSoFar);
-      CharUnits FieldSize =
-          CGF.getContext().getTypeSizeInChars(field->getType());
-      SizeSoFar = Offset + FieldSize;
-    }
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
       break;
@@ -1804,11 +1773,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
                                             CGF.getDestroyer(dtorKind), false);
       }
     }
-  }
-  if (ZeroInitPadding) {
-    CharUnits TotalSize =
-        Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
-    DoZeroInitPadding(SizeSoFar, TotalSize - SizeSoFar);
   }
 }
 
