@@ -1,13 +1,14 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
-// The IR remains untouched because of the presence of a non-function-like
-// symbol op (module @dont_touch_unacceptable_ir).
+// -----
+
+// Dead values are removed from the IR even if the module has a name
 //
-// expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
-module @dont_touch_unacceptable_ir {
-  func.func @has_cleanable_simple_op(%arg0 : i32) {
-    %non_live = arith.addi %arg0, %arg0 : i32
-    return
+module @named_module_acceptable {
+  func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
+    %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: %[[C:.*]] = tensor.empty[[C:.*]]
+    return %arg0 : tensor<10xf32>
   }
 }
 
