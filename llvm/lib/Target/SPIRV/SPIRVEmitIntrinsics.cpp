@@ -1351,7 +1351,8 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args;
   for (auto &Op : I.operands())
     Args.push_back(Op);
-  Args.push_back(B.getInt32(I.getSyncScopeID()));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
   Args.push_back(B.getInt32(
