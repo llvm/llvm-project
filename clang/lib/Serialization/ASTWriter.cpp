@@ -903,6 +903,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
+  RECORD(FUNCTION_DECL_TO_LAMBDAS_MAP);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
   RECORD(CUDA_SPECIAL_DECL_REFS);
@@ -5706,6 +5707,27 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   if (!DelayedNamespaceRecord.empty())
     Stream.EmitRecord(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD,
                       DelayedNamespaceRecord);
+
+  if (!FunctionToLambdasMap.empty()) {
+    // TODO: on disk hash table for function to lambda mapping might be more
+    // efficent becuase it allows lazy deserialization.
+    RecordData FunctionToLambdasMapRecord;
+    for (const auto &Pair : FunctionToLambdasMap) {
+      FunctionToLambdasMapRecord.push_back(
+          GetDeclRef(Pair.first).getRawValue());
+      FunctionToLambdasMapRecord.push_back(Pair.second.size());
+      for (const auto &Lambda : Pair.second)
+        FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
+    }
+
+    auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(FUNCTION_DECL_TO_LAMBDAS_MAP));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+    unsigned FunctionToLambdaMapAbbrev = Stream.EmitAbbrev(std::move(Abv));
+    Stream.EmitRecord(FUNCTION_DECL_TO_LAMBDAS_MAP, FunctionToLambdasMapRecord,
+                      FunctionToLambdaMapAbbrev);
+  }
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the

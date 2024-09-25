@@ -217,9 +217,7 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
 }
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
-#  if SANITIZER_GLIBC && !SANITIZER_GO
 static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
         SANITIZER_RISCV64

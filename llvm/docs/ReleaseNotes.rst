@@ -63,12 +63,6 @@ Changes to the LLVM IR
   * ``llvm.nvvm.bitcast.d2ll``
   * ``llvm.nvvm.bitcast.ll2d``
 
-* Remove the following intrinsics which can be replaced with a funnel-shift:
-
-  * ``llvm.nvvm.rotate.b32``
-  * ``llvm.nvvm.rotate.right.b64``
-  * ``llvm.nvvm.rotate.b64``
-
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -137,6 +131,7 @@ Changes to the RISC-V Backend
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 * Added ``Smctr`` and ``Ssctr`` extensions.
 * ``-mcpu=syntacore-scr7`` was added.
+* The ``Zacas`` extension is no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------

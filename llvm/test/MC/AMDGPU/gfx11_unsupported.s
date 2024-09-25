@@ -2014,9 +2014,6 @@ s_cmp_neq_f16 s1, s2
 s_cmp_nlt_f16 s1, s2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-s_singleuse_vdst 0x1234
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
