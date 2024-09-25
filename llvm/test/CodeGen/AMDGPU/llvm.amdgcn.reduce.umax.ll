@@ -539,11 +539,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX8DAGISEL-NEXT:    ; implicit-def: $sgpr4
 ; GFX8DAGISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX8DAGISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX8DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX8DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX8DAGISEL-NEXT:    s_load_dword s4, s[2:3], 0x2c
 ; GFX8DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX8DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX8DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX8DAGISEL-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
 ; GFX8DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v1, s4
@@ -611,11 +610,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX9DAGISEL-NEXT:    ; implicit-def: $sgpr4
 ; GFX9DAGISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9DAGISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX9DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX9DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX9DAGISEL-NEXT:    s_load_dword s4, s[2:3], 0x2c
 ; GFX9DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX9DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX9DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX9DAGISEL-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
 ; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s4
@@ -681,11 +679,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1064DAGISEL-NEXT:    ; implicit-def: $sgpr4
 ; GFX1064DAGISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX1064DAGISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1064DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1064DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX1064DAGISEL-NEXT:    s_load_dword s4, s[2:3], 0x2c
 ; GFX1064DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX1064DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX1064DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX1064DAGISEL-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
 ; GFX1064DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v1, s4
@@ -751,11 +748,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1032DAGISEL-NEXT:    ; implicit-def: $sgpr1
 ; GFX1032DAGISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032DAGISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1032DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1032DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX1032DAGISEL-NEXT:    s_load_dword s1, s[2:3], 0x2c
 ; GFX1032DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX1032DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX1032DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX1032DAGISEL-NEXT:    s_or_saveexec_b32 s0, s0
 ; GFX1032DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -823,11 +819,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164DAGISEL-NEXT:    v_cmpx_lt_u32_e32 15, v0
 ; GFX1164DAGISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1164DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1164DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX1164DAGISEL-NEXT:    s_load_b32 s4, s[2:3], 0x2c
 ; GFX1164DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX1164DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX1164DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX1164DAGISEL-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, s4
@@ -903,11 +898,10 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, i32 %in) {
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132DAGISEL-NEXT:    v_cmpx_lt_u32_e32 15, v0
 ; GFX1132DAGISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1132DAGISEL-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX1132DAGISEL-NEXT:  ; %bb.1: ; %else
 ; GFX1132DAGISEL-NEXT:    s_load_b32 s1, s[2:3], 0x2c
 ; GFX1132DAGISEL-NEXT:    ; implicit-def: $vgpr0
-; GFX1132DAGISEL-NEXT:  .LBB4_2: ; %Flow
+; GFX1132DAGISEL-NEXT:  ; %bb.2: ; %Flow
 ; GFX1132DAGISEL-NEXT:    s_or_saveexec_b32 s0, s0
 ; GFX1132DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_e32 v1, s1

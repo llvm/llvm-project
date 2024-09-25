@@ -153,12 +153,11 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    ; implicit-def: $vgpr3
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
-; GFX90A-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.global
 ; GFX90A-NEXT:    global_atomic_add_f32 v3, v[0:1], v2, off glc
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2
-; GFX90A-NEXT:  .LBB1_3: ; %Flow
+; GFX90A-NEXT:  ; %bb.3: ; %Flow
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB1_5
 ; GFX90A-NEXT:  ; %bb.4: ; %atomicrmw.private
@@ -241,12 +240,11 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX908-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
-; GFX908-NEXT:    s_cbranch_execz .LBB2_5
 ; GFX908-NEXT:  ; %bb.4: ; %atomicrmw.global
 ; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
 ; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX908-NEXT:    ; implicit-def: $vgpr2
-; GFX908-NEXT:  .LBB2_5: ; %Flow
+; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; GFX908-NEXT:    s_cbranch_execz .LBB2_7
 ; GFX908-NEXT:  ; %bb.6: ; %atomicrmw.private
@@ -291,12 +289,11 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
-; GFX90A-NEXT:    s_cbranch_execz .LBB2_5
 ; GFX90A-NEXT:  ; %bb.4: ; %atomicrmw.global
 ; GFX90A-NEXT:    global_atomic_add_f32 v[0:1], v2, off
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2
-; GFX90A-NEXT:  .LBB2_5: ; %Flow
+; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB2_7
 ; GFX90A-NEXT:  ; %bb.6: ; %atomicrmw.private

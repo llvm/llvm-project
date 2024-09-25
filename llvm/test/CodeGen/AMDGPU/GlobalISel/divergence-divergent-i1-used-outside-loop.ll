@@ -249,11 +249,10 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-NEXT:  .LBB3_6: ; %Flow1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, s6
-; GFX10-NEXT:    s_cbranch_execz .LBB3_8
 ; GFX10-NEXT:  ; %bb.7: ; %block.after.loop
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX10-NEXT:    flat_store_dword v[3:4], v0
-; GFX10-NEXT:  .LBB3_8: ; %exit
+; GFX10-NEXT:  ; %bb.8: ; %exit
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -315,7 +314,6 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v4
 ; GFX10-NEXT:    s_and_saveexec_b32 s7, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB4_4
 ; GFX10-NEXT:  ; %bb.3: ; %if.block.0
 ; GFX10-NEXT:    ; in Loop: Header=BB4_2 Depth=1
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
@@ -323,7 +321,7 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    v_add_co_u32 v8, s4, v2, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v9, s4, v3, v9, s4
 ; GFX10-NEXT:    global_store_dword v[8:9], v4, off
-; GFX10-NEXT:  .LBB4_4: ; %loop.break.block
+; GFX10-NEXT:  ; %bb.4: ; %loop.break.block
 ; GFX10-NEXT:    ; in Loop: Header=BB4_2 Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s7
@@ -342,10 +340,9 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:  .LBB4_6: ; %cond.block.1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, s6
-; GFX10-NEXT:    s_cbranch_execz .LBB4_8
 ; GFX10-NEXT:  ; %bb.7: ; %if.block.1
 ; GFX10-NEXT:    global_store_dword v[6:7], v4, off
-; GFX10-NEXT:  .LBB4_8: ; %exit
+; GFX10-NEXT:  ; %bb.8: ; %exit
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -536,11 +533,10 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_and_saveexec_b32 s0, s1
 ; GFX10-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execz .LBB6_6
 ; GFX10-NEXT:  ; %bb.5: ; %break.body
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 10
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
-; GFX10-NEXT:  .LBB6_6: ; %exit
+; GFX10-NEXT:  ; %bb.6: ; %exit
 ; GFX10-NEXT:    s_endpgm
 entry:
   br label %A

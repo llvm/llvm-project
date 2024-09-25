@@ -76,12 +76,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 28, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[2:3]
-; GFX7-NEXT:  .LBB0_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -96,12 +95,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[2:3]
-; GFX8-NEXT:  .LBB0_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -116,10 +114,9 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    flat_load_dword v4, v[2:3] offset:28
-; GFX9-NEXT:  .LBB0_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -134,10 +131,9 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    flat_load_dword v4, v[2:3] offset:28
-; GFX10-NEXT:  .LBB0_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
@@ -232,13 +228,12 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
 ; GFX7-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64 offset:28
-; GFX7-NEXT:  .LBB1_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -253,12 +248,11 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[2:3]
-; GFX8-NEXT:  .LBB1_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -273,10 +267,9 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX9-NEXT:  .LBB1_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -291,10 +284,9 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX10-NEXT:  .LBB1_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
@@ -345,13 +337,12 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
 ; GFX7-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64 offset:28
-; GFX7-NEXT:  .LBB2_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -366,12 +357,11 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 28, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[2:3]
-; GFX8-NEXT:  .LBB2_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3d08fc, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -386,10 +376,9 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX9-NEXT:  .LBB2_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3d0000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -404,10 +393,9 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:28
-; GFX10-NEXT:  .LBB2_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
@@ -513,12 +501,11 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0xfff, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX7-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX7-NEXT:  .LBB3_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x1000, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -534,12 +521,11 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0xfff, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX8-NEXT:  .LBB3_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x1000, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -555,10 +541,9 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    flat_load_sbyte v4, v[2:3] offset:4095
-; GFX9-NEXT:  .LBB3_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -574,12 +559,11 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x800, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3] offset:2047
-; GFX10-NEXT:  .LBB3_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
@@ -634,12 +618,11 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x1000, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX7-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX7-NEXT:  .LBB4_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x61a7c, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -655,12 +638,11 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x1000, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX8-NEXT:  .LBB4_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x61a7c, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -676,12 +658,11 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, 0x1000, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX9-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX9-NEXT:  .LBB4_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x61000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -697,12 +678,11 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x1000, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3]
-; GFX10-NEXT:  .LBB4_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x61800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
@@ -757,12 +737,11 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX7-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX7-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, v3, v5, vcc
 ; GFX7-NEXT:    flat_load_sbyte v6, v[2:3]
-; GFX7-NEXT:  .LBB5_2: ; %endif
+; GFX7-NEXT:  ; %bb.2: ; %endif
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0x1000, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -778,12 +757,11 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX8-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX8-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX8-NEXT:  ; %bb.1: ; %if
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, v3, v5, vcc
 ; GFX8-NEXT:    flat_load_sbyte v6, v[2:3]
-; GFX8-NEXT:  .LBB5_2: ; %endif
+; GFX8-NEXT:  ; %bb.2: ; %endif
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x1000, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -799,12 +777,11 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX9-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX9-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
 ; GFX9-NEXT:    flat_load_sbyte v6, v[2:3]
-; GFX9-NEXT:  .LBB5_2: ; %endif
+; GFX9-NEXT:  ; %bb.2: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -820,12 +797,11 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
-; GFX10-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v6, v[2:3]
-; GFX10-NEXT:  .LBB5_2: ; %endif
+; GFX10-NEXT:  ; %bb.2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
