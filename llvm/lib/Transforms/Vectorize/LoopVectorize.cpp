@@ -538,12 +538,6 @@ protected:
   /// A small list of PHINodes.
   using PhiVector = SmallVector<PHINode *, 4>;
 
-  /// A type for scalarized values in the new loop. Each value from the
-  /// original loop, when scalarized, is represented by UF x VF scalar values
-  /// in the new unrolled loop, where UF is the unroll factor and VF is the
-  /// vectorization factor.
-  using ScalarParts = SmallVector<SmallVector<Value *, 4>, 2>;
-
   /// Set up the values of the IVs correctly when exiting the vector loop.
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                     Value *VectorTripCount, Value *EndValue,
@@ -9469,7 +9463,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  // Generate scalar instances for all VF lanes of all UF parts.
+  // Generate scalar instances for all VF lanes.
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)

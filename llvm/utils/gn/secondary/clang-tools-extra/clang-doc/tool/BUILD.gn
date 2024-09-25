@@ -1,7 +1,7 @@
 copy("assets") {
   sources = [
-    "../assets/index.js",
     "../assets/clang-doc-default-stylesheet.css",
+    "../assets/index.js",
   ]
   outputs = [ "$root_build_dir/share/clang-doc/{{source_file_part}}" ]
 }

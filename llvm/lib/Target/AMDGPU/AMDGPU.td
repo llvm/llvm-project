@@ -929,12 +929,6 @@ def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
 
-def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
-  "HasVGPRSingleUseHintInsts",
-  "true",
-  "Has single-use VGPR hint instructions"
->;
-
 def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
   "HasPseudoScalarTrans",
   "true",
@@ -1635,14 +1629,12 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      Feature1_5xVGPRs,
      FeatureRequiredExportPriority])>;
 
@@ -1650,7 +1642,6 @@ def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion12 : FeatureSet<
@@ -1683,7 +1674,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
-   FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
@@ -2290,9 +2280,6 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
-
-def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
-  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;

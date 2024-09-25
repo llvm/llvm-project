@@ -412,12 +412,11 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(eq), [[BUILD_VECTOR]](<8 x s8>), [[BUILD_VECTOR1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s8>), [[UV1:%[0-9]+]]:_(<4 x s8>) = G_UNMERGE_VALUES [[ICMP]](<8 x s8>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[ICMP]](<8 x s8>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR2]](<4 x s32>), [[C]](s64)

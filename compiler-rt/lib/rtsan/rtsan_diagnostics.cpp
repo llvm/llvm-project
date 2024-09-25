@@ -37,12 +37,6 @@ public:
   const char *FunctionName() const { return Green(); }
   const char *Reason() const { return Blue(); }
 };
-
-template <class... Ts> struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-// TODO: Remove below when c++20
-template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 } // namespace
 
 static void PrintStackTrace(uptr pc, uptr bp) {
@@ -53,35 +47,39 @@ static void PrintStackTrace(uptr pc, uptr bp) {
 }
 
 static void PrintError(const Decorator &decorator,
-                       const DiagnosticsCallerInfo &info) {
-  const char *violation_type = std::visit(
-      Overloaded{
-          [](const InterceptedCallInfo &) { return "unsafe-library-call"; },
-          [](const BlockingCallInfo &) { return "blocking-call"; }},
-      info);
+                       const DiagnosticsInfo &info) {
+  const auto ErrorTypeStr = [&info]() -> const char * {
+    switch (info.type) {
+    case DiagnosticsInfoType::InterceptedCall:
+      return "unsafe-library-call";
+    case DiagnosticsInfoType::BlockingCall:
+      return "blocking-call";
+    }
+    return "(unknown error)";
+  };
 
   Printf("%s", decorator.Error());
-  Report("ERROR: RealtimeSanitizer: %s\n", violation_type);
+  Report("ERROR: RealtimeSanitizer: %s\n", ErrorTypeStr());
 }
 
 static void PrintReason(const Decorator &decorator,
-                        const DiagnosticsCallerInfo &info) {
+                        const DiagnosticsInfo &info) {
   Printf("%s", decorator.Reason());
 
-  std::visit(
-      Overloaded{[decorator](const InterceptedCallInfo &call) {
-                   Printf("Intercepted call to real-time unsafe function "
-                          "`%s%s%s` in real-time context!",
-                          decorator.FunctionName(),
-                          call.intercepted_function_name_, decorator.Reason());
-                 },
-                 [decorator](const BlockingCallInfo &arg) {
-                   Printf("Call to blocking function "
-                          "`%s%s%s` in real-time context!",
-                          decorator.FunctionName(), arg.blocking_function_name_,
-                          decorator.Reason());
-                 }},
-      info);
+  switch (info.type) {
+  case DiagnosticsInfoType::InterceptedCall: {
+    Printf("Intercepted call to real-time unsafe function "
+           "`%s%s%s` in real-time context!",
+           decorator.FunctionName(), info.func_name, decorator.Reason());
+    break;
+  }
+  case DiagnosticsInfoType::BlockingCall: {
+    Printf("Call to blocking function "
+           "`%s%s%s` in real-time context!",
+           decorator.FunctionName(), info.func_name, decorator.Reason());
+    break;
+  }
+  }
 
   Printf("\n");
 }
@@ -90,8 +88,8 @@ void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
   ScopedErrorReportLock l;
 
   Decorator d;
-  PrintError(d, info.call_info);
-  PrintReason(d, info.call_info);
+  PrintError(d, info);
+  PrintReason(d, info);
   Printf("%s", d.Default());
   PrintStackTrace(info.pc, info.bp);
 }
