@@ -15,6 +15,7 @@
 #include "compiler.h"
 #include "error.h"
 #include "jit_dispatch.h"
+#include "sections_tracker.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
