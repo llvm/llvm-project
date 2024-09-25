@@ -4451,7 +4451,7 @@ void request_readMemory(const llvm::json::Object &request) {
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
-  buf.resize(std::min(count_result, count_requested));
+  buf.resize(std::min<size_t>(count_result, count_requested));
 
   llvm::json::Object body;
   std::string formatted_addr = "0x" + llvm::utohexstr(addr_int);

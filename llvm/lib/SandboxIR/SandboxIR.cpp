@@ -3404,8 +3404,29 @@ Value *Context::getValue(llvm::Value *V) const {
   return nullptr;
 }
 
+Module *Context::getModule(llvm::Module *LLVMM) const {
+  auto It = LLVMModuleToModuleMap.find(LLVMM);
+  if (It != LLVMModuleToModuleMap.end())
+    return It->second.get();
+  return nullptr;
+}
+
+Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
+  auto Pair = LLVMModuleToModuleMap.insert({LLVMM, nullptr});
+  auto It = Pair.first;
+  if (!Pair.second)
+    return It->second.get();
+  It->second = std::unique_ptr<Module>(new Module(*LLVMM, *this));
+  return It->second.get();
+}
+
 Function *Context::createFunction(llvm::Function *F) {
   assert(getValue(F) == nullptr && "Already exists!");
+  // Create the module if needed before we create the new sandboxir::Function.
+  // Note: this won't fully populate the module. The only globals that will be
+  // available will be the ones being used within the function.
+  getOrCreateModule(F->getParent());
+
   auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
   auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
   // Create arguments.
@@ -3415,6 +3436,24 @@ Function *Context::createFunction(llvm::Function *F) {
   for (auto &BB : *F)
     createBasicBlock(&BB);
   return SBF;
+}
+
+Module *Context::createModule(llvm::Module *LLVMM) {
+  auto *M = getOrCreateModule(LLVMM);
+  // Create the functions.
+  for (auto &LLVMF : *LLVMM)
+    createFunction(&LLVMF);
+  // Create globals.
+  for (auto &Global : LLVMM->globals())
+    getOrCreateValue(&Global);
+  // Create aliases.
+  for (auto &Alias : LLVMM->aliases())
+    getOrCreateValue(&Alias);
+  // Create ifuncs.
+  for (auto &IFunc : LLVMM->ifuncs())
+    getOrCreateValue(&IFunc);
+
+  return M;
 }
 
 Function *BasicBlock::getParent() const {
