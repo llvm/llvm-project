@@ -1376,15 +1376,21 @@ protected:
   const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
   lto::IndexWriteCallback OnWrite;
   bool ShouldEmitImportsFiles;
+  DefaultThreadPool BackendThreadPool;
+  std::optional<Error> Err;
+  std::mutex ErrMu;
+  std::mutex OnWriteMu;
 
 public:
   ThinBackendProc(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles)
+      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles,
+      ThreadPoolStrategy ThinLTOParallelism)
       : Conf(Conf), CombinedIndex(CombinedIndex),
         ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
-        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles) {}
+        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles),
+        BackendThreadPool(ThinLTOParallelism) {}
 
   virtual ~ThinBackendProc() = default;
   virtual Error start(
@@ -1393,8 +1399,13 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
-  virtual Error wait() = 0;
-  virtual unsigned getThreadCount() = 0;
+  Error wait() {
+    BackendThreadPool.wait();
+    if (Err)
+      return std::move(*Err);
+    return Error::success();
+  }
+  unsigned getThreadCount() { return BackendThreadPool.getMaxConcurrency(); }
   virtual bool isSensitiveToInputOrder() { return false; }
 
   // Write sharded indices and (optionally) imports to disk
@@ -1429,14 +1440,10 @@ public:
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
-  DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
   DenseSet<GlobalValue::GUID> CfiFunctionDefs;
   DenseSet<GlobalValue::GUID> CfiFunctionDecls;
-
-  std::optional<Error> Err;
-  std::mutex ErrMu;
 
   bool ShouldEmitIndexFiles;
 
@@ -1448,9 +1455,9 @@ public:
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                        OnWrite, ShouldEmitImportsFiles),
-        BackendThreadPool(ThinLTOParallelism), AddStream(std::move(AddStream)),
-        Cache(std::move(Cache)), ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
+                        OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
+        AddStream(std::move(AddStream)), Cache(std::move(Cache)),
+        ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     for (auto &Name : CombinedIndex.cfiFunctionDefs())
       CfiFunctionDefs.insert(
           GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
@@ -1547,18 +1554,6 @@ public:
       OnWrite(std::string(ModulePath));
     return Error::success();
   }
-
-  Error wait() override {
-    BackendThreadPool.wait();
-    if (Err)
-      return std::move(*Err);
-    else
-      return Error::success();
-  }
-
-  unsigned getThreadCount() override {
-    return BackendThreadPool.getMaxConcurrency();
-  }
 };
 } // end anonymous namespace
 
@@ -1615,10 +1610,6 @@ namespace {
 class WriteIndexesThinBackend : public ThinBackendProc {
   std::string OldPrefix, NewPrefix, NativeObjectPrefix;
   raw_fd_ostream *LinkedObjectsFile;
-  DefaultThreadPool BackendThreadPool;
-  std::optional<Error> Err;
-  std::mutex ErrMu;
-  std::mutex OnWriteMu;
 
 public:
   WriteIndexesThinBackend(
@@ -1628,7 +1619,8 @@ public:
       std::string NativeObjectPrefix, bool ShouldEmitImportsFiles,
       raw_fd_ostream *LinkedObjectsFile, lto::IndexWriteCallback OnWrite)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                        OnWrite, ShouldEmitImportsFiles),
+                        OnWrite, ShouldEmitImportsFiles,
+                        /* ThinLTOParallelism */ hardware_concurrency()),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         NativeObjectPrefix(NativeObjectPrefix),
         LinkedObjectsFile(LinkedObjectsFile) {}
@@ -1641,6 +1633,10 @@ public:
       MapVector<StringRef, BitcodeModule> &ModuleMap) override {
     StringRef ModulePath = BM.getModuleIdentifier();
 
+    // The contents of this file may be used as input to a native link, and must
+    // therefore contain the processed modules in a determinstic order than
+    // match the order they are provided on the command line. For that reason,
+    // we cannot include this in the asynchronously executed lambda below.
     if (LinkedObjectsFile) {
       std::string ObjectPrefix =
           NativeObjectPrefix.empty() ? NewPrefix : NativeObjectPrefix;
@@ -1673,17 +1669,6 @@ public:
         },
         ModulePath, ImportList, OldPrefix, NewPrefix);
     return Error::success();
-  }
-
-  Error wait() override {
-    BackendThreadPool.wait();
-    if (Err)
-      return std::move(*Err);
-    return Error::success();
-  }
-
-  unsigned getThreadCount() override {
-    return BackendThreadPool.getMaxConcurrency();
   }
 
   bool isSensitiveToInputOrder() override {
