@@ -1289,9 +1289,6 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   static const int PR_SCHED_CORE = 62;
   static const int PR_SCHED_CORE_GET = 0;
   static const int PR_GET_PDEATHSIG = 2;
-  static const int PR_SET_SECCOMP = 22;
-
-  static const int SECCOMP_MODE_FILTER = 2;
   if (option == PR_SET_VMA && arg2 == 0UL) {
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
@@ -1310,9 +1307,6 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg5), sizeof(u64));
   } else if (res != -1 && option == PR_GET_PDEATHSIG) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg2), sizeof(int));
-  } else if (res != -1 && option == PR_SET_SECCOMP &&
-             arg2 == SECCOMP_MODE_FILTER) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)(arg3), struct_sock_fprog_sz);
   }
   return res;
 }
