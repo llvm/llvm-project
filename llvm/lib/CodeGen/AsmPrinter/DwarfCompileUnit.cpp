@@ -779,6 +779,13 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
+  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
+      !Single.getExpr()) {
+    // Lack of expression means it is a register.  Registers for PTX need to
+    // be marked with DW_AT_address_class = 2.  See
+    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1, 2);
+  }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
