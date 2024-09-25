@@ -5142,14 +5142,11 @@ lowerVECTOR_SHUFFLEAsCONCAT_VECTORS(ShuffleVectorSDNode *SVN, SelectionDAG &DAG,
   SDValue V1 = SVN->getOperand(0);
   if (V1.getOpcode() != ISD::INSERT_SUBVECTOR)
     return SDValue();
-  if (!V1.getOperand(0).isUndef())
+  if (!V1.getOperand(0).isUndef() || V1.getConstantOperandVal(2) != 0)
     return SDValue();
   SDValue InsertValue = V1.getOperand(1);
   MVT SubVecVT = InsertValue.getSimpleValueType();
   unsigned SubVecNumElements = SubVecVT.getVectorNumElements();
-  uint64_t InsertIndex = cast<ConstantSDNode>(V1.getOperand(2))->getZExtValue();
-  if (InsertIndex != 0)
-    return SDValue();
   ArrayRef<int> Mask = SVN->getMask();
   if (Mask.size() % SubVecNumElements != 0)
     return SDValue();
