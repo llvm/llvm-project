@@ -3,6 +3,18 @@
 
 namespace std {
   using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)operator new(sizeof(T) * N);
+    }
+    constexpr void deallocate(void *p) {
+      operator delete(p);
+    }
+  };
+  template<typename T, typename ...Args>
+  constexpr void construct_at(void *p, Args &&...args) {
+    new (p) T((Args&&)args...); // both-note {{in call to}}
+  }
 }
 
 void *operator new(std::size_t, void *p) { return p; }
@@ -216,4 +228,36 @@ namespace records {
     return 0;
   }
   static_assert(foo() == 0);
+}
+
+namespace ConstructAt {
+  struct S {
+    int a = 10;
+    float b = 1.0;
+  };
+
+  constexpr bool ok1() {
+    S s;
+
+    std::construct_at<S>(&s);
+    return s.a == 10 && s.b == 1.0;
+  }
+  static_assert(ok1());
+
+  struct S2 {
+    constexpr S2() {
+      (void)(1/0); // both-note {{division by zero}} \
+                   // both-warning {{division by zero is undefined}}
+    }
+  };
+
+  constexpr bool ctorFail() { //
+    S2 *s = std::allocator<S2>().allocate(1);
+    std::construct_at<S2>(s); // both-note {{in call to}}
+
+    return true;
+  }
+  static_assert(ctorFail()); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to 'ctorFail()'}}
+
 }

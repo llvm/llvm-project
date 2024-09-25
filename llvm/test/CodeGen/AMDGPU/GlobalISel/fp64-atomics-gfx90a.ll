@@ -49,7 +49,8 @@ define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, doub
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -123,7 +124,8 @@ define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -168,7 +170,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) 
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -242,7 +245,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrsp
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -287,7 +291,8 @@ define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, d
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -361,7 +366,8 @@ define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -404,7 +410,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -478,7 +485,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr add
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -521,7 +529,8 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, doub
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -595,7 +604,8 @@ define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -640,7 +650,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) 
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -714,7 +725,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrsp
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -759,7 +771,8 @@ define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, d
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -833,7 +846,8 @@ define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -876,7 +890,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -950,7 +965,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr add
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_min_num_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -993,7 +1009,8 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, doub
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1067,7 +1084,8 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -1112,7 +1130,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) 
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null offen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1186,7 +1205,8 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s0, 4
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[4:7], s0 offen th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
@@ -1231,7 +1251,8 @@ define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, d
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1305,7 +1326,8 @@ define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -1348,7 +1370,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[4:5] :: v_dual_mov_b32 v2, s6
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], null idxen
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1422,7 +1445,8 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr add
 ; GFX1210-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x44
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[8:9] :: v_dual_mov_b32 v2, s10
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX1210-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[4:7], null idxen offset:4 th:TH_ATOMIC_NT_RETURN
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
@@ -1458,8 +1482,9 @@ define amdgpu_kernel void @global_atomic_fmin_f64_noret(ptr addrspace(1) %ptr, d
 ; GFX1210-LABEL: global_atomic_fmin_f64_noret:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_atomic_min_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1490,8 +1515,9 @@ define amdgpu_kernel void @global_atomic_fmax_f64_noret(ptr addrspace(1) %ptr, d
 ; GFX1210-LABEL: global_atomic_fmax_f64_noret:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    global_atomic_max_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -2078,7 +2104,8 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], 4.0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
@@ -2118,7 +2145,8 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], 4.0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
@@ -2160,7 +2188,8 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat_system:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], 4.0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_SYS
@@ -2318,7 +2347,8 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat_agent_safe:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], 4.0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1] scope:SCOPE_DEV
@@ -2352,8 +2382,9 @@ define amdgpu_kernel void @flat_atomic_fmin_f64_noret(ptr %ptr, double %data) {
 ; GFX1210-LABEL: flat_atomic_fmin_f64_noret:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
@@ -2410,8 +2441,9 @@ define amdgpu_kernel void @flat_atomic_fmax_f64_noret(ptr %ptr, double %data) {
 ; GFX1210-LABEL: flat_atomic_fmax_f64_noret:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:

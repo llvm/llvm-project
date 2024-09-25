@@ -37,7 +37,7 @@ class VOP <string opName> {
 
 // First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
 defvar VOPDX_Max_Index = 12;
-defvar VOPD3X_Max_Index = 37;
+defvar VOPD3X_Max_Index = 36;
 
 class VOPD_Component<bits<6> OpIn, string vOPDName> {
   Instruction BaseVOP = !cast<Instruction>(NAME);

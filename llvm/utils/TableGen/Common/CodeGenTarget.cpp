@@ -121,7 +121,7 @@ StringRef CodeGenTarget::getRegNamespace() const {
   return RegClasses.size() > 0 ? RegClasses.front().Namespace : "";
 }
 
-Record *CodeGenTarget::getInstructionSet() const {
+const Record *CodeGenTarget::getInstructionSet() const {
   return TargetRec->getValueAsDef("InstructionSet");
 }
 
@@ -131,8 +131,9 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
 
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
-Record *CodeGenTarget::getAsmParser() const {
-  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyParsers");
+const Record *CodeGenTarget::getAsmParser() const {
+  std::vector<const Record *> LI =
+      TargetRec->getValueAsListOfConstDefs("AssemblyParsers");
   if (AsmParserNum >= LI.size())
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
@@ -142,28 +143,27 @@ Record *CodeGenTarget::getAsmParser() const {
 /// getAsmParserVariant - Return the AssemblyParserVariant definition for
 /// this target.
 ///
-Record *CodeGenTarget::getAsmParserVariant(unsigned i) const {
-  std::vector<Record *> LI =
-      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
-  if (i >= LI.size())
-    PrintFatalError("Target does not have an AsmParserVariant #" + Twine(i) +
+const Record *CodeGenTarget::getAsmParserVariant(unsigned Idx) const {
+  std::vector<const Record *> LI =
+      TargetRec->getValueAsListOfConstDefs("AssemblyParserVariants");
+  if (Idx >= LI.size())
+    PrintFatalError("Target does not have an AsmParserVariant #" + Twine(Idx) +
                     "!");
-  return LI[i];
+  return LI[Idx];
 }
 
 /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
 /// available for this target.
 ///
 unsigned CodeGenTarget::getAsmParserVariantCount() const {
-  std::vector<Record *> LI =
-      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
-  return LI.size();
+  return TargetRec->getValueAsListOfDefs("AssemblyParserVariants").size();
 }
 
 /// getAsmWriter - Return the AssemblyWriter definition for this target.
 ///
-Record *CodeGenTarget::getAsmWriter() const {
-  std::vector<Record *> LI = TargetRec->getValueAsListOfDefs("AssemblyWriters");
+const Record *CodeGenTarget::getAsmWriter() const {
+  std::vector<const Record *> LI =
+      TargetRec->getValueAsListOfConstDefs("AssemblyWriters");
   if (AsmWriterNum >= LI.size())
     PrintFatalError("Target does not have an AsmWriter #" +
                     Twine(AsmWriterNum) + "!");
@@ -422,30 +422,29 @@ ComplexPattern::ComplexPattern(const Record *R) {
   // FIXME: Why is this different from parseSDPatternOperatorProperties?
   // Parse the properties.
   Properties = 0;
-  std::vector<Record *> PropList = R->getValueAsListOfDefs("Properties");
-  for (unsigned i = 0, e = PropList.size(); i != e; ++i)
-    if (PropList[i]->getName() == "SDNPHasChain") {
+  for (const Record *Prop : R->getValueAsListOfDefs("Properties")) {
+    if (Prop->getName() == "SDNPHasChain") {
       Properties |= 1 << SDNPHasChain;
-    } else if (PropList[i]->getName() == "SDNPOptInGlue") {
+    } else if (Prop->getName() == "SDNPOptInGlue") {
       Properties |= 1 << SDNPOptInGlue;
-    } else if (PropList[i]->getName() == "SDNPMayStore") {
+    } else if (Prop->getName() == "SDNPMayStore") {
       Properties |= 1 << SDNPMayStore;
-    } else if (PropList[i]->getName() == "SDNPMayLoad") {
+    } else if (Prop->getName() == "SDNPMayLoad") {
       Properties |= 1 << SDNPMayLoad;
-    } else if (PropList[i]->getName() == "SDNPSideEffect") {
+    } else if (Prop->getName() == "SDNPSideEffect") {
       Properties |= 1 << SDNPSideEffect;
-    } else if (PropList[i]->getName() == "SDNPMemOperand") {
+    } else if (Prop->getName() == "SDNPMemOperand") {
       Properties |= 1 << SDNPMemOperand;
-    } else if (PropList[i]->getName() == "SDNPVariadic") {
+    } else if (Prop->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
-    } else if (PropList[i]->getName() == "SDNPWantRoot") {
+    } else if (Prop->getName() == "SDNPWantRoot") {
       Properties |= 1 << SDNPWantRoot;
-    } else if (PropList[i]->getName() == "SDNPWantParent") {
+    } else if (Prop->getName() == "SDNPWantParent") {
       Properties |= 1 << SDNPWantParent;
     } else {
-      PrintFatalError(R->getLoc(), "Unsupported SD Node property '" +
-                                       PropList[i]->getName() +
-                                       "' on ComplexPattern '" + R->getName() +
-                                       "'!");
+      PrintFatalError(R->getLoc(),
+                      "Unsupported SD Node property '" + Prop->getName() +
+                          "' on ComplexPattern '" + R->getName() + "'!");
     }
+  }
 }

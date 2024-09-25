@@ -39,8 +39,9 @@ define amdgpu_ps float @flat_load_b32_idxprom_wrong_stride(ptr align 4 inreg %p,
 ;
 ; GISEL-LABEL: flat_load_b32_idxprom_wrong_stride:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_dual_mov_b64 v[2:3], s[0:1] :: v_dual_ashrrev_i32 v1, 31, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
