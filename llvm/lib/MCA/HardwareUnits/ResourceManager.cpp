@@ -322,12 +322,11 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
 
       uint64_t ResourceMask = llvm::bit_floor(ReadyMask);
 
-      auto it = AvailableUnits.find(ResourceMask);
-      if (it == AvailableUnits.end()) {
+      auto [it, Inserted] = AvailableUnits.try_emplace(ResourceMask);
+      if (Inserted) {
         unsigned Index = getResourceStateIndex(ResourceMask);
         unsigned NumUnits = llvm::popcount(Resources[Index]->getReadyMask());
-        it =
-            AvailableUnits.insert(std::make_pair(ResourceMask, NumUnits)).first;
+        it->second = NumUnits;
       }
 
       if (!it->second) {
