@@ -1,15 +1,15 @@
-//===- DXILDataScalarization.cpp - Prepare LLVM Module for DXIL Data
-// Legalization----===//
+//===- DXILDataScalarization.cpp - Perform DXIL Data Legalization----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===--------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------===//
 
 #include "DXILDataScalarization.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -20,7 +20,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <utility>
 
 #define DEBUG_TYPE "dxil-data-scalarization"
 #define Max_VEC_SIZE 4
@@ -164,14 +163,16 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
   if (isa<VectorType>(OrigType) && isa<ArrayType>(NewType)) {
     // Convert vector initializer to array initializer
     SmallVector<Constant *, Max_VEC_SIZE> ArrayElements;
-    if( ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
-        for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I) 
-            ArrayElements.push_back(ConstVecInit->getOperand(I));
-    } else if (ConstantDataVector *ConstDataVecInit = llvm::dyn_cast<llvm::ConstantDataVector>(Init)) {
-        for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I) 
-            ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
-    }  else {
-      llvm_unreachable("Expected a ConstantVector or ConstantDataVector for vector initializer!");
+    if (ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
+      for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I)
+        ArrayElements.push_back(ConstVecInit->getOperand(I));
+    } else if (ConstantDataVector *ConstDataVecInit =
+                   llvm::dyn_cast<llvm::ConstantDataVector>(Init)) {
+      for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I)
+        ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
+    } else {
+      llvm_unreachable("Expected a ConstantVector or ConstantDataVector for "
+                       "vector initializer!");
     }
 
     return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);
@@ -213,9 +214,10 @@ static void findAndReplaceVectors(Module &M) {
       // Create a new global variable with the updated type
       GlobalVariable *NewGlobal = new GlobalVariable(
           M, NewType, G.isConstant(), G.getLinkage(),
-          // This is set via: transformInitializer
-          nullptr, G.getName() + ".scalarized", &G, G.getThreadLocalMode(),
-          G.getAddressSpace(), G.isExternallyInitialized());
+          // Initializer is set via transformInitializer
+          /*Initializer=*/nullptr, G.getName() + ".scalarized", &G,
+          G.getThreadLocalMode(), G.getAddressSpace(),
+          G.isExternallyInitialized());
 
       // Copy relevant attributes
       NewGlobal->setUnnamedAddr(G.getUnnamedAddr());
@@ -230,12 +232,9 @@ static void findAndReplaceVectors(Module &M) {
       }
 
       // Note: we want to do G.replaceAllUsesWith(NewGlobal);, but it assumes
-      // type equality
-      //  So instead we will use the visitor pattern
+      // type equality. Instead we will use the visitor pattern.
       Impl.GlobalMap[&G] = NewGlobal;
-      for (User *U : G.users()) {
-        // Note: The GEPS are stored as constExprs
-        // This step flattens them out to instructions
+      for (User *U : make_early_inc_range(G.users())) {
         if (isa<ConstantExpr>(U) && isa<Operator>(U)) {
           ConstantExpr *CE = cast<ConstantExpr>(U);
           convertUsersOfConstantsToInstructions(CE,
@@ -243,18 +242,6 @@ static void findAndReplaceVectors(Module &M) {
                                                 /*RemoveDeadConstants=*/false,
                                                 /*IncludeSelf=*/true);
         }
-      }
-      // Uses should have grown
-      std::vector<User *> UsersToProcess;
-      // Collect all users first
-      // work around so I can delete
-      // in a loop body
-      for (User *U : G.users()) {
-        UsersToProcess.push_back(U);
-      }
-
-      // Now process each user
-      for (User *U : UsersToProcess) {
         if (isa<Instruction>(U)) {
           Instruction *Inst = cast<Instruction>(U);
           Function *F = Inst->getFunction();
