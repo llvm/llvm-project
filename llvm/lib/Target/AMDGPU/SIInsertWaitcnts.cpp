@@ -820,7 +820,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_CONSUME &&
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (const MachineOperand &Op : Inst.all_uses()) {
-          if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
+          if (TRI->isVectorRegister(*MRI, Op.getReg()))
             setExpScore(&Inst, TRI, MRI, Op, CurrScore);
         }
       }
@@ -872,7 +872,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         }
       }
       for (const MachineOperand &Op : Inst.all_uses()) {
-        if (Op.isReg() && TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (TRI->isVectorRegister(*MRI, Op.getReg()))
           setExpScore(&Inst, TRI, MRI, Op, CurrScore);
       }
     }
@@ -1752,6 +1752,14 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (IsVGPR) {
+            // Implicit VGPR defs and uses are never a part of the memory
+            // instructions description and usually present to account for
+            // super-register liveness.
+            // TODO: Most of the other instructions also have implicit uses
+            // for the liveness accounting only.
+            if (Op.isImplicit() && MI.mayLoadOrStore())
+              continue;
+
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
             // previous write and this write are the same type of VMEM
             // instruction, in which case they are (in some architectures)
@@ -2327,7 +2335,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
           HasVMemStore = true;
       }
       for (const MachineOperand &Op : MI.all_uses()) {
-        if (!Op.isReg() || !TRI->isVectorRegister(*MRI, Op.getReg()))
+        if (!TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
         RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, Op);
         // Vgpr use

@@ -6246,16 +6246,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   case X86::VMOVAPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVUPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVAPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVUPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
                             get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);

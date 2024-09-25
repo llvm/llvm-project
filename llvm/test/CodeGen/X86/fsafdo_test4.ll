@@ -7,8 +7,8 @@
 ; CHECK: .loc    1 0 3 # foo.c:0:3
 ; CHECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
 ; CHECK: .loc    1 0 5 is_stmt 0 # :0:5
-; CHECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK: .loc    1 0 5 is_stmt 0 # :0:5
+; CHECK: .loc    1 9 5 discriminator 2 # foo.c:9:5
+; CHECK: .loc    1 0 5 # :0:5
 ; CHECK: .loc	   1 7 3 is_stmt 1 discriminator 2 # foo.c:7:3
 ; CHECK: .loc    1 14 3 # foo.c:14:3
 ; Check that variable __llvm_fs_discriminator__ is NOT generated.

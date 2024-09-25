@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
@@ -1366,6 +1367,11 @@ inline uint32_t hashGnu(StringRef Name) {
     H = (H << 5) + H + C;
   return H;
 }
+
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32BE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64BE>;
 
 } // end namespace object
 } // end namespace llvm

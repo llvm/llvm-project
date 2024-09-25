@@ -4376,8 +4376,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
         // single VALU instruction to materialize zero. Otherwise it is less
         // instructions to perform VALU adds with immediates or inline literals.
         unsigned NumLiterals =
-            !TII.isInlineConstant(APInt(32, ConstOffset & 0xffffffff)) +
-            !TII.isInlineConstant(APInt(32, ConstOffset >> 32));
+            !TII.isInlineConstant(APInt(32, Lo_32(ConstOffset))) +
+            !TII.isInlineConstant(APInt(32, Hi_32(ConstOffset)));
         if (STI.getConstantBusLimit(AMDGPU::V_ADD_U32_e64) > NumLiterals)
           return std::nullopt;
       }

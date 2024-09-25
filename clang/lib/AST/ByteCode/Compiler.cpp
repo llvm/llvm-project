@@ -431,6 +431,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_AddressSpaceConversion:
+  case CK_CPointerToObjCPointerCast:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
@@ -724,9 +725,7 @@ bool Compiler<Emitter>::VisitParenExpr(const ParenExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Need short-circuiting for these.
-  if (BO->getType()->isVectorType())
-    return this->VisitVectorBinOp(BO);
-  if (BO->isLogicalOp())
+  if (BO->isLogicalOp() && !BO->getType()->isVectorType())
     return this->VisitLogicalBinOp(BO);
 
   const Expr *LHS = BO->getLHS();
@@ -745,6 +744,8 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   if (BO->getType()->isAnyComplexType())
     return this->VisitComplexBinOp(BO);
+  if (BO->getType()->isVectorType())
+    return this->VisitVectorBinOp(BO);
   if ((LHS->getType()->isAnyComplexType() ||
        RHS->getType()->isAnyComplexType()) &&
       BO->isComparisonOp())
@@ -1263,16 +1264,14 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  assert(!E->isCommaOp() &&
+         "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
   assert(E->getLHS()->getType()->isVectorType());
   assert(E->getRHS()->getType()->isVectorType());
 
-  // FIXME: Current only support comparison binary operator, add support for
-  // other binary operator.
-  if (!E->isComparisonOp() && !E->isLogicalOp())
-    return this->emitInvalid(E);
   // Prepare storage for result.
-  if (!Initializing) {
+  if (!Initializing && !E->isCompoundAssignmentOp()) {
     unsigned LocalIndex = allocateTemporary(E);
     if (!this->emitGetPtrLocal(LocalIndex, E))
       return false;
@@ -1281,10 +1280,12 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   const auto *VecTy = E->getType()->getAs<VectorType>();
+  auto Op = E->isCompoundAssignmentOp()
+                ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
+                : E->getOpcode();
 
-  // The LHS and RHS of a comparison operator must have the same type. So we
-  // just use LHS vector element type here.
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
+  PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   // Evaluate LHS and save value to LHSOffset.
@@ -1301,7 +1302,18 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
     return false;
 
-  auto getElem = [=](unsigned Offset, unsigned Index) {
+  if (E->isCompoundAssignmentOp() && !this->emitGetLocal(PT_Ptr, LHSOffset, E))
+    return false;
+
+  // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
+  // integer promotion.
+  bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
+  QualType PromotTy =
+      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+  PrimType PromotT = classifyPrim(PromotTy);
+  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+
+  auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
       return false;
     if (!this->emitArrayElemPop(ElemT, Index, E))
@@ -1311,16 +1323,63 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
         return false;
       if (!this->emitPrimCast(PT_Bool, ResultElemT, VecTy->getElementType(), E))
         return false;
+    } else if (NeedIntPromot) {
+      if (!this->emitPrimCast(ElemT, PromotT, PromotTy, E))
+        return false;
     }
     return true;
   };
 
+#define EMIT_ARITH_OP(OP)                                                      \
+  {                                                                            \
+    if (ElemT == PT_Float) {                                                   \
+      if (!this->emit##OP##f(getFPOptions(E), E))                              \
+        return false;                                                          \
+    } else {                                                                   \
+      if (!this->emit##OP(ElemT, E))                                           \
+        return false;                                                          \
+    }                                                                          \
+    break;                                                                     \
+  }
+
   for (unsigned I = 0; I != VecTy->getNumElements(); ++I) {
-    if (!getElem(LHSOffset, I))
+    if (!getElem(LHSOffset, ElemT, I))
       return false;
-    if (!getElem(RHSOffset, I))
+    if (!getElem(RHSOffset, RHSElemT, I))
       return false;
-    switch (E->getOpcode()) {
+    switch (Op) {
+    case BO_Add:
+      EMIT_ARITH_OP(Add)
+    case BO_Sub:
+      EMIT_ARITH_OP(Sub)
+    case BO_Mul:
+      EMIT_ARITH_OP(Mul)
+    case BO_Div:
+      EMIT_ARITH_OP(Div)
+    case BO_Rem:
+      if (!this->emitRem(ElemT, E))
+        return false;
+      break;
+    case BO_And:
+      if (!this->emitBitAnd(OpT, E))
+        return false;
+      break;
+    case BO_Or:
+      if (!this->emitBitOr(OpT, E))
+        return false;
+      break;
+    case BO_Xor:
+      if (!this->emitBitXor(OpT, E))
+        return false;
+      break;
+    case BO_Shl:
+      if (!this->emitShl(OpT, RHSElemT, E))
+        return false;
+      break;
+    case BO_Shr:
+      if (!this->emitShr(OpT, RHSElemT, E))
+        return false;
+      break;
     case BO_EQ:
       if (!this->emitEQ(ElemT, E))
         return false;
@@ -1356,7 +1415,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
         return false;
       break;
     default:
-      llvm_unreachable("Unsupported binary operator");
+      return this->emitInvalid(E);
     }
 
     // The result of the comparison is a vector of the same width and number
@@ -1371,10 +1430,19 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
         return false;
     }
 
+    // If we performed an integer promotion, we need to cast the compute result
+    // into result vector element type.
+    if (NeedIntPromot &&
+        !this->emitPrimCast(PromotT, ResultElemT, VecTy->getElementType(), E))
+      return false;
+
     // Initialize array element with the value we just computed.
     if (!this->emitInitElem(ResultElemT, I, E))
       return false;
   }
+
+  if (DiscardResult && E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
+    return false;
   return true;
 }
 
@@ -2134,7 +2202,9 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
-  return this->delegate(E->getString());
+  if (std::optional<unsigned> I = P.getOrCreateDummy(E))
+    return this->emitGetPtrGlobal(*I, E);
+  return false;
 }
 
 template <class Emitter>
@@ -2292,6 +2362,8 @@ bool Compiler<Emitter>::VisitPointerCompoundAssignOperator(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
+  if (E->getType()->isVectorType())
+    return VisitVectorBinOp(E);
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
@@ -2459,6 +2531,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
+    if (!this->checkLiteralType(SubExpr))
+      return false;
     // Non-primitive values.
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
@@ -2479,6 +2553,10 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     return this->emitGetPtrLocal(LocalIndex, E);
   } else {
+
+    if (!this->checkLiteralType(SubExpr))
+      return false;
+
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
             allocateLocal(Inner, E->getExtendingDecl())) {
@@ -3021,12 +3099,11 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   QualType ElementType = E->getAllocatedType();
   std::optional<PrimType> ElemT = classify(ElementType);
   unsigned PlacementArgs = E->getNumPlacementArgs();
+  const FunctionDecl *OperatorNew = E->getOperatorNew();
+  const Expr *PlacementDest = nullptr;
   bool IsNoThrow = false;
 
-  // FIXME: Better diagnostic. diag::note_constexpr_new_placement
   if (PlacementArgs != 0) {
-    // The only new-placement list we support is of the form (std::nothrow).
-    //
     // FIXME: There is no restriction on this, but it's not clear that any
     // other form makes any sense. We get here for cases such as:
     //
@@ -3035,27 +3112,44 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     // (which should presumably be valid only if N is a multiple of
     // alignof(int), and in any case can't be deallocated unless N is
     // alignof(X) and X has new-extended alignment).
-    if (PlacementArgs != 1 || !E->getPlacementArg(0)->getType()->isNothrowT())
-      return this->emitInvalid(E);
+    if (PlacementArgs == 1) {
+      const Expr *Arg1 = E->getPlacementArg(0);
+      if (Arg1->getType()->isNothrowT()) {
+        if (!this->discard(Arg1))
+          return false;
+        IsNoThrow = true;
+      } else {
+        // Invalid unless we have C++26 or are in a std:: function.
+        if (!this->emitInvalidNewDeleteExpr(E, E))
+          return false;
 
-    if (!this->discard(E->getPlacementArg(0)))
-      return false;
-    IsNoThrow = true;
-  }
+        // If we have a placement-new destination, we'll later use that instead
+        // of allocating.
+        if (OperatorNew->isReservedGlobalPlacementOperator())
+          PlacementDest = Arg1;
+      }
+    } else {
+      // Always invalid.
+      return this->emitInvalid(E);
+    }
+  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
+    return this->emitInvalidNewDeleteExpr(E, E);
 
   const Descriptor *Desc;
-  if (ElemT) {
-    if (E->isArray())
-      Desc = nullptr; // We're not going to use it in this case.
-    else
-      Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
-                                /*IsConst=*/false, /*IsTemporary=*/false,
-                                /*IsMutable=*/false);
-  } else {
-    Desc = P.createDescriptor(
-        E, ElementType.getTypePtr(),
-        E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
-        /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+  if (!PlacementDest) {
+    if (ElemT) {
+      if (E->isArray())
+        Desc = nullptr; // We're not going to use it in this case.
+      else
+        Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+                                  /*IsConst=*/false, /*IsTemporary=*/false,
+                                  /*IsMutable=*/false);
+    } else {
+      Desc = P.createDescriptor(
+          E, ElementType.getTypePtr(),
+          E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
+          /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+    }
   }
 
   if (E->isArray()) {
@@ -3072,26 +3166,42 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     PrimType SizeT = classifyPrim(Stripped->getType());
 
-    if (!this->visit(Stripped))
-      return false;
-
-    if (ElemT) {
-      // N primitive elements.
-      if (!this->emitAllocN(SizeT, *ElemT, E, IsNoThrow, E))
+    if (PlacementDest) {
+      if (!this->visit(PlacementDest))
+        return false;
+      if (!this->visit(Stripped))
+        return false;
+      if (!this->emitCheckNewTypeMismatchArray(SizeT, E, E))
         return false;
     } else {
-      // N Composite elements.
-      if (!this->emitAllocCN(SizeT, Desc, IsNoThrow, E))
+      if (!this->visit(Stripped))
         return false;
+
+      if (ElemT) {
+        // N primitive elements.
+        if (!this->emitAllocN(SizeT, *ElemT, E, IsNoThrow, E))
+          return false;
+      } else {
+        // N Composite elements.
+        if (!this->emitAllocCN(SizeT, Desc, IsNoThrow, E))
+          return false;
+      }
     }
 
     if (Init && !this->visitInitializer(Init))
       return false;
 
   } else {
-    // Allocate just one element.
-    if (!this->emitAlloc(Desc, E))
-      return false;
+    if (PlacementDest) {
+      if (!this->visit(PlacementDest))
+        return false;
+      if (!this->emitCheckNewTypeMismatch(E, E))
+        return false;
+    } else {
+      // Allocate just one element.
+      if (!this->emitAlloc(Desc, E))
+        return false;
+    }
 
     if (Init) {
       if (ElemT) {
@@ -3117,6 +3227,11 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   const Expr *Arg = E->getArgument();
+
+  const FunctionDecl *OperatorDelete = E->getOperatorDelete();
+
+  if (!OperatorDelete->isReplaceableGlobalAllocationFunction())
+    return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
   if (!this->visit(Arg))
@@ -3499,9 +3614,6 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   assert(!classify(E->getType()));
-
-  if (!this->checkLiteralType(E))
-    return false;
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);

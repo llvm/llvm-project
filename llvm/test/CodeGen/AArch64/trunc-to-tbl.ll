@@ -705,14 +705,14 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q4, q1, [x0, #48]
+; CHECK-NEXT:    ldp q4, q0, [x0, #48]
 ; CHECK-NEXT:    add x9, x1, #10
-; CHECK-NEXT:    ldr d0, [x0, #80]
+; CHECK-NEXT:    ldr d1, [x0, #80]
 ; CHECK-NEXT:    ldp q3, q2, [x0]
 ; CHECK-NEXT:    ldr q5, [x0, #32]
 ; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    add x0, x0, #128
-; CHECK-NEXT:    uzp1.4s v0, v1, v0
+; CHECK-NEXT:    uzp1.4s v0, v0, v1
 ; CHECK-NEXT:    uzp1.4s v1, v5, v4
 ; CHECK-NEXT:    uzp1.4s v2, v3, v2
 ; CHECK-NEXT:    xtn.4h v0, v0
