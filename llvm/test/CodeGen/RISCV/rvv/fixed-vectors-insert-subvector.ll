@@ -894,3 +894,26 @@ define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
   %2 = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %1, i64 0)
   ret <4 x i32> %2
 }
+
+define <16 x i32> @build_vector_insert(<16 x i32> %0) {
+; VLA-LABEL: build_vector_insert:
+; VLA:       # %bb.0: # %entry
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vmv.v.i v16, 0
+; VLA-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; VLA-NEXT:    vslideup.vi v12, v16, 8
+; VLA-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; VLA-NEXT:    vmv.v.v v12, v8
+; VLA-NEXT:    vmv4r.v v8, v12
+; VLA-NEXT:    ret
+;
+; VLS-LABEL: build_vector_insert:
+; VLS:       # %bb.0: # %entry
+; VLS-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLS-NEXT:    vmv.v.i v10, 0
+; VLS-NEXT:    ret
+entry:
+  %1 = call <16 x i32> @llvm.vector.insert.v16f32.v8f32(<16 x i32> poison, <8 x i32> zeroinitializer, i64 8)
+  %2 = shufflevector <16 x i32> %0, <16 x i32> %1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <16 x i32> %2
+}
