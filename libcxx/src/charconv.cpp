@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <charconv>
-#include <string.h>
 
 #include "include/to_chars_floating_point.h"
 
@@ -74,4 +73,43 @@ to_chars_result to_chars(char* __first, char* __last, long double __value, chars
       __first, __last, static_cast<double>(__value), __fmt, __precision);
 }
 
+template __to_chars_offset_result
+__external_to_chars_integral<2, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<8, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<16, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<2, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<8, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<16, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+#ifndef _LIBCPP_HAS_NO_INT128
+template __to_chars_offset_result
+__external_to_chars_integral<2, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<8, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<16, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+#endif // _LIBCPP_HAS_NO_INT128
+
+template __to_chars_offset_result
+__external_to_chars_integral<uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, uint32_t);
+
+template __to_chars_offset_result
+__external_to_chars_integral<uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, uint64_t);
+
+#ifndef _LIBCPP_HAS_NO_INT128
+template __to_chars_offset_result
+__external_to_chars_integral<__uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, __uint128_t);
+#endif
 _LIBCPP_END_NAMESPACE_STD
