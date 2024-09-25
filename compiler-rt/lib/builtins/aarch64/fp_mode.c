@@ -25,6 +25,7 @@
 // __aarch64_fe_default_rmode symbol.
 #if defined(_MSC_VER)
 extern CRT_FE_ROUND_MODE __default_rmode;
+extern CRT_FE_ROUND_MODE __aarch64_fe_default_rmode;
 CRT_FE_ROUND_MODE __default_rmode = CRT_FE_TONEAREST;
 #pragma comment(linker, "/alternatename:__aarch64_fe_default_rmode=__default_rmode")
 #else
