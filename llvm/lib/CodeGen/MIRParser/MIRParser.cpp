@@ -625,10 +625,10 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MRI.freezeReservedRegs();
 
   if (computeFunctionProperties(MF, YamlMF))
-    return false;
+    return true;
 
   if (initializeCallSiteInfo(PFS, YamlMF))
-    return false;
+    return true;
 
   setupDebugValueTracking(MF, PFS, YamlMF);
 
