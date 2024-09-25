@@ -125,7 +125,7 @@ static std::unique_ptr<InterfaceFile>
 getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Filename);
+      MemoryBuffer::getFile(Filename, /*IsText=*/true);
   if (BufferOrErr.getError())
     ExitOnErr(errorCodeToError(BufferOrErr.getError()));
   auto Buffer = std::move(*BufferOrErr);
