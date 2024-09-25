@@ -721,12 +721,15 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return error("couldn't start parsing - no stack frame");
 
   ExecutionContextScope *exe_scope =
-      m_options.GetREPLEnabled() ? static_cast<ExecutionContextScope *>(target)
-                                 : static_cast<ExecutionContextScope *>(frame);
+      m_options.GetREPLEnabled() || m_options.GetPlaygroundTransformEnabled()
+          ? static_cast<ExecutionContextScope *>(target)
+          : static_cast<ExecutionContextScope *>(frame);
 
-exe_scope = exe_ctx.GetBestExecutionContextScope();
+  exe_scope = exe_ctx.GetBestExecutionContextScope();
 
-  m_swift_scratch_ctx = target->GetSwiftScratchContext(m_err, *exe_scope);
+  m_swift_scratch_ctx = target->GetSwiftScratchContext(
+      m_err, *exe_scope, /*create_on_demand=*/true,
+      m_options.GetPlaygroundTransformEnabled());
   if (!m_swift_scratch_ctx)
     return error("could not create a Swift scratch context: ",
                  m_err.AsCString());
@@ -734,12 +737,12 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
   // For playgrounds, the target triple should be used for expression
   // evaluation, not the current module. This requires disabling precise
   // compiler invocations.
-  //
-  // To disable precise compiler invocations, pass a null SymbolContext.
-  const SymbolContext *sc = nullptr;
-  if (!m_runs_in_playground_or_repl)
-    sc = &frame->GetSymbolContext(lldb::eSymbolContextFunction);
-
+  SymbolContext sc;
+  if (m_options.GetREPLEnabled() || m_options.GetPlaygroundTransformEnabled())
+    sc = SymbolContext(target->shared_from_this(),
+                       target->GetExecutableModule());
+  else
+    sc = frame->GetSymbolContext(lldb::eSymbolContextFunction);
   auto *swift_ast_ctx = m_swift_scratch_ctx->get()->GetSwiftASTContext(sc);
   m_swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(swift_ast_ctx);

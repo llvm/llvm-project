@@ -1231,7 +1231,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
           target.GetSwiftScratchContext(error, frame);
       auto scratch_ctx = maybe_swift_ast->get();
       if (scratch_ctx) {
-        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(&sc)) {
+        if (SwiftASTContext *swift_ast = scratch_ctx->GetSwiftASTContext(sc)) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName());
         if (error.Success()) {

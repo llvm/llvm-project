@@ -3063,7 +3063,7 @@ SwiftLanguageRuntimeImpl::GetConcreteType(ExecutionContextScope *exe_scope,
   if (!promise_sp)
     return CompilerType();
 
-  const SymbolContext *sc = &frame->GetSymbolContext(eSymbolContextFunction);
+  const SymbolContext &sc = frame->GetSymbolContext(eSymbolContextFunction);
   return promise_sp->FulfillTypePromise(sc);
 }
 

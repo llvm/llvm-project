@@ -194,27 +194,10 @@ bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
   return SetPropertyAtIndex(idx, new_value);
 }
 
-bool ModuleListProperties::GetUseSwiftTypeRefTypeSystem() const {
-  const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
-}
-
 bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
   const uint32_t idx = ePropertySwiftValidateTypeSystem;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
-}
-
-bool ModuleListProperties::GetUseSwiftPreciseCompilerInvocation() const {
-  const uint32_t idx = ePropertyUseSwiftPreciseCompilerInvocation;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
-}
-
-bool ModuleListProperties::SetUseSwiftTypeRefTypeSystem(bool new_value) {
-  const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
-  return SetPropertyAtIndex(idx, new_value);
 }
 
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
