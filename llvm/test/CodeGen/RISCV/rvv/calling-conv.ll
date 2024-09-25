@@ -47,9 +47,13 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect
 ; RV32-NEXT:    addi sp, s0, -144
+; RV32-NEXT:    .cfi_def_cfa sp, 144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 144
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: caller_scalable_vector_split_indirect:
@@ -78,9 +82,13 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect
 ; RV64-NEXT:    addi sp, s0, -144
+; RV64-NEXT:    .cfi_def_cfa sp, 144
 ; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 144
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %c = alloca i64
   %a = call <vscale x 32 x i32> @callee_scalable_vector_split_indirect(<vscale x 32 x i32> zeroinitializer, <vscale x 32 x i32> %x)
@@ -99,7 +107,9 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @caller_tuple_return() {
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    vmv2r.v v10, v12
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: caller_tuple_return:
@@ -113,7 +123,9 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @caller_tuple_return() {
 ; RV64-NEXT:    vmv2r.v v8, v10
 ; RV64-NEXT:    vmv2r.v v10, v12
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @callee_tuple_return()
   %b = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %a, 0
@@ -137,7 +149,9 @@ define void @caller_tuple_argument({<vscale x 4 x i32>, <vscale x 4 x i32>} %x) 
 ; RV32-NEXT:    vmv2r.v v10, v12
 ; RV32-NEXT:    call callee_tuple_argument
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: caller_tuple_argument:
@@ -151,7 +165,9 @@ define void @caller_tuple_argument({<vscale x 4 x i32>, <vscale x 4 x i32>} %x) 
 ; RV64-NEXT:    vmv2r.v v10, v12
 ; RV64-NEXT:    call callee_tuple_argument
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %a = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %x, 0
   %b = extractvalue {<vscale x 4 x i32>, <vscale x 4 x i32>} %x, 1

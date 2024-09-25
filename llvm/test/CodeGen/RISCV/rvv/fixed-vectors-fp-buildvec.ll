@@ -225,8 +225,11 @@ define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; RV32-ZFHMIN-NEXT:    csrr a0, vlenb
 ; RV32-ZFHMIN-NEXT:    slli a0, a0, 1
 ; RV32-ZFHMIN-NEXT:    add sp, sp, a0
+; RV32-ZFHMIN-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-ZFHMIN-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-ZFHMIN-NEXT:    .cfi_restore ra
 ; RV32-ZFHMIN-NEXT:    addi sp, sp, 48
+; RV32-ZFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-ZFHMIN-NEXT:    ret
 ;
 ; RV64-ZFHMIN-LABEL: splat_idx_v4f16:
@@ -255,8 +258,11 @@ define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; RV64-ZFHMIN-NEXT:    csrr a0, vlenb
 ; RV64-ZFHMIN-NEXT:    slli a0, a0, 1
 ; RV64-ZFHMIN-NEXT:    add sp, sp, a0
+; RV64-ZFHMIN-NEXT:    .cfi_def_cfa sp, 48
 ; RV64-ZFHMIN-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-ZFHMIN-NEXT:    .cfi_restore ra
 ; RV64-ZFHMIN-NEXT:    addi sp, sp, 48
+; RV64-ZFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZFHMIN-NEXT:    ret
   %x = extractelement <4 x half> %v, i64 %idx
   %ins = insertelement <4 x half> poison, half %x, i32 0
@@ -526,9 +532,13 @@ define <16 x float> @buildvec_v16f32(float %e0, float %e1, float %e2, float %e3,
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -128
+; RV32-NEXT:    .cfi_def_cfa sp, 128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v16f32:
@@ -570,9 +580,13 @@ define <16 x float> @buildvec_v16f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -128
+; RV64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 128
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <16 x float> poison, float %e0, i64 0
   %v1 = insertelement <16 x float> %v0, float %e1, i64 1
@@ -666,13 +680,21 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a1)
 ; RV32-NEXT:    addi sp, s0, -256
+; RV32-NEXT:    .cfi_def_cfa sp, 256
 ; RV32-NEXT:    lw ra, 252(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    fld fs0, 240(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs1, 232(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs2, 224(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs3, 216(sp) # 8-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore fs0
+; RV32-NEXT:    .cfi_restore fs1
+; RV32-NEXT:    .cfi_restore fs2
+; RV32-NEXT:    .cfi_restore fs3
 ; RV32-NEXT:    addi sp, sp, 256
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v32f32:
@@ -771,6 +793,7 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a1)
 ; RV64-NEXT:    addi sp, s0, -256
+; RV64-NEXT:    .cfi_def_cfa sp, 256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs0, 232(sp) # 8-byte Folded Reload
@@ -785,7 +808,22 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    fld fs9, 160(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs10, 152(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs11, 144(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore fs0
+; RV64-NEXT:    .cfi_restore fs1
+; RV64-NEXT:    .cfi_restore fs2
+; RV64-NEXT:    .cfi_restore fs3
+; RV64-NEXT:    .cfi_restore fs4
+; RV64-NEXT:    .cfi_restore fs5
+; RV64-NEXT:    .cfi_restore fs6
+; RV64-NEXT:    .cfi_restore fs7
+; RV64-NEXT:    .cfi_restore fs8
+; RV64-NEXT:    .cfi_restore fs9
+; RV64-NEXT:    .cfi_restore fs10
+; RV64-NEXT:    .cfi_restore fs11
 ; RV64-NEXT:    addi sp, sp, 256
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <32 x float> poison, float %e0, i64 0
   %v1 = insertelement <32 x float> %v0, float %e1, i64 1
@@ -846,9 +884,13 @@ define <8 x double> @buildvec_v8f64(double %e0, double %e1, double %e2, double %
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -128
+; RV32-NEXT:    .cfi_def_cfa sp, 128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v8f64:
@@ -874,9 +916,13 @@ define <8 x double> @buildvec_v8f64(double %e0, double %e1, double %e2, double %
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -128
+; RV64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 128
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <8 x double> poison, double %e0, i64 0
   %v1 = insertelement <8 x double> %v0, double %e1, i64 1
@@ -937,9 +983,13 @@ define <16 x double> @buildvec_v16f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -384
+; RV32-NEXT:    .cfi_def_cfa sp, 384
 ; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 384
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v16f64:
@@ -973,9 +1023,13 @@ define <16 x double> @buildvec_v16f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -256
+; RV64-NEXT:    .cfi_def_cfa sp, 256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 256
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <16 x double> poison, double %e0, i64 0
   %v1 = insertelement <16 x double> %v0, double %e1, i64 1
@@ -1102,6 +1156,7 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    addi a0, sp, 256
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -512
+; RV32-NEXT:    .cfi_def_cfa sp, 512
 ; RV32-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    fld fs0, 496(sp) # 8-byte Folded Reload
@@ -1116,7 +1171,22 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    fld fs9, 424(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs10, 416(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs11, 408(sp) # 8-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore fs0
+; RV32-NEXT:    .cfi_restore fs1
+; RV32-NEXT:    .cfi_restore fs2
+; RV32-NEXT:    .cfi_restore fs3
+; RV32-NEXT:    .cfi_restore fs4
+; RV32-NEXT:    .cfi_restore fs5
+; RV32-NEXT:    .cfi_restore fs6
+; RV32-NEXT:    .cfi_restore fs7
+; RV32-NEXT:    .cfi_restore fs8
+; RV32-NEXT:    .cfi_restore fs9
+; RV32-NEXT:    .cfi_restore fs10
+; RV32-NEXT:    .cfi_restore fs11
 ; RV32-NEXT:    addi sp, sp, 512
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v32f64:
@@ -1192,13 +1262,21 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    mv a0, sp
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    addi sp, s0, -384
+; RV64-NEXT:    .cfi_def_cfa sp, 384
 ; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs0, 360(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs1, 352(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs2, 344(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs3, 336(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore fs0
+; RV64-NEXT:    .cfi_restore fs1
+; RV64-NEXT:    .cfi_restore fs2
+; RV64-NEXT:    .cfi_restore fs3
 ; RV64-NEXT:    addi sp, sp, 384
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <32 x double> poison, double %e0, i64 0
   %v1 = insertelement <32 x double> %v0, double %e1, i64 1
@@ -1341,7 +1419,20 @@ define <32 x double> @buildvec_v32f64_exact_vlen(double %e0, double %e1, double 
 ; RV32-NEXT:    fld fs9, 32(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs10, 24(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    fld fs11, 16(sp) # 8-byte Folded Reload
+; RV32-NEXT:    .cfi_restore fs0
+; RV32-NEXT:    .cfi_restore fs1
+; RV32-NEXT:    .cfi_restore fs2
+; RV32-NEXT:    .cfi_restore fs3
+; RV32-NEXT:    .cfi_restore fs4
+; RV32-NEXT:    .cfi_restore fs5
+; RV32-NEXT:    .cfi_restore fs6
+; RV32-NEXT:    .cfi_restore fs7
+; RV32-NEXT:    .cfi_restore fs8
+; RV32-NEXT:    .cfi_restore fs9
+; RV32-NEXT:    .cfi_restore fs10
+; RV32-NEXT:    .cfi_restore fs11
 ; RV32-NEXT:    addi sp, sp, 112
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_v32f64_exact_vlen:
@@ -1425,7 +1516,16 @@ define <32 x double> @buildvec_v32f64_exact_vlen(double %e0, double %e1, double 
 ; RV64-NEXT:    fld fs5, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs7, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore fs0
+; RV64-NEXT:    .cfi_restore fs1
+; RV64-NEXT:    .cfi_restore fs2
+; RV64-NEXT:    .cfi_restore fs3
+; RV64-NEXT:    .cfi_restore fs4
+; RV64-NEXT:    .cfi_restore fs5
+; RV64-NEXT:    .cfi_restore fs6
+; RV64-NEXT:    .cfi_restore fs7
 ; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %v0 = insertelement <32 x double> poison, double %e0, i64 0
   %v1 = insertelement <32 x double> %v0, double %e1, i64 1

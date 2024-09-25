@@ -15,7 +15,9 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ; CHECK-NEXT:     PseudoCALLIndirect killed $x10, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2
   ; CHECK-NEXT:   }
   ; CHECK-NEXT:   $x1 = LD $x2, 8 :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x1
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 16
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT:   PseudoRET
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void

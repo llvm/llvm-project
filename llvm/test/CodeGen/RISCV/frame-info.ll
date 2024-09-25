@@ -29,7 +29,10 @@ define void @trivial() {
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: trivial:
@@ -44,7 +47,10 @@ define void @trivial() {
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   ret void
 }
@@ -66,9 +72,13 @@ define void @stack_alloc(i32 signext %size) {
 ; RV32-NEXT:    mv sp, a0
 ; RV32-NEXT:    call callee_with_args
 ; RV32-NEXT:    addi sp, s0, -16
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: stack_alloc:
@@ -89,9 +99,13 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-NEXT:    mv sp, a0
 ; RV64-NEXT:    call callee_with_args
 ; RV64-NEXT:    addi sp, s0, -16
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: stack_alloc:
@@ -110,9 +124,13 @@ define void @stack_alloc(i32 signext %size) {
 ; RV32-WITHFP-NEXT:    mv sp, a0
 ; RV32-WITHFP-NEXT:    call callee_with_args
 ; RV32-WITHFP-NEXT:    addi sp, s0, -16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: stack_alloc:
@@ -133,9 +151,13 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-WITHFP-NEXT:    mv sp, a0
 ; RV64-WITHFP-NEXT:    call callee_with_args
 ; RV64-WITHFP-NEXT:    addi sp, s0, -16
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
@@ -157,7 +179,9 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call callee2
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: branch_and_tail_call:
@@ -173,7 +197,9 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call callee2
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: branch_and_tail_call:
@@ -194,7 +220,10 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-WITHFP-NEXT:    call callee2
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: branch_and_tail_call:
@@ -215,7 +244,10 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-NEXT:    call callee2
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   br i1 %a, label %blue_pill, label %red_pill
 blue_pill:

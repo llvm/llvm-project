@@ -59,6 +59,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va1:
@@ -84,6 +85,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-NEXT:    sw a2, 12(sp)
 ; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va1:
@@ -111,7 +113,10 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va1:
@@ -144,7 +149,10 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
@@ -1588,6 +1596,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-NEXT:    lui a1, 24414
 ; RV32-NEXT:    addi a1, a1, 304
 ; RV32-NEXT:    add sp, sp, a1
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va_large_stack:
@@ -1633,6 +1642,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    lui a1, 24414
 ; RV64-NEXT:    addiw a1, a1, 336
 ; RV64-NEXT:    add sp, sp, a1
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va_large_stack:
@@ -1667,9 +1677,13 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    lui a1, 24414
 ; RV32-WITHFP-NEXT:    addi a1, a1, -1728
 ; RV32-WITHFP-NEXT:    add sp, sp, a1
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-WITHFP-NEXT:    lw ra, 1996(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 1992(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 2032
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va_large_stack:
@@ -1709,9 +1723,13 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    lui a1, 24414
 ; RV64-WITHFP-NEXT:    addiw a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 1952(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 2032
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   %large = alloca [ 100000000 x i8 ]
   %va = alloca ptr
@@ -1739,6 +1757,7 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-NEXT:    sw a1, 8(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va_vprintf:
@@ -1755,6 +1774,7 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-NEXT:    sd a1, 0(sp)
 ; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va_vprintf:
@@ -1778,7 +1798,10 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va_vprintf:
@@ -1802,7 +1825,10 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 32
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   %args = alloca ptr
   %args_cp = alloca ptr
@@ -1832,7 +1858,9 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-NEXT:    sw a7, 44(sp)
 ; RV32-NEXT:    call va_vprintf
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va_printf:
@@ -1853,7 +1881,9 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-NEXT:    sd a7, 72(sp)
 ; RV64-NEXT:    call va_vprintf
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va_printf:
@@ -1879,7 +1909,10 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    call va_vprintf
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va_printf:
@@ -1905,7 +1938,10 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    call va_vprintf
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    .cfi_restore ra
+; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
+; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
   %args = alloca ptr
   call void @llvm.va_start(ptr %args)

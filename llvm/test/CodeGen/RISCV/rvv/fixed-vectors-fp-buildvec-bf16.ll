@@ -45,8 +45,11 @@ define <4 x bfloat> @splat_idx_v4bf16(<4 x bfloat> %v, i64 %idx) {
 ; RV32-ZFBFMIN-NEXT:    csrr a0, vlenb
 ; RV32-ZFBFMIN-NEXT:    slli a0, a0, 1
 ; RV32-ZFBFMIN-NEXT:    add sp, sp, a0
+; RV32-ZFBFMIN-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-ZFBFMIN-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-ZFBFMIN-NEXT:    .cfi_restore ra
 ; RV32-ZFBFMIN-NEXT:    addi sp, sp, 48
+; RV32-ZFBFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-ZFBFMIN-NEXT:    ret
 ;
 ; RV64-ZFBFMIN-LABEL: splat_idx_v4bf16:
@@ -75,8 +78,11 @@ define <4 x bfloat> @splat_idx_v4bf16(<4 x bfloat> %v, i64 %idx) {
 ; RV64-ZFBFMIN-NEXT:    csrr a0, vlenb
 ; RV64-ZFBFMIN-NEXT:    slli a0, a0, 1
 ; RV64-ZFBFMIN-NEXT:    add sp, sp, a0
+; RV64-ZFBFMIN-NEXT:    .cfi_def_cfa sp, 48
 ; RV64-ZFBFMIN-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-ZFBFMIN-NEXT:    .cfi_restore ra
 ; RV64-ZFBFMIN-NEXT:    addi sp, sp, 48
+; RV64-ZFBFMIN-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZFBFMIN-NEXT:    ret
   %x = extractelement <4 x bfloat> %v, i64 %idx
   %ins = insertelement <4 x bfloat> poison, bfloat %x, i32 0

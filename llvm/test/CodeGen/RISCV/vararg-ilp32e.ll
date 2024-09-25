@@ -25,7 +25,10 @@ define i32 @caller(i32 %a) {
 ; ILP32E-NEXT:    mv a0, s0
 ; ILP32E-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
 ; ILP32E-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    .cfi_restore ra
+; ILP32E-NEXT:    .cfi_restore s0
 ; ILP32E-NEXT:    addi sp, sp, 8
+; ILP32E-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-NEXT:    ret
 ;
 ; ILP32E-WITHFP-LABEL: caller:
@@ -49,7 +52,11 @@ define i32 @caller(i32 %a) {
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    .cfi_restore ra
+; ILP32E-WITHFP-NEXT:    .cfi_restore s0
+; ILP32E-WITHFP-NEXT:    .cfi_restore s1
 ; ILP32E-WITHFP-NEXT:    addi sp, sp, 12
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-WITHFP-NEXT:    ret
 entry:
   call void (i32, ...) @va_double(i32 1, double 2.000000e+00)
@@ -82,7 +89,9 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-NEXT:    bnez a0, .LBB1_2
 ; ILP32E-NEXT:  # %bb.1: # %if.end
 ; ILP32E-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    .cfi_restore ra
 ; ILP32E-NEXT:    addi sp, sp, 32
+; ILP32E-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-NEXT:    ret
 ; ILP32E-NEXT:  .LBB1_2: # %if.then
 ; ILP32E-NEXT:    call abort
@@ -117,7 +126,10 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:  # %bb.1: # %if.end
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    .cfi_restore ra
+; ILP32E-WITHFP-NEXT:    .cfi_restore s0
 ; ILP32E-WITHFP-NEXT:    addi sp, sp, 36
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-WITHFP-NEXT:    ret
 ; ILP32E-WITHFP-NEXT:  .LBB1_2: # %if.then
 ; ILP32E-WITHFP-NEXT:    call abort
