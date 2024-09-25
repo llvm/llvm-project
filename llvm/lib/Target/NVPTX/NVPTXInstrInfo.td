@@ -3502,8 +3502,8 @@ def: Pat<(v2i16 (scalar_to_vector (i16 Int16Regs:$a))),
 
 // Create SDNodes so they can be used in the DAG code, e.g.
 // NVPTXISelLowering (LowerShiftLeftParts and LowerShiftRightParts)
-def fshl_clamp : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
-def fshr_clamp : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
+def fshl_clamp : SDNode<"NVPTXISD::FSHL_CLAMP", SDTIntShiftDOp, []>;
+def fshr_clamp : SDNode<"NVPTXISD::FSHR_CLAMP", SDTIntShiftDOp, []>;
 
 // Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
 // no side effects.
@@ -3514,7 +3514,7 @@ let hasSideEffects = false in {
                   (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
                   "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
                   [(set Int32Regs:$dst,
-                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt)))]>,
+                      (op (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt)))]>,
         Requires<[hasHWROT32]>;
 
     def _r
@@ -3522,7 +3522,7 @@ let hasSideEffects = false in {
                   (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
                   "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
                   [(set Int32Regs:$dst,
-                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt)))]>,
+                      (op (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt)))]>,
         Requires<[hasHWROT32]>;
   }
 
