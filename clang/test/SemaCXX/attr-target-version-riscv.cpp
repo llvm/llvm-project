@@ -63,3 +63,51 @@ __attribute__((target_version("default"))) int DefaultInVersion(void) { return 2
 __attribute__((target_version("arch=+c;"))) int EmptyVersionAfterSemiColon(void) { return 2;}
 // expected-error@+1 {{redefinition of 'EmptyVersionAfterSemiColon'}}
 __attribute__((target_version("default"))) int EmptyVersionAfterSemiColon(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'arch=+c;arch=+f' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("arch=+c;arch=+f"))) int dupArch(void) { return 2; }
+// expected-error@+1 {{redefinition of 'dupArch'}}
+__attribute__((target_version("default"))) int dupArch(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'default;default' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("default;default"))) int dupDefault(void) { return 2;}
+// expected-error@+1 {{redefinition of 'dupDefault'}}
+__attribute__((target_version("default"))) int dupDefault(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'priority=1;priority=2' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("priority=1;priority=2"))) int dupPriority(void) { return 2; }
+// expected-error@+1 {{redefinition of 'dupPriority'}}
+__attribute__((target_version("default"))) int dupPriority(void) { return 2; }
+
+// expected-warning@+2 {{unsupported '=1' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("=1"))) int invalidVerson1(void) { return 2; }
+// expected-error@+1 {{redefinition of 'invalidVerson1'}}
+__attribute__((target_version("default"))) int invalidVerson1(void) { return 2; }
+
+// expected-warning@+2 {{unsupported '=+v' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("=+v"))) int invalidVerson2(void) { return 2; }
+// expected-error@+1 {{redefinition of 'invalidVerson2'}}
+__attribute__((target_version("default"))) int invalidVerson2(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'v' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("v"))) int invalidVerson3(void) { return 2; }
+// expected-error@+1 {{redefinition of 'invalidVerson3'}}
+__attribute__((target_version("default"))) int invalidVerson3(void) { return 2; }
+
+// expected-warning@+2 {{unsupported '' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version(";"))) int invalidVerson4(void) { return 2; }
+// expected-error@+1 {{redefinition of 'invalidVerson4'}}
+__attribute__((target_version("default"))) int invalidVerson4(void) { return 2; }
+
+// expected-warning@+2 {{unsupported 'priority=1' in the 'target_version' attribute string; 'target_version' attribute ignored}}
+// expected-note@+1 {{previous definition is here}}
+__attribute__((target_version("priority=1"))) int prioriyWithoutArch(void) { return 2; }
+// expected-error@+1 {{redefinition of 'prioriyWithoutArch'}}
+__attribute__((target_version("default"))) int prioriyWithoutArch(void) { return 2; }

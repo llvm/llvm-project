@@ -3063,9 +3063,12 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
     bool HasArch = false;
     bool HasPriority = false;
     bool HasDefault = false;
+    bool DuplicateAttr = false;
     for (auto &AttrStr : AttrStrs) {
       // Only support arch=+ext,... syntax.
       if (AttrStr.starts_with("arch=+")) {
+        if (HasArch)
+          DuplicateAttr = true;
         HasArch = true;
         ParsedTargetAttr TargetAttr =
             Context.getTargetInfo().parseTargetAttr(AttrStr);
@@ -3077,8 +3080,12 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
       } else if (AttrStr.starts_with("default")) {
+        if (HasDefault)
+          DuplicateAttr = true;
         HasDefault = true;
       } else if (AttrStr.consume_front("priority=")) {
+        if (HasPriority)
+          DuplicateAttr = true;
         HasPriority = true;
         int Digit;
         if (AttrStr.getAsInteger(0, Digit))
@@ -3090,7 +3097,8 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       }
     }
 
-    if ((HasPriority || HasArch) && HasDefault)
+    if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+        (HasPriority && !HasArch))
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << AttrStr << TargetVersion;
 
