@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include <cstdint>
-#include "MCInstrAnalysis.h"
 
 namespace llvm {
 class MCSubtargetInfo;
@@ -31,7 +30,7 @@ bool MCInstrAnalysis::evaluateBranch(const MCInst & /*Inst*/, uint64_t /*Addr*/,
   return false;
 }
 
-bool llvm::MCInstrAnalysis::evaluateInstruction(const MCInst &Inst,
+bool MCInstrAnalysis::evaluateInstruction(const MCInst &Inst,
                                                 uint64_t Addr, uint64_t Size,
                                                 uint64_t &Target) const {
   return false;

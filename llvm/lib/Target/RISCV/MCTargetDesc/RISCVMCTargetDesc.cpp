@@ -189,9 +189,12 @@ public:
         }
         break;
       }
-      case RISCV::AUIPC:
-      case RISCV::LUI:
-      {
+      case RISCV::AUIPC: {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    Addr + (Inst.getOperand(1).getImm() << 12));
+        break;
+      }
+      case RISCV::LUI: {
         setGPRState(Inst.getOperand(0).getReg(), 
                     Inst.getOperand(1).getImm() << 12);
         break;
