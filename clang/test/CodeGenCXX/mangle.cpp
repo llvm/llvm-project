@@ -11,6 +11,8 @@ struct Y { };
 //CHECK: @pr5966_i = external global
 //CHECK: @_ZL8pr5966_j = internal global
 
+//CHECK: @_ZTCN6test624InstE0_NS_1A4ImplINS1_4WrapEEE
+
 // CHECK-LABEL: define{{.*}} zeroext i1 @_ZplRK1YRA100_P1X
 bool operator+(const Y&, X* (&xs)[100]) { return false; }
 
@@ -1213,4 +1215,26 @@ namespace test61 {
   template <typename T> void f(typename T::Y::a, typename T::Y::b) {}
   // CHECK-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
   template void f<X>(int, int);
+}
+
+namespace test62 {
+namespace A {
+
+class VBase {
+ public:
+  virtual ~VBase() {};
+};
+
+struct Wrap {};
+
+template <typename T>
+class Impl : public virtual VBase {
+ public:
+};
+
+}  // namespace A
+
+struct Inst : public A::Impl<A::Wrap> {};
+
+void Test() { Inst a; }
 }
